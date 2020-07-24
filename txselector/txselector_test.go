@@ -5,9 +5,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/txselector/common"
+	"github.com/hermeznetwork/hermez-node/txselector/mock"
+
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/tx-selector/common"
-	"github.com/hermeznetwork/hermez-node/tx-selector/mock"
 	"github.com/stretchr/testify/assert"
 )
 

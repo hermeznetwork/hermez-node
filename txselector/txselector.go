@@ -3,8 +3,8 @@ package txselector
 import (
 	"sort"
 
-	"github.com/hermeznetwork/hermez-node/tx-selector/common"
-	"github.com/hermeznetwork/hermez-node/tx-selector/mock"
+	"github.com/hermeznetwork/hermez-node/txselector/common"
+	"github.com/hermeznetwork/hermez-node/txselector/mock"
 )
 
 // txs implements the interface Sort for an array of Tx
