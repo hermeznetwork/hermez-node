@@ -1,7 +1,7 @@
 package mock
 
 import (
-	"github.com/hermeznetwork/hermez-node/tx-selector/common"
+	"github.com/hermeznetwork/hermez-node/txselector/common"
 )
 
 type MockDB struct {
