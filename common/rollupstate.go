@@ -6,12 +6,12 @@ import (
 	eth "github.com/ethereum/go-ethereum/common"
 )
 
-// RollupState give information about the rollup, and the synchronization status between the operator and the smart contract
+// RollupState give information about the rollup, and the synchronization status between the coordinator and the smart contract
 type RollupState struct {
-	IsSynched        bool        // true if the operator is fully synched with the rollup smart contract
+	IsSynched        bool        // true if the coordinator is fully synched with the rollup smart contract
 	SyncProgress     float32     // percentage of synced progress with the rollup smart contract
-	LastBlockSynched uint64      // last Etherum block synchronized by the operator
-	LastBatchSynched BatchNum    // last batch synchronized by the operator
+	LastBlockSynched uint64      // last Etherum block synchronized by the coordinator
+	LastBatchSynched BatchNum    // last batch synchronized by the coordinator
 	FeeDeposit       *big.Int    // amount of eth (in wei) that has to be payed to do a deposit
 	FeeL1Tx          *big.Int    // amount of eth (in wei) that has to be payed to do a L1 tx
 	ContractAddr     eth.Address // Etherum address of the rollup smart contract

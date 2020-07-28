@@ -12,25 +12,8 @@ type RecommendedFee struct {
 	CreatesAccountAndRegister float64
 }
 
-// FeeSelector is used to select a percentage from the FeePlan. Max value is 16
+// FeeSelector is used to select a percentage from the FeePlan.
 type FeeSelector uint8
 
 // FeePlan represents the fee model, a position in the array indicates the percentage of tokens paid in concept of fee for a transaction
-var FeePlan = [16]float64{
-	0,
-	.001,
-	.002,
-	.005,
-	.01,
-	.02,
-	.05,
-	.1,
-	.2,
-	.5,
-	1,
-	2,
-	5,
-	10,
-	20,
-	50,
-}
+var FeePlan = [256]float64{}

@@ -1,15 +1,20 @@
 package common
 
-import "math/big"
+import (
+	"math/big"
+
+	eth "github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-crypto/babyjub"
+)
 
 // L1Tx is a struct that represents an already forged L1 tx
 // WARNING: this struct is very unclear and a complete guess
 type L1Tx struct {
 	Tx
-	Ax                 *big.Int // Ax is the x coordinate of the BabyJubJub curve point
-	Ay                 *big.Int // Ay is the y coordinate of the BabyJubJub curve point
+	PublicKey          babyjub.PublicKey
 	LoadAmount         *big.Int // amount transfered from L1 -> L2
-	Mined              bool
-	BlockNum           uint64
+	EthBlockNum        uint64
+	EthTxHash          eth.Hash
+	Position           int // Position among all the L1Txs in that batch
 	ToForgeL1TxsNumber uint32
 }

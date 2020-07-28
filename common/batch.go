@@ -1,8 +1,6 @@
 package common
 
 import (
-	"time"
-
 	eth "github.com/ethereum/go-ethereum/common"
 )
 
@@ -11,8 +9,7 @@ type Batch struct {
 	BatchNum      BatchNum
 	SlotNum       SlotNum // Slot in which the batch is forged
 	EthTxHash     eth.Hash
-	BlockNum      uint64 // Etherum block in which the batch is forged
-	Timestamp     time.Time
+	EthBlockNum   uint64 // Etherum block in which the batch is forged
 	Forger        eth.Address
 	ExitRoot      Hash
 	OldRoot       Hash

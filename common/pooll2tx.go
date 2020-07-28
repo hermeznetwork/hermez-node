@@ -7,7 +7,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// PoolL2Tx is a struct that represents a L2Tx sent by an account to the operator hat is waiting to be forged
+// PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
 type PoolL2Tx struct {
 	Tx
 	Status             PoolL2TxStatus
@@ -23,12 +23,12 @@ type PoolL2Tx struct {
 type PoolL2TxStatus string
 
 const (
-	// Pending represents a valid L2Tx that hasn't started the forging process
-	Pending PoolL2TxStatus = "Pending"
-	// Forging represents a valid L2Tx that has started the forging process
-	Forging PoolL2TxStatus = "Forging"
-	// Forged represents a L2Tx that has already been forged
-	Forged PoolL2TxStatus = "Forged"
-	// Invalid represents a L2Tx that has been invalidated
-	Invalid PoolL2TxStatus = "Invalid"
+	// PoolL2TxStatusPending represents a valid L2Tx that hasn't started the forging process
+	PoolL2TxStatusPending PoolL2TxStatus = "Pending"
+	// PoolL2TxStatusForging represents a valid L2Tx that has started the forging process
+	PoolL2TxStatusForging PoolL2TxStatus = "Forging"
+	// PoolL2TxStatusForged represents a L2Tx that has already been forged
+	PoolL2TxStatusForged PoolL2TxStatus = "Forged"
+	// PoolL2TxStatusInvalid represents a L2Tx that has been invalidated
+	PoolL2TxStatusInvalid PoolL2TxStatus = "Invalid"
 )

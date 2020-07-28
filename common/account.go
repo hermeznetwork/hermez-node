@@ -14,5 +14,5 @@ type Account struct {
 	Idx       uint32   // bits = SMT levels (SMT levels needs to be decided)
 	Nonce     uint64   // effective 48 bits
 	Balance   *big.Int // Up to 192 bits
-	Signature babyjub.PublicKey
+	PublicKey babyjub.PublicKey
 }

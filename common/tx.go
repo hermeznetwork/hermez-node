@@ -27,16 +27,16 @@ type TxID Hash // Hash is a guess
 type TxType string
 
 const (
-	// Exit represents L2->L1 token transfer.  A leaf for this account appears in the exit tree of the block
-	Exit TxType = "Exit"
-	// Withdrawn represents the balance that was moved from L2->L1 has been widthrawn from the smart contract
-	Withdrawn TxType = "Withdrawn"
-	// Transfer represents L2->L2 token transfer
-	Transfer TxType = "Transfer"
-	// Deposit represents L1->L2 transfer
-	Deposit TxType = "Deposit"
-	// CreateAccountDeposit represents creation of a new leaf in the state tree (newAcconut) + L1->L2 transfer
-	CreateAccountDeposit TxType = "CreateAccountDeposit"
-	// CreateAccountDepositTransfer represents L1->L2 transfer + L2->L2 transfer
-	CreateAccountDepositTransfer TxType = "CreateAccountDepositTransfer"
+	// TxTypeExit represents L2->L1 token transfer.  A leaf for this account appears in the exit tree of the block
+	TxTypeExit TxType = "Exit"
+	// TxTypeWithdrawn represents the balance that was moved from L2->L1 has been widthrawn from the smart contract
+	TxTypeWithdrawn TxType = "Withdrawn"
+	// TxTypeTransfer represents L2->L2 token transfer
+	TxTypeTransfer TxType = "Transfer"
+	// TxTypeDeposit represents L1->L2 transfer
+	TxTypeDeposit TxType = "Deposit"
+	// TxTypeCreateAccountDeposit represents creation of a new leaf in the state tree (newAcconut) + L1->L2 transfer
+	TxTypeCreateAccountDeposit TxType = "CreateAccountDeposit"
+	// TxTypeCreateAccountDepositTransfer represents L1->L2 transfer + L2->L2 transfer
+	TxTypeCreateAccountDepositTransfer TxType = "CreateAccountDepositTransfer"
 )
