@@ -107,7 +107,11 @@ func (p *PriceUpdater) UpdatePrices() error {
 		}
 
 		// (*p.DB)[p.Config.TokensList[ti]] = tinfo
-		p.DB.UpdateTokenInfo(tinfo)
+		err = p.DB.UpdateTokenInfo(tinfo)
+
+		if err != nil {
+			return err
+		}
 
 	}
 

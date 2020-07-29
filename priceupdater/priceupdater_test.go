@@ -25,16 +25,16 @@ func TestCon(t *testing.T) {
 	err = pud.UpdatePrices()
 	assert.Equal(t, err, nil)
 
-	info, err := pud.Get("ETH")
+	info, _ := pud.Get("ETH")
 	assert.NotZero(t, info.Value)
 
-	info2, err := pud.Get("NEC")
+	info2, _ := pud.Get("NEC")
 	assert.NotZero(t, info2.Value)
 
-	info3, err := pud.Get("INVENTED")
+	info3, _ := pud.Get("INVENTED")
 	assert.Equal(t, info3.Value, float64(0))
 
-	prices, err := pud.DB.GetPrices()
+	prices, _ := pud.DB.GetPrices()
 	assert.Equal(t, prices["ETH"], info)
 	assert.Equal(t, prices["NEC"], info2)
 
