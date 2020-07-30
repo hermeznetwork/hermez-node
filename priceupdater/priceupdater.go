@@ -8,13 +8,12 @@ import (
 	"github.com/dghubble/sling"
 )
 
-const ApiUrl = "https://api-pub.bitfinex.com/v2/"
-
 // ConfigPriceUpdater contains the configuration set by the coordinator
 type ConfigPriceUpdater struct {
 	RecommendedFee              uint64 // in dollars
 	RecommendedCreateAccountFee uint64 // in dollars
 	TokensList                  []string
+	ApiUrl                      string
 }
 
 // TokenInfo contains the updated value for the token
@@ -79,7 +78,7 @@ func (p *PriceUpdater) UpdatePrices() error {
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
-	client := sling.New().Base(ApiUrl).Client(httpClient)
+	client := sling.New().Base(p.Config.ApiUrl).Client(httpClient)
 
 	state := [10]float64{}
 

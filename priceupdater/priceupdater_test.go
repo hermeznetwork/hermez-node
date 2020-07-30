@@ -15,6 +15,7 @@ func TestCon(t *testing.T) {
 		RecommendedFee:              1,
 		RecommendedCreateAccountFee: 1,
 		TokensList:                  []string{"ETH", "NEC"},
+		ApiUrl:                      "https://api-pub.bitfinex.com/v2/",
 	}
 
 	pud, err := NewPriceUpdater(&db, config)
