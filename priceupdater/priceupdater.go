@@ -17,13 +17,6 @@ type ConfigPriceUpdater struct {
 	TokensList                  []string
 }
 
-// RecommendedFee is the struct that will be sent to FE by the API
-type RecommendedFee struct {
-	// all in $
-	ExistingAccount float64
-	CreatesAccount  float64
-}
-
 // TokenInfo contains the updated value for the token
 type TokenInfo struct {
 	Symbol      string
