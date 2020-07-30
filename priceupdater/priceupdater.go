@@ -1,20 +1,26 @@
 package priceupdater
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/dghubble/sling"
 )
 
-const ApiUrl = "https://api-pub.bitfinex.com/v2/"
+var (
+	// ErrSymbolDoesNotExistInDatabase is used when trying to get a token that is not in the DB
+	ErrSymbolDoesNotExistInDatabase = errors.New("symbol does not exist in database")
+)
 
 // ConfigPriceUpdater contains the configuration set by the coordinator
 type ConfigPriceUpdater struct {
 	RecommendedFee              uint64 // in dollars
 	RecommendedCreateAccountFee uint64 // in dollars
 	TokensList                  []string
+	ApiUrl                      string
 }
 
 // TokenInfo contains the updated value for the token
@@ -24,49 +30,20 @@ type TokenInfo struct {
 	LastUpdated time.Time
 }
 
-// MemoryDB is a Key Value DB
-type MemoryDB map[string]TokenInfo
-
-// Get one token information
-func (m *MemoryDB) Get(tokenSymbol string) (TokenInfo, error) {
-
-	return (*m)[tokenSymbol], nil
-
-}
-
-// GetPrices gets all the prices contained in the DB
-func (m *MemoryDB) GetPrices() (map[string]TokenInfo, error) {
-
-	var info = make(map[string]TokenInfo)
-
-	for key, value := range *m {
-		info[key] = value
-	}
-
-	return info, nil
-}
-
-// UpdateTokenInfo updates one token info
-func (m *MemoryDB) UpdateTokenInfo(tokenInfo TokenInfo) error {
-
-	(*m)[tokenInfo.Symbol] = tokenInfo
-
-	return nil
-}
-
 // PriceUpdater definition
 type PriceUpdater struct {
-	DB     *MemoryDB
+	DB     map[string]TokenInfo
 	Config ConfigPriceUpdater
+	mu     sync.RWMutex
 }
 
 // NewPriceUpdater is the constructor for the updater
-func NewPriceUpdater(db *MemoryDB, config ConfigPriceUpdater) (PriceUpdater, error) {
+func NewPriceUpdater(config ConfigPriceUpdater) PriceUpdater {
 
 	return PriceUpdater{
-		DB:     db,
+		DB:     make(map[string]TokenInfo),
 		Config: config,
-	}, nil
+	}
 
 }
 
@@ -79,9 +56,12 @@ func (p *PriceUpdater) UpdatePrices() error {
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
-	client := sling.New().Base(ApiUrl).Client(httpClient)
+	client := sling.New().Base(p.Config.ApiUrl).Client(httpClient)
 
 	state := [10]float64{}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	for ti := range p.Config.TokensList {
 
@@ -99,12 +79,7 @@ func (p *PriceUpdater) UpdatePrices() error {
 			LastUpdated: time.Now(),
 		}
 
-		// (*p.DB)[p.Config.TokensList[ti]] = tinfo
-		err = p.DB.UpdateTokenInfo(tinfo)
-
-		if err != nil {
-			return err
-		}
+		(p.DB)[tinfo.Symbol] = tinfo
 
 	}
 
@@ -112,16 +87,53 @@ func (p *PriceUpdater) UpdatePrices() error {
 }
 
 // UpdateConfig allows to update the price-updater configuration
-func (p *PriceUpdater) UpdateConfig(config ConfigPriceUpdater) error {
+func (p *PriceUpdater) UpdateConfig(config ConfigPriceUpdater) {
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	p.Config = config
 
-	return nil
 }
 
-// Get info for a token from the price-updatader database
-func (p *PriceUpdater) Get(token string) (TokenInfo, error) {
+// Get one token information
+func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
 
-	return p.DB.Get(token)
+	var info TokenInfo
+
+	// Check if symbol exists in database
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if info, ok := p.DB[tokenSymbol]; ok {
+		return info, nil
+	}
+
+	return info, ErrSymbolDoesNotExistInDatabase
+
+}
+
+// GetPrices gets all the prices contained in the DB
+func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
+
+	var info = make(map[string]TokenInfo)
+
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	for key, value := range p.DB {
+		info[key] = value
+	}
+
+	return info
+}
+
+// UpdateTokenInfo updates one token info
+func (p *PriceUpdater) UpdateTokenInfo(tokenInfo TokenInfo) {
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	(p.DB)[tokenInfo.Symbol] = tokenInfo
 
 }
