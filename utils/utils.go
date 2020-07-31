@@ -4,8 +4,13 @@ import (
 	"math/big"
 )
 
+// Float16 represents a float in a 16 bit format
+type Float16 uint16
+
 // Float2fix converts a float to a fix
-func Float2fix(fl int64) *big.Int {
+func Float2fix(fl16 Float16) *big.Int {
+
+	fl := int64(fl16)
 
 	m := big.NewInt(fl & 0x3FF)
 	e := big.NewInt(fl >> 11)
@@ -25,17 +30,17 @@ func Float2fix(fl int64) *big.Int {
 }
 
 // floorFix2Float converts a fix to a float, always rounding down
-func floorFix2Float(_f string) *big.Int {
+func floorFix2Float(_f *big.Int) Float16 {
 
 	zero := big.NewInt(0)
 	ten := big.NewInt(10)
 	e := 0
 
 	m := big.NewInt(0)
-	m.SetString(_f, 10)
+	m.SetString(_f.String(), 10)
 
 	if m.Cmp(zero) == 0 {
-		return zero
+		return 0
 	}
 
 	s := big.NewInt(0).Rsh(m, 10)
@@ -50,23 +55,20 @@ func floorFix2Float(_f string) *big.Int {
 
 	m.Add(m, big.NewInt(int64(e<<11)))
 
-	return m
+	return Float16(m.Int64())
 
 }
 
 // Fix2float converts a fix to a float
-func Fix2float(_f string) *big.Int {
+func Fix2float(f *big.Int) Float16 {
 
-	f := big.NewInt(0)
-	f.SetString(_f, 10)
+	fl1 := floorFix2Float(f)
+	fi1 := Float2fix(fl1)
+	fl2 := big.NewInt(int64(fl1 | 0x400))
+	fi2 := Float2fix(Float16(fl2.Int64()))
 
-	fl1 := floorFix2Float(_f)
-	fi1 := Float2fix(fl1.Int64())
-	fl2 := big.NewInt(int64(fl1.Int64() | 0x400))
-	fi2 := Float2fix(fl2.Int64())
-
-	m3 := big.NewInt((fl1.Int64() & 0x3FF) + 1)
-	e3 := fl1.Int64() >> 11
+	m3 := big.NewInt((int64(fl1) & 0x3FF) + 1)
+	e3 := int64(fl1) >> 11
 
 	if m3.Cmp(big.NewInt(0x400)) == 0 {
 
@@ -75,7 +77,7 @@ func Fix2float(_f string) *big.Int {
 	}
 
 	fl3 := m3.Add(m3, big.NewInt(e3<<11))
-	fi3 := Float2fix(fl3.Int64())
+	fi3 := Float2fix(Float16(fl3.Int64()))
 
 	res := fl1
 
@@ -84,7 +86,7 @@ func Fix2float(_f string) *big.Int {
 
 	if d.Cmp(d2) == 1 {
 
-		res = fl2
+		res = Float16(fl2.Int64())
 		d = d2
 	}
 
@@ -92,7 +94,7 @@ func Fix2float(_f string) *big.Int {
 
 	if d.Cmp(d3) == 1 {
 
-		res = fl3
+		res = Float16(fl3.Int64())
 	}
 
 	return res
@@ -100,18 +102,15 @@ func Fix2float(_f string) *big.Int {
 }
 
 // FloorFix2Float Converts a float to a fix, always rounding down
-func FloorFix2Float(_f string) *big.Int {
+func FloorFix2Float(f *big.Int) Float16 {
 
-	f := big.NewInt(0)
-	f.SetString(_f, 10)
-
-	fl1 := floorFix2Float(_f)
-	fl2 := big.NewInt(int64(fl1.Int64() | 0x400))
-	fi2 := Float2fix(fl2.Int64())
+	fl1 := floorFix2Float(f)
+	fl2 := big.NewInt(int64(fl1) | 0x400)
+	fi2 := Float2fix(Float16(fl2.Int64()))
 
 	if fi2.Cmp(f) < 1 {
-		return fl2
-	} else {
-		return fl1
+		return Float16(fl2.Int64())
 	}
+	return fl1
+
 }

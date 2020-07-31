@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,7 +9,7 @@ import (
 
 func TestConversions(t *testing.T) {
 
-	testVector := map[int64]string{
+	testVector := map[Float16]string{
 		0x307B: "123000000",
 		0x1DC6: "454500",
 		0xFFFF: "10235000000000000000000000000000000",
@@ -28,8 +29,11 @@ func TestConversions(t *testing.T) {
 
 		assert.Equal(t, fix.String(), testVector[test])
 
-		fl := Fix2float(testVector[test])
-		fx2 := Float2fix(fl.Int64())
+		bi := big.NewInt(0)
+		bi.SetString(testVector[test], 10)
+
+		fl := Fix2float(bi)
+		fx2 := Float2fix(fl)
 
 		assert.Equal(t, fx2.String(), testVector[test])
 
@@ -39,7 +43,7 @@ func TestConversions(t *testing.T) {
 
 func TestFloorFix2Float(t *testing.T) {
 
-	testVector := map[string]int64{
+	testVector := map[string]Float16{
 		"87999990000000000": 0x776f,
 		"87950000000000001": 0x776f,
 		"87950000000000000": 0x776f,
@@ -48,10 +52,39 @@ func TestFloorFix2Float(t *testing.T) {
 
 	for test := range testVector {
 
-		testFloat := FloorFix2Float(test)
+		bi := big.NewInt(0)
+		bi.SetString(test, 10)
 
-		assert.Equal(t, testFloat.Int64(), testVector[test])
+		testFloat := FloorFix2Float(bi)
+
+		assert.Equal(t, testFloat, testVector[test])
 
 	}
 
 }
+
+/*
+func TestConversions2(t *testing.T) {
+	assert.Equal(t, "10", Float2fix(10).String())
+	assert.Equal(t, "1000", Float2fix(1000).String())
+	assert.Equal(t, "65535", Float2fix(65535).String())
+	assert.Equal(t, "65536", Float2fix(65536).String())
+	assert.Equal(t, "100000", Float2fix(100000).String()) // should this return an error?
+	assert.Equal(t, "10000000", Float2fix(10000000).String())
+
+	assert.Equal(t, "10", floorFix2Float("10").String())
+	assert.Equal(t, "10", floorFix2Float("10.004").String())
+	assert.Equal(t, "10000", floorFix2Float("10000").String())
+
+	assert.Equal(t, "10", Fix2float("10").String())
+	assert.Equal(t, "10", Fix2float("10.004").String())
+	assert.Equal(t, "32767", Fix2float("32767").String())
+	assert.Equal(t, "32768", Fix2float("32768").String())
+	assert.Equal(t, "65535", Fix2float("65535").String())
+	assert.Equal(t, "100000", Fix2float("100000").String())
+
+	assert.Equal(t, "10", FloorFix2Float("10").String())
+	assert.Equal(t, "10", FloorFix2Float("10.04").String())
+	assert.Equal(t, "1000", FloorFix2Float("1000").String())
+}
+*/
