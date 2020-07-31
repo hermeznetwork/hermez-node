@@ -20,7 +20,7 @@ type ConfigPriceUpdater struct {
 	RecommendedFee              uint64 // in dollars
 	RecommendedCreateAccountFee uint64 // in dollars
 	TokensList                  []string
-	ApiUrl                      string
+	APIURL                      string
 }
 
 // TokenInfo contains the updated value for the token
@@ -32,8 +32,8 @@ type TokenInfo struct {
 
 // PriceUpdater definition
 type PriceUpdater struct {
-	DB     map[string]TokenInfo
-	Config ConfigPriceUpdater
+	db     map[string]TokenInfo
+	config ConfigPriceUpdater
 	mu     sync.RWMutex
 }
 
@@ -41,13 +41,13 @@ type PriceUpdater struct {
 func NewPriceUpdater(config ConfigPriceUpdater) PriceUpdater {
 
 	return PriceUpdater{
-		DB:     make(map[string]TokenInfo),
-		Config: config,
+		db:     make(map[string]TokenInfo),
+		config: config,
 	}
 
 }
 
-// UpdatePrices is triggered by the Coordinator, and internally will update the token prices in the MemoryDB
+// UpdatePrices is triggered by the Coordinator, and internally will update the token prices in the db
 func (p *PriceUpdater) UpdatePrices() error {
 
 	tr := &http.Transport{
@@ -56,16 +56,13 @@ func (p *PriceUpdater) UpdatePrices() error {
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
-	client := sling.New().Base(p.Config.ApiUrl).Client(httpClient)
+	client := sling.New().Base(p.config.APIURL).Client(httpClient)
 
 	state := [10]float64{}
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	for _, tokenSymbol := range p.config.TokensList {
 
-	for ti := range p.Config.TokensList {
-
-		resp, err := client.New().Get("ticker/t" + p.Config.TokensList[ti] + "USD").ReceiveSuccess(&state)
+		resp, err := client.New().Get("ticker/t" + tokenSymbol + "USD").ReceiveSuccess(&state)
 		if err != nil {
 			return err
 		}
@@ -74,12 +71,12 @@ func (p *PriceUpdater) UpdatePrices() error {
 		}
 
 		tinfo := TokenInfo{
-			Symbol:      p.Config.TokensList[ti],
+			Symbol:      tokenSymbol,
 			Value:       state[6],
 			LastUpdated: time.Now(),
 		}
 
-		(p.DB)[tinfo.Symbol] = tinfo
+		p.UpdateTokenInfo(tinfo)
 
 	}
 
@@ -92,7 +89,7 @@ func (p *PriceUpdater) UpdateConfig(config ConfigPriceUpdater) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.Config = config
+	p.config = config
 
 }
 
@@ -105,7 +102,7 @@ func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	if info, ok := p.DB[tokenSymbol]; ok {
+	if info, ok := p.db[tokenSymbol]; ok {
 		return info, nil
 	}
 
@@ -113,7 +110,7 @@ func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
 
 }
 
-// GetPrices gets all the prices contained in the DB
+// GetPrices gets all the prices contained in the db
 func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
 
 	var info = make(map[string]TokenInfo)
@@ -121,7 +118,7 @@ func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	for key, value := range p.DB {
+	for key, value := range p.db {
 		info[key] = value
 	}
 
@@ -134,6 +131,6 @@ func (p *PriceUpdater) UpdateTokenInfo(tokenInfo TokenInfo) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	(p.DB)[tokenInfo.Symbol] = tokenInfo
+	p.db[tokenInfo.Symbol] = tokenInfo
 
 }

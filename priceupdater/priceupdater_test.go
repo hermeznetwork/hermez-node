@@ -13,13 +13,10 @@ func TestCon(t *testing.T) {
 		RecommendedFee:              1,
 		RecommendedCreateAccountFee: 1,
 		TokensList:                  []string{"ETH", "NEC"},
-		ApiUrl:                      "https://api-pub.bitfinex.com/v2/",
+		APIURL:                      "https://api-pub.bitfinex.com/v2/",
 	}
 
 	pud := NewPriceUpdater(config)
-
-	assert.Equal(t, pud.Config.TokensList[0], "ETH")
-	assert.Equal(t, pud.Config.TokensList[1], "NEC")
 
 	err := pud.UpdatePrices()
 	assert.Equal(t, err, nil)
