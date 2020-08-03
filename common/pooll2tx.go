@@ -1,6 +1,7 @@
 package common
 
 import (
+	"math/big"
 	"time"
 
 	eth "github.com/ethereum/go-ethereum/common"
@@ -10,13 +11,23 @@ import (
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
 type PoolL2Tx struct {
 	Tx
+	ToBJJ              babyjub.PublicKey
 	Status             PoolL2TxStatus
-	RqTxCompressedData []byte            // 253 bits, optional for atomic txs
-	RqToEthAddr        eth.Address       // optional for atomic txs
-	RqToBjj            babyjub.PublicKey // optional for atomic txs
-	RqFromeEthAddr     eth.Address       // optional for atomic txs
-	Received           time.Time         // time when added to the tx pool
+	RqTxCompressedData []byte // 253 bits, optional for atomic txs
+	RqTx               RqTx
+	Timestamp          time.Time         // time when added to the tx pool
 	Signature          babyjub.Signature // tx signature
+	ToEthAddr          eth.Address
+}
+
+// RqTx Transaction Data used to indicate that a transaction depends on another transaction
+type RqTx struct {
+	FromEthAddr eth.Address
+	ToEthAddr   eth.Address
+	TokenID     TokenID
+	Amount      *big.Int
+	FeeSelector FeeSelector
+	Nonce       uint64 // effective 48 bits used
 }
 
 // PoolL2TxStatus is a struct that represents the status of a L2 transaction

@@ -6,12 +6,15 @@ import (
 	eth "github.com/ethereum/go-ethereum/common"
 )
 
-// Token is a struct that represents an Etherum token that is supported in Hermez network
+// Token is a struct that represents an Ethereum token that is supported in Hermez network
 type Token struct {
-	ID       TokenID
-	Addr     eth.Address
-	Symbol   string
-	Decimals uint64
+	TokenID     TokenID
+	EthAddr     eth.Address
+	Name        string
+	Symbol      string
+	Decimals    uint64
+	EthTxHash   eth.Hash // Ethereum TxHash in which this token was registered
+	EthBlockNum uint64   // Ethereum block number in which this token was registered
 }
 
 // TokenInfo provides the price of the token in USD

@@ -5,9 +5,10 @@ import (
 )
 
 // Bid is a struct that represents one bid in the PoH
-// WARNING: this is strongly based on the previous implementation, once the new spec is done, this may change a lot.
 type Bid struct {
-	SlotNum         SlotNum     // Slot in which the bid is done
-	InfoCoordinator Coordinator // Operaror bidder information
-	Amount          *big.Int
+	SlotNum     SlotNum // Slot in which the bid is done
+	Coordinator         // Coordinator bidder information
+	BidValue    *big.Int
+	EthBlockNum uint64
+	Won         bool // boolean flag that tells that this is the final winning bid of this SlotNum
 }

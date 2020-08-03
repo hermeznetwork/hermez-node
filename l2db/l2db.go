@@ -56,8 +56,8 @@ func (l2db *L2DB) AddTx(tx *common.PoolL2Tx) error {
 	return nil
 }
 
-// AddRegisterAuthorization inserts a register authorization into the DB
-func (l2db *L2DB) AddRegisterAuthorization() error { // TODO: AddRegisterAuthorization(auth &common.RegisterAuthorization)
+// AddAccountCreationAuth inserts an account creation authorization into the DB
+func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error { // TODO: AddRegisterAuthorization(auth &common.RegisterAuthorization)
 	return nil
 }
 
@@ -71,9 +71,9 @@ func (l2db *L2DB) GetPendingTxs() ([]common.PoolL2Tx, error) {
 	return nil, nil
 }
 
-// GetRegisterAuthorization return the authorization to make registers of an Etherum address
-func (l2db *L2DB) GetRegisterAuthorization(ethAddr eth.Address) (int, error) { // TODO: int will be changed to *common.RegisterAuthorization
-	return 0, nil
+// GetAccountCreationAuth return the authorization to make registers of an Ethereum address
+func (l2db *L2DB) GetAccountCreationAuth(ethAddr eth.Address) (*common.AccountCreationAuth, error) {
+	return nil, nil
 }
 
 // StartForging updates the state of the transactions that will begin the forging process.

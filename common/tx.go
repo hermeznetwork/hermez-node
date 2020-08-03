@@ -2,22 +2,19 @@ package common
 
 import (
 	"math/big"
-
-	eth "github.com/ethereum/go-ethereum/common"
 )
 
 // Tx is a struct that represents a Hermez network transaction
 type Tx struct {
-	ID          TxID
-	FromEthAddr eth.Address
-	ToEthAddr   eth.Address
-	FromIdx     uint32
-	ToIdx       uint32
-	TokenID     TokenID
-	Amount      *big.Int
-	Nonce       uint64 // effective 48 bits used
-	FeeSelector FeeSelector
-	Type        TxType // optional, descrives which kind of tx it's
+	TxID     TxID
+	FromIdx  uint32
+	ToIdx    uint32
+	TokenID  TokenID
+	Amount   *big.Int
+	Nonce    uint64 // effective 48 bits used
+	Fee      FeeSelector
+	Type     TxType   // optional, descrives which kind of tx it's
+	BatchNum BatchNum // batchNum in which this tx was forged. Presence indicates "forged" state.
 }
 
 // TxID is the identifier of a Hermez network transaction
@@ -37,6 +34,16 @@ const (
 	TxTypeDeposit TxType = "Deposit"
 	// TxTypeCreateAccountDeposit represents creation of a new leaf in the state tree (newAcconut) + L1->L2 transfer
 	TxTypeCreateAccountDeposit TxType = "CreateAccountDeposit"
-	// TxTypeCreateAccountDepositTransfer represents L1->L2 transfer + L2->L2 transfer
-	TxTypeCreateAccountDepositTransfer TxType = "CreateAccountDepositTransfer"
+	// TxTypeCreateAccountDepositAndTransfer represents L1->L2 transfer + L2->L2 transfer
+	TxTypeCreateAccountDepositAndTransfer TxType = "CreateAccountDepositAndTransfer"
+	// TxTypeDepositAndTransfer TBD
+	TxTypeDepositAndTransfer TxType = "TxTypeDepositAndTransfer"
+	// TxTypeForceTransfer TBD
+	TxTypeForceTransfer TxType = "TxTypeForceTransfer"
+	// TxTypeForceExit TBD
+	TxTypeForceExit TxType = "TxTypeForceExit"
+	// TxTypeTransferToEthAddr TBD
+	TxTypeTransferToEthAddr TxType = "TxTypeTransferToEthAddr"
+	// TxTypeTransferToBJJ TBD
+	TxTypeTransferToBJJ TxType = "TxTypeTransferToBJJ"
 )
