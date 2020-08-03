@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	eth "github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
@@ -63,6 +64,16 @@ func (l *Leaf) BigInts() ([5]*big.Int, error) {
 	e[4] = new(big.Int).SetBytes(SwapEndianness(b[128:160]))
 
 	return e, nil
+}
+
+// Value returns the value of the Leaf, which is the Poseidon hash of its *big.Int representation
+func (l *Leaf) Value() (*big.Int, error) {
+	toHash := [poseidon.T]*big.Int{}
+	lBI := l.BigInts()
+	copy(toHash[:], lBI[:])
+
+	v, err := poseidon.Hash(toHash)
+	return v, err
 }
 
 // LeafFromBigInts returns a Leaf from a [5]*big.Int
