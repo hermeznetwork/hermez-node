@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 	"github.com/stretchr/testify/assert"
@@ -45,40 +46,40 @@ func TestLeaf(t *testing.T) {
 	assert.Equal(t, l1, l2)
 }
 
-// func TestLeafLoop(t *testing.T) {
-//         // check that for different Address there is no problem
-//         for i := 0; i < 256; i++ {
-//                 key, err := ethCrypto.GenerateKey()
-//                 assert.Nil(t, err)
-//                 address := ethCrypto.PubkeyToAddress(key.PublicKey)
-//
-//                 leaf := &Leaf{
-//                         TokenID: TokenID(i),
-//                         Nonce:   uint64(i),
-//                         Balance: big.NewInt(1000),
-//                         Ax:      big.NewInt(9876),
-//                         Ay:      big.NewInt(6789),
-//                         EthAddr: address,
-//                 }
-//                 b, err := leaf.Bytes()
-//                 assert.Nil(t, err)
-//                 l1, err := LeafFromBytes(b)
-//                 assert.Nil(t, err)
-//                 assert.Equal(t, leaf, l1)
-//
-//                 e, err := leaf.BigInts()
-//                 assert.Nil(t, err)
-//                 assert.True(t, cryptoUtils.CheckBigIntInField(e[0]))
-//                 assert.True(t, cryptoUtils.CheckBigIntInField(e[1]))
-//                 assert.True(t, cryptoUtils.CheckBigIntInField(e[2]))
-//                 assert.True(t, cryptoUtils.CheckBigIntInField(e[3]))
-//                 assert.True(t, cryptoUtils.CheckBigIntInField(e[4]))
-//
-//                 l2, err := LeafFromBigInts(e)
-//                 assert.Nil(t, err)
-//                 assert.Equal(t, leaf, l2)
-//         }
-// }
+func TestLeafLoop(t *testing.T) {
+	// check that for different Address there is no problem
+	for i := 0; i < 256; i++ {
+		key, err := ethCrypto.GenerateKey()
+		assert.Nil(t, err)
+		address := ethCrypto.PubkeyToAddress(key.PublicKey)
+
+		leaf := &Leaf{
+			TokenID: TokenID(i),
+			Nonce:   uint64(i),
+			Balance: big.NewInt(1000),
+			Ax:      big.NewInt(9876),
+			Ay:      big.NewInt(6789),
+			EthAddr: address,
+		}
+		b, err := leaf.Bytes()
+		assert.Nil(t, err)
+		l1, err := LeafFromBytes(b)
+		assert.Nil(t, err)
+		assert.Equal(t, leaf, l1)
+
+		e, err := leaf.BigInts()
+		assert.Nil(t, err)
+		assert.True(t, cryptoUtils.CheckBigIntInField(e[0]))
+		assert.True(t, cryptoUtils.CheckBigIntInField(e[1]))
+		assert.True(t, cryptoUtils.CheckBigIntInField(e[2]))
+		assert.True(t, cryptoUtils.CheckBigIntInField(e[3]))
+		assert.True(t, cryptoUtils.CheckBigIntInField(e[4]))
+
+		l2, err := LeafFromBigInts(e)
+		assert.Nil(t, err)
+		assert.Equal(t, leaf, l2)
+	}
+}
 
 func TestLeafErrNotInFF(t *testing.T) {
 	z := big.NewInt(0)
