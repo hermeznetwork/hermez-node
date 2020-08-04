@@ -1,8 +1,6 @@
 package batchbuilder
 
 import (
-	"math/big"
-
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-merkletree"
@@ -41,9 +39,8 @@ func NewBatchBuilder(stateDB db.Storage, configCircuits []ConfigCircuit, batchNu
 		configCircuits: configCircuits,
 	}
 
-	bb.Reset(batchNum, idx, true)
-
-	return &bb, nil
+	err = bb.Reset(batchNum, idx, true)
+	return &bb, err
 }
 
 // Reset tells the BatchBuilder to reset it's internal state to the required
@@ -55,27 +52,32 @@ func (bb *BatchBuilder) Reset(batchNum int, idx uint64, fromSynchronizer bool) e
 	return nil
 }
 
-type ZKInputs struct{} // TMP
-
-func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.L2Tx, tokenIDs []common.TokenID) (*ZKInputs, error) {
-
+func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.L2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
 	for _, tx := range l1usertxs {
-		bb.processL1Tx(tx)
+		err := bb.processL1Tx(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for _, tx := range l1coordinatortxs {
-		bb.processL1Tx(tx)
+		err := bb.processL1Tx(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for _, tx := range l2txs {
 		switch tx.Type {
 		case common.TxTypeTransfer:
 			// go to the MT leaf of sender and receiver, and update
 			// balance & nonce
-			bb.applyTransfer(tx.Tx)
+			err := bb.applyTransfer(tx.Tx)
+			if err != nil {
+				return nil, err
+			}
 		case common.TxTypeExit:
 			// execute exit flow
 		default:
 		}
-
 	}
 
 	return nil, nil
@@ -86,23 +88,40 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
 		// go to the MT leaf of sender and receiver, and update balance
 		// & nonce
-		bb.applyTransfer(tx.Tx)
+		err := bb.applyTransfer(tx.Tx)
+		if err != nil {
+			return err
+		}
 	case common.TxTypeCreateAccountDeposit:
 		// add new leaf to the MT, update balance of the MT leaf
-		bb.applyCreateLeaf(tx)
+		err := bb.applyCreateLeaf(tx)
+		if err != nil {
+			return err
+		}
 	case common.TxTypeDeposit:
 		// update balance of the MT leaf
-		bb.applyDeposit(tx)
+		err := bb.applyDeposit(tx, false)
+		if err != nil {
+			return err
+		}
 	case common.TxTypeDepositAndTransfer:
 		// update balance in MT leaf, update balance & nonce of sender
 		// & receiver
-		bb.applyDeposit(tx) // this after v0, can be done by bb.applyDepositAndTransfer in a single step
-		bb.applyTransfer(tx.Tx)
+		err := bb.applyDeposit(tx, true)
+		if err != nil {
+			return err
+		}
 	case common.TxTypeCreateAccountDepositAndTransfer:
 		// add new leaf to the merkletree, update balance in MT leaf,
 		// update balance & nonce of sender & receiver
-		bb.applyCreateLeaf(tx)
-		bb.applyTransfer(tx.Tx)
+		err := bb.applyCreateLeaf(tx)
+		if err != nil {
+			return err
+		}
+		err = bb.applyTransfer(tx.Tx)
+		if err != nil {
+			return err
+		}
 	case common.TxTypeExit:
 		// execute exit flow
 	default:
@@ -114,11 +133,9 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 // applyCreateLeaf creates a new leaf in the leaf of the depositer, it stores
 // the deposit value
 func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
-	k := big.NewInt(int64(bb.idx + 1))
-
 	leaf := common.Leaf{
 		TokenID: tx.TokenID,
-		Nonce:   0, // TODO check always that a new leaf is created nonce is at 0
+		Nonce:   0, // TODO check w spec: always that a new leaf is created nonce is at 0
 		Balance: tx.LoadAmount,
 		Ax:      tx.FromBJJ.X,
 		Ay:      tx.FromBJJ.Y,
@@ -129,9 +146,12 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 	if err != nil {
 		return err
 	}
-
-	// store at the DB the key: v, and value: leaf.Bytes()
 	dbTx, err := bb.mt.DB().NewTx()
+	if err != nil {
+		return err
+	}
+
+	err = bb.CreateBalance(dbTx, common.Idx(bb.idx+1), leaf)
 	if err != nil {
 		return err
 	}
@@ -141,26 +161,66 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 	}
 	dbTx.Put(v.Bytes(), leafBytes[:])
 
-	// Add k & v into the MT
-	err = bb.mt.Add(k, v)
-	if err != nil {
+	// if everything is fine, do dbTx & increment idx
+	if err := dbTx.Commit(); err != nil {
 		return err
 	}
-
-	// if everything is fine, increment idx
 	bb.idx = bb.idx + 1
 	return nil
 }
 
-// applyDeposit updates the balance in the leaf of the depositer
-func (bb *BatchBuilder) applyDeposit(tx common.L1Tx) error {
+// applyDeposit updates the balance in the leaf of the depositer, if andTransfer parameter is set to true, the method will also apply the Transfer of the L1Tx/DepositAndTransfer
+func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, andTransfer bool) error {
+	dbTx, err := bb.mt.DB().NewTx()
+	if err != nil {
+		return err
+	}
 
+	// deposit
+	err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.LoadAmount, false)
+	if err != nil {
+		return err
+	}
+
+	// in case that the tx is a L1Tx>DepositAndTransfer
+	if andTransfer {
+		// transact
+		err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.Tx.Amount, true)
+		if err != nil {
+			return err
+		}
+		err = bb.UpdateBalance(dbTx, tx.ToIdx, tx.Tx.Amount, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := dbTx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // applyTransfer updates the balance & nonce in the leaf of the sender, and the
 // balance in the leaf of the receiver
 func (bb *BatchBuilder) applyTransfer(tx common.Tx) error {
+	dbTx, err := bb.mt.DB().NewTx()
+	if err != nil {
+		return err
+	}
 
+	// transact
+	err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.Amount, true)
+	if err != nil {
+		return err
+	}
+	err = bb.UpdateBalance(dbTx, tx.ToIdx, tx.Amount, false)
+	if err != nil {
+		return err
+	}
+
+	if err := dbTx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
