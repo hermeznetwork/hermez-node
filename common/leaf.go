@@ -66,10 +66,13 @@ func (l *Leaf) BigInts() ([5]*big.Int, error) {
 	return e, nil
 }
 
-// Value returns the value of the Leaf, which is the Poseidon hash of its *big.Int representation
-func (l *Leaf) Value() (*big.Int, error) {
+// HashValue returns the value of the Leaf, which is the Poseidon hash of its *big.Int representation
+func (l *Leaf) HashValue() (*big.Int, error) {
 	toHash := [poseidon.T]*big.Int{}
-	lBI := l.BigInts()
+	lBI, err := l.BigInts()
+	if err != nil {
+		return nil, err
+	}
 	copy(toHash[:], lBI[:])
 
 	v, err := poseidon.Hash(toHash)

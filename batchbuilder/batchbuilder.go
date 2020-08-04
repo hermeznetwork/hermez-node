@@ -55,7 +55,9 @@ func (bb *BatchBuilder) Reset(batchNum int, idx uint64, fromSynchronizer bool) e
 	return nil
 }
 
-func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.L2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
+type ZKInputs struct{} // TMP
+
+func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.L2Tx, tokenIDs []common.TokenID) (*ZKInputs, error) {
 
 	for _, tx := range l1usertxs {
 		bb.processL1Tx(tx)
@@ -123,7 +125,7 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 		EthAddr: tx.FromEthAddr,
 	}
 
-	v, err := leaf.Value()
+	v, err := leaf.HashValue()
 	if err != nil {
 		return err
 	}
@@ -133,7 +135,10 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 	if err != nil {
 		return err
 	}
-	leafBytes := leaf.Bytes()
+	leafBytes, err := leaf.Bytes()
+	if err != nil {
+		return err
+	}
 	dbTx.Put(v.Bytes(), leafBytes[:])
 
 	// Add k & v into the MT
