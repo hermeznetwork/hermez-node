@@ -2,13 +2,14 @@ package common
 
 import (
 	"math/big"
+
+	eth "github.com/ethereum/go-ethereum/common"
 )
 
 // Bid is a struct that represents one bid in the PoH
 type Bid struct {
-	SlotNum     SlotNum // Slot in which the bid is done
-	Coordinator         // Coordinator bidder information
-	BidValue    *big.Int
-	EthBlockNum uint64
-	Won         bool // boolean flag that tells that this is the final winning bid of this SlotNum
+	SlotNum     SlotNum     `meddler:"slot_num"`
+	ForgerAddr  eth.Address `meddler:"forger_addr"` // Coordinator reference
+	BidValue    *big.Int    `meddler:"bid_value,bigint"`
+	EthBlockNum uint64      `meddler:"eth_block_num"`
 }
