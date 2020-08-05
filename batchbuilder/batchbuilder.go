@@ -3,17 +3,20 @@ package batchbuilder
 import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
 	"github.com/iden3/go-merkletree/db/memory"
 )
 
+// ConfigCircuit contains the circuit configuration
 type ConfigCircuit struct {
 	TxsMax       uint64
 	L1TxsMax     uint64
 	SMTLevelsMax uint64
 }
 
+// BatchBuilder implements the batch builder type, which contains the functionallities
 type BatchBuilder struct {
 	StateDB        db.Storage // where the MTs will be stored by the Synchronizer
 	idx            uint64
@@ -21,6 +24,7 @@ type BatchBuilder struct {
 	configCircuits []ConfigCircuit
 }
 
+// ConfigBatch contains the batch configuration
 type ConfigBatch struct {
 	CoordinatorAddress ethCommon.Address
 }
@@ -48,10 +52,11 @@ func NewBatchBuilder(stateDB db.Storage, configCircuits []ConfigCircuit, batchNu
 // copy of the rollup state from the Synchronizer at that `batchNum`, otherwise
 // it can just roll back the internal copy.
 func (bb *BatchBuilder) Reset(batchNum int, idx uint64, fromSynchronizer bool) error {
-
+	// TODO
 	return nil
 }
 
+// BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
 func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.L2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
 	for _, tx := range l1usertxs {
 		err := bb.processL1Tx(tx)
@@ -137,7 +142,7 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 		TokenID: tx.TokenID,
 		Nonce:   0, // TODO check w spec: always that a new leaf is created nonce is at 0
 		Balance: tx.LoadAmount,
-		Ax:      tx.FromBJJ.X,
+		Sign:    babyjub.PointCoordSign(tx.FromBJJ.X),
 		Ay:      tx.FromBJJ.Y,
 		EthAddr: tx.FromEthAddr,
 	}

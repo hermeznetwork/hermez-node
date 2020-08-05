@@ -7,7 +7,7 @@ import (
 	"github.com/iden3/go-merkletree/db"
 )
 
-// TODO move this file into StateDB, which Synchronizer will use in the disk DB, and BatchBuilder will use with the MemoryDB
+// TODO next iteration move the methods of this file into StateDB, which Synchronizer will use in the disk DB, and BatchBuilder will use with the MemoryDB
 
 // GetBalance returns the balance for a given Idx from the DB
 func (bb *BatchBuilder) GetBalance(tx db.Tx, idx common.Idx) (*common.Leaf, error) {
@@ -16,7 +16,7 @@ func (bb *BatchBuilder) GetBalance(tx db.Tx, idx common.Idx) (*common.Leaf, erro
 	if err != nil {
 		return nil, err
 	}
-	var b [32 * 5]byte
+	var b [32 * common.NLEAFELEMS]byte
 	copy(b[:], vBytes)
 	leaf, err := common.LeafFromBytes(b)
 	if err != nil {
