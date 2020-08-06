@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math"
 	"math/big"
 
 	eth "github.com/ethereum/go-ethereum/common"
@@ -28,7 +27,7 @@ type Leaf struct {
 func (l *Leaf) Bytes() ([32 * NLEAFELEMS]byte, error) {
 	var b [32 * NLEAFELEMS]byte
 
-	if l.Nonce >= uint64(math.Pow(2, 40)) {
+	if l.Nonce > 0xffffffffff {
 		return b, fmt.Errorf("%s Nonce", ErrNumOverflow)
 	}
 	if len(l.Balance.Bytes()) > 24 {
@@ -102,9 +101,6 @@ func LeafFromBytes(b [32 * NLEAFELEMS]byte) (*Leaf, error) {
 	var nonceBytes [8]byte
 	copy(nonceBytes[:], b[4:9])
 	nonce := binary.LittleEndian.Uint64(nonceBytes[:])
-	if nonce >= uint64(math.Pow(2, 40)) {
-		return nil, fmt.Errorf("%s Nonce", ErrNumOverflow)
-	}
 	sign := b[10] == 1
 	balance := new(big.Int).SetBytes(SwapEndianness(b[32:56])) // b[32:56], as Balance is 192 bits (24 bytes)
 	if !bytes.Equal(b[56:64], []byte{0, 0, 0, 0, 0, 0, 0, 0}) {

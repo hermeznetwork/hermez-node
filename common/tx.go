@@ -22,7 +22,7 @@ func (idx Idx) BigInt() *big.Int {
 
 // IdxFromBigInt converts a *big.Int to Idx type
 func IdxFromBigInt(b *big.Int) (Idx, error) {
-	if b.Int64() > 4294967295 { // 2**32-1
+	if b.Int64() > 0xffffffff { // 2**32-1
 		return 0, ErrNumOverflow
 	}
 	return Idx(uint32(b.Int64())), nil
