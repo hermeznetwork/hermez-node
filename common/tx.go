@@ -1,14 +1,38 @@
 package common
 
 import (
+	"encoding/binary"
 	"math/big"
 )
+
+// Idx represents the account Index in the MerkleTree
+type Idx uint32
+
+// Bytes returns a byte array representing the Idx
+func (idx Idx) Bytes() []byte {
+	var b [4]byte
+	binary.LittleEndian.PutUint32(b[:], uint32(idx))
+	return b[:]
+}
+
+// BigInt returns a *big.Int representing the Idx
+func (idx Idx) BigInt() *big.Int {
+	return big.NewInt(int64(idx))
+}
+
+// IdxFromBigInt converts a *big.Int to Idx type
+func IdxFromBigInt(b *big.Int) (Idx, error) {
+	if b.Int64() > 0xffffffff { // 2**32-1
+		return 0, ErrNumOverflow
+	}
+	return Idx(uint32(b.Int64())), nil
+}
 
 // Tx is a struct that represents a Hermez network transaction
 type Tx struct {
 	TxID     TxID
-	FromIdx  uint32
-	ToIdx    uint32
+	FromIdx  Idx // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	ToIdx    Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
 	TokenID  TokenID
 	Amount   *big.Int
 	Nonce    uint64 // effective 48 bits used

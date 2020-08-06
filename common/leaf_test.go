@@ -17,12 +17,13 @@ func TestLeaf(t *testing.T) {
 		TokenID: TokenID(1),
 		Nonce:   uint64(1234),
 		Balance: big.NewInt(1000),
-		Ax:      big.NewInt(9876),
+		Sign:    true,
 		Ay:      big.NewInt(6789),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 	b, err := leaf.Bytes()
 	assert.Nil(t, err)
+	assert.Equal(t, byte(1), b[10])
 	l1, err := LeafFromBytes(b)
 	assert.Nil(t, err)
 	assert.Equal(t, leaf, l1)
@@ -33,11 +34,10 @@ func TestLeaf(t *testing.T) {
 	assert.True(t, cryptoUtils.CheckBigIntInField(e[1]))
 	assert.True(t, cryptoUtils.CheckBigIntInField(e[2]))
 	assert.True(t, cryptoUtils.CheckBigIntInField(e[3]))
-	assert.True(t, cryptoUtils.CheckBigIntInField(e[4]))
 
 	assert.Equal(t, "1000", e[1].String())
-	assert.Equal(t, "9876", e[2].String())
-	assert.Equal(t, "6789", e[3].String())
+	assert.Equal(t, "6789", e[2].String())
+	assert.Equal(t, new(big.Int).SetBytes(SwapEndianness(leaf.EthAddr.Bytes())).String(), e[3].String())
 
 	l2, err := LeafFromBigInts(e)
 	assert.Nil(t, err)
@@ -56,7 +56,7 @@ func TestLeaf(t *testing.T) {
 //                         TokenID: TokenID(i),
 //                         Nonce:   uint64(i),
 //                         Balance: big.NewInt(1000),
-//                         Ax:      big.NewInt(9876),
+//                         Sign:    true,
 //                         Ay:      big.NewInt(6789),
 //                         EthAddr: address,
 //                 }
@@ -72,7 +72,6 @@ func TestLeaf(t *testing.T) {
 //                 assert.True(t, cryptoUtils.CheckBigIntInField(e[1]))
 //                 assert.True(t, cryptoUtils.CheckBigIntInField(e[2]))
 //                 assert.True(t, cryptoUtils.CheckBigIntInField(e[3]))
-//                 assert.True(t, cryptoUtils.CheckBigIntInField(e[4]))
 //
 //                 l2, err := LeafFromBigInts(e)
 //                 assert.Nil(t, err)
@@ -85,20 +84,20 @@ func TestLeafErrNotInFF(t *testing.T) {
 
 	// Q-1 should not give error
 	r := new(big.Int).Sub(cryptoConstants.Q, big.NewInt(1))
-	e := [5]*big.Int{z, z, r, r, r}
+	e := [NLEAFELEMS]*big.Int{z, z, r, r}
 	_, err := LeafFromBigInts(e)
 	assert.Nil(t, err)
 
 	// Q should give error
 	r = cryptoConstants.Q
-	e = [5]*big.Int{z, z, r, r, r}
+	e = [NLEAFELEMS]*big.Int{z, z, r, r}
 	_, err = LeafFromBigInts(e)
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrNotInFF, err)
 
 	// Q+1 should give error
 	r = new(big.Int).Add(cryptoConstants.Q, big.NewInt(1))
-	e = [5]*big.Int{z, z, r, r, r}
+	e = [NLEAFELEMS]*big.Int{z, z, r, r}
 	_, err = LeafFromBigInts(e)
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrNotInFF, err)
@@ -110,7 +109,7 @@ func TestLeafErrNumOverflowNonce(t *testing.T) {
 		TokenID: TokenID(1),
 		Nonce:   uint64(math.Pow(2, 40) - 1),
 		Balance: big.NewInt(1000),
-		Ax:      big.NewInt(9876),
+		Sign:    true,
 		Ay:      big.NewInt(6789),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
@@ -125,11 +124,6 @@ func TestLeafErrNumOverflowNonce(t *testing.T) {
 
 	_, err = LeafFromBytes(b)
 	assert.Nil(t, err)
-
-	b[9] = 1
-	_, err = LeafFromBytes(b)
-	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Errorf("%s Nonce", ErrNumOverflow), err)
 }
 
 func TestLeafErrNumOverflowBalance(t *testing.T) {
@@ -138,7 +132,7 @@ func TestLeafErrNumOverflowBalance(t *testing.T) {
 		TokenID: TokenID(1),
 		Nonce:   uint64(math.Pow(2, 40) - 1),
 		Balance: new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(192), nil), big.NewInt(1)),
-		Ax:      big.NewInt(9876),
+		Sign:    true,
 		Ay:      big.NewInt(6789),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
