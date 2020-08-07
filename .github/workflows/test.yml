@@ -16,6 +16,8 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
     - name: Checkout code
       uses: actions/checkout@v2
+    - name: Postgres
+      run: docker run --rm --name hermez-historydb-test -p 5432:5432 -e POSTGRES_DB=hermez -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD=hermez -d postgres
     - name: Test
       env:
         GOARCH: ${{ matrix.goarch }}
