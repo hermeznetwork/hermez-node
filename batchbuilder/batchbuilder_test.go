@@ -2,28 +2,22 @@ package batchbuilder
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 
-	"github.com/iden3/go-merkletree/db/memory"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// func genTxs(n int) common.Tx {
-//         return common.Tx{}
-// }
-// func genL1Txs(n int) []common.L1Tx {
-//
-//         return nil
-// }
-// func genL2Txs(n int) []common.L2Tx {
-//
-//         return nil
-// }
-
 func TestBatchBuilder(t *testing.T) {
-	stateDB := memory.NewMemoryStorage()
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.Nil(t, err)
 
-	bb, err := NewBatchBuilder(stateDB, nil, 0, 0, 32)
+	sdb, err := statedb.NewStateDB(dir, false, false, 0)
+	assert.Nil(t, err)
+
+	bb, err := NewBatchBuilder(sdb, nil, 0, 0, 32)
 	assert.Nil(t, err)
 	fmt.Println(bb)
 }
