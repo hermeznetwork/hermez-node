@@ -14,7 +14,7 @@ import (
 
 const NLEAFELEMS = 4
 
-// Account is a struct that gives information of the holdings of an address for a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
+// Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
 type Account struct {
 	TokenID   TokenID
 	Nonce     uint64   // max of 40 bits used

@@ -139,7 +139,7 @@ func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) error {
 	return tx.Commit()
 }
 
-// MTCreateAccount creates a new the Account in the StateDB for the given Idx,
+// MTCreateAccount creates a new Account in the StateDB for the given Idx,
 // and updates the MerkleTree, returning a CircomProcessorProof
 func (s *StateDB) MTCreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	if s.mt == nil {
