@@ -1,11 +1,11 @@
 package batchbuilder
 
 import (
+	"math/big"
+
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/iden3/go-merkletree"
-	"github.com/iden3/go-merkletree/db"
-	"github.com/iden3/go-merkletree/db/memory"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
 )
 
 // ConfigCircuit contains the circuit configuration
@@ -15,11 +15,12 @@ type ConfigCircuit struct {
 	SMTLevelsMax uint64
 }
 
-// BatchBuilder implements the batch builder type, which contains the functionallities
+// BatchBuilder implements the batch builder type, which contains the
+// functionalities
 type BatchBuilder struct {
-	StateDB        db.Storage // where the MTs will be stored by the Synchronizer
+	// idx holds the current Idx that the BatchBuilder is using
 	idx            uint64
-	mt             *merkletree.MerkleTree
+	localStateDB   *statedb.LocalStateDB
 	configCircuits []ConfigCircuit
 }
 
@@ -30,19 +31,19 @@ type ConfigBatch struct {
 
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset
 // method
-func NewBatchBuilder(stateDB db.Storage, configCircuits []ConfigCircuit, batchNum int, idx, nLevels uint64) (*BatchBuilder, error) {
-	localMt, err := merkletree.NewMerkleTree(memory.NewMemoryStorage(), int(nLevels))
+func NewBatchBuilder(synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum int, idx, nLevels uint64) (*BatchBuilder, error) {
+	localStateDB, err := statedb.NewLocalStateDB(synchronizerStateDB, true, int(nLevels))
 	if err != nil {
 		return nil, err
 	}
+
 	bb := BatchBuilder{
-		StateDB:        stateDB,
 		idx:            idx,
-		mt:             localMt,
+		localStateDB:   localStateDB,
 		configCircuits: configCircuits,
 	}
 
-	err = bb.Reset(batchNum, idx, true)
+	err = bb.Reset(batchNum, true)
 	return &bb, err
 }
 
@@ -50,8 +51,12 @@ func NewBatchBuilder(stateDB db.Storage, configCircuits []ConfigCircuit, batchNu
 // `batchNum`.  If `fromSynchronizer` is true, the BatchBuilder must take a
 // copy of the rollup state from the Synchronizer at that `batchNum`, otherwise
 // it can just roll back the internal copy.
-func (bb *BatchBuilder) Reset(batchNum int, idx uint64, fromSynchronizer bool) error {
-	// TODO
+func (bb *BatchBuilder) Reset(batchNum int, fromSynchronizer bool) error {
+	err := bb.localStateDB.Reset(batchNum, fromSynchronizer)
+	if err != nil {
+		return err
+	}
+	// bb.idx = idx // TODO idx will be obtained from the statedb reset
 	return nil
 }
 
@@ -98,7 +103,7 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 		}
 	case common.TxTypeCreateAccountDeposit:
 		// add new account to the MT, update balance of the MT account
-		err := bb.applyCreateLeaf(tx)
+		err := bb.applyCreateAccount(tx)
 		if err != nil {
 			return err
 		}
@@ -118,7 +123,7 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 	case common.TxTypeCreateAccountDepositAndTransfer:
 		// add new account to the merkletree, update balance in MT account,
 		// update balance & nonce of sender & receiver
-		err := bb.applyCreateLeaf(tx)
+		err := bb.applyCreateAccount(tx)
 		if err != nil {
 			return err
 		}
@@ -134,10 +139,10 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 	return nil
 }
 
-// applyCreateLeaf creates a new account in the account of the depositer, it stores
+// applyCreateAccount creates a new account in the account of the depositer, it stores
 // the deposit value
-func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
-	account := common.Account{
+func (bb *BatchBuilder) applyCreateAccount(tx common.L1Tx) error {
+	account := &common.Account{
 		TokenID:   tx.TokenID,
 		Nonce:     0,
 		Balance:   tx.LoadAmount,
@@ -145,85 +150,78 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 		EthAddr:   tx.FromEthAddr,
 	}
 
-	v, err := account.HashValue()
-	if err != nil {
-		return err
-	}
-	dbTx, err := bb.mt.DB().NewTx()
+	err := bb.localStateDB.CreateAccount(common.Idx(bb.idx+1), account)
 	if err != nil {
 		return err
 	}
 
-	err = bb.CreateBalance(dbTx, common.Idx(bb.idx+1), account)
-	if err != nil {
-		return err
-	}
-	accountBytes, err := account.Bytes()
-	if err != nil {
-		return err
-	}
-	dbTx.Put(v.Bytes(), accountBytes[:])
-
-	// if everything is fine, do dbTx & increment idx
-	if err := dbTx.Commit(); err != nil {
-		return err
-	}
 	bb.idx = bb.idx + 1
 	return nil
 }
 
-// applyDeposit updates the balance in the account of the depositer, if andTransfer parameter is set to true, the method will also apply the Transfer of the L1Tx/DepositAndTransfer
-func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, andTransfer bool) error {
-	dbTx, err := bb.mt.DB().NewTx()
+// applyDeposit updates the balance in the account of the depositer, if
+// andTransfer parameter is set to true, the method will also apply the
+// Transfer of the L1Tx/DepositAndTransfer
+func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, transfer bool) error {
+	// deposit the tx.LoadAmount into the sender account
+	accSender, err := bb.localStateDB.GetAccount(tx.FromIdx)
 	if err != nil {
 		return err
 	}
-
-	// deposit
-	err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.LoadAmount, false)
-	if err != nil {
-		return err
-	}
+	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.LoadAmount)
 
 	// in case that the tx is a L1Tx>DepositAndTransfer
-	if andTransfer {
-		// transact
-		err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.Tx.Amount, true)
+	if transfer {
+		accReceiver, err := bb.localStateDB.GetAccount(tx.ToIdx)
 		if err != nil {
 			return err
 		}
-		err = bb.UpdateBalance(dbTx, tx.ToIdx, tx.Tx.Amount, false)
+		// substract amount to the sender
+		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Tx.Amount)
+		// add amount to the receiver
+		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Tx.Amount)
+		// update receiver account in localStateDB
+		err = bb.localStateDB.UpdateAccount(tx.ToIdx, accReceiver)
 		if err != nil {
 			return err
 		}
 	}
-
-	if err := dbTx.Commit(); err != nil {
+	// update sender account in localStateDB
+	err = bb.localStateDB.UpdateAccount(tx.FromIdx, accSender)
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// applyTransfer updates the balance & nonce in the account of the sender, and the
-// balance in the account of the receiver
+// applyTransfer updates the balance & nonce in the account of the sender, and
+// the balance in the account of the receiver
 func (bb *BatchBuilder) applyTransfer(tx common.Tx) error {
-	dbTx, err := bb.mt.DB().NewTx()
+	// get sender and receiver accounts from localStateDB
+	accSender, err := bb.localStateDB.GetAccount(tx.FromIdx)
+	if err != nil {
+		return err
+	}
+	accReceiver, err := bb.localStateDB.GetAccount(tx.ToIdx)
 	if err != nil {
 		return err
 	}
 
-	// transact
-	err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.Amount, true)
+	// substract amount to the sender
+	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
+	// add amount to the receiver
+	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
+
+	// update receiver account in localStateDB
+	err = bb.localStateDB.UpdateAccount(tx.ToIdx, accReceiver)
 	if err != nil {
 		return err
 	}
-	err = bb.UpdateBalance(dbTx, tx.ToIdx, tx.Amount, false)
+	// update sender account in localStateDB
+	err = bb.localStateDB.UpdateAccount(tx.FromIdx, accSender)
 	if err != nil {
 		return err
 	}
 
-	if err := dbTx.Commit(); err != nil {
-		return err
-	}
 	return nil
 }
