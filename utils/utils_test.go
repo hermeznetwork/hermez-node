@@ -25,16 +25,17 @@ func TestConversions(t *testing.T) {
 
 	for test := range testVector {
 
-		fix := Float2fix(test)
+		fix := Float2Fix(test)
 
 		assert.Equal(t, fix.String(), testVector[test])
 
 		bi := big.NewInt(0)
 		bi.SetString(testVector[test], 10)
 
-		fl := Fix2float(bi)
-		fx2 := Float2fix(fl)
+		fl, err := Fix2Float(bi)
+		assert.Equal(t, nil, err)
 
+		fx2 := Float2Fix(fl)
 		assert.Equal(t, fx2.String(), testVector[test])
 
 	}
@@ -63,28 +64,35 @@ func TestFloorFix2Float(t *testing.T) {
 
 }
 
-/*
-func TestConversions2(t *testing.T) {
-	assert.Equal(t, "10", Float2fix(10).String())
-	assert.Equal(t, "1000", Float2fix(1000).String())
-	assert.Equal(t, "65535", Float2fix(65535).String())
-	assert.Equal(t, "65536", Float2fix(65536).String())
-	assert.Equal(t, "100000", Float2fix(100000).String()) // should this return an error?
-	assert.Equal(t, "10000000", Float2fix(10000000).String())
+func TestConversionLosses(t *testing.T) {
+	a := big.NewInt(1000)
+	b, err := Fix2Float(a)
+	assert.Equal(t, nil, err)
+	c := Float2Fix(b)
+	assert.Equal(t, c, a)
 
-	assert.Equal(t, "10", floorFix2Float("10").String())
-	assert.Equal(t, "10", floorFix2Float("10.004").String())
-	assert.Equal(t, "10000", floorFix2Float("10000").String())
+	a = big.NewInt(1024)
+	b, err = Fix2Float(a)
+	assert.Equal(t, ErrRoundingLoss, err)
+	c = Float2Fix(b)
+	assert.NotEqual(t, c, a)
 
-	assert.Equal(t, "10", Fix2float("10").String())
-	assert.Equal(t, "10", Fix2float("10.004").String())
-	assert.Equal(t, "32767", Fix2float("32767").String())
-	assert.Equal(t, "32768", Fix2float("32768").String())
-	assert.Equal(t, "65535", Fix2float("65535").String())
-	assert.Equal(t, "100000", Fix2float("100000").String())
+	a = big.NewInt(32767)
+	b, err = Fix2Float(a)
+	assert.Equal(t, ErrRoundingLoss, err)
+	c = Float2Fix(b)
+	assert.NotEqual(t, c, a)
 
-	assert.Equal(t, "10", FloorFix2Float("10").String())
-	assert.Equal(t, "10", FloorFix2Float("10.04").String())
-	assert.Equal(t, "1000", FloorFix2Float("1000").String())
+	a = big.NewInt(32768)
+	b, err = Fix2Float(a)
+	assert.Equal(t, ErrRoundingLoss, err)
+	c = Float2Fix(b)
+	assert.NotEqual(t, c, a)
+
+	a = big.NewInt(65536000)
+	b, err = Fix2Float(a)
+	assert.Equal(t, ErrRoundingLoss, err)
+	c = Float2Fix(b)
+	assert.NotEqual(t, c, a)
+
 }
-*/

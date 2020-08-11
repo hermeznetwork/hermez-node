@@ -1,14 +1,20 @@
 package utils
 
 import (
+	"errors"
 	"math/big"
+)
+
+var (
+	// ErrRoundingLoss is used when converted big.Int to Float16 causes rounding loss
+	ErrRoundingLoss = errors.New("input value causes rounding loss")
 )
 
 // Float16 represents a float in a 16 bit format
 type Float16 uint16
 
 // Float2fix converts a float to a fix
-func Float2fix(fl16 Float16) *big.Int {
+func Float2Fix(fl16 Float16) *big.Int {
 
 	fl := int64(fl16)
 
@@ -60,12 +66,12 @@ func floorFix2Float(_f *big.Int) Float16 {
 }
 
 // Fix2float converts a fix to a float
-func Fix2float(f *big.Int) Float16 {
+func Fix2Float(f *big.Int) (Float16, error) {
 
 	fl1 := floorFix2Float(f)
-	fi1 := Float2fix(fl1)
+	fi1 := Float2Fix(fl1)
 	fl2 := big.NewInt(int64(fl1 | 0x400))
-	fi2 := Float2fix(Float16(fl2.Int64()))
+	fi2 := Float2Fix(Float16(fl2.Int64()))
 
 	m3 := big.NewInt((int64(fl1) & 0x3FF) + 1)
 	e3 := int64(fl1) >> 11
@@ -77,7 +83,7 @@ func Fix2float(f *big.Int) Float16 {
 	}
 
 	fl3 := m3.Add(m3, big.NewInt(e3<<11))
-	fi3 := Float2fix(Float16(fl3.Int64()))
+	fi3 := Float2Fix(Float16(fl3.Int64()))
 
 	res := fl1
 
@@ -97,7 +103,14 @@ func Fix2float(f *big.Int) Float16 {
 		res = Float16(fl3.Int64())
 	}
 
-	return res
+	// Do rounding check
+
+	if Float2Fix(res).Cmp(f) == 0 {
+
+		return res, nil
+	}
+
+	return res, ErrRoundingLoss
 
 }
 
@@ -106,7 +119,7 @@ func FloorFix2Float(f *big.Int) Float16 {
 
 	fl1 := floorFix2Float(f)
 	fl2 := big.NewInt(int64(fl1) | 0x400)
-	fi2 := Float2fix(Float16(fl2.Int64()))
+	fi2 := Float2Fix(Float16(fl2.Int64()))
 
 	if fi2.Cmp(f) < 1 {
 		return Float16(fl2.Int64())
