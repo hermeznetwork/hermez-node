@@ -3,7 +3,6 @@ package batchbuilder
 import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
 	"github.com/iden3/go-merkletree/db/memory"
@@ -73,7 +72,7 @@ func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordin
 	for _, tx := range l2txs {
 		switch tx.Type {
 		case common.TxTypeTransfer:
-			// go to the MT leaf of sender and receiver, and update
+			// go to the MT account of sender and receiver, and update
 			// balance & nonce
 			err := bb.applyTransfer(tx.Tx)
 			if err != nil {
@@ -91,33 +90,33 @@ func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordin
 func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 	switch tx.Type {
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
-		// go to the MT leaf of sender and receiver, and update balance
+		// go to the MT account of sender and receiver, and update balance
 		// & nonce
 		err := bb.applyTransfer(tx.Tx)
 		if err != nil {
 			return err
 		}
 	case common.TxTypeCreateAccountDeposit:
-		// add new leaf to the MT, update balance of the MT leaf
+		// add new account to the MT, update balance of the MT account
 		err := bb.applyCreateLeaf(tx)
 		if err != nil {
 			return err
 		}
-	case common.TxTypeDeposit:
-		// update balance of the MT leaf
+	case common.TxTypeDeposit: // TODO check if this type will ever exist, or will be TxTypeDepositAndTransfer with transfer 0 value
+		// update balance of the MT account
 		err := bb.applyDeposit(tx, false)
 		if err != nil {
 			return err
 		}
 	case common.TxTypeDepositAndTransfer:
-		// update balance in MT leaf, update balance & nonce of sender
+		// update balance in MT account, update balance & nonce of sender
 		// & receiver
 		err := bb.applyDeposit(tx, true)
 		if err != nil {
 			return err
 		}
 	case common.TxTypeCreateAccountDepositAndTransfer:
-		// add new leaf to the merkletree, update balance in MT leaf,
+		// add new account to the merkletree, update balance in MT account,
 		// update balance & nonce of sender & receiver
 		err := bb.applyCreateLeaf(tx)
 		if err != nil {
@@ -135,19 +134,18 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 	return nil
 }
 
-// applyCreateLeaf creates a new leaf in the leaf of the depositer, it stores
+// applyCreateLeaf creates a new account in the account of the depositer, it stores
 // the deposit value
 func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
-	leaf := common.Leaf{
-		TokenID: tx.TokenID,
-		Nonce:   0, // TODO check w spec: always that a new leaf is created nonce is at 0
-		Balance: tx.LoadAmount,
-		Sign:    babyjub.PointCoordSign(tx.FromBJJ.X),
-		Ay:      tx.FromBJJ.Y,
-		EthAddr: tx.FromEthAddr,
+	account := common.Account{
+		TokenID:   tx.TokenID,
+		Nonce:     0,
+		Balance:   tx.LoadAmount,
+		PublicKey: &tx.FromBJJ,
+		EthAddr:   tx.FromEthAddr,
 	}
 
-	v, err := leaf.HashValue()
+	v, err := account.HashValue()
 	if err != nil {
 		return err
 	}
@@ -156,15 +154,15 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 		return err
 	}
 
-	err = bb.CreateBalance(dbTx, common.Idx(bb.idx+1), leaf)
+	err = bb.CreateBalance(dbTx, common.Idx(bb.idx+1), account)
 	if err != nil {
 		return err
 	}
-	leafBytes, err := leaf.Bytes()
+	accountBytes, err := account.Bytes()
 	if err != nil {
 		return err
 	}
-	dbTx.Put(v.Bytes(), leafBytes[:])
+	dbTx.Put(v.Bytes(), accountBytes[:])
 
 	// if everything is fine, do dbTx & increment idx
 	if err := dbTx.Commit(); err != nil {
@@ -174,7 +172,7 @@ func (bb *BatchBuilder) applyCreateLeaf(tx common.L1Tx) error {
 	return nil
 }
 
-// applyDeposit updates the balance in the leaf of the depositer, if andTransfer parameter is set to true, the method will also apply the Transfer of the L1Tx/DepositAndTransfer
+// applyDeposit updates the balance in the account of the depositer, if andTransfer parameter is set to true, the method will also apply the Transfer of the L1Tx/DepositAndTransfer
 func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, andTransfer bool) error {
 	dbTx, err := bb.mt.DB().NewTx()
 	if err != nil {
@@ -206,8 +204,8 @@ func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, andTransfer bool) error {
 	return nil
 }
 
-// applyTransfer updates the balance & nonce in the leaf of the sender, and the
-// balance in the leaf of the receiver
+// applyTransfer updates the balance & nonce in the account of the sender, and the
+// balance in the account of the receiver
 func (bb *BatchBuilder) applyTransfer(tx common.Tx) error {
 	dbTx, err := bb.mt.DB().NewTx()
 	if err != nil {
