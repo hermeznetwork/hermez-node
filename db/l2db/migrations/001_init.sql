@@ -20,7 +20,9 @@ CREATE TABLE tx_pool (
     rq_fee SMALLINT,
     rq_nonce BIGINT,
     signature BYTEA NOT NULL,
-    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    absolute_fee NUMERIC,
+    absolut_fee_update TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE account_creation_auth (

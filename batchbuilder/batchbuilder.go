@@ -79,7 +79,7 @@ func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordin
 		case common.TxTypeTransfer:
 			// go to the MT account of sender and receiver, and update
 			// balance & nonce
-			err := bb.applyTransfer(tx.Tx)
+			err := bb.applyTransfer(tx.Tx())
 			if err != nil {
 				return nil, err
 			}
@@ -97,7 +97,7 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update balance
 		// & nonce
-		err := bb.applyTransfer(tx.Tx)
+		err := bb.applyTransfer(tx.Tx())
 		if err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 		if err != nil {
 			return err
 		}
-		err = bb.applyTransfer(tx.Tx)
+		err = bb.applyTransfer(tx.Tx())
 		if err != nil {
 			return err
 		}
@@ -171,6 +171,7 @@ func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, transfer bool) error {
 	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.LoadAmount)
 
 	// in case that the tx is a L1Tx>DepositAndTransfer
+<<<<<<< HEAD
 	if transfer {
 		accReceiver, err := bb.localStateDB.GetAccount(tx.ToIdx)
 		if err != nil {
@@ -182,6 +183,15 @@ func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, transfer bool) error {
 		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Tx.Amount)
 		// update receiver account in localStateDB
 		err = bb.localStateDB.UpdateAccount(tx.ToIdx, accReceiver)
+=======
+	if andTransfer {
+		// transact
+		err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.Amount, true)
+		if err != nil {
+			return err
+		}
+		err = bb.UpdateBalance(dbTx, tx.ToIdx, tx.Amount, false)
+>>>>>>> WIP
 		if err != nil {
 			return err
 		}

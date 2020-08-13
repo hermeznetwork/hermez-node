@@ -69,8 +69,8 @@ CREATE TABLE l1tx (
     token_id INT NOT NULL REFERENCES token (token_id),
     amount NUMERIC NOT NULL,
     nonce BIGINT NOT NULL,
-    load_amount BYTEA NOT NULL
-    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    load_amount BYTEA NOT NULL,
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE
 );
 
 CREATE TABLE l2tx (
