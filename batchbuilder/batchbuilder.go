@@ -26,7 +26,7 @@ type BatchBuilder struct {
 
 // ConfigBatch contains the batch configuration
 type ConfigBatch struct {
-	CoordinatorAddress ethCommon.Address
+	ForgerAddress ethCommon.Address
 }
 
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset

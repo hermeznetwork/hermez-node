@@ -54,3 +54,7 @@ type ZKInputs struct {
 	OldKey2   []*big.Int
 	OldValue2 []*big.Int
 }
+
+type CallDataForge struct {
+	// TBD
+}
