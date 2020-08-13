@@ -210,6 +210,12 @@ func NewLocalStateDB(synchronizerDB *StateDB, withMT bool, nLevels int) (*LocalS
 // LocalStateDB.synchronizerStateDB for the given batchNum
 func (l *LocalStateDB) Reset(batchNum int, fromSynchronizer bool) error {
 	// TODO
-
+	// if fromSynchronizer==true:
+	// 	make copy from l.synchronizerStateDB at the batchNum to the localStateDB
+	// 		if synchronizerStateDB does not have batchNum, return err
+	// 	the localStateDB checkpoint is set to batchNum
+	// else fromSynchronizer==false:
+	// 	the localStateDB checkpoint is set to batchNum
+	// 		if localStateDB does not have batchNum, return err
 	return nil
 }

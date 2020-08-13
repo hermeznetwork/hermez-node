@@ -18,6 +18,7 @@ type PoolL2Tx struct {
 	Timestamp          time.Time         // time when added to the tx pool
 	Signature          babyjub.Signature // tx signature
 	ToEthAddr          eth.Address
+	AbsoluteFee        float64 // TODO add methods to calculate this value from Tx.Fee tables + priceupdater tables
 }
 
 // RqTx Transaction Data used to indicate that a transaction depends on another transaction
