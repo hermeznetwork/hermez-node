@@ -50,21 +50,21 @@ func NewStateDB(path string, inDisk bool, withMT bool, nLevels int) (*StateDB, e
 }
 
 // CheckPointAt does a checkpoint at the given batchNum in the defined path
-func (s *StateDB) CheckPointAt(batchNum int, path string) error {
+func (s *StateDB) CheckPointAt(batchNum uint64, path string) error {
 	// TODO
 
 	return nil
 }
 
 // Reset resets the StateDB to the checkpoint at the given batchNum
-func (s *StateDB) Reset(batchNum int) error {
+func (s *StateDB) Reset(batchNum uint64) error {
 	// TODO
 
 	return nil
 }
 
 // Checkpoints returns a list of the checkpoints (batchNums)
-func (s *StateDB) Checkpoints() ([]int, error) {
+func (s *StateDB) Checkpoints() ([]uint64, error) {
 	// TODO
 
 	//batchnums, err
@@ -208,7 +208,7 @@ func NewLocalStateDB(synchronizerDB *StateDB, withMT bool, nLevels int) (*LocalS
 
 // Reset performs a reset, getting the state from
 // LocalStateDB.synchronizerStateDB for the given batchNum
-func (l *LocalStateDB) Reset(batchNum int, fromSynchronizer bool) error {
+func (l *LocalStateDB) Reset(batchNum uint64, fromSynchronizer bool) error {
 	// TODO
 	// if fromSynchronizer==true:
 	// 	make copy from l.synchronizerStateDB at the batchNum to the localStateDB

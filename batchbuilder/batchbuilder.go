@@ -31,7 +31,7 @@ type ConfigBatch struct {
 
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset
 // method
-func NewBatchBuilder(synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum int, idx, nLevels uint64) (*BatchBuilder, error) {
+func NewBatchBuilder(synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum uint64, idx, nLevels uint64) (*BatchBuilder, error) {
 	localStateDB, err := statedb.NewLocalStateDB(synchronizerStateDB, true, int(nLevels))
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func NewBatchBuilder(synchronizerStateDB *statedb.StateDB, configCircuits []Conf
 // `batchNum`.  If `fromSynchronizer` is true, the BatchBuilder must take a
 // copy of the rollup state from the Synchronizer at that `batchNum`, otherwise
 // it can just roll back the internal copy.
-func (bb *BatchBuilder) Reset(batchNum int, fromSynchronizer bool) error {
+func (bb *BatchBuilder) Reset(batchNum uint64, fromSynchronizer bool) error {
 	err := bb.localStateDB.Reset(batchNum, fromSynchronizer)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (bb *BatchBuilder) Reset(batchNum int, fromSynchronizer bool) error {
 }
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
-func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.L2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
+func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
 	for _, tx := range l1usertxs {
 		err := bb.processL1Tx(tx)
 		if err != nil {
