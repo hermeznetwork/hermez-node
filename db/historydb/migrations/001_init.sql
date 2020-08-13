@@ -59,19 +59,18 @@ CREATE TABLE token (
 
 CREATE TABLE l1tx (
     tx_id BYTEA PRIMARY KEY,
+    to_forge_l1_txs_num BIGINT NOT NULL,
+    position INT NOT NULL,
+    origin_user BOOLEAN NOT NULL,
     from_idx BIGINT NOT NULL,
+    from_eth_addr BYTEA NOT NULL,
+    from_bjj BYTEA NOT NULL,
     to_idx BIGINT NOT NULL,
     token_id INT NOT NULL REFERENCES token (token_id),
     amount NUMERIC NOT NULL,
     nonce BIGINT NOT NULL,
-    fee INT NOT NULL,
-    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    to_forge_l1_txs_num BIGINT NOT NULL,
-    position INT NOT NULL,
-    origin_user BOOLEAN NOT NULL,
-    from_eth_addr BYTEA NOT NULL,
-    from_bjj BYTEA NOT NULL,
     load_amount BYTEA NOT NULL
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
 );
 
 CREATE TABLE l2tx (
