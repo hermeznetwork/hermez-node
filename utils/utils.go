@@ -13,10 +13,10 @@ var (
 // Float16 represents a float in a 16 bit format
 type Float16 uint16
 
-// Float2fix converts a float to a fix
-func Float2Fix(fl16 Float16) *big.Int {
+// BigInt converts the Float16 to a big.Int integer
+func (fl16 *Float16) BigInt() *big.Int {
 
-	fl := int64(fl16)
+	fl := int64(*fl16)
 
 	m := big.NewInt(fl & 0x3FF)
 	e := big.NewInt(fl >> 11)
@@ -40,10 +40,10 @@ func floorFix2Float(_f *big.Int) Float16 {
 
 	zero := big.NewInt(0)
 	ten := big.NewInt(10)
-	e := 0
+	e := int64(0)
 
 	m := big.NewInt(0)
-	m.SetString(_f.String(), 10)
+	m.Set(_f)
 
 	if m.Cmp(zero) == 0 {
 		return 0
@@ -59,31 +59,29 @@ func floorFix2Float(_f *big.Int) Float16 {
 
 	}
 
-	m.Add(m, big.NewInt(int64(e<<11)))
-
-	return Float16(m.Int64())
+	return Float16(m.Int64() | e<<11)
 
 }
 
-// Fix2float converts a fix to a float
-func Fix2Float(f *big.Int) (Float16, error) {
+// NewFloat16 encodes a big.Int integer as a Float16, returning error in case
+// of loss during the encoding.
+func NewFloat16(f *big.Int) (Float16, error) {
 
 	fl1 := floorFix2Float(f)
-	fi1 := Float2Fix(fl1)
-	fl2 := big.NewInt(int64(fl1 | 0x400))
-	fi2 := Float2Fix(Float16(fl2.Int64()))
+	fi1 := fl1.BigInt()
+	fl2 := fl1 | 0x400
+	fi2 := fl2.BigInt()
 
-	m3 := big.NewInt((int64(fl1) & 0x3FF) + 1)
-	e3 := int64(fl1) >> 11
+	m3 := (fl1 & 0x3FF) + 1
+	e3 := fl1 >> 11
 
-	if m3.Cmp(big.NewInt(0x400)) == 0 {
-
-		m3.SetInt64(0x66) // 0x400 / 10
+	if m3&0x400 == 0 {
+		m3 = 0x66
 		e3++
 	}
 
-	fl3 := m3.Add(m3, big.NewInt(e3<<11))
-	fi3 := Float2Fix(Float16(fl3.Int64()))
+	fl3 := m3 + e3<<11
+	fi3 := fl3.BigInt()
 
 	res := fl1
 
@@ -91,8 +89,7 @@ func Fix2Float(f *big.Int) (Float16, error) {
 	d2 := big.NewInt(0).Abs(fi2.Sub(fi2, f))
 
 	if d.Cmp(d2) == 1 {
-
-		res = Float16(fl2.Int64())
+		res = fl2
 		d = d2
 	}
 
@@ -100,12 +97,12 @@ func Fix2Float(f *big.Int) (Float16, error) {
 
 	if d.Cmp(d3) == 1 {
 
-		res = Float16(fl3.Int64())
+		res = fl3
 	}
 
 	// Do rounding check
 
-	if Float2Fix(res).Cmp(f) == 0 {
+	if res.BigInt().Cmp(f) == 0 {
 
 		return res, nil
 	}
@@ -114,15 +111,16 @@ func Fix2Float(f *big.Int) (Float16, error) {
 
 }
 
-// FloorFix2Float Converts a float to a fix, always rounding down
-func FloorFix2Float(f *big.Int) Float16 {
+// NewFloat16Floor encodes a big.Int integer as a Float16, rounding down in
+// case of loss during the encoding.
+func NewFloat16Floor(f *big.Int) Float16 {
 
 	fl1 := floorFix2Float(f)
-	fl2 := big.NewInt(int64(fl1) | 0x400)
-	fi2 := Float2Fix(Float16(fl2.Int64()))
+	fl2 := fl1 | 0x400
+	fi2 := fl2.BigInt()
 
 	if fi2.Cmp(f) < 1 {
-		return Float16(fl2.Int64())
+		return fl2
 	}
 	return fl1
 
