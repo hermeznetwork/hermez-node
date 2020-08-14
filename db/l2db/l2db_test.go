@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestAddTx(t *testing.T) {
-	const nInserts = 10
+	const nInserts = 20
 	cleanDB()
 	txs := genTxs(nInserts)
 	for _, tx := range txs {
@@ -51,6 +51,12 @@ func TestAddTx(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, tx.Timestamp.Unix(), fetchedTx.Timestamp.Unix())
 		tx.Timestamp = fetchedTx.Timestamp
+		foo := time.Time{}
+		if tx.AbsoluteFeeUpdate != foo {
+			assert.Equal(t, tx.AbsoluteFeeUpdate.Unix(), fetchedTx.AbsoluteFeeUpdate.Unix())
+			tx.Timestamp = fetchedTx.Timestamp
+			tx.AbsoluteFeeUpdate = fetchedTx.AbsoluteFeeUpdate
+		}
 		assert.Equal(t, tx, fetchedTx)
 	}
 }
@@ -85,40 +91,46 @@ func TestGetPending(t *testing.T) {
 	for i, fetchedTx := range fetchedTxs {
 		assert.Equal(t, pendingTxs[i].Timestamp.Unix(), fetchedTx.Timestamp.Unix())
 		pendingTxs[i].Timestamp = fetchedTx.Timestamp
+		assert.Equal(t, pendingTxs[i].AbsoluteFeeUpdate.Unix(), fetchedTx.AbsoluteFeeUpdate.Unix())
+		pendingTxs[i].AbsoluteFeeUpdate = fetchedTx.AbsoluteFeeUpdate
 		assert.Equal(t, pendingTxs[i], fetchedTx)
 	}
 }
 
 func TestStartForging(t *testing.T) {
-	const nInserts = 80
+	const nInserts = 24
 	const fakeBlockNum = 33
 	cleanDB()
 	txs := genTxs(nInserts)
 	var startForgingTxs []*common.PoolL2Tx
 	var startForgingTxIDs []common.TxID
-	for i, tx := range txs {
+	randomizer := 0
+	for _, tx := range txs {
 		err := l2DB.AddTx(tx)
 		assert.NoError(t, err)
-		if tx.State == common.PoolL2TxStatePending && i%2 == 0 {
+		if tx.State == common.PoolL2TxStatePending && randomizer%2 == 0 {
+			randomizer++
 			startForgingTxs = append(startForgingTxs, tx)
 			startForgingTxIDs = append(startForgingTxIDs, tx.TxID)
+		}
+		if tx.State == common.PoolL2TxStateForging {
+			startForgingTxs = append(startForgingTxs, tx)
 		}
 	}
 	err := l2DB.StartForging(startForgingTxIDs, fakeBlockNum)
 	assert.NoError(t, err)
+	// TODO: Fetch txs and check that they've been updated correctly
 }
 
 func genTxs(n int) []*common.PoolL2Tx {
-	// WARNING: this is just to test geting/seting from/to the DB.
-	// This tx doesn't follow the protocol (signature, txID, ...)!!
-	// TODO:
-	// - ENABLE SIGNATURE !!!!
-	// - make it compliant with the protocol once common.Tx is more advanced
+	// WARNING: This tx doesn't follow the protocol (signature, txID, ...)
+	// it's just to test geting/seting from/to the DB.
+	// Type and RqTxCompressedData: not initialized because it's not stored
+	// on the DB and add noise when checking results.
 	txs := make([]*common.PoolL2Tx, 0, n)
 	privK := babyjub.NewRandPrivKey()
 	for i := 0; i < n; i++ {
 		var state common.PoolL2TxState
-		includeRq := i%2 == 0
 		if i%4 == 0 {
 			state = common.PoolL2TxStatePending
 		} else if i%4 == 1 {
@@ -129,26 +141,33 @@ func genTxs(n int) []*common.PoolL2Tx {
 			state = common.PoolL2TxStateForged
 		}
 		tx := &common.PoolL2Tx{
-			TxID:    common.TxID(common.Hash([]byte(strconv.Itoa(i)))),
-			FromIdx: 47,
-			ToIdx:   96,
-			TokenID: 73,
-			Amount:  big.NewInt(3487762374627846747),
-			Nonce:   28,
-			Fee:     99,
-			//	Type:          common.TxTypeTransfer,
-			ToBJJ:     *privK.Public(),
-			State:     state,
-			Timestamp: time.Now().UTC(),
-			// Signature:     *privK.SignPoseidon(big.NewInt(674238462)),
+			TxID:      common.TxID(common.Hash([]byte(strconv.Itoa(i)))),
+			FromIdx:   47,
+			ToIdx:     96,
 			ToEthAddr: eth.BigToAddress(big.NewInt(234523534)),
+			ToBJJ:     privK.Public(),
+			TokenID:   73,
+			Amount:    big.NewInt(3487762374627846747),
+			Fee:       99,
+			Nonce:     28,
+			State:     state,
+			Signature: *privK.SignPoseidon(big.NewInt(674238462)),
+			Timestamp: time.Now().UTC(),
 		}
-		if includeRq {
+		if i%2 == 0 { // Optional parameters: rq
+			tx.RqFromIdx = 893
+			tx.RqToIdx = 334
+			tx.RqToEthAddr = eth.BigToAddress(big.NewInt(239457111187))
+			tx.RqToBJJ = privK.Public()
+			tx.RqTokenID = 222
 			tx.RqAmount = big.NewInt(3487762374627846747)
 			tx.RqFee = 11
-			tx.RqToEthAddr = eth.BigToAddress(big.NewInt(239457111187))
-			tx.RqTokenID = 222
 			tx.RqNonce = 78
+		}
+		if i%3 == 0 { // Optional parameters: things that get updated "a posteriori"
+			tx.BatchNum = 489
+			tx.AbsoluteFee = 39.12345
+			tx.AbsoluteFeeUpdate = time.Now().UTC()
 		}
 		txs = append(txs, tx)
 	}

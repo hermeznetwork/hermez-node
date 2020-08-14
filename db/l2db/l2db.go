@@ -2,6 +2,7 @@ package l2db
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	eth "github.com/ethereum/go-ethereum/common"
@@ -103,20 +104,24 @@ func (l2db *L2DB) GetAccountCreationAuth(ethAddr eth.Address) (*common.AccountCr
 // StartForging updates the state of the transactions that will begin the forging process.
 // The state of the txs referenced by txIDs will be changed from Pending -> Forging
 func (l2db *L2DB) StartForging(txIDs []common.TxID, batchNum common.BatchNum) error {
-	query := `UPDATE tx_pool 
-	SET state = $1, batch_num = $2 
-	WHERE state = $3 AND tx_id IN `
-	txIDstr := "("
-	for _, id := range txIDs {
-		txIDstr += `\\x` + string(id) + ","
-	}
-	txIDstr = txIDstr[:len(txIDstr)-1] + ");"
-	_, err := l2db.db.Exec(
-		query+txIDstr,
-		common.PoolL2TxStateForging,
-		batchNum,
-		common.PoolL2TxStatePending,
+	query, args, err := sqlx.In(
+		`UPDATE tx_pool
+		SET state = '`+string(common.PoolL2TxStateForging)+`', batch_num = `+strconv.Itoa(int(batchNum))+`
+		WHERE state = '`+string(common.PoolL2TxStatePending)+`' AND tx_id IN (?);`,
+		txIDs,
 	)
+	// query, args, err := sqlx.In(
+	// 	`UPDATE tx_pool
+	// 	SET state = '`+string(common.PoolL2TxStateForging)+`', batch_num = `+strconv.Itoa(int(batchNum))+`
+	// 	WHERE tx_id IN (?);`,
+	// 	txIDs,
+	// )
+	if err != nil {
+		return err
+	}
+	query = l2db.db.Rebind(query)
+	_, err = l2db.db.Exec(query, args...)
+	// return fmt.Errorf(query)
 	return err
 }
 

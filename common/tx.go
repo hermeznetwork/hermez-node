@@ -28,19 +28,6 @@ func IdxFromBigInt(b *big.Int) (Idx, error) {
 	return Idx(uint32(b.Int64())), nil
 }
 
-// Tx is a struct that represents a Hermez network transaction
-type Tx struct {
-	TxID     TxID        `meddler:"tx_id"`
-	FromIdx  Idx         `meddler:"from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	ToIdx    Idx         `meddler:"to_idx"`   // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	TokenID  TokenID     `meddler:"token_id"`
-	Amount   *big.Int    `meddler:"amount,bigint"` // TODO: change to float16
-	Nonce    uint64      `meddler:"nonce"`         // effective 48 bits used
-	Fee      FeeSelector `meddler:"fee"`
-	Type     TxType      `meddler:"-"`         // optional, descrives which kind of tx it's
-	BatchNum BatchNum    `meddler:"batch_num"` // batchNum in which this tx was forged. Presence indicates "forged" state.
-}
-
 // TxID is the identifier of a Hermez network transaction
 type TxID Hash // Hash is a guess
 
@@ -71,8 +58,3 @@ const (
 	// TxTypeTransferToBJJ TBD
 	TxTypeTransferToBJJ TxType = "TxTypeTransferToBJJ"
 )
-
-// Txer returns a generic Tx, usefull to work with mixed Tx types
-type Txer interface {
-	Tx() Tx
-}

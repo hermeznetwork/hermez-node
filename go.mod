@@ -7,14 +7,8 @@ require (
 	github.com/ethereum/go-ethereum v1.9.17
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.0
-<<<<<<< HEAD
-	github.com/iden3/go-iden3-crypto v0.0.6-0.20200806115047-327a8175d6eb
+	github.com/iden3/go-iden3-crypto v0.0.6-0.20200814110325-70841d78e7d8
 	github.com/iden3/go-merkletree v0.0.0-20200807083900-f6f82d8375d5
-	github.com/jinzhu/gorm v1.9.15
-=======
-	github.com/iden3/go-iden3-crypto v0.0.6-0.20200723082457-29a66457f0bf
-	github.com/iden3/go-merkletree v0.0.0-20200723202738-75e24244a1e3
->>>>>>> WIP
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351

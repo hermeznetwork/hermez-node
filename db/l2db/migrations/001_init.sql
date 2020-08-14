@@ -22,7 +22,7 @@ CREATE TABLE tx_pool (
     signature BYTEA NOT NULL,
     timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     absolute_fee NUMERIC,
-    absolut_fee_update TIMESTAMP WITHOUT TIME ZONE
+    absolute_fee_update TIMESTAMP WITHOUT TIME ZONE
 );
 
 CREATE TABLE account_creation_auth (

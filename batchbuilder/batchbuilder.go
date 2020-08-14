@@ -171,27 +171,17 @@ func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, transfer bool) error {
 	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.LoadAmount)
 
 	// in case that the tx is a L1Tx>DepositAndTransfer
-<<<<<<< HEAD
 	if transfer {
 		accReceiver, err := bb.localStateDB.GetAccount(tx.ToIdx)
 		if err != nil {
 			return err
 		}
 		// substract amount to the sender
-		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Tx.Amount)
+		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
 		// add amount to the receiver
-		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Tx.Amount)
+		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
 		// update receiver account in localStateDB
 		err = bb.localStateDB.UpdateAccount(tx.ToIdx, accReceiver)
-=======
-	if andTransfer {
-		// transact
-		err = bb.UpdateBalance(dbTx, tx.FromIdx, tx.Amount, true)
-		if err != nil {
-			return err
-		}
-		err = bb.UpdateBalance(dbTx, tx.ToIdx, tx.Amount, false)
->>>>>>> WIP
 		if err != nil {
 			return err
 		}
