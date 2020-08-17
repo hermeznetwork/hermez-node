@@ -100,14 +100,17 @@ func (s *StateDB) setCurrentBatch() error {
 	return nil
 }
 
-// CheckPointAt does a checkpoint at the given batchNum in the defined path
+// MakeCheckpoint does a checkpoint at the given batchNum in the defined path
 func (s *StateDB) MakeCheckpoint() error {
 	// advance currentBatch
 	s.currentBatch++
 
 	checkpointPath := s.path + "/BatchNum" + strconv.Itoa(int(s.currentBatch))
 
-	s.setCurrentBatch()
+	err := s.setCurrentBatch()
+	if err != nil {
+		return err
+	}
 
 	// if checkpoint BatchNum already exist in disk, delete it
 	if _, err := os.Stat(checkpointPath); !os.IsNotExist(err) {
@@ -118,7 +121,7 @@ func (s *StateDB) MakeCheckpoint() error {
 	}
 
 	// execute Checkpoint
-	err := s.db.Pebble().Checkpoint(checkpointPath)
+	err = s.db.Pebble().Checkpoint(checkpointPath)
 	if err != nil {
 		return err
 	}
