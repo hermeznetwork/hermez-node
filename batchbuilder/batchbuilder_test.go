@@ -14,10 +14,12 @@ func TestBatchBuilder(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	synchDB, err := statedb.NewStateDB(dir, false, false, 0)
+	synchDB, err := statedb.NewStateDB(dir, false, 0)
 	assert.Nil(t, err)
 
-	bb, err := NewBatchBuilder(synchDB, nil, 0, 0, 32)
+	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
+	require.Nil(t, err)
+	bb, err := NewBatchBuilder(bbDir, synchDB, nil, 0, 32)
 	assert.Nil(t, err)
 	fmt.Println(bb)
 }

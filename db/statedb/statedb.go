@@ -23,8 +23,10 @@ var ErrAccountAlreadyExists = errors.New("Can not CreateAccount because Account 
 // KEYCURRENTBATCH is used as key in the db to store the current BatchNum
 var KEYCURRENTBATCH = []byte("currentbatch")
 
-// STATEDBPATH defines the subpath of the StateDB
-const STATEDBPATH = "/statedb"
+// PATHSTATEDB defines the subpath of the StateDB
+const PATHSTATEDB = "/statedb"
+const PATHBATCHNUM = "/BatchNum"
+const PATHCURRENT = "/current"
 
 // StateDB represents the StateDB object
 type StateDB struct {
@@ -39,7 +41,7 @@ type StateDB struct {
 func NewStateDB(path string, withMT bool, nLevels int) (*StateDB, error) {
 	var sto *pebble.PebbleStorage
 	var err error
-	sto, err = pebble.NewPebbleStorage(path+STATEDBPATH+"/current", false)
+	sto, err = pebble.NewPebbleStorage(path+PATHSTATEDB+PATHCURRENT, false)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +55,7 @@ func NewStateDB(path string, withMT bool, nLevels int) (*StateDB, error) {
 	}
 
 	sdb := &StateDB{
-		path: path + STATEDBPATH,
+		path: path + PATHSTATEDB,
 		db:   sto,
 		mt:   mt,
 	}
@@ -100,14 +102,17 @@ func (s *StateDB) setCurrentBatch() error {
 	return nil
 }
 
-// CheckPointAt does a checkpoint at the given batchNum in the defined path
+// MakeCheckpoint does a checkpoint at the given batchNum in the defined path. Internally this advances & stores the current BatchNum, and then stores a Checkpoint of the current state of the StateDB.
 func (s *StateDB) MakeCheckpoint() error {
 	// advance currentBatch
 	s.currentBatch++
 
-	checkpointPath := s.path + "/BatchNum" + strconv.Itoa(int(s.currentBatch))
+	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(s.currentBatch))
 
-	s.setCurrentBatch()
+	err := s.setCurrentBatch()
+	if err != nil {
+		return err
+	}
 
 	// if checkpoint BatchNum already exist in disk, delete it
 	if _, err := os.Stat(checkpointPath); !os.IsNotExist(err) {
@@ -118,7 +123,7 @@ func (s *StateDB) MakeCheckpoint() error {
 	}
 
 	// execute Checkpoint
-	err := s.db.Pebble().Checkpoint(checkpointPath)
+	err = s.db.Pebble().Checkpoint(checkpointPath)
 	if err != nil {
 		return err
 	}
@@ -128,7 +133,7 @@ func (s *StateDB) MakeCheckpoint() error {
 
 // DeleteCheckpoint removes if exist the checkpoint of the given batchNum
 func (s *StateDB) DeleteCheckpoint(batchNum uint64) error {
-	checkpointPath := s.path + "/BatchNum" + strconv.Itoa(int(batchNum))
+	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
 
 	if _, err := os.Stat(checkpointPath); os.IsNotExist(err) {
 		return fmt.Errorf("Checkpoint with batchNum %d does not exist in DB", batchNum)
@@ -142,8 +147,8 @@ func (s *StateDB) DeleteCheckpoint(batchNum uint64) error {
 // those checkpoints will remain in the storage, and eventually will be
 // deleted when MakeCheckpoint overwrites them.
 func (s *StateDB) Reset(batchNum uint64) error {
-	checkpointPath := s.path + "/BatchNum" + strconv.Itoa(int(batchNum))
-	currentPath := s.path + "/current"
+	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
+	currentPath := s.path + PATHCURRENT
 
 	// remove 'current'
 	err := os.RemoveAll(currentPath)
@@ -311,9 +316,9 @@ func NewLocalStateDB(path string, synchronizerDB *StateDB, withMT bool, nLevels 
 // gets the state from LocalStateDB.synchronizerStateDB for the given batchNum. If fromSynchronizer is false, get the state from LocalStateDB checkpoints.
 func (l *LocalStateDB) Reset(batchNum uint64, fromSynchronizer bool) error {
 
-	synchronizerCheckpointPath := l.synchronizerStateDB.path + "/BatchNum" + strconv.Itoa(int(batchNum))
-	checkpointPath := l.path + "/BatchNum" + strconv.Itoa(int(batchNum))
-	currentPath := l.path + "/current"
+	synchronizerCheckpointPath := l.synchronizerStateDB.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
+	checkpointPath := l.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
+	currentPath := l.path + PATHCURRENT
 
 	if fromSynchronizer {
 		// use checkpoint from SynchronizerStateDB

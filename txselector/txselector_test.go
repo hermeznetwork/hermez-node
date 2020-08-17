@@ -104,12 +104,14 @@ func initTestDB(l2 *l2db.L2DB, sdb *statedb.StateDB) *mock.MockDB {
 func TestGetL2TxSelection(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
-	sdb, err := statedb.NewStateDB(dir, false, false, 0)
+	sdb, err := statedb.NewStateDB(dir, false, 0)
 	assert.Nil(t, err)
 	testL2DB := &l2db.L2DB{}
 	// initTestDB(testL2DB, sdb)
 
-	txsel, err := NewTxSelector(sdb, testL2DB, 3, 3, 3)
+	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
+	require.Nil(t, err)
+	txsel, err := NewTxSelector(txselDir, sdb, testL2DB, 3, 3, 3)
 	assert.Nil(t, err)
 	fmt.Println(txsel)
 

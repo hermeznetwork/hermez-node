@@ -35,8 +35,8 @@ type TxSelector struct {
 }
 
 // NewTxSelector returns a *TxSelector
-func NewTxSelector(synchronizerStateDB *statedb.StateDB, l2 *l2db.L2DB, maxL1UserTxs, maxL1OperatorTxs, maxTxs uint64) (*TxSelector, error) {
-	localAccountsDB, err := statedb.NewLocalStateDB(synchronizerStateDB, false, 0) // without merkletree
+func NewTxSelector(dbpath string, synchronizerStateDB *statedb.StateDB, l2 *l2db.L2DB, maxL1UserTxs, maxL1OperatorTxs, maxTxs uint64) (*TxSelector, error) {
+	localAccountsDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, false, 0) // without merkletree
 	if err != nil {
 		return nil, err
 	}

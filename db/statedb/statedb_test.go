@@ -251,9 +251,12 @@ func TestCheckpoints(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(5), cb)
 
-	// printCheckpoints(t, sdb.path)
-	// printCheckpoints(t, ldb.path)
-	// printCheckpoints(t, ldb2.path)
+	debug := false
+	if debug {
+		printCheckpoints(t, sdb.path)
+		printCheckpoints(t, ldb.path)
+		printCheckpoints(t, ldb2.path)
+	}
 }
 
 func printCheckpoints(t *testing.T, path string) {
