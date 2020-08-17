@@ -1,12 +1,17 @@
 package batchbuilder
 
 import (
+	"encoding/binary"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/iden3/go-merkletree/db"
 )
+
+// KEYIDX is used as key in the db to store the current Idx
+var KEYIDX = []byte("idx")
 
 // ConfigCircuit contains the circuit configuration
 type ConfigCircuit struct {
@@ -31,14 +36,13 @@ type ConfigBatch struct {
 
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset
 // method
-func NewBatchBuilder(synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum uint64, idx, nLevels uint64) (*BatchBuilder, error) {
-	localStateDB, err := statedb.NewLocalStateDB(synchronizerStateDB, true, int(nLevels))
+func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum uint64, nLevels uint64) (*BatchBuilder, error) {
+	localStateDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, true, int(nLevels))
 	if err != nil {
 		return nil, err
 	}
 
 	bb := BatchBuilder{
-		idx:            idx,
 		localStateDB:   localStateDB,
 		configCircuits: configCircuits,
 	}
@@ -52,12 +56,17 @@ func NewBatchBuilder(synchronizerStateDB *statedb.StateDB, configCircuits []Conf
 // copy of the rollup state from the Synchronizer at that `batchNum`, otherwise
 // it can just roll back the internal copy.
 func (bb *BatchBuilder) Reset(batchNum uint64, fromSynchronizer bool) error {
+	if batchNum == 0 {
+		bb.idx = 0
+		return nil
+	}
 	err := bb.localStateDB.Reset(batchNum, fromSynchronizer)
 	if err != nil {
 		return err
 	}
-	// bb.idx = idx // TODO idx will be obtained from the statedb reset
-	return nil
+	// idx is obtained from the statedb reset
+	bb.idx, err = bb.getIdx()
+	return err
 }
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
@@ -139,8 +148,8 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 	return nil
 }
 
-// applyCreateAccount creates a new account in the account of the depositer, it stores
-// the deposit value
+// applyCreateAccount creates a new account in the account of the depositer, it
+// stores the deposit value
 func (bb *BatchBuilder) applyCreateAccount(tx common.L1Tx) error {
 	account := &common.Account{
 		TokenID:   tx.TokenID,
@@ -156,7 +165,7 @@ func (bb *BatchBuilder) applyCreateAccount(tx common.L1Tx) error {
 	}
 
 	bb.idx = bb.idx + 1
-	return nil
+	return bb.setIdx(bb.idx)
 }
 
 // applyDeposit updates the balance in the account of the depositer, if
@@ -223,5 +232,33 @@ func (bb *BatchBuilder) applyTransfer(tx common.Tx) error {
 		return err
 	}
 
+	return nil
+}
+
+// getIdx returns the stored Idx from the localStateDB, which is the last Idx used for an Account in the localStateDB.
+func (bb *BatchBuilder) getIdx() (uint64, error) {
+	idxBytes, err := bb.localStateDB.DB().Get(KEYIDX)
+	if err == db.ErrNotFound {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	idx := binary.LittleEndian.Uint64(idxBytes[:8])
+	return idx, nil
+}
+
+// setIdx stores Idx in the localStateDB
+func (bb *BatchBuilder) setIdx(idx uint64) error {
+	tx, err := bb.localStateDB.DB().NewTx()
+	if err != nil {
+		return err
+	}
+	var idxBytes [8]byte
+	binary.LittleEndian.PutUint64(idxBytes[:], idx)
+	tx.Put(KEYIDX, idxBytes[:])
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
