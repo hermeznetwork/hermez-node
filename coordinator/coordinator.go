@@ -98,14 +98,14 @@ func (c *Coordinator) forgeSequence() error {
 	c.batchNum = c.batchNum + 1
 	batchInfo := NewBatchInfo(c.batchNum, serverProofInfo) // to accumulate metadata of the batch
 
-	var l2Txs []common.PoolL2Tx
+	var l2Txs []*common.PoolL2Tx
 	// var feesInfo
-	var l1UserTxsExtra, l1OperatorTxs []common.L1Tx
+	var l1UserTxsExtra, l1OperatorTxs []*common.L1Tx
 	// 1. Decide if we forge L2Tx or L1+L2Tx
 	if c.shouldL1L2Batch() {
 		// 2a: L1+L2 txs
 		// l1UserTxs, toForgeL1TxsNumber := c.synchronizer.GetNextL1UserTxs() // TODO once synchronizer is ready, uncomment
-		var l1UserTxs []common.L1Tx = nil                                                             // tmp, depends on synchronizer
+		var l1UserTxs []*common.L1Tx = nil                                                            // tmp, depends on synchronizer
 		l1UserTxsExtra, l1OperatorTxs, l2Txs, err = c.txsel.GetL1L2TxSelection(c.batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
 			return err
@@ -210,7 +210,7 @@ func (c *Coordinator) purgeRemoveByTimeout() error {
 	return nil
 }
 
-func (c *Coordinator) purgeInvalidDueToL2TxsSelection(l2Txs []common.PoolL2Tx) error {
+func (c *Coordinator) purgeInvalidDueToL2TxsSelection(l2Txs []*common.PoolL2Tx) error {
 
 	return nil
 }
