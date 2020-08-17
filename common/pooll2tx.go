@@ -40,6 +40,19 @@ type PoolL2Tx struct {
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
 }
 
+func (tx *PoolL2Tx) Tx() *Tx {
+	return &Tx{
+		TxID:    tx.TxID,
+		FromIdx: tx.FromIdx,
+		ToIdx:   tx.ToIdx,
+		TokenID: tx.TokenID,
+		Amount:  tx.Amount,
+		Nonce:   tx.Nonce,
+		Fee:     tx.Fee,
+		Type:    tx.Type,
+	}
+}
+
 // PoolL2TxState is a struct that represents the status of a L2 transaction
 type PoolL2TxState string
 

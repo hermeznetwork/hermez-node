@@ -64,7 +64,7 @@ func BenchmarkAddTx(b *testing.B) {
 	txs := genTxs(nInserts)
 	now := time.Now()
 	for _, tx := range txs {
-		l2DB.AddTx(tx)
+		_ = l2DB.AddTx(tx)
 	}
 	elapsedTime := time.Since(now)
 	fmt.Println("Time to insert 2048 txs:", elapsedTime)
@@ -114,6 +114,7 @@ func TestStartForging(t *testing.T) {
 			startForgingTxs = append(startForgingTxs, tx)
 		}
 	}
+	fmt.Println(startForgingTxs) // TODO added print here to avoid lint complaining about startForgingTxs not being used
 	err := l2DB.StartForging(startForgingTxIDs, fakeBlockNum)
 	assert.NoError(t, err)
 	// TODO: Fetch txs and check that they've been updated correctly

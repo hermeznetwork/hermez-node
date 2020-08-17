@@ -9,7 +9,7 @@ import (
 )
 
 // txs implements the interface Sort for an array of Tx
-type txs []common.PoolL2Tx
+type txs []*common.PoolL2Tx
 
 func (t txs) Len() int {
 	return len(t)
@@ -61,7 +61,7 @@ func (txsel *TxSelector) Reset(batchNum uint64) error {
 }
 
 // GetL2TxSelection returns a selection of the L2Txs for the next batch, from the L2DB pool
-func (txsel *TxSelector) GetL2TxSelection(batchNum uint64) ([]common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL2TxSelection(batchNum uint64) ([]*common.PoolL2Tx, error) {
 	// get pending l2-tx from tx-pool
 	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // once l2db ready, maybe use parameter 'batchNum'
 	if err != nil {
@@ -90,7 +90,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum uint64) ([]common.PoolL2Tx, e
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
-func (txsel *TxSelector) GetL1L2TxSelection(batchNum uint64, l1txs []common.L1Tx) ([]common.L1Tx, []common.L1Tx, []common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL1L2TxSelection(batchNum uint64, l1txs []*common.L1Tx) ([]*common.L1Tx, []*common.L1Tx, []*common.PoolL2Tx, error) {
 	// apply l1-user-tx to localAccountDB
 	//     create new leaves
 	//     update balances
@@ -113,7 +113,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum uint64, l1txs []common.L1Tx
 	}
 
 	// prepare (from the selected l2txs) pending to create from the AccountCreationAuthsDB
-	var accountCreationAuths []common.Account
+	var accountCreationAuths []*common.Account
 	// TODO once DB ready:
 	// if tx.ToIdx is in AccountCreationAuthsDB, take it and add it to
 	// the array 'accountCreationAuths'
@@ -155,7 +155,7 @@ func (txsel *TxSelector) getL2Profitable(txs txs, max uint64) txs {
 	sort.Sort(txs)
 	return txs[:max]
 }
-func (txsel *TxSelector) createL1OperatorTxForL2Tx(accounts []common.Account) []common.L1Tx {
+func (txsel *TxSelector) createL1OperatorTxForL2Tx(accounts []*common.Account) []*common.L1Tx {
 	//
 	return nil
 }
