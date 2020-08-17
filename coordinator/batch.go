@@ -14,9 +14,9 @@ type BatchInfo struct {
 	serverProof    *ServerProofInfo
 	zkInputs       *common.ZKInputs
 	proof          *Proof
-	L1UserTxsExtra []common.L1Tx
-	L1OperatorTxs  []common.L1Tx
-	L2Txs          []common.PoolL2Tx
+	L1UserTxsExtra []*common.L1Tx
+	L1OperatorTxs  []*common.L1Tx
+	L2Txs          []*common.PoolL2Tx
 	// FeesInfo
 }
 
@@ -31,7 +31,7 @@ func NewBatchInfo(batchNum uint64, serverProof *ServerProofInfo) BatchInfo {
 
 // SetTxsInfo sets the l1UserTxs, l1OperatorTxs and l2Txs to the BatchInfo data
 // structure
-func (bi *BatchInfo) SetTxsInfo(l1UserTxsExtra, l1OperatorTxs []common.L1Tx, l2Txs []common.PoolL2Tx) {
+func (bi *BatchInfo) SetTxsInfo(l1UserTxsExtra, l1OperatorTxs []*common.L1Tx, l2Txs []*common.PoolL2Tx) {
 	// TBD parameter: feesInfo
 	bi.L1UserTxsExtra = l1UserTxsExtra
 	bi.L1OperatorTxs = l1OperatorTxs

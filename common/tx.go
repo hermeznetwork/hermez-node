@@ -58,3 +58,16 @@ const (
 	// TxTypeTransferToBJJ TBD
 	TxTypeTransferToBJJ TxType = "TxTypeTransferToBJJ"
 )
+
+// Tx is a struct used by the TxSelector & BatchBuilder as a generic type generated from L1Tx & PoolL2Tx
+type Tx struct {
+	TxID     TxID
+	FromIdx  Idx // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	ToIdx    Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	TokenID  TokenID
+	Amount   *big.Int
+	Nonce    uint64 // effective 48 bits used
+	Fee      FeeSelector
+	Type     TxType   // optional, descrives which kind of tx it's
+	BatchNum BatchNum // batchNum in which this tx was forged. Presence indicates "forged" state.
+}

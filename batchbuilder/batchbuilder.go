@@ -70,7 +70,7 @@ func (bb *BatchBuilder) Reset(batchNum uint64, fromSynchronizer bool) error {
 }
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
-func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
+func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
 	for _, tx := range l1usertxs {
 		err := bb.processL1Tx(tx)
 		if err != nil {
@@ -101,7 +101,7 @@ func (bb *BatchBuilder) BuildBatch(configBatch ConfigBatch, l1usertxs, l1coordin
 	return nil, nil
 }
 
-func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
+func (bb *BatchBuilder) processL1Tx(tx *common.L1Tx) error {
 	switch tx.Type {
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update balance
@@ -150,12 +150,12 @@ func (bb *BatchBuilder) processL1Tx(tx common.L1Tx) error {
 
 // applyCreateAccount creates a new account in the account of the depositer, it
 // stores the deposit value
-func (bb *BatchBuilder) applyCreateAccount(tx common.L1Tx) error {
+func (bb *BatchBuilder) applyCreateAccount(tx *common.L1Tx) error {
 	account := &common.Account{
 		TokenID:   tx.TokenID,
 		Nonce:     0,
 		Balance:   tx.LoadAmount,
-		PublicKey: &tx.FromBJJ,
+		PublicKey: tx.FromBJJ,
 		EthAddr:   tx.FromEthAddr,
 	}
 
@@ -171,7 +171,7 @@ func (bb *BatchBuilder) applyCreateAccount(tx common.L1Tx) error {
 // applyDeposit updates the balance in the account of the depositer, if
 // andTransfer parameter is set to true, the method will also apply the
 // Transfer of the L1Tx/DepositAndTransfer
-func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, transfer bool) error {
+func (bb *BatchBuilder) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	// deposit the tx.LoadAmount into the sender account
 	accSender, err := bb.localStateDB.GetAccount(tx.FromIdx)
 	if err != nil {
@@ -205,7 +205,7 @@ func (bb *BatchBuilder) applyDeposit(tx common.L1Tx, transfer bool) error {
 
 // applyTransfer updates the balance & nonce in the account of the sender, and
 // the balance in the account of the receiver
-func (bb *BatchBuilder) applyTransfer(tx common.Tx) error {
+func (bb *BatchBuilder) applyTransfer(tx *common.Tx) error {
 	// get sender and receiver accounts from localStateDB
 	accSender, err := bb.localStateDB.GetAccount(tx.FromIdx)
 	if err != nil {
