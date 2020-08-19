@@ -71,7 +71,7 @@ func (l *Account) BigInts() ([NLEAFELEMS]*big.Int, error) {
 // HashValue returns the value of the Account, which is the Poseidon hash of its *big.Int representation
 func (l *Account) HashValue() (*big.Int, error) {
 	b0 := big.NewInt(0)
-	toHash := [poseidon.T]*big.Int{b0, b0, b0, b0, b0, b0}
+	toHash := []*big.Int{b0, b0, b0, b0, b0, b0}
 	lBI, err := l.BigInts()
 	if err != nil {
 		return nil, err
