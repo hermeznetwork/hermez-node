@@ -133,7 +133,7 @@ func (c *Coordinator) forgeSequence() error {
 	batchInfo.SetTxsInfo(l1UserTxsExtra, l1OperatorTxs, l2Txs) // TODO feesInfo
 
 	// 4. Call BatchBuilder with TxSelector output
-	configBatch := batchbuilder.ConfigBatch{
+	configBatch := &batchbuilder.ConfigBatch{
 		ForgerAddress: c.config.ForgerAddress,
 	}
 	zkInputs, err := c.batchBuilder.BuildBatch(configBatch, l1UserTxsExtra, l1OperatorTxs, l2Txs, nil) // TODO []common.TokenID --> feesInfo

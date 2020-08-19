@@ -13,6 +13,7 @@ import (
 
 var eof = rune(0)
 var errof = fmt.Errorf("eof in parseline")
+var ecomment = fmt.Errorf("comment in parseline")
 
 const (
 	ILLEGAL Token = iota
@@ -27,8 +28,9 @@ type Instruction struct {
 	From    string
 	To      string
 	Amount  uint64
+	Fee     uint8
 	TokenID common.TokenID
-	Type    int // 0: Deposit, 1: Transfer
+	Type    common.TxType // D: Deposit, T: Transfer, E: ForceExit
 }
 
 type Instructions struct {
@@ -40,17 +42,22 @@ type Instructions struct {
 func (i Instruction) String() string {
 	buf := bytes.NewBufferString("")
 	switch i.Type {
-	case 0:
-		fmt.Fprintf(buf, "Type: Deposit, ")
-	case 1:
+	case common.TxTypeCreateAccountDeposit:
+		fmt.Fprintf(buf, "Type: Create&Deposit, ")
+	case common.TxTypeTransfer:
 		fmt.Fprintf(buf, "Type: Transfer, ")
+	case common.TxTypeForceExit:
+		fmt.Fprintf(buf, "Type: ForceExit, ")
 	default:
 	}
 	fmt.Fprintf(buf, "From: %s, ", i.From)
-	if i.Type == 1 {
+	if i.Type == common.TxTypeTransfer {
 		fmt.Fprintf(buf, "To: %s, ", i.To)
 	}
 	fmt.Fprintf(buf, "Amount: %d, ", i.Amount)
+	if i.Type == common.TxTypeTransfer {
+		fmt.Fprintf(buf, "Fee: %d, ", i.Fee)
+	}
 	fmt.Fprintf(buf, "TokenID: %d,\n", i.TokenID)
 	return buf.String()
 }
@@ -58,11 +65,18 @@ func (i Instruction) String() string {
 func (i Instruction) Raw() string {
 	buf := bytes.NewBufferString("")
 	fmt.Fprintf(buf, "%s", i.From)
-	if i.Type == 1 {
+	if i.Type == common.TxTypeTransfer {
 		fmt.Fprintf(buf, "-%s", i.To)
 	}
-	fmt.Fprintf(buf, " (%d):", i.TokenID)
+	fmt.Fprintf(buf, " (%d)", i.TokenID)
+	if i.Type == common.TxTypeForceExit {
+		fmt.Fprintf(buf, "E")
+	}
+	fmt.Fprintf(buf, ":")
 	fmt.Fprintf(buf, " %d", i.Amount)
+	if i.Type == common.TxTypeTransfer {
+		fmt.Fprintf(buf, " %d", i.Fee)
+	}
 	return buf.String()
 }
 
@@ -78,6 +92,10 @@ func isWhitespace(ch rune) bool {
 
 func isLetter(ch rune) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+}
+
+func isComment(ch rune) bool {
+	return ch == '/'
 }
 
 func isDigit(ch rune) bool {
@@ -111,6 +129,10 @@ func (s *Scanner) scan() (tok Token, lit string) {
 		return s.scanWhitespace()
 	} else if isLetter(ch) || isDigit(ch) {
 		// letter/digit
+		s.unread()
+		return s.scanIndent()
+	} else if isComment(ch) {
+		// comment
 		s.unread()
 		return s.scanIndent()
 	}
@@ -198,18 +220,22 @@ func (p *Parser) scanIgnoreWhitespace() (tok Token, lit string) {
 
 // parseLine parses the current line
 func (p *Parser) parseLine() (*Instruction, error) {
-	/*
-		line can be Deposit:
-			A (1): 10
-		or Transfer:
-			A-B (1): 6
-	*/
+	// line can be Deposit:
+	//         A (1): 10
+	// or Transfer:
+	//         A-B (1): 6
+	// or Withdraw:
+	//         A (1) E: 4
 	c := &Instruction{}
 	tok, lit := p.scanIgnoreWhitespace()
 	if tok == EOF {
 		return nil, errof
 	}
 	c.Literal += lit
+	if lit == "/" {
+		_, _ = p.s.r.ReadString('\n')
+		return nil, ecomment
+	}
 	c.From = lit
 
 	_, lit = p.scanIgnoreWhitespace()
@@ -219,7 +245,7 @@ func (p *Parser) parseLine() (*Instruction, error) {
 		_, lit = p.scanIgnoreWhitespace()
 		c.Literal += lit
 		c.To = lit
-		c.Type = 1
+		c.Type = common.TxTypeTransfer
 		_, lit = p.scanIgnoreWhitespace() // expect (
 		c.Literal += lit
 		if lit != "(" {
@@ -228,7 +254,7 @@ func (p *Parser) parseLine() (*Instruction, error) {
 			return c, fmt.Errorf("Expected '(', found '%s'", lit)
 		}
 	} else {
-		c.Type = 0
+		c.Type = common.TxTypeCreateAccountDeposit
 	}
 
 	_, lit = p.scanIgnoreWhitespace()
@@ -248,8 +274,13 @@ func (p *Parser) parseLine() (*Instruction, error) {
 		return c, fmt.Errorf("Expected ')', found '%s'", lit)
 	}
 
-	_, lit = p.scanIgnoreWhitespace() // expect :
+	_, lit = p.scanIgnoreWhitespace() // expect ':' or 'E' (Exit type)
 	c.Literal += lit
+	if lit == "E" {
+		c.Type = common.TxTypeForceExit
+		_, lit = p.scanIgnoreWhitespace() // expect ':'
+		c.Literal += lit
+	}
 	if lit != ":" {
 		line, _ := p.s.r.ReadString('\n')
 		c.Literal += line
@@ -264,6 +295,23 @@ func (p *Parser) parseLine() (*Instruction, error) {
 		return c, err
 	}
 	c.Amount = uint64(amount)
+
+	if c.Type == common.TxTypeTransfer {
+		tok, lit = p.scanIgnoreWhitespace()
+		c.Literal += lit
+		fee, err := strconv.Atoi(lit)
+		if err != nil {
+			line, _ := p.s.r.ReadString('\n')
+			c.Literal += line
+			return c, err
+		}
+		if fee > 255 {
+			line, _ := p.s.r.ReadString('\n')
+			c.Literal += line
+			return c, fmt.Errorf("Fee %d can not be bigger than 255", fee)
+		}
+		c.Fee = uint8(fee)
+	}
 
 	if tok == EOF {
 		return nil, errof
@@ -282,12 +330,16 @@ func (p *Parser) Parse() (Instructions, error) {
 		if err == errof {
 			break
 		}
+		if err == ecomment {
+			i++
+			continue
+		}
 		if err != nil {
 			return instructions, fmt.Errorf("error parsing line %d: %s, err: %s", i, instruction.Literal, err.Error())
 		}
 		instructions.Instructions = append(instructions.Instructions, instruction)
 		accounts[instruction.From] = true
-		if instruction.Type == 1 { // type: Transfer
+		if instruction.Type == common.TxTypeTransfer { // type: Transfer
 			accounts[instruction.To] = true
 		}
 		tokenids[instruction.TokenID] = true
