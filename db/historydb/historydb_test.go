@@ -44,7 +44,7 @@ func TestAddBlock(t *testing.T) {
 	fromBlock = 1
 	toBlock = 5
 	// Delete peviously created rows (clean previous test execs)
-	assert.NoError(t, historyDB.reorg(fromBlock-1))
+	assert.NoError(t, historyDB.Reorg(fromBlock-1))
 	// Generate fake blocks
 	blocks := genBlocks(fromBlock, toBlock)
 	// Insert blocks into DB
@@ -95,11 +95,11 @@ func TestBids(t *testing.T) {
 // setTestBlocks WARNING: this will delete the blocks and recreate them
 func setTestBlocks(from, to uint64) {
 	if from == 0 {
-		if err := historyDB.reorg(from); err != nil {
+		if err := historyDB.Reorg(from); err != nil {
 			panic(err)
 		}
 	} else {
-		if err := historyDB.reorg(from - 1); err != nil {
+		if err := historyDB.Reorg(from - 1); err != nil {
 			panic(err)
 		}
 	}

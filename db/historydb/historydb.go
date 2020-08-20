@@ -40,7 +40,12 @@ func NewHistoryDB(port int, host, user, password, dbname string) (*HistoryDB, er
 	return &HistoryDB{hdb}, nil
 }
 
-// addBlocks insert blocks into the DB
+// AddBlock insert a block into the DB
+func (hdb *HistoryDB) AddBlock(blocks *common.Block) error {
+	return nil
+}
+
+// addBlocks insert blocks into the DB. TODO: move method to test
 func (hdb *HistoryDB) addBlocks(blocks []common.Block) error {
 	return db.BulkInsert(
 		hdb.db,
@@ -60,11 +65,36 @@ func (hdb *HistoryDB) GetBlocks(from, to uint64) ([]*common.Block, error) {
 	return blocks, err
 }
 
-// reorg deletes all the information that was added into the DB after the lastValidBlock
+// Reorg deletes all the information that was added into the DB after the lastValidBlock
 // WARNING: this is a draaft of the function, useful at the moment for tests
-func (hdb *HistoryDB) reorg(lastValidBlock uint64) error {
+func (hdb *HistoryDB) Reorg(lastValidBlock uint64) error {
 	_, err := hdb.db.Exec("DELETE FROM block WHERE eth_block_num > $1;", lastValidBlock)
 	return err
+}
+
+// SyncRollup stores all the data that can be changed / added on a block in the Rollup SC
+func (hdb *HistoryDB) SyncRollup(
+	blockNum uint64,
+	l1txs []common.L1Tx,
+	l2txs []common.L2Tx,
+	registeredAccounts []common.Account,
+	exitTree common.ExitTreeLeaf,
+	withdrawals common.ExitTreeLeaf,
+	registeredTokens []common.Token,
+	batch *common.Batch,
+	vars *common.RollupVars,
+) error {
+	return nil
+}
+
+// SyncPoD stores all the data that can be changed / added on a block in the PoD SC
+func (hdb *HistoryDB) SyncPoD(
+	blockNum uint64,
+	bids []common.Bid,
+	coordinators []common.Coordinator,
+	vars *common.PoDVars,
+) error {
+	return nil
 }
 
 // addBids insert Bids into the DB

@@ -32,8 +32,6 @@ func (tx *L1Tx) Tx() *Tx {
 		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
 		Amount:  tx.Amount,
-		Nonce:   0,
-		Fee:     0,
 		Type:    tx.Type,
 	}
 }
