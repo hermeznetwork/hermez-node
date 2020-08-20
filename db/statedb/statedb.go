@@ -201,95 +201,73 @@ func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
 	return common.AccountFromBytes(b)
 }
 
-// CreateAccount creates a new Account in the StateDB for the given Idx.
-// MerkleTree is not affected.
-func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) error {
+// CreateAccount creates a new Account in the StateDB for the given Idx.  If
+// StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
+// MerkleTree, returning a CircomProcessorProof.
+func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	accountBytes, err := account.Bytes()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// store the Leaf value
 	tx, err := s.db.NewTx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = tx.Get(idx.Bytes())
 	if err != db.ErrNotFound {
-		return ErrAccountAlreadyExists
+		return nil, ErrAccountAlreadyExists
 	}
 
 	tx.Put(v.Bytes(), accountBytes[:])
 	tx.Put(idx.Bytes(), v.Bytes())
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	if s.mt != nil {
+		return s.mt.AddAndGetCircomProof(idx.BigInt(), v)
+	}
+	return nil, nil
 }
 
-// UpdateAccount updates the Account in the StateDB for the given Idx.
-// MerkleTree is not affected.
-func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) error {
+// UpdateAccount updates the Account in the StateDB for the given Idx.  If
+// StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
+// MerkleTree, returning a CircomProcessorProof.
+func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	accountBytes, err := account.Bytes()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tx, err := s.db.NewTx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	tx.Put(v.Bytes(), accountBytes[:])
 	tx.Put(idx.Bytes(), v.Bytes())
 
-	return tx.Commit()
-}
-
-// MTCreateAccount creates a new Account in the StateDB for the given Idx,
-// and updates the MerkleTree, returning a CircomProcessorProof
-func (s *StateDB) MTCreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
-	if s.mt == nil {
-		return nil, ErrStateDBWithoutMT
-	}
-	err := s.CreateAccount(idx, account)
-	if err != nil {
+	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	v, err := account.HashValue() // already computed in s.CreateAccount, next iteration reuse first computation
-	if err != nil {
-		return nil, err
+	if s.mt != nil {
+		return s.mt.Update(idx.BigInt(), v)
 	}
-	// Add k & v into the MT
-	return s.mt.AddAndGetCircomProof(idx.BigInt(), v)
-}
-
-// MTUpdateAccount updates the Account in the StateDB for the given Idx, and
-// updates the MerkleTree, returning a CircomProcessorProof
-func (s *StateDB) MTUpdateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
-	if s.mt == nil {
-		return nil, ErrStateDBWithoutMT
-	}
-	err := s.UpdateAccount(idx, account)
-	if err != nil {
-		return nil, err
-	}
-
-	v, err := account.HashValue() // already computed in s.CreateAccount, next iteration reuse first computation
-	if err != nil {
-		return nil, err
-	}
-	// Add k & v into the MT
-	return s.mt.Update(idx.BigInt(), v)
+	return nil, nil
 }
 
 // MTGetProof returns the CircomVerifierProof for a given Idx
