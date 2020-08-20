@@ -34,6 +34,8 @@ type StateDB struct {
 	currentBatch uint64
 	db           *pebble.PebbleStorage
 	mt           *merkletree.MerkleTree
+	// idx holds the current Idx that the BatchBuilder is using
+	idx uint64
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
@@ -147,6 +149,11 @@ func (s *StateDB) DeleteCheckpoint(batchNum uint64) error {
 // those checkpoints will remain in the storage, and eventually will be
 // deleted when MakeCheckpoint overwrites them.
 func (s *StateDB) Reset(batchNum uint64) error {
+	if batchNum == 0 {
+		s.idx = 0
+		return nil
+	}
+
 	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
 	currentPath := s.path + PATHCURRENT
 
@@ -174,7 +181,9 @@ func (s *StateDB) Reset(batchNum uint64) error {
 	if err != nil {
 		return err
 	}
-	return nil
+	// idx is obtained from the statedb reset
+	s.idx, err = s.getIdx()
+	return err
 }
 
 // GetAccount returns the account for the given Idx
@@ -315,6 +324,10 @@ func NewLocalStateDB(path string, synchronizerDB *StateDB, withMT bool, nLevels 
 // Reset performs a reset in the LocaStateDB. If fromSynchronizer is true, it
 // gets the state from LocalStateDB.synchronizerStateDB for the given batchNum. If fromSynchronizer is false, get the state from LocalStateDB checkpoints.
 func (l *LocalStateDB) Reset(batchNum uint64, fromSynchronizer bool) error {
+	if batchNum == 0 {
+		l.idx = 0
+		return nil
+	}
 
 	synchronizerCheckpointPath := l.synchronizerStateDB.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
 	checkpointPath := l.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
