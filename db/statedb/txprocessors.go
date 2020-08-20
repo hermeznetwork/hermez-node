@@ -89,7 +89,7 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 		EthAddr:   tx.FromEthAddr,
 	}
 
-	err := s.CreateAccount(common.Idx(s.idx+1), account)
+	_, err := s.CreateAccount(common.Idx(s.idx+1), account)
 	if err != nil {
 		return err
 	}
@@ -120,13 +120,13 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		// add amount to the receiver
 		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
 		// update receiver account in localStateDB
-		err = s.UpdateAccount(tx.ToIdx, accReceiver)
+		_, err = s.UpdateAccount(tx.ToIdx, accReceiver)
 		if err != nil {
 			return err
 		}
 	}
 	// update sender account in localStateDB
-	err = s.UpdateAccount(tx.FromIdx, accSender)
+	_, err = s.UpdateAccount(tx.FromIdx, accSender)
 	if err != nil {
 		return err
 	}
@@ -146,18 +146,21 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 		return err
 	}
 
+	// increment nonce
+	accSender.Nonce++
+
 	// substract amount to the sender
 	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
 	// add amount to the receiver
 	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
 
 	// update receiver account in localStateDB
-	err = s.UpdateAccount(tx.ToIdx, accReceiver)
+	_, err = s.UpdateAccount(tx.ToIdx, accReceiver)
 	if err != nil {
 		return err
 	}
 	// update sender account in localStateDB
-	err = s.UpdateAccount(tx.FromIdx, accSender)
+	_, err = s.UpdateAccount(tx.FromIdx, accSender)
 	if err != nil {
 		return err
 	}
