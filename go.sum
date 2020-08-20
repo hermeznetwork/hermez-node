@@ -274,6 +274,8 @@ github.com/iden3/go-iden3-crypto v0.0.6-0.20200813145745-66519124ca17 h1:aqy++85
 github.com/iden3/go-iden3-crypto v0.0.6-0.20200813145745-66519124ca17/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
 github.com/iden3/go-iden3-crypto v0.0.6-0.20200814110325-70841d78e7d8 h1:1QeVvr/DjiBpk8tw3vBfYD+zs0JeYl3fPIUA/foDq3w=
 github.com/iden3/go-iden3-crypto v0.0.6-0.20200814110325-70841d78e7d8/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
+github.com/iden3/go-iden3-crypto v0.0.6-0.20200819064831-09d161e9f670 h1:gNBFu/WnRfNn+xywE04fgCWSHlb6wr0nIIll9i4R2fc=
+github.com/iden3/go-iden3-crypto v0.0.6-0.20200819064831-09d161e9f670/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
 github.com/iden3/go-merkletree v0.0.0-20200723202738-75e24244a1e3 h1:QR6LqG1HqqPE4myiLR73QFIieAfwODG3bqo1juuaqVI=
 github.com/iden3/go-merkletree v0.0.0-20200723202738-75e24244a1e3/go.mod h1:Fc49UeywIsj8nUfb5lxBzmWrMeMmqzTJ5F0OcjdiEME=
 github.com/iden3/go-merkletree v0.0.0-20200806171216-dd600560e44c h1:EzVMSVkwKdfcOR1a+rZe9dfbtAj6KdJnBxOEZ5B+gCQ=
@@ -284,6 +286,10 @@ github.com/iden3/go-merkletree v0.0.0-20200815105542-2277604e65dd h1:AkPlODLWkgQ
 github.com/iden3/go-merkletree v0.0.0-20200815105542-2277604e65dd/go.mod h1:/MsQOzDnxK8X/u7XP9ZBoZwZ4gIm9FlwfqckH5dRuTM=
 github.com/iden3/go-merkletree v0.0.0-20200815144208-1f1bd54b93ae h1:CC8oKPM+38/Dkq20QymuIjyRo0UFzJZeH5DPbGWURrI=
 github.com/iden3/go-merkletree v0.0.0-20200815144208-1f1bd54b93ae/go.mod h1:/MsQOzDnxK8X/u7XP9ZBoZwZ4gIm9FlwfqckH5dRuTM=
+github.com/iden3/go-merkletree v0.0.0-20200819075941-77df3096f7ea h1:0MtMnN42ULNxOnJYa0FH1qjeSEBPkYVH6ZCs22rz2FU=
+github.com/iden3/go-merkletree v0.0.0-20200819075941-77df3096f7ea/go.mod h1:MRe6i0mi2oDVUzgBIHsNRE6XAg8EBuqIQZMsd+do+dU=
+github.com/iden3/go-merkletree v0.0.0-20200819092443-dc656fdd32fc h1:VnRP7JCp5TJHnTC+r8NrXGkRBvp62tRGqeA3FcdEq+Q=
+github.com/iden3/go-merkletree v0.0.0-20200819092443-dc656fdd32fc/go.mod h1:MRe6i0mi2oDVUzgBIHsNRE6XAg8EBuqIQZMsd+do+dU=
 github.com/iden3/go-wasm3 v0.0.1/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=

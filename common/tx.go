@@ -45,10 +45,10 @@ const (
 	TxTypeDeposit TxType = "Deposit"
 	// TxTypeCreateAccountDeposit represents creation of a new leaf in the state tree (newAcconut) + L1->L2 transfer
 	TxTypeCreateAccountDeposit TxType = "CreateAccountDeposit"
-	// TxTypeCreateAccountDepositAndTransfer represents L1->L2 transfer + L2->L2 transfer
-	TxTypeCreateAccountDepositAndTransfer TxType = "CreateAccountDepositAndTransfer"
-	// TxTypeDepositAndTransfer TBD
-	TxTypeDepositAndTransfer TxType = "TxTypeDepositAndTransfer"
+	// TxTypeCreateAccountDepositTransfer represents L1->L2 transfer + L2->L2 transfer
+	TxTypeCreateAccountDepositTransfer TxType = "CreateAccountDepositTransfer"
+	// TxTypeDepositTransfer TBD
+	TxTypeDepositTransfer TxType = "TxTypeDepositTransfer"
 	// TxTypeForceTransfer TBD
 	TxTypeForceTransfer TxType = "TxTypeForceTransfer"
 	// TxTypeForceExit TBD
@@ -63,7 +63,7 @@ const (
 type Tx struct {
 	TxID     TxID
 	FromIdx  Idx // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	ToIdx    Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	ToIdx    Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositTransfer
 	TokenID  TokenID
 	Amount   *big.Int
 	Nonce    uint64 // effective 48 bits used
