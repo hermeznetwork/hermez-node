@@ -1,12 +1,37 @@
 package common
 
 import (
+	"encoding/binary"
+	"fmt"
 	"math/big"
 	"time"
 
 	eth "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
+
+// Nonce represents the nonce value in a uint64, which has the method Bytes that returns a byte array of length 5 (40 bits).
+type Nonce uint64
+
+// Bytes returns a byte array of length 5 representing the Nonce
+func (n Nonce) Bytes() ([5]byte, error) {
+	if n >= 1099511627776 { // 2**40bits
+		return [5]byte{}, ErrNonceOverflow
+	}
+	var nonceBytes [8]byte
+	binary.LittleEndian.PutUint64(nonceBytes[:], uint64(n))
+	var b [5]byte
+	copy(b[:], nonceBytes[:5])
+	return b, nil
+}
+
+func NonceFromBytes(b [5]byte) (Nonce, error) {
+	var nonceBytes [8]byte
+	copy(nonceBytes[:], b[:5])
+	nonce := binary.LittleEndian.Uint64(nonceBytes[:])
+	return Nonce(nonce), nil
+}
 
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
 type PoolL2Tx struct {
@@ -19,7 +44,7 @@ type PoolL2Tx struct {
 	TokenID   TokenID            `meddler:"token_id"`
 	Amount    *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
 	Fee       FeeSelector        `meddler:"fee"`
-	Nonce     uint64             `meddler:"nonce"` // effective 48 bits used
+	Nonce     Nonce              `meddler:"nonce"` // effective 40 bits used
 	State     PoolL2TxState      `meddler:"state"`
 	Signature babyjub.Signature  `meddler:"signature"`         // tx signature
 	Timestamp time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
@@ -38,6 +63,86 @@ type PoolL2Tx struct {
 	// Extra metadata, may be uninitialized
 	Type               TxType `meddler:"-"` // optional, descrives which kind of tx it's
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
+}
+
+// TxCompressedData spec:
+// [ 32 bits ] signatureConstant // 4 bytes: [0:4]
+// [ 16 bits ] chainId // 2 bytes: [4:6]
+// [ 48 bits ] fromIdx // 6 bytes: [6:12]
+// [ 48 bits ] toIdx // 6 bytes: [12:18]
+// [ 16 bits ] amountFloat16 // 2 bytes: [18:20]
+// [ 32 bits ] tokenID // 4 bytes: [20:24]
+// [ 40 bits ] nonce // 5 bytes: [24:29]
+// [ 8 bits  ] userFee // 1 byte: [29:30]
+// [ 1 bits  ] toBjjSign // 1 byte: [30:31]
+// Total bits compressed data:  241 bits // 31 bytes in *big.Int representation
+func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
+	// sigconstant
+	sc, ok := new(big.Int).SetString("3322668559", 10)
+	if !ok {
+		return nil, fmt.Errorf("error parsing SignatureConstant")
+	}
+
+	amountFloat16, err := utils.NewFloat16(tx.Amount)
+	if err != nil {
+		return nil, err
+	}
+	var b [31]byte
+	copy(b[:4], SwapEndianness(sc.Bytes()))
+	copy(b[4:6], []byte{1, 0, 0, 0}) // LittleEndian representation of uint32(1) for Ethereum
+	copy(b[6:12], tx.FromIdx.Bytes())
+	copy(b[12:18], tx.ToIdx.Bytes())
+	copy(b[18:20], amountFloat16.Bytes())
+	copy(b[20:24], tx.TokenID.Bytes())
+	nonceBytes, err := tx.Nonce.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[24:29], nonceBytes[:])
+	b[29] = byte(tx.Fee)
+	toBjjSign := byte(0)
+	if babyjub.PointCoordSign(tx.ToBJJ.X) {
+		toBjjSign = byte(1)
+	}
+	b[30] = toBjjSign
+	bi := new(big.Int).SetBytes(SwapEndianness(b[:]))
+
+	return bi, nil
+}
+
+// TxCompressedDataV2 spec:
+// [ 48 bits ] fromIdx // 6 bytes: [0:6]
+// [ 48 bits ] toIdx // 6 bytes: [6:12]
+// [ 16 bits ] amountFloat16 // 2 bytes: [12:14]
+// [ 32 bits ] tokenID // 4 bytes: [14:18]
+// [ 40 bits ] nonce // 5 bytes: [18:23]
+// [ 8 bits  ] userFee // 1 byte: [23:24]
+// [ 1 bits  ] toBjjSign // 1 byte: [24:25]
+// Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
+func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
+	amountFloat16, err := utils.NewFloat16(tx.Amount)
+	if err != nil {
+		return nil, err
+	}
+	var b [25]byte
+	copy(b[0:6], tx.FromIdx.Bytes())
+	copy(b[6:12], tx.ToIdx.Bytes())
+	copy(b[12:14], amountFloat16.Bytes())
+	copy(b[14:18], tx.TokenID.Bytes())
+	nonceBytes, err := tx.Nonce.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[18:23], nonceBytes[:])
+	b[23] = byte(tx.Fee)
+	toBjjSign := byte(0)
+	if babyjub.PointCoordSign(tx.ToBJJ.X) {
+		toBjjSign = byte(1)
+	}
+	b[24] = toBjjSign
+
+	bi := new(big.Int).SetBytes(SwapEndianness(b[:]))
+	return bi, nil
 }
 
 func (tx *PoolL2Tx) Tx() *Tx {

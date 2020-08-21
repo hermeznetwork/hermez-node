@@ -16,7 +16,7 @@ var errof = fmt.Errorf("eof in parseline")
 var ecomment = fmt.Errorf("comment in parseline")
 
 const (
-	ILLEGAL Token = iota
+	ILLEGAL token = iota
 	WS
 	EOF
 
@@ -80,9 +80,9 @@ func (i Instruction) Raw() string {
 	return buf.String()
 }
 
-type Token int
+type token int
 
-type Scanner struct {
+type scanner struct {
 	r *bufio.Reader
 }
 
@@ -102,12 +102,12 @@ func isDigit(ch rune) bool {
 	return (ch >= '0' && ch <= '9')
 }
 
-// NewScanner creates a new Scanner with the given io.Reader
-func NewScanner(r io.Reader) *Scanner {
-	return &Scanner{r: bufio.NewReader(r)}
+// NewScanner creates a new scanner with the given io.Reader
+func NewScanner(r io.Reader) *scanner {
+	return &scanner{r: bufio.NewReader(r)}
 }
 
-func (s *Scanner) read() rune {
+func (s *scanner) read() rune {
 	ch, _, err := s.r.ReadRune()
 	if err != nil {
 		return eof
@@ -115,12 +115,12 @@ func (s *Scanner) read() rune {
 	return ch
 }
 
-func (s *Scanner) unread() {
+func (s *scanner) unread() {
 	_ = s.r.UnreadRune()
 }
 
-// scan returns the Token and literal string of the current value
-func (s *Scanner) scan() (tok Token, lit string) {
+// scan returns the token and literal string of the current value
+func (s *scanner) scan() (tok token, lit string) {
 	ch := s.read()
 
 	if isWhitespace(ch) {
@@ -144,7 +144,7 @@ func (s *Scanner) scan() (tok Token, lit string) {
 	return ILLEGAL, string(ch)
 }
 
-func (s *Scanner) scanWhitespace() (token Token, lit string) {
+func (s *scanner) scanWhitespace() (token token, lit string) {
 	var buf bytes.Buffer
 	buf.WriteRune(s.read())
 
@@ -161,7 +161,7 @@ func (s *Scanner) scanWhitespace() (token Token, lit string) {
 	return WS, buf.String()
 }
 
-func (s *Scanner) scanIndent() (tok Token, lit string) {
+func (s *scanner) scanIndent() (tok token, lit string) {
 	var buf bytes.Buffer
 	buf.WriteRune(s.read())
 
@@ -177,16 +177,16 @@ func (s *Scanner) scanIndent() (tok Token, lit string) {
 	}
 
 	if len(buf.String()) == 1 {
-		return Token(rune(buf.String()[0])), buf.String()
+		return token(rune(buf.String()[0])), buf.String()
 	}
 	return IDENT, buf.String()
 }
 
 // Parser defines the parser
 type Parser struct {
-	s   *Scanner
+	s   *scanner
 	buf struct {
-		tok Token
+		tok token
 		lit string
 		n   int
 	}
@@ -197,7 +197,7 @@ func NewParser(r io.Reader) *Parser {
 	return &Parser{s: NewScanner(r)}
 }
 
-func (p *Parser) scan() (tok Token, lit string) {
+func (p *Parser) scan() (tok token, lit string) {
 	// if there is a token in the buffer return it
 	if p.buf.n != 0 {
 		p.buf.n = 0
@@ -210,7 +210,7 @@ func (p *Parser) scan() (tok Token, lit string) {
 	return
 }
 
-func (p *Parser) scanIgnoreWhitespace() (tok Token, lit string) {
+func (p *Parser) scanIgnoreWhitespace() (tok token, lit string) {
 	tok, lit = p.scan()
 	if tok == WS {
 		tok, lit = p.scan()
@@ -319,6 +319,10 @@ func (p *Parser) parseLine() (*Instruction, error) {
 	return c, nil
 }
 
+func idxTokenIDToString(idx string, tid common.TokenID) string {
+	return idx + strconv.Itoa(int(tid))
+}
+
 // Parse parses through reader
 func (p *Parser) Parse() (Instructions, error) {
 	var instructions Instructions
@@ -338,9 +342,9 @@ func (p *Parser) Parse() (Instructions, error) {
 			return instructions, fmt.Errorf("error parsing line %d: %s, err: %s", i, instruction.Literal, err.Error())
 		}
 		instructions.Instructions = append(instructions.Instructions, instruction)
-		accounts[instruction.From] = true
+		accounts[idxTokenIDToString(instruction.From, instruction.TokenID)] = true
 		if instruction.Type == common.TxTypeTransfer { // type: Transfer
-			accounts[instruction.To] = true
+			accounts[idxTokenIDToString(instruction.To, instruction.TokenID)] = true
 		}
 		tokenids[instruction.TokenID] = true
 		i++

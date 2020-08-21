@@ -23,39 +23,47 @@ type Account struct {
 	EthAddr   eth.Address
 }
 
+func (a *Account) String() string {
+	buf := bytes.NewBufferString("")
+	fmt.Fprintf(buf, "PublicKey: %s..., ", a.PublicKey.String()[:10])
+	fmt.Fprintf(buf, "EthAddr: %s..., ", a.EthAddr.String()[:10])
+	fmt.Fprintf(buf, "TokenID: %v, ", a.TokenID)
+	fmt.Fprintf(buf, "Nonce: %d, ", a.Nonce)
+	fmt.Fprintf(buf, "Balance: %s, ", a.Balance.String())
+	return buf.String()
+}
+
 // Bytes returns the bytes representing the Account, in a way that each BigInt is represented by 32 bytes, in spite of the BigInt could be represented in less bytes (due a small big.Int), so in this way each BigInt is always 32 bytes and can be automatically parsed from a byte array.
-func (l *Account) Bytes() ([32 * NLEAFELEMS]byte, error) {
+func (a *Account) Bytes() ([32 * NLEAFELEMS]byte, error) {
 	var b [32 * NLEAFELEMS]byte
 
-	if l.Nonce > 0xffffffffff {
+	if a.Nonce > 0xffffffffff {
 		return b, fmt.Errorf("%s Nonce", ErrNumOverflow)
 	}
-	if len(l.Balance.Bytes()) > 24 {
+	if len(a.Balance.Bytes()) > 24 {
 		return b, fmt.Errorf("%s Balance", ErrNumOverflow)
 	}
 
-	var tokenIDBytes [4]byte
-	binary.LittleEndian.PutUint32(tokenIDBytes[:], uint32(l.TokenID))
 	var nonceBytes [8]byte
-	binary.LittleEndian.PutUint64(nonceBytes[:], l.Nonce)
+	binary.LittleEndian.PutUint64(nonceBytes[:], a.Nonce)
 
-	copy(b[0:4], tokenIDBytes[:])
+	copy(b[0:4], a.TokenID.Bytes())
 	copy(b[4:9], nonceBytes[:])
-	if babyjub.PointCoordSign(l.PublicKey.X) {
+	if babyjub.PointCoordSign(a.PublicKey.X) {
 		b[10] = 1
 	}
-	copy(b[32:64], SwapEndianness(l.Balance.Bytes())) // SwapEndianness, as big.Int uses BigEndian
-	copy(b[64:96], SwapEndianness(l.PublicKey.Y.Bytes()))
-	copy(b[96:116], l.EthAddr.Bytes())
+	copy(b[32:64], SwapEndianness(a.Balance.Bytes())) // SwapEndianness, as big.Int uses BigEndian
+	copy(b[64:96], SwapEndianness(a.PublicKey.Y.Bytes()))
+	copy(b[96:116], a.EthAddr.Bytes())
 
 	return b, nil
 }
 
 // BigInts returns the [5]*big.Int, where each *big.Int is inside the Finite Field
-func (l *Account) BigInts() ([NLEAFELEMS]*big.Int, error) {
+func (a *Account) BigInts() ([NLEAFELEMS]*big.Int, error) {
 	e := [NLEAFELEMS]*big.Int{}
 
-	b, err := l.Bytes()
+	b, err := a.Bytes()
 	if err != nil {
 		return e, err
 	}
@@ -69,10 +77,10 @@ func (l *Account) BigInts() ([NLEAFELEMS]*big.Int, error) {
 }
 
 // HashValue returns the value of the Account, which is the Poseidon hash of its *big.Int representation
-func (l *Account) HashValue() (*big.Int, error) {
+func (a *Account) HashValue() (*big.Int, error) {
 	b0 := big.NewInt(0)
 	toHash := []*big.Int{b0, b0, b0, b0, b0, b0}
-	lBI, err := l.BigInts()
+	lBI, err := a.BigInts()
 	if err != nil {
 		return nil, err
 	}
@@ -122,12 +130,12 @@ func AccountFromBytes(b [32 * NLEAFELEMS]byte) (*Account, error) {
 		return nil, ErrNotInFF
 	}
 
-	l := Account{
+	a := Account{
 		TokenID:   TokenID(tokenID),
 		Nonce:     nonce,
 		Balance:   balance,
 		PublicKey: &publicKey,
 		EthAddr:   ethAddr,
 	}
-	return &l, nil
+	return &a, nil
 }
