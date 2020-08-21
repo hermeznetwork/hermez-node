@@ -4,9 +4,9 @@ import (
 	"math/big"
 )
 
-type ExitTreeLeaf struct {
+type ExitInfo struct {
 	AccountIdx  Idx
 	MerkleProof []byte
-	Amount      *big.Int
+	Balance     *big.Int
 	Nullifier   *big.Int
 }

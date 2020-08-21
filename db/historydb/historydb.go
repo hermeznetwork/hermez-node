@@ -54,7 +54,12 @@ func (hdb *HistoryDB) addBlocks(blocks []common.Block) error {
 	)
 }
 
-// GetBlocks retrrieve blocks from the DB
+// GetBlock retrieve a block from the DB, given a block number
+func (hdb *HistoryDB) GetBlock(blockNum uint64) (*common.Block, error) {
+	return nil, nil
+}
+
+// GetBlocks retrieve blocks from the DB, given a range of block numbers defined by from and to
 func (hdb *HistoryDB) GetBlocks(from, to uint64) ([]*common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
@@ -63,6 +68,16 @@ func (hdb *HistoryDB) GetBlocks(from, to uint64) ([]*common.Block, error) {
 		from, to,
 	)
 	return blocks, err
+}
+
+// GetLastBlock retrieve the block with the highest block number from the DB
+func (hdb *HistoryDB) GetLastBlock() (*common.Block, error) {
+	return nil, nil
+}
+
+// GetLastBatchNum returns the BatchNum of the latest forged batch
+func (hdb *HistoryDB) GetLastBatchNum() (*common.BatchNum, error) {
+	return nil, nil
 }
 
 // Reorg deletes all the information that was added into the DB after the lastValidBlock

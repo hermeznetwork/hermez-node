@@ -22,8 +22,7 @@ type L1Tx struct {
 	Amount          *big.Int           `meddler:"amount,bigint"`
 	LoadAmount      *big.Int           `meddler:"load_amount,bigint"`
 	EthBlockNum     uint64             `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
-	// Extra metadata, may be uninitialized
-	Type TxType `meddler:"-"` // optional, descrives which kind of tx it's
+	Type            TxType             `meddler:"tx_type"`
 }
 
 func (tx *L1Tx) Tx() *Tx {

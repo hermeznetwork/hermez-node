@@ -15,8 +15,7 @@ type L2Tx struct {
 	Amount   *big.Int    `meddler:"amount,bigint"`
 	Fee      FeeSelector `meddler:"fee"`
 	Nonce    Nonce       `meddler:"nonce"`
-	// Extra metadata, may be uninitialized
-	Type TxType `meddler:"-"` // optional, descrives which kind of tx it's
+	Type     TxType      `meddler:"tx_type"`
 }
 
 func (tx *L2Tx) Tx() *Tx {

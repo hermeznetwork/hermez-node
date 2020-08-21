@@ -30,7 +30,7 @@ CREATE TABLE exit_tree (
     batch_num BIGINT REFERENCES batch (batch_num) ON DELETE CASCADE,
     account_idx BIGINT,
     merkle_proof BYTEA NOT NULL,
-    amount NUMERIC NOT NULL,
+    balance NUMERIC NOT NULL,
     nullifier BYTEA NOT NULL,
     PRIMARY KEY (batch_num, account_idx)
 );
@@ -72,7 +72,8 @@ CREATE TABLE l1tx (
     token_id INT NOT NULL REFERENCES token (token_id),
     amount NUMERIC NOT NULL,
     load_amount BYTEA NOT NULL,
-    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    tx_type VARCHAR(40) NOT NULL
 );
 
 CREATE TABLE l2tx (
@@ -83,7 +84,8 @@ CREATE TABLE l2tx (
     to_idx BIGINT NOT NULL,
     amount NUMERIC NOT NULL,
     fee INT NOT NULL,
-    nonce BIGINT NOT NULL
+    nonce BIGINT NOT NULL,
+    tx_type VARCHAR(40) NOT NULL
 );
 
 CREATE TABLE account (
