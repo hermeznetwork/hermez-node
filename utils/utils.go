@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/binary"
 	"errors"
 	"math/big"
 )
@@ -13,9 +14,15 @@ var (
 // Float16 represents a float in a 16 bit format
 type Float16 uint16
 
-// BigInt converts the Float16 to a big.Int integer
-func (fl16 *Float16) BigInt() *big.Int {
+// Bytes return a byte array of length 2 with the Float16 value encoded in LittleEndian
+func (f16 Float16) Bytes() []byte {
+	var b [2]byte
+	binary.LittleEndian.PutUint16(b[:], uint16(f16))
+	return b[:]
+}
 
+// BigInt converts the Float16 to a *big.Int integer
+func (fl16 *Float16) BigInt() *big.Int {
 	fl := int64(*fl16)
 
 	m := big.NewInt(fl & 0x3FF)
@@ -30,14 +37,11 @@ func (fl16 *Float16) BigInt() *big.Int {
 		res.Add(res, exp.Div(exp, big.NewInt(2)))
 
 	}
-
 	return res
-
 }
 
 // floorFix2Float converts a fix to a float, always rounding down
 func floorFix2Float(_f *big.Int) Float16 {
-
 	zero := big.NewInt(0)
 	ten := big.NewInt(10)
 	e := int64(0)
@@ -60,13 +64,11 @@ func floorFix2Float(_f *big.Int) Float16 {
 	}
 
 	return Float16(m.Int64() | e<<11)
-
 }
 
-// NewFloat16 encodes a big.Int integer as a Float16, returning error in case
+// NewFloat16 encodes a *big.Int integer as a Float16, returning error in case
 // of loss during the encoding.
 func NewFloat16(f *big.Int) (Float16, error) {
-
 	fl1 := floorFix2Float(f)
 	fi1 := fl1.BigInt()
 	fl2 := fl1 | 0x400
@@ -101,20 +103,16 @@ func NewFloat16(f *big.Int) (Float16, error) {
 	}
 
 	// Do rounding check
-
 	if res.BigInt().Cmp(f) == 0 {
 
 		return res, nil
 	}
-
 	return res, ErrRoundingLoss
-
 }
 
 // NewFloat16Floor encodes a big.Int integer as a Float16, rounding down in
 // case of loss during the encoding.
 func NewFloat16Floor(f *big.Int) Float16 {
-
 	fl1 := floorFix2Float(f)
 	fl2 := fl1 | 0x400
 	fi2 := fl2.BigInt()
@@ -123,5 +121,4 @@ func NewFloat16Floor(f *big.Int) Float16 {
 		return fl2
 	}
 	return fl1
-
 }

@@ -66,7 +66,7 @@ type Tx struct {
 	ToIdx    Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositTransfer
 	TokenID  TokenID
 	Amount   *big.Int
-	Nonce    uint64 // effective 48 bits used
+	Nonce    Nonce // effective 40 bits used
 	Fee      FeeSelector
 	Type     TxType   // optional, descrives which kind of tx it's
 	BatchNum BatchNum // batchNum in which this tx was forged. Presence indicates "forged" state.

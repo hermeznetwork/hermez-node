@@ -17,7 +17,7 @@ type Account struct {
 	BJJ   *babyjub.PrivateKey
 	Addr  ethCommon.Address
 	Idx   common.Idx
-	Nonce uint64
+	Nonce common.Nonce
 }
 
 // GenerateKeys generates BabyJubJub & Address keys for the given list of
@@ -66,40 +66,37 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([]*common.L1Tx, [
 		case common.TxTypeCreateAccountDeposit:
 			tx := common.L1Tx{
 				// TxID
-				FromEthAddr: accounts[inst.From].Addr,
-				FromBJJ:     accounts[inst.From].BJJ.Public(),
+				FromEthAddr: accounts[idxTokenIDToString(inst.From, inst.TokenID)].Addr,
+				FromBJJ:     accounts[idxTokenIDToString(inst.From, inst.TokenID)].BJJ.Public(),
 				TokenID:     inst.TokenID,
 				LoadAmount:  big.NewInt(int64(inst.Amount)),
 				Type:        common.TxTypeCreateAccountDeposit,
 			}
 			l1txs = append(l1txs, &tx)
-			if accounts[inst.From].Idx == common.Idx(0) { // if account.Idx is not set yet, set it and increment idx
-				accounts[inst.From].Idx = common.Idx(idx)
+			if accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx == common.Idx(0) { // if account.Idx is not set yet, set it and increment idx
+				accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx = common.Idx(idx)
 				idx++
 			}
 		case common.TxTypeTransfer:
 			tx := common.PoolL2Tx{
 				// TxID: nil,
-				FromIdx:   accounts[inst.From].Idx,
-				ToIdx:     accounts[inst.To].Idx,
-				ToEthAddr: accounts[inst.To].Addr,
-				ToBJJ:     accounts[inst.To].BJJ.Public(),
+				FromIdx:   accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
+				ToIdx:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx,
+				ToEthAddr: accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
+				ToBJJ:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
 				TokenID:   inst.TokenID,
 				Amount:    big.NewInt(int64(inst.Amount)),
 				Fee:       common.FeeSelector(inst.Fee),
-				Nonce:     accounts[inst.From].Nonce,
+				Nonce:     accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce,
 				State:     common.PoolL2TxStatePending,
 				Timestamp: time.Now(),
 				BatchNum:  0,
 				Type:      common.TxTypeTransfer,
 			}
-			// if inst.Fee == 0 {
-			//         tx.Fee = common.FeeSelector(i % 255)
-			// }
 			// TODO once signature function is ready, perform
 			// signature and set it to tx.Signature
 
-			accounts[inst.From].Nonce++
+			accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce++
 			l2txs = append(l2txs, &tx)
 		default:
 			continue

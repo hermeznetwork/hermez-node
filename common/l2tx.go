@@ -14,7 +14,7 @@ type L2Tx struct {
 	ToIdx    Idx         `meddler:"to_idx"`
 	Amount   *big.Int    `meddler:"amount,bigint"`
 	Fee      FeeSelector `meddler:"fee"`
-	Nonce    uint64      `meddler:"nonce"`
+	Nonce    Nonce       `meddler:"nonce"`
 	// Extra metadata, may be uninitialized
 	Type TxType `meddler:"-"` // optional, descrives which kind of tx it's
 }
