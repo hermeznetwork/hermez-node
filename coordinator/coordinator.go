@@ -29,14 +29,14 @@ type Coordinator struct {
 	txsel        *txselector.TxSelector
 	batchBuilder *batchbuilder.BatchBuilder
 
-	ethClient  *eth.EthClient
+	ethClient  *eth.Client
 	ethTxStore kvdb.Storage
 }
 
 // NewCoordinator creates a new Coordinator
 func NewCoordinator() *Coordinator { // once synchronizer is ready, synchronizer.Synchronizer will be passed as parameter here
 	var c *Coordinator
-	c.ethClient = eth.NewEthClient() // TBD
+	// c.ethClient = eth.NewClient() // TBD
 	c.ethTxStore = memory.NewMemoryStorage()
 	return c
 }
