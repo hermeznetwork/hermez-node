@@ -149,7 +149,7 @@ func genTxs(n int) []*common.PoolL2Tx {
 			Fee:       99,
 			Nonce:     28,
 			State:     state,
-			Signature: *privK.SignPoseidon(big.NewInt(674238462)),
+			Signature: privK.SignPoseidon(big.NewInt(674238462)),
 			Timestamp: time.Now().UTC(),
 		}
 		if i%2 == 0 { // Optional parameters: rq

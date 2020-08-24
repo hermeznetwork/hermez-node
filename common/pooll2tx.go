@@ -9,6 +9,7 @@ import (
 	eth "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 // Nonce represents the nonce value in a uint64, which has the method Bytes that returns a byte array of length 5 (40 bits).
@@ -46,7 +47,7 @@ type PoolL2Tx struct {
 	Fee       FeeSelector        `meddler:"fee"`
 	Nonce     Nonce              `meddler:"nonce"` // effective 40 bits used
 	State     PoolL2TxState      `meddler:"state"`
-	Signature babyjub.Signature  `meddler:"signature"`         // tx signature
+	Signature *babyjub.Signature `meddler:"signature"`         // tx signature
 	Timestamp time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
 	BatchNum          BatchNum           `meddler:"batch_num,zeroisnull"`   // batchNum in which this tx was forged. Presence indicates "forged" state.
@@ -143,6 +144,31 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 
 	bi := new(big.Int).SetBytes(SwapEndianness(b[:]))
 	return bi, nil
+}
+
+// HashToSign returns the computed Poseidon hash from the *PoolL2Tx that will be signed by the sender.
+func (tx *PoolL2Tx) HashToSign() (*big.Int, error) {
+	toCompressedData, err := tx.TxCompressedData()
+	if err != nil {
+		return nil, err
+	}
+	toEthAddr := EthAddrToBigInt(tx.ToEthAddr)
+	toBjjAy := tx.ToBJJ.Y
+	rqTxCompressedDataV2, err := tx.TxCompressedDataV2()
+	if err != nil {
+		return nil, err
+	}
+
+	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBjjAy, rqTxCompressedDataV2, EthAddrToBigInt(tx.RqToEthAddr), tx.RqToBJJ.Y})
+}
+
+// VerifySignature returns true if the signature verification is correct for the given PublicKey
+func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
+	h, err := tx.HashToSign()
+	if err != nil {
+		return false
+	}
+	return pk.VerifyPoseidon(h, tx.Signature)
 }
 
 func (tx *PoolL2Tx) Tx() *Tx {
