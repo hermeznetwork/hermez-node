@@ -4,105 +4,185 @@ import (
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
+	"github.com/iden3/go-merkletree/db/memory"
 )
 
 // keyidx is used as key in the db to store the current Idx
 var keyidx = []byte("idx")
 
-// ProcessTxs process the given L1Txs & L2Txs applying the needed updates
-// to the StateDB depending on the transaction Type. Returns the
-// common.ZKInputs to generate the SnarkProof later used by the BatchBuilder,
-// and returns common.ExitTreeLeaf that is later used by the Synchronizer to
-// update the HistoryDB.
-func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*common.ExitTreeLeaf, error) {
-	for _, tx := range l1usertxs {
-		err := s.processL1Tx(tx)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	for _, tx := range l1coordinatortxs {
-		err := s.processL1Tx(tx)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	for _, tx := range l2txs {
-		err := s.processL2Tx(tx)
+// FUTURE This will be used from common once pending PR is merged
+type ExitInfo struct {
+	Idx       *common.Idx
+	Proof     *merkletree.CircomVerifierProof
+	Nullifier *big.Int
+	Balance   *big.Int
+}
+
+// ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
+// the StateDB depending on the transaction Type. Returns the common.ZKInputs
+// to generate the SnarkProof later used by the BatchBuilder, and if
+// cmpExitTree is set to true, returns common.ExitTreeLeaf that is later used
+// by the Synchronizer to update the HistoryDB.
+func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*ExitInfo, error) {
+	var err error
+	var exitTree *merkletree.MerkleTree
+	exits := make(map[common.Idx]common.Account)
+	if cmpExitTree {
+		// TBD if ExitTree is only in memory or stored in disk, for the moment
+		// only needed in memory
+		exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
-	return nil, nil, nil
+	for _, tx := range l1usertxs {
+		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if exitIdx != nil && cmpExitTree {
+			exits[*exitIdx] = *exitAccount
+		}
+	}
+	for _, tx := range l1coordinatortxs {
+		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if exitIdx != nil && cmpExitTree {
+			exits[*exitIdx] = *exitAccount
+		}
+	}
+	for _, tx := range l2txs {
+		exitIdx, exitAccount, err := s.processL2Tx(exitTree, tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if exitIdx != nil && cmpExitTree {
+			exits[*exitIdx] = *exitAccount
+		}
+	}
+
+	if !cmpExitTree {
+		return nil, nil, nil
+	}
+
+	// once all txs processed (exitTree root frozen), for each leaf
+	// generate ExitInfo data
+	var exitInfos []*ExitInfo
+	for exitIdx, exitAccount := range exits {
+		// 0. generate MerkleProof
+		p, err := exitTree.GenerateCircomVerifierProof(exitIdx.BigInt(), nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		// 1. compute nullifier
+		exitAccStateValue, err := exitAccount.HashValue()
+		if err != nil {
+			return nil, nil, err
+		}
+		nullifier, err := poseidon.Hash([]*big.Int{
+			exitAccStateValue,
+			big.NewInt(int64(s.currentBatch)),
+			exitTree.Root().BigInt(),
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		// 2. generate ExitInfo
+		ei := &ExitInfo{
+			Idx:       &exitIdx,
+			Proof:     p,
+			Nullifier: nullifier,
+			Balance:   exitAccount.Balance,
+		}
+		exitInfos = append(exitInfos, ei)
+	}
+
+	// return exitInfos, so Synchronizer will be able to store it into
+	// HistoryDB for the concrete BatchNum
+	return nil, exitInfos, nil
 }
 
 // processL2Tx process the given L2Tx applying the needed updates to
 // the StateDB depending on the transaction Type.
-func (s *StateDB) processL2Tx(tx *common.L2Tx) error {
+func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.L2Tx) (*common.Idx, *common.Account, error) {
 	switch tx.Type {
 	case common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update
 		// balance & nonce
 		err := s.applyTransfer(tx.Tx())
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	case common.TxTypeExit:
 		// execute exit flow
+		exitAccount, err := s.applyExit(exitTree, tx.Tx())
+		if err != nil {
+			return nil, nil, err
+		}
+		return &tx.FromIdx, exitAccount, nil
 	default:
 	}
-	return nil
+	return nil, nil, nil
 }
 
 // processL1Tx process the given L1Tx applying the needed updates to the
 // StateDB depending on the transaction Type.
-func (s *StateDB) processL1Tx(tx *common.L1Tx) error {
+func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx, *common.Account, error) {
 	switch tx.Type {
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update balance
 		// & nonce
 		err := s.applyTransfer(tx.Tx())
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	case common.TxTypeCreateAccountDeposit:
 		// add new account to the MT, update balance of the MT account
 		err := s.applyCreateAccount(tx)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	case common.TxTypeDeposit:
 		// update balance of the MT account
 		err := s.applyDeposit(tx, false)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	case common.TxTypeDepositTransfer:
 		// update balance in MT account, update balance & nonce of sender
 		// & receiver
 		err := s.applyDeposit(tx, true)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	case common.TxTypeCreateAccountDepositTransfer:
 		// add new account to the merkletree, update balance in MT account,
 		// update balance & nonce of sender & receiver
 		err := s.applyCreateAccount(tx)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		err = s.applyTransfer(tx.Tx())
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	case common.TxTypeExit:
 		// execute exit flow
+		exitAccount, err := s.applyExit(exitTree, tx.Tx())
+		if err != nil {
+			return nil, nil, err
+		}
+		return &tx.FromIdx, exitAccount, nil
 	default:
 	}
 
-	return nil
+	return nil, nil, nil
 }
 
 // applyCreateAccount creates a new account in the account of the depositer, it
@@ -193,6 +273,43 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 	}
 
 	return nil
+}
+
+func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx *common.Tx) (*common.Account, error) {
+	// 0. substract tx.Amount from current Account in StateMT
+	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
+	acc, err := s.GetAccount(tx.FromIdx)
+	if err != nil {
+		return nil, err
+	}
+	acc.Balance = new(big.Int).Sub(acc.Balance, tx.Amount)
+	_, err = s.UpdateAccount(tx.FromIdx, acc)
+	if err != nil {
+		return nil, err
+	}
+
+	exitAccount, err := getAccountInTreeDB(exitTree.DB(), tx.FromIdx)
+	if err == db.ErrNotFound {
+		// 1a. if idx does not exist in exitTree:
+		// add new leaf 'ExitTreeLeaf', where ExitTreeLeaf.Balance = exitAmount (exitAmount=tx.Amount)
+		exitAccount := &common.Account{
+			TokenID:   acc.TokenID,
+			Nonce:     common.Nonce(1),
+			Balance:   tx.Amount,
+			PublicKey: acc.PublicKey,
+			EthAddr:   acc.EthAddr,
+		}
+		_, err = createAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
+		return exitAccount, err
+	} else if err != nil {
+		return exitAccount, err
+	}
+
+	// 1b. if idx already exist in exitTree:
+	// update account, where account.Balance += exitAmount
+	exitAccount.Balance = new(big.Int).Add(exitAccount.Balance, tx.Amount)
+	_, err = updateAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
+	return exitAccount, err
 }
 
 // getIdx returns the stored Idx from the localStateDB, which is the last Idx

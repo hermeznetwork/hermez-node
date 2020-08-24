@@ -179,16 +179,33 @@ func (s *StateDB) Reset(batchNum uint64) error {
 	}
 	// idx is obtained from the statedb reset
 	s.idx, err = s.getIdx()
-	return err
+	if err != nil {
+		return err
+	}
+
+	// open the MT for the current s.db
+	mt, err := merkletree.NewMerkleTree(s.db, s.mt.MaxLevels())
+	if err != nil {
+		return err
+	}
+	s.mt = mt
+
+	return nil
 }
 
 // GetAccount returns the account for the given Idx
 func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
-	vBytes, err := s.db.Get(idx.Bytes())
+	return getAccountInTreeDB(s.db, idx)
+}
+
+// getAccountInTreeDB is abstracted from StateDB to be used from StateDB and
+// from ExitTree.  GetAccount returns the account for the given Idx
+func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
+	vBytes, err := sto.Get(idx.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	accBytes, err := s.db.Get(vBytes)
+	accBytes, err := sto.Get(vBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -201,6 +218,14 @@ func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+	return createAccountInTreeDB(s.db, s.mt, idx, account)
+}
+
+// createAccountInTreeDB is abstracted from StateDB to be used from StateDB and
+// from ExitTree.  Creates a new Account in the StateDB for the given Idx.  If
+// StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
+// MerkleTree, returning a CircomProcessorProof.
+func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
@@ -212,7 +237,7 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 	}
 
 	// store the Leaf value
-	tx, err := s.db.NewTx()
+	tx, err := sto.NewTx()
 	if err != nil {
 		return nil, err
 	}
@@ -229,9 +254,10 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 		return nil, err
 	}
 
-	if s.mt != nil {
-		return s.mt.AddAndGetCircomProof(idx.BigInt(), v)
+	if mt != nil {
+		return mt.AddAndGetCircomProof(idx.BigInt(), v)
 	}
+
 	return nil, nil
 }
 
@@ -239,7 +265,15 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
-	// store at the DB the key: v, and value: leaf.Bytes()
+	return updateAccountInTreeDB(s.db, s.mt, idx, account)
+}
+
+// updateAccountInTreeDB is abstracted from StateDB to be used from StateDB and
+// from ExitTree.  Updates the Account in the StateDB for the given Idx.  If
+// StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
+// MerkleTree, returning a CircomProcessorProof.
+func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+	// store at the DB the key: v, and value: account.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
 		return nil, err
@@ -249,7 +283,7 @@ func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkl
 		return nil, err
 	}
 
-	tx, err := s.db.NewTx()
+	tx, err := sto.NewTx()
 	if err != nil {
 		return nil, err
 	}
@@ -260,8 +294,8 @@ func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkl
 		return nil, err
 	}
 
-	if s.mt != nil {
-		return s.mt.Update(idx.BigInt(), v)
+	if mt != nil {
+		return mt.Update(idx.BigInt(), v)
 	}
 	return nil, nil
 }
@@ -344,6 +378,13 @@ func (l *LocalStateDB) Reset(batchNum uint64, fromSynchronizer bool) error {
 		if err != nil {
 			return err
 		}
+		// open the MT for the current s.db
+		mt, err := merkletree.NewMerkleTree(l.db, l.mt.MaxLevels())
+		if err != nil {
+			return err
+		}
+		l.mt = mt
+
 		return nil
 	}
 	// use checkpoint from LocalStateDB
