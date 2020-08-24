@@ -17,7 +17,7 @@ const NLEAFELEMS = 4
 // Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
 type Account struct {
 	TokenID   TokenID
-	Nonce     uint64   // max of 40 bits used
+	Nonce     Nonce    // max of 40 bits used
 	Balance   *big.Int // max of 192 bits used
 	PublicKey *babyjub.PublicKey
 	EthAddr   ethCommon.Address
@@ -44,8 +44,10 @@ func (a *Account) Bytes() ([32 * NLEAFELEMS]byte, error) {
 		return b, fmt.Errorf("%s Balance", ErrNumOverflow)
 	}
 
-	var nonceBytes [8]byte
-	binary.LittleEndian.PutUint64(nonceBytes[:], a.Nonce)
+	nonceBytes, err := a.Nonce.Bytes()
+	if err != nil {
+		return b, err
+	}
 
 	copy(b[0:4], a.TokenID.Bytes())
 	copy(b[4:9], nonceBytes[:])
@@ -107,9 +109,9 @@ func AccountFromBigInts(e [NLEAFELEMS]*big.Int) (*Account, error) {
 // AccountFromBytes returns a Account from a byte array
 func AccountFromBytes(b [32 * NLEAFELEMS]byte) (*Account, error) {
 	tokenID := binary.LittleEndian.Uint32(b[0:4])
-	var nonceBytes [8]byte
-	copy(nonceBytes[:], b[4:9])
-	nonce := binary.LittleEndian.Uint64(nonceBytes[:])
+	var nonceBytes5 [5]byte
+	copy(nonceBytes5[:], b[4:9])
+	nonce := NonceFromBytes(nonceBytes5)
 	sign := b[10] == 1
 	balance := new(big.Int).SetBytes(SwapEndianness(b[32:56])) // b[32:56], as Balance is 192 bits (24 bytes)
 	if !bytes.Equal(b[56:64], []byte{0, 0, 0, 0, 0, 0, 0, 0}) {

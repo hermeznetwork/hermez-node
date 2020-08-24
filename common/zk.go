@@ -58,3 +58,7 @@ type ZKInputs struct {
 type CallDataForge struct {
 	// TBD
 }
+
+type ExitTreeLeaf struct {
+	// TBD
+}

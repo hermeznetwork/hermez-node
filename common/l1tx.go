@@ -31,7 +31,6 @@ func (tx *L1Tx) Tx() *Tx {
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
-		TokenID: tx.TokenID,
 		Amount:  tx.Amount,
 		Nonce:   0,
 		Fee:     0,

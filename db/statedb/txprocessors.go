@@ -1,19 +1,46 @@
 package statedb
 
 import (
-	"encoding/binary"
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-merkletree/db"
 )
 
-// KEYIDX is used as key in the db to store the current Idx
-var KEYIDX = []byte("idx")
+// keyidx is used as key in the db to store the current Idx
+var keyidx = []byte("idx")
 
-// ProcessPoolL2Tx process the given PoolL2Tx applying the needed updates to
+// ProcessTxs process the given L1Txs & L2Txs applying the needed updates
+// to the StateDB depending on the transaction Type. Returns the
+// common.ZKInputs to generate the SnarkProof later used by the BatchBuilder,
+// and returns common.ExitTreeLeaf that is later used by the Synchronizer to
+// update the HistoryDB.
+func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*common.ExitTreeLeaf, error) {
+	for _, tx := range l1usertxs {
+		err := s.processL1Tx(tx)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, tx := range l1coordinatortxs {
+		err := s.processL1Tx(tx)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, tx := range l2txs {
+		err := s.processL2Tx(tx)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return nil, nil, nil
+}
+
+// processL2Tx process the given L2Tx applying the needed updates to
 // the StateDB depending on the transaction Type.
-func (s *StateDB) ProcessPoolL2Tx(tx *common.PoolL2Tx) error {
+func (s *StateDB) processL2Tx(tx *common.L2Tx) error {
 	switch tx.Type {
 	case common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update
@@ -29,9 +56,9 @@ func (s *StateDB) ProcessPoolL2Tx(tx *common.PoolL2Tx) error {
 	return nil
 }
 
-// ProcessL1Tx process the given L1Tx applying the needed updates to the
+// processL1Tx process the given L1Tx applying the needed updates to the
 // StateDB depending on the transaction Type.
-func (s *StateDB) ProcessL1Tx(tx *common.L1Tx) error {
+func (s *StateDB) processL1Tx(tx *common.L1Tx) error {
 	switch tx.Type {
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update balance
@@ -170,27 +197,24 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 
 // getIdx returns the stored Idx from the localStateDB, which is the last Idx
 // used for an Account in the localStateDB.
-func (s *StateDB) getIdx() (uint64, error) {
-	idxBytes, err := s.DB().Get(KEYIDX)
+func (s *StateDB) getIdx() (common.Idx, error) {
+	idxBytes, err := s.DB().Get(keyidx)
 	if err == db.ErrNotFound {
 		return 0, nil
 	}
 	if err != nil {
 		return 0, err
 	}
-	idx := binary.LittleEndian.Uint64(idxBytes[:8])
-	return idx, nil
+	return common.IdxFromBytes(idxBytes[:4])
 }
 
 // setIdx stores Idx in the localStateDB
-func (s *StateDB) setIdx(idx uint64) error {
+func (s *StateDB) setIdx(idx common.Idx) error {
 	tx, err := s.DB().NewTx()
 	if err != nil {
 		return err
 	}
-	var idxBytes [8]byte
-	binary.LittleEndian.PutUint64(idxBytes[:], idx)
-	tx.Put(KEYIDX, idxBytes[:])
+	tx.Put(keyidx, idx.Bytes())
 	if err := tx.Commit(); err != nil {
 		return err
 	}

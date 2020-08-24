@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 )
 
@@ -18,6 +19,15 @@ func (idx Idx) Bytes() []byte {
 // BigInt returns a *big.Int representing the Idx
 func (idx Idx) BigInt() *big.Int {
 	return big.NewInt(int64(idx))
+}
+
+// IdxFromBytes returns Idx from a byte array
+func IdxFromBytes(b []byte) (Idx, error) {
+	if len(b) != 4 {
+		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected 4", len(b))
+	}
+	idx := binary.LittleEndian.Uint32(b[:4])
+	return Idx(idx), nil
 }
 
 // IdxFromBigInt converts a *big.Int to Idx type
@@ -64,7 +74,6 @@ type Tx struct {
 	TxID     TxID
 	FromIdx  Idx // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	ToIdx    Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositTransfer
-	TokenID  TokenID
 	Amount   *big.Int
 	Nonce    Nonce // effective 40 bits used
 	Fee      FeeSelector

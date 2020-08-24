@@ -1,6 +1,8 @@
 package common
 
 import (
+	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -26,3 +28,19 @@ type Batch struct {
 
 // BatchNum identifies a batch
 type BatchNum uint32
+
+// Bytes returns a byte array of length 4 representing the BatchNum
+func (bn BatchNum) Bytes() []byte {
+	var batchNumBytes [4]byte
+	binary.LittleEndian.PutUint32(batchNumBytes[:], uint32(bn))
+	return batchNumBytes[:]
+}
+
+// BatchNumFromBytes returns BatchNum from a []byte
+func BatchNumFromBytes(b []byte) (BatchNum, error) {
+	if len(b) != 4 {
+		return 0, fmt.Errorf("can not parse BatchNumFromBytes, bytes len %d, expected 4", len(b))
+	}
+	batchNum := binary.LittleEndian.Uint32(b[:4])
+	return BatchNum(batchNum), nil
+}

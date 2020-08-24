@@ -18,3 +18,15 @@ type L2Tx struct {
 	// Extra metadata, may be uninitialized
 	Type TxType `meddler:"-"` // optional, descrives which kind of tx it's
 }
+
+func (tx *L2Tx) Tx() *Tx {
+	return &Tx{
+		TxID:    tx.TxID,
+		FromIdx: tx.FromIdx,
+		ToIdx:   tx.ToIdx,
+		Amount:  tx.Amount,
+		Nonce:   tx.Nonce,
+		Fee:     tx.Fee,
+		Type:    tx.Type,
+	}
+}
