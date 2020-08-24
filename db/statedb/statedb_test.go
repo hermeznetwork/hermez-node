@@ -27,7 +27,7 @@ func newAccount(t *testing.T, i int) *common.Account {
 
 	return &common.Account{
 		TokenID:   common.TokenID(i),
-		Nonce:     uint64(i),
+		Nonce:     common.Nonce(i),
 		Balance:   big.NewInt(1000),
 		PublicKey: pk,
 		EthAddr:   address,
@@ -159,7 +159,7 @@ func TestCheckpoints(t *testing.T) {
 	assert.Nil(t, err)
 	cb, err := sdb.GetCurrentBatch()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(1), cb)
+	assert.Equal(t, common.BatchNum(1), cb)
 
 	for i := 1; i < 10; i++ {
 		err = sdb.MakeCheckpoint()
@@ -167,7 +167,7 @@ func TestCheckpoints(t *testing.T) {
 
 		cb, err = sdb.GetCurrentBatch()
 		assert.Nil(t, err)
-		assert.Equal(t, uint64(i+1), cb)
+		assert.Equal(t, common.BatchNum(i+1), cb)
 	}
 
 	// printCheckpoints(t, sdb.path)
@@ -184,14 +184,14 @@ func TestCheckpoints(t *testing.T) {
 	// check that currentBatch is as expected after Reset
 	cb, err = sdb.GetCurrentBatch()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(3), cb)
+	assert.Equal(t, common.BatchNum(3), cb)
 
 	// advance one checkpoint and check that currentBatch is fine
 	err = sdb.MakeCheckpoint()
 	assert.Nil(t, err)
 	cb, err = sdb.GetCurrentBatch()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(4), cb)
+	assert.Equal(t, common.BatchNum(4), cb)
 
 	err = sdb.DeleteCheckpoint(uint64(9))
 	assert.Nil(t, err)
@@ -214,13 +214,13 @@ func TestCheckpoints(t *testing.T) {
 	// check that currentBatch is 4 after the Reset
 	cb, err = ldb.GetCurrentBatch()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(4), cb)
+	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb
 	err = ldb.MakeCheckpoint()
 	assert.Nil(t, err)
 	cb, err = ldb.GetCurrentBatch()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(5), cb)
+	assert.Equal(t, common.BatchNum(5), cb)
 
 	// Create a 2nd LocalStateDB from the initial StateDB
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
@@ -234,13 +234,13 @@ func TestCheckpoints(t *testing.T) {
 	// check that currentBatch is 4 after the Reset
 	cb, err = ldb2.GetCurrentBatch()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(4), cb)
+	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb2
 	err = ldb2.MakeCheckpoint()
 	assert.Nil(t, err)
 	cb, err = ldb2.GetCurrentBatch()
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(5), cb)
+	assert.Equal(t, common.BatchNum(5), cb)
 
 	debug := false
 	if debug {

@@ -27,11 +27,12 @@ func (n Nonce) Bytes() ([5]byte, error) {
 	return b, nil
 }
 
-func NonceFromBytes(b [5]byte) (Nonce, error) {
+// NonceFromBytes returns Nonce from a [5]byte
+func NonceFromBytes(b [5]byte) Nonce {
 	var nonceBytes [8]byte
 	copy(nonceBytes[:], b[:5])
 	nonce := binary.LittleEndian.Uint64(nonceBytes[:])
-	return Nonce(nonce), nil
+	return Nonce(nonce)
 }
 
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
@@ -171,17 +172,37 @@ func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
 	return pk.VerifyPoseidon(h, tx.Signature)
 }
 
+func (tx *PoolL2Tx) L2Tx() *L2Tx {
+	return &L2Tx{
+		TxID:     tx.TxID,
+		BatchNum: tx.BatchNum,
+		FromIdx:  tx.FromIdx,
+		ToIdx:    tx.ToIdx,
+		Amount:   tx.Amount,
+		Fee:      tx.Fee,
+		Nonce:    tx.Nonce,
+		Type:     tx.Type,
+	}
+}
+
 func (tx *PoolL2Tx) Tx() *Tx {
 	return &Tx{
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
-		TokenID: tx.TokenID,
 		Amount:  tx.Amount,
 		Nonce:   tx.Nonce,
 		Fee:     tx.Fee,
 		Type:    tx.Type,
 	}
+}
+
+func PoolL2TxsToL2Txs(txs []*PoolL2Tx) []*L2Tx {
+	var r []*L2Tx
+	for _, tx := range txs {
+		r = append(r, tx.L2Tx())
+	}
+	return r
 }
 
 // PoolL2TxState is a struct that represents the status of a L2 transaction

@@ -16,8 +16,7 @@ func TestNonceParser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 5, len(nBytes))
 	assert.Equal(t, "0100000000", hex.EncodeToString(nBytes[:]))
-	n2, err := NonceFromBytes(nBytes)
-	assert.Nil(t, err)
+	n2 := NonceFromBytes(nBytes)
 	assert.Equal(t, n, n2)
 
 	// value before overflow
@@ -26,8 +25,7 @@ func TestNonceParser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 5, len(nBytes))
 	assert.Equal(t, "ffffffffff", hex.EncodeToString(nBytes[:]))
-	n2, err = NonceFromBytes(nBytes)
-	assert.Nil(t, err)
+	n2 = NonceFromBytes(nBytes)
 	assert.Equal(t, n, n2)
 
 	// expect value overflow
@@ -35,8 +33,6 @@ func TestNonceParser(t *testing.T) {
 	nBytes, err = n.Bytes()
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrNonceOverflow, err)
-	_, err = NonceFromBytes(nBytes)
-	assert.Nil(t, err)
 }
 
 func TestTxCompressedData(t *testing.T) {

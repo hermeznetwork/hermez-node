@@ -98,21 +98,21 @@ func (c *Coordinator) forgeSequence() error {
 	c.batchNum = c.batchNum + 1
 	batchInfo := NewBatchInfo(c.batchNum, serverProofInfo) // to accumulate metadata of the batch
 
-	var l2Txs []*common.PoolL2Tx
+	var poolL2Txs []*common.PoolL2Tx
 	// var feesInfo
 	var l1UserTxsExtra, l1OperatorTxs []*common.L1Tx
 	// 1. Decide if we forge L2Tx or L1+L2Tx
 	if c.shouldL1L2Batch() {
 		// 2a: L1+L2 txs
 		// l1UserTxs, toForgeL1TxsNumber := c.synchronizer.GetNextL1UserTxs() // TODO once synchronizer is ready, uncomment
-		var l1UserTxs []*common.L1Tx = nil                                                            // tmp, depends on synchronizer
-		l1UserTxsExtra, l1OperatorTxs, l2Txs, err = c.txsel.GetL1L2TxSelection(c.batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
+		var l1UserTxs []*common.L1Tx = nil                                                                // tmp, depends on synchronizer
+		l1UserTxsExtra, l1OperatorTxs, poolL2Txs, err = c.txsel.GetL1L2TxSelection(c.batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
 			return err
 		}
 	} else {
 		// 2b: only L2 txs
-		l2Txs, err = c.txsel.GetL2TxSelection(c.batchNum) // TODO once feesInfo is added to method return, add the var
+		poolL2Txs, err = c.txsel.GetL2TxSelection(c.batchNum) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
 			return err
 		}
@@ -121,21 +121,22 @@ func (c *Coordinator) forgeSequence() error {
 	}
 
 	// Run purger to invalidate transactions that become invalid beause of
-	// the l2Txs selected.  Will mark as invalid the txs that have a
+	// the poolL2Txs selected.  Will mark as invalid the txs that have a
 	// (fromIdx, nonce) which already appears in the selected txs (includes
 	// all the nonces smaller than the current one)
-	err = c.purgeInvalidDueToL2TxsSelection(l2Txs)
+	err = c.purgeInvalidDueToL2TxsSelection(poolL2Txs)
 	if err != nil {
 		return err
 	}
 
 	// 3.  Save metadata from TxSelector output for BatchNum
-	batchInfo.SetTxsInfo(l1UserTxsExtra, l1OperatorTxs, l2Txs) // TODO feesInfo
+	batchInfo.SetTxsInfo(l1UserTxsExtra, l1OperatorTxs, poolL2Txs) // TODO feesInfo
 
 	// 4. Call BatchBuilder with TxSelector output
 	configBatch := &batchbuilder.ConfigBatch{
 		ForgerAddress: c.config.ForgerAddress,
 	}
+	l2Txs := common.PoolL2TxsToL2Txs(poolL2Txs)
 	zkInputs, err := c.batchBuilder.BuildBatch(configBatch, l1UserTxsExtra, l1OperatorTxs, l2Txs, nil) // TODO []common.TokenID --> feesInfo
 	if err != nil {
 		return err

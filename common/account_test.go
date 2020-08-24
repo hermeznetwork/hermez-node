@@ -23,7 +23,7 @@ func TestAccount(t *testing.T) {
 
 	account := &Account{
 		TokenID:   TokenID(1),
-		Nonce:     uint64(1234),
+		Nonce:     Nonce(1234),
 		Balance:   big.NewInt(1000),
 		PublicKey: pk,
 		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
@@ -66,7 +66,7 @@ func TestAccountLoop(t *testing.T) {
 
 		account := &Account{
 			TokenID:   TokenID(i),
-			Nonce:     uint64(i),
+			Nonce:     Nonce(i),
 			Balance:   big.NewInt(1000),
 			PublicKey: pk,
 			EthAddr:   address,
@@ -98,7 +98,7 @@ func TestAccountHashValue(t *testing.T) {
 
 	account := &Account{
 		TokenID:   TokenID(1),
-		Nonce:     uint64(1234),
+		Nonce:     Nonce(1234),
 		Balance:   big.NewInt(1000),
 		PublicKey: pk,
 		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
@@ -142,7 +142,7 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 	// check limit
 	account := &Account{
 		TokenID:   TokenID(1),
-		Nonce:     uint64(math.Pow(2, 40) - 1),
+		Nonce:     Nonce(math.Pow(2, 40) - 1),
 		Balance:   big.NewInt(1000),
 		PublicKey: pk,
 		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
@@ -151,7 +151,7 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 	assert.Nil(t, err)
 
 	// force value overflow
-	account.Nonce = uint64(math.Pow(2, 40))
+	account.Nonce = Nonce(math.Pow(2, 40))
 	b, err := account.Bytes()
 	assert.NotNil(t, err)
 	assert.Equal(t, fmt.Errorf("%s Nonce", ErrNumOverflow), err)
@@ -169,7 +169,7 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 	// check limit
 	account := &Account{
 		TokenID:   TokenID(1),
-		Nonce:     uint64(math.Pow(2, 40) - 1),
+		Nonce:     Nonce(math.Pow(2, 40) - 1),
 		Balance:   new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(192), nil), big.NewInt(1)),
 		PublicKey: pk,
 		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),

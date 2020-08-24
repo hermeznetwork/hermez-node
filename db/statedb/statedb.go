@@ -1,7 +1,6 @@
 package statedb
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -31,11 +30,11 @@ const PATHCURRENT = "/current"
 // StateDB represents the StateDB object
 type StateDB struct {
 	path         string
-	currentBatch uint64
+	currentBatch common.BatchNum
 	db           *pebble.PebbleStorage
 	mt           *merkletree.MerkleTree
 	// idx holds the current Idx that the BatchBuilder is using
-	idx uint64
+	idx common.Idx
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
@@ -77,7 +76,7 @@ func (s *StateDB) DB() *pebble.PebbleStorage {
 }
 
 // GetCurrentBatch returns the current BatchNum stored in the StateDB
-func (s *StateDB) GetCurrentBatch() (uint64, error) {
+func (s *StateDB) GetCurrentBatch() (common.BatchNum, error) {
 	cbBytes, err := s.db.Get(KEYCURRENTBATCH)
 	if err == db.ErrNotFound {
 		return 0, nil
@@ -85,8 +84,7 @@ func (s *StateDB) GetCurrentBatch() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	cb := binary.LittleEndian.Uint64(cbBytes[:8])
-	return cb, nil
+	return common.BatchNumFromBytes(cbBytes)
 }
 
 // setCurrentBatch stores the current BatchNum in the StateDB
@@ -95,9 +93,7 @@ func (s *StateDB) setCurrentBatch() error {
 	if err != nil {
 		return err
 	}
-	var cbBytes [8]byte
-	binary.LittleEndian.PutUint64(cbBytes[:], s.currentBatch)
-	tx.Put(KEYCURRENTBATCH, cbBytes[:])
+	tx.Put(KEYCURRENTBATCH, s.currentBatch.Bytes())
 	if err := tx.Commit(); err != nil {
 		return err
 	}
