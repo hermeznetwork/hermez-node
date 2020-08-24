@@ -8,7 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/iden3/go-iden3-core v0.0.8
-	github.com/iden3/go-iden3-crypto v0.0.6-0.20200819064831-09d161e9f670
+	github.com/iden3/go-iden3-crypto v0.0.6-0.20200823174058-e04ca5764a15
 	github.com/iden3/go-merkletree v0.0.0-20200819092443-dc656fdd32fc
 	github.com/jinzhu/gorm v1.9.15
 	github.com/jmoiron/sqlx v1.2.0

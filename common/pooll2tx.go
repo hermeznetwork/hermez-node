@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"time"
 
-	eth "github.com/ethereum/go-ethereum/common"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -40,7 +40,7 @@ type PoolL2Tx struct {
 	TxID      TxID               `meddler:"tx_id"`
 	FromIdx   Idx                `meddler:"from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	ToIdx     Idx                `meddler:"to_idx"`   // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	ToEthAddr eth.Address        `meddler:"to_eth_addr"`
+	ToEthAddr ethCommon.Address  `meddler:"to_eth_addr"`
 	ToBJJ     *babyjub.PublicKey `meddler:"to_bjj"` // TODO: stop using json, use scanner/valuer
 	TokenID   TokenID            `meddler:"token_id"`
 	Amount    *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
@@ -53,7 +53,7 @@ type PoolL2Tx struct {
 	BatchNum          BatchNum           `meddler:"batch_num,zeroisnull"`   // batchNum in which this tx was forged. Presence indicates "forged" state.
 	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	RqToIdx           Idx                `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	RqToEthAddr       eth.Address        `meddler:"rq_to_eth_addr"`
+	RqToEthAddr       ethCommon.Address  `meddler:"rq_to_eth_addr"`
 	RqToBJJ           *babyjub.PublicKey `meddler:"rq_to_bjj"` // TODO: stop using json, use scanner/valuer
 	RqTokenID         TokenID            `meddler:"rq_token_id,zeroisnull"`
 	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16

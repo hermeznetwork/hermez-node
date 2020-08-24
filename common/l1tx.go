@@ -3,7 +3,7 @@ package common
 import (
 	"math/big"
 
-	eth "github.com/ethereum/go-ethereum/common"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -15,7 +15,7 @@ type L1Tx struct {
 	Position        int                `meddler:"position"`
 	UserOrigin      bool               `meddler:"user_origin"` // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
 	FromIdx         Idx                `meddler:"from_idx"`    // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	FromEthAddr     eth.Address        `meddler:"from_eth_addr"`
+	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr"`
 	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj"`
 	ToIdx           Idx                `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
 	TokenID         TokenID            `meddler:"token_id"`

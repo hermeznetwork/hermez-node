@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	eth "github.com/ethereum/go-ethereum/common"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
@@ -20,7 +20,7 @@ type Account struct {
 	Nonce     uint64   // max of 40 bits used
 	Balance   *big.Int // max of 192 bits used
 	PublicKey *babyjub.PublicKey
-	EthAddr   eth.Address
+	EthAddr   ethCommon.Address
 }
 
 func (a *Account) String() string {
@@ -121,7 +121,7 @@ func AccountFromBytes(b [32 * NLEAFELEMS]byte) (*Account, error) {
 		return nil, err
 	}
 	publicKey := babyjub.PublicKey(*pkPoint)
-	ethAddr := eth.BytesToAddress(b[96:116])
+	ethAddr := ethCommon.BytesToAddress(b[96:116])
 
 	if !cryptoUtils.CheckBigIntInField(balance) {
 		return nil, ErrNotInFF
