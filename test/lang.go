@@ -14,6 +14,8 @@ import (
 var eof = rune(0)
 var errof = fmt.Errorf("eof in parseline")
 var ecomment = fmt.Errorf("comment in parseline")
+var enewbatch = fmt.Errorf("newbatch")
+var TypeNewBatch common.TxType = "TxTypeNewBatch"
 
 const (
 	ILLEGAL token = iota
@@ -226,6 +228,9 @@ func (p *Parser) parseLine() (*Instruction, error) {
 	//         A-B (1): 6
 	// or Withdraw:
 	//         A (1) E: 4
+	// or NextBatch:
+	// 	> and here the comment
+
 	c := &Instruction{}
 	tok, lit := p.scanIgnoreWhitespace()
 	if tok == EOF {
@@ -235,6 +240,9 @@ func (p *Parser) parseLine() (*Instruction, error) {
 	if lit == "/" {
 		_, _ = p.s.r.ReadString('\n')
 		return nil, ecomment
+	} else if lit == ">" {
+		_, _ = p.s.r.ReadString('\n')
+		return nil, enewbatch
 	}
 	c.From = lit
 
@@ -336,6 +344,12 @@ func (p *Parser) Parse() (Instructions, error) {
 		}
 		if err == ecomment {
 			i++
+			continue
+		}
+		if err == enewbatch {
+			i++
+			inst := &Instruction{Type: TypeNewBatch}
+			instructions.Instructions = append(instructions.Instructions, inst)
 			continue
 		}
 		if err != nil {
