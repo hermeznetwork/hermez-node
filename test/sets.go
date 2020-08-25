@@ -164,6 +164,3 @@ var SetTest0 = `
 	I-H (1): 5 1
 	A (1) E: 5
 `
-
-// cases to add:
-// - L2 tx from B to A, when B still does not have tokens, which will receive from C
