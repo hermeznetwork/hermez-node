@@ -9,7 +9,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/iden3/go-iden3-core v0.0.8
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20200823174058-e04ca5764a15
-	github.com/iden3/go-merkletree v0.0.0-20200819092443-dc656fdd32fc
+	github.com/iden3/go-merkletree v0.0.0-20200825093552-a4b68208bb41
 	github.com/jinzhu/gorm v1.9.15
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
