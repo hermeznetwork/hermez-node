@@ -15,7 +15,7 @@ type RollupVars struct {
 	Governance     eth.Address
 }
 
-type PoDVars struct {
+type AuctionVars struct {
 	EthBlockNum       uint64
 	SlotDeadline      uint
 	CloseAuctionSlots uint

@@ -8,7 +8,6 @@ CREATE TABLE block (
 CREATE TABLE coordianator (
     forger_addr BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    beneficiary_addr BYTEA NOT NULL,
     withdraw_addr BYTEA NOT NULL,
     url VARCHAR(200) NOT NULL,
     PRIMARY KEY (forger_addr, eth_block_num)
