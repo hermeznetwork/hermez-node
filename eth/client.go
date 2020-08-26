@@ -195,9 +195,18 @@ func (c *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.He
 	return c.client.HeaderByNumber(ctx, number)
 }
 
-// BlockByNumber internally calls ethclient.Client BlockByNumber
-func (c *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return c.client.BlockByNumber(ctx, number)
+// BlockByNumber internally calls ethclient.Client BlockByNumber and returns *common.Block
+func (c *Client) BlockByNumber(ctx context.Context, number *big.Int) (*common.Block, error) {
+	block, err := c.client.BlockByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+	b := &common.Block{
+		EthBlockNum: block.Number().Uint64(),
+		Timestamp:   time.Unix(int64(block.Time()), 0),
+		Hash:        block.Hash(),
+	}
+	return b, nil
 }
 
 func (c *Client) ForgeCall(callData *common.CallDataForge) ([]byte, error) {

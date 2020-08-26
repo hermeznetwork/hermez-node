@@ -3,6 +3,7 @@ package coordinator
 import (
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,8 +20,8 @@ func TestBatchQueue(t *testing.T) {
 		batchNum: 1,
 	})
 
-	assert.Equal(t, uint64(0), bq.Pop().batchNum)
-	assert.Equal(t, uint64(2), bq.Pop().batchNum)
-	assert.Equal(t, uint64(1), bq.Pop().batchNum)
+	assert.Equal(t, common.BatchNum(0), bq.Pop().batchNum)
+	assert.Equal(t, common.BatchNum(2), bq.Pop().batchNum)
+	assert.Equal(t, common.BatchNum(1), bq.Pop().batchNum)
 	assert.Nil(t, bq.Pop())
 }
