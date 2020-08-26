@@ -8,6 +8,12 @@ import (
 	"time"
 
 	"github.com/dghubble/sling"
+	"github.com/gin-gonic/gin"
+)
+
+const (
+	MaxIdleConn     = 10
+	IdleConnTimeout = 10
 )
 
 var (
@@ -21,6 +27,7 @@ type ConfigPriceUpdater struct {
 	RecommendedCreateAccountFee uint64 // in dollars
 	TokensList                  []string
 	APIURL                      string
+	ServerPort                  string
 }
 
 // TokenInfo contains the updated value for the token
@@ -35,24 +42,23 @@ type PriceUpdater struct {
 	db     map[string]TokenInfo
 	config ConfigPriceUpdater
 	mu     sync.RWMutex
+	server *gin.Engine
 }
 
 // NewPriceUpdater is the constructor for the updater
-func NewPriceUpdater(config ConfigPriceUpdater) PriceUpdater {
-
-	return PriceUpdater{
+func NewPriceUpdater(config ConfigPriceUpdater) *PriceUpdater {
+	p := &PriceUpdater{
 		db:     make(map[string]TokenInfo),
 		config: config,
 	}
-
+	return p
 }
 
 // UpdatePrices is triggered by the Coordinator, and internally will update the token prices in the db
 func (p *PriceUpdater) UpdatePrices() error {
-
 	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    10 * time.Second,
+		MaxIdleConns:       MaxIdleConn,
+		IdleConnTimeout:    IdleConnTimeout * time.Second,
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
@@ -61,12 +67,11 @@ func (p *PriceUpdater) UpdatePrices() error {
 	state := [10]float64{}
 
 	for _, tokenSymbol := range p.config.TokensList {
-
 		resp, err := client.New().Get("ticker/t" + tokenSymbol + "USD").ReceiveSuccess(&state)
 		if err != nil {
 			return err
 		}
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("Unexpected response status code: %v", resp.StatusCode)
 		}
 
@@ -77,7 +82,6 @@ func (p *PriceUpdater) UpdatePrices() error {
 		}
 
 		p.UpdateTokenInfo(tinfo)
-
 	}
 
 	return nil
@@ -85,17 +89,14 @@ func (p *PriceUpdater) UpdatePrices() error {
 
 // UpdateConfig allows to update the price-updater configuration
 func (p *PriceUpdater) UpdateConfig(config ConfigPriceUpdater) {
-
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	p.config = config
-
 }
 
 // Get one token information
 func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
-
 	var info TokenInfo
 
 	// Check if symbol exists in database
@@ -107,12 +108,10 @@ func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
 	}
 
 	return info, ErrSymbolDoesNotExistInDatabase
-
 }
 
 // GetPrices gets all the prices contained in the db
 func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
-
 	var info = make(map[string]TokenInfo)
 
 	p.mu.RLock()
@@ -127,10 +126,8 @@ func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
 
 // UpdateTokenInfo updates one token info
 func (p *PriceUpdater) UpdateTokenInfo(tokenInfo TokenInfo) {
-
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	p.db[tokenInfo.Symbol] = tokenInfo
-
 }
