@@ -57,7 +57,8 @@ func Init(levelStr, errorsPath string) {
 	}
 	//nolint:errcheck
 	defer logger.Sync()
-	log = logger.Sugar()
+	withOptions := logger.WithOptions(zap.AddCallerSkip(1))
+	log = withOptions.Sugar()
 
 	if errorsPath != "" {
 		log.Infof("file where errors will be written: %s", errorsPath)

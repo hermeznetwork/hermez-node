@@ -13,20 +13,12 @@ import (
 // keyidx is used as key in the db to store the current Idx
 var keyidx = []byte("idx")
 
-// FUTURE This will be used from common once pending PR is merged
-type ExitInfo struct {
-	Idx       *common.Idx
-	Proof     *merkletree.CircomVerifierProof
-	Nullifier *big.Int
-	Balance   *big.Int
-}
-
 // ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
 // the StateDB depending on the transaction Type. Returns the common.ZKInputs
 // to generate the SnarkProof later used by the BatchBuilder, and if
 // cmpExitTree is set to true, returns common.ExitTreeLeaf that is later used
 // by the Synchronizer to update the HistoryDB.
-func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*ExitInfo, error) {
+func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*common.ExitInfo, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 	exits := make(map[common.Idx]common.Account)
@@ -71,8 +63,8 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 	}
 
 	// once all txs processed (exitTree root frozen), for each leaf
-	// generate ExitInfo data
-	var exitInfos []*ExitInfo
+	// generate common.ExitInfo data
+	var exitInfos []*common.ExitInfo
 	for exitIdx, exitAccount := range exits {
 		// 0. generate MerkleProof
 		p, err := exitTree.GenerateCircomVerifierProof(exitIdx.BigInt(), nil)
@@ -92,12 +84,12 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 		if err != nil {
 			return nil, nil, err
 		}
-		// 2. generate ExitInfo
-		ei := &ExitInfo{
-			Idx:       &exitIdx,
-			Proof:     p,
-			Nullifier: nullifier,
-			Balance:   exitAccount.Balance,
+		// 2. generate common.ExitInfo
+		ei := &common.ExitInfo{
+			AccountIdx:  exitIdx,
+			MerkleProof: p,
+			Nullifier:   nullifier,
+			Balance:     exitAccount.Balance,
 		}
 		exitInfos = append(exitInfos, ei)
 	}
