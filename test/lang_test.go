@@ -20,6 +20,10 @@ func TestParse(t *testing.T) {
 		// L2 transactions
 		A-B (1): 6 1
 		B-C (1): 3 1
+
+		// set new batch, label does not affect
+		> batch1
+
 		C-A (1): 3 1
 		A-B (2): 15 1
 
@@ -34,7 +38,7 @@ func TestParse(t *testing.T) {
 	parser := NewParser(strings.NewReader(s))
 	instructions, err := parser.Parse()
 	assert.Nil(t, err)
-	assert.Equal(t, 12, len(instructions.Instructions))
+	assert.Equal(t, 13, len(instructions.Instructions))
 	// assert.Equal(t, 5, len(instructions.Accounts))
 	fmt.Println(instructions.Accounts)
 	assert.Equal(t, 3, len(instructions.TokenIDs))
@@ -46,12 +50,13 @@ func TestParse(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, "User0 (1): 20", instructions.Instructions[7].Raw())
-	assert.Equal(t, "Type: Create&Deposit, From: User0, Amount: 20, TokenID: 1,\n", instructions.Instructions[7].String())
-	assert.Equal(t, "User0-User1 (1): 15 1", instructions.Instructions[9].Raw())
-	assert.Equal(t, "Type: Transfer, From: User0, To: User1, Amount: 15, Fee: 1, TokenID: 1,\n", instructions.Instructions[9].String())
-	assert.Equal(t, "A (1)E: 5", instructions.Instructions[11].Raw())
-	assert.Equal(t, "Type: ForceExit, From: A, Amount: 5, TokenID: 1,\n", instructions.Instructions[11].String())
+	assert.Equal(t, TypeNewBatch, instructions.Instructions[5].Type)
+	assert.Equal(t, "User0 (1): 20", instructions.Instructions[8].Raw())
+	assert.Equal(t, "Type: Create&Deposit, From: User0, Amount: 20, TokenID: 1,\n", instructions.Instructions[8].String())
+	assert.Equal(t, "User0-User1 (1): 15 1", instructions.Instructions[10].Raw())
+	assert.Equal(t, "Type: Transfer, From: User0, To: User1, Amount: 15, Fee: 1, TokenID: 1,\n", instructions.Instructions[10].String())
+	assert.Equal(t, "A (1)E: 5", instructions.Instructions[12].Raw())
+	assert.Equal(t, "Type: ForceExit, From: A, Amount: 5, TokenID: 1,\n", instructions.Instructions[12].String())
 }
 
 func TestParseErrors(t *testing.T) {

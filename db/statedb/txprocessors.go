@@ -30,16 +30,15 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 	var err error
 	var exitTree *merkletree.MerkleTree
 	exits := make(map[common.Idx]common.Account)
-	if cmpExitTree {
-		// TBD if ExitTree is only in memory or stored in disk, for the moment
-		// only needed in memory
-		exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
-		if err != nil {
-			return nil, nil, err
-		}
+
+	// TBD if ExitTree is only in memory or stored in disk, for the moment
+	// only needed in memory
+	exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
+	if err != nil {
+		return nil, nil, err
 	}
 
-	for _, tx := range l1usertxs {
+	for _, tx := range l1coordinatortxs {
 		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
@@ -48,7 +47,7 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 			exits[*exitIdx] = *exitAccount
 		}
 	}
-	for _, tx := range l1coordinatortxs {
+	for _, tx := range l1usertxs {
 		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
@@ -108,29 +107,6 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 	return nil, exitInfos, nil
 }
 
-// processL2Tx process the given L2Tx applying the needed updates to
-// the StateDB depending on the transaction Type.
-func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.L2Tx) (*common.Idx, *common.Account, error) {
-	switch tx.Type {
-	case common.TxTypeTransfer:
-		// go to the MT account of sender and receiver, and update
-		// balance & nonce
-		err := s.applyTransfer(tx.Tx())
-		if err != nil {
-			return nil, nil, err
-		}
-	case common.TxTypeExit:
-		// execute exit flow
-		exitAccount, err := s.applyExit(exitTree, tx.Tx())
-		if err != nil {
-			return nil, nil, err
-		}
-		return &tx.FromIdx, exitAccount, nil
-	default:
-	}
-	return nil, nil, nil
-}
-
 // processL1Tx process the given L1Tx applying the needed updates to the
 // StateDB depending on the transaction Type.
 func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx, *common.Account, error) {
@@ -182,6 +158,29 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	default:
 	}
 
+	return nil, nil, nil
+}
+
+// processL2Tx process the given L2Tx applying the needed updates to
+// the StateDB depending on the transaction Type.
+func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.L2Tx) (*common.Idx, *common.Account, error) {
+	switch tx.Type {
+	case common.TxTypeTransfer:
+		// go to the MT account of sender and receiver, and update
+		// balance & nonce
+		err := s.applyTransfer(tx.Tx())
+		if err != nil {
+			return nil, nil, err
+		}
+	case common.TxTypeExit:
+		// execute exit flow
+		exitAccount, err := s.applyExit(exitTree, tx.Tx())
+		if err != nil {
+			return nil, nil, err
+		}
+		return &tx.FromIdx, exitAccount, nil
+	default:
+	}
 	return nil, nil, nil
 }
 
