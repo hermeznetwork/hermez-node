@@ -8,7 +8,6 @@ import (
 )
 
 func TestConversions(t *testing.T) {
-
 	testVector := map[Float16]string{
 		0x307B: "123000000",
 		0x1DC6: "454500",
@@ -24,7 +23,6 @@ func TestConversions(t *testing.T) {
 	}
 
 	for test := range testVector {
-
 		fix := test.BigInt()
 
 		assert.Equal(t, fix.String(), testVector[test])
@@ -37,13 +35,10 @@ func TestConversions(t *testing.T) {
 
 		fx2 := fl.BigInt()
 		assert.Equal(t, fx2.String(), testVector[test])
-
 	}
-
 }
 
 func TestFloorFix2Float(t *testing.T) {
-
 	testVector := map[string]Float16{
 		"87999990000000000": 0x776f,
 		"87950000000000001": 0x776f,
@@ -52,16 +47,13 @@ func TestFloorFix2Float(t *testing.T) {
 	}
 
 	for test := range testVector {
-
 		bi := big.NewInt(0)
 		bi.SetString(test, 10)
 
 		testFloat := NewFloat16Floor(bi)
 
 		assert.Equal(t, testFloat, testVector[test])
-
 	}
-
 }
 
 func TestConversionLosses(t *testing.T) {
@@ -94,7 +86,6 @@ func TestConversionLosses(t *testing.T) {
 	assert.Equal(t, ErrRoundingLoss, err)
 	c = b.BigInt()
 	assert.NotEqual(t, c, a)
-
 }
 
 func BenchmarkFloat16(b *testing.B) {
