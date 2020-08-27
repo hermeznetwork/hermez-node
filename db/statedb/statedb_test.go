@@ -193,13 +193,13 @@ func TestCheckpoints(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 
-	err = sdb.DeleteCheckpoint(uint64(9))
+	err = sdb.DeleteCheckpoint(common.BatchNum(9))
 	assert.Nil(t, err)
-	err = sdb.DeleteCheckpoint(uint64(10))
+	err = sdb.DeleteCheckpoint(common.BatchNum(10))
 	assert.Nil(t, err)
-	err = sdb.DeleteCheckpoint(uint64(9)) // does not exist, should return err
+	err = sdb.DeleteCheckpoint(common.BatchNum(9)) // does not exist, should return err
 	assert.NotNil(t, err)
-	err = sdb.DeleteCheckpoint(uint64(11)) // does not exist, should return err
+	err = sdb.DeleteCheckpoint(common.BatchNum(11)) // does not exist, should return err
 	assert.NotNil(t, err)
 
 	// Create a LocalStateDB from the initial StateDB

@@ -52,7 +52,7 @@ func NewTxSelector(dbpath string, synchronizerStateDB *statedb.StateDB, l2 *l2db
 
 // Reset tells the TxSelector to get it's internal AccountsDB
 // from the required `batchNum`
-func (txsel *TxSelector) Reset(batchNum uint64) error {
+func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 	err := txsel.localAccountsDB.Reset(batchNum, true)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (txsel *TxSelector) Reset(batchNum uint64) error {
 }
 
 // GetL2TxSelection returns a selection of the L2Txs for the next batch, from the L2DB pool
-func (txsel *TxSelector) GetL2TxSelection(batchNum uint64) ([]*common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]*common.PoolL2Tx, error) {
 	// get pending l2-tx from tx-pool
 	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // once l2db ready, maybe use parameter 'batchNum'
 	if err != nil {
@@ -90,7 +90,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum uint64) ([]*common.PoolL2Tx, 
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
-func (txsel *TxSelector) GetL1L2TxSelection(batchNum uint64, l1txs []*common.L1Tx) ([]*common.L1Tx, []*common.L1Tx, []*common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1txs []*common.L1Tx) ([]*common.L1Tx, []*common.L1Tx, []*common.PoolL2Tx, error) {
 	// apply l1-user-tx to localAccountDB
 	//     create new leaves
 	//     update balances
@@ -153,6 +153,9 @@ func (txsel *TxSelector) checkIfAccountExistOrPending(idx common.Idx) bool {
 
 func (txsel *TxSelector) getL2Profitable(txs txs, max uint64) txs {
 	sort.Sort(txs)
+	if len(txs) < int(max) {
+		return txs
+	}
 	return txs[:max]
 }
 func (txsel *TxSelector) createL1OperatorTxForL2Tx(accounts []*common.Account) []*common.L1Tx {
