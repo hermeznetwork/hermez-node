@@ -16,6 +16,6 @@ type SmartContractParameters struct {
 	ContractAddr        ethCommon.Address // Ethereum address of the rollup smart contract
 	NLevels             uint16            // Heigth of the SMT. This will determine the maximum number of accounts that can coexist in the Hermez network by 2^nLevels
 	MaxTxs              uint16            // Max amount of txs that can be added in a batch, either L1 or L2
-	FeeL1Tx             *big.Int          // amount of eth (in wei) that has to be payed to do a L1 tx
-	FeeDeposit          *big.Int          // amount of eth (in wei) that has to be payed to do a deposit
+	FeeL1Tx             *big.Int          // amount of eth (in wei) that has to be paid to do a L1 tx
+	FeeDeposit          *big.Int          // amount of eth (in wei) that has to be paid to do a deposit
 }

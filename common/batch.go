@@ -8,22 +8,19 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
+const batchNumBytesLen = 4
+
 // Batch is a struct that represents Hermez network batch
 type Batch struct {
-	BatchNum         BatchNum
-	SlotNum          SlotNum // Slot in which the batch is forged
-	EthTxHash        ethCommon.Hash
-	EthBlockNum      uint64 // Ethereum block in which the batch is forged
-	ExitRoot         Hash
-	OldStateRoot     Hash
-	NewStateRoot     Hash
-	OldNumAccounts   int
-	NewNumAccounts   int
-	ToForgeL1TxsNum  uint32         // optional, Only when the batch forges L1 txs. Identifier that corresponds to the group of L1 txs forged in the current batch.
-	ToForgeL1TxsHash ethCommon.Hash // optional, Only when the batch forges L1 txs. Frozen from pendingL1TxsHash (which are the group of L1UserTxs), to be forged in ToForgeL1TxsNum + 1.
-	ForgedL1TxsHash  ethCommon.Hash // optional, Only when the batch forges L1 txs. This will be the Hash of the group of L1 txs (L1UserTxs + L1CoordinatorTx) forged in the current batch.
-	CollectedFees    map[TokenID]*big.Int
-	ForgerAddr       ethCommon.Address // TODO: Should this be retrieved via slot reference?
+	BatchNum      BatchNum             `meddler:"batch_num"`
+	EthBlockNum   uint64               `meddler:"eth_block_num"` // Ethereum block in which the batch is forged
+	ForgerAddr    ethCommon.Address    `meddler:"forger_addr"`   // TODO: Should this be retrieved via slot reference?
+	CollectedFees map[TokenID]*big.Int `meddler:"fees_collected,json"`
+	StateRoot     Hash                 `meddler:"state_root"`
+	NumAccounts   int                  `meddler:"num_accounts"`
+	ExitRoot      Hash                 `meddler:"exit_root"`
+	ForgeL1TxsNum uint32               `meddler:"forge_l1_txs_num"` // optional, Only when the batch forges L1 txs. Identifier that corresponds to the group of L1 txs forged in the current batch.
+	SlotNum       SlotNum              `meddler:"slot_num"`         // Slot in which the batch is forged
 }
 
 // BatchNum identifies a batch
@@ -38,7 +35,7 @@ func (bn BatchNum) Bytes() []byte {
 
 // BatchNumFromBytes returns BatchNum from a []byte
 func BatchNumFromBytes(b []byte) (BatchNum, error) {
-	if len(b) != 4 {
+	if len(b) != batchNumBytesLen {
 		return 0, fmt.Errorf("can not parse BatchNumFromBytes, bytes len %d, expected 4", len(b))
 	}
 	batchNum := binary.LittleEndian.Uint32(b[:4])

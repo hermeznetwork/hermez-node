@@ -1,6 +1,6 @@
 package common
 
-// Fee is a type that represents the percentage of tokens that will be payed in a transaction
+// Fee is a type that represents the percentage of tokens that will be paid in a transaction
 // to incentivaise the materialization of it
 type Fee float64
 
@@ -15,5 +15,7 @@ type RecommendedFee struct {
 // FeeSelector is used to select a percentage from the FeePlan.
 type FeeSelector uint8
 
+const MAXFEEPLAN = 256
+
 // FeePlan represents the fee model, a position in the array indicates the percentage of tokens paid in concept of fee for a transaction
-var FeePlan = [256]float64{}
+var FeePlan = [MAXFEEPLAN]float64{}

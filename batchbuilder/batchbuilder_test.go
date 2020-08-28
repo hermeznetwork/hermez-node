@@ -1,7 +1,6 @@
 package batchbuilder
 
 import (
-	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -19,7 +18,6 @@ func TestBatchBuilder(t *testing.T) {
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.Nil(t, err)
-	bb, err := NewBatchBuilder(bbDir, synchDB, nil, 0, 32)
+	_, err = NewBatchBuilder(bbDir, synchDB, nil, 0, 32)
 	assert.Nil(t, err)
-	fmt.Println(bb)
 }

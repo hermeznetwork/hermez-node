@@ -10,7 +10,7 @@ type Proof struct {
 
 // BatchInfo contans the Batch information
 type BatchInfo struct {
-	batchNum       uint64
+	batchNum       common.BatchNum
 	serverProof    *ServerProofInfo
 	zkInputs       *common.ZKInputs
 	proof          *Proof
@@ -22,7 +22,7 @@ type BatchInfo struct {
 
 // NewBatchInfo creates a new BatchInfo with the given batchNum &
 // ServerProofInfo
-func NewBatchInfo(batchNum uint64, serverProof *ServerProofInfo) BatchInfo {
+func NewBatchInfo(batchNum common.BatchNum, serverProof *ServerProofInfo) BatchInfo {
 	return BatchInfo{
 		batchNum:    batchNum,
 		serverProof: serverProof,

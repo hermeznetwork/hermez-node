@@ -13,33 +13,24 @@ import (
 // keyidx is used as key in the db to store the current Idx
 var keyidx = []byte("idx")
 
-// FUTURE This will be used from common once pending PR is merged
-type ExitInfo struct {
-	Idx       *common.Idx
-	Proof     *merkletree.CircomVerifierProof
-	Nullifier *big.Int
-	Balance   *big.Int
-}
-
 // ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
 // the StateDB depending on the transaction Type. Returns the common.ZKInputs
 // to generate the SnarkProof later used by the BatchBuilder, and if
 // cmpExitTree is set to true, returns common.ExitTreeLeaf that is later used
 // by the Synchronizer to update the HistoryDB.
-func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*ExitInfo, error) {
+func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*common.ExitInfo, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 	exits := make(map[common.Idx]common.Account)
-	if cmpExitTree {
-		// TBD if ExitTree is only in memory or stored in disk, for the moment
-		// only needed in memory
-		exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
-		if err != nil {
-			return nil, nil, err
-		}
+
+	// TBD if ExitTree is only in memory or stored in disk, for the moment
+	// only needed in memory
+	exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
+	if err != nil {
+		return nil, nil, err
 	}
 
-	for _, tx := range l1usertxs {
+	for _, tx := range l1coordinatortxs {
 		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
@@ -48,7 +39,7 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 			exits[*exitIdx] = *exitAccount
 		}
 	}
-	for _, tx := range l1coordinatortxs {
+	for _, tx := range l1usertxs {
 		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
@@ -72,8 +63,8 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 	}
 
 	// once all txs processed (exitTree root frozen), for each leaf
-	// generate ExitInfo data
-	var exitInfos []*ExitInfo
+	// generate common.ExitInfo data
+	var exitInfos []*common.ExitInfo
 	for exitIdx, exitAccount := range exits {
 		// 0. generate MerkleProof
 		p, err := exitTree.GenerateCircomVerifierProof(exitIdx.BigInt(), nil)
@@ -93,12 +84,12 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 		if err != nil {
 			return nil, nil, err
 		}
-		// 2. generate ExitInfo
-		ei := &ExitInfo{
-			Idx:       &exitIdx,
-			Proof:     p,
-			Nullifier: nullifier,
-			Balance:   exitAccount.Balance,
+		// 2. generate common.ExitInfo
+		ei := &common.ExitInfo{
+			AccountIdx:  exitIdx,
+			MerkleProof: p,
+			Nullifier:   nullifier,
+			Balance:     exitAccount.Balance,
 		}
 		exitInfos = append(exitInfos, ei)
 	}
@@ -106,29 +97,6 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 	// return exitInfos, so Synchronizer will be able to store it into
 	// HistoryDB for the concrete BatchNum
 	return nil, exitInfos, nil
-}
-
-// processL2Tx process the given L2Tx applying the needed updates to
-// the StateDB depending on the transaction Type.
-func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.L2Tx) (*common.Idx, *common.Account, error) {
-	switch tx.Type {
-	case common.TxTypeTransfer:
-		// go to the MT account of sender and receiver, and update
-		// balance & nonce
-		err := s.applyTransfer(tx.Tx())
-		if err != nil {
-			return nil, nil, err
-		}
-	case common.TxTypeExit:
-		// execute exit flow
-		exitAccount, err := s.applyExit(exitTree, tx.Tx())
-		if err != nil {
-			return nil, nil, err
-		}
-		return &tx.FromIdx, exitAccount, nil
-	default:
-	}
-	return nil, nil, nil
 }
 
 // processL1Tx process the given L1Tx applying the needed updates to the
@@ -185,6 +153,29 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	return nil, nil, nil
 }
 
+// processL2Tx process the given L2Tx applying the needed updates to
+// the StateDB depending on the transaction Type.
+func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.L2Tx) (*common.Idx, *common.Account, error) {
+	switch tx.Type {
+	case common.TxTypeTransfer:
+		// go to the MT account of sender and receiver, and update
+		// balance & nonce
+		err := s.applyTransfer(tx.Tx())
+		if err != nil {
+			return nil, nil, err
+		}
+	case common.TxTypeExit:
+		// execute exit flow
+		exitAccount, err := s.applyExit(exitTree, tx.Tx())
+		if err != nil {
+			return nil, nil, err
+		}
+		return &tx.FromIdx, exitAccount, nil
+	default:
+	}
+	return nil, nil, nil
+}
+
 // applyCreateAccount creates a new account in the account of the depositer, it
 // stores the deposit value
 func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
@@ -222,7 +213,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		if err != nil {
 			return err
 		}
-		// substract amount to the sender
+		// subtract amount to the sender
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
 		// add amount to the receiver
 		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
@@ -256,7 +247,7 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 	// increment nonce
 	accSender.Nonce++
 
-	// substract amount to the sender
+	// subtract amount to the sender
 	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
 	// add amount to the receiver
 	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
@@ -276,7 +267,7 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 }
 
 func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx *common.Tx) (*common.Account, error) {
-	// 0. substract tx.Amount from current Account in StateMT
+	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := s.GetAccount(tx.FromIdx)
 	if err != nil {

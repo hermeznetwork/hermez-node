@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/stretchr/testify/require"
 )
 
 type Account struct {
@@ -49,17 +51,16 @@ func GenerateKeys(t *testing.T, accNames []string) map[string]*Account {
 
 // GenerateTestTxs generates L1Tx & PoolL2Tx in a deterministic way for the
 // given Instructions.
-func GenerateTestTxs(t *testing.T, instructions Instructions) ([]*common.L1Tx, []*common.PoolL2Tx) {
+func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx) {
 	accounts := GenerateKeys(t, instructions.Accounts)
+	l1CreatedAccounts := make(map[string]*Account)
 
-	// debug
-	// fmt.Println("accounts:")
-	// for n, a := range accounts {
-	//         fmt.Printf("	%s: bjj:%s - addr:%s\n", n, a.BJJ.Public().String()[:10], a.Addr.Hex()[:10])
-	// }
-
-	var l1txs []*common.L1Tx
-	var l2txs []*common.PoolL2Tx
+	var batchL1Txs []*common.L1Tx
+	var batchCoordinatorL1Txs []*common.L1Tx
+	var batchPoolL2Txs []*common.PoolL2Tx
+	var l1Txs [][]*common.L1Tx
+	var coordinatorL1Txs [][]*common.L1Tx
+	var poolL2Txs [][]*common.PoolL2Tx
 	idx := 1
 	for _, inst := range instructions.Instructions {
 		switch inst.Type {
@@ -72,37 +73,88 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([]*common.L1Tx, [
 				LoadAmount:  big.NewInt(int64(inst.Amount)),
 				Type:        common.TxTypeCreateAccountDeposit,
 			}
-			l1txs = append(l1txs, &tx)
+			batchL1Txs = append(batchL1Txs, &tx)
 			if accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx == common.Idx(0) { // if account.Idx is not set yet, set it and increment idx
 				accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx = common.Idx(idx)
+
+				l1CreatedAccounts[idxTokenIDToString(inst.From, inst.TokenID)] = accounts[idxTokenIDToString(inst.From, inst.TokenID)]
 				idx++
 			}
 		case common.TxTypeTransfer:
+			// if account of receiver does not exist, create a new CoordinatorL1Tx creating the account
+			if _, ok := l1CreatedAccounts[idxTokenIDToString(inst.To, inst.TokenID)]; !ok {
+				tx := common.L1Tx{
+					FromEthAddr: accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
+					FromBJJ:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
+					TokenID:     inst.TokenID,
+					LoadAmount:  big.NewInt(int64(inst.Amount)),
+					Type:        common.TxTypeCreateAccountDeposit,
+				}
+				accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx = common.Idx(idx)
+				l1CreatedAccounts[idxTokenIDToString(inst.To, inst.TokenID)] = accounts[idxTokenIDToString(inst.To, inst.TokenID)]
+				batchCoordinatorL1Txs = append(batchCoordinatorL1Txs, &tx)
+				idx++
+			}
+
 			tx := common.PoolL2Tx{
 				// TxID: nil,
-				FromIdx:   accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
-				ToIdx:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx,
-				ToEthAddr: accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
-				ToBJJ:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
-				TokenID:   inst.TokenID,
-				Amount:    big.NewInt(int64(inst.Amount)),
-				Fee:       common.FeeSelector(inst.Fee),
-				Nonce:     accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce,
-				State:     common.PoolL2TxStatePending,
-				Timestamp: time.Now(),
-				BatchNum:  0,
-				Type:      common.TxTypeTransfer,
+				FromIdx:     accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
+				ToIdx:       accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx,
+				ToEthAddr:   accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
+				ToBJJ:       accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
+				TokenID:     inst.TokenID,
+				Amount:      big.NewInt(int64(inst.Amount)),
+				Fee:         common.FeeSelector(inst.Fee),
+				Nonce:       accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce,
+				State:       common.PoolL2TxStatePending,
+				Timestamp:   time.Now(),
+				BatchNum:    0,
+				RqToEthAddr: accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
+				RqToBJJ:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
+				Type:        common.TxTypeTransfer,
 			}
-			// TODO once signature function is ready, perform
-			// signature and set it to tx.Signature
+			// perform signature and set it to tx.Signature
+			toSign, err := tx.HashToSign()
+			if err != nil {
+				panic(err)
+			}
+			sig := accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.SignPoseidon(toSign)
+			tx.Signature = sig
 
 			accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce++
-			l2txs = append(l2txs, &tx)
+			batchPoolL2Txs = append(batchPoolL2Txs, &tx)
+
+		case common.TxTypeExit, common.TxTypeForceExit:
+			tx := common.L1Tx{
+				FromIdx: accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
+				ToIdx:   common.Idx(1), // as is an Exit
+				TokenID: inst.TokenID,
+				Amount:  big.NewInt(int64(inst.Amount)),
+				Type:    common.TxTypeExit,
+			}
+			batchL1Txs = append(batchL1Txs, &tx)
+		case TypeNewBatch:
+			l1Txs = append(l1Txs, batchL1Txs)
+			coordinatorL1Txs = append(coordinatorL1Txs, batchCoordinatorL1Txs)
+			poolL2Txs = append(poolL2Txs, batchPoolL2Txs)
+			batchL1Txs = []*common.L1Tx{}
+			batchCoordinatorL1Txs = []*common.L1Tx{}
+			batchPoolL2Txs = []*common.PoolL2Tx{}
 		default:
 			continue
 		}
-
 	}
+	l1Txs = append(l1Txs, batchL1Txs)
+	coordinatorL1Txs = append(coordinatorL1Txs, batchCoordinatorL1Txs)
+	poolL2Txs = append(poolL2Txs, batchPoolL2Txs)
 
-	return l1txs, l2txs
+	return l1Txs, coordinatorL1Txs, poolL2Txs
+}
+
+func GenerateTestTxsFromSet(t *testing.T, set string) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx) {
+	parser := NewParser(strings.NewReader(set))
+	instructions, err := parser.Parse()
+	require.Nil(t, err)
+
+	return GenerateTestTxs(t, instructions)
 }

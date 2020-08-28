@@ -7,7 +7,6 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

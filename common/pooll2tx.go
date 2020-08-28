@@ -17,7 +17,7 @@ type Nonce uint64
 
 // Bytes returns a byte array of length 5 representing the Nonce
 func (n Nonce) Bytes() ([5]byte, error) {
-	if n >= 1099511627776 { // 2**40bits
+	if n > maxNonceValue {
 		return [5]byte{}, ErrNonceOverflow
 	}
 	var nonceBytes [8]byte
@@ -62,8 +62,8 @@ type PoolL2Tx struct {
 	RqNonce           uint64             `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
 	AbsoluteFee       float64            `meddler:"absolute_fee,zeroisnull"`
 	AbsoluteFeeUpdate time.Time          `meddler:"absolute_fee_update,utctimez"`
+	Type              TxType             `meddler:"tx_type"`
 	// Extra metadata, may be uninitialized
-	Type               TxType `meddler:"-"` // optional, descrives which kind of tx it's
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
 }
 

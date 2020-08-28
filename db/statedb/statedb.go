@@ -130,7 +130,7 @@ func (s *StateDB) MakeCheckpoint() error {
 }
 
 // DeleteCheckpoint removes if exist the checkpoint of the given batchNum
-func (s *StateDB) DeleteCheckpoint(batchNum uint64) error {
+func (s *StateDB) DeleteCheckpoint(batchNum common.BatchNum) error {
 	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
 
 	if _, err := os.Stat(checkpointPath); os.IsNotExist(err) {
@@ -144,7 +144,7 @@ func (s *StateDB) DeleteCheckpoint(batchNum uint64) error {
 // does not delete the checkpoints between old current and the new current,
 // those checkpoints will remain in the storage, and eventually will be
 // deleted when MakeCheckpoint overwrites them.
-func (s *StateDB) Reset(batchNum uint64) error {
+func (s *StateDB) Reset(batchNum common.BatchNum) error {
 	if batchNum == 0 {
 		s.idx = 0
 		return nil
@@ -331,7 +331,7 @@ func NewLocalStateDB(path string, synchronizerDB *StateDB, withMT bool, nLevels 
 
 // Reset performs a reset in the LocaStateDB. If fromSynchronizer is true, it
 // gets the state from LocalStateDB.synchronizerStateDB for the given batchNum. If fromSynchronizer is false, get the state from LocalStateDB checkpoints.
-func (l *LocalStateDB) Reset(batchNum uint64, fromSynchronizer bool) error {
+func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) error {
 	if batchNum == 0 {
 		l.idx = 0
 		return nil

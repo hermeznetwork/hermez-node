@@ -68,7 +68,6 @@ func TestTxCompressedData(t *testing.T) {
 	// test vector value generated from javascript implementation
 	assert.Equal(t, "6571340879233176732837827812956721483162819083004853354503", txCompressedData.String())
 	assert.Equal(t, "10c000000000b0000000a0009000000000008000000000007", hex.EncodeToString(txCompressedData.Bytes())[1:])
-
 }
 
 func TestHashToSign(t *testing.T) {

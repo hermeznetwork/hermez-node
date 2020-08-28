@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	MaxIdleConn     = 10
-	IdleConnTimeout = 10
+	defaultMaxIdleConns    = 10
+	defaultIdleConnTimeout = 10
 )
 
 var (
@@ -47,18 +47,17 @@ type PriceUpdater struct {
 
 // NewPriceUpdater is the constructor for the updater
 func NewPriceUpdater(config ConfigPriceUpdater) *PriceUpdater {
-	p := &PriceUpdater{
+	return &PriceUpdater{
 		db:     make(map[string]TokenInfo),
 		config: config,
 	}
-	return p
 }
 
 // UpdatePrices is triggered by the Coordinator, and internally will update the token prices in the db
 func (p *PriceUpdater) UpdatePrices() error {
 	tr := &http.Transport{
-		MaxIdleConns:       MaxIdleConn,
-		IdleConnTimeout:    IdleConnTimeout * time.Second,
+		MaxIdleConns:       defaultMaxIdleConns,
+		IdleConnTimeout:    defaultIdleConnTimeout * time.Second,
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
