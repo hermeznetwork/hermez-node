@@ -122,7 +122,7 @@ func TestStartForging(t *testing.T) {
 
 func genTxs(n int) []*common.PoolL2Tx {
 	// WARNING: This tx doesn't follow the protocol (signature, txID, ...)
-	// it's just to test geting/seting from/to the DB.
+	// it's just to test getting/setting from/to the DB.
 	// Type and RqTxCompressedData: not initialized because it's not stored
 	// on the DB and add noise when checking results.
 	txs := make([]*common.PoolL2Tx, 0, n)

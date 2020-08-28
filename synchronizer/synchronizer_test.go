@@ -18,18 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// In order to run the test you need to run a Posgres DB with
-// a database named "history" that is accessible by
-// user: "hermez"
-// pass: set it using the env var POSTGRES_PASS
-// This can be achieved by running: POSTGRES_PASS=your_strong_pass && sudo docker run --rm --name hermez-db-test -p 5432:5432 -e POSTGRES_DB=history -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD=$POSTGRES_PASS -d postgres && sleep 2s && sudo docker exec -it hermez-db-test psql -a history -U hermez -c "CREATE DATABASE l2;"
-// After running the test you can stop the container by running: sudo docker kill hermez-db-test
-// If you already did that for the L2DB you don't have to do it again
-
-// A env var called INFURA_PROJECT_ID must be set with a valid project id code
-
 func Test(t *testing.T) {
-
 	syncConfig := SyncConfig{
 		LoopInterval: 5,
 	}
@@ -49,11 +38,11 @@ func Test(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Init eth client
-	projectID := os.Getenv("INFURA_PROJECT_ID")
-	ethClient, err := ethclient.Dial("https://mainnet.infura.io/v3/" + projectID)
+	ehtClientDialURL := os.Getenv("ETHCLIENT_DIAL_URL")
+	ethClient, err := ethclient.Dial(ehtClientDialURL)
 	require.Nil(t, err)
 
-	client := eth.NewClient(ethClient, nil, nil)
+	client := eth.NewClient(ethClient, nil, nil, nil)
 
 	// Let's update the FirstSavedBlock to have a faster testing
 
@@ -87,7 +76,7 @@ func Test(t *testing.T) {
 	require.Nil(t, err)
 
 	log.Debugf("Wait for the blockchain to generate some blocks...")
-	time.Sleep(40 * time.Second)
+	time.Sleep(60 * time.Second)
 
 	err = s.sync()
 	require.Nil(t, err)

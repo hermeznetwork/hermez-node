@@ -7,7 +7,6 @@ import (
 )
 
 func TestCon(t *testing.T) {
-
 	config := ConfigPriceUpdater{
 
 		RecommendedFee:              1,
@@ -36,5 +35,4 @@ func TestCon(t *testing.T) {
 	prices := pud.GetPrices()
 	assert.Equal(t, prices["ETH"], info)
 	assert.Equal(t, prices["NEC"], info2)
-
 }

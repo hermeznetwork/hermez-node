@@ -1,3 +1,4 @@
+//nolint:gomnd
 package utils
 
 import (
@@ -33,9 +34,7 @@ func (fl16 *Float16) BigInt() *big.Int {
 	res := m.Mul(m, exp)
 
 	if e5 != 0 && e.Cmp(big.NewInt(0)) != 0 {
-
 		res.Add(res, exp.Div(exp, big.NewInt(2)))
-
 	}
 	return res
 }
@@ -56,11 +55,9 @@ func floorFix2Float(_f *big.Int) Float16 {
 	s := big.NewInt(0).Rsh(m, 10)
 
 	for s.Cmp(zero) != 0 {
-
 		m.Div(m, ten)
 		s.Rsh(m, 10)
 		e++
-
 	}
 
 	return Float16(m.Int64() | e<<11)
@@ -98,13 +95,11 @@ func NewFloat16(f *big.Int) (Float16, error) {
 	d3 := big.NewInt(0).Abs(fi3.Sub(fi3, f))
 
 	if d.Cmp(d3) == 1 {
-
 		res = fl3
 	}
 
 	// Do rounding check
 	if res.BigInt().Cmp(f) == 0 {
-
 		return res, nil
 	}
 	return res, ErrRoundingLoss

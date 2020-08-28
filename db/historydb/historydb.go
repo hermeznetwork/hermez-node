@@ -7,7 +7,9 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // driver for postgres DB
+
+	//nolint:errcheck // driver for postgres DB
+	_ "github.com/lib/pq"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 )

@@ -49,8 +49,8 @@ func TestBlocks(t *testing.T) {
 	// Generate fake blocks
 	blocks := genBlocks(fromBlock, toBlock)
 	// Insert blocks into DB
-	for _, block := range blocks {
-		err := historyDB.AddBlock(&block)
+	for i := 0; i < len(blocks); i++ {
+		err := historyDB.AddBlock(&blocks[i])
 		assert.NoError(t, err)
 	}
 	// Get all blocks from DB

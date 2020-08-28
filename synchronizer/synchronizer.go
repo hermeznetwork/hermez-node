@@ -39,7 +39,6 @@ type Synchronizer struct {
 
 // NewSynchronizer creates a new Synchronizer
 func NewSynchronizer(syncConfig *SyncConfig, ethClient *eth.Client, historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *Synchronizer {
-
 	s := &Synchronizer{
 		config:    syncConfig,
 		ethClient: ethClient,
@@ -52,18 +51,17 @@ func NewSynchronizer(syncConfig *SyncConfig, ethClient *eth.Client, historyDB *h
 
 // Start starts the Synchronizer service
 func (s *Synchronizer) Start() {
-
 	go func() {
-
 		<-time.After(s.config.LoopInterval * time.Second)
-		_ = s.sync()
+		err := s.sync()
 
+		if err != nil {
+			log.Error(err)
+		}
 	}()
-
 }
 
 func (s *Synchronizer) sync() error {
-
 	// Avoid new sync while performing one
 	s.mux.Lock()
 	defer s.mux.Unlock()
@@ -81,7 +79,6 @@ func (s *Synchronizer) sync() error {
 	if lastSavedBlock == nil || lastSavedBlock.EthBlockNum == 0 {
 		lastSavedBlock = &s.config.FirstSavedBlock
 	} else {
-
 		// Get the latest block we have in History DB from blockchain to detect a reorg
 
 		header, err := s.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum)))
@@ -90,7 +87,6 @@ func (s *Synchronizer) sync() error {
 		}
 
 		if header.Hash() != lastSavedBlock.Hash {
-
 			// Reorg detected
 			log.Debugf("Reorg Detected...")
 			err := s.reorg(lastSavedBlock)
@@ -104,9 +100,7 @@ func (s *Synchronizer) sync() error {
 			if err != nil {
 				return err
 			}
-
 		}
-
 	}
 
 	log.Debugf("Syncing...")
@@ -123,7 +117,6 @@ func (s *Synchronizer) sync() error {
 	log.Debugf("Blocks to sync: %v", latestBlockNum.Uint64()-lastSavedBlock.EthBlockNum)
 
 	for lastSavedBlock.EthBlockNum < latestBlockNum.Uint64() {
-
 		ethBlock, err := s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum+1)))
 		if err != nil {
 			return err
@@ -141,15 +134,12 @@ func (s *Synchronizer) sync() error {
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil
-
 }
 
 func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
-
 	// Iterate History DB and the blokchain looking for the latest valid block
 
 	var block *common.Block
@@ -159,7 +149,6 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 	log.Debugf("Reorg first uncle block: %v", blockNum)
 
 	for !found && blockNum > s.config.FirstSavedBlock.EthBlockNum {
-
 		header, err := s.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
 		if err != nil {
 			return err
@@ -172,22 +161,16 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 		}
 
 		if block.Hash == header.Hash() {
-
 			found = true
-
 			log.Debugf("Found valid block: %v", blockNum)
-
 		} else {
 			log.Debugf("Discarding block: %v", blockNum)
-
 		}
 
 		blockNum--
-
 	}
 
 	if found {
-
 		// Set History DB and State DB to the correct state
 
 		err := s.historyDB.Reorg(block.EthBlockNum)
@@ -203,7 +186,6 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 		}
 
 		if batchNum != 0 {
-
 			err = s.stateDB.Reset(batchNum)
 
 			if err != nil {
@@ -212,9 +194,7 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 		}
 
 		return nil
-
 	}
 
 	return ErrNotAbleToSync
-
 }

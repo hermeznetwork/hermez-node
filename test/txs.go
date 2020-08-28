@@ -143,7 +143,6 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 		default:
 			continue
 		}
-
 	}
 	l1Txs = append(l1Txs, batchL1Txs)
 	coordinatorL1Txs = append(coordinatorL1Txs, batchCoordinatorL1Txs)

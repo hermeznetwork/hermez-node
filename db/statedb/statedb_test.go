@@ -32,7 +32,6 @@ func newAccount(t *testing.T, i int) *common.Account {
 		PublicKey: pk,
 		EthAddr:   address,
 	}
-
 }
 
 func TestStateDBWithoutMT(t *testing.T) {

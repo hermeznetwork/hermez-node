@@ -12,7 +12,13 @@ import (
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
-const NLEAFELEMS = 4
+const (
+	NLEAFELEMS = 4
+	// maxNonceValue is the maximum value that the Account.Nonce can have (40 bits: maxNonceValue=2**40-1)
+	maxNonceValue = 0xffffffffff
+	// maxBalanceBytes is the maximum bytes that can use the Account.Balance *big.Int
+	maxBalanceBytes = 24
+)
 
 // Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
 type Account struct {
@@ -37,10 +43,10 @@ func (a *Account) String() string {
 func (a *Account) Bytes() ([32 * NLEAFELEMS]byte, error) {
 	var b [32 * NLEAFELEMS]byte
 
-	if a.Nonce > 0xffffffffff {
+	if a.Nonce > maxNonceValue {
 		return b, fmt.Errorf("%s Nonce", ErrNumOverflow)
 	}
-	if len(a.Balance.Bytes()) > 24 {
+	if len(a.Balance.Bytes()) > maxBalanceBytes {
 		return b, fmt.Errorf("%s Balance", ErrNumOverflow)
 	}
 

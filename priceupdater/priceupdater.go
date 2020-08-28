@@ -10,6 +10,11 @@ import (
 	"github.com/dghubble/sling"
 )
 
+const (
+	defaultMaxIdleConns    = 10
+	defaultIdleConnTimeout = 10
+)
+
 var (
 	// ErrSymbolDoesNotExistInDatabase is used when trying to get a token that is not in the DB
 	ErrSymbolDoesNotExistInDatabase = errors.New("symbol does not exist in database")
@@ -39,20 +44,17 @@ type PriceUpdater struct {
 
 // NewPriceUpdater is the constructor for the updater
 func NewPriceUpdater(config ConfigPriceUpdater) PriceUpdater {
-
 	return PriceUpdater{
 		db:     make(map[string]TokenInfo),
 		config: config,
 	}
-
 }
 
 // UpdatePrices is triggered by the Coordinator, and internally will update the token prices in the db
 func (p *PriceUpdater) UpdatePrices() error {
-
 	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    10 * time.Second,
+		MaxIdleConns:       defaultMaxIdleConns,
+		IdleConnTimeout:    defaultIdleConnTimeout * time.Second,
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
@@ -61,12 +63,12 @@ func (p *PriceUpdater) UpdatePrices() error {
 	state := [10]float64{}
 
 	for _, tokenSymbol := range p.config.TokensList {
-
 		resp, err := client.New().Get("ticker/t" + tokenSymbol + "USD").ReceiveSuccess(&state)
 		if err != nil {
 			return err
 		}
-		if resp.StatusCode != 200 {
+		// if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("Unexpected response status code: %v", resp.StatusCode)
 		}
 
@@ -77,7 +79,6 @@ func (p *PriceUpdater) UpdatePrices() error {
 		}
 
 		p.UpdateTokenInfo(tinfo)
-
 	}
 
 	return nil
@@ -85,17 +86,14 @@ func (p *PriceUpdater) UpdatePrices() error {
 
 // UpdateConfig allows to update the price-updater configuration
 func (p *PriceUpdater) UpdateConfig(config ConfigPriceUpdater) {
-
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	p.config = config
-
 }
 
 // Get one token information
 func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
-
 	var info TokenInfo
 
 	// Check if symbol exists in database
@@ -107,12 +105,10 @@ func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
 	}
 
 	return info, ErrSymbolDoesNotExistInDatabase
-
 }
 
 // GetPrices gets all the prices contained in the db
 func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
-
 	var info = make(map[string]TokenInfo)
 
 	p.mu.RLock()
@@ -127,10 +123,8 @@ func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
 
 // UpdateTokenInfo updates one token info
 func (p *PriceUpdater) UpdateTokenInfo(tokenInfo TokenInfo) {
-
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	p.db[tokenInfo.Symbol] = tokenInfo
-
 }

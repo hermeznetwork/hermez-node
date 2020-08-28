@@ -21,6 +21,6 @@ jobs:
     - name: Test
       env:
         POSTGRES_PASS: ${{ secrets.POSTGRES_PASS }}
-        INFURA_PROJECT_ID: ${{ secrets.INFURA_PROJECT_ID }}
+        ETHCLIENT_DIAL_URL: ${{ secrets.ETHCLIENT_DIAL_URL }}
         GOARCH: ${{ matrix.goarch }}
       run: go test ./... -v
