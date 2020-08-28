@@ -294,17 +294,14 @@ func (c *Coordinator) isForgeSequence() bool {
 }
 
 func (c *Coordinator) purgeRemoveByTimeout() error {
-
 	return nil
 }
 
 func (c *Coordinator) purgeInvalidDueToL2TxsSelection(l2Txs []*common.PoolL2Tx) error {
-
 	return nil
 }
 
 func (c *Coordinator) shouldL1L2Batch() bool {
-
 	return false
 }
 

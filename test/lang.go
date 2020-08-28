@@ -313,7 +313,7 @@ func (p *Parser) parseLine() (*Instruction, error) {
 			c.Literal += line
 			return c, err
 		}
-		if fee > 255 {
+		if fee > common.MAXFEEPLAN-1 {
 			line, _ := p.s.r.ReadString('\n')
 			c.Literal += line
 			return c, fmt.Errorf("Fee %d can not be bigger than 255", fee)

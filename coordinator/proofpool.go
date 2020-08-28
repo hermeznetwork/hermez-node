@@ -20,6 +20,5 @@ type ServerProofPool struct {
 }
 
 func (p *ServerProofPool) GetNextAvailable() (*ServerProofInfo, error) {
-
 	return nil, nil
 }

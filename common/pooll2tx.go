@@ -17,7 +17,7 @@ type Nonce uint64
 
 // Bytes returns a byte array of length 5 representing the Nonce
 func (n Nonce) Bytes() ([5]byte, error) {
-	if n >= 1099511627776 { // 2**40bits
+	if n > maxNonceValue {
 		return [5]byte{}, ErrNonceOverflow
 	}
 	var nonceBytes [8]byte

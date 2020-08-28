@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// SyncronizerState describes the syncronization progress of the smart contracts
+// SyncronizerState describes the synchronization progress of the smart contracts
 type SyncronizerState struct {
 	LastUpdate                time.Time // last time this information was updated
 	CurrentBatchNum           BatchNum  // Last batch that was forged on the blockchain

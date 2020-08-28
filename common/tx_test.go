@@ -19,5 +19,4 @@ func TestIdx(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrNumOverflow, err)
 	assert.Equal(t, Idx(0), i)
-
 }

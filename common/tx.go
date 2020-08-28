@@ -6,6 +6,12 @@ import (
 	"math/big"
 )
 
+const (
+	idxBytesLen = 4
+	// maxIdxValue is the maximum value that Idx can have (32 bits: maxIdxValue=2**32-1)
+	maxIdxValue = 0xffffffff
+)
+
 // Idx represents the account Index in the MerkleTree
 type Idx uint32
 
@@ -23,7 +29,7 @@ func (idx Idx) BigInt() *big.Int {
 
 // IdxFromBytes returns Idx from a byte array
 func IdxFromBytes(b []byte) (Idx, error) {
-	if len(b) != 4 {
+	if len(b) != idxBytesLen {
 		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected 4", len(b))
 	}
 	idx := binary.LittleEndian.Uint32(b[:4])
@@ -32,7 +38,7 @@ func IdxFromBytes(b []byte) (Idx, error) {
 
 // IdxFromBigInt converts a *big.Int to Idx type
 func IdxFromBigInt(b *big.Int) (Idx, error) {
-	if b.Int64() > 0xffffffff { // 2**32-1
+	if b.Int64() > maxIdxValue {
 		return 0, ErrNumOverflow
 	}
 	return Idx(uint32(b.Int64())), nil

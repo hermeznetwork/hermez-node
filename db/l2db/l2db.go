@@ -10,7 +10,9 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // driver for postgres DB
+
+	//nolint:errcheck // driver for postgres DB
+	_ "github.com/lib/pq"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 )
@@ -26,7 +28,7 @@ type L2DB struct {
 
 // NewL2DB creates a L2DB.
 // More info on how to set dbDialect and dbArgs here: http://gorm.io/docs/connecting_to_the_database.html
-// safetyPeriod is the ammount of blockchain blocks that must be waited before deleting anything (to avoid reorg problems).
+// safetyPeriod is the amount of blockchain blocks that must be waited before deleting anything (to avoid reorg problems).
 // maxTxs indicates the desired maximum amount of txs stored on the L2DB.
 // TTL indicates the maximum amount of time that a tx can be in the L2DB
 // (to prevent tx that won't ever be forged to stay there, will be used if maxTxs is exceeded).
@@ -153,7 +155,7 @@ func (l2db *L2DB) UpdateTxs(txs []*common.PoolL2Tx) error {
 	return nil
 }
 
-// Reorg updates the state of txs that were updated in a batch that has been discarted due to a blockchian reorg.
+// Reorg updates the state of txs that were updated in a batch that has been discarted due to a blockchain reorg.
 // The state of the affected txs can change form Forged -> Pending or from Invalid -> Pending
 func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 	// TODO: impl

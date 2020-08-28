@@ -12,3 +12,10 @@ POSTGRES_PASS=yourpasswordhere; sudo docker run --rm --name hermez-db-test -p 54
 ```
 POSTGRES_PASS=yourpasswordhere go test ./...
 ```
+
+## Lint
+- Install [golangci-lint](https://golangci-lint.run)
+- Once installed, to check the lints
+```
+golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd --max-same-issues 0
+```

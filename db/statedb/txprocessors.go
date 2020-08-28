@@ -213,7 +213,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		if err != nil {
 			return err
 		}
-		// substract amount to the sender
+		// subtract amount to the sender
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
 		// add amount to the receiver
 		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
@@ -247,7 +247,7 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 	// increment nonce
 	accSender.Nonce++
 
-	// substract amount to the sender
+	// subtract amount to the sender
 	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
 	// add amount to the receiver
 	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
@@ -267,7 +267,7 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 }
 
 func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx *common.Tx) (*common.Account, error) {
-	// 0. substract tx.Amount from current Account in StateMT
+	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
