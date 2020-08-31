@@ -17,10 +17,11 @@ import (
 )
 
 var (
+	// ErrAccountNil is used when the calls can not be made because the account is nil
 	ErrAccountNil = fmt.Errorf("Authorized calls can't be made when the account is nil")
-	// ErrReceiptStatusFailed when receiving a failed transaction
+	// ErrReceiptStatusFailed is used when receiving a failed transaction
 	ErrReceiptStatusFailed = fmt.Errorf("receipt status is failed")
-	// ErrReceiptNotRecieved when unable to retrieve a transaction
+	// ErrReceiptNotReceived is used when unable to retrieve a transaction
 	ErrReceiptNotReceived = fmt.Errorf("receipt not available")
 )
 
@@ -36,6 +37,7 @@ const (
 	defaultIntervalReceiptLoop = 200
 )
 
+// Config defines the configuration parameters of the Client
 type Config struct {
 	CallGasLimit        uint64
 	DeployGasLimit      uint64
@@ -115,6 +117,7 @@ func (c *Client) CallAuth(gasLimit uint64,
 	return tx, err
 }
 
+// ContractData contains the contract data
 type ContractData struct {
 	Address ethCommon.Address
 	Tx      *types.Transaction
@@ -161,7 +164,7 @@ func (c *Client) Call(fn func(*ethclient.Client) error) error {
 // WaitReceipt will block until a transaction is confirmed.  Internally it
 // polls the state every 200 milliseconds.
 func (c *Client) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
-	return c.waitReceipt(tx, context.TODO(), c.ReceiptTimeout)
+	return c.waitReceipt(context.TODO(), tx, c.ReceiptTimeout)
 }
 
 // GetReceipt will check if a transaction is confirmed and return
@@ -170,10 +173,10 @@ func (c *Client) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
 func (c *Client) GetReceipt(tx *types.Transaction) (*types.Receipt, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	return c.waitReceipt(tx, ctx, 0)
+	return c.waitReceipt(ctx, tx, 0)
 }
 
-func (c *Client) waitReceipt(tx *types.Transaction, ctx context.Context, timeout time.Duration) (*types.Receipt, error) {
+func (c *Client) waitReceipt(ctx context.Context, tx *types.Transaction, timeout time.Duration) (*types.Receipt, error) {
 	var err error
 	var receipt *types.Receipt
 
@@ -233,6 +236,7 @@ func (c *Client) BlockByNumber(ctx context.Context, number *big.Int) (*common.Bl
 	return b, nil
 }
 
+// ForgeCall send the *common.CallDataForge to the Forge method of the smart contract
 func (c *Client) ForgeCall(callData *common.CallDataForge) ([]byte, error) {
 	// TODO this depends on the smart contracts, once are ready this will be updated
 	return nil, nil

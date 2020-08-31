@@ -62,7 +62,7 @@ func Init(levelStr, errorsPath string) {
 
 	if errorsPath != "" {
 		log.Infof("file where errors will be written: %s", errorsPath)
-		errorsFile, err = os.OpenFile(errorsPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		errorsFile, err = os.OpenFile(errorsPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) //nolint:gosec
 		if err != nil {
 			panic(err)
 		}
@@ -76,7 +76,7 @@ func writeToErrorsFile(msg string) {
 		return
 	}
 	//nolint:errcheck
-	errorsFile.WriteString(fmt.Sprintf("%s %s\n", time.Now().Format(time.RFC3339), msg))
+	errorsFile.WriteString(fmt.Sprintf("%s %s\n", time.Now().Format(time.RFC3339), msg)) //nolint:gosec
 }
 
 // Debug calls log.Debug

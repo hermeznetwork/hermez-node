@@ -14,8 +14,8 @@ import (
 	"github.com/iden3/go-merkletree/db/memory"
 )
 
-// CoordinatorConfig contains the Coordinator configuration
-type CoordinatorConfig struct {
+// Config contains the Coordinator configuration
+type Config struct {
 	ForgerAddress ethCommon.Address
 	LoopInterval  time.Duration
 }
@@ -29,7 +29,7 @@ type Coordinator struct {
 	forging    bool
 	isForgeSeq bool // WIP just for testing while implementing
 
-	config CoordinatorConfig
+	config Config
 
 	batchNum        common.BatchNum
 	batchQueue      *BatchQueue
@@ -45,7 +45,7 @@ type Coordinator struct {
 }
 
 // NewCoordinator creates a new Coordinator
-func NewCoordinator(conf CoordinatorConfig,
+func NewCoordinator(conf Config,
 	hdb *historydb.HistoryDB,
 	txsel *txselector.TxSelector,
 	bb *batchbuilder.BatchBuilder,
@@ -61,6 +61,7 @@ func NewCoordinator(conf CoordinatorConfig,
 	return &c
 }
 
+// Stop stops the Coordinator
 func (c *Coordinator) Stop() {
 	log.Info("Stopping Coordinator")
 	c.stopch <- true

@@ -4,6 +4,8 @@ import (
 	"math/big"
 )
 
+// ZKInputs represents the inputs that will be used to generate the zkSNARK
+// proof
 type ZKInputs struct {
 	InitialIdx    uint64
 	OldStRoot     Hash
@@ -19,7 +21,7 @@ type ZKInputs struct {
 	TxData        []*big.Int
 
 	FromIdx     []uint64
-	ToIdX       []uint64
+	ToIdX       []uint64 //nolint:golint
 	ToAx        []*big.Int
 	ToAy        []*big.Int
 	ToEthAddr   []*big.Int
@@ -55,10 +57,7 @@ type ZKInputs struct {
 	OldValue2 []*big.Int
 }
 
+// CallDataForge TBD
 type CallDataForge struct {
-	// TBD
-}
-
-type ExitTreeLeaf struct {
 	// TBD
 }

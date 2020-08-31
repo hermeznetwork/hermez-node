@@ -25,6 +25,7 @@ type L1Tx struct {
 	Type            TxType             `meddler:"tx_type"`
 }
 
+// Tx returns a *Tx from the L1Tx
 func (tx *L1Tx) Tx() *Tx {
 	return &Tx{
 		TxID:    tx.TxID,

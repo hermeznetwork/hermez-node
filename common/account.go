@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	// NLEAFELEMS is the number of elements for a leaf
 	NLEAFELEMS = 4
 	// maxNonceValue is the maximum value that the Account.Nonce can have (40 bits: maxNonceValue=2**40-1)
 	maxNonceValue = 0xffffffffff

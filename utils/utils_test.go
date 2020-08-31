@@ -101,17 +101,17 @@ func BenchmarkFloat16(b *testing.B) {
 		BigInt  *big.Int
 	}
 	testVector := []pair{
-		pair{0x307B, newBigInt("123000000")},
-		pair{0x1DC6, newBigInt("454500")},
-		pair{0xFFFF, newBigInt("10235000000000000000000000000000000")},
-		pair{0x0000, newBigInt("0")},
-		pair{0x0400, newBigInt("0")},
-		pair{0x0001, newBigInt("1")},
-		pair{0x0401, newBigInt("1")},
-		pair{0x0800, newBigInt("0")},
-		pair{0x0c00, newBigInt("5")},
-		pair{0x0801, newBigInt("10")},
-		pair{0x0c01, newBigInt("15")},
+		{0x307B, newBigInt("123000000")},
+		{0x1DC6, newBigInt("454500")},
+		{0xFFFF, newBigInt("10235000000000000000000000000000000")},
+		{0x0000, newBigInt("0")},
+		{0x0400, newBigInt("0")},
+		{0x0001, newBigInt("1")},
+		{0x0401, newBigInt("1")},
+		{0x0800, newBigInt("0")},
+		{0x0c00, newBigInt("5")},
+		{0x0801, newBigInt("10")},
+		{0x0c01, newBigInt("15")},
 	}
 	b.Run("floorFix2Float()", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -120,7 +120,7 @@ func BenchmarkFloat16(b *testing.B) {
 	})
 	b.Run("NewFloat16()", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			NewFloat16(testVector[i%len(testVector)].BigInt) //nolint:errcheck
+			_, _ = NewFloat16(testVector[i%len(testVector)].BigInt)
 		}
 	})
 	b.Run("Float16.BigInt()", func(b *testing.B) {
