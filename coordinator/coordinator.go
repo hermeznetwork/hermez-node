@@ -40,7 +40,7 @@ type Coordinator struct {
 	txsel        *txselector.TxSelector
 	batchBuilder *batchbuilder.BatchBuilder
 
-	ethClient  *eth.Client
+	ethClient  eth.ClientInterface
 	ethTxStore kvdb.Storage
 }
 
