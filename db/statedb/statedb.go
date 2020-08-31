@@ -13,10 +13,12 @@ import (
 	"github.com/iden3/go-merkletree/db/pebble"
 )
 
-// ErrStateDBWithoutMT is used when a method that requires a MerkleTree is called in a StateDB that does not have a MerkleTree defined
+// ErrStateDBWithoutMT is used when a method that requires a MerkleTree is
+// called in a StateDB that does not have a MerkleTree defined
 var ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a StateDB without MerkleTree")
 
-// ErrAccountAlreadyExists is used when CreateAccount is called and the Account already exists
+// ErrAccountAlreadyExists is used when CreateAccount is called and the Account
+// already exists
 var ErrAccountAlreadyExists = errors.New("Can not CreateAccount because Account already exists")
 
 // KEYCURRENTBATCH is used as key in the db to store the current BatchNum
@@ -24,7 +26,13 @@ var KEYCURRENTBATCH = []byte("currentbatch")
 
 // PATHSTATEDB defines the subpath of the StateDB
 const PATHSTATEDB = "/statedb"
+
+// PATHBATCHNUM defines the subpath of the Batch Checkpoint in the subpath of
+// the StateDB
 const PATHBATCHNUM = "/BatchNum"
+
+// PATHCURRENT defines the subpath of the current Batch in the subpath of the
+// StateDB
 const PATHCURRENT = "/current"
 
 // StateDB represents the StateDB object
@@ -159,7 +167,7 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 		return err
 	}
 	// copy 'BatchNumX' to 'current'
-	cmd := exec.Command("cp", "-r", checkpointPath, currentPath)
+	cmd := exec.Command("cp", "-r", checkpointPath, currentPath) //nolint:gosec
 	err = cmd.Run()
 	if err != nil {
 		return err
@@ -354,13 +362,13 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 			return err
 		}
 		// copy synchronizer'BatchNumX' to 'current'
-		cmd := exec.Command("cp", "-r", synchronizerCheckpointPath, currentPath)
+		cmd := exec.Command("cp", "-r", synchronizerCheckpointPath, currentPath) //nolint:gosec
 		err = cmd.Run()
 		if err != nil {
 			return err
 		}
 		// copy synchronizer-'BatchNumX' to 'BatchNumX'
-		cmd = exec.Command("cp", "-r", synchronizerCheckpointPath, checkpointPath)
+		cmd = exec.Command("cp", "-r", synchronizerCheckpointPath, checkpointPath) //nolint:gosec
 		err = cmd.Run()
 		if err != nil {
 			return err

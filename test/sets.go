@@ -15,7 +15,7 @@ package test
 // 	> and here the comment
 // 	move one batch forward
 
-// Set0 has 3 batches, 29 different accounts, with:
+// SetTest0 has 3 batches, 29 different accounts, with:
 // - 3 TokenIDs
 // - 29+5+10 L1 txs (deposits & exits)
 // - 21+53+7 L2 transactions

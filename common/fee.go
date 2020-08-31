@@ -4,8 +4,9 @@ package common
 // to incentivaise the materialization of it
 type Fee float64
 
-// RecommendedFee is the recommended fee to pay in USD per transaction set by the coordinator
-// according to the tx type (if the tx requires to create an account and register, only register or he account already esists)
+// RecommendedFee is the recommended fee to pay in USD per transaction set by
+// the coordinator according to the tx type (if the tx requires to create an
+// account and register, only register or he account already esists)
 type RecommendedFee struct {
 	ExistingAccount           float64
 	CreatesAccount            float64
@@ -15,7 +16,9 @@ type RecommendedFee struct {
 // FeeSelector is used to select a percentage from the FeePlan.
 type FeeSelector uint8
 
+// MAXFEEPLAN is the maximum value of the FeePlan
 const MAXFEEPLAN = 256
 
-// FeePlan represents the fee model, a position in the array indicates the percentage of tokens paid in concept of fee for a transaction
+// FeePlan represents the fee model, a position in the array indicates the
+// percentage of tokens paid in concept of fee for a transaction
 var FeePlan = [MAXFEEPLAN]float64{}

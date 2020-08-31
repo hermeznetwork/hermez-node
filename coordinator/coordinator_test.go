@@ -46,7 +46,7 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 func TestCoordinator(t *testing.T) {
 	txsel, bb := newTestModules(t)
 
-	conf := CoordinatorConfig{
+	conf := Config{
 		LoopInterval: 100 * time.Millisecond,
 	}
 	hdb := &historydb.HistoryDB{}

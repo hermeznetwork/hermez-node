@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Account contains the data related to a testing account
 type Account struct {
 	BJJ   *babyjub.PrivateKey
 	Addr  ethCommon.Address
@@ -151,6 +152,8 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 	return l1Txs, coordinatorL1Txs, poolL2Txs
 }
 
+// GenerateTestTxsFromSet reurns the L1 & L2 transactions for a given Set of
+// Instructions code
 func GenerateTestTxsFromSet(t *testing.T, set string) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx) {
 	parser := NewParser(strings.NewReader(set))
 	instructions, err := parser.Parse()
