@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/dghubble/sling v1.3.0
 	github.com/ethereum/go-ethereum v1.9.17
+	github.com/gin-gonic/gin v1.6.3
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/iden3/go-iden3-core v0.0.8

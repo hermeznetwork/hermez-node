@@ -20,8 +20,8 @@ var (
 	ErrSymbolDoesNotExistInDatabase = errors.New("symbol does not exist in database")
 )
 
-// ConfigPriceUpdater contains the configuration set by the coordinator
-type ConfigPriceUpdater struct {
+// Config contains the configuration set by the coordinator
+type Config struct {
 	RecommendedFee              uint64 // in dollars
 	RecommendedCreateAccountFee uint64 // in dollars
 	TokensList                  []string
@@ -37,16 +37,16 @@ type TokenInfo struct {
 
 // PriceUpdater definition
 type PriceUpdater struct {
-	db     map[string]TokenInfo
-	config ConfigPriceUpdater
-	mu     sync.RWMutex
+	DB     map[string]TokenInfo
+	Config Config
+	Mu     sync.RWMutex
 }
 
 // NewPriceUpdater is the constructor for the updater
-func NewPriceUpdater(config ConfigPriceUpdater) PriceUpdater {
-	return PriceUpdater{
-		db:     make(map[string]TokenInfo),
-		config: config,
+func NewPriceUpdater(config Config) *PriceUpdater {
+	return &PriceUpdater{
+		DB:     make(map[string]TokenInfo),
+		Config: config,
 	}
 }
 
@@ -58,16 +58,15 @@ func (p *PriceUpdater) UpdatePrices() error {
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
-	client := sling.New().Base(p.config.APIURL).Client(httpClient)
+	client := sling.New().Base(p.Config.APIURL).Client(httpClient)
 
 	state := [10]float64{}
 
-	for _, tokenSymbol := range p.config.TokensList {
+	for _, tokenSymbol := range p.Config.TokensList {
 		resp, err := client.New().Get("ticker/t" + tokenSymbol + "USD").ReceiveSuccess(&state)
 		if err != nil {
 			return err
 		}
-		// if resp.StatusCode != 200 {
 		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("Unexpected response status code: %v", resp.StatusCode)
 		}
@@ -85,11 +84,11 @@ func (p *PriceUpdater) UpdatePrices() error {
 }
 
 // UpdateConfig allows to update the price-updater configuration
-func (p *PriceUpdater) UpdateConfig(config ConfigPriceUpdater) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (p *PriceUpdater) UpdateConfig(config Config) {
+	p.Mu.Lock()
+	defer p.Mu.Unlock()
 
-	p.config = config
+	p.Config = config
 }
 
 // Get one token information
@@ -97,10 +96,10 @@ func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
 	var info TokenInfo
 
 	// Check if symbol exists in database
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+	p.Mu.RLock()
+	defer p.Mu.RUnlock()
 
-	if info, ok := p.db[tokenSymbol]; ok {
+	if info, ok := p.DB[tokenSymbol]; ok {
 		return info, nil
 	}
 
@@ -111,10 +110,10 @@ func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
 func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
 	var info = make(map[string]TokenInfo)
 
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+	p.Mu.RLock()
+	defer p.Mu.RUnlock()
 
-	for key, value := range p.db {
+	for key, value := range p.DB {
 		info[key] = value
 	}
 
@@ -123,8 +122,8 @@ func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
 
 // UpdateTokenInfo updates one token info
 func (p *PriceUpdater) UpdateTokenInfo(tokenInfo TokenInfo) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.Mu.Lock()
+	defer p.Mu.Unlock()
 
-	p.db[tokenInfo.Symbol] = tokenInfo
+	p.DB[tokenInfo.Symbol] = tokenInfo
 }

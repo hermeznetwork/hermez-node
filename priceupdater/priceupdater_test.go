@@ -7,8 +7,7 @@ import (
 )
 
 func TestCon(t *testing.T) {
-	config := ConfigPriceUpdater{
-
+	config := Config{
 		RecommendedFee:              1,
 		RecommendedCreateAccountFee: 1,
 		TokensList:                  []string{"ETH", "NEC"},
