@@ -6,8 +6,8 @@ import (
 	"errors"
 	"math/big"
 	"sync"
-	"time"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
@@ -20,17 +20,43 @@ var (
 	ErrNotAbleToSync = errors.New("it has not been possible to synchronize any block")
 )
 
-// SyncConfig stores the Synchronizer configuration parameters
-type SyncConfig struct {
-	LoopInterval    time.Duration // In seconds
-	FirstSavedBlock common.Block  // First relevant Eth block
+// Config stores the Synchronizer configuration parameters
+type Config struct {
+	FirstSavedBlock common.Block // First relevant Eth block
 
+}
+
+// rollupData contains information from Rollup Contract
+type rollupData struct {
+	// l1txs []common.L1Tx
+	// l2txs []common.L2Tx
+	// registeredAccounts []common.Account
+	// exitTree           []common.ExitTreeLeaf
+	// withdrawals        []common.ExitTreeLeaf
+	// registeredTokens   []common.Token
+	// batch      *common.Batch
+	// rollupVars *common.RollupVars
+}
+
+// auctionData contains information from Auction Contract
+type auctionData struct {
+	// bids         []common.Bid
+	// coordinators []common.Coordinator
+	// auctionVars  *common.AuctionVars
+}
+
+// Status is returned by the Status method
+type Status struct {
+	CurrentBlock      uint64
+	CurrentBatch      common.BatchNum
+	CurrentForgerAddr ethCommon.Address
+	NextForgerAddr    ethCommon.Address
+	Synchronized      bool
 }
 
 // Synchronizer implements the Synchronizer type
 type Synchronizer struct {
-	config *SyncConfig
-	// lastSavedBlock common.Block
+	config    *Config
 	ethClient *eth.Client
 	historyDB *historydb.HistoryDB
 	stateDB   *statedb.StateDB
@@ -38,9 +64,9 @@ type Synchronizer struct {
 }
 
 // NewSynchronizer creates a new Synchronizer
-func NewSynchronizer(syncConfig *SyncConfig, ethClient *eth.Client, historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *Synchronizer {
+func NewSynchronizer(config *Config, ethClient *eth.Client, historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *Synchronizer {
 	s := &Synchronizer{
-		config:    syncConfig,
+		config:    config,
 		ethClient: ethClient,
 		historyDB: historyDB,
 		stateDB:   stateDB,
@@ -49,19 +75,8 @@ func NewSynchronizer(syncConfig *SyncConfig, ethClient *eth.Client, historyDB *h
 	return s
 }
 
-// Start starts the Synchronizer service
-func (s *Synchronizer) Start() {
-	go func() {
-		<-time.After(s.config.LoopInterval * time.Second)
-		err := s.sync()
-
-		if err != nil {
-			log.Error(err)
-		}
-	}()
-}
-
-func (s *Synchronizer) sync() error {
+// Sync updates History and State DB with information from the blockchain
+func (s *Synchronizer) Sync() error {
 	// Avoid new sync while performing one
 	s.mux.Lock()
 	defer s.mux.Unlock()
@@ -122,6 +137,31 @@ func (s *Synchronizer) sync() error {
 			return err
 		}
 
+		// Get data from the rollup contract
+		rollupData, err := s.rollupSync(ethBlock)
+
+		if err != nil {
+			return err
+		}
+
+		// Log this to avoid compiler unused var error
+		if rollupData != nil {
+			log.Debugf("%v", rollupData)
+		}
+
+		// Get data from the action contract
+		auctionData, err := s.auctionSync(ethBlock)
+
+		// Log this to avoid compiler unused var error
+		if auctionData != nil {
+			log.Debugf("%v", auctionData)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		// Add rollupData and auctionData once the method is updated
 		err = s.historyDB.AddBlock(ethBlock)
 
 		if err != nil {
@@ -139,6 +179,7 @@ func (s *Synchronizer) sync() error {
 	return nil
 }
 
+// reorg manages a reorg, updating History and State DB as needed
 func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 	// Iterate History DB and the blokchain looking for the latest valid block
 
@@ -197,4 +238,53 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 	}
 
 	return ErrNotAbleToSync
+}
+
+// Status returns current status values from the Synchronizer
+func (s *Synchronizer) Status() (*Status, error) {
+	var status *Status
+
+	// Get latest block in History DB
+	lastSavedBlock, err := s.historyDB.GetLastBlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	status.CurrentBlock = lastSavedBlock.EthBlockNum
+
+	// Get latest batch in History DB
+	lastSavedBatch, err := s.historyDB.GetLastBatchNum()
+
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	status.CurrentBatch = lastSavedBatch
+
+	// Get latest blockNum in blockchain
+	latestBlockNum, err := s.ethClient.CurrentBlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Get CurrentForgerAddr & NextForgerAddr
+
+	// Check if Synchronizer is synchronized
+	status.Synchronized = status.CurrentBlock == latestBlockNum.Uint64()
+
+	return status, nil
+}
+
+// rollupSync gets information from the Rollup Contract
+func (s *Synchronizer) rollupSync(block *common.Block) (*rollupData, error) {
+	// To be implemented
+	return nil, nil
+}
+
+// auctionSync gets information from the Auction Contract
+func (s *Synchronizer) auctionSync(block *common.Block) (*auctionData, error) {
+	// To be implemented
+	return nil, nil
 }

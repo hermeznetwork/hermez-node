@@ -19,9 +19,7 @@ import (
 )
 
 func Test(t *testing.T) {
-	syncConfig := SyncConfig{
-		LoopInterval: 5,
-	}
+	var config Config
 
 	// Int State DB
 	dir, err := ioutil.TempDir("", "tmpdb")
@@ -52,14 +50,14 @@ func Test(t *testing.T) {
 	latestBlock, err = client.BlockByNumber(context.Background(), big.NewInt(int64(latestBlock.EthBlockNum-20)))
 	require.Nil(t, err)
 
-	syncConfig.FirstSavedBlock = *latestBlock
+	config.FirstSavedBlock = *latestBlock
 
 	// Create Synchronizer
 
-	s := NewSynchronizer(&syncConfig, client, historyDB, sdb)
+	s := NewSynchronizer(&config, client, historyDB, sdb)
 
 	// Test Sync
-	err = s.sync()
+	err = s.Sync()
 	require.Nil(t, err)
 
 	// Force a Reorg
@@ -76,9 +74,9 @@ func Test(t *testing.T) {
 	require.Nil(t, err)
 
 	log.Debugf("Wait for the blockchain to generate some blocks...")
-	time.Sleep(60 * time.Second)
+	time.Sleep(40 * time.Second)
 
-	err = s.sync()
+	err = s.Sync()
 	require.Nil(t, err)
 
 	// Close History DB
