@@ -114,20 +114,20 @@ func TestAccountErrNotInFF(t *testing.T) {
 
 	// Q-1 should not give error
 	r := new(big.Int).Sub(cryptoConstants.Q, big.NewInt(1))
-	e := [NLEAFELEMS]*big.Int{z, z, r, r}
+	e := [NLeafElems]*big.Int{z, z, r, r}
 	_, err := AccountFromBigInts(e)
 	assert.Nil(t, err)
 
 	// Q should give error
 	r = cryptoConstants.Q
-	e = [NLEAFELEMS]*big.Int{z, z, r, r}
+	e = [NLeafElems]*big.Int{z, z, r, r}
 	_, err = AccountFromBigInts(e)
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrNotInFF, err)
 
 	// Q+1 should give error
 	r = new(big.Int).Add(cryptoConstants.Q, big.NewInt(1))
-	e = [NLEAFELEMS]*big.Int{z, z, r, r}
+	e = [NLeafElems]*big.Int{z, z, r, r}
 	_, err = AccountFromBigInts(e)
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrNotInFF, err)

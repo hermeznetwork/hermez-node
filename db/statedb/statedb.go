@@ -21,19 +21,19 @@ var ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a
 // already exists
 var ErrAccountAlreadyExists = errors.New("Can not CreateAccount because Account already exists")
 
-// KEYCURRENTBATCH is used as key in the db to store the current BatchNum
-var KEYCURRENTBATCH = []byte("currentbatch")
+// KeyCurrentBatch is used as key in the db to store the current BatchNum
+var KeyCurrentBatch = []byte("currentbatch")
 
-// PATHSTATEDB defines the subpath of the StateDB
-const PATHSTATEDB = "/statedb"
+// PathStateDB defines the subpath of the StateDB
+const PathStateDB = "/statedb"
 
-// PATHBATCHNUM defines the subpath of the Batch Checkpoint in the subpath of
+// PathBatchNum defines the subpath of the Batch Checkpoint in the subpath of
 // the StateDB
-const PATHBATCHNUM = "/BatchNum"
+const PathBatchNum = "/BatchNum"
 
-// PATHCURRENT defines the subpath of the current Batch in the subpath of the
+// PathCurrent defines the subpath of the current Batch in the subpath of the
 // StateDB
-const PATHCURRENT = "/current"
+const PathCurrent = "/current"
 
 // StateDB represents the StateDB object
 type StateDB struct {
@@ -50,7 +50,7 @@ type StateDB struct {
 func NewStateDB(path string, withMT bool, nLevels int) (*StateDB, error) {
 	var sto *pebble.PebbleStorage
 	var err error
-	sto, err = pebble.NewPebbleStorage(path+PATHSTATEDB+PATHCURRENT, false)
+	sto, err = pebble.NewPebbleStorage(path+PathStateDB+PathCurrent, false)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func NewStateDB(path string, withMT bool, nLevels int) (*StateDB, error) {
 	}
 
 	sdb := &StateDB{
-		path: path + PATHSTATEDB,
+		path: path + PathStateDB,
 		db:   sto,
 		mt:   mt,
 	}
@@ -85,7 +85,7 @@ func (s *StateDB) DB() *pebble.PebbleStorage {
 
 // GetCurrentBatch returns the current BatchNum stored in the StateDB
 func (s *StateDB) GetCurrentBatch() (common.BatchNum, error) {
-	cbBytes, err := s.db.Get(KEYCURRENTBATCH)
+	cbBytes, err := s.db.Get(KeyCurrentBatch)
 	if err == db.ErrNotFound {
 		return 0, nil
 	}
@@ -101,7 +101,7 @@ func (s *StateDB) setCurrentBatch() error {
 	if err != nil {
 		return err
 	}
-	tx.Put(KEYCURRENTBATCH, s.currentBatch.Bytes())
+	tx.Put(KeyCurrentBatch, s.currentBatch.Bytes())
 	if err := tx.Commit(); err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (s *StateDB) MakeCheckpoint() error {
 	// advance currentBatch
 	s.currentBatch++
 
-	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(s.currentBatch))
+	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(s.currentBatch))
 
 	err := s.setCurrentBatch()
 	if err != nil {
@@ -139,7 +139,7 @@ func (s *StateDB) MakeCheckpoint() error {
 
 // DeleteCheckpoint removes if exist the checkpoint of the given batchNum
 func (s *StateDB) DeleteCheckpoint(batchNum common.BatchNum) error {
-	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
+	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
 
 	if _, err := os.Stat(checkpointPath); os.IsNotExist(err) {
 		return fmt.Errorf("Checkpoint with batchNum %d does not exist in DB", batchNum)
@@ -158,8 +158,8 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 		return nil
 	}
 
-	checkpointPath := s.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
-	currentPath := s.path + PATHCURRENT
+	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
+	currentPath := s.path + PathCurrent
 
 	// remove 'current'
 	err := os.RemoveAll(currentPath)
@@ -217,7 +217,7 @@ func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 	if err != nil {
 		return nil, err
 	}
-	var b [32 * common.NLEAFELEMS]byte
+	var b [32 * common.NLeafElems]byte
 	copy(b[:], accBytes)
 	return common.AccountFromBytes(b)
 }
@@ -345,9 +345,9 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 		return nil
 	}
 
-	synchronizerCheckpointPath := l.synchronizerStateDB.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
-	checkpointPath := l.path + PATHBATCHNUM + strconv.Itoa(int(batchNum))
-	currentPath := l.path + PATHCURRENT
+	synchronizerCheckpointPath := l.synchronizerStateDB.path + PathBatchNum + strconv.Itoa(int(batchNum))
+	checkpointPath := l.path + PathBatchNum + strconv.Itoa(int(batchNum))
+	currentPath := l.path + PathCurrent
 
 	if fromSynchronizer {
 		// use checkpoint from SynchronizerStateDB

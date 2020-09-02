@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -11,25 +10,28 @@ import (
 
 var log *zap.SugaredLogger
 
-// errorsFile is the file where the errors are being written
-var errorsFile *os.File
-
 func init() {
 	// default level: debug
 	Init("debug", "")
 }
 
 // Init the logger with defined level. errorsPath defines the file where to store the errors, if set to "" will not store errors.
-func Init(levelStr, errorsPath string) {
+func Init(levelStr, logPath string) {
 	var level zap.AtomicLevel
 	err := level.UnmarshalText([]byte(levelStr))
 	if err != nil {
 		panic(fmt.Errorf("Error on setting log level: %s", err))
 	}
+	outputPaths := []string{"stdout"}
+	if logPath != "" {
+		log.Infof("log file: %s", logPath)
+		outputPaths = append(outputPaths, logPath)
+	}
+
 	cfg := zap.Config{
 		Level:            level,
 		Encoding:         "console",
-		OutputPaths:      []string{"stdout"},
+		OutputPaths:      outputPaths,
 		ErrorOutputPaths: []string{"stderr"},
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey: "message",
@@ -60,23 +62,7 @@ func Init(levelStr, errorsPath string) {
 	withOptions := logger.WithOptions(zap.AddCallerSkip(1))
 	log = withOptions.Sugar()
 
-	if errorsPath != "" {
-		log.Infof("file where errors will be written: %s", errorsPath)
-		errorsFile, err = os.OpenFile(errorsPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) //nolint:gosec
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	log.Infof("log level: %s", level)
-}
-
-func writeToErrorsFile(msg string) {
-	if errorsFile == nil {
-		return
-	}
-	//nolint:errcheck
-	errorsFile.WriteString(fmt.Sprintf("%s %s\n", time.Now().Format(time.RFC3339), msg)) //nolint:gosec
 }
 
 // Debug calls log.Debug
@@ -97,7 +83,6 @@ func Warn(args ...interface{}) {
 // Error calls log.Error and stores the error message into the ErrorFile
 func Error(args ...interface{}) {
 	log.Error(args...)
-	go writeToErrorsFile(fmt.Sprint(args...))
 }
 
 // Debugf calls log.Debugf
@@ -118,5 +103,24 @@ func Warnf(template string, args ...interface{}) {
 // Errorf calls log.Errorf and stores the error message into the ErrorFile
 func Errorf(template string, args ...interface{}) {
 	log.Errorf(template, args...)
-	go writeToErrorsFile(fmt.Sprintf(template, args...))
+}
+
+// Debugw calls log.Debugw
+func Debugw(template string, kv ...interface{}) {
+	log.Debugw(template, kv...)
+}
+
+// Infow calls log.Infow
+func Infow(template string, kv ...interface{}) {
+	log.Infow(template, kv...)
+}
+
+// Warnw calls log.Warnw
+func Warnw(template string, kv ...interface{}) {
+	log.Warnw(template, kv...)
+}
+
+// Errorw calls log.Errorw and stores the error message into the ErrorFile
+func Errorw(template string, kv ...interface{}) {
+	log.Errorw(template, kv...)
 }

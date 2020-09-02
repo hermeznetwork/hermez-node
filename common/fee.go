@@ -16,9 +16,9 @@ type RecommendedFee struct {
 // FeeSelector is used to select a percentage from the FeePlan.
 type FeeSelector uint8
 
-// MAXFEEPLAN is the maximum value of the FeePlan
-const MAXFEEPLAN = 256
+// MaxFeePlan is the maximum value of the FeePlan
+const MaxFeePlan = 256
 
 // FeePlan represents the fee model, a position in the array indicates the
 // percentage of tokens paid in concept of fee for a transaction
-var FeePlan = [MAXFEEPLAN]float64{}
+var FeePlan = [MaxFeePlan]float64{}
