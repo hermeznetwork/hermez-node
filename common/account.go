@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	// NLEAFELEMS is the number of elements for a leaf
-	NLEAFELEMS = 4
+	// NLeafElems is the number of elements for a leaf
+	NLeafElems = 4
 	// maxNonceValue is the maximum value that the Account.Nonce can have (40 bits: maxNonceValue=2**40-1)
 	maxNonceValue = 0xffffffffff
 	// maxBalanceBytes is the maximum bytes that can use the Account.Balance *big.Int
@@ -41,8 +41,8 @@ func (a *Account) String() string {
 }
 
 // Bytes returns the bytes representing the Account, in a way that each BigInt is represented by 32 bytes, in spite of the BigInt could be represented in less bytes (due a small big.Int), so in this way each BigInt is always 32 bytes and can be automatically parsed from a byte array.
-func (a *Account) Bytes() ([32 * NLEAFELEMS]byte, error) {
-	var b [32 * NLEAFELEMS]byte
+func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
+	var b [32 * NLeafElems]byte
 
 	if a.Nonce > maxNonceValue {
 		return b, fmt.Errorf("%s Nonce", ErrNumOverflow)
@@ -69,8 +69,8 @@ func (a *Account) Bytes() ([32 * NLEAFELEMS]byte, error) {
 }
 
 // BigInts returns the [5]*big.Int, where each *big.Int is inside the Finite Field
-func (a *Account) BigInts() ([NLEAFELEMS]*big.Int, error) {
-	e := [NLEAFELEMS]*big.Int{}
+func (a *Account) BigInts() ([NLeafElems]*big.Int, error) {
+	e := [NLeafElems]*big.Int{}
 
 	b, err := a.Bytes()
 	if err != nil {
@@ -100,11 +100,11 @@ func (a *Account) HashValue() (*big.Int, error) {
 }
 
 // AccountFromBigInts returns a Account from a [5]*big.Int
-func AccountFromBigInts(e [NLEAFELEMS]*big.Int) (*Account, error) {
+func AccountFromBigInts(e [NLeafElems]*big.Int) (*Account, error) {
 	if !cryptoUtils.CheckBigIntArrayInField(e[:]) {
 		return nil, ErrNotInFF
 	}
-	var b [32 * NLEAFELEMS]byte
+	var b [32 * NLeafElems]byte
 	copy(b[0:32], SwapEndianness(e[0].Bytes())) // SwapEndianness, as big.Int uses BigEndian
 	copy(b[32:64], SwapEndianness(e[1].Bytes()))
 	copy(b[64:96], SwapEndianness(e[2].Bytes()))
@@ -114,7 +114,7 @@ func AccountFromBigInts(e [NLEAFELEMS]*big.Int) (*Account, error) {
 }
 
 // AccountFromBytes returns a Account from a byte array
-func AccountFromBytes(b [32 * NLEAFELEMS]byte) (*Account, error) {
+func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 	tokenID := binary.LittleEndian.Uint32(b[0:4])
 	var nonceBytes5 [5]byte
 	copy(nonceBytes5[:], b[4:9])
