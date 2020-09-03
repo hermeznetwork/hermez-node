@@ -26,20 +26,23 @@ type Config struct {
 
 }
 
-// rollupData contains information from Rollup Contract
-type rollupData struct {
-	// l1txs []common.L1Tx
-	// l2txs []common.L2Tx
+// BatchData contains information about Batches from the contracts
+type BatchData struct {
+	// l1txs              []common.L1Tx
+	// l2txs              []common.L2Tx
 	// registeredAccounts []common.Account
 	// exitTree           []common.ExitTreeLeaf
-	// withdrawals        []common.ExitTreeLeaf
-	// registeredTokens   []common.Token
-	// batch      *common.Batch
-	// rollupVars *common.RollupVars
 }
 
-// auctionData contains information from Auction Contract
-type auctionData struct {
+// BlockData contains information about Blocks from the contracts
+type BlockData struct {
+	// block *common.Block
+	// Rollup
+	// batches          []BatchData
+	// withdrawals      []common.ExitTreeLeaf
+	// registeredTokens []common.Token
+	// rollupVars       *common.RollupVars
+	// Auction
 	// bids         []common.Bid
 	// coordinators []common.Coordinator
 	// auctionVars  *common.AuctionVars
@@ -81,6 +84,8 @@ func (s *Synchronizer) Sync() error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
+	var lastStoredForgeL1TxsNum uint64
+
 	// Get lastSavedBlock from History DB
 	lastSavedBlock, err := s.historyDB.GetLastBlock()
 
@@ -96,12 +101,12 @@ func (s *Synchronizer) Sync() error {
 	} else {
 		// Get the latest block we have in History DB from blockchain to detect a reorg
 
-		header, err := s.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum)))
+		ethBlock, err := s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum)))
 		if err != nil {
 			return err
 		}
 
-		if header.Hash() != lastSavedBlock.Hash {
+		if ethBlock.Hash != lastSavedBlock.Hash {
 			// Reorg detected
 			log.Debugf("Reorg Detected...")
 			err := s.reorg(lastSavedBlock)
@@ -138,24 +143,14 @@ func (s *Synchronizer) Sync() error {
 		}
 
 		// Get data from the rollup contract
-		rollupData, err := s.rollupSync(ethBlock)
+		blockData, batchData, err := s.rollupSync(ethBlock, lastStoredForgeL1TxsNum)
 
 		if err != nil {
 			return err
 		}
 
-		// Log this to avoid compiler unused var error
-		if rollupData != nil {
-			log.Debugf("%v", rollupData)
-		}
-
 		// Get data from the action contract
-		auctionData, err := s.auctionSync(ethBlock)
-
-		// Log this to avoid compiler unused var error
-		if auctionData != nil {
-			log.Debugf("%v", auctionData)
-		}
+		err = s.auctionSync(blockData, batchData)
 
 		if err != nil {
 			return err
@@ -278,13 +273,13 @@ func (s *Synchronizer) Status() (*Status, error) {
 }
 
 // rollupSync gets information from the Rollup Contract
-func (s *Synchronizer) rollupSync(block *common.Block) (*rollupData, error) {
+func (s *Synchronizer) rollupSync(block *common.Block, lastStoredForgeL1TxsNum uint64) (*BlockData, []*BatchData, error) {
 	// To be implemented
-	return nil, nil
+	return nil, nil, nil
 }
 
 // auctionSync gets information from the Auction Contract
-func (s *Synchronizer) auctionSync(block *common.Block) (*auctionData, error) {
+func (s *Synchronizer) auctionSync(blockData *BlockData, batchData []*BatchData) error {
 	// To be implemented
-	return nil, nil
+	return nil
 }
