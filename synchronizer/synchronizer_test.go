@@ -1,26 +1,20 @@
 package synchronizer
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test(t *testing.T) {
-	var config Config
-
 	// Int State DB
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
@@ -42,42 +36,35 @@ func Test(t *testing.T) {
 
 	client := eth.NewClient(ethClient, nil, nil, nil)
 
-	// Let's update the FirstSavedBlock to have a faster testing
-
-	latestBlock, err := client.BlockByNumber(context.Background(), nil)
-	require.Nil(t, err)
-
-	latestBlock, err = client.BlockByNumber(context.Background(), big.NewInt(int64(latestBlock.EthBlockNum-20)))
-	require.Nil(t, err)
-
-	config.FirstSavedBlock = *latestBlock
-
 	// Create Synchronizer
 
-	s := NewSynchronizer(&config, client, historyDB, sdb)
+	s := NewSynchronizer(client, historyDB, sdb)
 
 	// Test Sync
 	err = s.Sync()
 	require.Nil(t, err)
 
-	// Force a Reorg
+	// TODO: Reorg will be properly tested once we have the mock ethClient implemented
+	/*
+		// Force a Reorg
+		lastSavedBlock, err := historyDB.GetLastBlock()
+		require.Nil(t, err)
 
-	lastSavedBlock, err := historyDB.GetLastBlock()
-	require.Nil(t, err)
+		lastSavedBlock.EthBlockNum++
+		err = historyDB.AddBlock(lastSavedBlock)
+		require.Nil(t, err)
 
-	lastSavedBlock.EthBlockNum++
-	err = historyDB.AddBlock(lastSavedBlock)
-	require.Nil(t, err)
+		lastSavedBlock.EthBlockNum++
+		err = historyDB.AddBlock(lastSavedBlock)
+		require.Nil(t, err)
 
-	lastSavedBlock.EthBlockNum++
-	err = historyDB.AddBlock(lastSavedBlock)
-	require.Nil(t, err)
+		log.Debugf("Wait for the blockchain to generate some blocks...")
+		time.Sleep(40 * time.Second)
 
-	log.Debugf("Wait for the blockchain to generate some blocks...")
-	time.Sleep(40 * time.Second)
 
-	err = s.Sync()
-	require.Nil(t, err)
+		err = s.Sync()
+		require.Nil(t, err)
+	*/
 
 	// Close History DB
 	if err := historyDB.Close(); err != nil {

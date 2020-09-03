@@ -15,16 +15,14 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 )
 
+const (
+	blocksToSync = 20 // TODO: This will be deleted once we can get the firstSavedBlock from the ethClient
+)
+
 var (
 	// ErrNotAbleToSync is used when there is not possible to find a valid block to sync
 	ErrNotAbleToSync = errors.New("it has not been possible to synchronize any block")
 )
-
-// Config stores the Synchronizer configuration parameters
-type Config struct {
-	FirstSavedBlock common.Block // First relevant Eth block
-
-}
 
 // BatchData contains information about Batches from the contracts
 type BatchData struct {
@@ -59,17 +57,16 @@ type Status struct {
 
 // Synchronizer implements the Synchronizer type
 type Synchronizer struct {
-	config    *Config
-	ethClient *eth.Client
-	historyDB *historydb.HistoryDB
-	stateDB   *statedb.StateDB
-	mux       sync.Mutex
+	ethClient       *eth.Client
+	historyDB       *historydb.HistoryDB
+	stateDB         *statedb.StateDB
+	firstSavedBlock *common.Block
+	mux             sync.Mutex
 }
 
 // NewSynchronizer creates a new Synchronizer
-func NewSynchronizer(config *Config, ethClient *eth.Client, historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *Synchronizer {
+func NewSynchronizer(ethClient *eth.Client, historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *Synchronizer {
 	s := &Synchronizer{
-		config:    config,
 		ethClient: ethClient,
 		historyDB: historyDB,
 		stateDB:   stateDB,
@@ -86,6 +83,17 @@ func (s *Synchronizer) Sync() error {
 
 	var lastStoredForgeL1TxsNum uint64
 
+	// TODO: Get this information from ethClient once it's implemented
+	// for the moment we will get the latestblock - 20 as firstSavedBlock
+	latestBlock, err := s.ethClient.BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+	s.firstSavedBlock, err = s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(latestBlock.EthBlockNum-blocksToSync)))
+	if err != nil {
+		return err
+	}
+
 	// Get lastSavedBlock from History DB
 	lastSavedBlock, err := s.historyDB.GetLastBlock()
 
@@ -97,7 +105,7 @@ func (s *Synchronizer) Sync() error {
 	// In case of nil we must do a full sync
 
 	if lastSavedBlock == nil || lastSavedBlock.EthBlockNum == 0 {
-		lastSavedBlock = &s.config.FirstSavedBlock
+		lastSavedBlock = s.firstSavedBlock
 	} else {
 		// Get the latest block we have in History DB from blockchain to detect a reorg
 
@@ -149,7 +157,7 @@ func (s *Synchronizer) Sync() error {
 			return err
 		}
 
-		// Get data from the action contract
+		// Get data from the auction contract
 		err = s.auctionSync(blockData, batchData)
 
 		if err != nil {
@@ -177,14 +185,13 @@ func (s *Synchronizer) Sync() error {
 // reorg manages a reorg, updating History and State DB as needed
 func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 	// Iterate History DB and the blokchain looking for the latest valid block
-
 	var block *common.Block
 	blockNum := uncleBlock.EthBlockNum
 	found := false
 
 	log.Debugf("Reorg first uncle block: %v", blockNum)
 
-	for !found && blockNum > s.config.FirstSavedBlock.EthBlockNum {
+	for !found && blockNum > s.firstSavedBlock.EthBlockNum {
 		header, err := s.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
 		if err != nil {
 			return err
@@ -208,7 +215,6 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 
 	if found {
 		// Set History DB and State DB to the correct state
-
 		err := s.historyDB.Reorg(block.EthBlockNum)
 
 		if err != nil {
@@ -237,6 +243,10 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 
 // Status returns current status values from the Synchronizer
 func (s *Synchronizer) Status() (*Status, error) {
+	// Avoid possible incosistencies
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
 	var status *Status
 
 	// Get latest block in History DB
