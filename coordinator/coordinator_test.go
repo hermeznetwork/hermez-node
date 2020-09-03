@@ -10,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestCoordinator(t *testing.T) {
 		LoopInterval: 100 * time.Millisecond,
 	}
 	hdb := &historydb.HistoryDB{}
-	c := NewCoordinator(conf, hdb, txsel, bb, nil)
+	c := NewCoordinator(conf, hdb, txsel, bb, &eth.Client{})
 	c.Start()
 	time.Sleep(1 * time.Second)
 

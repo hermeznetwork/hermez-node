@@ -255,8 +255,8 @@ func (c *Coordinator) proveSequence() error {
 		return err
 	}
 	batchInfo.SetProof(proof)
-	callData := c.prepareCallDataForge(batchInfo)
-	_, err = c.ethClient.ForgeCall(callData)
+	forgeBatchArgs := c.prepareForgeBatchArgs(batchInfo)
+	_, err = c.ethClient.RollupForgeBatch(forgeBatchArgs)
 	if err != nil {
 		return err
 	}
@@ -306,6 +306,6 @@ func (c *Coordinator) shouldL1L2Batch() bool {
 	return false
 }
 
-func (c *Coordinator) prepareCallDataForge(batchInfo *BatchInfo) *common.CallDataForge {
+func (c *Coordinator) prepareForgeBatchArgs(batchInfo *BatchInfo) *eth.RollupForgeBatchArgs {
 	return nil
 }

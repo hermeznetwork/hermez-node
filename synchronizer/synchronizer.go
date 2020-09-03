@@ -86,11 +86,11 @@ func (s *Synchronizer) Sync() error {
 
 	// TODO: Get this information from ethClient once it's implemented
 	// for the moment we will get the latestblock - 20 as firstSavedBlock
-	latestBlock, err := s.ethClient.BlockByNumber(context.Background(), nil)
+	latestBlock, err := s.ethClient.EthBlockByNumber(context.Background(), nil)
 	if err != nil {
 		return err
 	}
-	s.firstSavedBlock, err = s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(latestBlock.EthBlockNum-blocksToSync)))
+	s.firstSavedBlock, err = s.ethClient.EthBlockByNumber(context.Background(), big.NewInt(int64(latestBlock.EthBlockNum-blocksToSync)))
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (s *Synchronizer) Sync() error {
 		lastSavedBlock = s.firstSavedBlock
 	} else {
 		// Get the latest block we have in History DB from blockchain to detect a reorg
-		ethBlock, err := s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum)))
+		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum)))
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ func (s *Synchronizer) Sync() error {
 	log.Debugf("Syncing...")
 
 	// Get latest blockNum in blockchain
-	latestBlockNum, err := s.ethClient.CurrentBlock()
+	latestBlockNum, err := s.ethClient.EthCurrentBlock()
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (s *Synchronizer) Sync() error {
 	log.Debugf("Blocks to sync: %v (lastSavedBlock: %v, latestBlock: %v)", latestBlockNum.Uint64()-lastSavedBlock.EthBlockNum, lastSavedBlock.EthBlockNum, latestBlockNum)
 
 	for lastSavedBlock.EthBlockNum < latestBlockNum.Uint64() {
-		ethBlock, err := s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum+1)))
+		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum+1)))
 		if err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 
 	// Iterate History DB and the blokchain looking for the latest valid block
 	for !found && blockNum > s.firstSavedBlock.EthBlockNum {
-		header, err := s.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
+		header, err := s.ethClient.EthHeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
 		if err != nil {
 			return err
 		}
@@ -247,7 +247,7 @@ func (s *Synchronizer) Status() (*Status, error) {
 	status.CurrentBatch = lastSavedBatch
 
 	// Get latest blockNum in blockchain
-	latestBlockNum, err := s.ethClient.CurrentBlock()
+	latestBlockNum, err := s.ethClient.EthCurrentBlock()
 	if err != nil {
 		return nil, err
 	}

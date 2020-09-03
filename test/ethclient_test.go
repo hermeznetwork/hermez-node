@@ -13,21 +13,21 @@ import (
 
 func TestClientInterface(t *testing.T) {
 	var c eth.ClientInterface
-	client := NewTestEthClient(true, 1000)
+	client := NewClient(true, 1000)
 	c = client
 	require.NotNil(t, c)
 }
 
 func TestEthClient(t *testing.T) {
-	c := NewTestEthClient(true, 1000)
+	c := NewClient(true, 1000)
 
-	block, err := c.BlockByNumber(context.TODO(), big.NewInt(3))
+	block, err := c.EthBlockByNumber(context.TODO(), big.NewInt(3))
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(3), block.EthBlockNum)
 	assert.Equal(t, time.Unix(3, 0), block.Timestamp)
 	assert.Equal(t, "0x6b0ab5a7a0ebf5f05cef3b49bc7a9739de06469a4e05557d802ee828fdf5187e", block.Hash.Hex())
 
-	header, err := c.HeaderByNumber(context.TODO(), big.NewInt(4))
+	header, err := c.EthHeaderByNumber(context.TODO(), big.NewInt(4))
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(4), header.Number)
 	assert.Equal(t, uint64(4), header.Time)
