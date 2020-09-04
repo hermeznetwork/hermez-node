@@ -34,6 +34,87 @@ func newAccount(t *testing.T, i int) *common.Account {
 	}
 }
 
+func TestNewStateDBIntermediateState(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.Nil(t, err)
+
+	sdb, err := NewStateDB(dir, false, 0)
+	assert.Nil(t, err)
+
+	// test values
+	k0 := []byte("testkey0")
+	k1 := []byte("testkey1")
+	v0 := []byte("testvalue0")
+	v1 := []byte("testvalue1")
+
+	// store some data
+	tx, err := sdb.db.NewTx()
+	assert.Nil(t, err)
+	err = tx.Put(k0, v0)
+	assert.Nil(t, err)
+	err = tx.Commit()
+	assert.Nil(t, err)
+	v, err := sdb.db.Get(k0)
+	assert.Nil(t, err)
+	assert.Equal(t, v0, v)
+
+	// call NewStateDB which should get the db at the last checkpoint state
+	// executing a Reset (discarding the last 'testkey0'&'testvalue0' data)
+	sdb, err = NewStateDB(dir, false, 0)
+	assert.Nil(t, err)
+	v, err = sdb.db.Get(k0)
+	assert.NotNil(t, err)
+	assert.Equal(t, db.ErrNotFound, err)
+	assert.Nil(t, v)
+
+	// store the same data from the beginning that has ben lost since last NewStateDB
+	tx, err = sdb.db.NewTx()
+	assert.Nil(t, err)
+	err = tx.Put(k0, v0)
+	assert.Nil(t, err)
+	err = tx.Commit()
+	assert.Nil(t, err)
+	v, err = sdb.db.Get(k0)
+	assert.Nil(t, err)
+	assert.Equal(t, v0, v)
+
+	// make checkpoints with the current state
+	bn, err := sdb.GetCurrentBatch()
+	assert.Nil(t, err)
+	assert.Equal(t, common.BatchNum(0), bn)
+	err = sdb.MakeCheckpoint()
+	assert.Nil(t, err)
+	bn, err = sdb.GetCurrentBatch()
+	assert.Nil(t, err)
+	assert.Equal(t, common.BatchNum(1), bn)
+
+	// write more data
+	tx, err = sdb.db.NewTx()
+	assert.Nil(t, err)
+	err = tx.Put(k1, v1)
+	assert.Nil(t, err)
+	err = tx.Commit()
+	assert.Nil(t, err)
+
+	v, err = sdb.db.Get(k1)
+	assert.Nil(t, err)
+	assert.Equal(t, v1, v)
+
+	// call NewStateDB which should get the db at the last checkpoint state
+	// executing a Reset (discarding the last 'testkey1'&'testvalue1' data)
+	sdb, err = NewStateDB(dir, false, 0)
+	assert.Nil(t, err)
+
+	v, err = sdb.db.Get(k0)
+	assert.Nil(t, err)
+	assert.Equal(t, v0, v)
+
+	v, err = sdb.db.Get(k1)
+	assert.NotNil(t, err)
+	assert.Equal(t, db.ErrNotFound, err)
+	assert.Nil(t, v)
+}
+
 func TestStateDBWithoutMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)

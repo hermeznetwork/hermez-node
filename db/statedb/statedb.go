@@ -75,6 +75,12 @@ func NewStateDB(path string, withMT bool, nLevels int) (*StateDB, error) {
 		return nil, err
 	}
 
+	// make reset (get checkpoint) at currentBatch
+	err = sdb.Reset(sdb.currentBatch)
+	if err != nil {
+		return nil, err
+	}
+
 	return sdb, nil
 }
 
@@ -101,7 +107,10 @@ func (s *StateDB) setCurrentBatch() error {
 	if err != nil {
 		return err
 	}
-	tx.Put(KeyCurrentBatch, s.currentBatch.Bytes())
+	err = tx.Put(KeyCurrentBatch, s.currentBatch.Bytes())
+	if err != nil {
+		return err
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
@@ -153,11 +162,6 @@ func (s *StateDB) DeleteCheckpoint(batchNum common.BatchNum) error {
 // those checkpoints will remain in the storage, and eventually will be
 // deleted when MakeCheckpoint overwrites them.
 func (s *StateDB) Reset(batchNum common.BatchNum) error {
-	if batchNum == 0 {
-		s.idx = 0
-		return nil
-	}
-
 	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
 	currentPath := s.path + PathCurrent
 
@@ -166,6 +170,18 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 	if err != nil {
 		return err
 	}
+	if batchNum == 0 {
+		// if batchNum == 0, open the new fresh 'current'
+		sto, err := pebble.NewPebbleStorage(currentPath, false)
+		if err != nil {
+			return err
+		}
+		s.db = sto
+		s.idx = 0
+		s.currentBatch = batchNum
+		return nil
+	}
+
 	// copy 'BatchNumX' to 'current'
 	cmd := exec.Command("cp", "-r", checkpointPath, currentPath) //nolint:gosec
 	err = cmd.Run()
@@ -191,12 +207,14 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 		return err
 	}
 
-	// open the MT for the current s.db
-	mt, err := merkletree.NewMerkleTree(s.db, s.mt.MaxLevels())
-	if err != nil {
-		return err
+	if s.mt != nil {
+		// open the MT for the current s.db
+		mt, err := merkletree.NewMerkleTree(s.db, s.mt.MaxLevels())
+		if err != nil {
+			return err
+		}
+		s.mt = mt
 	}
-	s.mt = mt
 
 	return nil
 }
@@ -255,8 +273,14 @@ func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 		return nil, ErrAccountAlreadyExists
 	}
 
-	tx.Put(v.Bytes(), accountBytes[:])
-	tx.Put(idx.Bytes(), v.Bytes())
+	err = tx.Put(v.Bytes(), accountBytes[:])
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Put(idx.Bytes(), v.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
@@ -295,8 +319,14 @@ func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 	if err != nil {
 		return nil, err
 	}
-	tx.Put(v.Bytes(), accountBytes[:])
-	tx.Put(idx.Bytes(), v.Bytes())
+	err = tx.Put(v.Bytes(), accountBytes[:])
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Put(idx.Bytes(), v.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
