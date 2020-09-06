@@ -4,8 +4,8 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 )
 
+// Proof TBD this type will be got from the proof server
 type Proof struct {
-	// TBD this type will be got from the proof server
 }
 
 // BatchInfo contans the Batch information
@@ -58,6 +58,7 @@ type BatchQueue struct {
 	queue []*BatchInfo
 }
 
+// NewBatchQueue returns a new *BatchQueue
 func NewBatchQueue() *BatchQueue {
 	return &BatchQueue{
 		queue: []*BatchInfo{},

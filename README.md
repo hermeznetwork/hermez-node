@@ -17,5 +17,5 @@ POSTGRES_PASS=yourpasswordhere go test ./...
 - Install [golangci-lint](https://golangci-lint.run)
 - Once installed, to check the lints
 ```
-golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd --max-same-issues 0
+golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports -E golint --exclude-use-default=false --max-same-issues 0
 ```

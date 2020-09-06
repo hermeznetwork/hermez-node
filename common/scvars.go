@@ -6,6 +6,7 @@ import (
 	eth "github.com/ethereum/go-ethereum/common"
 )
 
+// RollupVars contain the Rollup smart contract variables
 type RollupVars struct {
 	EthBlockNum    uint64
 	ForgeL1Timeout *big.Int
@@ -15,6 +16,7 @@ type RollupVars struct {
 	Governance     eth.Address
 }
 
+// AuctionVars contain the Auction smart contract variables
 type AuctionVars struct {
 	EthBlockNum       uint64
 	SlotDeadline      uint
@@ -28,8 +30,10 @@ type AuctionVars struct {
 	AllocationRatio   AllocationRatio
 }
 
+// MinBidSlots TODO
 type MinBidSlots [6]uint
 
+// AllocationRatio TODO
 type AllocationRatio struct {
 	Donation uint
 	Burn     uint

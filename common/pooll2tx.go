@@ -172,6 +172,7 @@ func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
 	return pk.VerifyPoseidon(h, tx.Signature)
 }
 
+// L2Tx returns a *L2Tx from the PoolL2Tx
 func (tx *PoolL2Tx) L2Tx() *L2Tx {
 	return &L2Tx{
 		TxID:     tx.TxID,
@@ -185,6 +186,7 @@ func (tx *PoolL2Tx) L2Tx() *L2Tx {
 	}
 }
 
+// Tx returns a *Tx from the PoolL2Tx
 func (tx *PoolL2Tx) Tx() *Tx {
 	return &Tx{
 		TxID:    tx.TxID,
@@ -197,6 +199,7 @@ func (tx *PoolL2Tx) Tx() *Tx {
 	}
 }
 
+// PoolL2TxsToL2Txs returns an array of []*L2Tx from an array of []*PoolL2Tx
 func PoolL2TxsToL2Txs(txs []*PoolL2Tx) []*L2Tx {
 	var r []*L2Tx
 	for _, tx := range txs {

@@ -13,10 +13,14 @@ import (
 
 var eof = rune(0)
 var errof = fmt.Errorf("eof in parseline")
-var ecomment = fmt.Errorf("comment in parseline")
-var enewbatch = fmt.Errorf("newbatch")
+var errComment = fmt.Errorf("comment in parseline")
+var errNewBatch = fmt.Errorf("newbatch")
+
+// TypeNewBatch is used for testing purposes only, and represents the
+// common.TxType of a new batch
 var TypeNewBatch common.TxType = "TxTypeNewBatch"
 
+//nolint
 const (
 	ILLEGAL token = iota
 	WS
@@ -25,6 +29,7 @@ const (
 	IDENT // val
 )
 
+// Instruction is the data structure that represents one line of code
 type Instruction struct {
 	Literal string
 	From    string
@@ -35,6 +40,7 @@ type Instruction struct {
 	Type    common.TxType // D: Deposit, T: Transfer, E: ForceExit
 }
 
+// Instructions contains the full Set of Instructions representing a full code
 type Instructions struct {
 	Instructions []*Instruction
 	Accounts     []string
@@ -64,6 +70,7 @@ func (i Instruction) String() string {
 	return buf.String()
 }
 
+// Raw returns a string with the raw representation of the Instruction
 func (i Instruction) Raw() string {
 	buf := bytes.NewBufferString("")
 	fmt.Fprintf(buf, "%s", i.From)
@@ -104,8 +111,8 @@ func isDigit(ch rune) bool {
 	return (ch >= '0' && ch <= '9')
 }
 
-// NewScanner creates a new scanner with the given io.Reader
-func NewScanner(r io.Reader) *scanner {
+// newScanner creates a new scanner with the given io.Reader
+func newScanner(r io.Reader) *scanner {
 	return &scanner{r: bufio.NewReader(r)}
 }
 
@@ -196,7 +203,7 @@ type Parser struct {
 
 // NewParser creates a new parser from a io.Reader
 func NewParser(r io.Reader) *Parser {
-	return &Parser{s: NewScanner(r)}
+	return &Parser{s: newScanner(r)}
 }
 
 func (p *Parser) scan() (tok token, lit string) {
@@ -239,10 +246,10 @@ func (p *Parser) parseLine() (*Instruction, error) {
 	c.Literal += lit
 	if lit == "/" {
 		_, _ = p.s.r.ReadString('\n')
-		return nil, ecomment
+		return nil, errComment
 	} else if lit == ">" {
 		_, _ = p.s.r.ReadString('\n')
-		return nil, enewbatch
+		return nil, errNewBatch
 	}
 	c.From = lit
 
@@ -313,7 +320,7 @@ func (p *Parser) parseLine() (*Instruction, error) {
 			c.Literal += line
 			return c, err
 		}
-		if fee > common.MAXFEEPLAN-1 {
+		if fee > common.MaxFeePlan-1 {
 			line, _ := p.s.r.ReadString('\n')
 			c.Literal += line
 			return c, fmt.Errorf("Fee %d can not be bigger than 255", fee)
@@ -342,11 +349,11 @@ func (p *Parser) Parse() (Instructions, error) {
 		if err == errof {
 			break
 		}
-		if err == ecomment {
+		if err == errComment {
 			i++
 			continue
 		}
-		if err == enewbatch {
+		if err == errNewBatch {
 			i++
 			inst := &Instruction{Type: TypeNewBatch}
 			instructions.Instructions = append(instructions.Instructions, inst)

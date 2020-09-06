@@ -1,3 +1,7 @@
+// Package utils provides methods to work with Hermez custom half float
+// precision, 16 bits, codification internally called Float16 has been adopted
+// to encode large integers. This is done in order to save bits when L2
+// transactions are published.
 //nolint:gomnd
 package utils
 
@@ -23,8 +27,8 @@ func (f16 Float16) Bytes() []byte {
 }
 
 // BigInt converts the Float16 to a *big.Int integer
-func (fl16 *Float16) BigInt() *big.Int {
-	fl := int64(*fl16)
+func (f16 *Float16) BigInt() *big.Int {
+	fl := int64(*f16)
 
 	m := big.NewInt(fl & 0x3FF)
 	e := big.NewInt(fl >> 11)
