@@ -21,5 +21,6 @@ jobs:
     - name: Test
       env:
         POSTGRES_PASS: ${{ secrets.POSTGRES_PASS }}
+        ETHCLIENT_DIAL_URL: ${{ secrets.ETHCLIENT_DIAL_URL }}
         GOARCH: ${{ matrix.goarch }}
       run: go test ./... -v
