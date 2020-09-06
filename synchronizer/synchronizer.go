@@ -25,25 +25,27 @@ var (
 )
 
 // BatchData contains information about Batches from the contracts
+//nolint:structcheck,unused
 type BatchData struct {
-	// l1txs              []common.L1Tx
-	// l2txs              []common.L2Tx
-	// registeredAccounts []common.Account
-	// exitTree           []common.ExitTreeLeaf
+	l1txs              []common.L1Tx
+	l2txs              []common.L2Tx
+	registeredAccounts []common.Account
+	exitTree           []common.ExitTreeLeaf
 }
 
 // BlockData contains information about Blocks from the contracts
+//nolint:structcheck,unused
 type BlockData struct {
-	// block *common.Block
+	block *common.Block
 	// Rollup
-	// batches          []BatchData
-	// withdrawals      []common.ExitTreeLeaf
-	// registeredTokens []common.Token
-	// rollupVars       *common.RollupVars
+	batches          []BatchData
+	withdrawals      []common.ExitTreeLeaf
+	registeredTokens []common.Token
+	rollupVars       *common.RollupVars
 	// Auction
-	// bids         []common.Bid
-	// coordinators []common.Coordinator
-	// auctionVars  *common.AuctionVars
+	bids         []common.Bid
+	coordinators []common.Coordinator
+	auctionVars  *common.AuctionVars
 }
 
 // Status is returned by the Status method
@@ -71,7 +73,6 @@ func NewSynchronizer(ethClient *eth.Client, historyDB *historydb.HistoryDB, stat
 		historyDB: historyDB,
 		stateDB:   stateDB,
 	}
-
 	return s
 }
 
@@ -96,19 +97,16 @@ func (s *Synchronizer) Sync() error {
 
 	// Get lastSavedBlock from History DB
 	lastSavedBlock, err := s.historyDB.GetLastBlock()
-
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 
 	// Check if we got a block or nil
 	// In case of nil we must do a full sync
-
 	if lastSavedBlock == nil || lastSavedBlock.EthBlockNum == 0 {
 		lastSavedBlock = s.firstSavedBlock
 	} else {
 		// Get the latest block we have in History DB from blockchain to detect a reorg
-
 		ethBlock, err := s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum)))
 		if err != nil {
 			return err
@@ -118,13 +116,11 @@ func (s *Synchronizer) Sync() error {
 			// Reorg detected
 			log.Debugf("Reorg Detected...")
 			err := s.reorg(lastSavedBlock)
-
 			if err != nil {
 				return err
 			}
 
 			lastSavedBlock, err = s.historyDB.GetLastBlock()
-
 			if err != nil {
 				return err
 			}
@@ -135,14 +131,11 @@ func (s *Synchronizer) Sync() error {
 
 	// Get latest blockNum in blockchain
 	latestBlockNum, err := s.ethClient.CurrentBlock()
-
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("lastSavedBlock: %v", latestBlockNum)
-	log.Debugf("latestBlock: %v", latestBlockNum)
-	log.Debugf("Blocks to sync: %v", latestBlockNum.Uint64()-lastSavedBlock.EthBlockNum)
+	log.Debugf("Blocks to sync: %v (lastSavedBlock: %v, latestBlock: %v)", latestBlockNum.Uint64()-lastSavedBlock.EthBlockNum, lastSavedBlock.EthBlockNum, latestBlockNum)
 
 	for lastSavedBlock.EthBlockNum < latestBlockNum.Uint64() {
 		ethBlock, err := s.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum+1)))
@@ -152,28 +145,24 @@ func (s *Synchronizer) Sync() error {
 
 		// Get data from the rollup contract
 		blockData, batchData, err := s.rollupSync(ethBlock, lastStoredForgeL1TxsNum)
-
 		if err != nil {
 			return err
 		}
 
 		// Get data from the auction contract
 		err = s.auctionSync(blockData, batchData)
-
 		if err != nil {
 			return err
 		}
 
 		// Add rollupData and auctionData once the method is updated
 		err = s.historyDB.AddBlock(ethBlock)
-
 		if err != nil {
 			return err
 		}
 
 		// We get the block on every iteration
 		lastSavedBlock, err = s.historyDB.GetLastBlock()
-
 		if err != nil {
 			return err
 		}
@@ -184,13 +173,13 @@ func (s *Synchronizer) Sync() error {
 
 // reorg manages a reorg, updating History and State DB as needed
 func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
-	// Iterate History DB and the blokchain looking for the latest valid block
 	var block *common.Block
 	blockNum := uncleBlock.EthBlockNum
 	found := false
 
 	log.Debugf("Reorg first uncle block: %v", blockNum)
 
+	// Iterate History DB and the blokchain looking for the latest valid block
 	for !found && blockNum > s.firstSavedBlock.EthBlockNum {
 		header, err := s.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
 		if err != nil {
@@ -198,11 +187,9 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 		}
 
 		block, err = s.historyDB.GetBlock(blockNum)
-
 		if err != nil {
 			return err
 		}
-
 		if block.Hash == header.Hash() {
 			found = true
 			log.Debugf("Found valid block: %v", blockNum)
@@ -216,20 +203,16 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 	if found {
 		// Set History DB and State DB to the correct state
 		err := s.historyDB.Reorg(block.EthBlockNum)
-
 		if err != nil {
 			return err
 		}
 
 		batchNum, err := s.historyDB.GetLastBatchNum()
-
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
-
 		if batchNum != 0 {
 			err = s.stateDB.Reset(batchNum)
-
 			if err != nil {
 				return err
 			}
@@ -243,7 +226,7 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 
 // Status returns current status values from the Synchronizer
 func (s *Synchronizer) Status() (*Status, error) {
-	// Avoid possible incosistencies
+	// Avoid possible inconsistencies
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
@@ -251,25 +234,20 @@ func (s *Synchronizer) Status() (*Status, error) {
 
 	// Get latest block in History DB
 	lastSavedBlock, err := s.historyDB.GetLastBlock()
-
 	if err != nil {
 		return nil, err
 	}
-
 	status.CurrentBlock = lastSavedBlock.EthBlockNum
 
 	// Get latest batch in History DB
 	lastSavedBatch, err := s.historyDB.GetLastBatchNum()
-
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-
 	status.CurrentBatch = lastSavedBatch
 
 	// Get latest blockNum in blockchain
 	latestBlockNum, err := s.ethClient.CurrentBlock()
-
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +256,6 @@ func (s *Synchronizer) Status() (*Status, error) {
 
 	// Check if Synchronizer is synchronized
 	status.Synchronized = status.CurrentBlock == latestBlockNum.Uint64()
-
 	return status, nil
 }
 

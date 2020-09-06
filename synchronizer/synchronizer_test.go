@@ -37,7 +37,6 @@ func Test(t *testing.T) {
 	client := eth.NewClient(ethClient, nil, nil, nil)
 
 	// Create Synchronizer
-
 	s := NewSynchronizer(client, historyDB, sdb)
 
 	// Test Sync
