@@ -10,7 +10,7 @@ POSTGRES_PASS=yourpasswordhere; sudo docker run --rm --name hermez-db-test -p 54
 ```
 - Then, run the tests with the password as env var
 ```
-POSTGRES_PASS=yourpasswordhere go test ./...
+POSTGRES_PASS=yourpasswordhere ETHCLIENT_DIAL_URL=yourethereumurlhere go test ./...
 ```
 
 ## Lint

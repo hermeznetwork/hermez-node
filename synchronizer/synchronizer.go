@@ -30,7 +30,7 @@ type BatchData struct {
 	l1txs              []common.L1Tx
 	l2txs              []common.L2Tx
 	registeredAccounts []common.Account
-	exitTree           []common.ExitTreeLeaf
+	exitTree           []common.ExitInfo
 }
 
 // BlockData contains information about Blocks from the contracts
@@ -39,7 +39,7 @@ type BlockData struct {
 	block *common.Block
 	// Rollup
 	batches          []BatchData
-	withdrawals      []common.ExitTreeLeaf
+	withdrawals      []common.ExitInfo
 	registeredTokens []common.Token
 	rollupVars       *common.RollupVars
 	// Auction
