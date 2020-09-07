@@ -18,9 +18,9 @@ import (
 
 // EthereumInterface is the interface to Ethereum
 type EthereumInterface interface {
-	EthCurrentBlock() (*big.Int, error)
-	EthHeaderByNumber(context.Context, *big.Int) (*types.Header, error)
-	EthBlockByNumber(context.Context, *big.Int) (*common.Block, error)
+	EthCurrentBlock() (int64, error)
+	// EthHeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	EthBlockByNumber(context.Context, int64) (*common.Block, error)
 }
 
 var (
@@ -214,29 +214,33 @@ func (c *EthereumClient) waitReceipt(ctx context.Context, tx *types.Transaction,
 }
 
 // EthCurrentBlock returns the current block number in the blockchain
-func (c *EthereumClient) EthCurrentBlock() (*big.Int, error) {
+func (c *EthereumClient) EthCurrentBlock() (int64, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return header.Number, nil
+	return header.Number.Int64(), nil
 }
 
 // EthHeaderByNumber internally calls ethclient.Client HeaderByNumber
-func (c *EthereumClient) EthHeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.client.HeaderByNumber(ctx, number)
-}
+// func (c *EthereumClient) EthHeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+// 	return c.client.HeaderByNumber(ctx, number)
+// }
 
 // EthBlockByNumber internally calls ethclient.Client BlockByNumber and returns *common.Block
-func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number *big.Int) (*common.Block, error) {
-	block, err := c.client.BlockByNumber(ctx, number)
+func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*common.Block, error) {
+	blockNum := big.NewInt(number)
+	if number == 0 {
+		blockNum = nil
+	}
+	block, err := c.client.BlockByNumber(ctx, blockNum)
 	if err != nil {
 		return nil, err
 	}
 	b := &common.Block{
-		EthBlockNum: block.Number().Uint64(),
+		EthBlockNum: block.Number().Int64(),
 		Timestamp:   time.Unix(int64(block.Time()), 0),
 		Hash:        block.Hash(),
 	}

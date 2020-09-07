@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"math/big"
 	"sync"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -50,7 +49,7 @@ type BlockData struct {
 
 // Status is returned by the Status method
 type Status struct {
-	CurrentBlock      uint64
+	CurrentBlock      int64
 	CurrentBatch      common.BatchNum
 	CurrentForgerAddr ethCommon.Address
 	NextForgerAddr    ethCommon.Address
@@ -82,15 +81,15 @@ func (s *Synchronizer) Sync() error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	var lastStoredForgeL1TxsNum uint64
+	var lastStoredForgeL1TxsNum int64
 
 	// TODO: Get this information from ethClient once it's implemented
 	// for the moment we will get the latestblock - 20 as firstSavedBlock
-	latestBlock, err := s.ethClient.EthBlockByNumber(context.Background(), nil)
+	latestBlock, err := s.ethClient.EthBlockByNumber(context.Background(), 0)
 	if err != nil {
 		return err
 	}
-	s.firstSavedBlock, err = s.ethClient.EthBlockByNumber(context.Background(), big.NewInt(int64(latestBlock.EthBlockNum-blocksToSync)))
+	s.firstSavedBlock, err = s.ethClient.EthBlockByNumber(context.Background(), latestBlock.EthBlockNum-blocksToSync)
 	if err != nil {
 		return err
 	}
@@ -107,7 +106,7 @@ func (s *Synchronizer) Sync() error {
 		lastSavedBlock = s.firstSavedBlock
 	} else {
 		// Get the latest block we have in History DB from blockchain to detect a reorg
-		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum)))
+		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), lastSavedBlock.EthBlockNum)
 		if err != nil {
 			return err
 		}
@@ -135,10 +134,10 @@ func (s *Synchronizer) Sync() error {
 		return err
 	}
 
-	log.Debugf("Blocks to sync: %v (lastSavedBlock: %v, latestBlock: %v)", latestBlockNum.Uint64()-lastSavedBlock.EthBlockNum, lastSavedBlock.EthBlockNum, latestBlockNum)
+	log.Debugf("Blocks to sync: %v (lastSavedBlock: %v, latestBlock: %v)", latestBlockNum-lastSavedBlock.EthBlockNum, lastSavedBlock.EthBlockNum, latestBlockNum)
 
-	for lastSavedBlock.EthBlockNum < latestBlockNum.Uint64() {
-		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), big.NewInt(int64(lastSavedBlock.EthBlockNum+1)))
+	for lastSavedBlock.EthBlockNum < latestBlockNum {
+		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), lastSavedBlock.EthBlockNum+1)
 		if err != nil {
 			return err
 		}
@@ -181,7 +180,7 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 
 	// Iterate History DB and the blokchain looking for the latest valid block
 	for !found && blockNum > s.firstSavedBlock.EthBlockNum {
-		header, err := s.ethClient.EthHeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
+		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), blockNum)
 		if err != nil {
 			return err
 		}
@@ -190,7 +189,7 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) error {
 		if err != nil {
 			return err
 		}
-		if block.Hash == header.Hash() {
+		if block.Hash == ethBlock.Hash {
 			found = true
 			log.Debugf("Found valid block: %v", blockNum)
 		} else {
@@ -255,12 +254,12 @@ func (s *Synchronizer) Status() (*Status, error) {
 	// TODO: Get CurrentForgerAddr & NextForgerAddr
 
 	// Check if Synchronizer is synchronized
-	status.Synchronized = status.CurrentBlock == latestBlockNum.Uint64()
+	status.Synchronized = status.CurrentBlock == latestBlockNum
 	return status, nil
 }
 
 // rollupSync gets information from the Rollup Contract
-func (s *Synchronizer) rollupSync(block *common.Block, lastStoredForgeL1TxsNum uint64) (*BlockData, []*BatchData, error) {
+func (s *Synchronizer) rollupSync(block *common.Block, lastStoredForgeL1TxsNum int64) (*BlockData, []*BatchData, error) {
 	// To be implemented
 	return nil, nil, nil
 }
