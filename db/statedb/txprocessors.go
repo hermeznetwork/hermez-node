@@ -322,7 +322,10 @@ func (s *StateDB) setIdx(idx common.Idx) error {
 	if err != nil {
 		return err
 	}
-	tx.Put(keyidx, idx.Bytes())
+	err = tx.Put(keyidx, idx.Bytes())
+	if err != nil {
+		return err
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
