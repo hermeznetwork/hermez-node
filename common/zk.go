@@ -144,8 +144,3 @@ type ZKInputs struct {
 	ethAddr3  []*big.Int   // ethCommon.Address, len: [maxFeeTx]
 	siblings3 [][]*big.Int // Hash, len: [maxFeeTx][nLevels + 1]
 }
-
-// CallDataForge TBD
-type CallDataForge struct {
-	// TBD
-}

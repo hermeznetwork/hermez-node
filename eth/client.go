@@ -1,243 +1,42 @@
 package eth
 
 import (
-	"context"
 	"fmt"
-	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
-	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/log"
 )
 
-var (
-	// ErrAccountNil is used when the calls can not be made because the account is nil
-	ErrAccountNil = fmt.Errorf("Authorized calls can't be made when the account is nil")
-	// ErrReceiptStatusFailed is used when receiving a failed transaction
-	ErrReceiptStatusFailed = fmt.Errorf("receipt status is failed")
-	// ErrReceiptNotReceived is used when unable to retrieve a transaction
-	ErrReceiptNotReceived = fmt.Errorf("receipt not available")
-)
+var errTODO = fmt.Errorf("TODO: Not implemented yet")
 
-const (
-	errStrDeploy      = "deployment of %s failed: %w"
-	errStrWaitReceipt = "wait receipt of %s deploy failed: %w"
-
-	// default values
-	defaultCallGasLimit        = 300000
-	defaultDeployGasLimit      = 1000000
-	defaultGasPriceDiv         = 100
-	defaultReceiptTimeout      = 60
-	defaultIntervalReceiptLoop = 200
-)
-
-// Config defines the configuration parameters of the Client
-type Config struct {
-	CallGasLimit        uint64
-	DeployGasLimit      uint64
-	GasPriceDiv         uint64
-	ReceiptTimeout      time.Duration // in seconds
-	IntervalReceiptLoop time.Duration // in milliseconds
+// ClientInterface is the eth Client interface used by hermez-node modules to
+// interact with Ethereum Blockchain and smart contracts.
+type ClientInterface interface {
+	EthereumInterface
+	RollupInterface
+	AuctionInterface
 }
 
-// Client is an ethereum client to call Smart Contract methods.
+//
+// Implementation
+//
+
+// Client is used to interact with Ethereum and the Hermez smart contracts.
 type Client struct {
-	client         *ethclient.Client
-	account        *accounts.Account
-	ks             *ethKeystore.KeyStore
-	ReceiptTimeout time.Duration
-	config         *Config
+	EthereumClient
+	AuctionClient
+	RollupClient
 }
 
-// NewClient creates a Client instance.  The account is not mandatory (it can
-// be nil).  If the account is nil, CallAuth will fail with ErrAccountNil.
-func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, config *Config) *Client {
-	if config == nil {
-		config = &Config{
-			CallGasLimit:        defaultCallGasLimit,
-			DeployGasLimit:      defaultDeployGasLimit,
-			GasPriceDiv:         defaultGasPriceDiv,
-			ReceiptTimeout:      defaultReceiptTimeout,
-			IntervalReceiptLoop: defaultIntervalReceiptLoop,
-		}
+// NewClient creates a new Client to interact with Ethereum and the Hermez smart contracts.
+func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, config *EthereumConfig) *Client {
+	ethereumClient := NewEthereumClient(client, account, ks, config)
+	auctionClient := &AuctionClient{}
+	rollupCient := &RollupClient{}
+	return &Client{
+		EthereumClient: *ethereumClient,
+		AuctionClient:  *auctionClient,
+		RollupClient:   *rollupCient,
 	}
-	return &Client{client: client, account: account, ks: ks, ReceiptTimeout: config.ReceiptTimeout * time.Second, config: config}
-}
-
-// BalanceAt retieves information about the default account
-func (c *Client) BalanceAt(addr ethCommon.Address) (*big.Int, error) {
-	return c.client.BalanceAt(context.TODO(), addr, nil)
-}
-
-// Account returns the underlying ethereum account
-func (c *Client) Account() *accounts.Account {
-	return c.account
-}
-
-// CallAuth performs a Smart Contract method call that requires authorization.
-// This call requires a valid account with Ether that can be spend during the
-// call.
-func (c *Client) CallAuth(gasLimit uint64,
-	fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
-	if c.account == nil {
-		return nil, ErrAccountNil
-	}
-
-	gasPrice, err := c.client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	inc := new(big.Int).Set(gasPrice)
-	inc.Div(inc, new(big.Int).SetUint64(c.config.GasPriceDiv))
-	gasPrice.Add(gasPrice, inc)
-	log.Debug("Transaction metadata", "gasPrice", gasPrice)
-
-	auth, err := bind.NewKeyStoreTransactor(c.ks, *c.account)
-	if err != nil {
-		return nil, err
-	}
-	auth.Value = big.NewInt(0) // in wei
-	if gasLimit == 0 {
-		auth.GasLimit = c.config.CallGasLimit // in units
-	} else {
-		auth.GasLimit = gasLimit // in units
-	}
-	auth.GasPrice = gasPrice
-
-	tx, err := fn(c.client, auth)
-	if tx != nil {
-		log.Debug("Transaction", "tx", tx.Hash().Hex(), "nonce", tx.Nonce())
-	}
-	return tx, err
-}
-
-// ContractData contains the contract data
-type ContractData struct {
-	Address ethCommon.Address
-	Tx      *types.Transaction
-	Receipt *types.Receipt
-}
-
-// Deploy a smart contract.  `name` is used to log deployment information.  fn
-// is a wrapper to the deploy function generated by abigen.  In case of error,
-// the returned `ContractData` may have some parameters filled depending on the
-// kind of error that occurred.
-func (c *Client) Deploy(name string,
-	fn func(c *ethclient.Client, auth *bind.TransactOpts) (ethCommon.Address, *types.Transaction, interface{}, error)) (ContractData, error) {
-	var contractData ContractData
-	log.Info("Deploying", "contract", name)
-	tx, err := c.CallAuth(
-		c.config.DeployGasLimit,
-		func(client *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			addr, tx, _, err := fn(client, auth)
-			if err != nil {
-				return nil, err
-			}
-			contractData.Address = addr
-			return tx, nil
-		},
-	)
-	if err != nil {
-		return contractData, fmt.Errorf(errStrDeploy, name, err)
-	}
-	log.Info("Waiting receipt", "tx", tx.Hash().Hex(), "contract", name)
-	contractData.Tx = tx
-	receipt, err := c.WaitReceipt(tx)
-	if err != nil {
-		return contractData, fmt.Errorf(errStrWaitReceipt, name, err)
-	}
-	contractData.Receipt = receipt
-	return contractData, nil
-}
-
-// Call performs a read only Smart Contract method call.
-func (c *Client) Call(fn func(*ethclient.Client) error) error {
-	return fn(c.client)
-}
-
-// WaitReceipt will block until a transaction is confirmed.  Internally it
-// polls the state every 200 milliseconds.
-func (c *Client) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
-	return c.waitReceipt(context.TODO(), tx, c.ReceiptTimeout)
-}
-
-// GetReceipt will check if a transaction is confirmed and return
-// immediately, waiting at most 1 second and returning error if the transaction
-// is still pending.
-func (c *Client) GetReceipt(tx *types.Transaction) (*types.Receipt, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
-	defer cancel()
-	return c.waitReceipt(ctx, tx, 0)
-}
-
-func (c *Client) waitReceipt(ctx context.Context, tx *types.Transaction, timeout time.Duration) (*types.Receipt, error) {
-	var err error
-	var receipt *types.Receipt
-
-	txid := tx.Hash()
-	log.Debug("Waiting for receipt", "tx", txid.Hex())
-
-	start := time.Now()
-	for {
-		receipt, err = c.client.TransactionReceipt(ctx, txid)
-		if receipt != nil || time.Since(start) >= timeout {
-			break
-		}
-		time.Sleep(c.config.IntervalReceiptLoop * time.Millisecond)
-	}
-
-	if receipt != nil && receipt.Status == types.ReceiptStatusFailed {
-		log.Error("Failed transaction", "tx", txid.Hex())
-		return receipt, ErrReceiptStatusFailed
-	}
-
-	if receipt == nil {
-		log.Debug("Pendingtransaction / Wait receipt timeout", "tx", txid.Hex(), "lasterr", err)
-		return receipt, ErrReceiptNotReceived
-	}
-	log.Debug("Successful transaction", "tx", txid.Hex())
-
-	return receipt, err
-}
-
-// CurrentBlock returns the current block number in the blockchain
-func (c *Client) CurrentBlock() (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
-	defer cancel()
-	header, err := c.client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	return header.Number, nil
-}
-
-// HeaderByNumber internally calls ethclient.Client HeaderByNumber
-func (c *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.client.HeaderByNumber(ctx, number)
-}
-
-// BlockByNumber internally calls ethclient.Client BlockByNumber and returns *common.Block
-func (c *Client) BlockByNumber(ctx context.Context, number *big.Int) (*common.Block, error) {
-	block, err := c.client.BlockByNumber(ctx, number)
-	if err != nil {
-		return nil, err
-	}
-	b := &common.Block{
-		EthBlockNum: block.Number().Uint64(),
-		Timestamp:   time.Unix(int64(block.Time()), 0),
-		Hash:        block.Hash(),
-	}
-	return b, nil
-}
-
-// ForgeCall send the *common.CallDataForge to the Forge method of the smart contract
-func (c *Client) ForgeCall(callData *common.CallDataForge) ([]byte, error) {
-	// TODO this depends on the smart contracts, once are ready this will be updated
-	return nil, nil
 }
