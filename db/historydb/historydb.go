@@ -48,7 +48,7 @@ func (hdb *HistoryDB) AddBlock(block *common.Block) error {
 }
 
 // GetBlock retrieve a block from the DB, given a block number
-func (hdb *HistoryDB) GetBlock(blockNum uint64) (*common.Block, error) {
+func (hdb *HistoryDB) GetBlock(blockNum int64) (*common.Block, error) {
 	block := &common.Block{}
 	err := meddler.QueryRow(
 		hdb.db, block,
@@ -58,7 +58,7 @@ func (hdb *HistoryDB) GetBlock(blockNum uint64) (*common.Block, error) {
 }
 
 // GetBlocks retrieve blocks from the DB, given a range of block numbers defined by from and to
-func (hdb *HistoryDB) GetBlocks(from, to uint64) ([]*common.Block, error) {
+func (hdb *HistoryDB) GetBlocks(from, to int64) ([]*common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
 		hdb.db, &blocks,
@@ -122,14 +122,14 @@ func (hdb *HistoryDB) GetLastL1TxsNum() (uint32, error) {
 }
 
 // Reorg deletes all the information that was added into the DB after the lastValidBlock
-func (hdb *HistoryDB) Reorg(lastValidBlock uint64) error {
+func (hdb *HistoryDB) Reorg(lastValidBlock int64) error {
 	_, err := hdb.db.Exec("DELETE FROM block WHERE eth_block_num > $1;", lastValidBlock)
 	return err
 }
 
 // SyncRollup stores all the data that can be changed / added on a block in the Rollup SC
 func (hdb *HistoryDB) SyncRollup(
-	blockNum uint64,
+	blockNum int64,
 	l1txs []common.L1Tx,
 	l2txs []common.L2Tx,
 	registeredAccounts []common.Account,
@@ -148,7 +148,7 @@ func (hdb *HistoryDB) SyncRollup(
 
 // SyncPoD stores all the data that can be changed / added on a block in the PoD SC
 func (hdb *HistoryDB) SyncPoD(
-	blockNum uint64,
+	blockNum int64,
 	bids []common.Bid,
 	coordinators []common.Coordinator,
 	vars *common.AuctionVars,
