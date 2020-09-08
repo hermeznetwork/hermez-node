@@ -8,7 +8,8 @@ import (
 
 // Block represents of an Ethereum block
 type Block struct {
-	EthBlockNum uint64         `meddler:"eth_block_num"`
+	EthBlockNum int64          `meddler:"eth_block_num"`
 	Timestamp   time.Time      `meddler:"timestamp"`
 	Hash        ethCommon.Hash `meddler:"hash"`
+	ParentHash  ethCommon.Hash `meddler:"-"`
 }

@@ -171,6 +171,26 @@ type AuctionEvents struct { //nolint:structcheck
 	HEZClaimed            []AuctionEventHEZClaimed
 }
 
+// NewAuctionEvents creates an empty AuctionEvents with the slices initialized.
+func NewAuctionEvents() AuctionEvents {
+	return AuctionEvents{
+		NewBid:                make([]AuctionEventNewBid, 0),
+		NewSlotDeadline:       make([]AuctionEventNewSlotDeadline, 0),
+		NewClosedAuctionSlots: make([]AuctionEventNewClosedAuctionSlots, 0),
+		NewOutbidding:         make([]AuctionEventNewOutbidding, 0),
+		NewDonationAddress:    make([]AuctionEventNewDonationAddress, 0),
+		NewBootCoordinator:    make([]AuctionEventNewBootCoordinator, 0),
+		NewOpenAuctionSlots:   make([]AuctionEventNewOpenAuctionSlots, 0),
+		NewAllocationRatio:    make([]AuctionEventNewAllocationRatio, 0),
+		NewCoordinator:        make([]AuctionEventNewCoordinator, 0),
+		CoordinatorUpdated:    make([]AuctionEventCoordinatorUpdated, 0),
+		NewForgeAllocated:     make([]AuctionEventNewForgeAllocated, 0),
+		NewMinBidEpoch:        make([]AuctionEventNewMinBidEpoch, 0),
+		NewForge:              make([]AuctionEventNewForge, 0),
+		HEZClaimed:            make([]AuctionEventHEZClaimed, 0),
+	}
+}
+
 // AuctionInterface is the inteface to to Auction Smart Contract
 type AuctionInterface interface {
 	//

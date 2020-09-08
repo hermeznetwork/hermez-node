@@ -5,8 +5,17 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+)
+
+const (
+	// FeeIdxCoordinatorLen is the number of tokens the coordinator can use
+	// to collect fees (determines the number of tokens that the
+	// coordinator can collect fees from).  This value is determined by the
+	// circuit.
+	FeeIdxCoordinatorLen = 64
 )
 
 // RollupConstants are the constants of the Rollup Smart Contract
@@ -41,9 +50,16 @@ type RollupVariables struct {
 // QueueStruct is the queue of L1Txs for a batch
 //nolint:structcheck
 type QueueStruct struct {
-	L1TxQueue    [][]byte
-	CurrentIndex int64
+	L1TxQueue    []common.L1Tx
 	TotalL1TxFee *big.Int
+}
+
+// NewQueueStruct creates a new clear QueueStruct.
+func NewQueueStruct() *QueueStruct {
+	return &QueueStruct{
+		L1TxQueue:    make([]common.L1Tx, 0),
+		TotalL1TxFee: big.NewInt(0),
+	}
 }
 
 // RollupState represents the state of the Rollup in the Smart Contract
@@ -51,11 +67,11 @@ type QueueStruct struct {
 type RollupState struct {
 	StateRoot              *big.Int
 	ExitRoots              []*big.Int
-	ExiNullifierMap        map[[256 / 8]byte]bool
+	ExitNullifierMap       map[[256 / 8]byte]bool
 	TokenList              []ethCommon.Address
 	TokenMap               map[ethCommon.Address]bool
-	mapL1TxQueue           map[int64]QueueStruct
-	LastLTxBatch           int64
+	MapL1TxQueue           map[int64]*QueueStruct
+	LastL1L2Batch          int64
 	CurrentToForgeL1TxsNum int64
 	LastToForgeL1TxsNum    int64
 	CurrentIdx             int64
@@ -63,9 +79,7 @@ type RollupState struct {
 
 // RollupEventL1UserTx is an event of the Rollup Smart Contract
 type RollupEventL1UserTx struct {
-	L1UserTx        []byte
-	ToForgeL1TxsNum int64
-	Position        int
+	L1Tx common.L1Tx
 }
 
 // RollupEventAddToken is an event of the Rollup Smart Contract
@@ -76,7 +90,8 @@ type RollupEventAddToken struct {
 
 // RollupEventForgeBatch is an event of the Rollup Smart Contract
 type RollupEventForgeBatch struct {
-	BatchNum int64
+	BatchNum  int64
+	EthTxHash ethCommon.Hash
 }
 
 // RollupEventUpdateForgeL1Timeout is an event of the Rollup Smart Contract
@@ -117,21 +132,35 @@ type RollupEvents struct { //nolint:structcheck
 	Withdraw             []RollupEventWithdraw
 }
 
+// NewRollupEvents creates an empty RollupEvents with the slices initialized.
+func NewRollupEvents() RollupEvents {
+	return RollupEvents{
+		L1UserTx:             make([]RollupEventL1UserTx, 0),
+		AddToken:             make([]RollupEventAddToken, 0),
+		ForgeBatch:           make([]RollupEventForgeBatch, 0),
+		UpdateForgeL1Timeout: make([]RollupEventUpdateForgeL1Timeout, 0),
+		UpdateFeeL1UserTx:    make([]RollupEventUpdateFeeL1UserTx, 0),
+		UpdateFeeAddToken:    make([]RollupEventUpdateFeeAddToken, 0),
+		UpdateTokenHez:       make([]RollupEventUpdateTokenHez, 0),
+		Withdraw:             make([]RollupEventWithdraw, 0),
+	}
+}
+
 // RollupForgeBatchArgs are the arguments to the ForgeBatch function in the Rollup Smart Contract
 //nolint:structcheck,unused
 type RollupForgeBatchArgs struct {
-	proofA      [2]*big.Int
-	proofB      [2][2]*big.Int
-	proofC      [2]*big.Int
-	newLastIdx  int64
-	newStRoot   *big.Int
-	newExitRoot *big.Int
-	// TODO: Replace compressedL1CoordinatorTx, l2TxsData, feeIdxCoordinator for vectors
-	compressedL1CoordinatorTx []byte
-	l2TxsData                 []byte
-	feeIdxCoordinator         []byte
-	verifierIdx               int64
-	l1Batch                   bool
+	ProofA            [2]*big.Int
+	ProofB            [2][2]*big.Int
+	ProofC            [2]*big.Int
+	NewLastIdx        int64
+	NewStRoot         *big.Int
+	NewExitRoot       *big.Int
+	L1CoordinatorTxs  []*common.L1Tx
+	L2Txs             []*common.L2Tx
+	FeeIdxCoordinator []common.Idx
+	// Circuit selector
+	VerifierIdx int64
+	L1Batch     bool
 }
 
 // RollupInterface is the inteface to to Rollup Smart Contract
@@ -176,7 +205,7 @@ type RollupInterface interface {
 
 	RollupConstants() (*RollupConstants, error)
 	RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethCommon.Hash, error)
-	RollupForgeBatchArgs(*types.Transaction) (*RollupForgeBatchArgs, error)
+	RollupForgeBatchArgs(ethCommon.Hash) (*RollupForgeBatchArgs, error)
 }
 
 //
@@ -293,6 +322,11 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 }
 
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the Rollup Smart Contract in the given transaction
-func (c *RollupClient) RollupForgeBatchArgs(transaction *types.Transaction) (*RollupForgeBatchArgs, error) {
+func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupForgeBatchArgs, error) {
+	// tx := client.TransactionByHash(ethTxHash) -> types.Transaction
+	// txData := types.Transaction -> Data()
+	// m := abi.MethodById(txData) -> Method
+	// m.Inputs.Unpack(txData) -> Args
+	// client.TransactionReceipt()?
 	return nil, errTODO
 }

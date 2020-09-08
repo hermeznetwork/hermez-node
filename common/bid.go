@@ -11,5 +11,5 @@ type Bid struct {
 	SlotNum     SlotNum           `meddler:"slot_num"`
 	ForgerAddr  ethCommon.Address `meddler:"forger_addr"` // Coordinator reference
 	BidValue    *big.Int          `meddler:"bid_value,bigint"`
-	EthBlockNum uint64            `meddler:"eth_block_num"`
+	EthBlockNum int64             `meddler:"eth_block_num"`
 }

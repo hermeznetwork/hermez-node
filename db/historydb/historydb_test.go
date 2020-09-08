@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestBlocks(t *testing.T) {
-	var fromBlock, toBlock uint64
+	var fromBlock, toBlock int64
 	fromBlock = 1
 	toBlock = 5
 	// Delete peviously created rows (clean previous test execs)
@@ -80,8 +80,8 @@ func assertEqualBlock(t *testing.T, expected *common.Block, actual *common.Block
 }
 
 func TestBatches(t *testing.T) {
-	const fromBlock uint64 = 1
-	const toBlock uint64 = 3
+	const fromBlock int64 = 1
+	const toBlock int64 = 3
 	const nBatchesPerBlock = 3
 	// Prepare blocks in the DB
 	setTestBlocks(fromBlock, toBlock)
@@ -95,7 +95,7 @@ func TestBatches(t *testing.T) {
 		for j := 0; j < nBatchesPerBlock; j++ {
 			batch := common.Batch{
 				BatchNum:      common.BatchNum(int(i-1)*nBatchesPerBlock + j),
-				EthBlockNum:   uint64(i),
+				EthBlockNum:   int64(i),
 				ForgerAddr:    eth.BigToAddress(big.NewInt(239457111187)),
 				CollectedFees: collectedFees,
 				StateRoot:     common.Hash([]byte("duhdqlwiucgwqeiu")),
@@ -129,8 +129,8 @@ func TestBatches(t *testing.T) {
 }
 
 func TestBids(t *testing.T) {
-	const fromBlock uint64 = 1
-	const toBlock uint64 = 5
+	const fromBlock int64 = 1
+	const toBlock int64 = 5
 	const bidsPerSlot = 5
 	// Prepare blocks in the DB
 	setTestBlocks(fromBlock, toBlock)
@@ -162,7 +162,7 @@ func TestBids(t *testing.T) {
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them
-func setTestBlocks(from, to uint64) {
+func setTestBlocks(from, to int64) {
 	if from == 0 {
 		if err := historyDB.Reorg(from); err != nil {
 			panic(err)
@@ -178,7 +178,7 @@ func setTestBlocks(from, to uint64) {
 	}
 }
 
-func genBlocks(from, to uint64) []common.Block {
+func genBlocks(from, to int64) []common.Block {
 	var blocks []common.Block
 	for i := from; i < to; i++ {
 		blocks = append(blocks, common.Block{

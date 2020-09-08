@@ -13,6 +13,7 @@ require (
 	github.com/jinzhu/gorm v1.9.15
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
+	github.com/mitchellh/copystructure v1.0.0
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/russross/meddler v1.0.0
 	github.com/stretchr/testify v1.6.1

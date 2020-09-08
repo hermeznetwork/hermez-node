@@ -13,7 +13,7 @@ const batchNumBytesLen = 4
 // Batch is a struct that represents Hermez network batch
 type Batch struct {
 	BatchNum      BatchNum             `meddler:"batch_num"`
-	EthBlockNum   uint64               `meddler:"eth_block_num"` // Ethereum block in which the batch is forged
+	EthBlockNum   int64                `meddler:"eth_block_num"` // Ethereum block in which the batch is forged
 	ForgerAddr    ethCommon.Address    `meddler:"forger_addr"`   // TODO: Should this be retrieved via slot reference?
 	CollectedFees map[TokenID]*big.Int `meddler:"fees_collected,json"`
 	StateRoot     Hash                 `meddler:"state_root"`
