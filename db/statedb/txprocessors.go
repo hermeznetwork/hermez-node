@@ -1,8 +1,12 @@
 package statedb
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"math/big"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-merkletree"
@@ -10,18 +14,41 @@ import (
 	"github.com/iden3/go-merkletree/db/memory"
 )
 
-// keyidx is used as key in the db to store the current Idx
-var keyidx = []byte("idx")
+var (
+	// keyidx is used as key in the db to store the current Idx
+	keyidx = []byte("idx")
+
+	ffAddr = ethCommon.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
+)
+
+func (s *StateDB) resetZKInputs() {
+	s.zki = nil
+	s.i = 0
+}
 
 // ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
 // the StateDB depending on the transaction Type. Returns the common.ZKInputs
 // to generate the SnarkProof later used by the BatchBuilder, and if
 // cmpExitTree is set to true, returns common.ExitTreeLeaf that is later used
 // by the Synchronizer to update the HistoryDB.
-func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx) (*common.ZKInputs, []*common.ExitInfo, error) {
+func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) (*common.ZKInputs, []*common.ExitInfo, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 	exits := make(map[common.Idx]common.Account)
+
+	if s.zki != nil {
+		return nil, nil, errors.New("Expected StateDB.zki==nil, something went wrong ans is not empty")
+	}
+	defer s.resetZKInputs()
+
+	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
+	if nTx == 0 {
+		return nil, nil, nil // TBD if return an error in the case of no Txs to process
+	}
+
+	if cmpZKInputs {
+		s.zki = common.NewZKInputs(nTx, 24, 32) // TODO this values will be parameters of the function
+	}
 
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
 	// only needed in memory
@@ -30,6 +57,19 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 		return nil, nil, err
 	}
 
+	// assumption: l1usertx are sorted by L1Tx.Position
+	for _, tx := range l1usertxs {
+		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if exitIdx != nil && cmpExitTree {
+			exits[*exitIdx] = *exitAccount
+		}
+		if s.zki != nil {
+			s.i++
+		}
+	}
 	for _, tx := range l1coordinatortxs {
 		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
@@ -38,14 +78,8 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 		if exitIdx != nil && cmpExitTree {
 			exits[*exitIdx] = *exitAccount
 		}
-	}
-	for _, tx := range l1usertxs {
-		exitIdx, exitAccount, err := s.processL1Tx(exitTree, tx)
-		if err != nil {
-			return nil, nil, err
-		}
-		if exitIdx != nil && cmpExitTree {
-			exits[*exitIdx] = *exitAccount
+		if s.zki != nil {
+			s.i++
 		}
 	}
 	for _, tx := range l2txs {
@@ -56,9 +90,12 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 		if exitIdx != nil && cmpExitTree {
 			exits[*exitIdx] = *exitAccount
 		}
+		if s.zki != nil {
+			s.i++
+		}
 	}
 
-	if !cmpExitTree {
+	if !cmpExitTree && !cmpZKInputs {
 		return nil, nil, nil
 	}
 
@@ -93,15 +130,78 @@ func (s *StateDB) ProcessTxs(cmpExitTree bool, l1usertxs, l1coordinatortxs []*co
 		}
 		exitInfos = append(exitInfos, ei)
 	}
+	if !cmpZKInputs {
+		return nil, exitInfos, nil
+	}
+
+	// compute last ZKInputs parameters
+	s.zki.OldLastIdx = (s.idx - 1).BigInt()
+	s.zki.OldStateRoot = s.mt.Root().BigInt()
+	s.zki.GlobalChainID = big.NewInt(0) // TODO, 0: ethereum, get this from config file
+	// zki.FeeIdxs = ? // TODO, this will be get from the config file
+	tokenIDs, err := s.getTokenIDsBigInt(l1usertxs, l1coordinatortxs, l2txs)
+	if err != nil {
+		return nil, nil, err
+	}
+	s.zki.FeePlanTokens = tokenIDs
+
+	// s.zki.ISInitStateRootFee = s.mt.Root().BigInt()
+	// compute fees
+
+	// once fees are computed
 
 	// return exitInfos, so Synchronizer will be able to store it into
 	// HistoryDB for the concrete BatchNum
-	return nil, exitInfos, nil
+	return s.zki, exitInfos, nil
+}
+
+// getTokenIDsBigInt returns the list of TokenIDs in *big.Int format
+func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) ([]*big.Int, error) {
+	tokenIDs := make(map[common.TokenID]bool)
+	for i := 0; i < len(l1usertxs); i++ {
+		tokenIDs[l1usertxs[i].TokenID] = true
+	}
+	for i := 0; i < len(l1coordinatortxs); i++ {
+		tokenIDs[l1coordinatortxs[i].TokenID] = true
+	}
+	for i := 0; i < len(l2txs); i++ {
+		// as L2Tx does not have parameter TokenID, get it from the
+		// AccountsDB (in the StateDB)
+		acc, err := s.GetAccount(l2txs[i].ToIdx)
+		if err != nil {
+			return nil, err
+		}
+		tokenIDs[acc.TokenID] = true
+	}
+	var tBI []*big.Int
+	for t := range tokenIDs {
+		tBI = append(tBI, t.BigInt())
+	}
+	return tBI, nil
 }
 
 // processL1Tx process the given L1Tx applying the needed updates to the
 // StateDB depending on the transaction Type.
 func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx, *common.Account, error) {
+	// ZKInputs
+	if s.zki != nil {
+		// Txs
+		// s.zki.TxCompressedData[s.i] = tx.TxCompressedData() // uncomment once L1Tx.TxCompressedData is ready
+		s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
+		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
+		s.zki.OnChain[s.i] = big.NewInt(1)
+
+		// L1Txs
+		s.zki.LoadAmountF[s.i] = tx.LoadAmount
+		s.zki.FromEthAddr[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
+		if tx.FromBJJ != nil {
+			s.zki.FromBJJCompressed[s.i] = common.BJJCompressedTo256BigInts(tx.FromBJJ.Compress())
+		}
+
+		// Intermediate States
+		s.zki.ISOnChain[s.i] = big.NewInt(1)
+	}
+
 	switch tx.Type {
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update balance
@@ -115,6 +215,11 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyCreateAccount(tx)
 		if err != nil {
 			return nil, nil, err
+		}
+
+		if s.zki != nil {
+			s.zki.AuxFromIdx[s.i] = s.idx.BigInt() // last s.idx is the one used for creating the new account
+			s.zki.NewAccount[s.i] = big.NewInt(1)
 		}
 	case common.TxTypeDeposit:
 		// update balance of the MT account
@@ -140,6 +245,11 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		if err != nil {
 			return nil, nil, err
 		}
+
+		if s.zki != nil {
+			s.zki.AuxFromIdx[s.i] = s.idx.BigInt() // last s.idx is the one used for creating the new account
+			s.zki.NewAccount[s.i] = big.NewInt(1)
+		}
 	case common.TxTypeExit:
 		// execute exit flow
 		exitAccount, err := s.applyExit(exitTree, tx.Tx())
@@ -155,7 +265,48 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 
 // processL2Tx process the given L2Tx applying the needed updates to
 // the StateDB depending on the transaction Type.
-func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.L2Tx) (*common.Idx, *common.Account, error) {
+func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, error) {
+	// ZKInputs
+	if s.zki != nil {
+		// Txs
+		// s.zki.TxCompressedData[s.i] = tx.TxCompressedData() // uncomment once L1Tx.TxCompressedData is ready
+		// s.zki.TxCompressedDataV2[s.i] = tx.TxCompressedDataV2() // uncomment once L2Tx.TxCompressedDataV2 is ready
+		s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
+		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
+
+		// fill AuxToIdx if needed
+		if tx.ToIdx == common.Idx(0) {
+			// Idx not set in the Tx, get it from DB through ToEthAddr or ToBJJ
+			var idx common.Idx
+			if !bytes.Equal(tx.ToEthAddr.Bytes(), ffAddr.Bytes()) {
+				idx = s.getIdxByEthAddr(tx.ToEthAddr)
+				if idx == common.Idx(0) {
+					return nil, nil, fmt.Errorf("Idx can not be found for given tx.FromEthAddr")
+				}
+			} else {
+				idx = s.getIdxByBJJ(tx.ToBJJ)
+				if idx == common.Idx(0) {
+					return nil, nil, fmt.Errorf("Idx can not be found for given tx.FromBJJ")
+				}
+			}
+			s.zki.AuxToIdx[s.i] = idx.BigInt()
+		}
+		s.zki.ToBJJAy[s.i] = tx.ToBJJ.Y
+		s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(tx.ToEthAddr)
+
+		s.zki.OnChain[s.i] = big.NewInt(0)
+		s.zki.NewAccount[s.i] = big.NewInt(0)
+
+		// L2Txs
+		// s.zki.RqOffset[s.i] =  // TODO
+		// s.zki.RqTxCompressedDataV2[s.i] = // TODO
+		// s.zki.RqToEthAddr[s.i] = common.EthAddrToBigInt(tx.RqToEthAddr) // TODO
+		// s.zki.RqToBJJAy[s.i] = tx.ToBJJ.Y // TODO
+		s.zki.S[s.i] = tx.Signature.S
+		s.zki.R8x[s.i] = tx.Signature.R8.X
+		s.zki.R8y[s.i] = tx.Signature.R8.Y
+	}
+
 	switch tx.Type {
 	case common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update

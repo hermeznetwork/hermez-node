@@ -43,6 +43,8 @@ type StateDB struct {
 	mt           *merkletree.MerkleTree
 	// idx holds the current Idx that the BatchBuilder is using
 	idx common.Idx
+	zki *common.ZKInputs
+	i   int // i is used for zki
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
