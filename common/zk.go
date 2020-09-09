@@ -64,13 +64,12 @@ type ZKInputs struct {
 
 	// OnChain determines if is L1 (1/true) or L2 (0/false)
 	OnChain []*big.Int // bool, len: [nTx]
-	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new account (fromIdx==0)
-	NewAccount []*big.Int // bool, len: [nTx]
 
 	//
 	// Txs/L1Txs
 	//
-	// transaction L1
+	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new account (fromIdx==0)
+	NewAccount []*big.Int // bool, len: [nTx]
 	// LoadAmountF encoded as float16
 	LoadAmountF []*big.Int // uint16, len: [nTx]
 	// FromEthAddr
@@ -109,8 +108,8 @@ type ZKInputs struct {
 	TokenID1  []*big.Int   // uint32, len: [nTx]
 	Nonce1    []*big.Int   // uint64 (max 40 bits), len: [nTx]
 	Sign1     []*big.Int   // bool, len: [nTx]
-	Balance1  []*big.Int   // big.Int (max 192 bits), len: [nTx]
 	Ay1       []*big.Int   // big.Int, len: [nTx]
+	Balance1  []*big.Int   // big.Int (max 192 bits), len: [nTx]
 	EthAddr1  []*big.Int   // ethCommon.Address, len: [nTx]
 	Siblings1 [][]*big.Int // big.Int, len: [nTx][nLevels + 1]
 	// Required for inserts and deletes, values of the CircomProcessorProof (smt insert proof)
@@ -123,8 +122,8 @@ type ZKInputs struct {
 	TokenID2  []*big.Int   // uint32, len: [nTx]
 	Nonce2    []*big.Int   // uint64 (max 40 bits), len: [nTx]
 	Sign2     []*big.Int   // bool, len: [nTx]
-	Balance2  []*big.Int   // big.Int (max 192 bits), len: [nTx]
 	Ay2       []*big.Int   // big.Int, len: [nTx]
+	Balance2  []*big.Int   // big.Int (max 192 bits), len: [nTx]
 	EthAddr2  []*big.Int   // ethCommon.Address, len: [nTx]
 	Siblings2 [][]*big.Int // big.Int, len: [nTx][nLevels + 1]
 	// newExit determines if an exit transaction has to create a new leaf in the exit tree
@@ -140,8 +139,8 @@ type ZKInputs struct {
 	TokenID3  []*big.Int   // uint32, len: [maxFeeTx]
 	Nonce3    []*big.Int   // uint64 (max 40 bits), len: [maxFeeTx]
 	Sign3     []*big.Int   // bool, len: [maxFeeTx]
-	Balance3  []*big.Int   // big.Int (max 192 bits), len: [maxFeeTx]
 	Ay3       []*big.Int   // big.Int, len: [maxFeeTx]
+	Balance3  []*big.Int   // big.Int (max 192 bits), len: [maxFeeTx]
 	EthAddr3  []*big.Int   // ethCommon.Address, len: [maxFeeTx]
 	Siblings3 [][]*big.Int // Hash, len: [maxFeeTx][nLevels + 1]
 
@@ -218,8 +217,8 @@ func NewZKInputs(nTx, maxFeeTx, nLevels int) *ZKInputs {
 	zki.TokenID1 = newSlice(nTx)
 	zki.Nonce1 = newSlice(nTx)
 	zki.Sign1 = newSlice(nTx)
-	zki.Balance1 = newSlice(nTx)
 	zki.Ay1 = newSlice(nTx)
+	zki.Balance1 = newSlice(nTx)
 	zki.EthAddr1 = newSlice(nTx)
 	zki.Siblings1 = make([][]*big.Int, nTx)
 	for i := 0; i < len(zki.Siblings1); i++ {
@@ -232,8 +231,8 @@ func NewZKInputs(nTx, maxFeeTx, nLevels int) *ZKInputs {
 	zki.TokenID2 = newSlice(nTx)
 	zki.Nonce2 = newSlice(nTx)
 	zki.Sign2 = newSlice(nTx)
-	zki.Balance2 = newSlice(nTx)
 	zki.Ay2 = newSlice(nTx)
+	zki.Balance2 = newSlice(nTx)
 	zki.EthAddr2 = newSlice(nTx)
 	zki.Siblings2 = make([][]*big.Int, nTx)
 	for i := 0; i < len(zki.Siblings2); i++ {
@@ -247,8 +246,8 @@ func NewZKInputs(nTx, maxFeeTx, nLevels int) *ZKInputs {
 	zki.TokenID3 = newSlice(maxFeeTx)
 	zki.Nonce3 = newSlice(maxFeeTx)
 	zki.Sign3 = newSlice(maxFeeTx)
-	zki.Balance3 = newSlice(maxFeeTx)
 	zki.Ay3 = newSlice(maxFeeTx)
+	zki.Balance3 = newSlice(maxFeeTx)
 	zki.EthAddr3 = newSlice(maxFeeTx)
 	zki.Siblings3 = make([][]*big.Int, maxFeeTx)
 	for i := 0; i < len(zki.Siblings3); i++ {

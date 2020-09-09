@@ -27,6 +27,11 @@ func (n Nonce) Bytes() ([5]byte, error) {
 	return b, nil
 }
 
+// BigInt returns the *big.Int representation of the Nonce value
+func (n Nonce) BigInt() *big.Int {
+	return big.NewInt(int64(n))
+}
+
 // NonceFromBytes returns Nonce from a [5]byte
 func NonceFromBytes(b [5]byte) Nonce {
 	var nonceBytes [8]byte
@@ -76,7 +81,7 @@ type PoolL2Tx struct {
 // [ 32 bits ] tokenID // 4 bytes: [20:24]
 // [ 40 bits ] nonce // 5 bytes: [24:29]
 // [ 8 bits  ] userFee // 1 byte: [29:30]
-// [ 1 bits  ] toBjjSign // 1 byte: [30:31]
+// [ 1 bits  ] toBJJSign // 1 byte: [30:31]
 // Total bits compressed data:  241 bits // 31 bytes in *big.Int representation
 func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 	// sigconstant
@@ -102,11 +107,11 @@ func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 	}
 	copy(b[24:29], nonceBytes[:])
 	b[29] = byte(tx.Fee)
-	toBjjSign := byte(0)
+	toBJJSign := byte(0)
 	if babyjub.PointCoordSign(tx.ToBJJ.X) {
-		toBjjSign = byte(1)
+		toBJJSign = byte(1)
 	}
-	b[30] = toBjjSign
+	b[30] = toBJJSign
 	bi := new(big.Int).SetBytes(SwapEndianness(b[:]))
 
 	return bi, nil
@@ -119,7 +124,7 @@ func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 // [ 32 bits ] tokenID // 4 bytes: [14:18]
 // [ 40 bits ] nonce // 5 bytes: [18:23]
 // [ 8 bits  ] userFee // 1 byte: [23:24]
-// [ 1 bits  ] toBjjSign // 1 byte: [24:25]
+// [ 1 bits  ] toBJJSign // 1 byte: [24:25]
 // Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
 func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 	amountFloat16, err := utils.NewFloat16(tx.Amount)
@@ -137,11 +142,11 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 	}
 	copy(b[18:23], nonceBytes[:])
 	b[23] = byte(tx.Fee)
-	toBjjSign := byte(0)
+	toBJJSign := byte(0)
 	if babyjub.PointCoordSign(tx.ToBJJ.X) {
-		toBjjSign = byte(1)
+		toBJJSign = byte(1)
 	}
-	b[24] = toBjjSign
+	b[24] = toBJJSign
 
 	bi := new(big.Int).SetBytes(SwapEndianness(b[:]))
 	return bi, nil
@@ -154,13 +159,13 @@ func (tx *PoolL2Tx) HashToSign() (*big.Int, error) {
 		return nil, err
 	}
 	toEthAddr := EthAddrToBigInt(tx.ToEthAddr)
-	toBjjAy := tx.ToBJJ.Y
+	toBJJAy := tx.ToBJJ.Y
 	rqTxCompressedDataV2, err := tx.TxCompressedDataV2()
 	if err != nil {
 		return nil, err
 	}
 
-	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBjjAy, rqTxCompressedDataV2, EthAddrToBigInt(tx.RqToEthAddr), tx.RqToBJJ.Y})
+	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBJJAy, rqTxCompressedDataV2, EthAddrToBigInt(tx.RqToEthAddr), tx.RqToBJJ.Y})
 }
 
 // VerifySignature returns true if the signature verification is correct for the given PublicKey

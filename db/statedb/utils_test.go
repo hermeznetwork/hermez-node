@@ -1,4 +1,4 @@
-package common
+package statedb
 
 import (
 	"math/big"
