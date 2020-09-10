@@ -216,6 +216,16 @@ type RollupInterface interface {
 
 // RollupClient is the implementation of the interface to the Rollup Smart Contract in ethereum.
 type RollupClient struct {
+	client  *EthereumClient
+	address ethCommon.Address
+}
+
+// NewRollupClient creates a new RollupClient
+func NewRollupClient(client *EthereumClient, address ethCommon.Address) *RollupClient {
+	return &RollupClient{
+		client:  client,
+		address: address,
+	}
 }
 
 // RollupForgeBatch is the interface to call the smart contract function
