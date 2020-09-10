@@ -17,42 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var clientSetup *ClientSetup
-
-func init() {
-	rollupConstants := &eth.RollupConstants{}
-	rollupVariables := &eth.RollupVariables{
-		MaxTxVerifiers:     make([]int, 0),
-		TokenHEZ:           ethCommon.Address{},
-		GovernanceAddress:  ethCommon.Address{},
-		SafetyBot:          ethCommon.Address{},
-		ConsensusContract:  ethCommon.Address{},
-		WithdrawalContract: ethCommon.Address{},
-		FeeAddToken:        big.NewInt(1),
-		ForgeL1Timeout:     16,
-		FeeL1UserTx:        big.NewInt(2),
-	}
-	auctionConstants := &eth.AuctionConstants{}
-	auctionVariables := &eth.AuctionVariables{
-		DonationAddress: ethCommon.Address{},
-		BootCoordinator: ethCommon.Address{},
-		MinBidEpoch: [6]*big.Int{
-			big.NewInt(10), big.NewInt(11), big.NewInt(12),
-			big.NewInt(13), big.NewInt(14), big.NewInt(15)},
-		ClosedAuctionSlots: 0,
-		OpenAuctionSlots:   0,
-		AllocationRatio:    [3]uint8{},
-		Outbidding:         0,
-		SlotDeadline:       0,
-	}
-	clientSetup = &ClientSetup{
-		RollupConstants:  rollupConstants,
-		RollupVariables:  rollupVariables,
-		AuctionConstants: auctionConstants,
-		AuctionVariables: auctionVariables,
-	}
-}
-
 type timer struct {
 	time int64
 }
@@ -66,16 +30,16 @@ func (t *timer) Time() int64 {
 func TestClientInterface(t *testing.T) {
 	var c eth.ClientInterface
 	var timer timer
-	client := NewClient(true, &timer, clientSetup)
+	clientSetup := NewClientSetupExample()
+	client := NewClient(true, &timer, ethCommon.Address{}, clientSetup)
 	c = client
 	require.NotNil(t, c)
 }
 
-func TestEthClient(t *testing.T) {
-	token1Addr := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
-
+func TestClientEth(t *testing.T) {
 	var timer timer
-	c := NewClient(true, &timer, clientSetup)
+	clientSetup := NewClientSetupExample()
+	c := NewClient(true, &timer, ethCommon.Address{}, clientSetup)
 	blockNum, err := c.EthCurrentBlock()
 	require.Nil(t, err)
 	assert.Equal(t, int64(0), blockNum)
@@ -98,6 +62,62 @@ func TestEthClient(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, int64(2), block.EthBlockNum)
 	assert.Equal(t, time.Unix(2, 0), block.Timestamp)
+}
+
+func TestClientAuction(t *testing.T) {
+	addrWithdraw := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
+	addrForge := ethCommon.HexToAddress("0xCfAA413eEb796f328620a3630Ae39124cabcEa92")
+	addrForge2 := ethCommon.HexToAddress("0x1fCb4ac309428feCc61B1C8cA5823C15A5e1a800")
+
+	var timer timer
+	clientSetup := NewClientSetupExample()
+	clientSetup.AuctionVariables.ClosedAuctionSlots = 2
+	clientSetup.AuctionVariables.OpenAuctionSlots = 100
+	c := NewClient(true, &timer, addrWithdraw, clientSetup)
+
+	_, err := c.AuctionBid(0, big.NewInt(1), addrForge)
+	assert.Equal(t, errBidClosed, err)
+
+	_, err = c.AuctionBid(102, big.NewInt(1), addrForge)
+	assert.Equal(t, errBidNotOpen, err)
+
+	_, err = c.AuctionBid(101, big.NewInt(16), addrForge)
+	assert.Equal(t, errCoordNotReg, err)
+
+	_, err = c.AuctionRegisterCoordinator(addrForge, "https://foo.bar")
+	assert.Nil(t, err)
+
+	_, err = c.AuctionBid(3, big.NewInt(1), addrForge)
+	assert.Equal(t, errBidBelowMin, err)
+
+	_, err = c.AuctionBid(3, big.NewInt(16), addrForge)
+	assert.Nil(t, err)
+
+	_, err = c.AuctionRegisterCoordinator(addrForge2, "https://foo2.bar")
+	assert.Nil(t, err)
+
+	_, err = c.AuctionBid(3, big.NewInt(16), addrForge2)
+	assert.Equal(t, errBidBelowMin, err)
+
+	_, err = c.AuctionBid(3, big.NewInt(17), addrForge2)
+	assert.Nil(t, err)
+
+	c.CtlMineBlock()
+
+	blockNum, err := c.EthCurrentBlock()
+	require.Nil(t, err)
+
+	auctionEvents, _, err := c.AuctionEventsByBlock(blockNum)
+	require.Nil(t, err)
+	assert.Equal(t, 2, len(auctionEvents.NewBid))
+}
+
+func TestClientRollup(t *testing.T) {
+	token1Addr := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
+
+	var timer timer
+	clientSetup := NewClientSetupExample()
+	c := NewClient(true, &timer, ethCommon.Address{}, clientSetup)
 
 	// Add a token
 
@@ -123,7 +143,7 @@ func TestEthClient(t *testing.T) {
 	}
 	c.CtlMineBlock()
 
-	blockNum, err = c.EthCurrentBlock()
+	blockNum, err := c.EthCurrentBlock()
 	require.Nil(t, err)
 	rollupEvents, _, err := c.RollupEventsByBlock(blockNum)
 	require.Nil(t, err)

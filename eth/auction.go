@@ -62,12 +62,11 @@ type AuctionVariables struct {
 // AuctionState represents the state of the Rollup in the Smart Contract
 type AuctionState struct {
 	// Mapping to control slot state
-	Slots map[int64]SlotState
+	Slots map[int64]*SlotState
 	// Mapping to control balances pending to claim
 	PendingBalances map[ethCommon.Address]*big.Int
-
 	// Mapping to register all the coordinators. The address used for the mapping is the forger address
-	Coordinators map[ethCommon.Address]Coordinator
+	Coordinators map[ethCommon.Address]*Coordinator
 }
 
 // AuctionEventNewBid is an event of the Auction Smart Contract
