@@ -3,6 +3,7 @@ module github.com/hermeznetwork/hermez-node
 go 1.14
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/dghubble/sling v1.3.0
 	github.com/ethereum/go-ethereum v1.9.17
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
@@ -17,5 +18,8 @@ require (
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/russross/meddler v1.0.0
 	github.com/stretchr/testify v1.6.1
+	github.com/urfave/cli v1.22.1
+	github.com/urfave/cli/v2 v2.2.0
 	go.uber.org/zap v1.13.0
+	gopkg.in/go-playground/validator.v9 v9.29.1
 )

@@ -44,34 +44,110 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 	return txsel, bb
 }
 
+// CoordNode is an example of a Node that handles the goroutines for the coordinator
+type CoordNode struct {
+	c                     *Coordinator
+	stopForge             chan bool
+	stopGetProofCallForge chan bool
+	stopForgeCallConfirm  chan bool
+}
+
+func NewCoordNode(c *Coordinator) *CoordNode {
+	return &CoordNode{
+		c: c,
+	}
+}
+
+func (cn *CoordNode) Start() {
+	log.Debugw("Starting CoordNode...")
+	cn.stopForge = make(chan bool)
+	cn.stopGetProofCallForge = make(chan bool)
+	cn.stopForgeCallConfirm = make(chan bool)
+	batchCh0 := make(chan *BatchInfo)
+	batchCh1 := make(chan *BatchInfo)
+
+	go func() {
+		for {
+			select {
+			case <-cn.stopForge:
+				return
+			default:
+				if forge, err := cn.c.ForgeLoopFn(batchCh0, cn.stopForge); err == ErrStop {
+					return
+				} else if err != nil {
+					log.Errorw("CoordNode ForgeLoopFn", "error", err)
+				} else if !forge {
+					time.Sleep(500 * time.Millisecond)
+				}
+			}
+		}
+	}()
+	go func() {
+		for {
+			select {
+			case <-cn.stopGetProofCallForge:
+				return
+			default:
+				if err := cn.c.GetProofCallForgeLoopFn(
+					batchCh0, batchCh1, cn.stopGetProofCallForge); err == ErrStop {
+					return
+				} else if err != nil {
+					log.Errorw("CoordNode GetProofCallForgeLoopFn", "error", err)
+				}
+			}
+		}
+	}()
+	go func() {
+		for {
+			select {
+			case <-cn.stopForgeCallConfirm:
+				return
+			default:
+				if err := cn.c.ForgeCallConfirmLoopFn(
+					batchCh1, cn.stopForgeCallConfirm); err == ErrStop {
+					return
+				} else if err != nil {
+					log.Errorw("CoordNode ForgeCallConfirmLoopFn", "error", err)
+				}
+			}
+		}
+	}()
+}
+
+func (cn *CoordNode) Stop() {
+	log.Debugw("Stopping CoordNode...")
+	cn.stopForge <- true
+	cn.stopGetProofCallForge <- true
+	cn.stopForgeCallConfirm <- true
+}
+
 func TestCoordinator(t *testing.T) {
 	txsel, bb := newTestModules(t)
 
-	conf := Config{
-		LoopInterval: 100 * time.Millisecond,
-	}
+	conf := Config{}
 	hdb := &historydb.HistoryDB{}
 	c := NewCoordinator(conf, hdb, txsel, bb, &eth.Client{})
-	c.Start()
+	cn := NewCoordNode(c)
+	cn.Start()
 	time.Sleep(1 * time.Second)
 
 	// simulate forgeSequence time
-	log.Debug("simulate entering in forge time")
+	log.Info("simulate entering in forge time")
 	c.isForgeSeq = true
 	time.Sleep(1 * time.Second)
 
 	// simulate going out from forgeSequence
-	log.Debug("simulate going out from forge time")
+	log.Info("simulate going out from forge time")
 	c.isForgeSeq = false
 	time.Sleep(1 * time.Second)
 
 	// simulate entering forgeSequence time again
-	log.Debug("simulate entering in forge time again")
+	log.Info("simulate entering in forge time again")
 	c.isForgeSeq = true
 	time.Sleep(1 * time.Second)
 
 	// simulate stopping forgerLoop by channel
-	log.Debug("simulate stopping forgerLoop by closing coordinator stopch")
-	c.Stop()
+	log.Info("simulate stopping forgerLoop by closing coordinator stopch")
+	cn.Stop()
 	time.Sleep(1 * time.Second)
 }

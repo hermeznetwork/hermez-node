@@ -12,5 +12,5 @@ type AccountCreationAuth struct {
 	Timestamp time.Time
 	EthAddr   ethCommon.Address
 	BJJ       babyjub.PublicKey
-	Signature babyjub.Signature
+	Signature []byte
 }

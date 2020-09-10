@@ -1,6 +1,9 @@
 package coordinator
 
-import "github.com/hermeznetwork/hermez-node/common"
+import (
+	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
+)
 
 // ServerProofInfo contains the data related to a ServerProof
 type ServerProofInfo struct {
@@ -25,6 +28,12 @@ type ServerProofPool struct {
 }
 
 // GetNextAvailable returns the available ServerProofInfo
-func (p *ServerProofPool) GetNextAvailable() (*ServerProofInfo, error) {
+func (p *ServerProofPool) GetNextAvailable(stopCh chan bool) (*ServerProofInfo, error) {
+	select {
+	case <-stopCh:
+		log.Info("ServerProofPool.GetNextAvailable stopped")
+		return nil, ErrStop
+	default:
+	}
 	return nil, nil
 }

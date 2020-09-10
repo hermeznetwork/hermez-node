@@ -149,15 +149,16 @@ func NewRollupEvents() RollupEvents {
 // RollupForgeBatchArgs are the arguments to the ForgeBatch function in the Rollup Smart Contract
 //nolint:structcheck,unused
 type RollupForgeBatchArgs struct {
-	ProofA            [2]*big.Int
-	ProofB            [2][2]*big.Int
-	ProofC            [2]*big.Int
-	NewLastIdx        int64
-	NewStRoot         *big.Int
-	NewExitRoot       *big.Int
-	L1CoordinatorTxs  []*common.L1Tx
-	L2Txs             []*common.L2Tx
-	FeeIdxCoordinator []common.Idx
+	ProofA                [2]*big.Int
+	ProofB                [2][2]*big.Int
+	ProofC                [2]*big.Int
+	NewLastIdx            int64
+	NewStRoot             *big.Int
+	NewExitRoot           *big.Int
+	L1CoordinatorTxs      []*common.L1Tx
+	L1CoordinatorTxsAuths [][]byte // Authorization for accountCreations for each L1CoordinatorTxs
+	L2Txs                 []*common.L2Tx
+	FeeIdxCoordinator     []common.Idx
 	// Circuit selector
 	VerifierIdx int64
 	L1Batch     bool

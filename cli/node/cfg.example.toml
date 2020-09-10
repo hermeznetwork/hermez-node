@@ -1,0 +1,29 @@
+[StateDB]
+Path = "/tmp/iden3-test/hermez/statedb"
+
+[PostgreSQL]
+Port     = 5432
+Host     = "localhost"
+User     = "hermez"
+Password = "yourpasswordhere"
+
+[L2DB]
+Name         = "l2"
+SafetyPeriod = 10
+MaxTxs       = 512
+TTL          = "24h"
+
+[HistoryDB]
+Name = "history"
+
+[Web3]
+URL = "XXX"
+
+[TxSelector]
+Path = "/tmp/iden3-test/hermez/txselector"
+
+[BatchBuilder]
+Path = "/tmp/iden3-test/hermez/batchbuilder"
+
+[Synchronizer]
+SyncLoopInterval = "1s"

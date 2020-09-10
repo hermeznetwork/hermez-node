@@ -4,7 +4,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 )
 
-// Proof TBD this type will be got from the proof server
+// Proof TBD this type will be received from the proof server
 type Proof struct {
 }
 
