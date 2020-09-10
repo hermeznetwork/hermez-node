@@ -198,8 +198,7 @@ func (c *Coordinator) forge(serverProofInfo *ServerProofInfo) (*BatchInfo, error
 	configBatch := &batchbuilder.ConfigBatch{
 		ForgerAddress: c.config.ForgerAddress,
 	}
-	l2Txs := common.PoolL2TxsToL2Txs(poolL2Txs)
-	zkInputs, err := c.batchBuilder.BuildBatch(configBatch, l1UserTxsExtra, l1OperatorTxs, l2Txs, nil) // TODO []common.TokenID --> feesInfo
+	zkInputs, err := c.batchBuilder.BuildBatch(configBatch, l1UserTxsExtra, l1OperatorTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
 	if err != nil {
 		return nil, err
 	}

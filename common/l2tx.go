@@ -30,3 +30,28 @@ func (tx *L2Tx) Tx() *Tx {
 		Type:    tx.Type,
 	}
 }
+
+// PoolL2Tx returns the data structure of PoolL2Tx with the parameters of a
+// L2Tx filled
+func (tx *L2Tx) PoolL2Tx() *PoolL2Tx {
+	return &PoolL2Tx{
+		TxID:     tx.TxID,
+		BatchNum: tx.BatchNum,
+		FromIdx:  tx.FromIdx,
+		ToIdx:    tx.ToIdx,
+		Amount:   tx.Amount,
+		Fee:      tx.Fee,
+		Nonce:    tx.Nonce,
+		Type:     tx.Type,
+	}
+}
+
+// L2TxsToPoolL2Txs returns an array of []*PoolL2Tx from an array of []*L2Tx,
+// where the PoolL2Tx only have the parameters of a L2Tx filled.
+func L2TxsToPoolL2Txs(txs []*L2Tx) []*PoolL2Tx {
+	var r []*PoolL2Tx
+	for _, tx := range txs {
+		r = append(r, tx.PoolL2Tx())
+	}
+	return r
+}

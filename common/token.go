@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"math/big"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -33,4 +34,9 @@ func (t TokenID) Bytes() []byte {
 	var tokenIDBytes [4]byte
 	binary.LittleEndian.PutUint32(tokenIDBytes[:], uint32(t))
 	return tokenIDBytes[:]
+}
+
+// BigInt returns the *big.Int representation of the TokenID
+func (t TokenID) BigInt() *big.Int {
+	return big.NewInt(int64(t))
 }
