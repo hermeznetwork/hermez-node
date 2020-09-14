@@ -31,7 +31,7 @@ type Coordinator struct {
 	config Config
 
 	batchNum        common.BatchNum
-	serverProofPool ServerProofPool
+	serverProofPool *ServerProofPool
 
 	// synchronizer *synchronizer.Synchronizer
 	hdb          *historydb.HistoryDB
@@ -47,14 +47,20 @@ func NewCoordinator(conf Config,
 	hdb *historydb.HistoryDB,
 	txsel *txselector.TxSelector,
 	bb *batchbuilder.BatchBuilder,
+	serverProofs []ServerProofInterface,
 	ethClient *eth.Client) *Coordinator { // once synchronizer is ready, synchronizer.Synchronizer will be passed as parameter here
+	serverProofPool := NewServerProofPool(len(serverProofs))
+	for _, serverProof := range serverProofs {
+		serverProofPool.Add(serverProof)
+	}
 	c := Coordinator{
-		config:       conf,
-		hdb:          hdb,
-		txsel:        txsel,
-		batchBuilder: bb,
-		ethClient:    ethClient,
-		ethTxStore:   memory.NewMemoryStorage(),
+		config:          conf,
+		serverProofPool: serverProofPool,
+		hdb:             hdb,
+		txsel:           txsel,
+		batchBuilder:    bb,
+		ethClient:       ethClient,
+		ethTxStore:      memory.NewMemoryStorage(),
 	}
 	return &c
 }
@@ -97,13 +103,14 @@ func (c *Coordinator) ForgeLoopFn(outBatchCh chan *BatchInfo, stopCh chan bool) 
 	// 0. If there's an available server proof: Start pipeline for batchNum = batchNum + 1.
 	// non-blocking call, returns nil if a server proof is
 	// not available, or non-nil otherwise.
-	serverProofInfo, err := c.serverProofPool.GetNextAvailable(stopCh)
+	serverProof, err := c.serverProofPool.Get(stopCh)
 	if err != nil {
 		return true, err
 	}
+	log.Debugw("got serverProof", "server", serverProof)
 
 	log.Debugw("start forge")
-	batchInfo, err := c.forge(serverProofInfo)
+	batchInfo, err := c.forge(serverProof)
 	if err != nil {
 		log.Errorw("forge", "error", err)
 		return true, err
@@ -123,7 +130,7 @@ func (c *Coordinator) GetProofCallForgeLoopFn(inBatchCh, outBatchCh chan *BatchI
 		return ErrStop
 	case batchInfo := <-inBatchCh:
 		log.Debugw("start getProofCallForge", "batchNum", batchInfo.batchNum)
-		if err := c.getProofCallForge(batchInfo); err != nil {
+		if err := c.getProofCallForge(batchInfo, stopCh); err != nil {
 			return err
 		}
 		log.Debugw("end getProofCallForge", "batchNum", batchInfo.batchNum)
@@ -150,7 +157,7 @@ func (c *Coordinator) ForgeCallConfirmLoopFn(inBatchCh chan *BatchInfo, stopCh c
 	return nil
 }
 
-func (c *Coordinator) forge(serverProofInfo *ServerProofInfo) (*BatchInfo, error) {
+func (c *Coordinator) forge(serverProof ServerProofInterface) (*BatchInfo, error) {
 	// remove transactions from the pool that have been there for too long
 	err := c.purgeRemoveByTimeout()
 	if err != nil {
@@ -158,7 +165,7 @@ func (c *Coordinator) forge(serverProofInfo *ServerProofInfo) (*BatchInfo, error
 	}
 
 	c.batchNum = c.batchNum + 1
-	batchInfo := NewBatchInfo(c.batchNum, serverProofInfo) // to accumulate metadata of the batch
+	batchInfo := NewBatchInfo(c.batchNum, serverProof) // to accumulate metadata of the batch
 
 	var poolL2Txs []*common.PoolL2Tx
 	// var feesInfo
@@ -216,9 +223,9 @@ func (c *Coordinator) forge(serverProofInfo *ServerProofInfo) (*BatchInfo, error
 }
 
 // getProofCallForge gets the generated zkProof & sends it to the SmartContract
-func (c *Coordinator) getProofCallForge(batchInfo *BatchInfo) error {
-	serverProofInfo := batchInfo.serverProof
-	proof, err := serverProofInfo.GetProof() // blocking call, until not resolved don't continue. Returns when the proof server has calculated the proof
+func (c *Coordinator) getProofCallForge(batchInfo *BatchInfo, stopCh chan bool) error {
+	serverProof := batchInfo.serverProof
+	proof, err := serverProof.GetProof(stopCh) // blocking call, until not resolved don't continue. Returns when the proof server has calculated the proof
 	if err != nil {
 		return err
 	}
@@ -254,26 +261,26 @@ func (c *Coordinator) forgeCallConfirm(batchInfo *BatchInfo) error {
 }
 
 func (c *Coordinator) handleReorg() error {
-	return nil
+	return nil // TODO
 }
 
 // isForgeSequence returns true if the node is the Forger in the current ethereum block
 func (c *Coordinator) isForgeSequence() bool {
-	return c.isForgeSeq
+	return c.isForgeSeq // TODO
 }
 
 func (c *Coordinator) purgeRemoveByTimeout() error {
-	return nil
+	return nil // TODO
 }
 
 func (c *Coordinator) purgeInvalidDueToL2TxsSelection(l2Txs []*common.PoolL2Tx) error {
-	return nil
+	return nil // TODO
 }
 
 func (c *Coordinator) shouldL1L2Batch() bool {
-	return false
+	return false // TODO
 }
 
 func (c *Coordinator) prepareForgeBatchArgs(batchInfo *BatchInfo) *eth.RollupForgeBatchArgs {
-	return nil
+	return nil // TODO
 }

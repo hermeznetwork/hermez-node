@@ -86,27 +86,31 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			cfg.PostgreSQL.Host,
 			cfg.PostgreSQL.User,
 			cfg.PostgreSQL.Password,
-			cfg.L2DB.Name,
-			cfg.L2DB.SafetyPeriod,
-			cfg.L2DB.MaxTxs,
-			cfg.L2DB.TTL.Duration,
+			coordCfg.L2DB.Name,
+			coordCfg.L2DB.SafetyPeriod,
+			coordCfg.L2DB.MaxTxs,
+			coordCfg.L2DB.TTL.Duration,
 		)
 		if err != nil {
 			return nil, err
 		}
 		// TODO: Get (maxL1UserTxs, maxL1OperatorTxs, maxTxs) from the smart contract
-		txSelector, err := txselector.NewTxSelector(cfg.TxSelector.Path, stateDB, l2DB, 10, 10, 10)
+		txSelector, err := txselector.NewTxSelector(coordCfg.TxSelector.Path, stateDB, l2DB, 10, 10, 10)
 		if err != nil {
 			return nil, err
 		}
 		// TODO: Get (configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) from smart contract
 		nLevels := uint64(32) //nolint:gomnd
-		batchBuilder, err := batchbuilder.NewBatchBuilder(cfg.BatchBuilder.Path, stateDB, nil, 0, nLevels)
+		batchBuilder, err := batchbuilder.NewBatchBuilder(coordCfg.BatchBuilder.Path, stateDB, nil, 0, nLevels)
 		if err != nil {
 			return nil, err
 		}
 		if err != nil {
 			return nil, err
+		}
+		serverProofs := make([]coordinator.ServerProofInterface, len(coordCfg.ServerProofs))
+		for i, serverProofCfg := range coordCfg.ServerProofs {
+			serverProofs[i] = coordinator.NewServerProof(serverProofCfg.URL)
 		}
 		coord = coordinator.NewCoordinator(
 			coordinator.Config{
@@ -115,6 +119,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			historyDB,
 			txSelector,
 			batchBuilder,
+			serverProofs,
 			client,
 		)
 	}

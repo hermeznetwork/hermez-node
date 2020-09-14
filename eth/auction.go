@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	HermezAuctionProtocol "github.com/hermeznetwork/hermez-node/eth/contracts/auction"
+	"github.com/hermeznetwork/hermez-node/log"
 )
 
 // AuctionConstants are the constants of the Rollup Smart Contract
@@ -35,6 +36,16 @@ type SlotState struct {
 	Fulfilled    bool
 }
 
+// NewSlotState returns an empty SlotState
+func NewSlotState() *SlotState {
+	return &SlotState{
+		Forger:       ethCommon.Address{},
+		BidAmount:    big.NewInt(0),
+		ClosedMinBid: big.NewInt(0),
+		Fulfilled:    false,
+	}
+}
+
 // Coordinator is the details of the Coordinator identified by the forger address
 type Coordinator struct {
 	WithdrawalAddress ethCommon.Address
@@ -48,15 +59,15 @@ type AuctionVariables struct {
 	// Boot Coordinator Address
 	BootCoordinator ethCommon.Address
 	// The minimum bid value in a series of 6 slots
-	MinBidEpoch [6]*big.Int
+	DefaultSlotSetBid [6]*big.Int
 	// Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
 	ClosedAuctionSlots uint16
 	// Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )
 	OpenAuctionSlots uint16
 	// How the HEZ tokens deposited by the slot winner are distributed (Burn: 40% - Donation: 40% - HGT: 20%)
-	AllocationRatio [3]uint8
+	AllocationRatio [3]uint16
 	// Minimum outbid (percentage) over the previous one to consider it valid
-	Outbidding uint8
+	Outbidding uint16
 	// Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before
 	SlotDeadline uint8
 }
@@ -90,7 +101,7 @@ type AuctionEventNewClosedAuctionSlots struct {
 
 // AuctionEventNewOutbidding is an event of the Auction Smart Contract
 type AuctionEventNewOutbidding struct {
-	NewOutbidding uint8
+	NewOutbidding uint16
 }
 
 // AuctionEventNewDonationAddress is an event of the Auction Smart Contract
@@ -110,7 +121,7 @@ type AuctionEventNewOpenAuctionSlots struct {
 
 // AuctionEventNewAllocationRatio is an event of the Auction Smart Contract
 type AuctionEventNewAllocationRatio struct {
-	NewAllocationRatio [3]uint8
+	NewAllocationRatio [3]uint16
 }
 
 // AuctionEventNewCoordinator is an event of the Auction Smart Contract
@@ -136,9 +147,9 @@ type AuctionEventNewForgeAllocated struct {
 	GovernanceAmount *big.Int
 }
 
-// AuctionEventNewMinBidEpoch is an event of the Auction Smart Contract
-type AuctionEventNewMinBidEpoch struct {
-	SlotEpoch        int64
+// AuctionEventNewDefaultSlotSetBid is an event of the Auction Smart Contract
+type AuctionEventNewDefaultSlotSetBid struct {
+	SlotSet          int64
 	NewInitialMinBid *big.Int
 }
 
@@ -167,7 +178,7 @@ type AuctionEvents struct { //nolint:structcheck
 	NewCoordinator        []AuctionEventNewCoordinator
 	CoordinatorUpdated    []AuctionEventCoordinatorUpdated
 	NewForgeAllocated     []AuctionEventNewForgeAllocated
-	NewMinBidEpoch        []AuctionEventNewMinBidEpoch
+	NewDefaultSlotSetBid  []AuctionEventNewDefaultSlotSetBid
 	NewForge              []AuctionEventNewForge
 	HEZClaimed            []AuctionEventHEZClaimed
 }
@@ -186,7 +197,7 @@ func NewAuctionEvents() AuctionEvents {
 		NewCoordinator:        make([]AuctionEventNewCoordinator, 0),
 		CoordinatorUpdated:    make([]AuctionEventCoordinatorUpdated, 0),
 		NewForgeAllocated:     make([]AuctionEventNewForgeAllocated, 0),
-		NewMinBidEpoch:        make([]AuctionEventNewMinBidEpoch, 0),
+		NewDefaultSlotSetBid:  make([]AuctionEventNewDefaultSlotSetBid, 0),
 		NewForge:              make([]AuctionEventNewForge, 0),
 		HEZClaimed:            make([]AuctionEventHEZClaimed, 0),
 	}
@@ -205,15 +216,15 @@ type AuctionInterface interface {
 	AuctionGetOpenAuctionSlots() (uint16, error)
 	AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint16) (*types.Transaction, error)
 	AuctionGetClosedAuctionSlots() (uint16, error)
-	AuctionSetOutbidding(newOutbidding uint8) (*types.Transaction, error)
-	AuctionGetOutbidding() (uint8, error)
-	AuctionSetAllocationRatio(newAllocationRatio [3]uint8) (*types.Transaction, error)
-	AuctionGetAllocationRatio() ([3]uint8, error)
+	AuctionSetOutbidding(newOutbidding uint16) (*types.Transaction, error)
+	AuctionGetOutbidding() (uint16, error)
+	AuctionSetAllocationRatio(newAllocationRatio [3]uint16) (*types.Transaction, error)
+	AuctionGetAllocationRatio() ([3]uint16, error)
 	AuctionSetDonationAddress(newDonationAddress ethCommon.Address) (*types.Transaction, error)
 	AuctionGetDonationAddress() (*ethCommon.Address, error)
 	AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address) (*types.Transaction, error)
 	AuctionGetBootCoordinator() (*ethCommon.Address, error)
-	AuctionChangeEpochMinBid(slotEpoch int64, newInitialMinBid *big.Int) (*types.Transaction, error)
+	AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid *big.Int) (*types.Transaction, error)
 
 	// Coordinator Management
 	AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL string) (*types.Transaction, error)
@@ -223,13 +234,13 @@ type AuctionInterface interface {
 	// Slot Info
 	AuctionGetCurrentSlotNumber() (int64, error)
 	AuctionGetMinBidBySlot(slot int64) (*big.Int, error)
-	AuctionGetMinBidEpoch(epoch uint8) (*big.Int, error)
+	AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, error)
 
 	// Bidding
 	// AuctionTokensReceived(operator, from, to ethCommon.Address, amount *big.Int,
 	// 	userData, operatorData []byte) error // Only called from another smart contract
 	AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (*types.Transaction, error)
-	AuctionMultiBid(startingSlot int64, endingSlot int64, slotEpoch [6]bool,
+	AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool,
 		maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error)
 
 	// Forge
@@ -267,6 +278,7 @@ func NewAuctionClient(client *EthereumClient, address ethCommon.Address) *Auctio
 
 // AuctionSetSlotDeadline is the interface to call the smart contract function
 func (c *AuctionClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -288,6 +300,7 @@ func (c *AuctionClient) AuctionGetSlotDeadline() (uint8, error) {
 
 // AuctionSetOpenAuctionSlots is the interface to call the smart contract function
 func (c *AuctionClient) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -309,6 +322,7 @@ func (c *AuctionClient) AuctionGetOpenAuctionSlots() (uint16, error) {
 
 // AuctionSetClosedAuctionSlots is the interface to call the smart contract function
 func (c *AuctionClient) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint16) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -329,49 +343,58 @@ func (c *AuctionClient) AuctionGetClosedAuctionSlots() (uint16, error) {
 }
 
 // AuctionSetOutbidding is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint8) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint16) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionGetOutbidding is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetOutbidding() (uint8, error) {
-	var outbidding uint8
-	if err := c.client.Call(func(ec *ethclient.Client) error {
-		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
-		if err != nil {
-			return err
-		}
-		outbidding, err = auction.GetOutbidding(nil)
-		return err
-	}); err != nil {
-		return 0, err
-	}
-	return outbidding, nil
+func (c *AuctionClient) AuctionGetOutbidding() (uint16, error) {
+	// TODO: Update
+	// var outbidding uint8
+	// if err := c.client.Call(func(ec *ethclient.Client) error {
+	// 	auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	outbidding, err = auction.GetOutbidding(nil)
+	// 	return err
+	// }); err != nil {
+	// 	return 0, err
+	// }
+	// return outbidding, nil
+	log.Error("TODO")
+	return 0, errTODO
 }
 
 // AuctionSetAllocationRatio is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetAllocationRatio(newAllocationRatio [3]uint8) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionGetAllocationRatio is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetAllocationRatio() ([3]uint8, error) {
-	var allocationRation [3]uint8
-	if err := c.client.Call(func(ec *ethclient.Client) error {
-		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
-		if err != nil {
-			return err
-		}
-		allocationRation, err = auction.GetAllocationRatio(nil)
-		return err
-	}); err != nil {
-		return [3]uint8{}, err
-	}
-	return allocationRation, nil
+func (c *AuctionClient) AuctionGetAllocationRatio() ([3]uint16, error) {
+	// TODO: Update
+	// var allocationRation [3]uint8
+	// if err := c.client.Call(func(ec *ethclient.Client) error {
+	// 	auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	allocationRation, err = auction.GetAllocationRatio(nil)
+	// 	return err
+	// }); err != nil {
+	// 	return [3]uint8{}, err
+	// }
+	// return allocationRation, nil
+	log.Error("TODO")
+	return [3]uint16{}, errTODO
 }
 
 // AuctionSetDonationAddress is the interface to call the smart contract function
 func (c *AuctionClient) AuctionSetDonationAddress(newDonationAddress ethCommon.Address) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -393,6 +416,7 @@ func (c *AuctionClient) AuctionGetDonationAddress() (*ethCommon.Address, error) 
 
 // AuctionSetBootCoordinator is the interface to call the smart contract function
 func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -412,23 +436,27 @@ func (c *AuctionClient) AuctionGetBootCoordinator() (*ethCommon.Address, error) 
 	return &bootCoordinator, nil
 }
 
-// AuctionChangeEpochMinBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionChangeEpochMinBid(slotEpoch int64, newInitialMinBid *big.Int) (*types.Transaction, error) {
+// AuctionChangeDefaultSlotSetBid is the interface to call the smart contract function
+func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid *big.Int) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionRegisterCoordinator is the interface to call the smart contract function
 func (c *AuctionClient) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL string) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionIsRegisteredCoordinator is the interface to call the smart contract function
 func (c *AuctionClient) AuctionIsRegisteredCoordinator(forgerAddress ethCommon.Address) (bool, error) {
+	log.Error("TODO")
 	return false, errTODO
 }
 
 // AuctionUpdateCoordinatorInfo is the interface to call the smart contract function
 func (c *AuctionClient) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address, newWithdrawAddress ethCommon.Address, newURL string) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -466,20 +494,24 @@ func (c *AuctionClient) AuctionGetMinBidBySlot(slot int64) (*big.Int, error) {
 	return minBid, nil
 }
 
-// AuctionGetMinBidEpoch is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetMinBidEpoch(epoch uint8) (*big.Int, error) {
-	var minBidEpoch *big.Int
-	if err := c.client.Call(func(ec *ethclient.Client) error {
-		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
-		if err != nil {
-			return err
-		}
-		minBidEpoch, err = auction.GetMinBidEpoch(nil, epoch)
-		return err
-	}); err != nil {
-		return big.NewInt(0), err
-	}
-	return minBidEpoch, nil
+// AuctionGetDefaultSlotSetBid is the interface to call the smart contract function
+func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, error) {
+	// TODO: Update
+	// 	var DefaultSlotSetBid *big.Int
+	// 	if err := c.client.Call(func(ec *ethclient.Client) error {
+	// 		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		defaultSlotSetBid, err = auction.GetDefaultSlotSetBid(nil, slotSet)
+	// 		return err
+	// 	}); err != nil {
+	// 		return big.NewInt(0), err
+	// 	}
+	// 	return defaultSlotSetBid, nil
+
+	log.Error("TODO")
+	return nil, errTODO
 }
 
 // AuctionTokensReceived is the interface to call the smart contract function
@@ -489,16 +521,19 @@ func (c *AuctionClient) AuctionGetMinBidEpoch(epoch uint8) (*big.Int, error) {
 
 // AuctionBid is the interface to call the smart contract function
 func (c *AuctionClient) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionMultiBid(startingSlot int64, endingSlot int64, slotEpoch [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionCanForge is the interface to call the smart contract function
 func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address) (bool, error) {
+	log.Error("TODO")
 	return false, errTODO
 }
 
@@ -509,15 +544,18 @@ func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address) (bool, error) 
 
 // AuctionClaimHEZ is the interface to call the smart contract function
 func (c *AuctionClient) AuctionClaimHEZ() (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionConstants returns the Constants of the Auction Smart Contract
 func (c *AuctionClient) AuctionConstants() (*AuctionConstants, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // AuctionEventsByBlock returns the events in a block that happened in the Auction Smart Contract
 func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error) {
+	log.Error("TODO")
 	return nil, nil, errTODO
 }

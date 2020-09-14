@@ -126,7 +126,9 @@ func TestCoordinator(t *testing.T) {
 
 	conf := Config{}
 	hdb := &historydb.HistoryDB{}
-	c := NewCoordinator(conf, hdb, txsel, bb, &eth.Client{})
+	serverProofs := []ServerProofInterface{&ServerProof{}, &ServerProof{}}
+	ethClient := &eth.Client{}
+	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient)
 	cn := NewCoordNode(c)
 	cn.Start()
 	time.Sleep(1 * time.Second)
