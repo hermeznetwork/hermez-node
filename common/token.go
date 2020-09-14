@@ -9,13 +9,15 @@ import (
 
 // Token is a struct that represents an Ethereum token that is supported in Hermez network
 type Token struct {
-	TokenID     TokenID
-	EthAddr     ethCommon.Address
-	Name        string
-	Symbol      string
-	Decimals    uint64
-	EthTxHash   ethCommon.Hash // Ethereum TxHash in which this token was registered
-	EthBlockNum uint64         // Ethereum block number in which this token was registered
+	TokenID     TokenID           `meddler:"token_id"`
+	EthBlockNum int64             `meddler:"eth_block_num"` // Ethereum block number in which this token was registered
+	EthAddr     ethCommon.Address `meddler:"eth_addr"`
+	Name        string            `meddler:"name"`
+	Symbol      string            `meddler:"symbol"`
+	Decimals    uint64            `meddler:"decimals"`
+	USD         float32           `meddler:"usd,zeroisnull"`
+	USDUpdate   time.Time         `meddler:"usd_update,utctimez"`
+	EthTxHash   ethCommon.Hash    `meddler:"-"` // Ethereum TxHash in which this token was registered
 }
 
 // TokenInfo provides the price of the token in USD

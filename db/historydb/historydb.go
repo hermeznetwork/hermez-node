@@ -47,6 +47,19 @@ func (hdb *HistoryDB) AddBlock(block *common.Block) error {
 	return meddler.Insert(hdb.db, "block", block)
 }
 
+// AddBlocks inserts blocks into the DB
+func (hdb *HistoryDB) AddBlocks(blocks []common.Block) error {
+	return db.BulkInsert(
+		hdb.db,
+		`INSERT INTO block (
+			eth_block_num,
+			timestamp,
+			hash
+		) VALUES %s;`,
+		blocks[:],
+	)
+}
+
 // GetBlock retrieve a block from the DB, given a block number
 func (hdb *HistoryDB) GetBlock(blockNum int64) (*common.Block, error) {
 	block := &common.Block{}
@@ -77,8 +90,8 @@ func (hdb *HistoryDB) GetLastBlock() (*common.Block, error) {
 	return block, err
 }
 
-// addBatches insert Bids into the DB
-func (hdb *HistoryDB) addBatches(batches []common.Batch) error {
+// AddBatches insert Bids into the DB
+func (hdb *HistoryDB) AddBatches(batches []common.Batch) error {
 	return db.BulkInsert(
 		hdb.db,
 		`INSERT INTO batch (
@@ -129,7 +142,7 @@ func (hdb *HistoryDB) Reorg(lastValidBlock int64) error {
 
 // SyncRollup stores all the data that can be changed / added on a block in the Rollup SC
 func (hdb *HistoryDB) SyncRollup(
-	blockNum int64,
+	blockNum uint64,
 	l1txs []common.L1Tx,
 	l2txs []common.L2Tx,
 	registeredAccounts []common.Account,
@@ -140,7 +153,7 @@ func (hdb *HistoryDB) SyncRollup(
 	vars *common.RollupVars,
 ) error {
 	// TODO: make all in a single DB commit
-	if err := hdb.addBatches(batches); err != nil {
+	if err := hdb.AddBatches(batches); err != nil {
 		return err
 	}
 	return nil
@@ -148,7 +161,7 @@ func (hdb *HistoryDB) SyncRollup(
 
 // SyncPoD stores all the data that can be changed / added on a block in the PoD SC
 func (hdb *HistoryDB) SyncPoD(
-	blockNum int64,
+	blockNum uint64,
 	bids []common.Bid,
 	coordinators []common.Coordinator,
 	vars *common.AuctionVars,
@@ -166,15 +179,138 @@ func (hdb *HistoryDB) addBids(bids []common.Bid) error {
 	)
 }
 
-// GetBidsBySlot return the bids for a specific slot
-func (hdb *HistoryDB) GetBidsBySlot(slotNum common.SlotNum) ([]*common.Bid, error) {
+// GetBids return the bids for a specific slot
+func (hdb *HistoryDB) GetBids() ([]*common.Bid, error) {
 	var bids []*common.Bid
 	err := meddler.QueryAll(
 		hdb.db, &bids,
-		"SELECT * FROM bid WHERE $1 = slot_num;",
-		slotNum,
+		"SELECT * FROM bid;",
 	)
 	return bids, err
+}
+
+// AddToken insert a token into the DB
+func (hdb *HistoryDB) AddToken(token *common.Token) error {
+	return meddler.Insert(hdb.db, "token", token)
+}
+
+// AddTokens insert tokens into the DB
+func (hdb *HistoryDB) AddTokens(tokens []common.Token) error {
+	return db.BulkInsert(
+		hdb.db,
+		`INSERT INTO token (
+			token_id,
+			eth_block_num,
+			eth_addr,
+			name,
+			symbol,
+			decimals,
+			usd,
+			usd_update
+		) VALUES %s;`,
+		tokens[:],
+	)
+}
+
+// UpdateTokenValue updates the USD value of a token
+func (hdb *HistoryDB) UpdateTokenValue(tokenID common.TokenID, value float32) error {
+	_, err := hdb.db.Exec(
+		"UPDATE token SET usd = $1 WHERE token_id = $2;",
+		value, tokenID,
+	)
+	return err
+}
+
+// GetTokens returns a list of tokens from the DB
+func (hdb *HistoryDB) GetTokens() ([]*common.Token, error) {
+	var tokens []*common.Token
+	err := meddler.QueryAll(
+		hdb.db, &tokens,
+		"SELECT * FROM token ORDER BY token_id;",
+	)
+	return tokens, err
+}
+
+// AddAccounts insert accounts into the DB
+func (hdb *HistoryDB) AddAccounts(accounts []common.Account) error {
+	return db.BulkInsert(
+		hdb.db,
+		`INSERT INTO account (
+			idx,
+			token_id,
+			batch_num,
+			bjj,
+			eth_addr
+		) VALUES %s;`,
+		accounts[:],
+	)
+}
+
+// GetAccounts returns a list of accounts from the DB
+func (hdb *HistoryDB) GetAccounts() ([]*common.Account, error) {
+	var accs []*common.Account
+	err := meddler.QueryAll(
+		hdb.db, &accs,
+		"SELECT * FROM account ORDER BY idx;",
+	)
+	return accs, err
+}
+
+// AddL1Txs inserts L1 txs to the DB
+func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error {
+	txs := []common.Tx{}
+	for _, tx := range l1txs {
+		txs = append(txs, *tx.Tx())
+	}
+	return hdb.AddTxs(txs)
+}
+
+// AddL2Txs inserts L2 txs to the DB
+func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error {
+	txs := []common.Tx{}
+	for _, tx := range l2txs {
+		txs = append(txs, *tx.Tx())
+	}
+	return hdb.AddTxs(txs)
+}
+
+// AddTxs insert L1 txs into the DB
+func (hdb *HistoryDB) AddTxs(txs []common.Tx) error {
+	return db.BulkInsert(
+		hdb.db,
+		`INSERT INTO tx (
+			is_l1,
+			id,
+			type,
+			position,
+			from_idx,
+			to_idx,
+			amount,
+			amount_f,
+			token_id,
+			value_usd,
+			batch_num,
+			eth_block_num,
+			to_forge_l1_txs_num,
+			user_origin,
+			from_eth_addr,
+			from_bjj,
+			load_amount,
+			fee,
+			nonce
+		) VALUES %s;`,
+		txs[:],
+	)
+}
+
+// GetTxs returns a list of txs from the DB
+func (hdb *HistoryDB) GetTxs() ([]*common.Tx, error) {
+	var txs []*common.Tx
+	err := meddler.QueryAll(
+		hdb.db, &txs,
+		"SELECT * FROM tx ORDER BY id;",
+	)
+	return txs, err
 }
 
 // Close frees the resources used by HistoryDB

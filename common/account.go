@@ -23,11 +23,13 @@ const (
 
 // Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
 type Account struct {
-	TokenID   TokenID
-	Nonce     Nonce    // max of 40 bits used
-	Balance   *big.Int // max of 192 bits used
-	PublicKey *babyjub.PublicKey
-	EthAddr   ethCommon.Address
+	Idx       Idx                `meddler:"idx"`
+	TokenID   TokenID            `meddler:"token_id"`
+	BatchNum  BatchNum           `meddler:"batch_num"`
+	PublicKey *babyjub.PublicKey `meddler:"bjj"`
+	EthAddr   ethCommon.Address  `meddler:"eth_addr"`
+	Nonce     Nonce              `meddler:"-"` // max of 40 bits used
+	Balance   *big.Int           `meddler:"-"` // max of 192 bits used
 }
 
 func (a *Account) String() string {

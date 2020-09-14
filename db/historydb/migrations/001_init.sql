@@ -27,6 +27,7 @@ CREATE TABLE batch (
 
 CREATE TABLE exit_tree (
     batch_num BIGINT REFERENCES batch (batch_num) ON DELETE CASCADE,
+    withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
     account_idx BIGINT,
     merkle_proof BYTEA NOT NULL,
     balance NUMERIC NOT NULL,
@@ -34,17 +35,9 @@ CREATE TABLE exit_tree (
     PRIMARY KEY (batch_num, account_idx)
 );
 
-CREATE TABLE withdrawal (
-    batch_num BIGINT,
-    account_idx BIGINT,
-    eth_block_num BIGINT REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    FOREIGN KEY (batch_num, account_idx) REFERENCES exit_tree (batch_num, account_idx) ON DELETE CASCADE,
-    PRIMARY KEY (batch_num, account_idx)
-);
-
 CREATE TABLE bid (
     slot_num BIGINT NOT NULL,
-    bid_value BYTEA NOT NULL, -- (check if we can do a max(), if not add float for order purposes)
+    bid_value BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     forger_addr BYTEA NOT NULL, -- fake foreign key for coordinator
     PRIMARY KEY (slot_num, bid_value)
@@ -56,40 +49,111 @@ CREATE TABLE token (
     eth_addr BYTEA UNIQUE NOT NULL,
     name VARCHAR(20) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
-    decimals INT NOT NULL
+    decimals INT NOT NULL,
+    usd NUMERIC,
+    usd_update TIMESTAMP
 );
 
-CREATE TABLE l1tx (
-    tx_id BYTEA PRIMARY KEY,
-    to_forge_l1_txs_num BIGINT NOT NULL,
+-- +migrate StatementBegin
+CREATE FUNCTION set_token_usd_update() 
+    RETURNS TRIGGER 
+AS 
+$BODY$
+BEGIN
+    IF NEW."usd" IS NOT NULL AND NEW."usd_update" IS NULL THEN
+        NEW."usd_update" = timezone('utc', now());
+    END IF;
+    RETURN NEW;
+END;
+$BODY$
+LANGUAGE plpgsql;
+-- +migrate StatementEnd
+CREATE TRIGGER trigger_token_usd_update BEFORE UPDATE OR INSERT ON token
+FOR EACH ROW EXECUTE PROCEDURE set_token_usd_update();
+
+CREATE TABLE tx (
+    -- Generic TX
+    is_l1 BOOLEAN NOT NULL,
+    id BYTEA PRIMARY KEY,
+    type VARCHAR(40) NOT NULL,
     position INT NOT NULL,
-    user_origin BOOLEAN NOT NULL,
     from_idx BIGINT NOT NULL,
-    from_eth_addr BYTEA NOT NULL,
-    from_bjj BYTEA NOT NULL,
     to_idx BIGINT NOT NULL,
+    amount BYTEA NOT NULL,
+    amount_f NUMERIC NOT NULL,
     token_id INT NOT NULL REFERENCES token (token_id),
-    amount NUMERIC NOT NULL,
-    load_amount BYTEA NOT NULL,
+    value_usd NUMERIC, -- Value of the amount in USD at the moment the tx was inserted in the DB
+    batch_num BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL, -- Can be NULL in the case of L1 txs that are on the queue but not forged yet.
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    tx_type VARCHAR(40) NOT NULL
+    -- L1
+    to_forge_l1_txs_num BIGINT,
+    user_origin BOOLEAN,
+    from_eth_addr BYTEA,
+    from_bjj BYTEA,
+    load_amount BYTEA,
+    -- L2
+    fee INT,
+    nonce BIGINT
 );
 
-CREATE TABLE l2tx (
-    tx_id BYTEA PRIMARY KEY,
-    batch_num BIGINT NOT NULL REFERENCES batch (batch_num) ON DELETE CASCADE,
-    position INT NOT NULL,
-    from_idx BIGINT NOT NULL,
-    to_idx BIGINT NOT NULL,
-    amount NUMERIC NOT NULL,
-    fee INT NOT NULL,
-    nonce BIGINT NOT NULL,
-    tx_type VARCHAR(40) NOT NULL
-);
+-- +migrate StatementBegin
+CREATE FUNCTION set_tx()
+    RETURNS TRIGGER 
+AS 
+$BODY$
+BEGIN
+    -- Validate L1/L2 constrains
+    IF NEW.is_l1 AND (( -- L1 mandatory fields
+        NEW.user_origin IS NULL OR
+        NEW.from_eth_addr IS NULL OR
+        NEW.from_bjj IS NULL OR
+        NEW.load_amount IS NULL
+    ) OR (NOT NEW.user_origin AND NEW.batch_num IS NULL)) THEN -- If is Coordinator L1, must include batch_num
+        RAISE EXCEPTION 'Invalid L1 tx.';
+    ELSIF NOT NEW.is_l1 THEN
+        IF NEW.fee IS NULL THEN
+            NEW.fee = (SELECT 0);
+        END IF;
+        IF NEW.batch_num IS NULL OR NEW.nonce IS NULL THEN
+            RAISE EXCEPTION 'Invalid L2 tx.';
+        END IF;
+    END IF;
+    -- If is L2, add token_id
+    IF NEW.token_id IS NULL THEN
+        NEW."token_id" = (SELECT token_id FROM account WHERE idx = NEW."from_idx");
+    END IF;
+    -- Set value_usd
+    NEW."value_usd" = (SELECT usd * NEW.amount_f FROM token WHERE token_id = NEW.token_id);
+    RETURN NEW;
+END;
+$BODY$
+LANGUAGE plpgsql;
+-- +migrate StatementEnd
+CREATE TRIGGER trigger_set_tx BEFORE INSERT ON tx
+FOR EACH ROW EXECUTE PROCEDURE set_tx();
+
+-- +migrate StatementBegin
+CREATE FUNCTION forge_l1_user_txs() 
+    RETURNS TRIGGER 
+AS 
+$BODY$
+BEGIN
+    IF NEW.forge_l1_txs_num IS NOT NULL THEN
+        UPDATE tx 
+        SET batch_num = NEW.batch_num
+        WHERE user_origin AND NEW.forge_l1_txs_num = to_forge_l1_txs_num;
+    END IF;
+    RETURN NEW;
+END;
+$BODY$
+LANGUAGE plpgsql;
+-- +migrate StatementEnd
+CREATE TRIGGER trigger_forge_l1_txs AFTER INSERT ON batch
+FOR EACH ROW EXECUTE PROCEDURE forge_l1_user_txs();
 
 CREATE TABLE account (
     idx BIGINT PRIMARY KEY,
-    token_id INT NOT NULL REFERENCES token (token_id),
+    token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
     batch_num BIGINT NOT NULL REFERENCES batch (batch_num) ON DELETE CASCADE,
     bjj BYTEA NOT NULL,
     eth_addr BYTEA NOT NULL
@@ -113,7 +177,7 @@ CREATE TABLE consensus_vars (
     outbidding INT NOT NULL,
     donation_address BYTEA NOT NULL,
     governance_address BYTEA NOT NULL,
-    allocation_ratio vARCHAR(200)
+    allocation_ratio VARCHAR(200)
 );
 
 -- +migrate Down
