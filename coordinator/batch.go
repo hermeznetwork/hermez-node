@@ -52,30 +52,3 @@ func (bi *BatchInfo) SetServerProof(serverProof ServerProofInterface) {
 func (bi *BatchInfo) SetProof(proof *Proof) {
 	bi.proof = proof
 }
-
-// // BatchQueue implements a FIFO queue of BatchInfo
-// type BatchQueue struct {
-// 	queue []*BatchInfo
-// }
-//
-// // NewBatchQueue returns a new *BatchQueue
-// func NewBatchQueue() *BatchQueue {
-// 	return &BatchQueue{
-// 		queue: []*BatchInfo{},
-// 	}
-// }
-//
-// // Push adds the given BatchInfo to the BatchQueue
-// func (bq *BatchQueue) Push(b *BatchInfo) {
-// 	bq.queue = append(bq.queue, b)
-// }
-//
-// // Pop pops the first BatchInfo from the BatchQueue
-// func (bq *BatchQueue) Pop() *BatchInfo {
-// 	if len(bq.queue) == 0 {
-// 		return nil
-// 	}
-// 	b := bq.queue[0]
-// 	bq.queue = bq.queue[1:]
-// 	return b
-// }

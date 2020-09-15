@@ -10,8 +10,8 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
-	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,7 +77,7 @@ func (cn *CoordNode) Start() {
 				} else if err != nil {
 					log.Errorw("CoordNode ForgeLoopFn", "error", err)
 				} else if !forge {
-					time.Sleep(500 * time.Millisecond)
+					time.Sleep(200 * time.Millisecond)
 				}
 			}
 		}
@@ -121,13 +121,28 @@ func (cn *CoordNode) Stop() {
 	cn.stopForgeCallConfirm <- true
 }
 
+type timer struct {
+	time int64
+}
+
+func (t *timer) Time() int64 {
+	currentTime := t.time
+	t.time++
+	return currentTime
+}
+
 func TestCoordinator(t *testing.T) {
 	txsel, bb := newTestModules(t)
 
 	conf := Config{}
 	hdb := &historydb.HistoryDB{}
 	serverProofs := []ServerProofInterface{&ServerProof{}, &ServerProof{}}
-	ethClient := &eth.Client{}
+
+	var timer timer
+	ethClientSetup := test.NewClientSetupExample()
+	addr := ethClientSetup.AuctionVariables.BootCoordinator
+	ethClient := test.NewClient(true, &timer, addr, ethClientSetup)
+
 	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient)
 	cn := NewCoordNode(c)
 	cn.Start()
@@ -135,18 +150,24 @@ func TestCoordinator(t *testing.T) {
 
 	// simulate forgeSequence time
 	log.Info("simulate entering in forge time")
+	c.rw.Lock()
 	c.isForgeSeq = true
+	c.rw.Unlock()
 	time.Sleep(1 * time.Second)
 
 	// simulate going out from forgeSequence
 	log.Info("simulate going out from forge time")
+	c.rw.Lock()
 	c.isForgeSeq = false
+	c.rw.Unlock()
 	time.Sleep(1 * time.Second)
 
 	// simulate entering forgeSequence time again
 	log.Info("simulate entering in forge time again")
+	c.rw.Lock()
 	c.isForgeSeq = true
-	time.Sleep(1 * time.Second)
+	c.rw.Unlock()
+	time.Sleep(2 * time.Second)
 
 	// simulate stopping forgerLoop by channel
 	log.Info("simulate stopping forgerLoop by closing coordinator stopch")
