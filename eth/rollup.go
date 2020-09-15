@@ -91,9 +91,9 @@ type RollupState struct {
 
 // RollupEventL1UserTx is an event of the Rollup Smart Contract
 type RollupEventL1UserTx struct {
-	L1Tx             common.L1Tx
-	QueueIndex       *big.Int
-	TransactionIndex *big.Int
+	L1Tx            common.L1Tx
+	ToForgeL1TxsNum int64 // QueueIndex       *big.Int
+	Position        int   // TransactionIndex *big.Int
 }
 
 // RollupEventAddToken is an event of the Rollup Smart Contract

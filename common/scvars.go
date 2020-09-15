@@ -2,6 +2,7 @@ package common
 
 import (
 	"math/big"
+	"time"
 
 	eth "github.com/ethereum/go-ethereum/common"
 )
@@ -28,6 +29,16 @@ type AuctionVars struct {
 	DonationAddress   eth.Address
 	GovernanceAddress eth.Address
 	AllocationRatio   AllocationRatio
+}
+
+// WithdrawalDelayerVars contains the Withdrawal Delayer smart contract variables
+type WithdrawalDelayerVars struct {
+	HermezRollupAddress        eth.Address
+	HermezGovernanceDAOAddress eth.Address
+	WhiteHackGroupAddress      eth.Address
+	WithdrawalDelay            uint
+	EmergencyModeStartingTime  time.Time
+	EmergencyModeEnabled       bool
 }
 
 // MinBidSlots TODO
