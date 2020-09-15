@@ -32,12 +32,23 @@ func TestL1TxCodec(t *testing.T) {
 	expected, err := utils.HexDecode("c58d29fa6e86e4fae04ddced660d45bcf3cb237056ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c00000002000200010000000500000003")
 	require.Nil(t, err)
 
-	encodedData := l1Tx.Bytes(32)
+	encodedData, err := l1Tx.Bytes(32)
+	require.Nil(t, err)
 	assert.Equal(t, expected, encodedData)
 
 	decodedData, err := L1TxFromBytes(encodedData)
 	require.Nil(t, err)
+	assert.Equal(t, l1Tx, *decodedData)
 
-	encodedData2 := decodedData.Bytes(32)
+	encodedData2, err := decodedData.Bytes(32)
+	require.Nil(t, err)
 	assert.Equal(t, encodedData, encodedData2)
+
+	// expect error if length!=68
+	_, err = L1TxFromBytes(encodedData[:66])
+	require.NotNil(t, err)
+	_, err = L1TxFromBytes([]byte{})
+	require.NotNil(t, err)
+	_, err = L1TxFromBytes(nil)
+	require.NotNil(t, err)
 }

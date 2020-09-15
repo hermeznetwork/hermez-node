@@ -1,18 +1,17 @@
 package common
 
 import (
+	"fmt"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 const (
-	fromBJJCompressedB = 256
-	fromEthAddrB       = 160
-	f16B               = 16
-	tokenIDB           = 32
-	cidXB              = 32
+	// L1TxBytesLen is the length of the byte array that represents the L1Tx
+	L1TxBytesLen = 68
 )
 
 // L1Tx is a struct that represents a L1 tx
@@ -64,69 +63,57 @@ func (tx *L1Tx) Tx() *Tx {
 }
 
 // Bytes encodes a L1Tx into []byte
-func (tx *L1Tx) Bytes(nLevels int) []byte {
-	res := big.NewInt(0)
-	res = res.Add(res, big.NewInt(0).Or(big.NewInt(0), tx.ToIdx.BigInt()))
-	res = res.Add(res, big.NewInt(0).Lsh(big.NewInt(0).Or(big.NewInt(0), big.NewInt(int64(tx.TokenID))), uint(nLevels)))
-	res = res.Add(res, big.NewInt(0).Lsh(big.NewInt(0).Or(big.NewInt(0), tx.Amount), uint(nLevels+tokenIDB)))
-	res = res.Add(res, big.NewInt(0).Lsh(big.NewInt(0).Or(big.NewInt(0), tx.LoadAmount), uint(nLevels+tokenIDB+f16B)))
-	res = res.Add(res, big.NewInt(0).Lsh(big.NewInt(0).Or(big.NewInt(0), tx.FromIdx.BigInt()), uint(nLevels+tokenIDB+2*f16B)))
-
-	fromBJJ := big.NewInt(0)
-	fromBJJ.SetString(tx.FromBJJ.String(), 16)
-	fromBJJCompressed := big.NewInt(0).Or(big.NewInt(0), fromBJJ)
-	res = res.Add(res, big.NewInt(0).Lsh(fromBJJCompressed, uint(2*nLevels+tokenIDB+2*f16B)))
-
-	fromEthAddr := big.NewInt(0).Or(big.NewInt(0), tx.FromEthAddr.Hash().Big())
-	res = res.Add(res, big.NewInt(0).Lsh(fromEthAddr, uint(fromBJJCompressedB+2*nLevels+tokenIDB+2*f16B)))
-
-	return res.Bytes()
+func (tx *L1Tx) Bytes(nLevels int) ([]byte, error) {
+	var b [68]byte
+	copy(b[0:4], tx.ToIdx.Bytes())
+	copy(b[4:8], tx.TokenID.Bytes())
+	amountFloat16, err := utils.NewFloat16(tx.Amount)
+	if err != nil {
+		return nil, err
+	}
+	copy(b[8:10], amountFloat16.Bytes())
+	loadAmountFloat16, err := utils.NewFloat16(tx.LoadAmount)
+	if err != nil {
+		return nil, err
+	}
+	copy(b[10:12], loadAmountFloat16.Bytes())
+	copy(b[12:16], tx.FromIdx.Bytes())
+	pkComp := tx.FromBJJ.Compress()
+	copy(b[16:48], SwapEndianness(pkComp[:]))
+	copy(b[48:68], SwapEndianness(tx.FromEthAddr.Bytes()))
+	return SwapEndianness(b[:]), nil
 }
 
 // L1TxFromBytes decodes a L1Tx from []byte
-func L1TxFromBytes(l1TxEncoded []byte) (*L1Tx, error) {
-	l1Tx := &L1Tx{}
-	var idxB uint = cidXB
+func L1TxFromBytes(bRaw []byte) (*L1Tx, error) {
+	if len(bRaw) != L1TxBytesLen {
+		return nil, fmt.Errorf("Can not parse L1Tx bytes, expected length %d, current: %d", 68, len(bRaw))
+	}
 
-	l1TxEncodedBI := big.NewInt(0)
-	l1TxEncodedBI.SetBytes(l1TxEncoded)
-
-	toIdx, err := IdxFromBigInt(extract(l1TxEncodedBI, 0, idxB))
-
+	b := SwapEndianness(bRaw)
+	tx := &L1Tx{}
+	var err error
+	tx.ToIdx, err = IdxFromBytes(b[0:4])
 	if err != nil {
 		return nil, err
 	}
-
-	l1Tx.ToIdx = toIdx
-
-	l1Tx.TokenID = TokenID(extract(l1TxEncodedBI, idxB, tokenIDB).Uint64())
-	l1Tx.Amount = extract(l1TxEncodedBI, idxB+tokenIDB, f16B)
-	l1Tx.LoadAmount = extract(l1TxEncodedBI, idxB+tokenIDB+f16B, f16B)
-	fromIdx, err := IdxFromBigInt(extract(l1TxEncodedBI, idxB+tokenIDB+2*f16B, f16B))
-
+	tx.TokenID, err = TokenIDFromBytes(b[4:8])
 	if err != nil {
 		return nil, err
 	}
-
-	l1Tx.FromIdx = fromIdx
-
+	tx.Amount = new(big.Int).SetBytes(SwapEndianness(b[8:10]))
+	tx.LoadAmount = new(big.Int).SetBytes(SwapEndianness(b[10:12]))
+	tx.FromIdx, err = IdxFromBytes(b[12:16])
+	if err != nil {
+		return nil, err
+	}
+	pkCompB := SwapEndianness(b[16:48])
 	var pkComp babyjub.PublicKeyComp
-	copy(pkComp[:], extract(l1TxEncodedBI, 2*idxB+tokenIDB+2*f16B, fromBJJCompressedB).Bytes())
-	pk, err := pkComp.Decompress()
-
+	copy(pkComp[:], pkCompB)
+	tx.FromBJJ, err = pkComp.Decompress()
 	if err != nil {
 		return nil, err
 	}
-
-	l1Tx.FromBJJ = pk
-
-	l1Tx.FromEthAddr = ethCommon.BigToAddress(extract(l1TxEncodedBI, fromBJJCompressedB+2*idxB+tokenIDB+2*f16B, fromEthAddrB))
-
-	return l1Tx, nil
-}
-
-// extract masks and shifts a bigInt
-func extract(num *big.Int, origin uint, len uint) *big.Int {
-	mask := big.NewInt(0).Sub(big.NewInt(0).Lsh(big.NewInt(1), len), big.NewInt(1))
-	return big.NewInt(0).And(big.NewInt(0).Rsh(num, origin), mask)
+	tx.FromEthAddr = ethCommon.BytesToAddress(SwapEndianness(b[48:68]))
+	return tx, nil
 }

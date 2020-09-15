@@ -2,11 +2,15 @@ package common
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 )
+
+// tokenIDBytesLen defines the length of the TokenID byte array representation
+const tokenIDBytesLen = 4
 
 // Token is a struct that represents an Ethereum token that is supported in Hermez network
 type Token struct {
@@ -40,4 +44,13 @@ func (t TokenID) Bytes() []byte {
 // BigInt returns the *big.Int representation of the TokenID
 func (t TokenID) BigInt() *big.Int {
 	return big.NewInt(int64(t))
+}
+
+// TokenIDFromBytes returns TokenID from a byte array
+func TokenIDFromBytes(b []byte) (TokenID, error) {
+	if len(b) != tokenIDBytesLen {
+		return 0, fmt.Errorf("can not parse TokenID, bytes len %d, expected 4", len(b))
+	}
+	tid := binary.LittleEndian.Uint32(b[:4])
+	return TokenID(tid), nil
 }
