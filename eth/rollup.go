@@ -5,7 +5,9 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
+	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -24,28 +26,37 @@ type RollupConstants struct {
 	// Maxim Deposit allowed
 	MaxAmountDeposit *big.Int
 	MaxAmountL2      *big.Int
-	MaxTokens        uint32
+	MaxTokens        *big.Int
 	// maximum L1 transactions allowed to be queued for a batch
-	MaxL1Tx int
+	MaxL1Tx *big.Int
 	// maximum L1 user transactions allowed to be queued for a batch
-	MaxL1UserTx        int
+	MaxL1UserTx        *big.Int
 	Rfield             *big.Int
-	L1CoordinatorBytes int
-	L1UserBytes        int
-	L2Bytes            int
+	L1CoordinatorBytes *big.Int
+	L1UserBytes        *big.Int
+	L2Bytes            *big.Int
+	MaxTxVerifiers     []int
+	TokenHEZ           ethCommon.Address
+	// Only test
+	GovernanceAddress ethCommon.Address
+	// Only test
+	SafetyBot ethCommon.Address
+	// Only test
+	ConsensusContract ethCommon.Address
+	// Only test
+	WithdrawalContract ethCommon.Address
+	ReservedIDx        uint32
+	LastIDx            uint32
+	ExitIDx            uint32
+	NoLimitToken       *big.Int
+	NumBuckets         *big.Int
+	MaxWDelay          *big.Int
 }
 
 // RollupVariables are the variables of the Rollup Smart Contract
 type RollupVariables struct {
-	MaxTxVerifiers     []int
-	TokenHEZ           ethCommon.Address
-	GovernanceAddress  ethCommon.Address
-	SafetyBot          ethCommon.Address
-	ConsensusContract  ethCommon.Address
-	WithdrawalContract ethCommon.Address
-	FeeAddToken        *big.Int
-	ForgeL1Timeout     int64
-	FeeL1UserTx        *big.Int
+	FeeAddToken    *big.Int
+	ForgeL1Timeout int64
 }
 
 // QueueStruct is the queue of L1Txs for a batch
@@ -78,9 +89,11 @@ type RollupState struct {
 	CurrentIdx             int64
 }
 
-// RollupEventL1UserTx is an event of the Rollup Smart Contract
-type RollupEventL1UserTx struct {
-	L1Tx common.L1Tx
+// RollupEventL1UserTxEvent is an event of the Rollup Smart Contract
+type RollupEventL1UserTxEvent struct {
+	L1Tx             common.L1Tx
+	QueueIndex       *big.Int
+	TransactionIndex *big.Int
 }
 
 // RollupEventAddToken is an event of the Rollup Smart Contract
@@ -91,18 +104,13 @@ type RollupEventAddToken struct {
 
 // RollupEventForgeBatch is an event of the Rollup Smart Contract
 type RollupEventForgeBatch struct {
-	BatchNum  int64
+	BatchNum  *big.Int
 	EthTxHash ethCommon.Hash
 }
 
-// RollupEventUpdateForgeL1Timeout is an event of the Rollup Smart Contract
-type RollupEventUpdateForgeL1Timeout struct {
-	ForgeL1Timeout int64
-}
-
-// RollupEventUpdateFeeL1UserTx is an event of the Rollup Smart Contract
-type RollupEventUpdateFeeL1UserTx struct {
-	FeeL1UserTx *big.Int
+// RollupEventUpdateForgeL1L2BatchTimeout is an event of the Rollup Smart Contract
+type RollupEventUpdateForgeL1L2BatchTimeout struct {
+	ForgeL1Timeout *big.Int
 }
 
 // RollupEventUpdateFeeAddToken is an event of the Rollup Smart Contract
@@ -110,40 +118,32 @@ type RollupEventUpdateFeeAddToken struct {
 	FeeAddToken *big.Int
 }
 
-// RollupEventUpdateTokenHez is an event of the Rollup Smart Contract
-type RollupEventUpdateTokenHez struct {
-	TokenHEZ ethCommon.Address
-}
-
-// RollupEventWithdraw is an event of the Rollup Smart Contract
-type RollupEventWithdraw struct {
-	Idx         int64
-	NumExitRoot int
+// RollupEventWithdrawEvent is an event of the Rollup Smart Contract
+type RollupEventWithdrawEvent struct {
+	Idx             *big.Int
+	NumExitRoot     *big.Int
+	InstantWithdraw bool
 }
 
 // RollupEvents is the list of events in a block of the Rollup Smart Contract
 type RollupEvents struct { //nolint:structcheck
-	L1UserTx             []RollupEventL1UserTx
-	AddToken             []RollupEventAddToken
-	ForgeBatch           []RollupEventForgeBatch
-	UpdateForgeL1Timeout []RollupEventUpdateForgeL1Timeout
-	UpdateFeeL1UserTx    []RollupEventUpdateFeeL1UserTx
-	UpdateFeeAddToken    []RollupEventUpdateFeeAddToken
-	UpdateTokenHez       []RollupEventUpdateTokenHez
-	Withdraw             []RollupEventWithdraw
+	L1UserTxEvent               []RollupEventL1UserTxEvent
+	AddToken                    []RollupEventAddToken
+	ForgeBatch                  []RollupEventForgeBatch
+	UpdateForgeL1L2BatchTimeout []RollupEventUpdateForgeL1L2BatchTimeout
+	UpdateFeeAddToken           []RollupEventUpdateFeeAddToken
+	WithdrawEvent               []RollupEventWithdrawEvent
 }
 
 // NewRollupEvents creates an empty RollupEvents with the slices initialized.
 func NewRollupEvents() RollupEvents {
 	return RollupEvents{
-		L1UserTx:             make([]RollupEventL1UserTx, 0),
-		AddToken:             make([]RollupEventAddToken, 0),
-		ForgeBatch:           make([]RollupEventForgeBatch, 0),
-		UpdateForgeL1Timeout: make([]RollupEventUpdateForgeL1Timeout, 0),
-		UpdateFeeL1UserTx:    make([]RollupEventUpdateFeeL1UserTx, 0),
-		UpdateFeeAddToken:    make([]RollupEventUpdateFeeAddToken, 0),
-		UpdateTokenHez:       make([]RollupEventUpdateTokenHez, 0),
-		Withdraw:             make([]RollupEventWithdraw, 0),
+		L1UserTxEvent:               make([]RollupEventL1UserTxEvent, 0),
+		AddToken:                    make([]RollupEventAddToken, 0),
+		ForgeBatch:                  make([]RollupEventForgeBatch, 0),
+		UpdateForgeL1L2BatchTimeout: make([]RollupEventUpdateForgeL1L2BatchTimeout, 0),
+		UpdateFeeAddToken:           make([]RollupEventUpdateFeeAddToken, 0),
+		WithdrawEvent:               make([]RollupEventWithdrawEvent, 0),
 	}
 }
 
@@ -175,8 +175,7 @@ type RollupInterface interface {
 
 	RollupForgeBatch(*RollupForgeBatchArgs) (*types.Transaction, error)
 	RollupAddToken(tokenAddress ethCommon.Address) (*types.Transaction, error)
-	// RollupWithdrawSNARK() (*types.Transaction, error) // TODO (Not defined in Hermez.sol)
-	RollupWithdrawMerkleProof(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey,
+	RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey,
 		numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error)
 	RollupForceExit(fromIdx int64, amountF utils.Float16, tokenID int64) (*types.Transaction, error)
 	RollupForceTransfer(fromIdx int64, amountF utils.Float16, tokenID, toIdx int64) (*types.Transaction, error)
@@ -190,16 +189,14 @@ type RollupInterface interface {
 	RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF utils.Float16,
 		tokenID int64) (*types.Transaction, error)
 
-	RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error)
-	RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error)
-	RollupGetQueue(queue int64) ([]byte, error)
+	RollupGetCurrentTokens() (*big.Int, error)
+	// RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error)
+	// RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error)
+	// RollupGetQueue(queue int64) ([]byte, error)
 
 	// Governance Public Functions
-	RollupUpdateForgeL1Timeout(newForgeL1Timeout int64) (*types.Transaction, error)
-	RollupUpdateFeeL1UserTx(newFeeL1UserTx *big.Int) (*types.Transaction, error)
+	RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (*types.Transaction, error)
 	RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (*types.Transaction, error)
-	RollupUpdateTokensHEZ(newTokenHEZ ethCommon.Address) (*types.Transaction, error)
-	// RollupUpdateGovernance() (*types.Transaction, error) // TODO (Not defined in Hermez.sol)
 
 	//
 	// Smart Contract Status
@@ -245,8 +242,8 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address) (*types.Tr
 // 	return nil, errTODO
 // }
 
-// RollupWithdrawMerkleProof is the interface to call the smart contract function
-func (c *RollupClient) RollupWithdrawMerkleProof(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey, numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error) {
+// RollupWithdraw is the interface to call the smart contract function
+func (c *RollupClient) RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey, numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
@@ -294,31 +291,28 @@ func (c *RollupClient) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, 
 }
 
 // RollupGetTokenAddress is the interface to call the smart contract function
-func (c *RollupClient) RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error) {
+/* func (c *RollupClient) RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error) {
+	return nil, errTODO
+} */
+
+// RollupGetCurrentTokens is the interface to call the smart contract function
+func (c *RollupClient) RollupGetCurrentTokens() (*big.Int, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupGetL1TxFromQueue is the interface to call the smart contract function
-func (c *RollupClient) RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error) {
-	log.Error("TODO")
+/* func (c *RollupClient) RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error) {
 	return nil, errTODO
-}
+} */
 
 // RollupGetQueue is the interface to call the smart contract function
-func (c *RollupClient) RollupGetQueue(queue int64) ([]byte, error) {
-	log.Error("TODO")
+/* func (c *RollupClient) RollupGetQueue(queue int64) ([]byte, error) {
 	return nil, errTODO
-}
+}*/
 
-// RollupUpdateForgeL1Timeout is the interface to call the smart contract function
-func (c *RollupClient) RollupUpdateForgeL1Timeout(newForgeL1Timeout int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupUpdateFeeL1UserTx is the interface to call the smart contract function
-func (c *RollupClient) RollupUpdateFeeL1UserTx(newFeeL1UserTx *big.Int) (*types.Transaction, error) {
+// RollupUpdateForgeL1L2BatchTimeout is the interface to call the smart contract function
+func (c *RollupClient) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
@@ -329,21 +323,37 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (*types.
 	return nil, errTODO
 }
 
-// RollupUpdateTokensHEZ is the interface to call the smart contract function
-func (c *RollupClient) RollupUpdateTokensHEZ(newTokenHEZ ethCommon.Address) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupUpdateGovernance is the interface to call the smart contract function
-// func (c *RollupClient) RollupUpdateGovernance() (*types.Transaction, error) { // TODO (Not defined in Hermez.sol)
-// 	return nil, errTODO
-// }
-
 // RollupConstants returns the Constants of the Rollup Smart Contract
 func (c *RollupClient) RollupConstants() (*RollupConstants, error) {
-	log.Error("TODO")
-	return nil, errTODO
+	rollupConstants := new(RollupConstants)
+	if err := c.client.Call(func(ec *ethclient.Client) error {
+		rollup, err := Hermez.NewHermez(c.address, ec)
+		if err != nil {
+			return err
+		}
+		// rollupConstants.GovernanceAddress :=
+		rollupConstants.L1CoordinatorBytes, err = rollup.L1COORDINATORBYTES(nil)
+		rollupConstants.L1UserBytes, err = rollup.L1USERBYTES(nil)
+		rollupConstants.L2Bytes, err = rollup.L2BYTES(nil)
+		rollupConstants.LastIDx, err = rollup.LASTIDX(nil)
+		rollupConstants.MaxAmountDeposit, err = rollup.MAXLOADAMOUNT(nil)
+		rollupConstants.MaxAmountL2, err = rollup.MAXAMOUNT(nil)
+		rollupConstants.MaxL1Tx, err = rollup.MAXL1TX(nil)
+		rollupConstants.MaxL1UserTx, err = rollup.MAXL1USERTX(nil)
+		rollupConstants.MaxTokens, err = rollup.MAXTOKENS(nil)
+		rollupConstants.MaxWDelay, err = rollup.MAXWITHDRAWALDELAY(nil)
+		rollupConstants.NoLimitToken, err = rollup.NOLIMIT(nil)
+		rollupConstants.NumBuckets, err = rollup.NUMBUCKETS(nil)
+		// rollupConstants.ReservedIDx =
+		rollupConstants.Rfield, err = rollup.RFIELD(nil)
+		// rollupConstants.SafetyBot =
+		// rollupConstants.TokenHEZ =
+		// rollupConstants.WithdrawalContract =
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return rollupConstants, nil
 }
 
 // RollupEventsByBlock returns the events in a block that happened in the Rollup Smart Contract
