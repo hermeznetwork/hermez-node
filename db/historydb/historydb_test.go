@@ -2,6 +2,7 @@ package historydb
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"testing"
@@ -200,7 +201,7 @@ func TestTxs(t *testing.T) {
 	blocks := setTestBlocks(fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 5
-	const tokenValue = 5
+	const tokenValue = 1.23456
 	tokens := test.GenTokens(nTokens, blocks)
 	for i := 0; i < len(tokens); i++ {
 		tokens[i].USD = tokenValue
@@ -218,31 +219,68 @@ func TestTxs(t *testing.T) {
 	err = historyDB.AddAccounts(accs)
 	assert.NoError(t, err)
 	// Generate fake L1 txs
-	const nL1s = 10
+	const nL1s = 30
 	_, l1txs := test.GenL1Txs(0, nL1s, 0, nil, accs, tokens, blocks, batches)
 	err = historyDB.AddL1Txs(l1txs)
 	assert.NoError(t, err)
 	// Generate fake L2 txs
-	const nL2s = 10
+	const nL2s = 20
 	_, l2txs := test.GenL2Txs(0, nL2s, 0, nil, accs, tokens, blocks, batches)
 	err = historyDB.AddL2Txs(l2txs)
 	assert.NoError(t, err)
-	// Fetch txs
-	fetchedTxs, err := historyDB.GetTxs()
-	assert.NoError(t, err)
-	// Compare fetched txs vs generated txs. All txs value should be 25 (5amount * 5USD)
-	generatedTxs := []*common.Tx{}
+	// Compare fetched txs vs generated txs.
 	for i := 0; i < len(l1txs); i++ {
 		tx := l1txs[i].Tx()
-		tx.USD = tokenValue * tx.AmountF
-		generatedTxs = append(generatedTxs, tx)
+		fetchedTx, err := historyDB.GetTx(tx.TxID)
+		assert.NoError(t, err)
+		tx.USD = tokenValue * tx.AmountFloat
+		if fetchedTx.USD > tx.USD {
+			assert.Less(t, 0.999, tx.USD/fetchedTx.USD)
+		} else {
+			assert.Less(t, 0.999, fetchedTx.USD/tx.USD)
+		}
+		tx.LoadAmountUSD = tokenValue * tx.LoadAmountFloat
+		if fetchedTx.LoadAmountUSD > tx.LoadAmountUSD {
+			assert.Less(t, 0.999, tx.LoadAmountUSD/fetchedTx.LoadAmountUSD)
+		} else {
+			assert.Less(t, 0.999, fetchedTx.LoadAmountUSD/tx.LoadAmountUSD)
+		}
+		tx.LoadAmountUSD = 0
+		tx.USD = 0
+		fetchedTx.LoadAmountUSD = 0
+		fetchedTx.USD = 0
+		assert.Equal(t, tx, fetchedTx)
 	}
 	for i := 0; i < len(l2txs); i++ {
 		tx := l2txs[i].Tx()
-		tx.USD = tokenValue * tx.AmountF
-		generatedTxs = append(generatedTxs, tx)
+		fetchedTx, err := historyDB.GetTx(tx.TxID)
+		assert.NoError(t, err)
+		tx.USD = tokenValue * tx.AmountFloat
+		if fetchedTx.USD > tx.USD {
+			assert.Less(t, 0.999, tx.USD/fetchedTx.USD)
+		} else {
+			assert.Less(t, 0.999, fetchedTx.USD/tx.USD)
+		}
+		if tx.Fee == 0 {
+			tx.FeeUSD = 0
+		} else if tx.Fee <= 32 {
+			tx.FeeUSD = tx.USD * math.Pow(10, -24+(float64(tx.Fee)/2))
+		} else if tx.Fee <= 223 {
+			tx.FeeUSD = tx.USD * math.Pow(10, -8+(0.041666666666667*(float64(tx.Fee)-32)))
+		} else {
+			tx.FeeUSD = tx.USD * math.Pow(10, float64(tx.Fee)-224)
+		}
+		if fetchedTx.FeeUSD > tx.FeeUSD {
+			assert.Less(t, 0.999, tx.FeeUSD/fetchedTx.FeeUSD)
+		} else if fetchedTx.FeeUSD < tx.FeeUSD {
+			assert.Less(t, 0.999, fetchedTx.FeeUSD/tx.FeeUSD)
+		}
+		tx.FeeUSD = 0
+		tx.USD = 0
+		fetchedTx.FeeUSD = 0
+		fetchedTx.USD = 0
+		assert.Equal(t, tx, fetchedTx)
 	}
-	assert.Equal(t, generatedTxs, fetchedTxs)
 	// Test trigger: L1 integrity
 	// from_eth_addr can't be null
 	l1txs[0].FromEthAddr = ethCommon.Address{}

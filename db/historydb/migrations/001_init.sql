@@ -82,7 +82,7 @@ CREATE TABLE tx (
     amount BYTEA NOT NULL,
     amount_f NUMERIC NOT NULL,
     token_id INT NOT NULL REFERENCES token (token_id),
-    value_usd NUMERIC, -- Value of the amount in USD at the moment the tx was inserted in the DB
+    amount_usd NUMERIC, -- Value of the amount in USD at the moment the tx was inserted in the DB
     batch_num BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL, -- Can be NULL in the case of L1 txs that are on the queue but not forged yet.
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     -- L1
@@ -91,8 +91,11 @@ CREATE TABLE tx (
     from_eth_addr BYTEA,
     from_bjj BYTEA,
     load_amount BYTEA,
+    load_amount_f NUMERIC,
+    load_amount_usd NUMERIC,
     -- L2
     fee INT,
+    fee_usd NUMERIC,
     nonce BIGINT
 );
 
@@ -101,13 +104,15 @@ CREATE FUNCTION set_tx()
     RETURNS TRIGGER 
 AS 
 $BODY$
+DECLARE token_value NUMERIC := (SELECT usd FROM token WHERE token_id = NEW.token_id);
 BEGIN
     -- Validate L1/L2 constrains
     IF NEW.is_l1 AND (( -- L1 mandatory fields
         NEW.user_origin IS NULL OR
         NEW.from_eth_addr IS NULL OR
         NEW.from_bjj IS NULL OR
-        NEW.load_amount IS NULL
+        NEW.load_amount IS NULL OR
+        NEW.load_amount_f IS NULL
     ) OR (NOT NEW.user_origin AND NEW.batch_num IS NULL)) THEN -- If is Coordinator L1, must include batch_num
         RAISE EXCEPTION 'Invalid L1 tx.';
     ELSIF NOT NEW.is_l1 THEN
@@ -123,7 +128,15 @@ BEGIN
         NEW."token_id" = (SELECT token_id FROM account WHERE idx = NEW."from_idx");
     END IF;
     -- Set value_usd
-    NEW."value_usd" = (SELECT usd * NEW.amount_f FROM token WHERE token_id = NEW.token_id);
+    NEW."amount_usd" = (SELECT token_value * NEW.amount_f);
+    NEW."load_amount_usd" = (SELECT token_value * NEW.load_amount_f);
+    IF NOT NEW.is_l1 THEN
+        NEW."fee_usd" = (SELECT token_value * NEW.amount_f * CASE
+            WHEN NEW.fee = 0 THEN 0	
+            WHEN NEW.fee >= 1 AND NEW.fee <= 32 THEN POWER(10,-24+(NEW.fee::float/2))	
+            WHEN NEW.fee >= 33 AND NEW.fee <= 223 THEN POWER(10,-8+(0.041666666666667*(NEW.fee::float-32)))	
+            WHEN NEW.fee >= 224 AND NEW.fee <= 255 THEN POWER(10,NEW.fee-224) END);
+    END IF;
     RETURN NEW;
 END;
 $BODY$

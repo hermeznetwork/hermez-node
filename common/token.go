@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"math/big"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -17,7 +18,6 @@ type Token struct {
 	Decimals    uint64            `meddler:"decimals"`
 	USD         float32           `meddler:"usd,zeroisnull"`
 	USDUpdate   time.Time         `meddler:"usd_update,utctimez"`
-	EthTxHash   ethCommon.Hash    `meddler:"-"` // Ethereum TxHash in which this token was registered
 }
 
 // TokenInfo provides the price of the token in USD
@@ -35,4 +35,9 @@ func (t TokenID) Bytes() []byte {
 	var tokenIDBytes [4]byte
 	binary.LittleEndian.PutUint32(tokenIDBytes[:], uint32(t))
 	return tokenIDBytes[:]
+}
+
+// BigInt returns the *big.Int representation of the TokenID
+func (t TokenID) BigInt() *big.Int {
+	return big.NewInt(int64(t))
 }

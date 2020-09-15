@@ -39,7 +39,6 @@ func GenTokens(nTokens int, blocks []common.Block) []common.Token {
 			Symbol:      fmt.Sprint(i),
 			Decimals:    uint64(i),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
-			EthTxHash:   ethCommon.BigToHash(big.NewInt(int64(i))),
 			EthAddr:     ethCommon.BigToAddress(big.NewInt(int64(i))),
 		}
 		if i%2 == 0 {
@@ -129,14 +128,12 @@ func GenL1Txs(
 				Position:        i,
 				UserOrigin:      i%2 == 0,
 				TokenID:         tokens[i%len(tokens)].TokenID,
-				//nolint:gomnd
-				Amount: big.NewInt(3487746747),
-				//nolint:gomnd
-				LoadAmount:  big.NewInt(636345),
-				EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
-				Type:        randomTxType(i),
+				Amount:          big.NewInt(int64(i + 1)),
+				LoadAmount:      big.NewInt(int64(i + 1)),
+				EthBlockNum:     blocks[i%len(blocks)].EthBlockNum,
+				Type:            randomTxType(i),
 			}
-			if i%3 == 0 {
+			if i%4 == 0 {
 				tx.BatchNum = batches[i%len(batches)].BatchNum
 			}
 		} else {
@@ -209,7 +206,7 @@ func GenL2Txs(
 			BatchNum: batches[i%len(batches)].BatchNum,
 			Position: i,
 			//nolint:gomnd
-			Amount: big.NewInt(3487746747),
+			Amount: big.NewInt(int64(i + 1)),
 			//nolint:gomnd
 			Fee:         common.FeeSelector(i % 256),
 			Nonce:       common.Nonce(i + 1),

@@ -51,8 +51,8 @@ func (bb *BatchBuilder) Reset(batchNum common.BatchNum, fromSynchronizer bool) e
 }
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
-func (bb *BatchBuilder) BuildBatch(configBatch *ConfigBatch, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.L2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
-	zkInputs, _, err := bb.localStateDB.ProcessTxs(false, l1usertxs, l1coordinatortxs, l2txs)
+func (bb *BatchBuilder) BuildBatch(configBatch *ConfigBatch, l1usertxs, l1coordinatortxs []*common.L1Tx, pooll2txs []*common.PoolL2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
+	zkInputs, _, err := bb.localStateDB.ProcessTxs(false, true, l1usertxs, l1coordinatortxs, pooll2txs)
 	if err != nil {
 		return nil, err
 	}

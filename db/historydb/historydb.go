@@ -179,7 +179,7 @@ func (hdb *HistoryDB) addBids(bids []common.Bid) error {
 	)
 }
 
-// GetBids return the bids for a specific slot
+// GetBids return the bids
 func (hdb *HistoryDB) GetBids() ([]*common.Bid, error) {
 	var bids []*common.Bid
 	err := meddler.QueryAll(
@@ -288,7 +288,7 @@ func (hdb *HistoryDB) AddTxs(txs []common.Tx) error {
 			amount,
 			amount_f,
 			token_id,
-			value_usd,
+			amount_usd,
 			batch_num,
 			eth_block_num,
 			to_forge_l1_txs_num,
@@ -296,7 +296,10 @@ func (hdb *HistoryDB) AddTxs(txs []common.Tx) error {
 			from_eth_addr,
 			from_bjj,
 			load_amount,
+			load_amount_f,
+			load_amount_usd,
 			fee,
+			fee_usd,
 			nonce
 		) VALUES %s;`,
 		txs[:],
@@ -308,9 +311,20 @@ func (hdb *HistoryDB) GetTxs() ([]*common.Tx, error) {
 	var txs []*common.Tx
 	err := meddler.QueryAll(
 		hdb.db, &txs,
-		"SELECT * FROM tx ORDER BY id;",
+		`SELECT * FROM tx 
+		ORDER BY (batch_num, position) ASC`,
 	)
 	return txs, err
+}
+
+// GetTx returns a tx from the DB
+func (hdb *HistoryDB) GetTx(txID common.TxID) (*common.Tx, error) {
+	tx := new(common.Tx)
+	return tx, meddler.QueryRow(
+		hdb.db, tx,
+		"SELECT * FROM tx WHERE id = $1;",
+		txID,
+	)
 }
 
 // Close frees the resources used by HistoryDB
