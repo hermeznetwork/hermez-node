@@ -64,9 +64,11 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
 	// only needed in memory
-	exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
-	if err != nil {
-		return nil, nil, err
+	if cmpExitTree {
+		exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// assumption: l1usertx are sorted by L1Tx.Position
@@ -333,12 +335,12 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 			// Idx not set in the Tx, get it from DB through ToEthAddr or ToBJJ
 			var idx common.Idx
 			if !bytes.Equal(tx.ToEthAddr.Bytes(), ffAddr.Bytes()) {
-				idx = s.getIdxByEthAddr(tx.ToEthAddr)
+				idx = s.GetIdxByEthAddr(tx.ToEthAddr)
 				if idx == common.Idx(0) {
 					return nil, nil, false, fmt.Errorf("Idx can not be found for given tx.FromEthAddr")
 				}
 			} else {
-				idx = s.getIdxByBJJ(tx.ToBJJ)
+				idx = s.GetIdxByBJJ(tx.ToBJJ)
 				if idx == common.Idx(0) {
 					return nil, nil, false, fmt.Errorf("Idx can not be found for given tx.FromBJJ")
 				}
@@ -629,6 +631,9 @@ func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx *common.Tx) (*co
 		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(p.Siblings)
 	}
 
+	if exitTree == nil {
+		return nil, false, nil
+	}
 	exitAccount, err := getAccountInTreeDB(exitTree.DB(), tx.FromIdx)
 	if err == db.ErrNotFound {
 		// 1a. if idx does not exist in exitTree:

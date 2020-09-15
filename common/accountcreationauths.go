@@ -11,6 +11,6 @@ import (
 type AccountCreationAuth struct {
 	Timestamp time.Time
 	EthAddr   ethCommon.Address
-	BJJ       babyjub.PublicKey
+	BJJ       *babyjub.PublicKey
 	Signature []byte
 }

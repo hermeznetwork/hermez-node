@@ -65,6 +65,12 @@ func NewL2DB(
 	}, nil
 }
 
+// DB returns a pointer to the L2DB.db. This method should be used only for
+// internal testing purposes.
+func (l2db *L2DB) DB() *sqlx.DB {
+	return l2db.db
+}
+
 // AddTx inserts a tx into the L2DB
 func (l2db *L2DB) AddTx(tx *common.PoolL2Tx) error {
 	return meddler.Insert(l2db.db, "tx_pool", tx)
