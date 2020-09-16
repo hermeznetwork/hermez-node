@@ -16,7 +16,7 @@ type Token struct {
 	Name        string            `meddler:"name"`
 	Symbol      string            `meddler:"symbol"`
 	Decimals    uint64            `meddler:"decimals"`
-	USD         float32           `meddler:"usd,zeroisnull"`
+	USD         float64           `meddler:"usd,zeroisnull"`
 	USDUpdate   time.Time         `meddler:"usd_update,utctimez"`
 }
 

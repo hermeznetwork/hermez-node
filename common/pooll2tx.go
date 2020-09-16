@@ -43,18 +43,20 @@ func NonceFromBytes(b [5]byte) Nonce {
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
 type PoolL2Tx struct {
 	// Stored in DB: mandatory fileds
-	TxID      TxID               `meddler:"tx_id"`
-	FromIdx   Idx                `meddler:"from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	ToIdx     Idx                `meddler:"to_idx"`   // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	ToEthAddr ethCommon.Address  `meddler:"to_eth_addr"`
-	ToBJJ     *babyjub.PublicKey `meddler:"to_bjj"` // TODO: stop using json, use scanner/valuer
-	TokenID   TokenID            `meddler:"token_id"`
-	Amount    *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
-	Fee       FeeSelector        `meddler:"fee"`
-	Nonce     Nonce              `meddler:"nonce"` // effective 40 bits used
-	State     PoolL2TxState      `meddler:"state"`
-	Signature *babyjub.Signature `meddler:"signature"`         // tx signature
-	Timestamp time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
+	TxID        TxID               `meddler:"tx_id"`
+	FromIdx     Idx                `meddler:"from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	ToIdx       Idx                `meddler:"to_idx"`   // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	ToEthAddr   ethCommon.Address  `meddler:"to_eth_addr"`
+	ToBJJ       *babyjub.PublicKey `meddler:"to_bjj"` // TODO: stop using json, use scanner/valuer
+	TokenID     TokenID            `meddler:"token_id"`
+	Amount      *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
+	AmountFloat float64            `meddler:"amount_f"`      // TODO: change to float16
+	USD         float64            `meddler:"value_usd"`     // TODO: change to float16
+	Fee         FeeSelector        `meddler:"fee"`
+	Nonce       Nonce              `meddler:"nonce"` // effective 40 bits used
+	State       PoolL2TxState      `meddler:"state"`
+	Signature   *babyjub.Signature `meddler:"signature"`         // tx signature
+	Timestamp   time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
 	BatchNum          BatchNum           `meddler:"batch_num,zeroisnull"`   // batchNum in which this tx was forged. Presence indicates "forged" state.
 	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
@@ -65,8 +67,8 @@ type PoolL2Tx struct {
 	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16
 	RqFee             FeeSelector        `meddler:"rq_fee,zeroisnull"`
 	RqNonce           uint64             `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
-	AbsoluteFee       float64            `meddler:"absolute_fee,zeroisnull"`
-	AbsoluteFeeUpdate time.Time          `meddler:"absolute_fee_update,utctimez"`
+	AbsoluteFee       float64            `meddler:"fee_usd,zeroisnull"`
+	AbsoluteFeeUpdate time.Time          `meddler:"usd_update,utctimez"`
 	Type              TxType             `meddler:"tx_type"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs

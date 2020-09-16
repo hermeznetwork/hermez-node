@@ -143,7 +143,7 @@ func TestTokens(t *testing.T) {
 	// Update price of generated tokens without price
 	for i := 0; i < len(tokens); i++ {
 		if tokens[i].USD == 0 {
-			value := 3.33 + float32(i)
+			value := 3.33 + float64(i)
 			tokens[i].USD = value
 			err := historyDB.UpdateTokenValue(tokens[i].TokenID, value)
 			assert.NoError(t, err)
