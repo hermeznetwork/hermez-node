@@ -72,16 +72,22 @@ func TestClientAuction(t *testing.T) {
 	var timer timer
 	clientSetup := NewClientSetupExample()
 	clientSetup.AuctionVariables.ClosedAuctionSlots = 2
-	clientSetup.AuctionVariables.OpenAuctionSlots = 100
+	clientSetup.AuctionVariables.OpenAuctionSlots = 4320
+	clientSetup.AuctionVariables.DefaultSlotSetBid = [6]*big.Int{
+		big.NewInt(1000), big.NewInt(1100), big.NewInt(1200),
+		big.NewInt(1300), big.NewInt(1400), big.NewInt(1500)}
 	c := NewClient(true, &timer, addrWithdraw, clientSetup)
+
+	// Check several cases in which bid doesn't succed, and also do 2 successful bids.
 
 	_, err := c.AuctionBid(0, big.NewInt(1), addrForge)
 	assert.Equal(t, errBidClosed, err)
 
-	_, err = c.AuctionBid(102, big.NewInt(1), addrForge)
+	_, err = c.AuctionBid(4322, big.NewInt(1), addrForge)
 	assert.Equal(t, errBidNotOpen, err)
 
-	_, err = c.AuctionBid(101, big.NewInt(16), addrForge)
+	// 101 % 6 = 5;  defaultSlotSetBid[5] = 1500;  1500 + 10% = 1650
+	_, err = c.AuctionBid(101, big.NewInt(1650), addrForge)
 	assert.Equal(t, errCoordNotReg, err)
 
 	_, err = c.AuctionRegisterCoordinator(addrForge, "https://foo.bar")
@@ -90,7 +96,7 @@ func TestClientAuction(t *testing.T) {
 	_, err = c.AuctionBid(3, big.NewInt(1), addrForge)
 	assert.Equal(t, errBidBelowMin, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(16), addrForge)
+	_, err = c.AuctionBid(3, big.NewInt(1650), addrForge)
 	assert.Nil(t, err)
 
 	_, err = c.AuctionRegisterCoordinator(addrForge2, "https://foo2.bar")
@@ -99,7 +105,8 @@ func TestClientAuction(t *testing.T) {
 	_, err = c.AuctionBid(3, big.NewInt(16), addrForge2)
 	assert.Equal(t, errBidBelowMin, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(17), addrForge2)
+	// 1650 + 10% = 1815
+	_, err = c.AuctionBid(3, big.NewInt(1815), addrForge2)
 	assert.Nil(t, err)
 
 	c.CtlMineBlock()

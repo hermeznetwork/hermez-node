@@ -25,10 +25,28 @@ func (d *Duration) UnmarshalText(data []byte) error {
 	return nil
 }
 
+// ServerProof is the server proof configuration data.
+type ServerProof struct {
+	URL string `validate:"required"`
+}
+
 // Coordinator is the coordinator specific configuration.
 type Coordinator struct {
 	ForgerAddress     ethCommon.Address `validate:"required"`
 	ForgeLoopInterval Duration          `validate:"required"`
+	L2DB              struct {
+		Name         string   `validate:"required"`
+		SafetyPeriod uint16   `validate:"required"`
+		MaxTxs       uint32   `validate:"required"`
+		TTL          Duration `validate:"required"`
+	} `validate:"required"`
+	TxSelector struct {
+		Path string `validate:"required"`
+	} `validate:"required"`
+	BatchBuilder struct {
+		Path string `validate:"required"`
+	} `validate:"required"`
+	ServerProofs []ServerProof `validate:"required"`
 }
 
 // Node is the hermez node configuration.
@@ -42,23 +60,11 @@ type Node struct {
 		User     string `validate:"required"`
 		Password string `validate:"required"`
 	} `validate:"required"`
-	L2DB struct {
-		Name         string   `validate:"required"`
-		SafetyPeriod uint16   `validate:"required"`
-		MaxTxs       uint32   `validate:"required"`
-		TTL          Duration `validate:"required"`
-	} `validate:"required"`
 	HistoryDB struct {
 		Name string `validate:"required"`
 	} `validate:"required"`
 	Web3 struct {
 		URL string `validate:"required"`
-	} `validate:"required"`
-	TxSelector struct {
-		Path string `validate:"required"`
-	} `validate:"required"`
-	BatchBuilder struct {
-		Path string `validate:"required"`
 	} `validate:"required"`
 	Synchronizer struct {
 		SyncLoopInterval Duration `validate:"required"`

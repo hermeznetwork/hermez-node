@@ -6,6 +6,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -219,11 +220,13 @@ type RollupClient struct {
 
 // RollupForgeBatch is the interface to call the smart contract function
 func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupAddToken is the interface to call the smart contract function
 func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -234,76 +237,91 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address) (*types.Tr
 
 // RollupWithdrawMerkleProof is the interface to call the smart contract function
 func (c *RollupClient) RollupWithdrawMerkleProof(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey, numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupForceExit is the interface to call the smart contract function
 func (c *RollupClient) RollupForceExit(fromIdx int64, amountF utils.Float16, tokenID int64) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupForceTransfer is the interface to call the smart contract function
 func (c *RollupClient) RollupForceTransfer(fromIdx int64, amountF utils.Float16, tokenID, toIdx int64) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupCreateAccountDepositTransfer is the interface to call the smart contract function
 func (c *RollupClient) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey, loadAmountF, amountF utils.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupDepositTransfer is the interface to call the smart contract function
 func (c *RollupClient) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF utils.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupDeposit is the interface to call the smart contract function
 func (c *RollupClient) RollupDeposit(fromIdx int64, loadAmountF utils.Float16, tokenID int64) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupCreateAccountDepositFromRelayer is the interface to call the smart contract function
 func (c *RollupClient) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey babyjub.PublicKey, loadAmountF utils.Float16) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupCreateAccountDeposit is the interface to call the smart contract function
 func (c *RollupClient) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF utils.Float16, tokenID int64) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupGetTokenAddress is the interface to call the smart contract function
 func (c *RollupClient) RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupGetL1TxFromQueue is the interface to call the smart contract function
 func (c *RollupClient) RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupGetQueue is the interface to call the smart contract function
 func (c *RollupClient) RollupGetQueue(queue int64) ([]byte, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupUpdateForgeL1Timeout is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateForgeL1Timeout(newForgeL1Timeout int64) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupUpdateFeeL1UserTx is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateFeeL1UserTx(newFeeL1UserTx *big.Int) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupUpdateFeeAddToken is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupUpdateTokensHEZ is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateTokensHEZ(newTokenHEZ ethCommon.Address) (*types.Transaction, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
@@ -314,11 +332,13 @@ func (c *RollupClient) RollupUpdateTokensHEZ(newTokenHEZ ethCommon.Address) (*ty
 
 // RollupConstants returns the Constants of the Rollup Smart Contract
 func (c *RollupClient) RollupConstants() (*RollupConstants, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupEventsByBlock returns the events in a block that happened in the Rollup Smart Contract
 func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethCommon.Hash, error) {
+	log.Error("TODO")
 	return nil, nil, errTODO
 }
 
@@ -329,5 +349,6 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 	// m := abi.MethodById(txData) -> Method
 	// m.Inputs.Unpack(txData) -> Args
 	// client.TransactionReceipt()?
+	log.Error("TODO")
 	return nil, errTODO
 }
