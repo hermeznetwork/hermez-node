@@ -9,13 +9,27 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
-// TODO
-func (s *StateDB) getIdxByEthAddr(addr ethCommon.Address) common.Idx {
+// GetIdxByEthAddr returns the smallest Idx in the StateDB for the given
+// Ethereum Address. Will return 0 in case that Idx is not found in the
+// StateDB.
+func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) common.Idx {
+	// TODO
 	return common.Idx(0)
 }
 
-// TODO
-func (s *StateDB) getIdxByBJJ(pk *babyjub.PublicKey) common.Idx {
+// GetIdxByBJJ returns the smallest Idx in the StateDB for the given BabyJubJub
+// PublicKey. Will return 0 in case that Idx is not found in the StateDB.
+func (s *StateDB) GetIdxByBJJ(pk *babyjub.PublicKey) common.Idx {
+	// TODO
+	return common.Idx(0)
+}
+
+// GetIdxByEthAddrBJJ returns the smallest Idx in the StateDB for the given
+// Ethereum Address AND the given BabyJubJub PublicKey. If `addr` is the zero
+// address, it's ignored in the query.  If `pk` is nil, it's ignored in the
+// query.  Will return 0 in case that Idx is not found in the StateDB.
+func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) common.Idx {
+	// TODO
 	return common.Idx(0)
 }
 

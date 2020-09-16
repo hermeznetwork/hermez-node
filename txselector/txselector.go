@@ -1,6 +1,9 @@
 package txselector
 
+// current: very simple version of TxSelector
+
 import (
+	"math/big"
 	"sort"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -81,16 +84,17 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]*common.P
 	// get most profitable L2-tx
 	txs := txsel.getL2Profitable(validTxs, txsel.MaxTxs)
 
-	// apply L2-tx to local AccountDB, make checkpoint tagged with BatchID
-	//     update balances
-	//     update nonces
-
-	// return selected txs
-	return txs, nil
+	// process the txs in the local AccountsDB
+	_, _, err = txsel.localAccountsDB.ProcessTxs(false, false, nil, nil, txs)
+	if err != nil {
+		return nil, err
+	}
+	err = txsel.localAccountsDB.MakeCheckpoint()
+	return txs, err
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
-func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1txs []*common.L1Tx) ([]*common.L1Tx, []*common.L1Tx, []*common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*common.L1Tx) ([]*common.L1Tx, []*common.L1Tx, []*common.PoolL2Tx, error) {
 	// apply l1-user-tx to localAccountDB
 	//     create new leaves
 	//     update balances
@@ -102,53 +106,72 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1txs []*c
 		return nil, nil, nil, err
 	}
 
-	// discard the txs that don't have an Account in the AccountDB
-	// neither appear in the AccountCreationAuthsDB
 	var validTxs txs
-	for _, tx := range l2TxsRaw {
-		if txsel.checkIfAccountExistOrPending(tx.FromIdx) {
-			// if FromIdx has an account into the AccountsDB
-			validTxs = append(validTxs, tx)
+	var l1CoordinatorTxs []*common.L1Tx
+
+	// if tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB, if so,
+	// tx is used.  if tx.ToIdx==0, check if tx.ToEthAddr/tx.ToBJJ exist in
+	// localAccountsDB, if yes tx is used; if not, check if tx.ToEthAddr is
+	// in AccountCreationAuthDB, if so, tx is used and L1CoordinatorTx of
+	// CreateAccountAndDeposit is created.
+	for i := 0; i < len(l2TxsRaw); i++ {
+		if l2TxsRaw[i].ToIdx >= common.IdxUserThreshold {
+			_, err = txsel.localAccountsDB.GetAccount(l2TxsRaw[i].ToIdx)
+			if err != nil {
+				// tx not valid
+				continue
+			}
+			// Account found in the DB, include the l2Tx in the selection
+			validTxs = append(validTxs, l2TxsRaw[i])
+		} else if l2TxsRaw[i].ToIdx == common.Idx(0) {
+			idx := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
+			if idx != common.Idx(0) {
+				// account for ToEthAddr/ToBJJ already exist,
+				// there is no need to create a new one.
+				// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
+				validTxs = append(validTxs, l2TxsRaw[i])
+				continue
+			}
+			// check if ToEthAddr is in AccountCreationAuths
+			_, err := txsel.l2db.GetAccountCreationAuth(l2TxsRaw[i].ToEthAddr) // TODO once l2db.GetAccountCreationAuth is ready, use the value returned as 'accAuth'
+			if err != nil {
+				// not found, l2Tx will not be added in the selection
+				continue
+			}
+			validTxs = append(validTxs, l2TxsRaw[i])
+
+			// create L1CoordinatorTx for the accountCreation
+			l1CoordinatorTx := &common.L1Tx{
+				UserOrigin: false,
+				// FromEthAddr: accAuth.EthAddr, // TODO This 2 lines will panic, as l2db.GetAccountCreationAuth is not implemented yet and returns nil. Uncomment this 2 lines once l2db method is done.
+				// FromBJJ:     accAuth.BJJ,
+				TokenID:    l2TxsRaw[i].TokenID,
+				LoadAmount: big.NewInt(0),
+				Type:       common.TxTypeCreateAccountDeposit,
+			}
+			l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
+		} else if l2TxsRaw[i].ToIdx == common.Idx(1) {
+			// valid txs (of Exit type)
+			validTxs = append(validTxs, l2TxsRaw[i])
 		}
 	}
 
-	// prepare (from the selected l2txs) pending to create from the AccountCreationAuthsDB
-	var accountCreationAuths []*common.Account
-	// TODO once DB ready:
-	// if tx.ToIdx is in AccountCreationAuthsDB, take it and add it to
-	// the array 'accountCreationAuths'
-	// for _, tx := range l2txs {
-	//         account, err := txsel.localAccountsDB.GetAccount(tx.ToIdx)
-	//         if err != nil {
-	//                 return nil, nil, nil, err
-	//         }
-	//         if accountToCreate, ok := txsel.DB.AccountCreationAuthsDB[accountID]; ok {
-	//                 accountCreationAuths = append(accountCreationAuths, accountToCreate)
-	//         }
-	// }
-
-	// create L1-operator-tx for each L2-tx selected in which the recipient does not have account
-	l1OperatorTxs := txsel.createL1OperatorTxForL2Tx(accountCreationAuths) // only with the L2-tx selected ones
-
 	// get most profitable L2-tx
-	maxL2Txs := txsel.MaxTxs - uint64(len(l1OperatorTxs)) // - len(l1UserTxs)
-	l2txs := txsel.getL2Profitable(validTxs, maxL2Txs)
+	maxL2Txs := txsel.MaxTxs - uint64(len(l1CoordinatorTxs)) // - len(l1UserTxs)
+	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
 
-	return l1txs, l1OperatorTxs, l2txs, nil
-}
-
-func (txsel *TxSelector) checkIfAccountExistOrPending(idx common.Idx) bool {
-	// check if account exist in AccountDB
-	_, err := txsel.localAccountsDB.GetAccount(idx)
-	if err != nil {
-		return false
-	}
-	// check if account is pending to create
-	// TODO need a method in the DB to get the PendingRegisters
-	// if _, ok := txsel.DB.AccountCreationAuthsDB[accountID]; ok {
-	//         return true
+	// TODO This 3 lines will panic, as l2db.GetAccountCreationAuth is not implemented yet and returns nil. Uncomment this lines once l2db method is done.
+	// process the txs in the local AccountsDB
+	// _, _, err = txsel.localAccountsDB.ProcessTxs(false, false, l1Txs, l1CoordinatorTxs, l2Txs)
+	// if err != nil {
+	//         return nil, nil, nil, err
 	// }
-	return false
+	err = txsel.localAccountsDB.MakeCheckpoint()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return l1Txs, l1CoordinatorTxs, l2Txs, nil
 }
 
 func (txsel *TxSelector) getL2Profitable(txs txs, max uint64) txs {
@@ -157,8 +180,4 @@ func (txsel *TxSelector) getL2Profitable(txs txs, max uint64) txs {
 		return txs
 	}
 	return txs[:max]
-}
-func (txsel *TxSelector) createL1OperatorTxForL2Tx(accounts []*common.Account) []*common.L1Tx {
-	//
-	return nil
 }

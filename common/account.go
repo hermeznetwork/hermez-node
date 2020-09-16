@@ -19,7 +19,49 @@ const (
 	maxNonceValue = 0xffffffffff
 	// maxBalanceBytes is the maximum bytes that can use the Account.Balance *big.Int
 	maxBalanceBytes = 24
+
+	idxBytesLen = 4
+	// maxIdxValue is the maximum value that Idx can have (32 bits: maxIdxValue=2**32-1)
+	maxIdxValue = 0xffffffff
+
+	// userThreshold determines the threshold from the User Idxs can be
+	userThreshold = 256
+	// IdxUserThreshold is a Idx type value that determines the threshold
+	// from the User Idxs can be
+	IdxUserThreshold = Idx(userThreshold)
 )
+
+// Idx represents the account Index in the MerkleTree
+type Idx uint32
+
+// Bytes returns a byte array representing the Idx
+func (idx Idx) Bytes() []byte {
+	var b [4]byte
+	binary.LittleEndian.PutUint32(b[:], uint32(idx))
+	return b[:]
+}
+
+// BigInt returns a *big.Int representing the Idx
+func (idx Idx) BigInt() *big.Int {
+	return big.NewInt(int64(idx))
+}
+
+// IdxFromBytes returns Idx from a byte array
+func IdxFromBytes(b []byte) (Idx, error) {
+	if len(b) != idxBytesLen {
+		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected 4", len(b))
+	}
+	idx := binary.LittleEndian.Uint32(b[:4])
+	return Idx(idx), nil
+}
+
+// IdxFromBigInt converts a *big.Int to Idx type
+func IdxFromBigInt(b *big.Int) (Idx, error) {
+	if b.Int64() > maxIdxValue {
+		return 0, ErrNumOverflow
+	}
+	return Idx(uint32(b.Int64())), nil
+}
 
 // Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
 type Account struct {
