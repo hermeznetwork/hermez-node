@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -57,9 +56,9 @@ type Coordinator struct {
 // AuctionVariables are the variables of the Auction Smart Contract
 type AuctionVariables struct {
 	// Boot Coordinator Address
-	DonationAddress *ethCommon.Address
+	DonationAddress ethCommon.Address
 	// Boot Coordinator Address
-	BootCoordinator *ethCommon.Address
+	BootCoordinator ethCommon.Address
 	// The minimum bid value in a series of 6 slots
 	DefaultSlotSetBid [6]*big.Int
 	// Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
@@ -246,11 +245,11 @@ type AuctionInterface interface {
 		maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error)
 
 	// Forge
-	AuctionCanForge(forger ethCommon.Address, blockNumber *big.Int) (bool, error)
+	AuctionCanForge(forger ethCommon.Address, blockNum int64) (bool, error)
 	// AuctionForge(forger ethCommon.Address) (bool, error) // Only called from another smart contract
 
 	// Fees
-	AuctionClaimHEZ(claimAddress common.Address) (*types.Transaction, error)
+	AuctionClaimHEZ(claimAddress ethCommon.Address) (*types.Transaction, error)
 
 	//
 	// Smart Contract Status
@@ -266,15 +265,17 @@ type AuctionInterface interface {
 
 // AuctionClient is the implementation of the interface to the Auction Smart Contract in ethereum.
 type AuctionClient struct {
-	client  *EthereumClient
-	address ethCommon.Address
+	client   *EthereumClient
+	address  ethCommon.Address
+	gasLimit uint64
 }
 
 // NewAuctionClient creates a new AuctionClient
 func NewAuctionClient(client *EthereumClient, address ethCommon.Address) *AuctionClient {
 	return &AuctionClient{
-		client:  client,
-		address: address,
+		client:   client,
+		address:  address,
+		gasLimit: 1000000, //nolint:gomnd
 	}
 }
 
@@ -283,7 +284,7 @@ func (c *AuctionClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transa
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -318,7 +319,7 @@ func (c *AuctionClient) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -353,7 +354,7 @@ func (c *AuctionClient) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint1
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -388,7 +389,7 @@ func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint16) (*types.Trans
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		12500000,
+		12500000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -423,7 +424,7 @@ func (c *AuctionClient) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) 
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -458,7 +459,7 @@ func (c *AuctionClient) AuctionSetDonationAddress(newDonationAddress ethCommon.A
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -493,7 +494,7 @@ func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.A
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -528,7 +529,7 @@ func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitial
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -548,7 +549,7 @@ func (c *AuctionClient) AuctionRegisterCoordinator(forgerAddress ethCommon.Addre
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -583,7 +584,7 @@ func (c *AuctionClient) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Add
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -665,14 +666,14 @@ func (c *AuctionClient) AuctionMultiBid(startingSlot int64, endingSlot int64, sl
 }
 
 // AuctionCanForge is the interface to call the smart contract function
-func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNumber *big.Int) (bool, error) {
+func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNum int64) (bool, error) {
 	var canForge bool
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 		if err != nil {
 			return err
 		}
-		canForge, err = auction.CanForge(nil, forger, blockNumber)
+		canForge, err = auction.CanForge(nil, forger, big.NewInt(blockNum))
 		return err
 	}); err != nil {
 		return false, err
@@ -686,11 +687,11 @@ func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNumber *b
 // }
 
 // AuctionClaimHEZ is the interface to call the smart contract function
-func (c *AuctionClient) AuctionClaimHEZ(claimAddress common.Address) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionClaimHEZ(claimAddress ethCommon.Address) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
-		1000000,
+		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
 			if err != nil {
@@ -713,10 +714,22 @@ func (c *AuctionClient) AuctionConstants() (*AuctionConstants, error) {
 			return err
 		}
 		auctionConstants.BlocksPerSlot, err = auction.BLOCKSPERSLOT(nil)
+		if err != nil {
+			return err
+		}
 		genesisBlock, err := auction.GenesisBlock(nil)
+		if err != nil {
+			return err
+		}
 		auctionConstants.GenesisBlockNum = genesisBlock.Int64()
 		auctionConstants.HermezRollup, err = auction.HermezRollup(nil)
+		if err != nil {
+			return err
+		}
 		auctionConstants.InitialMinimalBidding, err = auction.INITIALMINIMALBIDDING(nil)
+		if err != nil {
+			return err
+		}
 		auctionConstants.TokenHEZ, err = auction.TokenHEZ(nil)
 		return err
 	}); err != nil {
@@ -731,8 +744,18 @@ func (c *AuctionClient) AuctionVariables() (*AuctionVariables, error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		var err error
 		auctionVariables.AllocationRatio, err = c.AuctionGetAllocationRatio()
-		auctionVariables.BootCoordinator, err = c.AuctionGetBootCoordinator()
+		if err != nil {
+			return err
+		}
+		bootCoordinator, err := c.AuctionGetBootCoordinator()
+		if err != nil {
+			return err
+		}
+		auctionVariables.BootCoordinator = *bootCoordinator
 		auctionVariables.ClosedAuctionSlots, err = c.AuctionGetClosedAuctionSlots()
+		if err != nil {
+			return err
+		}
 		var defaultSlotSetBid [6]*big.Int
 		for i := uint8(0); i < 6; i++ {
 			bid, err := c.AuctionGetDefaultSlotSetBid(i)
@@ -742,9 +765,19 @@ func (c *AuctionClient) AuctionVariables() (*AuctionVariables, error) {
 			defaultSlotSetBid[i] = bid
 		}
 		auctionVariables.DefaultSlotSetBid = defaultSlotSetBid
-		auctionVariables.DonationAddress, err = c.AuctionGetDonationAddress()
+		donationAddress, err := c.AuctionGetDonationAddress()
+		if err != nil {
+			return err
+		}
+		auctionVariables.DonationAddress = *donationAddress
 		auctionVariables.OpenAuctionSlots, err = c.AuctionGetOpenAuctionSlots()
+		if err != nil {
+			return err
+		}
 		auctionVariables.Outbidding, err = c.AuctionGetOutbidding()
+		if err != nil {
+			return err
+		}
 		auctionVariables.SlotDeadline, err = c.AuctionGetSlotDeadline()
 		return err
 	}); err != nil {

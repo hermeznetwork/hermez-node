@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -36,7 +37,8 @@ var BOOTCOORDINATOR = common.HexToAddress(bootCoordinatorStr)
 
 var ehtClientDialURL = "http://localhost:8545"
 var auctionAddressStr = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5"
-var ownerAddressStr = "0xc783df8a850f42e7F7e57013759C285caa701eB6"
+
+// var ownerAddressStr = "0xc783df8a850f42e7F7e57013759C285caa701eB6"
 var governanceAddressStr = "0xead9c93b79ae7c1591b1fb5323bd777e86e150d4"
 var governancePrivateKey = "d49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb"
 var minBidStr = "10000000000000000000"
@@ -46,15 +48,18 @@ var BLOCKSPERSLOT = uint8(40)
 var TOKENHEZ = common.HexToAddress("0xf4e77E5Da47AC3125140c470c71cBca77B5c638c")
 var HERMEZROLLUP = common.HexToAddress("0xc4905364b78a742ccce7B890A89514061E47068D")
 
-var pathKs = "test/ks"
 var password = "pass"
 
 func TestNewAction(t *testing.T) {
 	key, err := crypto.HexToECDSA(governancePrivateKey)
 	require.Nil(t, err)
-	ks := keystore.NewKeyStore(pathKs, keystore.StandardScryptN, keystore.StandardScryptP)
+	dir, err := ioutil.TempDir("", "tmpks")
+	require.Nil(t, err)
+	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account, err := ks.ImportECDSA(key, password)
-	ks.Unlock(account, password)
+	require.Nil(t, err)
+	err = ks.Unlock(account, password)
+	require.Nil(t, err)
 	// Init eth client
 	ethClient, err := ethclient.Dial(ehtClientDialURL)
 	require.Nil(t, err)
@@ -120,6 +125,7 @@ func TestAuctionSetSlotDeadline(t *testing.T) {
 		_, err := auctionClient.AuctionSetSlotDeadline(newSlotDeadline)
 		require.Nil(t, err)
 		slotDeadline, err := auctionClient.AuctionGetSlotDeadline()
+		require.Nil(t, err)
 		assert.Equal(t, newSlotDeadline, slotDeadline)
 		_, err = auctionClient.AuctionSetSlotDeadline(slotDeadlineConst)
 		require.Nil(t, err)
@@ -140,6 +146,7 @@ func TestAuctionSetOpenAuctionSlots(t *testing.T) {
 		_, err := auctionClient.AuctionSetOpenAuctionSlots(newOpenAuctionSlots)
 		require.Nil(t, err)
 		openAuctionSlots, err := auctionClient.AuctionGetOpenAuctionSlots()
+		require.Nil(t, err)
 		assert.Equal(t, newOpenAuctionSlots, openAuctionSlots)
 		_, err = auctionClient.AuctionSetOpenAuctionSlots(openAuctionSlotsConst)
 		require.Nil(t, err)
@@ -160,6 +167,7 @@ func TestAuctionSetClosedAuctionSlots(t *testing.T) {
 		_, err := auctionClient.AuctionSetClosedAuctionSlots(newClosedAuctionSlots)
 		require.Nil(t, err)
 		closedAuctionSlots, err := auctionClient.AuctionGetClosedAuctionSlots()
+		require.Nil(t, err)
 		assert.Equal(t, newClosedAuctionSlots, closedAuctionSlots)
 		_, err = auctionClient.AuctionSetClosedAuctionSlots(closedAuctionSlotsConst)
 		require.Nil(t, err)
@@ -180,6 +188,7 @@ func TestAuctionSetOutbidding(t *testing.T) {
 		_, err := auctionClient.AuctionSetOutbidding(newOutbidding)
 		require.Nil(t, err)
 		outbidding, err := auctionClient.AuctionGetOutbidding()
+		require.Nil(t, err)
 		assert.Equal(t, newOutbidding, outbidding)
 		_, err = auctionClient.AuctionSetOutbidding(outbiddingConst)
 		require.Nil(t, err)
@@ -200,6 +209,7 @@ func TestAuctionSetAllocationRatio(t *testing.T) {
 		_, err := auctionClient.AuctionSetAllocationRatio(newAllocationRatio)
 		require.Nil(t, err)
 		allocationRatio, err := auctionClient.AuctionGetAllocationRatio()
+		require.Nil(t, err)
 		assert.Equal(t, newAllocationRatio, allocationRatio)
 		_, err = auctionClient.AuctionSetAllocationRatio(allocationRatioConst)
 		require.Nil(t, err)
@@ -230,6 +240,7 @@ func TestAuctionSetDonationAddress(t *testing.T) {
 		_, err := auctionClient.AuctionSetDonationAddress(newDonationAddress)
 		require.Nil(t, err)
 		donationAddress, err := auctionClient.AuctionGetDonationAddress()
+		require.Nil(t, err)
 		assert.Equal(t, &newDonationAddress, donationAddress)
 		donationAddressConst := common.HexToAddress(donationAddressStr)
 		_, err = auctionClient.AuctionSetDonationAddress(donationAddressConst)
@@ -243,6 +254,7 @@ func TestAuctionSetBootCoordinator(t *testing.T) {
 		_, err := auctionClient.AuctionSetBootCoordinator(newBootCoordinator)
 		require.Nil(t, err)
 		bootCoordinator, err := auctionClient.AuctionGetBootCoordinator()
+		require.Nil(t, err)
 		assert.Equal(t, &newBootCoordinator, bootCoordinator)
 		bootCoordinatorConst := common.HexToAddress(bootCoordinatorStr)
 		_, err = auctionClient.AuctionSetBootCoordinator(bootCoordinatorConst)

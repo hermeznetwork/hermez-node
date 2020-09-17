@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -14,9 +15,13 @@ var rollupClient *RollupClient
 func TestNewRollupClient(t *testing.T) {
 	key, err := crypto.HexToECDSA(governancePrivateKey)
 	require.Nil(t, err)
-	ks := keystore.NewKeyStore(pathKs, keystore.StandardScryptN, keystore.StandardScryptP)
+	dir, err := ioutil.TempDir("", "tmpks")
+	require.Nil(t, err)
+	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account, err := ks.ImportECDSA(key, password)
-	ks.Unlock(account, password)
+	require.Nil(t, err)
+	err = ks.Unlock(account, password)
+	require.Nil(t, err)
 	// Init eth client
 	ethClient, err := ethclient.Dial(ehtClientDialURL)
 	require.Nil(t, err)

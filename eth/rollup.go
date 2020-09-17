@@ -26,15 +26,15 @@ type RollupConstants struct {
 	// Maxim Deposit allowed
 	MaxAmountDeposit *big.Int
 	MaxAmountL2      *big.Int
-	MaxTokens        *big.Int
+	MaxTokens        int64
 	// maximum L1 transactions allowed to be queued for a batch
-	MaxL1Tx *big.Int
+	MaxL1Tx int
 	// maximum L1 user transactions allowed to be queued for a batch
-	MaxL1UserTx        *big.Int
+	MaxL1UserTx        int
 	Rfield             *big.Int
-	L1CoordinatorBytes *big.Int
-	L1UserBytes        *big.Int
-	L2Bytes            *big.Int
+	L1CoordinatorBytes int
+	L1UserBytes        int
+	L2Bytes            int
 	MaxTxVerifiers     []int
 	TokenHEZ           ethCommon.Address
 	// Only test
@@ -48,9 +48,9 @@ type RollupConstants struct {
 	ReservedIDx        uint32
 	LastIDx            uint32
 	ExitIDx            uint32
-	NoLimitToken       *big.Int
-	NumBuckets         *big.Int
-	MaxWDelay          *big.Int
+	NoLimitToken       int
+	NumBuckets         int
+	MaxWDelay          int64
 }
 
 // RollupVariables are the variables of the Rollup Smart Contract
@@ -89,8 +89,8 @@ type RollupState struct {
 	CurrentIdx             int64
 }
 
-// RollupEventL1UserTxEvent is an event of the Rollup Smart Contract
-type RollupEventL1UserTxEvent struct {
+// RollupEventL1UserTx is an event of the Rollup Smart Contract
+type RollupEventL1UserTx struct {
 	L1Tx             common.L1Tx
 	QueueIndex       *big.Int
 	TransactionIndex *big.Int
@@ -104,7 +104,7 @@ type RollupEventAddToken struct {
 
 // RollupEventForgeBatch is an event of the Rollup Smart Contract
 type RollupEventForgeBatch struct {
-	BatchNum  *big.Int
+	BatchNum  int64
 	EthTxHash ethCommon.Hash
 }
 
@@ -127,7 +127,7 @@ type RollupEventWithdrawEvent struct {
 
 // RollupEvents is the list of events in a block of the Rollup Smart Contract
 type RollupEvents struct { //nolint:structcheck
-	L1UserTxEvent               []RollupEventL1UserTxEvent
+	L1UserTx                    []RollupEventL1UserTx
 	AddToken                    []RollupEventAddToken
 	ForgeBatch                  []RollupEventForgeBatch
 	UpdateForgeL1L2BatchTimeout []RollupEventUpdateForgeL1L2BatchTimeout
@@ -138,7 +138,7 @@ type RollupEvents struct { //nolint:structcheck
 // NewRollupEvents creates an empty RollupEvents with the slices initialized.
 func NewRollupEvents() RollupEvents {
 	return RollupEvents{
-		L1UserTxEvent:               make([]RollupEventL1UserTxEvent, 0),
+		L1UserTx:                    make([]RollupEventL1UserTx, 0),
 		AddToken:                    make([]RollupEventAddToken, 0),
 		ForgeBatch:                  make([]RollupEventForgeBatch, 0),
 		UpdateForgeL1L2BatchTimeout: make([]RollupEventUpdateForgeL1L2BatchTimeout, 0),
@@ -332,24 +332,72 @@ func (c *RollupClient) RollupConstants() (*RollupConstants, error) {
 			return err
 		}
 		// rollupConstants.GovernanceAddress :=
-		rollupConstants.L1CoordinatorBytes, err = rollup.L1COORDINATORBYTES(nil)
-		rollupConstants.L1UserBytes, err = rollup.L1USERBYTES(nil)
-		rollupConstants.L2Bytes, err = rollup.L2BYTES(nil)
+		l1CoordinatorBytes, err := rollup.L1COORDINATORBYTES(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.L1CoordinatorBytes = int(l1CoordinatorBytes.Int64())
+		l1UserBytes, err := rollup.L1USERBYTES(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.L1UserBytes = int(l1UserBytes.Int64())
+		l2Bytes, err := rollup.L2BYTES(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.L2Bytes = int(l2Bytes.Int64())
 		rollupConstants.LastIDx, err = rollup.LASTIDX(nil)
+		if err != nil {
+			return err
+		}
 		rollupConstants.MaxAmountDeposit, err = rollup.MAXLOADAMOUNT(nil)
+		if err != nil {
+			return err
+		}
 		rollupConstants.MaxAmountL2, err = rollup.MAXAMOUNT(nil)
-		rollupConstants.MaxL1Tx, err = rollup.MAXL1TX(nil)
-		rollupConstants.MaxL1UserTx, err = rollup.MAXL1USERTX(nil)
-		rollupConstants.MaxTokens, err = rollup.MAXTOKENS(nil)
-		rollupConstants.MaxWDelay, err = rollup.MAXWITHDRAWALDELAY(nil)
-		rollupConstants.NoLimitToken, err = rollup.NOLIMIT(nil)
-		rollupConstants.NumBuckets, err = rollup.NUMBUCKETS(nil)
+		if err != nil {
+			return err
+		}
+		maxL1Tx, err := rollup.MAXL1TX(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.MaxL1Tx = int(maxL1Tx.Int64())
+		maxL1UserTx, err := rollup.MAXL1USERTX(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.MaxL1UserTx = int(maxL1UserTx.Int64())
+		maxTokens, err := rollup.MAXTOKENS(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.MaxTokens = maxTokens.Int64()
+		maxWDelay, err := rollup.MAXWITHDRAWALDELAY(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.MaxWDelay = maxWDelay.Int64()
+		noLimitToken, err := rollup.NOLIMIT(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.NoLimitToken = int(noLimitToken.Int64())
+		numBuckets, err := rollup.NUMBUCKETS(nil)
+		if err != nil {
+			return err
+		}
+		rollupConstants.NumBuckets = int(numBuckets.Int64())
 		// rollupConstants.ReservedIDx =
 		rollupConstants.Rfield, err = rollup.RFIELD(nil)
+		if err != nil {
+			return err
+		}
 		// rollupConstants.SafetyBot =
 		// rollupConstants.TokenHEZ =
 		// rollupConstants.WithdrawalContract =
-		return err
+		return nil
 	}); err != nil {
 		return nil, err
 	}
