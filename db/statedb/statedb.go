@@ -23,6 +23,10 @@ var ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a
 // already exists
 var ErrAccountAlreadyExists = errors.New("Can not CreateAccount because Account already exists")
 
+// ErrToIdxNotFound is used when trying to get the ToIdx from ToEthAddr or
+// ToEthAddr&ToBJJ
+var ErrToIdxNotFound = errors.New("ToIdx can not be found")
+
 // KeyCurrentBatch is used as key in the db to store the current BatchNum
 var KeyCurrentBatch = []byte("currentbatch")
 
@@ -248,7 +252,13 @@ func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
-	return createAccountInTreeDB(s.db, s.mt, idx, account)
+	cpp, err := createAccountInTreeDB(s.db, s.mt, idx, account)
+	if err != nil {
+		return cpp, err
+	}
+	// store idx by EthAddr & BJJ
+	err = s.setIdxByEthAddrBJJ(idx, account.EthAddr, account.PublicKey)
+	return cpp, err
 }
 
 // createAccountInTreeDB is abstracted from StateDB to be used from StateDB and
