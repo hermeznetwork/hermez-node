@@ -21,6 +21,8 @@ type EthereumInterface interface {
 	EthCurrentBlock() (int64, error)
 	// EthHeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 	EthBlockByNumber(context.Context, int64) (*common.Block, error)
+	EthAddress() (*ethCommon.Address, error)
+	EthTransactionReceipt(context.Context, ethCommon.Hash) (*types.Receipt, error)
 }
 
 var (
@@ -88,6 +90,14 @@ func (c *EthereumClient) BalanceAt(addr ethCommon.Address) (*big.Int, error) {
 // Account returns the underlying ethereum account
 func (c *EthereumClient) Account() *accounts.Account {
 	return c.account
+}
+
+// EthAddress returns the ethereum address of the account loaded into the EthereumClient
+func (c *EthereumClient) EthAddress() (*ethCommon.Address, error) {
+	if c.account == nil {
+		return nil, ErrAccountNil
+	}
+	return &c.account.Address, nil
 }
 
 // CallAuth performs a Smart Contract method call that requires authorization.
@@ -186,16 +196,21 @@ func (c *EthereumClient) GetReceipt(tx *types.Transaction) (*types.Receipt, erro
 	return c.waitReceipt(ctx, tx, 0)
 }
 
+// EthTransactionReceipt returns the transaction receipt of the given txHash
+func (c *EthereumClient) EthTransactionReceipt(ctx context.Context, txHash ethCommon.Hash) (*types.Receipt, error) {
+	return c.client.TransactionReceipt(ctx, txHash)
+}
+
 func (c *EthereumClient) waitReceipt(ctx context.Context, tx *types.Transaction, timeout time.Duration) (*types.Receipt, error) {
 	var err error
 	var receipt *types.Receipt
 
-	txid := tx.Hash()
-	log.Debugw("Waiting for receipt", "tx", txid.Hex())
+	txHash := tx.Hash()
+	log.Debugw("Waiting for receipt", "tx", txHash.Hex())
 
 	start := time.Now()
 	for {
-		receipt, err = c.client.TransactionReceipt(ctx, txid)
+		receipt, err = c.client.TransactionReceipt(ctx, txHash)
 		if receipt != nil || time.Since(start) >= timeout {
 			break
 		}
@@ -203,15 +218,15 @@ func (c *EthereumClient) waitReceipt(ctx context.Context, tx *types.Transaction,
 	}
 
 	if receipt != nil && receipt.Status == types.ReceiptStatusFailed {
-		log.Errorw("Failed transaction", "tx", txid.Hex())
+		log.Errorw("Failed transaction", "tx", txHash.Hex())
 		return receipt, ErrReceiptStatusFailed
 	}
 
 	if receipt == nil {
-		log.Debugw("Pendingtransaction / Wait receipt timeout", "tx", txid.Hex(), "lasterr", err)
+		log.Debugw("Pendingtransaction / Wait receipt timeout", "tx", txHash.Hex(), "lasterr", err)
 		return receipt, ErrReceiptNotReceived
 	}
-	log.Debugw("Successful transaction", "tx", txid.Hex())
+	log.Debugw("Successful transaction", "tx", txHash.Hex())
 
 	return receipt, err
 }

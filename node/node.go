@@ -144,8 +144,9 @@ func (n *Node) StartCoordinator() {
 	n.stoppedGetProofCallForge = make(chan bool)
 	n.stoppedForgeCallConfirm = make(chan bool)
 
-	batchCh0 := make(chan *coordinator.BatchInfo)
-	batchCh1 := make(chan *coordinator.BatchInfo)
+	queueSize := 1
+	batchCh0 := make(chan *coordinator.BatchInfo, queueSize)
+	batchCh1 := make(chan *coordinator.BatchInfo, queueSize)
 
 	go func() {
 		defer func() { n.stoppedForge <- true }()

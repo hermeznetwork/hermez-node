@@ -2,10 +2,12 @@ package coordinator
 
 import (
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 	"time"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -65,8 +67,9 @@ func (cn *CoordNode) Start() {
 	cn.stopForge = make(chan bool)
 	cn.stopGetProofCallForge = make(chan bool)
 	cn.stopForgeCallConfirm = make(chan bool)
-	batchCh0 := make(chan *BatchInfo)
-	batchCh1 := make(chan *BatchInfo)
+	queueSize := 8
+	batchCh0 := make(chan *BatchInfo, queueSize)
+	batchCh1 := make(chan *BatchInfo, queueSize)
 
 	go func() {
 		for {
@@ -78,6 +81,7 @@ func (cn *CoordNode) Start() {
 					return
 				} else if err != nil {
 					log.Errorw("CoordNode ForgeLoopFn", "error", err)
+					time.Sleep(200 * time.Millisecond) // Avoid overflowing log with errors
 				} else if !forge {
 					time.Sleep(200 * time.Millisecond)
 				}
@@ -133,17 +137,38 @@ func (t *timer) Time() int64 {
 	return currentTime
 }
 
+func waitForSlot(t *testing.T, c *test.Client, slot int64) {
+	for {
+		blockNum, err := c.EthCurrentBlock()
+		require.Nil(t, err)
+		nextBlockSlot, err := c.AuctionGetSlotNumber(blockNum + 1)
+		require.Nil(t, err)
+		if nextBlockSlot == slot {
+			break
+		}
+		c.CtlMineBlock()
+	}
+}
+
 func TestCoordinator(t *testing.T) {
 	txsel, bb := newTestModules(t)
 
 	conf := Config{}
 	hdb := &historydb.HistoryDB{}
-	serverProofs := []ServerProofInterface{&ServerProof{}, &ServerProof{}}
+	serverProofs := []ServerProofInterface{&ServerProofMock{}, &ServerProofMock{}}
 
 	var timer timer
 	ethClientSetup := test.NewClientSetupExample()
-	addr := ethClientSetup.AuctionVariables.BootCoordinator
-	ethClient := test.NewClient(true, &timer, addr, ethClientSetup)
+	addr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	ethClient := test.NewClient(true, &timer, &addr, ethClientSetup)
+
+	// Bid for slot 2 and 4
+	_, err := ethClient.AuctionRegisterCoordinator(addr, "https://foo.bar")
+	require.Nil(t, err)
+	_, err = ethClient.AuctionBid(2, big.NewInt(9999), addr)
+	require.Nil(t, err)
+	_, err = ethClient.AuctionBid(4, big.NewInt(9999), addr)
+	require.Nil(t, err)
 
 	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient)
 	cn := NewCoordNode(c)
@@ -151,24 +176,18 @@ func TestCoordinator(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// simulate forgeSequence time
+	waitForSlot(t, ethClient, 2)
 	log.Info("simulate entering in forge time")
-	c.rw.Lock()
-	c.isForgeSeq = true
-	c.rw.Unlock()
 	time.Sleep(1 * time.Second)
 
 	// simulate going out from forgeSequence
+	waitForSlot(t, ethClient, 3)
 	log.Info("simulate going out from forge time")
-	c.rw.Lock()
-	c.isForgeSeq = false
-	c.rw.Unlock()
 	time.Sleep(1 * time.Second)
 
 	// simulate entering forgeSequence time again
+	waitForSlot(t, ethClient, 4)
 	log.Info("simulate entering in forge time again")
-	c.rw.Lock()
-	c.isForgeSeq = true
-	c.rw.Unlock()
 	time.Sleep(2 * time.Second)
 
 	// simulate stopping forgerLoop by channel
