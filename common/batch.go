@@ -8,7 +8,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
-const batchNumBytesLen = 4
+const batchNumBytesLen = 8
 
 // Batch is a struct that represents Hermez network batch
 type Batch struct {
@@ -24,20 +24,20 @@ type Batch struct {
 }
 
 // BatchNum identifies a batch
-type BatchNum uint32
+type BatchNum int64
 
 // Bytes returns a byte array of length 4 representing the BatchNum
 func (bn BatchNum) Bytes() []byte {
-	var batchNumBytes [4]byte
-	binary.LittleEndian.PutUint32(batchNumBytes[:], uint32(bn))
+	var batchNumBytes [batchNumBytesLen]byte
+	binary.BigEndian.PutUint64(batchNumBytes[:], uint64(bn))
 	return batchNumBytes[:]
 }
 
 // BatchNumFromBytes returns BatchNum from a []byte
 func BatchNumFromBytes(b []byte) (BatchNum, error) {
 	if len(b) != batchNumBytesLen {
-		return 0, fmt.Errorf("can not parse BatchNumFromBytes, bytes len %d, expected 4", len(b))
+		return 0, fmt.Errorf("can not parse BatchNumFromBytes, bytes len %d, expected %d", len(b), batchNumBytesLen)
 	}
-	batchNum := binary.LittleEndian.Uint32(b[:4])
+	batchNum := binary.BigEndian.Uint64(b[:batchNumBytesLen])
 	return BatchNum(batchNum), nil
 }

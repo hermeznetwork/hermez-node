@@ -82,6 +82,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	// Reset DB
+	err = hdb.Reorg(-1)
+	if err != nil {
+		panic(err)
+	}
 	dir, err := ioutil.TempDir("", "tmpdb")
 	if err != nil {
 		panic(err)
@@ -94,6 +99,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	test.CleanL2DB(l2db.DB())
 	// Init API
 	api := gin.Default()
 	if err := SetAPIEndpoints(

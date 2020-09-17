@@ -10,6 +10,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree"
 )
 
 // WARNING: the generators in this file doesn't necessary follow the protocol
@@ -142,7 +143,7 @@ func GenL1Txs(
 			continue
 		}
 		if i < nUserTxs {
-			var from, to common.Account
+			var from, to *common.Account
 			var err error
 			if i%2 == 0 {
 				from, err = randomAccount(i, true, userAddr, accounts)
@@ -216,7 +217,7 @@ func GenL2Txs(
 			Type:        randomTxType(i),
 		}
 		if i < nUserTxs {
-			var from, to common.Account
+			var from, to *common.Account
 			var err error
 			if i%2 == 0 {
 				from, err = randomAccount(i, true, userAddr, accounts)
@@ -262,10 +263,10 @@ func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 	coords := []common.Coordinator{}
 	for i := 0; i < nCoords; i++ {
 		coords = append(coords, common.Coordinator{
-			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
-			Forger:      ethCommon.BigToAddress(big.NewInt(int64(i))),
-			Withdraw:    ethCommon.BigToAddress(big.NewInt(int64(i))),
-			URL:         "https://foo.bar",
+			EthBlockNum:  blocks[i%len(blocks)].EthBlockNum,
+			Forger:       ethCommon.BigToAddress(big.NewInt(int64(i))),
+			WithdrawAddr: ethCommon.BigToAddress(big.NewInt(int64(i))),
+			URL:          "https://foo.bar",
 		})
 	}
 	return coords
@@ -285,21 +286,51 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 	return bids
 }
 
-func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address, accs []common.Account) (common.Account, error) {
+// GenExitTree generates an exitTree (as an array of Exits)
+//nolint:gomnd
+func GenExitTree(n int) []common.ExitInfo {
+	exitTree := make([]common.ExitInfo, n)
+	for i := 0; i < n; i++ {
+		exitTree[i] = common.ExitInfo{
+			BatchNum:               common.BatchNum(i + 1),
+			InstantWithdrawn:       nil,
+			DelayedWithdrawRequest: nil,
+			DelayedWithdrawn:       nil,
+			AccountIdx:             common.Idx(i * 10),
+			MerkleProof: &merkletree.CircomVerifierProof{
+				Root: &merkletree.Hash{byte(i), byte(i + 1)},
+				Siblings: []*big.Int{
+					big.NewInt(int64(i) * 10),
+					big.NewInt(int64(i)*100 + 1),
+					big.NewInt(int64(i)*1000 + 2)},
+				OldKey:   &merkletree.Hash{byte(i * 1), byte(i*1 + 1)},
+				OldValue: &merkletree.Hash{byte(i * 2), byte(i*2 + 1)},
+				IsOld0:   i%2 == 0,
+				Key:      &merkletree.Hash{byte(i * 3), byte(i*3 + 1)},
+				Value:    &merkletree.Hash{byte(i * 4), byte(i*4 + 1)},
+				Fnc:      i % 2,
+			},
+			Balance: big.NewInt(int64(i) * 1000),
+		}
+	}
+	return exitTree
+}
+
+func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address, accs []common.Account) (*common.Account, error) {
 	i := seed % len(accs)
 	firstI := i
 	for {
 		acc := accs[i]
 		if userAccount && *userAddr == acc.EthAddr {
-			return acc, nil
+			return &acc, nil
 		}
 		if !userAccount && (userAddr == nil || *userAddr != acc.EthAddr) {
-			return acc, nil
+			return &acc, nil
 		}
 		i++
 		i = i % len(accs)
 		if i == firstI {
-			return acc, errors.New("Didnt found any account matchinng the criteria")
+			return &acc, errors.New("Didnt found any account matchinng the criteria")
 		}
 	}
 }
