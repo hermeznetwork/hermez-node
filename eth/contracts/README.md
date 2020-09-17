@@ -9,6 +9,6 @@ abigen --abi=HermezAuctionProtocol.abi --bin=HermezAuctionProtocol.bin --pkg=Her
 ```
 You must compile the contracts to get the `.bin` and `.abi` files. The contracts used are in the repo: https://github.com/hermeznetwork/contracts-circuits
 
-Specifically they have been processed in the commit with hash: `0ba124d60e192afda99ef4703aa13b8fef4a392a`
+Specifically they have been processed in the commit with hash: `745e8d588496d7762d4084a54bafd4435061ae35`
 
 > abigen version 1.9.21
