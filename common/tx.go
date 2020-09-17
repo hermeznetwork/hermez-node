@@ -66,3 +66,24 @@ type Tx struct {
 	FeeUSD float64     `meddler:"fee_usd,zeroisnull"`
 	Nonce  Nonce       `meddler:"nonce,zeroisnull"`
 }
+
+// L1Tx returns a *L1Tx from the Tx
+func (tx *Tx) L1Tx() *L1Tx {
+	l1Tx := &L1Tx{
+		TxID:            tx.TxID,
+		ToForgeL1TxsNum: tx.ToForgeL1TxsNum,
+		Position:        tx.Position,
+		UserOrigin:      tx.UserOrigin,
+		FromIdx:         tx.FromIdx,
+		FromEthAddr:     tx.FromEthAddr,
+		FromBJJ:         tx.FromBJJ,
+		ToIdx:           tx.ToIdx,
+		TokenID:         tx.TokenID,
+		Amount:          tx.Amount,
+		LoadAmount:      tx.LoadAmount,
+		EthBlockNum:     tx.EthBlockNum,
+		Type:            tx.Type,
+		BatchNum:        tx.BatchNum,
+	}
+	return l1Tx
+}

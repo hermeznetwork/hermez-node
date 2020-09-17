@@ -46,33 +46,42 @@ func TestBlocks(t *testing.T) {
 	var fromBlock, toBlock int64
 	fromBlock = 1
 	toBlock = 5
+	txn, err := historyDB.db.Begin()
+	assert.NoError(t, err)
+	defer func() {
+		// Rollback the transaction after the function returns.
+		// If the transaction was already committed, this will do nothing.
+		_ = txn.Rollback()
+	}()
 	// Delete peviously created rows (clean previous test execs)
 	assert.NoError(t, historyDB.Reorg(fromBlock-1))
 	// Generate fake blocks
 	blocks := test.GenBlocks(fromBlock, toBlock)
 	// Insert blocks into DB
 	for i := 0; i < len(blocks); i++ {
-		err := historyDB.AddBlock(&blocks[i])
+		err := historyDB.AddBlock(txn, blocks[i])
 		assert.NoError(t, err)
 	}
+	err = txn.Commit()
+	assert.NoError(t, err)
 	// Get all blocks from DB
 	fetchedBlocks, err := historyDB.GetBlocks(fromBlock, toBlock)
 	assert.Equal(t, len(blocks), len(fetchedBlocks))
 	// Compare generated vs getted blocks
 	assert.NoError(t, err)
 	for i, fetchedBlock := range fetchedBlocks {
-		assertEqualBlock(t, &blocks[i], fetchedBlock)
+		assertEqualBlock(t, blocks[i], fetchedBlock)
 	}
 	// Get blocks from the DB one by one
 	for i := fromBlock; i < toBlock; i++ {
 		fetchedBlock, err := historyDB.GetBlock(i)
 		assert.NoError(t, err)
-		assertEqualBlock(t, &blocks[i-1], fetchedBlock)
+		assertEqualBlock(t, blocks[i-1], fetchedBlock)
 	}
 	// Get last block
 	lastBlock, err := historyDB.GetLastBlock()
 	assert.NoError(t, err)
-	assertEqualBlock(t, &blocks[len(blocks)-1], lastBlock)
+	assertEqualBlock(t, blocks[len(blocks)-1], lastBlock)
 }
 
 func assertEqualBlock(t *testing.T, expected *common.Block, actual *common.Block) {
@@ -84,19 +93,28 @@ func assertEqualBlock(t *testing.T, expected *common.Block, actual *common.Block
 func TestBatches(t *testing.T) {
 	const fromBlock int64 = 1
 	const toBlock int64 = 3
+	txn, err := historyDB.db.Begin()
+	assert.NoError(t, err)
+	defer func() {
+		// Rollback the transaction after the function returns.
+		// If the transaction was already committed, this will do nothing.
+		_ = txn.Rollback()
+	}()
 	// Prepare blocks in the DB
-	blocks := setTestBlocks(fromBlock, toBlock)
+	blocks := setTestBlocks(t, fromBlock, toBlock)
 	// Generate fake batches
 	const nBatches = 9
 	batches := test.GenBatches(nBatches, blocks)
 	// Add batches to the DB
-	err := historyDB.AddBatches(batches)
+	err = historyDB.AddBatches(txn, batches)
+	assert.NoError(t, err)
+	err = txn.Commit()
 	assert.NoError(t, err)
 	// Get batches from the DB
 	fetchedBatches, err := historyDB.GetBatches(0, common.BatchNum(nBatches))
 	assert.NoError(t, err)
 	for i, fetchedBatch := range fetchedBatches {
-		assert.Equal(t, batches[i], *fetchedBatch)
+		assert.Equal(t, batches[i], fetchedBatch)
 	}
 	// Test GetLastBatchNum
 	fetchedLastBatchNum, err := historyDB.GetLastBatchNum()
@@ -111,34 +129,56 @@ func TestBatches(t *testing.T) {
 func TestBids(t *testing.T) {
 	const fromBlock int64 = 1
 	const toBlock int64 = 5
+	txn, err := historyDB.db.Begin()
+	assert.NoError(t, err)
+	defer func() {
+		// Rollback the transaction after the function returns.
+		// If the transaction was already committed, this will do nothing.
+		_ = txn.Rollback()
+	}()
 	// Prepare blocks in the DB
-	blocks := setTestBlocks(fromBlock, toBlock)
+	blocks := setTestBlocks(t, fromBlock, toBlock)
 	// Generate fake coordinators
 	const nCoords = 5
 	coords := test.GenCoordinators(nCoords, blocks)
+	err = historyDB.AddCoordinators(txn, coords)
+	assert.NoError(t, err)
 	// Generate fake bids
 	const nBids = 20
 	bids := test.GenBids(nBids, blocks, coords)
-	err := historyDB.addBids(bids)
+	err = historyDB.AddBids(txn, bids)
+	assert.NoError(t, err)
+	err = txn.Commit()
 	assert.NoError(t, err)
 	// Fetch bids
 	fetchedBids, err := historyDB.GetBids()
 	assert.NoError(t, err)
 	// Compare fetched bids vs generated bids
 	for i, bid := range fetchedBids {
-		assert.Equal(t, bids[i], *bid)
+		assert.Equal(t, bids[i], bid)
 	}
 }
 
 func TestTokens(t *testing.T) {
 	const fromBlock int64 = 1
 	const toBlock int64 = 5
+	txn, err := historyDB.db.Begin()
+	assert.NoError(t, err)
+	defer func() {
+		// Rollback the transaction after the function returns.
+		// If the transaction was already committed, this will do nothing.
+		_ = txn.Rollback()
+	}()
 	// Prepare blocks in the DB
-	blocks := setTestBlocks(fromBlock, toBlock)
+	blocks := setTestBlocks(t, fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 5
 	tokens := test.GenTokens(nTokens, blocks)
-	err := historyDB.AddTokens(tokens)
+	err = historyDB.AddTokens(txn, tokens)
+	assert.NoError(t, err)
+	err = txn.Commit()
+	assert.NoError(t, err)
+	txn, err = historyDB.db.Begin()
 	assert.NoError(t, err)
 	// Update price of generated tokens without price
 	for i := 0; i < len(tokens); i++ {
@@ -149,6 +189,8 @@ func TestTokens(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
+	err = txn.Commit()
+	assert.NoError(t, err)
 	// Fetch tokens
 	fetchedTokens, err := historyDB.GetTokens()
 	assert.NoError(t, err)
@@ -168,37 +210,53 @@ func TestTokens(t *testing.T) {
 func TestAccounts(t *testing.T) {
 	const fromBlock int64 = 1
 	const toBlock int64 = 5
+	txn, err := historyDB.db.Begin()
+	assert.NoError(t, err)
+	defer func() {
+		// Rollback the transaction after the function returns.
+		// If the transaction was already committed, this will do nothing.
+		_ = txn.Rollback()
+	}()
 	// Prepare blocks in the DB
-	blocks := setTestBlocks(fromBlock, toBlock)
+	blocks := setTestBlocks(t, fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 5
 	tokens := test.GenTokens(nTokens, blocks)
-	err := historyDB.AddTokens(tokens)
+	err = historyDB.AddTokens(txn, tokens)
 	assert.NoError(t, err)
 	// Generate fake batches
 	const nBatches = 10
 	batches := test.GenBatches(nBatches, blocks)
-	err = historyDB.AddBatches(batches)
+	err = historyDB.AddBatches(txn, batches)
 	assert.NoError(t, err)
 	// Generate fake accounts
 	const nAccounts = 3
 	accs := test.GenAccounts(nAccounts, 0, tokens, nil, batches)
-	err = historyDB.AddAccounts(accs)
+	err = historyDB.AddAccounts(txn, accs)
+	assert.NoError(t, err)
+	err = txn.Commit()
 	assert.NoError(t, err)
 	// Fetch accounts
 	fetchedAccs, err := historyDB.GetAccounts()
 	assert.NoError(t, err)
 	// Compare fetched accounts vs generated accounts
 	for i, acc := range fetchedAccs {
-		assert.Equal(t, accs[i], *acc)
+		assert.Equal(t, accs[i], acc)
 	}
 }
 
 func TestTxs(t *testing.T) {
 	const fromBlock int64 = 1
 	const toBlock int64 = 5
+	txn, err := historyDB.db.Begin()
+	assert.NoError(t, err)
+	defer func() {
+		// Rollback the transaction after the function returns.
+		// If the transaction was already committed, this will do nothing.
+		_ = txn.Rollback()
+	}()
 	// Prepare blocks in the DB
-	blocks := setTestBlocks(fromBlock, toBlock)
+	blocks := setTestBlocks(t, fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 5
 	const tokenValue = 1.23456
@@ -206,27 +264,29 @@ func TestTxs(t *testing.T) {
 	for i := 0; i < len(tokens); i++ {
 		tokens[i].USD = tokenValue
 	}
-	err := historyDB.AddTokens(tokens)
+	err = historyDB.AddTokens(txn, tokens)
 	assert.NoError(t, err)
 	// Generate fake batches
 	const nBatches = 10
 	batches := test.GenBatches(nBatches, blocks)
-	err = historyDB.AddBatches(batches)
+	err = historyDB.AddBatches(txn, batches)
 	assert.NoError(t, err)
 	// Generate fake accounts
 	const nAccounts = 3
 	accs := test.GenAccounts(nAccounts, 0, tokens, nil, batches)
-	err = historyDB.AddAccounts(accs)
+	err = historyDB.AddAccounts(txn, accs)
 	assert.NoError(t, err)
 	// Generate fake L1 txs
 	const nL1s = 30
 	_, l1txs := test.GenL1Txs(0, nL1s, 0, nil, accs, tokens, blocks, batches)
-	err = historyDB.AddL1Txs(l1txs)
+	err = historyDB.AddL1Txs(txn, l1txs)
 	assert.NoError(t, err)
 	// Generate fake L2 txs
 	const nL2s = 20
 	_, l2txs := test.GenL2Txs(0, nL2s, 0, nil, accs, tokens, blocks, batches)
-	err = historyDB.AddL2Txs(l2txs)
+	err = historyDB.AddL2Txs(txn, l2txs)
+	assert.NoError(t, err)
+	err = txn.Commit()
 	assert.NoError(t, err)
 	// Compare fetched txs vs generated txs.
 	for i := 0; i < len(l1txs); i++ {
@@ -284,40 +344,64 @@ func TestTxs(t *testing.T) {
 	// Test trigger: L1 integrity
 	// from_eth_addr can't be null
 	l1txs[0].FromEthAddr = ethCommon.Address{}
-	err = historyDB.AddL1Txs(l1txs)
+	err = historyDB.AddL1Txs(txn, l1txs)
 	assert.Error(t, err)
 	l1txs[0].FromEthAddr = ethCommon.BigToAddress(big.NewInt(int64(5)))
 	// from_bjj can't be null
 	l1txs[0].FromBJJ = nil
-	err = historyDB.AddL1Txs(l1txs)
+	err = historyDB.AddL1Txs(txn, l1txs)
 	assert.Error(t, err)
 	privK := babyjub.NewRandPrivKey()
 	l1txs[0].FromBJJ = privK.Public()
 	// load_amount can't be null
 	l1txs[0].LoadAmount = nil
-	err = historyDB.AddL1Txs(l1txs)
+	err = historyDB.AddL1Txs(txn, l1txs)
 	assert.Error(t, err)
 	// Test trigger: L2 integrity
 	// batch_num can't be null
 	l2txs[0].BatchNum = 0
-	err = historyDB.AddL2Txs(l2txs)
+	err = historyDB.AddL2Txs(txn, l2txs)
 	assert.Error(t, err)
 	l2txs[0].BatchNum = 1
 	// nonce can't be null
 	l2txs[0].Nonce = 0
-	err = historyDB.AddL2Txs(l2txs)
+	err = historyDB.AddL2Txs(txn, l2txs)
 	assert.Error(t, err)
+	// Test helper functions for Synchronizer
+	txs, err := historyDB.GetUserTxsToAddAccount(2)
+	assert.NoError(t, err)
+	assert.NotZero(t, len(txs))
+	position, err := historyDB.GetLastTxsPosition(2)
+	assert.NoError(t, err)
+	assert.Equal(t, 22, position)
+	// Test Update L1 TX Batch_num
+	txn, err = historyDB.db.Begin()
+	assert.NoError(t, err)
+	assert.Equal(t, common.BatchNum(0), txs[0].BatchNum)
+	txs[0].BatchNum = common.BatchNum(1)
+	err = historyDB.UpdateTxsBatchNum(txn, txs)
+	assert.NoError(t, err)
+	err = txn.Commit()
+	assert.NoError(t, err)
+	txs, err = historyDB.GetUserTxsToAddAccount(2)
+	assert.NoError(t, err)
+	assert.NotZero(t, len(txs))
+	assert.Equal(t, common.BatchNum(1), txs[0].BatchNum)
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them
-func setTestBlocks(from, to int64) []common.Block {
+func setTestBlocks(t *testing.T, from, to int64) []*common.Block {
+	txn, err := historyDB.db.Begin()
+	assert.NoError(t, err)
 	if err := cleanHistoryDB(); err != nil {
 		panic(err)
 	}
 	blocks := test.GenBlocks(from, to)
-	if err := historyDB.AddBlocks(blocks); err != nil {
+	if err := historyDB.AddBlocks(txn, blocks); err != nil {
 		panic(err)
 	}
+	err = txn.Commit()
+	assert.NoError(t, err)
 	return blocks
 }
 

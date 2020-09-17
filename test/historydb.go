@@ -16,10 +16,10 @@ import (
 // they are intended to check that the parsers between struct <==> DB are correct
 
 // GenBlocks generates block from, to block numbers. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenBlocks(from, to int64) []common.Block {
-	var blocks []common.Block
+func GenBlocks(from, to int64) []*common.Block {
+	var blocks []*common.Block
 	for i := from; i < to; i++ {
-		blocks = append(blocks, common.Block{
+		blocks = append(blocks, &common.Block{
 			EthBlockNum: i,
 			//nolint:gomnd
 			Timestamp: time.Now().Add(time.Second * 13).UTC(),
@@ -30,8 +30,8 @@ func GenBlocks(from, to int64) []common.Block {
 }
 
 // GenTokens generates tokens. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenTokens(nTokens int, blocks []common.Block) []common.Token {
-	tokens := []common.Token{}
+func GenTokens(nTokens int, blocks []*common.Block) []*common.Token {
+	tokens := []*common.Token{}
 	for i := 0; i < nTokens; i++ {
 		token := common.Token{
 			TokenID:     common.TokenID(i),
@@ -45,14 +45,14 @@ func GenTokens(nTokens int, blocks []common.Block) []common.Token {
 			token.USD = 3
 			token.USDUpdate = time.Now()
 		}
-		tokens = append(tokens, token)
+		tokens = append(tokens, &token)
 	}
 	return tokens
 }
 
 // GenBatches generates batches. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
-	batches := []common.Batch{}
+func GenBatches(nBatches int, blocks []*common.Block) []*common.Batch {
+	batches := []*common.Batch{}
 	collectedFees := make(map[common.TokenID]*big.Int)
 	for i := 0; i < 64; i++ {
 		collectedFees[common.TokenID(i)] = big.NewInt(int64(i))
@@ -73,19 +73,19 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 		if i%2 == 0 {
 			batch.ForgeL1TxsNum = uint32(i)
 		}
-		batches = append(batches, batch)
+		batches = append(batches, &batch)
 	}
 	return batches
 }
 
 // GenAccounts generates accounts. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAddr *ethCommon.Address, batches []common.Batch) []common.Account {
+func GenAccounts(totalAccounts, userAccounts int, tokens []*common.Token, userAddr *ethCommon.Address, batches []*common.Batch) []*common.Account {
 	if totalAccounts < userAccounts {
 		panic("totalAccounts must be greater than userAccounts")
 	}
 	privK := babyjub.NewRandPrivKey()
 	pubK := privK.Public()
-	accs := []common.Account{}
+	accs := []*common.Account{}
 	for i := 0; i < totalAccounts; i++ {
 		var addr ethCommon.Address
 		if i < userAccounts {
@@ -93,7 +93,7 @@ func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAdd
 		} else {
 			addr = ethCommon.BigToAddress(big.NewInt(int64(i)))
 		}
-		accs = append(accs, common.Account{
+		accs = append(accs, &common.Account{
 			Idx:       common.Idx(i),
 			TokenID:   tokens[i%len(tokens)].TokenID,
 			EthAddr:   addr,
@@ -109,16 +109,16 @@ func GenL1Txs(
 	fromIdx int,
 	totalTxs, nUserTxs int,
 	userAddr *ethCommon.Address,
-	accounts []common.Account,
-	tokens []common.Token,
-	blocks []common.Block,
-	batches []common.Batch,
-) ([]common.L1Tx, []common.L1Tx) {
+	accounts []*common.Account,
+	tokens []*common.Token,
+	blocks []*common.Block,
+	batches []*common.Batch,
+) ([]*common.L1Tx, []*common.L1Tx) {
 	if totalTxs < nUserTxs {
 		panic("totalTxs must be greater than userTxs")
 	}
-	userTxs := []common.L1Tx{}
-	othersTxs := []common.L1Tx{}
+	userTxs := []*common.L1Tx{}
+	othersTxs := []*common.L1Tx{}
 	for i := 0; i < totalTxs; i++ {
 		var tx common.L1Tx
 		if batches[i%len(batches)].ForgeL1TxsNum != 0 {
@@ -140,7 +140,7 @@ func GenL1Txs(
 			continue
 		}
 		if i < nUserTxs {
-			var from, to common.Account
+			var from, to *common.Account
 			var err error
 			if i%2 == 0 {
 				from, err = randomAccount(i, true, userAddr, accounts)
@@ -165,7 +165,7 @@ func GenL1Txs(
 			tx.FromEthAddr = from.EthAddr
 			tx.FromBJJ = from.PublicKey
 			tx.ToIdx = to.Idx
-			userTxs = append(userTxs, tx)
+			userTxs = append(userTxs, &tx)
 		} else {
 			from, err := randomAccount(i, false, userAddr, accounts)
 			if err != nil {
@@ -179,7 +179,7 @@ func GenL1Txs(
 			tx.FromEthAddr = from.EthAddr
 			tx.FromBJJ = from.PublicKey
 			tx.ToIdx = to.Idx
-			othersTxs = append(othersTxs, tx)
+			othersTxs = append(othersTxs, &tx)
 		}
 	}
 	return userTxs, othersTxs
@@ -190,16 +190,16 @@ func GenL2Txs(
 	fromIdx int,
 	totalTxs, nUserTxs int,
 	userAddr *ethCommon.Address,
-	accounts []common.Account,
-	tokens []common.Token,
-	blocks []common.Block,
-	batches []common.Batch,
-) ([]common.L2Tx, []common.L2Tx) {
+	accounts []*common.Account,
+	tokens []*common.Token,
+	blocks []*common.Block,
+	batches []*common.Batch,
+) ([]*common.L2Tx, []*common.L2Tx) {
 	if totalTxs < nUserTxs {
 		panic("totalTxs must be greater than userTxs")
 	}
-	userTxs := []common.L2Tx{}
-	othersTxs := []common.L2Tx{}
+	userTxs := []*common.L2Tx{}
+	othersTxs := []*common.L2Tx{}
 	for i := 0; i < totalTxs; i++ {
 		tx := common.L2Tx{
 			TxID:     common.TxID(common.Hash([]byte("L2_" + strconv.Itoa(fromIdx+i)))),
@@ -214,7 +214,7 @@ func GenL2Txs(
 			Type:        randomTxType(i),
 		}
 		if i < nUserTxs {
-			var from, to common.Account
+			var from, to *common.Account
 			var err error
 			if i%2 == 0 {
 				from, err = randomAccount(i, true, userAddr, accounts)
@@ -237,7 +237,7 @@ func GenL2Txs(
 			}
 			tx.FromIdx = from.Idx
 			tx.ToIdx = to.Idx
-			userTxs = append(userTxs, tx)
+			userTxs = append(userTxs, &tx)
 		} else {
 			from, err := randomAccount(i, false, userAddr, accounts)
 			if err != nil {
@@ -249,17 +249,17 @@ func GenL2Txs(
 			}
 			tx.FromIdx = from.Idx
 			tx.ToIdx = to.Idx
-			othersTxs = append(othersTxs, tx)
+			othersTxs = append(othersTxs, &tx)
 		}
 	}
 	return userTxs, othersTxs
 }
 
 // GenCoordinators generates coordinators. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
-	coords := []common.Coordinator{}
+func GenCoordinators(nCoords int, blocks []*common.Block) []*common.Coordinator {
+	coords := []*common.Coordinator{}
 	for i := 0; i < nCoords; i++ {
-		coords = append(coords, common.Coordinator{
+		coords = append(coords, &common.Coordinator{
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			Forger:      ethCommon.BigToAddress(big.NewInt(int64(i))),
 			Withdraw:    ethCommon.BigToAddress(big.NewInt(int64(i))),
@@ -270,10 +270,10 @@ func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 }
 
 // GenBids generates bids. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []common.Bid {
-	bids := []common.Bid{}
+func GenBids(nBids int, blocks []*common.Block, coords []*common.Coordinator) []*common.Bid {
+	bids := []*common.Bid{}
 	for i := 0; i < nBids; i++ {
-		bids = append(bids, common.Bid{
+		bids = append(bids, &common.Bid{
 			SlotNum:     common.SlotNum(i),
 			BidValue:    big.NewInt(int64(i)),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
@@ -283,7 +283,7 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 	return bids
 }
 
-func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address, accs []common.Account) (common.Account, error) {
+func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address, accs []*common.Account) (*common.Account, error) {
 	i := seed % len(accs)
 	firstI := i
 	for {

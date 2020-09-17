@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"math/big"
@@ -19,13 +20,13 @@ func InitMeddler() {
 // BulkInsert performs a bulk insert with a single statement into the specified table.  Example:
 // `db.BulkInsert(myDB, "INSERT INTO block (eth_block_num, timestamp, hash) VALUES %s", blocks[:])`
 // Note that all the columns must be specified in the query, and they must be in the same order as in the table.
-func BulkInsert(db meddler.DB, q string, args interface{}) error {
+func BulkInsert(txn *sql.Tx, q string, args interface{}) error {
 	arrayValue := reflect.ValueOf(args)
 	arrayLen := arrayValue.Len()
 	valueStrings := make([]string, 0, arrayLen)
 	var arglist = make([]interface{}, 0)
 	for i := 0; i < arrayLen; i++ {
-		arg := arrayValue.Index(i).Addr().Interface()
+		arg := arrayValue.Index(i).Interface()
 		elemArglist, err := meddler.Default.Values(arg, true)
 		if err != nil {
 			return err
@@ -39,7 +40,7 @@ func BulkInsert(db meddler.DB, q string, args interface{}) error {
 		valueStrings = append(valueStrings, value)
 	}
 	stmt := fmt.Sprintf(q, strings.Join(valueStrings, ","))
-	_, err := db.Exec(stmt, arglist...)
+	_, err := txn.Exec(stmt, arglist...)
 	return err
 }
 
