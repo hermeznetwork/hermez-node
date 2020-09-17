@@ -2,6 +2,9 @@ package common
 
 import (
 	"math/big"
+
+	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 // TxID is the identifier of a Hermez network transaction
@@ -37,12 +40,29 @@ const (
 
 // Tx is a struct used by the TxSelector & BatchBuilder as a generic type generated from L1Tx & PoolL2Tx
 type Tx struct {
-	TxID     TxID
-	FromIdx  Idx // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	ToIdx    Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositTransfer
-	Amount   *big.Int
-	Nonce    Nonce // effective 40 bits used
-	Fee      FeeSelector
-	Type     TxType   // optional, descrives which kind of tx it's
-	BatchNum BatchNum // batchNum in which this tx was forged. Presence indicates "forged" state.
+	// Generic
+	IsL1        bool     `meddler:"is_l1"`
+	TxID        TxID     `meddler:"id"`
+	Type        TxType   `meddler:"type"`
+	Position    int      `meddler:"position"`
+	FromIdx     Idx      `meddler:"from_idx"`
+	ToIdx       Idx      `meddler:"to_idx"`
+	Amount      *big.Int `meddler:"amount,bigint"`
+	AmountFloat float64  `meddler:"amount_f"`
+	TokenID     TokenID  `meddler:"token_id"`
+	USD         float64  `meddler:"amount_usd,zeroisnull"`
+	BatchNum    BatchNum `meddler:"batch_num,zeroisnull"` // batchNum in which this tx was forged. If the tx is L2, this must be != 0
+	EthBlockNum int64    `meddler:"eth_block_num"`        // Ethereum Block Number in which this L1Tx was added to the queue
+	// L1
+	ToForgeL1TxsNum uint32             `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
+	UserOrigin      bool               `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
+	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr"`
+	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj"`
+	LoadAmount      *big.Int           `meddler:"load_amount,bigintnull"`
+	LoadAmountFloat float64            `meddler:"load_amount_f"`
+	LoadAmountUSD   float64            `meddler:"load_amount_usd,zeroisnull"`
+	// L2
+	Fee    FeeSelector `meddler:"fee,zeroisnull"`
+	FeeUSD float64     `meddler:"fee_usd,zeroisnull"`
+	Nonce  Nonce       `meddler:"nonce,zeroisnull"`
 }

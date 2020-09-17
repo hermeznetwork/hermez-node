@@ -7,27 +7,35 @@ import (
 // L2Tx is a struct that represents an already forged L2 tx
 type L2Tx struct {
 	// Stored in DB: mandatory fileds
-	TxID     TxID        `meddler:"tx_id"`
-	BatchNum BatchNum    `meddler:"batch_num"` // batchNum in which this tx was forged.
-	Position int         `meddler:"position"`
-	FromIdx  Idx         `meddler:"from_idx"`
-	ToIdx    Idx         `meddler:"to_idx"`
-	Amount   *big.Int    `meddler:"amount,bigint"`
-	Fee      FeeSelector `meddler:"fee"`
-	Nonce    Nonce       `meddler:"nonce"`
-	Type     TxType      `meddler:"tx_type"`
+	TxID        TxID
+	BatchNum    BatchNum // batchNum in which this tx was forged.
+	Position    int
+	FromIdx     Idx
+	ToIdx       Idx
+	Amount      *big.Int
+	Fee         FeeSelector
+	Nonce       Nonce
+	Type        TxType
+	EthBlockNum int64 // Ethereum Block Number in which this L2Tx was added to the queue
 }
 
 // Tx returns a *Tx from the L2Tx
 func (tx *L2Tx) Tx() *Tx {
+	f := new(big.Float).SetInt(tx.Amount)
+	amountFloat, _ := f.Float64()
 	return &Tx{
-		TxID:    tx.TxID,
-		FromIdx: tx.FromIdx,
-		ToIdx:   tx.ToIdx,
-		Amount:  tx.Amount,
-		Nonce:   tx.Nonce,
-		Fee:     tx.Fee,
-		Type:    tx.Type,
+		IsL1:        false,
+		TxID:        tx.TxID,
+		Type:        tx.Type,
+		Position:    tx.Position,
+		FromIdx:     tx.FromIdx,
+		ToIdx:       tx.ToIdx,
+		Amount:      tx.Amount,
+		AmountFloat: amountFloat,
+		BatchNum:    tx.BatchNum,
+		EthBlockNum: tx.EthBlockNum,
+		Fee:         tx.Fee,
+		Nonce:       tx.Nonce,
 	}
 }
 

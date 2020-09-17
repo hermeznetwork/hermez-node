@@ -18,31 +18,49 @@ const (
 // L1Tx is a struct that represents a L1 tx
 type L1Tx struct {
 	// Stored in DB: mandatory fileds
-	TxID            TxID               `meddler:"tx_id"`
-	ToForgeL1TxsNum uint32             `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
-	Position        int                `meddler:"position"`
-	UserOrigin      bool               `meddler:"user_origin"` // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx         Idx                `meddler:"from_idx"`    // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr"`
-	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj"`
-	ToIdx           Idx                `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	TokenID         TokenID            `meddler:"token_id"`
-	Amount          *big.Int           `meddler:"amount,bigint"`
-	LoadAmount      *big.Int           `meddler:"load_amount,bigint"`
-	EthBlockNum     uint64             `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
-	Type            TxType             `meddler:"tx_type"`
-	BatchNum        BatchNum           `meddler:"-"`
+	TxID            TxID
+	ToForgeL1TxsNum uint32 // toForgeL1TxsNum in which the tx was forged / will be forged
+	Position        int
+	UserOrigin      bool // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
+	FromIdx         Idx  // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	FromEthAddr     ethCommon.Address
+	FromBJJ         *babyjub.PublicKey
+	ToIdx           Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	TokenID         TokenID
+	Amount          *big.Int
+	LoadAmount      *big.Int
+	EthBlockNum     int64 // Ethereum Block Number in which this L1Tx was added to the queue
+	Type            TxType
+	BatchNum        BatchNum
 }
 
 // Tx returns a *Tx from the L1Tx
 func (tx *L1Tx) Tx() *Tx {
-	return &Tx{
-		TxID:    tx.TxID,
-		FromIdx: tx.FromIdx,
-		ToIdx:   tx.ToIdx,
-		Amount:  tx.Amount,
-		Type:    tx.Type,
+	f := new(big.Float).SetInt(tx.Amount)
+	amountFloat, _ := f.Float64()
+	genericTx := &Tx{
+		IsL1:            true,
+		TxID:            tx.TxID,
+		Type:            tx.Type,
+		Position:        tx.Position,
+		FromIdx:         tx.FromIdx,
+		ToIdx:           tx.ToIdx,
+		Amount:          tx.Amount,
+		AmountFloat:     amountFloat,
+		TokenID:         tx.TokenID,
+		ToForgeL1TxsNum: tx.ToForgeL1TxsNum,
+		UserOrigin:      tx.UserOrigin,
+		FromEthAddr:     tx.FromEthAddr,
+		FromBJJ:         tx.FromBJJ,
+		LoadAmount:      tx.LoadAmount,
+		EthBlockNum:     tx.EthBlockNum,
 	}
+	if tx.LoadAmount != nil {
+		lf := new(big.Float).SetInt(tx.LoadAmount)
+		loadAmountFloat, _ := lf.Float64()
+		genericTx.LoadAmountFloat = loadAmountFloat
+	}
+	return genericTx
 }
 
 // Bytes encodes a L1Tx into []byte
