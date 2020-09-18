@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -65,55 +64,55 @@ func (tx *L1Tx) Tx() *Tx {
 // Bytes encodes a L1Tx into []byte
 func (tx *L1Tx) Bytes(nLevels int) ([]byte, error) {
 	var b [68]byte
-	copy(b[0:4], tx.ToIdx.Bytes())
-	copy(b[4:8], tx.TokenID.Bytes())
-	amountFloat16, err := utils.NewFloat16(tx.Amount)
-	if err != nil {
-		return nil, err
-	}
-	copy(b[8:10], amountFloat16.Bytes())
-	loadAmountFloat16, err := utils.NewFloat16(tx.LoadAmount)
-	if err != nil {
-		return nil, err
-	}
-	copy(b[10:12], loadAmountFloat16.Bytes())
-	copy(b[12:16], tx.FromIdx.Bytes())
+	copy(b[0:20], tx.FromEthAddr.Bytes())
 	pkComp := tx.FromBJJ.Compress()
-	copy(b[16:48], SwapEndianness(pkComp[:]))
-	copy(b[48:68], SwapEndianness(tx.FromEthAddr.Bytes()))
-	return SwapEndianness(b[:]), nil
+	copy(b[20:52], pkComp[:])
+	copy(b[52:56], tx.FromIdx.Bytes())
+	loadAmountFloat16, err := NewFloat16(tx.LoadAmount)
+	if err != nil {
+		return nil, err
+	}
+	copy(b[56:58], loadAmountFloat16.Bytes())
+	amountFloat16, err := NewFloat16(tx.Amount)
+	if err != nil {
+		return nil, err
+	}
+	copy(b[58:60], amountFloat16.Bytes())
+	copy(b[60:64], tx.TokenID.Bytes())
+	copy(b[64:68], tx.ToIdx.Bytes())
+	return b[:], nil
 }
 
 // L1TxFromBytes decodes a L1Tx from []byte
-func L1TxFromBytes(bRaw []byte) (*L1Tx, error) {
-	if len(bRaw) != L1TxBytesLen {
-		return nil, fmt.Errorf("Can not parse L1Tx bytes, expected length %d, current: %d", 68, len(bRaw))
+func L1TxFromBytes(b []byte) (*L1Tx, error) {
+	if len(b) != L1TxBytesLen {
+		return nil, fmt.Errorf("Can not parse L1Tx bytes, expected length %d, current: %d", 68, len(b))
 	}
 
-	b := SwapEndianness(bRaw)
 	tx := &L1Tx{}
 	var err error
-	tx.ToIdx, err = IdxFromBytes(b[0:4])
-	if err != nil {
-		return nil, err
-	}
-	tx.TokenID, err = TokenIDFromBytes(b[4:8])
-	if err != nil {
-		return nil, err
-	}
-	tx.Amount = new(big.Int).SetBytes(SwapEndianness(b[8:10]))
-	tx.LoadAmount = new(big.Int).SetBytes(SwapEndianness(b[10:12]))
-	tx.FromIdx, err = IdxFromBytes(b[12:16])
-	if err != nil {
-		return nil, err
-	}
-	pkCompB := SwapEndianness(b[16:48])
+	tx.FromEthAddr = ethCommon.BytesToAddress(b[0:20])
+	pkCompB := b[20:52]
 	var pkComp babyjub.PublicKeyComp
 	copy(pkComp[:], pkCompB)
 	tx.FromBJJ, err = pkComp.Decompress()
 	if err != nil {
 		return nil, err
 	}
-	tx.FromEthAddr = ethCommon.BytesToAddress(SwapEndianness(b[48:68]))
+	tx.FromIdx, err = IdxFromBytes(b[52:56])
+	if err != nil {
+		return nil, err
+	}
+	tx.LoadAmount = Float16FromBytes(b[56:58]).BigInt()
+	tx.Amount = Float16FromBytes(b[58:60]).BigInt()
+	tx.TokenID, err = TokenIDFromBytes(b[60:64])
+	if err != nil {
+		return nil, err
+	}
+	tx.ToIdx, err = IdxFromBytes(b[64:68])
+	if err != nil {
+		return nil, err
+	}
+
 	return tx, nil
 }

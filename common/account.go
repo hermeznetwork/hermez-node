@@ -37,7 +37,7 @@ type Idx uint32
 // Bytes returns a byte array representing the Idx
 func (idx Idx) Bytes() []byte {
 	var b [4]byte
-	binary.LittleEndian.PutUint32(b[:], uint32(idx))
+	binary.BigEndian.PutUint32(b[:], uint32(idx))
 	return b[:]
 }
 
@@ -51,7 +51,7 @@ func IdxFromBytes(b []byte) (Idx, error) {
 	if len(b) != idxBytesLen {
 		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected 4", len(b))
 	}
-	idx := binary.LittleEndian.Uint32(b[:4])
+	idx := binary.BigEndian.Uint32(b[:4])
 	return Idx(idx), nil
 }
 
@@ -84,7 +84,10 @@ func (a *Account) String() string {
 	return buf.String()
 }
 
-// Bytes returns the bytes representing the Account, in a way that each BigInt is represented by 32 bytes, in spite of the BigInt could be represented in less bytes (due a small big.Int), so in this way each BigInt is always 32 bytes and can be automatically parsed from a byte array.
+// Bytes returns the bytes representing the Account, in a way that each BigInt
+// is represented by 32 bytes, in spite of the BigInt could be represented in
+// less bytes (due a small big.Int), so in this way each BigInt is always 32
+// bytes and can be automatically parsed from a byte array.
 func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	var b [32 * NLeafElems]byte
 
@@ -105,7 +108,7 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	if babyjub.PointCoordSign(a.PublicKey.X) {
 		b[10] = 1
 	}
-	copy(b[32:64], SwapEndianness(a.Balance.Bytes())) // SwapEndianness, as big.Int uses BigEndian
+	copy(b[32:64], SwapEndianness(a.Balance.Bytes()))
 	copy(b[64:96], SwapEndianness(a.PublicKey.Y.Bytes()))
 	copy(b[96:116], a.EthAddr.Bytes())
 
@@ -159,7 +162,10 @@ func AccountFromBigInts(e [NLeafElems]*big.Int) (*Account, error) {
 
 // AccountFromBytes returns a Account from a byte array
 func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
-	tokenID := binary.LittleEndian.Uint32(b[0:4])
+	tokenID, err := TokenIDFromBytes(b[0:4])
+	if err != nil {
+		return nil, err
+	}
 	var nonceBytes5 [5]byte
 	copy(nonceBytes5[:], b[4:9])
 	nonce := NonceFromBytes(nonceBytes5)

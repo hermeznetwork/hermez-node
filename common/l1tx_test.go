@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestL1TxCodec(t *testing.T) {
+func TestL1TxByteParsers(t *testing.T) {
 	var pkComp babyjub.PublicKeyComp
 	err := pkComp.UnmarshalText([]byte("0x56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c"))
 	require.Nil(t, err)
@@ -19,7 +19,7 @@ func TestL1TxCodec(t *testing.T) {
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
 
-	l1Tx := L1Tx{
+	l1Tx := &L1Tx{
 		ToIdx:       3,
 		TokenID:     5,
 		Amount:      big.NewInt(1),
@@ -38,7 +38,7 @@ func TestL1TxCodec(t *testing.T) {
 
 	decodedData, err := L1TxFromBytes(encodedData)
 	require.Nil(t, err)
-	assert.Equal(t, l1Tx, *decodedData)
+	assert.Equal(t, l1Tx, decodedData)
 
 	encodedData2, err := decodedData.Bytes(32)
 	require.Nil(t, err)

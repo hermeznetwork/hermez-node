@@ -1,9 +1,9 @@
-// Package utils provides methods to work with Hermez custom half float
+// Package common Float16 provides methods to work with Hermez custom half float
 // precision, 16 bits, codification internally called Float16 has been adopted
 // to encode large integers. This is done in order to save bits when L2
 // transactions are published.
 //nolint:gomnd
-package utils
+package common
 
 import (
 	"encoding/binary"
@@ -19,11 +19,17 @@ var (
 // Float16 represents a float in a 16 bit format
 type Float16 uint16
 
-// Bytes return a byte array of length 2 with the Float16 value encoded in LittleEndian
+// Bytes return a byte array of length 2 with the Float16 value encoded in BigEndian
 func (f16 Float16) Bytes() []byte {
 	var b [2]byte
-	binary.LittleEndian.PutUint16(b[:], uint16(f16))
+	binary.BigEndian.PutUint16(b[:], uint16(f16))
 	return b[:]
+}
+
+// Float16FromBytes returns a Float16 from a byte array of 2 bytes.
+func Float16FromBytes(b []byte) *Float16 {
+	f16 := Float16(binary.BigEndian.Uint16(b[:2]))
+	return &f16
 }
 
 // BigInt converts the Float16 to a *big.Int integer
@@ -67,8 +73,8 @@ func floorFix2Float(_f *big.Int) Float16 {
 	return Float16(m.Int64() | e<<11)
 }
 
-// NewFloat16 encodes a *big.Int integer as a Float16, returning error in case
-// of loss during the encoding.
+// NewFloat16 encodes a *big.Int integer as a Float16, returning error in
+// case of loss during the encoding.
 func NewFloat16(f *big.Int) (Float16, error) {
 	fl1 := floorFix2Float(f)
 	fi1 := fl1.BigInt()

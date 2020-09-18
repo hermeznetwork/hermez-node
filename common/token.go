@@ -37,7 +37,7 @@ type TokenID uint32 // current implementation supports up to 2^32 tokens
 // Bytes returns a byte array of length 4 representing the TokenID
 func (t TokenID) Bytes() []byte {
 	var tokenIDBytes [4]byte
-	binary.LittleEndian.PutUint32(tokenIDBytes[:], uint32(t))
+	binary.BigEndian.PutUint32(tokenIDBytes[:], uint32(t))
 	return tokenIDBytes[:]
 }
 
@@ -51,6 +51,6 @@ func TokenIDFromBytes(b []byte) (TokenID, error) {
 	if len(b) != tokenIDBytesLen {
 		return 0, fmt.Errorf("can not parse TokenID, bytes len %d, expected 4", len(b))
 	}
-	tid := binary.LittleEndian.Uint32(b[:4])
+	tid := binary.BigEndian.Uint32(b[:4])
 	return TokenID(tid), nil
 }

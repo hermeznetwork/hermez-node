@@ -9,7 +9,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -177,16 +176,16 @@ type RollupInterface interface {
 	RollupAddToken(tokenAddress ethCommon.Address) (*types.Transaction, error)
 	RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey,
 		numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error)
-	RollupForceExit(fromIdx int64, amountF utils.Float16, tokenID int64) (*types.Transaction, error)
-	RollupForceTransfer(fromIdx int64, amountF utils.Float16, tokenID, toIdx int64) (*types.Transaction, error)
+	RollupForceExit(fromIdx int64, amountF common.Float16, tokenID int64) (*types.Transaction, error)
+	RollupForceTransfer(fromIdx int64, amountF common.Float16, tokenID, toIdx int64) (*types.Transaction, error)
 	RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey,
-		loadAmountF, amountF utils.Float16, tokenID int64, toIdx int64) (*types.Transaction, error)
-	RollupDepositTransfer(fromIdx int64, loadAmountF, amountF utils.Float16,
+		loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (*types.Transaction, error)
+	RollupDepositTransfer(fromIdx int64, loadAmountF, amountF common.Float16,
 		tokenID int64, toIdx int64) (*types.Transaction, error)
-	RollupDeposit(fromIdx int64, loadAmountF utils.Float16, tokenID int64) (*types.Transaction, error)
+	RollupDeposit(fromIdx int64, loadAmountF common.Float16, tokenID int64) (*types.Transaction, error)
 	RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte,
-		babyPubKey babyjub.PublicKey, loadAmountF utils.Float16) (*types.Transaction, error)
-	RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF utils.Float16,
+		babyPubKey babyjub.PublicKey, loadAmountF common.Float16) (*types.Transaction, error)
+	RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF common.Float16,
 		tokenID int64) (*types.Transaction, error)
 
 	RollupGetCurrentTokens() (*big.Int, error)
@@ -249,43 +248,43 @@ func (c *RollupClient) RollupWithdraw(tokenID int64, balance *big.Int, babyPubKe
 }
 
 // RollupForceExit is the interface to call the smart contract function
-func (c *RollupClient) RollupForceExit(fromIdx int64, amountF utils.Float16, tokenID int64) (*types.Transaction, error) {
+func (c *RollupClient) RollupForceExit(fromIdx int64, amountF common.Float16, tokenID int64) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupForceTransfer is the interface to call the smart contract function
-func (c *RollupClient) RollupForceTransfer(fromIdx int64, amountF utils.Float16, tokenID, toIdx int64) (*types.Transaction, error) {
+func (c *RollupClient) RollupForceTransfer(fromIdx int64, amountF common.Float16, tokenID, toIdx int64) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupCreateAccountDepositTransfer is the interface to call the smart contract function
-func (c *RollupClient) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey, loadAmountF, amountF utils.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
+func (c *RollupClient) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupDepositTransfer is the interface to call the smart contract function
-func (c *RollupClient) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF utils.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
+func (c *RollupClient) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupDeposit is the interface to call the smart contract function
-func (c *RollupClient) RollupDeposit(fromIdx int64, loadAmountF utils.Float16, tokenID int64) (*types.Transaction, error) {
+func (c *RollupClient) RollupDeposit(fromIdx int64, loadAmountF common.Float16, tokenID int64) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupCreateAccountDepositFromRelayer is the interface to call the smart contract function
-func (c *RollupClient) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey babyjub.PublicKey, loadAmountF utils.Float16) (*types.Transaction, error) {
+func (c *RollupClient) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey babyjub.PublicKey, loadAmountF common.Float16) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
 // RollupCreateAccountDeposit is the interface to call the smart contract function
-func (c *RollupClient) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF utils.Float16, tokenID int64) (*types.Transaction, error) {
+func (c *RollupClient) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF common.Float16, tokenID int64) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
