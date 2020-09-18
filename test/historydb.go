@@ -71,7 +71,7 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 			SlotNum:     common.SlotNum(i),
 		}
 		if i%2 == 0 {
-			batch.ForgeL1TxsNum = uint32(i)
+			batch.ForgeL1TxsNum = int64(i)
 		}
 		batches = append(batches, batch)
 	}

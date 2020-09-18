@@ -13,6 +13,8 @@ import (
 	"github.com/iden3/go-merkletree/db/pebble"
 )
 
+// TODO(Edu): Document here how StateDB is kept consistent
+
 // ErrStateDBWithoutMT is used when a method that requires a MerkleTree is
 // called in a StateDB that does not have a MerkleTree defined
 var ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a StateDB without MerkleTree")

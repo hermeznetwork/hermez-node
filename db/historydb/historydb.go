@@ -14,6 +14,8 @@ import (
 	"github.com/russross/meddler"
 )
 
+// TODO(Edu): Document here how HistoryDB is kept consistent
+
 // HistoryDB persist the historic of the rollup
 type HistoryDB struct {
 	db *sqlx.DB
@@ -129,9 +131,9 @@ func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 
 // GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB.  If there's no
 // batch in the DB (nil, nil) is returned.
-func (hdb *HistoryDB) GetLastL1TxsNum() (*uint32, error) {
+func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
 	row := hdb.db.QueryRow("SELECT MAX(forge_l1_txs_num) FROM batch;")
-	lastL1TxsNum := new(uint32)
+	lastL1TxsNum := new(int64)
 	return lastL1TxsNum, row.Scan(&lastL1TxsNum)
 }
 
