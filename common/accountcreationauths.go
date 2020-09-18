@@ -9,8 +9,8 @@ import (
 
 // AccountCreationAuth authorizations sent by users to the L2DB, to be used for account creations when necessary
 type AccountCreationAuth struct {
-	Timestamp time.Time
-	EthAddr   ethCommon.Address
-	BJJ       *babyjub.PublicKey
-	Signature []byte
+	EthAddr   ethCommon.Address  `meddler:"eth_addr"`
+	BJJ       *babyjub.PublicKey `meddler:"bjj"`
+	Signature []byte             `meddler:"signature"`
+	Timestamp time.Time          `meddler:"timestamp,utctime"`
 }

@@ -285,6 +285,7 @@ github.com/iden3/go-circom-prover-verifier v0.0.1/go.mod h1:1FkpX4nUXxYcY2fpzqd2
 github.com/iden3/go-circom-witnesscalc v0.0.1/go.mod h1:xjT1BlFZDBioHOlbD75SmZZLC1d1AfOycqbSa/1QRJU=
 github.com/iden3/go-iden3-core v0.0.8 h1:PLw7iCiX7Pw1dqBkR+JaLQWqB5RKd+vgu25UBdvFXGQ=
 github.com/iden3/go-iden3-core v0.0.8/go.mod h1:URNjIhMql6sEbWubIGrjJdw5wHCE1Pk1XghxjBOtA3s=
+github.com/iden3/go-iden3-crypto v0.0.5 h1:inCSm5a+ry+nbpVTL/9+m6UcIwSv6nhUm0tnIxEbcps=
 github.com/iden3/go-iden3-crypto v0.0.5/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=
 github.com/iden3/go-iden3-crypto v0.0.6-0.20200723082457-29a66457f0bf h1:/7L5dEqctuzJY2g8OEQct+1Y+n2sMKyd4JoYhw2jy1s=
 github.com/iden3/go-iden3-crypto v0.0.6-0.20200723082457-29a66457f0bf/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=

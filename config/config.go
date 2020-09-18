@@ -7,6 +7,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/common"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -35,10 +36,10 @@ type Coordinator struct {
 	ForgerAddress     ethCommon.Address `validate:"required"`
 	ForgeLoopInterval Duration          `validate:"required"`
 	L2DB              struct {
-		Name         string   `validate:"required"`
-		SafetyPeriod uint16   `validate:"required"`
-		MaxTxs       uint32   `validate:"required"`
-		TTL          Duration `validate:"required"`
+		Name         string          `validate:"required"`
+		SafetyPeriod common.BatchNum `validate:"required"`
+		MaxTxs       uint32          `validate:"required"`
+		TTL          Duration        `validate:"required"`
 	} `validate:"required"`
 	TxSelector struct {
 		Path string `validate:"required"`

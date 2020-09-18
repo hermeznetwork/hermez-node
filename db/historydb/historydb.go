@@ -213,7 +213,7 @@ func (hdb *HistoryDB) AddTokens(tokens []common.Token) error {
 }
 
 // UpdateTokenValue updates the USD value of a token
-func (hdb *HistoryDB) UpdateTokenValue(tokenID common.TokenID, value float32) error {
+func (hdb *HistoryDB) UpdateTokenValue(tokenID common.TokenID, value float64) error {
 	_, err := hdb.db.Exec(
 		"UPDATE token SET usd = $1 WHERE token_id = $2;",
 		value, tokenID,
