@@ -89,8 +89,12 @@ func TestBatches(t *testing.T) {
 	// Generate fake batches
 	const nBatches = 9
 	batches := test.GenBatches(nBatches, blocks)
+	// Test GetLastL1TxsNum with no batches
+	fetchedLastL1TxsNum, err := historyDB.GetLastL1TxsNum()
+	assert.NoError(t, err)
+	assert.Nil(t, fetchedLastL1TxsNum)
 	// Add batches to the DB
-	err := historyDB.AddBatches(batches)
+	err = historyDB.AddBatches(batches)
 	assert.NoError(t, err)
 	// Get batches from the DB
 	fetchedBatches, err := historyDB.GetBatches(0, common.BatchNum(nBatches))
@@ -103,9 +107,9 @@ func TestBatches(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, batches[len(batches)-1].BatchNum, fetchedLastBatchNum)
 	// Test GetLastL1TxsNum
-	fetchedLastL1TxsNum, err := historyDB.GetLastL1TxsNum()
+	fetchedLastL1TxsNum, err = historyDB.GetLastL1TxsNum()
 	assert.NoError(t, err)
-	assert.Equal(t, batches[nBatches-1].ForgeL1TxsNum, fetchedLastL1TxsNum)
+	assert.Equal(t, batches[nBatches-1].ForgeL1TxsNum, *fetchedLastL1TxsNum)
 }
 
 func TestBids(t *testing.T) {

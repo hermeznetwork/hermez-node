@@ -331,11 +331,16 @@ func (s *Synchronizer) rollupSync(block *common.Block) (*rollupData, error) {
 	var forgeL1TxsNum uint32
 	var numAccounts int
 
-	lastStoredForgeL1TxsNum, err := s.historyDB.GetLastL1TxsNum()
-
+	// using GetLastL1TxsNum as GetNextL1TxsNum
+	lastStoredForgeL1TxsNum := uint32(0)
+	lastStoredForgeL1TxsNumPtr, err := s.historyDB.GetLastL1TxsNum()
 	if err != nil {
 		return nil, err
 	}
+	if lastStoredForgeL1TxsNumPtr != nil {
+		lastStoredForgeL1TxsNum = *lastStoredForgeL1TxsNumPtr + 1
+	}
+	// }
 
 	// Get rollup events in the block
 	rollupEvents, _, err := s.ethClient.RollupEventsByBlock(block.EthBlockNum)
@@ -383,7 +388,7 @@ func (s *Synchronizer) rollupSync(block *common.Block) (*rollupData, error) {
 				l1CoordinatorTx.ToForgeL1TxsNum = uint32(lastStoredForgeL1TxsNum)
 				l1CoordinatorTx.TxID = common.TxID(common.Hash([]byte("0x01" + strconv.FormatInt(int64(lastStoredForgeL1TxsNum), 10) + strconv.FormatInt(int64(l1CoordinatorTx.Position), 10) + "00")))
 				l1CoordinatorTx.UserOrigin = false
-				l1CoordinatorTx.EthBlockNum = uint64(block.EthBlockNum)
+				l1CoordinatorTx.EthBlockNum = block.EthBlockNum
 				l1CoordinatorTx.BatchNum = common.BatchNum(fbEvent.BatchNum)
 
 				batchData.l1CoordinatorTxs = append(batchData.l1CoordinatorTxs, l1CoordinatorTx)
@@ -416,14 +421,16 @@ func (s *Synchronizer) rollupSync(block *common.Block) (*rollupData, error) {
 		}
 
 		// Get L2Txs
-		batchData.l2Txs = append(batchData.l2Txs, forgeBatchArgs.L2Txs...)
+		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2Txs) // TODO: This is a big uggly, find a better way
 
 		// Get exitTree
-		_, exitInfo, err := s.stateDB.ProcessTxs(true, batchData.l1UserTxs, batchData.l1CoordinatorTxs, batchData.l2Txs)
-
+		_, exitInfo, err := s.stateDB.ProcessTxs(true, false, batchData.l1UserTxs, batchData.l1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, err
 		}
+
+		l2Txs := common.PoolL2TxsToL2Txs(poolL2Txs) // TODO: This is a big uggly, find a better way
+		batchData.l2Txs = append(batchData.l2Txs, l2Txs...)
 
 		batchData.exitTree = exitInfo
 
@@ -451,7 +458,7 @@ func (s *Synchronizer) rollupSync(block *common.Block) (*rollupData, error) {
 
 		token.TokenID = common.TokenID(eAddToken.TokenID)
 		token.EthAddr = eAddToken.Address
-		token.EthBlockNum = uint64(block.EthBlockNum)
+		token.EthBlockNum = block.EthBlockNum
 
 		// TODO: Add external information consulting SC about it using Address
 		rollupData.registeredTokens = append(rollupData.registeredTokens, token)
@@ -543,7 +550,7 @@ func (s *Synchronizer) getL1UserTx(l1UserTxEvents []eth.RollupEventL1UserTx, blo
 		eL1UserTx.L1Tx.ToForgeL1TxsNum = uint32(eL1UserTx.ToForgeL1TxsNum)
 		eL1UserTx.L1Tx.Position = eL1UserTx.Position
 		eL1UserTx.L1Tx.UserOrigin = true
-		eL1UserTx.L1Tx.EthBlockNum = uint64(block.EthBlockNum)
+		eL1UserTx.L1Tx.EthBlockNum = block.EthBlockNum
 		eL1UserTx.L1Tx.BatchNum = 0
 
 		l1Txs = append(l1Txs, &eL1UserTx.L1Tx)

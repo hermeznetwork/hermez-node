@@ -127,10 +127,11 @@ func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 	return batchNum, row.Scan(&batchNum)
 }
 
-// GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB
-func (hdb *HistoryDB) GetLastL1TxsNum() (uint32, error) {
+// GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB.  If there's no
+// batch in the DB (nil, nil) is returned.
+func (hdb *HistoryDB) GetLastL1TxsNum() (*uint32, error) {
 	row := hdb.db.QueryRow("SELECT MAX(forge_l1_txs_num) FROM batch;")
-	var lastL1TxsNum uint32
+	lastL1TxsNum := new(uint32)
 	return lastL1TxsNum, row.Scan(&lastL1TxsNum)
 }
 
