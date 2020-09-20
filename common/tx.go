@@ -27,15 +27,15 @@ const (
 	// TxTypeCreateAccountDepositTransfer represents L1->L2 transfer + L2->L2 transfer
 	TxTypeCreateAccountDepositTransfer TxType = "CreateAccountDepositTransfer"
 	// TxTypeDepositTransfer TBD
-	TxTypeDepositTransfer TxType = "TxTypeDepositTransfer"
+	TxTypeDepositTransfer TxType = "DepositTransfer"
 	// TxTypeForceTransfer TBD
-	TxTypeForceTransfer TxType = "TxTypeForceTransfer"
+	TxTypeForceTransfer TxType = "ForceTransfer"
 	// TxTypeForceExit TBD
-	TxTypeForceExit TxType = "TxTypeForceExit"
+	TxTypeForceExit TxType = "ForceExit"
 	// TxTypeTransferToEthAddr TBD
-	TxTypeTransferToEthAddr TxType = "TxTypeTransferToEthAddr"
+	TxTypeTransferToEthAddr TxType = "TransferToEthAddr"
 	// TxTypeTransferToBJJ TBD
-	TxTypeTransferToBJJ TxType = "TxTypeTransferToBJJ"
+	TxTypeTransferToBJJ TxType = "TransferToBJJ"
 )
 
 // Tx is a struct used by the TxSelector & BatchBuilder as a generic type generated from L1Tx & PoolL2Tx

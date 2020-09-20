@@ -79,19 +79,21 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 }
 
 // GenAccounts generates accounts. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAddr *ethCommon.Address, batches []common.Batch) []common.Account {
+func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAddr *ethCommon.Address, userBjj *babyjub.PublicKey, batches []common.Batch) []common.Account {
 	if totalAccounts < userAccounts {
 		panic("totalAccounts must be greater than userAccounts")
 	}
-	privK := babyjub.NewRandPrivKey()
-	pubK := privK.Public()
 	accs := []common.Account{}
 	for i := 0; i < totalAccounts; i++ {
 		var addr ethCommon.Address
+		var pubK *babyjub.PublicKey
 		if i < userAccounts {
 			addr = *userAddr
+			pubK = userBjj
 		} else {
 			addr = ethCommon.BigToAddress(big.NewInt(int64(i)))
+			privK := babyjub.NewRandPrivKey()
+			pubK = privK.Public()
 		}
 		accs = append(accs, common.Account{
 			Idx:       common.Idx(i),

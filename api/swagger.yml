@@ -1,0 +1,2266 @@
+openapi: 3.0.0
+info:
+  description: |
+    This API server is the layer that allows 3rd party apps and services interfacing with the coordinator to explore, monitor and use the Hermez rollup.
+    Example of these apps are:
+    * Wallet: send L2 transactions, check balance, ...
+    * Explorer: List transactions, slots, batches, ...
+    * Exchange integrations
+    
+    All the endpoints that return a list of undefined size use pagination. Unless the opposite is explicitly said.
+    All the retunred items are ordered by ascending chronological order. 
+    This may not be trivial to deduce as the atributes used to order are not timestamps but the protocol ensures that those atributes follow the mentioned chronological order.
+    Each endpoint description clarify this in the `offset` description.
+
+    The response of the calls to these endpoints will always include a `pagination` object that includes `totalItems` and `lastReturnedItem`.
+    To iterate over the items the following query parameters are used:
+      - `offset`: Indicates the first item that will be returned. Defaul 0. Incompatible with `last`.
+      - `limit`: Indicates the maximum number of returned items. Default 20. Maximum 2049.
+      - `last`: When true the last `limit` items are returned. Default false. Incompatible with `offset`.
+
+    Iterate items in ascending chronological order:
+
+      1. Call the endpoint with no `offset` nor `last`.
+      2. Call the endpoint with `offset=<lastReturnedItem + 1>` until `lastReturnedItem == totalItems - 1`.
+
+    Iterate items in descending chronological order:
+
+      1. Call the endpoint with `last`.
+      2. Call the endpoint with `offset=<min(0, lastReturnedItem - 2*limit)>`. Once the `calculated offset == 0`, it will be known that that call will return the first item and therefore no subsequent calls need to be done.
+    If the `totalItems` change while iterating, it means that new items have been added at the end of the list. To fetch this items, use the following: `offset=<first received lastReturnedItem + 1>`, and from there iterate as decribed in *Iterate items in ascending chronological order*.
+    
+    **Note:** The returned list will alway be in ascending chronlogical order, so the returned arrays must be iterated from end to start in order to achieve reverse chronological order.
+    
+    **Note:** Pagination safety can be affected by Ethereum reorgs. In most of the cases this means that the last page can be changed, but older items should be safe.
+
+  version: "0.0.1"
+  title: Hermez Network API
+#  termsOfService: 'http://swagger.io/terms/'
+#  contact:
+#    email: apiteam@swagger.io
+#  license:
+#    name: Apache 2.0
+#    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+externalDocs:
+  description: Find out more about Hermez.
+  url: 'https://hermez.io'
+servers:
+  - description: Hosted mock up
+    url: http://167.71.59.190:4010
+  - description: Localhost mock Up
+    url: http://localhost:4010
+tags:
+  - name: Account
+    description: Hermez account and the tokens it holds.
+    externalDocs:
+      description: Find out more.
+      url: 'https://idocs.hermez.io/#/spec/zkrollup/README?id=account-types'
+  - name: Transaction
+    description: Send tokens off chain and track transactions.
+    externalDocs:
+      description: Find out more
+      url: 'https://idocs.hermez.io/#/spec/zkrollup/README?id=transaction-types'
+  - name: Hermez status
+    description: Info about operators, tokens, auctions and more.
+    externalDocs:
+      description: Find out more.
+      url: 'https://idocs.hermez.io/#/spec/zkrollup/README'
+paths:
+  '/account-creation-authorization':
+    post:
+      tags:
+        - Account
+      summary: Send an authorization that will allow the coordinator to register accounts associated to an Ethereum address on behalf of the user.
+      description: >-
+        Send an authorization to create rollup accounts associated to an Ethereum address. Each account creation (an account can only hold a specific token) is effective once the coordinator forges the corresponding L1CoordinatorTx (which are always of type *account creation*).
+      operationId: postRegister
+      requestBody:
+        description: Account creation authorization.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreationAuthorization'
+      responses:
+        '200':
+          description: Successful operation.
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/account-creation-authorization/{hermezEthereumAddress}':
+    get:
+      tags:
+        - Account
+      summary: Get to know if the coordinator has the ability to create accounts associated to an Ethereum address.
+      description: >-
+        True if the coordinator has the required authorization to perform an account creation with the given Ethereum address on behalf of the Ethereum address holder.
+      operationId: getAccountCreationAuthorization
+      parameters:
+        - name: hermezEthereumAddress
+          in: path
+          description: Ethereum address.
+          required: true
+          schema:
+            $ref: '#/components/schemas/HermezEthereumAddress'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountCreationAuthorization'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/accounts':
+    get:
+      tags:
+        - Account
+      summary: Get accounts balances and other associated information.
+      description: Get accounts balances and other associated information.
+      operationId: getAccounts
+      parameters:
+        - name: hermezEthereumAddress
+          in: query
+          description: Only get accounts associated to an Ethereum address. Incompatible with the query `BJJ`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/HermezEthereumAddress'
+        - name: BJJ
+          in: query
+          description: Only get accounts associated to a BabyJubJub public key.  Incompatible with the query `hermezEthereumAddress`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
+        - name: tokenIds
+          in: query
+          required: false
+          description: Only get accounts of specific tokens.
+          schema:
+            type: string
+            description: Comma separated list of token identifiers.
+            example: "3,87,91"
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: accounts will be ordered by increasing account index.
+            - Default first item: the first account to be returned will be the one that has the smallest account index.
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Accounts'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/accounts/{accountIndex}':
+    get:
+      tags:
+        - Account
+      summary: Get an account by its index.
+      description: Get an account by its index.
+      operationId: getAccount
+      parameters:
+        - name: accountIndex
+          in: path
+          description: Identifier of an account.
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/exits':
+    get:
+      tags:
+        - Account
+      summary: Get exit information. This information is required to perform a withdraw.
+      description: Get exit information. This information is required to perform a withdraw.
+      operationId: getExits
+      parameters:
+        - name: hermezEthereumAddress
+          in: query
+          description: Get exits associated to a Ethereum address. Incompatible with query `BJJ` and `accountIndex`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/HermezEthereumAddress'
+        - name: BJJ
+          in: query
+          description: Get exits associated to a BabyJubJub public key. Incompatible with query `hermezEthereumAddress` and `accountIndex`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
+        - name: accountIndex
+          in: query
+          description: Get exits associated to a specific account. Incompatible with queries `hermezEthereumAddress` and `BJJ`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: batchNum
+          in: query
+          description: Get exits from the exit tree of a specific batch.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BatchNum'
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: exits will be ordered by increasing (batchNum, accountIndex).
+            - Default first item: the first exit to be returned will be the one that has the smallest (baychNum, accountIndex).
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exits'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/exits/{batchNum}/{accountIndex}':
+    get:
+      tags:
+        - Account
+      summary: Get specific exit information.
+      description: Get exit information form a specific exit tree and account. This information is required to perform a withdraw.
+      operationId: getExit
+      parameters:
+        - name: batchNum
+          in: path
+          description: Batch of the exit tree.
+          required: true
+          schema:
+            $ref: '#/components/schemas/BatchNum'
+        - name: accountIndex
+          in: path
+          description: Account identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exit'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/transactions-pool':
+    post:
+      tags:
+        - Transaction
+      summary: Add an L2 transaction to the coordinator's pool
+      description: >-
+        Send L2 transaction. The transaction will be stored in the transaction pool of the coordinator and eventually forged.
+      operationId: postTx
+      requestBody:
+        description: Signed transaction.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PoolL2Transaction'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionId'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/transactions-pool/{id}':
+    get:
+      tags:
+        - Transaction
+      summary: Get details and status of a transaction that is in the pool.
+      description: >-
+        Get transaction from the pool by its id. This endpoint is specially useful for tracking the status of a transaction that may not be forged yet.
+        Only transactions from the pool will be returned.
+        Note that the transaction pool is different for each coordinator and therefore only a coordinator that has received a specific transaction
+        will be able to provide information about that transaction.
+      operationId: getPoolTx
+      parameters:
+        - name: id
+          in: path
+          description: Transaction identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoolL2Transaction'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/transactions-history':
+    get:
+      tags:
+        - Transaction
+      summary: Get details and status of transactions that have been forged.
+      description: >-
+        Get historical transactions. This endpoint will return all the different types of transactions except for:
+          - Transactions that are still in the transaction pool of any coordinator. These transactions can be fetched using `GET /transactions-pool/{id}`.
+          - L1 transactions that have not been forged yet. These transactions can be fetched using `GET /transactions-history/{id}`.
+      operationId: getHistoryTxs
+      parameters:
+        - name: tokenId
+          in: query
+          required: false
+          description: Only get transactions of specific token
+          schema:
+            $ref: '#/components/schemas/TokenId'
+        - name: hermezEthereumAddress
+          in: query
+          required: false
+          description: Only get transactions sent from or to an account associated to an Ethereum address Incompatible with the queries `BJJ` and `accountIndex`.
+          schema:
+            $ref: '#/components/schemas/HermezEthereumAddress'
+        - name: BJJ
+          in: query
+          description: Only get transactions associated to a BabyJubJub public key. Incompatible with the queries `hermezEthereumAddress` and `accountIndex`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
+        - name: accountIndex
+          in: query
+          required: false
+          description: Only get transactions sent from or to a specific account. Incompatible with the queries `tokenId`, `hermezEthereumAddress` and `BJJ`.
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: batchNum
+          in: query
+          required: false
+          description: Only get transactions forged in a specific batch.
+          schema:
+            $ref: '#/components/schemas/BatchNum'
+        - name: type
+          in: query
+          required: false
+          description: Only get transactions of a specific type.
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: History transactions will be ordered by increasing (batchNum, position).
+            - Default first item: the first transaction to be returned will be the one that has the smallest (batchNum, position).
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryTransactions'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/transactions-history/{id}':
+    get:
+      tags:
+        - Transaction
+      summary: Get details and status of a historical transaction.
+      description: >-
+        Get transaction from the history by its id. This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
+      operationId: getHistoryTx
+      parameters:
+        - name: id
+          in: path
+          description: Transaction identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryTransaction'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/batches':
+    get:
+      tags:
+        - Hermez status
+      summary: Get information about forged batches.
+      description: >-
+        Get information about forged batches.
+      operationId: getBatches
+      parameters:
+        - name: minBatchNum
+          in: query
+          required: false
+          description: Include only `batchNum < minBatchNum` batches.
+          schema:
+            $ref: '#/components/schemas/BatchNum'
+        - name: maxBatchNum
+          in: query
+          required: false
+          description: Include only `batchNum > maxBatchNum` batches.
+          schema:
+            type: number
+        - name: forgerAddr
+          in: query
+          required: false
+          description: Include only batches forged by `forgerAddr`
+          schema:
+            $ref: '#/components/schemas/EthereumAddress'
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: batches will be ordered by increasing `batchNum`.
+            - Default first item: the first batch to be returned will be the one that has the smallest `batchNum`.
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batches'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'                
+  '/batches/{batchNum}':
+    get:
+      tags:
+        - Hermez status
+      summary: Get a specific batch.
+      description: >-
+        Get a specific batch.
+      operationId: getBatch
+      parameters:
+        - name: batchNum
+          in: path
+          description: Batch identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/BatchNum'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/full-batches/{batchNum}':
+    get:
+      tags:
+        - Hermez status
+      summary: Get a full batch
+      description: >-
+        Get a specific batch, including the associated transactions. The object returned in this method can be a bit heavy. 
+        If you're devloping a front end, you may consider using a combinaton of `GET /batches/{batchnum}` and `GET /history-transactions?batchNum={batchNum}`.
+      operationId: getFullBatch
+      parameters:
+        - name: batchNum
+          in: path
+          description: Batch identifier
+          required: true
+          schema:
+            $ref: '#/components/schemas/BatchNum'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullBatch'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/slots':
+    get:
+      tags:
+        - Hermez status
+      summary: Get information about slots.
+      description: >-
+        Get information about slots.
+      operationId: getSlots
+      parameters:
+        - name: minSlotNum
+          in: query
+          required: false
+          description: Only include batches with `slotNum < minSlotNum`.
+          schema:
+            $ref: '#/components/schemas/SlotNum'
+        - name: maxSlothNum
+          in: query
+          required: false
+          description: Only include batches with `slotNum > maxSlotNum`.
+          schema:
+            $ref: '#/components/schemas/SlotNum'
+        - name: wonByEthereumAddress
+          in: query
+          required: false
+          description: Only include slots won by a coordinator whose `forgerAddr == wonByEthereumAddress`.
+          schema:
+            $ref: '#/components/schemas/EthereumAddress'
+        - name: finishedAuction
+          in: query
+          required: false
+          description: If set to true, only include slots whose auction has finished.
+          schema:
+            type: boolean
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: slots will be ordered by increasing `slotNum`.
+            - Default first item: the first slot to be returned will be the one that has the smallest `slotNum`.
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Slots'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/slots/{slotNum}':
+    get:
+      tags:
+        - Hermez status
+      summary: Get information about a specific slot.
+      description: >-
+        Get information about a specific slot.
+      operationId: getSlot
+      parameters:
+        - name: slotNum
+          in: path
+          required: true
+          description: Identifier of the slot.
+          schema:
+            $ref: '#/components/schemas/SlotNum'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Slot'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/bids':
+    get:
+      tags:
+        - Hermez status
+      summary: Get a list of bids made for a specific slot auction.
+      description: Get a list of bids made for a specific slot auction.
+      operationId: getSlotBids
+      parameters:
+        - name: slotNum
+          in: query
+          description: Slot identifier. Specify the auction where the returned bids were made.
+          required: false
+          schema:
+            $ref: '#/components/schemas/SlotNum'
+        - name: forgerAddr
+          in: query
+          description: Get only bids made by a coordinator identified by its forger address.
+          required: false
+          schema:
+            $ref: '#/components/schemas/EthereumAddress'
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: bids will be ordered by increasing (slotNum, bidValue)`.
+            - Default first item: the first bid to be returned will be the one that has the smallest (slotNum, bidValue).
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bids'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/next-forgers':
+    get:
+      tags:
+        - Hermez status
+      summary: Get next coordinators to forge.
+      description: >-
+        Return a list of the coordinators that will forge in the next slots.
+        The response includes the coordinator that is currently forging, and the ones that have won the upcomming slots whose auctions are closed.
+      operationId: getNextForgers
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NextForgers'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/state':
+    get:
+      tags:
+        - Hermez status
+      summary: Return global statistics and metrics of the network.
+      description: Return global statistics and metrics of the network.
+      operationId: getState
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/State'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/config':
+    get:
+      tags:
+        - Hermez status
+      summary: Return constant configuration of the network.
+      description: Return constant configuration of the network.
+      operationId: getConfig
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/tokens':
+    get:
+      tags:
+        - Hermez status
+      summary: Get information of the supported tokens in the Hermez network.
+      description: Get information of the supported tokens in the Hermez network.
+      operationId: getTokens
+      parameters:
+        - name: ids
+          in: query
+          required: false
+          description: Include only specific tokens by their Hermez identifiers.
+          schema:
+            type: string
+            description: Comma separated list of token identifiers
+            example: "2,44,689"
+        - name: symbols
+          in: query
+          required: false
+          description: Include only specific tokens by their symbols.
+          schema:
+            type: string
+            description: Comma separated list of token symbols.
+            example: "DAI,NEC,UMA"
+        - name: name
+          in: query
+          required: false
+          description: Include token(s) by their names (or a substring of the name).
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: tokens will be ordered by increasing tokenID.
+            - Default first item: the first token to be returned will be the one that has the smallest tokenID.
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/tokens/{id}':
+    get:
+      tags:
+        - Hermez status
+      summary: Get information of a token supported by Hermez network.
+      description: Get information of a token supported by Hermez network.
+      operationId: getToken
+      parameters:
+        - name: id
+          in: path
+          description: Token identifier
+          required: true
+          schema:
+            $ref: '#/components/schemas/TokenId'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/recommended-fee':
+    get:
+      tags:
+        - Hermez status
+      summary: Get recommended fee in USD.
+      description: >-
+        Get recommended fee in USD. Recommended price to pay according to the status of the destination account.
+      operationId: getFee
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendedFee'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/coordinators':
+    get:
+      tags:
+        - Hermez status
+      summary: Get information about coordinators.
+      description: Get information about coordinators.
+      operationId: getCoordinators
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          description: |
+            - Order: coordinators will be ordered by increasing (ethereumBlock, forgerAddr).
+            - Default first item: the first token to be returned will be the one that has the smallest (ethereumBlock, forgerAddr).
+          schema:
+            type: number
+        - name: last
+          in: query
+          required: false
+          description: Get the last page.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coordinators'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/coordinators/{forgerAddr}':
+    get:
+      tags:
+        - Hermez status
+      summary: Get the information of a coordinator.
+      description: Get the information of a coordinator.
+      operationId: getCoordinator
+      parameters:
+        - name: forgerAddr
+          in: path
+          description: Coordinator identifier
+          required: true
+          schema:
+            $ref: '#/components/schemas/EthereumAddress'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coordinator'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+components:
+  schemas:
+    PoolL2Transaction:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/TransactionId'
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        fromAccountIndex:
+          $ref: '#/components/schemas/AccountIndex'
+        toAccountIndex:
+          allOf:
+            - $ref: '#/components/schemas/AccountIndex'
+            - example: "hez:DAI:672"
+        toEthereumAddress:
+          $ref: '#/components/schemas/HermezEthereumAddress'
+        toBjj:
+          $ref: '#/components/schemas/BJJ'
+        tokenId:
+          $ref: '#/components/schemas/TokenId'
+        USD:
+          type: number
+          description: Value of the token in USD.
+          example: 4.53
+        fiatUpdate:
+          type: string
+          format: date-time
+          description: Timestamp of the moment the `USD` value was updated.
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/BigInt'
+            - description: Amount of tokens to be sent.
+              example: "63"
+        fee:
+          $ref: '#/components/schemas/FeeSelector'
+        feeUSD:
+          type: number
+          description: Fee in USD.
+          example: 0.75
+        nonce:
+          $ref: '#/components/schemas/Nonce'
+        state:
+          $ref: '#/components/schemas/PoolL2TransactionState'
+        signature:
+          allOf:
+            - $ref: '#/components/schemas/Signature'
+            - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
+            - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+        timestamp:
+          type: string
+          description: Moment in which the transaction was added to the pool.
+          format: date-time
+        batchNum:
+          allOf:
+            - $ref: '#/components/schemas/BatchNum'
+            - nullable: true
+            - example: 5432
+        requestFromAccountIndex:
+          allOf:
+            - $ref: '#/components/schemas/AccountIndex'
+            - nullable: true
+            - example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
+        requestToAccountIndex:
+          allOf:
+            - $ref: '#/components/schemas/AccountIndex'
+            - nullable: true
+            - example: "hez:DAI:33"
+        requestToEthereumAddress:
+          allOf:
+            - $ref: '#/components/schemas/HermezEthereumAddress'
+            - nullable: true
+            - example: "hez:0xbb942cfcd25ad4d90a62358b0dd84f33b3982699" 
+        requestToBJJ:
+          allOf:
+            - $ref: '#/components/schemas/BJJ'
+            - nullable: true
+            - example: "hez:HVrB8xQHAYt9QTpPUsj3RGOzDmrCI4IgrYslTeTqo6Ix"
+        requestTokenId:
+          allOf:
+            - $ref: '#/components/schemas/TokenId'
+            - nullable: true
+            - example: 4444
+        requestAmount:
+          allOf:
+            - $ref: '#/components/schemas/BigInt'
+            - description: Amount of tokens to be sent.
+            - example: "7"
+            - nullable: true
+        requestFee:
+          allOf:
+            - $ref: '#/components/schemas/FeeSelector'
+            - nullable: true
+            - example: 8
+        requestNonce:
+          allOf:
+            - $ref: '#/components/schemas/Nonce'
+            - nullable: true
+            - example: 6
+        tokenSymbol:
+          $ref: '#/components/schemas/TokenSymbol'
+      required:
+      - fromAccountIndex
+      - toAccountIndex
+      - toEthereumAddress
+      - toBjj
+      - tokenId
+      - amount
+      - fee
+      - nonce
+      - signature
+    TransactionId:
+      type: string
+      description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
+      example: "0x0040e2010000000000470000" 
+    EthereumAddress:
+      type: string
+      description: "Address of an Etherum account."
+      pattern: "^0x[a-fA-F0-9]{40}$"
+      example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
+    HermezEthereumAddress:
+      type: string
+      description: "Address of an Etherum account linked to the Hermez network."
+      pattern: "^hez:0x[a-fA-F0-9]{40}$"
+      example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
+    BJJ:
+      type: string
+      description: "BabyJubJub public key, encoded as base64, which result in 33 bytes (last byte used as checksum)."
+      pattern: "^hez:[A-Za-z0-9_-]{44}$"
+      example: "hez:rR7LXKal-av7I56Y0dEBCVmwc9zpoLY5ERhy5w7G-xwe"
+    AccountIndex:
+      type: string
+      description: >-
+        Identifier of an account. It references the position where the account is inside the state Merkle tree.
+        The identifier is built using: `hez:` + `token symbol:` + `index`
+      example: "hez:DAI:4444"
+    TransactionType:
+      type: string
+      description: Type of transaction.
+      enum:
+      - Exit
+      - Withdrawn
+      - Transfer
+      - Deposit
+      - CreateAccountDeposit
+      - CreateAccountDepositTransfer
+      - DepositTransfer
+      - ForceTransfer
+      - ForceExit
+      - TransferToEthAddr
+      - TransferToBJJ
+    TokenId:
+      type: integer
+      description: Identifier of a token registered in the network.
+      minimum: 0
+      maximum: 4294967295
+      example: 4444
+    BigInt:
+      type: string
+      description: BigInt is an integer encoded as a string for numbers that are very large.
+      example: "870885693"
+    FeeSelector:
+      type: integer
+      description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
+      minimum: 0
+      maximum: 256
+      example: 36
+    Nonce:
+      type: integer
+      description: Number that can only be used once per account, increments by one at each transaction.
+      minimum: 0
+      maximum: 1.84467440737096e+19
+      example: 121
+    PoolL2TransactionState:
+      type: string
+      description: > 
+        State of a L2 transaction from the coordinator pool.
+          * pend: Pending
+          * fing: Forging
+          * fged: Forged
+          * invl: Invalid  
+      enum:
+      - pend
+      - fing
+      - fged
+      - invl    
+    Signature:
+      type: string
+      description: BabyJubJub compressed signature.
+      pattern: "^[a-fA-F0-9]{128}$"
+      example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+    BatchNum:
+      type: integer
+      description: Identifier of a batch. Every new forged batch increments by one the batchNum, starting at 0.
+      minimum: 0
+      maximum: 4294967295
+      example: 5432
+    AccountCreationAuthorization:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        ethereumAddress:
+          $ref: '#/components/schemas/HermezEthereumAddress'
+        bjj:
+          $ref: '#/components/schemas/BJJ'
+        signature:
+          allOf:
+            - $ref: '#/components/schemas/Signature'
+            - description: Signature of the auth message. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=regular-rollup-account).
+            - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+      required:
+      - ethereumAddress
+      - bjj
+      - signature
+    HistoryTransaction:
+      type: object
+      description: Transaction of the Hermez network
+      properties:
+        L1orL2:
+          type: string
+          enum:
+            - L1
+            - L2
+        id:
+          $ref: '#/components/schemas/TransactionId'
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        position:
+          $ref: '#/components/schemas/TransactionPosition'
+        fromAccountIndex:
+          $ref: '#/components/schemas/AccountIndex'
+        toAccountIndex:
+          allOf:
+            - $ref: '#/components/schemas/AccountIndex'
+            - example: "hez:DAI:672"
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/BigInt'
+            - description: Amount of tokens to be sent.
+            -  example: "49"
+        batchNum:
+          type: integer
+          description: Batch in which the transaction was forged. Null indicates not forged yet.
+          minimum: 0
+          maximum: 4294967295
+          example: 5432
+          nullable: true
+        tokenId:
+          $ref: '#/components/schemas/TokenId'
+        tokenSymbol:
+          $ref: '#/components/schemas/TokenSymbol'
+        historicUSD:
+          type: number
+          description: Value in USD at the moment the transaction was forged.
+          example: 49.7
+        currentUSD:
+          type: number
+          description: Value in USD at the current token/USD conversion.
+          example: 50.01
+        fiatUpdate:
+          type: string
+          format: date-time
+          description: Timestamp of the moment the `currentUSD` value was updated.
+        timestamp:
+          type: string
+          format: date-time
+          description: In the case of L1 indicates the moment where the transaction was added in the smart contract. For L2 indicates when the transaction was forged.
+        L1Info:
+          type: object
+          description: Additional information that only applies to L1 transactions.
+          nullable: true
+          properties:
+            toForgeL1TransactionsNum:
+              $ref: '#/components/schemas/ToForgeL1TransactionsNum'
+            userOrigin:
+              type: boolean
+              description: True if the transaction was sent by a user. False if it was sent by a coordinator.
+            fromEthereumAddress:
+              $ref: '#/components/schemas/HermezEthereumAddress'
+            fromBJJ:
+              $ref: '#/components/schemas/BJJ'
+            loadAmount:
+              allOf:
+                - $ref: '#/components/schemas/BigInt'
+                - description: Tokens transfered from L1 to L2.
+                - example: "49"
+            loadAmountUSD:
+              type: number
+              description: Load amount in USD, at the moment the transaction was made.
+              example: 3.897
+            ethereumBlockNum:
+              allOf:
+                - $ref: '#/components/schemas/EthBlockNum'
+                - description: Ethereum block in which the transaction was added to the smart contract forge queue.
+                - example: 258723049
+          required:
+            - toForgeL1TransactionsNum
+            - userOrigin
+            - fromEthereumAddress
+            - fromBJJ
+            - loadAmount
+            - loadAmountUSD
+            - ethereumBlockNum
+          additionalProperties: false
+        L2Info:
+          type: object
+          description: Additional information that only applies to L2 transactions.
+          nullable: true
+          properties:
+            fee:
+              $ref: '#/components/schemas/FeeSelector'
+            feeUSD:
+              type: number
+              description: Fee in USD, at the moment the transaction was forged.
+              example: 263.89
+            nonce:
+              $ref: '#/components/schemas/Nonce'
+          example: null
+          required:
+            - fee
+            - feeUSD
+            - nonce
+          additionalProperties: false
+      required:
+        - L1orL2
+        - id
+        - type
+        - position
+        - fromAccountIndex
+        - toAccountIndex
+        - amount
+        - batchNum
+        - tokenId
+        - tokenSymbol
+        - historicUSD
+        - currentUSD
+        - fiatUpdate
+        - timestamp
+        - L1Info
+        - L2Info
+      additionalProperties: false
+    HistoryTransactions:
+      type: object
+      properties:
+        transactions:
+          type: array
+          description: List of history transactions.
+          items: 
+            $ref: '#/components/schemas/HistoryTransaction'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+      required:
+        - transactions
+        - pagination
+      additionalProperties: false
+    EthBlockNum:
+      type: integer
+      description: Ethereum block number
+      minimum: 0
+      maximum: 1.84467440737096e+19
+      example: 762375478
+    ToForgeL1TransactionsNum:
+      type: integer
+      description: Reference to know in which batch a L1 transaction was forged / will be forged.
+      minimum: 0
+      maximum: 4294967295
+      example: 784
+    TransactionPosition:
+      type: integer
+      description: Position that a transaction occupies in a batch.
+      minimum: 0
+      example: 5
+    URL:
+      type: string
+      description: HTTP URL
+      example: "https://hermez.io"
+    TokenSymbol:
+      type: string
+      description: Abreviation of the token name.
+      example: "DAI"
+    TokenName:
+      type: string
+      description: Token name.
+      example: "Dai"
+    CollectedFees:
+      type: array
+      description: Collected fees by the forger of the batch. A maximum of 64 different tokens can be used.
+      items:
+        type: object 
+        properties:
+          tokenId:
+            $ref: '#/components/schemas/TokenId'
+          tokenSymbol:
+            $ref: '#/components/schemas/TokenSymbol'
+          amount:
+            allOf:
+              - $ref: '#/components/schemas/BigInt'
+              - description: Ammount of collected tokens
+              - example: "53"
+    Batch:
+      type: object
+      description: Group of transactions forged in a coordinator and sent and validated in Ethereum.
+      properties:
+        batchNum:
+          $ref: '#/components/schemas/BatchNum'
+        ethereumBlockNum:
+          $ref: '#/components/schemas/EthBlockNum'
+        forgerAddr:
+          $ref: '#/components/schemas/EthereumAddress'
+        collectedFees:
+          $ref: '#/components/schemas/CollectedFees'
+        totalCollectedFeesUSD:
+          type: number
+          description: Sum of the all the fees collected, in USD.
+          example: 23.3
+        stateRoot:
+          allOf:
+            - $ref: '#/components/schemas/Hash'
+            - description: Root of the accounts Merkle Tree.
+            - example: "2734657026572a8708d883"
+        numAccounts:
+          type: integer
+          description: Number of registered accounts in this batch.
+        exitRoot:
+          allOf:
+            - $ref: '#/components/schemas/Hash'
+            - description: Root of the exit Merkle Tree associated to this batch.
+            - example: "2734657026572a8708d883"
+        forgeL1TransactionsNum:
+          allOf:
+            - $ref: '#/components/schemas/ToForgeL1TransactionsNum'
+            - description: Identifier that corresponds to the group of L1 transactions forged in the current batch.
+            - nullable: true
+            - example: 5
+        slotNum:
+          $ref: '#/components/schemas/SlotNum'
+    FullBatch:
+      type: object
+      description: Group of transactions forged in a coordinator and sent and validated in Ethereum.
+      properties:
+        batchNum:
+          $ref: '#/components/schemas/BatchNum'
+        forgerAddr:
+          $ref: '#/components/schemas/EthereumAddress'
+        collectedFees:
+          $ref: '#/components/schemas/CollectedFees'
+        ethereumBlockNum:
+          $ref: '#/components/schemas/EthBlockNum'
+        stateRoot:
+          allOf:
+            - $ref: '#/components/schemas/Hash'
+            - description: Root of the accounts Merkle Tree.
+            - example: "2734657026572a8708d883"
+        numAccounts:
+          type: integer
+          description: Number of registered accounts in this batch.
+        exitRoot:
+          allOf:
+            - $ref: '#/components/schemas/Hash'
+            - description: Root of the exit Merkle Tree associated to this batch.
+            - example: "2734657026572a8708d883"
+        forgeL1TransactionsNum:
+          allOf:
+            - $ref: '#/components/schemas/ToForgeL1TransactionsNum'
+            - description: Identifier that corresponds to the group of L1 transactions forged in the current batch.
+            - nullable: true
+            - example: 9
+        slotNum:
+          $ref: '#/components/schemas/SlotNum'
+        transactions:
+          type: array
+          description: List of forged transactions in the batch
+          items:
+            $ref: '#/components/schemas/HistoryTransaction'
+    Hash:
+      type: string
+      description: hashed data
+      example: "2734657026572a8708d883"
+    SlotNum:
+      type: integer
+      description: Identifier of a slot.
+      minimum: 0
+      maximum: 4294967295
+      example: 784        
+    Batches:
+      type: object
+      properties:
+        batches:
+          type: array
+          description: List of batches.
+          items:
+            $ref: '#/components/schemas/Batch'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    Coordinator:
+      type: object
+      properties:
+        forgerAddr:
+          $ref: '#/components/schemas/EthereumAddress'
+        withdrawAddr:
+          $ref: '#/components/schemas/EthereumAddress'
+        URL:
+          $ref: '#/components/schemas/URL'
+        ethereumBlock:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Ethereum block in which the coordinator registered into the network.
+            - example: 5735943738
+    Coordinators:
+      type: object
+      properties:
+        coordinators:
+          type: array
+          description: List of coordinators.
+          items: 
+            $ref: '#/components/schemas/Coordinator'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    Bid:
+      type: object
+      description: Tokens placed in an auction by a coordinator to gain the right to forge batches during a specific slot.
+      properties:
+        forgerAddr:
+          $ref: '#/components/schemas/EthereumAddress'
+        withdrawAddr:
+          $ref: '#/components/schemas/EthereumAddress'
+        URL:
+          $ref: '#/components/schemas/URL'
+        bidValue:
+          $ref: '#/components/schemas/BigInt'
+        ethereumBlockNum:
+          $ref: '#/components/schemas/EthBlockNum'
+        timestamp:
+          type: string
+          format: date-time
+    Bids:
+      type: object
+      properties:
+        bids:
+          type: array
+          description: List of bids.
+          items: 
+            $ref: '#/components/schemas/Bid'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    RecommendedFee:  
+      type: object
+      description: Fee that the coordinator recommends per transaction in USD.
+      properties:
+        existingAccount:
+          type: number
+          description: Recommended fee if the destination account of the transaction already exists.
+          minimum: 0
+          example: 0.1
+        createAccount:
+          type: number
+          description: Recommended fee if the destination account of the transaction doesn't exist, but the coordinator has an authorization to create a valid account associated to an Ethereum address and a BJJ public key controlled by the receiver.
+          minimum: 0
+          example: 1.3
+        createAccountInternal:
+          type: number
+          description: Recommended fee if the destination account of the transaction doesn't exist, but the coordinator has the ability to create a valid account associated to a BJJ public key controlled by the receiver. Note that these kind of accounts are not associated to an Ethereum address and therefore can only operate in L2. 
+          minimum: 0
+          example: 0.5
+    Token:
+      type: object
+      description: Hermez network compatible and registered token.
+      properties:
+        id:
+          $ref: '#/components/schemas/TokenId'
+        ethereumAddress:
+          allOf:
+            - $ref: '#/components/schemas/EthereumAddress'
+            - description: Ethereum address in which the token is deployed.
+            - example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+        name:
+          type: string
+          description: full name of the token
+          example: Maker Dai
+        symbol:
+          allOf:
+            - $ref: '#/components/schemas/TokenSymbol'
+            - example: DAI
+        decimals:
+          type: integer
+          description: Number of decimals of the token.
+          example: 5
+        ethereumBlockNum:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Ethereum block number in which the token was added to the Hermez network.
+            - example: 539847538
+        USD:
+          type: number
+          description: Value of the token in USD.
+          example: 4.53
+        fiatUpdate:
+          type: string
+          format: date-time
+          description: Timestamp of the moment the `USD` value was updated.
+    Tokens:
+      type: object
+      properties:
+        tokens:
+          type: array
+          description: List of tokens.
+          items: 
+            $ref: '#/components/schemas/Token'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    Exit:
+      type: object
+      description: Exit tree leaf. It Contains the necessary information to perform a withdrawal.
+      properties:
+        batchNum:
+          allOf:
+            - $ref: '#/components/schemas/BatchNum'
+            - description: Batch in which the exit was forged.
+            - example: 7394
+        accountIndex:
+          $ref: '#/components/schemas/AccountIndex'
+        merkleProof:
+          type: string
+          description: Existence proof of a leaf in a given Merkle Root. Encoded as hexadecimal string.
+          example: "0x347089321de8971320489793a823470918fffeab"
+        balance:
+          $ref: '#/components/schemas/BigInt'
+        nullifier:
+          $ref: '#/components/schemas/BigInt'
+        instantWithdrawn:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Block in which the exit balance was instantly withdrawn. Null indicates that an instant withdrawn hasn't been performed.
+            - example: 74747363
+        delayedWithdrawRequest:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Block in which the exit balance was requested to delay withdraw. Null indicates that a delay withdraw hasn't been performed.
+            - example: null
+        delayedWithdrawn:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Block in which the exit balance was delayed withdrawn after a delay withdraw request. Null indicates that a delay withdraw hasn't been performed.
+            - example: null
+    Exits:
+      type: object
+      properties:
+        exits:
+          type: array
+          description: List of exits.
+          items: 
+            $ref: '#/components/schemas/Exit'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'    
+    Account:
+      type: object
+      description: State tree leaf. It contains balance and nonce of an account.
+      properties:
+        accountIndex:
+          $ref: '#/components/schemas/AccountIndex'
+        tokenId:
+          $ref: '#/components/schemas/TokenId'
+        tokenSymbol:
+          $ref: '#/components/schemas/TokenSymbol'
+        tokenName:
+          $ref: '#/components/schemas/TokenName'
+        nonce:
+          $ref: '#/components/schemas/Nonce'      
+        balance:
+          $ref: '#/components/schemas/BigInt'
+        balanceUSD:
+          type: integer
+          description: Balance of the account in USD
+          example: 1304
+        bjj:
+          $ref: '#/components/schemas/BJJ'      
+        ethereumAddress:
+          $ref: '#/components/schemas/HermezEthereumAddress'
+    Accounts:
+      type: object
+      properties:
+        accounts:
+          type: array
+          description: List of accounts.
+          items: 
+            $ref: '#/components/schemas/Account'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    Slot:
+      type: object
+      description: Slot information.
+      properties:
+        slotNum:
+          $ref: '#/components/schemas/SlotNum'
+        firstBlock:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Block in which the slot began or will begin
+            - example: 76238647846
+        lastBlock:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Block in which the slot ended or will end
+            - example: 4475934
+        closedAuction:
+          type: boolean
+          description: Whether the auction of the slot has finished or not.
+        winner:
+          allOf:
+            - $ref: '#/components/schemas/Coordinator'
+            - description: Coordinator who won the auction. Only applicable if the auction is closed.
+            - nullable: true
+            - example: null
+        batchNums:
+          type: array
+          description: List of batch numbers that were forged during the slot
+          items:
+            $ref: '#/components/schemas/BatchNum'
+    Slots:
+      type: object
+      properties:
+        nextForgers:
+          type: array
+          description: List of slots.
+          items: 
+            $ref: '#/components/schemas/Slot'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    NextForger:
+      type: object
+      description: Coordinator information along with the scheduled forging period
+      properties:
+        coordinator:
+          $ref: '#/components/schemas/Coordinator'
+        period:
+          type: object
+          description: Time period in which the coordinator will have the ability to forge. Specified both in Ethereum blocks and timestamp
+          properties:
+            fromBlock:
+              $ref: '#/components/schemas/EthBlockNum'
+            toBlock:
+              $ref: '#/components/schemas/EthBlockNum'
+            fromTimestamp:
+              type: string
+              format: date-time
+            toTimestamp:
+              type: string
+              format: date-time
+    NextForgers:
+      type: object
+      properties:
+        nextForgers:
+          type: array
+          description: List of next coordinators to forge.
+          items: 
+            $ref: '#/components/schemas/NextForger'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    State:
+      type: object
+      description: Gobal statistics of the network.
+      properties:
+        lastBlock:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Last synchronized Etherum block.
+            - example: 3457437
+        lastBatch:
+          allOf:
+            - $ref: '#/components/schemas/BatchNum'
+            - description: Last batch that has been forged.
+            - example: 76523
+        currentSlot:
+          allOf:
+            - $ref: '#/components/schemas/SlotNum'
+            - description: Slot where batches are currently being forged.
+            - example: 2334
+        transactionsPerBatch:
+          type: number
+          description: Average transactions per batch in the last 24 hours.
+          example: 2002.7
+        batchFrequency:
+          type: number
+          description: Average elapsed time between batches in the last 24 hours, in seconds.
+          example: 8.9
+        transactionsPerSecond:
+          type: number
+          description: Average transactions per second in the last 24 hours.
+          example: 302.3
+        totalAccounts:
+          type: integer
+          description: Number of created accounts.
+          example: 90473
+        totalBJJs:
+          type: integer
+          description: Number of different registered BJJs.
+          example: 23067
+        avgTransactionFee:
+          type: number
+          description: Average fee percentage paid for L2 transactions in the last 24 hours.
+          example: 1.54
+        governance:
+          type: object
+          description: Network setings that are updatable by the governance.
+          properties:
+            rollup:
+              type: object
+              description: Rollup parameters.
+              properties:
+                forgeTimeout:
+                  type: integer
+                  description: Time delay between the beggining of a slot and the beggining of the period in which anyone can forge if the auction winner of the slot hasn't forged any batch yet. Time is measured in Ethereum blocks.
+                  example: 5
+                feeAddToken:
+                  type: integer
+                  description: fee to pay when registering tokens into the network.
+                  example: 5698
+            auction:
+              type: object
+              description: Auction parameters.
+              properties:
+                bootCoordinator:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the boot coordinator.
+                slotDeadline:
+                  type: integer
+                  description: Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before.
+                  example: 3
+                closedAuctionSlots:
+                  type: integer
+                  description: Amount of slots between the current slot and the slot auction that is closed. Example if the value is 2, when slot 10 begins, the auction of the slot 12 gets closed.
+                  example: 2
+                openAuctionSlots:
+                  type: integer
+                  description: How many days in advance are auctions opened.
+                defaultSlotSetBid:
+                  type: array
+                  description: "Initial minimal bid for each auction. Expressed as an array of 6 values. To calculate which value corresponds to each slot: `initialMinimalBidding[slotNum%6]`."
+                  items:
+                    type: integer
+                  example: [32,0,68,21,55,99]
+                outbidding:
+                  type: number
+                  description: Minimum outbid over the previous one to consider it valid.
+                  example: 3.64
+                donationAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address where the donations will go to.
+                allocationRatio:
+                  type: array
+                  description: Percentage in which fees will be splitted between donations, governance and burning. The sum of the tree values should be 100.
+                  items:
+                    type: integer
+                  example: [80,10,10]
+            withdrawalDelayer:
+              type: object
+              description: Withdrawal delayer parameters.
+              properties:
+                rollupAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the rollup smart contract.
+                governanceAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the governance mechanism.
+                whitheHackerGroupAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum Address that can claim the funds in an emergency when the maximum emergency mode time is exceeded.
+                keeperAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum Address that can enable emergency mode and modify the delay to make a withdrawal.
+                withdrawalDelay:
+                  allOf:
+                    - $ref: '#/components/schemas/EthBlockNum'
+                    - description: The time that anyone needs to wait until a withdrawal of the funds is allowed, in Ethereum blocks.
+                emergencyModeStartingTime:
+                  type: integer
+                  description: Ethereum block in which the emergency mode will be activated.
+                  example: 10
+                emergencyMode:
+                  type: boolean
+                  description: Indicates if emergency mode has been activated.
+            
+    PaginationInfo:
+      type: object
+      description: Give pagination information
+      properties:
+        totalItems:
+          type: integer
+          description: Amount of items that the endpoint can return given the filters and the current state of the database.
+          example: 2048
+        lastReturnedItem:
+          type: integer
+          description: Index of the last returned item. Useful to query next items.
+          example: 439
+    Config:
+      type: object
+      description: Configuration parameters of the different smart contracts that power the Hermez network.
+      properties:
+        hermez:
+          type: object
+          description: Constant configuration of the Hermez smart contract.
+          properties:
+            HEZTokenAddress:
+              allOf:
+                - $ref: '#/components/schemas/EthereumAddress'
+                - description: Ethereum address of the HEZ token.
+            maxTxVerifiers:
+              type: integer
+              description: Maximum transactions of the verifiers.
+              example: 100
+            maxLoadAmount:
+              type: integer
+              description: Maximum load amount (L1 to L2) allowed.
+              example: 321
+            maxAmount:
+              type: integer
+              description: Maximum amount (L2 to L2) allowed.
+              example: 837
+            maxTokens:
+              type: integer
+              description: Maximum number of different tokens that can be registered in the network.
+              example: 4294967295
+            reservedAccountIndex:
+              type: integer
+              description: First user index. Bellow this number the indexes are reserved for the protocol.
+              example: 256
+            lastAccountIndex:
+              type: integer
+              description: Biggest account index that can be registered.
+              example: 4294967295
+            exitAccountIndex:
+              type: integer
+              description: Account index used to indicate that a transaction is an `exit` or `force exit`.
+              example: 1
+            L1CoordinatorBytes:
+              type: integer
+              description: Number of bytes that a L1 coordinator transaction has ([4 bytes] token + [32 bytes] babyjub + [65 bytes] compressedSignature).
+              example: 23
+            L1UserBytes:
+              type: integer
+              description: Number of bytes that a L2 transaction has ([4 bytes] fromIdx + [4 bytes] toIdx + [2 bytes] amountFloat16 + [1 bytes] fee).
+              example: 32
+            L2Bytes:
+              type: integer
+              description: Number of bytes that a L2 transaction has ([4 bytes] fromIdx + [4 bytes] toIdx + [2 bytes] amountFloat16 + [1 bytes] fee).
+              example: 33
+            maxL1Transactions:
+              type: integer
+              description: Maximum L1 transactions allowed to be queued in a batch.
+              example: 128
+            maxL1UserTransactions:
+              type: integer
+              description: Maximum L1 transactions allowed to be queued in a batch by users (anyone who is not a coordinator).
+              example: 32
+            RField:
+              allOf:
+                - $ref: '#/components/schemas/BigInt'
+                - description: Modulus zkSNARK.
+        withdrawManager:
+          type: object
+          description: Constant configuration of the withdraw manager smart contract.
+          properties:
+            noLimit:
+              type: integer
+              description: Reserved bucket index when the token value is 0 USD.
+              example: 0
+            amountOfBuckets:
+              type: integer
+              description: Number of buckets
+            maxWithdrawalDelay:
+              type: integer
+              description: Maximum delay to withdraw tokens. Time is measured in Ethereum blocks.
+        auction:
+          type: object
+          description: Constant configuration of the auction smart contract.
+          properties:
+            HEZTokenAddress:
+              allOf:
+                - $ref: '#/components/schemas/EthereumAddress'
+                - description: Ethereum address of the HEZ token.
+            rollupAddress:
+              allOf:
+                - $ref: '#/components/schemas/EthereumAddress'
+                - description: Ethereum address of the rollup smart contract.
+            genesisBlockNum:
+              allOf:
+                - $ref: '#/components/schemas/EthBlockNum'
+                - description: Ethereum block number in which the smart contract starts operating.
+            delayGenesis:
+              type: integer
+              description: Time delay between `genesisBlockNum` and the beginning of the first block. Time is measured in Ethereum blocks.
+            blocksPerSlot:
+              type: integer
+              description: Blocks per slot.
+            initialMinimalBidding:
+              type: integer
+              description: Minimum bid when no one has bid yet.
+        withdrawalDelayer:
+          type: object
+          description: Constant configuration of the withdrawal delayer smart contract.
+          properties:
+            maxWithdrawalDelay:
+              type: integer
+              description: Maximum time delay in which the tokens can be locked in the contract. Time is measured in Ethereum blocks.
+              example: 200
+            maxEmergencyModeTime:
+              type: integer
+              description: Maximum amount of time in which the contract can be in emergency mode. Time is measured in Ethereum blocks.
+              example: 2000
+    Error:
+      type: object
+      description: Error response. 
+      properties:
+        message:
+          type: string
+    Error400:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - example:
+            message: Invalid signature.
+    Error404:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - example:
+            message: Item(s) not found.
+    Error500:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - example:
+            message: Database error.

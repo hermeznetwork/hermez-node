@@ -8,6 +8,7 @@ import (
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/jmoiron/sqlx"
 
 	//nolint:errcheck // driver for postgres DB
@@ -48,11 +49,13 @@ func NewL2DB(
 
 	// Run DB migrations
 	migrations := &migrate.PackrMigrationSource{
-		Box: packr.New("history-migrations", "./migrations"),
+		Box: packr.New("l2db-migrations", "./migrations"),
 	}
-	if _, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up); err != nil {
+	nMigrations, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+	if err != nil {
 		return nil, err
 	}
+	log.Debug("L2DB applied ", nMigrations, " migrations for ", dbname, " database")
 
 	return &L2DB{
 		db:           db,
