@@ -15,7 +15,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/mitchellh/copystructure"
 )
@@ -643,7 +642,7 @@ func (c *Client) RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *bab
 }
 
 // RollupForceExit is the interface to call the smart contract function
-func (c *Client) RollupForceExit(fromIdx int64, amountF utils.Float16, tokenID int64) (tx *types.Transaction, err error) {
+func (c *Client) RollupForceExit(fromIdx int64, amountF common.Float16, tokenID int64) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -654,7 +653,7 @@ func (c *Client) RollupForceExit(fromIdx int64, amountF utils.Float16, tokenID i
 }
 
 // RollupForceTransfer is the interface to call the smart contract function
-func (c *Client) RollupForceTransfer(fromIdx int64, amountF utils.Float16, tokenID, toIdx int64) (tx *types.Transaction, err error) {
+func (c *Client) RollupForceTransfer(fromIdx int64, amountF common.Float16, tokenID, toIdx int64) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -665,7 +664,7 @@ func (c *Client) RollupForceTransfer(fromIdx int64, amountF utils.Float16, token
 }
 
 // RollupCreateAccountDepositTransfer is the interface to call the smart contract function
-func (c *Client) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey, loadAmountF, amountF utils.Float16, tokenID int64, toIdx int64) (tx *types.Transaction, err error) {
+func (c *Client) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -685,7 +684,7 @@ func (c *Client) RollupGetCurrentTokens() (*big.Int, error) {
 }
 
 // RollupDepositTransfer is the interface to call the smart contract function
-func (c *Client) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF utils.Float16, tokenID int64, toIdx int64) (tx *types.Transaction, err error) {
+func (c *Client) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -696,7 +695,7 @@ func (c *Client) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF utils
 }
 
 // RollupDeposit is the interface to call the smart contract function
-func (c *Client) RollupDeposit(fromIdx int64, loadAmountF utils.Float16, tokenID int64) (tx *types.Transaction, err error) {
+func (c *Client) RollupDeposit(fromIdx int64, loadAmountF common.Float16, tokenID int64) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -707,7 +706,7 @@ func (c *Client) RollupDeposit(fromIdx int64, loadAmountF utils.Float16, tokenID
 }
 
 // RollupCreateAccountDepositFromRelayer is the interface to call the smart contract function
-func (c *Client) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey babyjub.PublicKey, loadAmountF utils.Float16) (tx *types.Transaction, err error) {
+func (c *Client) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey babyjub.PublicKey, loadAmountF common.Float16) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -718,7 +717,7 @@ func (c *Client) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []
 }
 
 // RollupCreateAccountDeposit is the interface to call the smart contract function
-func (c *Client) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF utils.Float16, tokenID int64) (tx *types.Transaction, err error) {
+func (c *Client) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF common.Float16, tokenID int64) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
@@ -21,9 +20,9 @@ func (n Nonce) Bytes() ([5]byte, error) {
 		return [5]byte{}, ErrNonceOverflow
 	}
 	var nonceBytes [8]byte
-	binary.LittleEndian.PutUint64(nonceBytes[:], uint64(n))
+	binary.BigEndian.PutUint64(nonceBytes[:], uint64(n))
 	var b [5]byte
-	copy(b[:], nonceBytes[:5])
+	copy(b[:], nonceBytes[3:])
 	return b, nil
 }
 
@@ -35,8 +34,8 @@ func (n Nonce) BigInt() *big.Int {
 // NonceFromBytes returns Nonce from a [5]byte
 func NonceFromBytes(b [5]byte) Nonce {
 	var nonceBytes [8]byte
-	copy(nonceBytes[:], b[:5])
-	nonce := binary.LittleEndian.Uint64(nonceBytes[:])
+	copy(nonceBytes[3:], b[:])
+	nonce := binary.BigEndian.Uint64(nonceBytes[:])
 	return Nonce(nonce)
 }
 
@@ -75,15 +74,15 @@ type PoolL2Tx struct {
 }
 
 // TxCompressedData spec:
-// [ 32 bits ] signatureConstant // 4 bytes: [0:4]
-// [ 16 bits ] chainId // 2 bytes: [4:6]
-// [ 48 bits ] fromIdx // 6 bytes: [6:12]
-// [ 48 bits ] toIdx // 6 bytes: [12:18]
-// [ 16 bits ] amountFloat16 // 2 bytes: [18:20]
-// [ 32 bits ] tokenID // 4 bytes: [20:24]
-// [ 40 bits ] nonce // 5 bytes: [24:29]
-// [ 8 bits  ] userFee // 1 byte: [29:30]
-// [ 1 bits  ] toBJJSign // 1 byte: [30:31]
+// [ 1 bits  ] toBJJSign // 1 byte
+// [ 8 bits  ] userFee // 1 byte
+// [ 40 bits ] nonce // 5 bytes
+// [ 32 bits ] tokenID // 4 bytes
+// [ 16 bits ] amountFloat16 // 2 bytes
+// [ 48 bits ] toIdx // 6 bytes
+// [ 48 bits ] fromIdx // 6 bytes
+// [ 16 bits ] chainId // 2 bytes
+// [ 32 bits ] signatureConstant // 4 bytes
 // Total bits compressed data:  241 bits // 31 bytes in *big.Int representation
 func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 	// sigconstant
@@ -92,65 +91,65 @@ func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 		return nil, fmt.Errorf("error parsing SignatureConstant")
 	}
 
-	amountFloat16, err := utils.NewFloat16(tx.Amount)
+	amountFloat16, err := NewFloat16(tx.Amount)
 	if err != nil {
 		return nil, err
 	}
 	var b [31]byte
-	copy(b[:4], SwapEndianness(sc.Bytes()))
-	copy(b[4:6], []byte{1, 0, 0, 0}) // LittleEndian representation of uint32(1) for Ethereum
-	copy(b[6:12], tx.FromIdx.Bytes())
-	copy(b[12:18], tx.ToIdx.Bytes())
-	copy(b[18:20], amountFloat16.Bytes())
-	copy(b[20:24], tx.TokenID.Bytes())
-	nonceBytes, err := tx.Nonce.Bytes()
-	if err != nil {
-		return nil, err
-	}
-	copy(b[24:29], nonceBytes[:])
-	b[29] = byte(tx.Fee)
 	toBJJSign := byte(0)
 	if babyjub.PointCoordSign(tx.ToBJJ.X) {
 		toBJJSign = byte(1)
 	}
-	b[30] = toBJJSign
-	bi := new(big.Int).SetBytes(SwapEndianness(b[:]))
+	b[0] = toBJJSign
+	b[1] = byte(tx.Fee)
+	nonceBytes, err := tx.Nonce.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[2:7], nonceBytes[:])
+	copy(b[7:11], tx.TokenID.Bytes())
+	copy(b[11:13], amountFloat16.Bytes())
+	copy(b[13+2:19], tx.ToIdx.Bytes())
+	copy(b[19+2:25], tx.FromIdx.Bytes())
+	copy(b[25:27], []byte{0, 1, 0, 0}) // TODO check js implementation (unexpected behaviour from test vector generated from js)
+	copy(b[27:31], sc.Bytes())
 
+	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
 }
 
 // TxCompressedDataV2 spec:
-// [ 48 bits ] fromIdx // 6 bytes: [0:6]
-// [ 48 bits ] toIdx // 6 bytes: [6:12]
-// [ 16 bits ] amountFloat16 // 2 bytes: [12:14]
-// [ 32 bits ] tokenID // 4 bytes: [14:18]
-// [ 40 bits ] nonce // 5 bytes: [18:23]
-// [ 8 bits  ] userFee // 1 byte: [23:24]
-// [ 1 bits  ] toBJJSign // 1 byte: [24:25]
+// [ 1 bits  ] toBJJSign // 1 byte
+// [ 8 bits  ] userFee // 1 byte
+// [ 40 bits ] nonce // 5 bytes
+// [ 32 bits ] tokenID // 4 bytes
+// [ 16 bits ] amountFloat16 // 2 bytes
+// [ 48 bits ] toIdx // 6 bytes
+// [ 48 bits ] fromIdx // 6 bytes
 // Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
 func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
-	amountFloat16, err := utils.NewFloat16(tx.Amount)
+	amountFloat16, err := NewFloat16(tx.Amount)
 	if err != nil {
 		return nil, err
 	}
 	var b [25]byte
-	copy(b[0:6], tx.FromIdx.Bytes())
-	copy(b[6:12], tx.ToIdx.Bytes())
-	copy(b[12:14], amountFloat16.Bytes())
-	copy(b[14:18], tx.TokenID.Bytes())
-	nonceBytes, err := tx.Nonce.Bytes()
-	if err != nil {
-		return nil, err
-	}
-	copy(b[18:23], nonceBytes[:])
-	b[23] = byte(tx.Fee)
 	toBJJSign := byte(0)
 	if babyjub.PointCoordSign(tx.ToBJJ.X) {
 		toBJJSign = byte(1)
 	}
-	b[24] = toBJJSign
+	b[0] = toBJJSign
+	b[1] = byte(tx.Fee)
+	nonceBytes, err := tx.Nonce.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[2:7], nonceBytes[:])
+	copy(b[7:11], tx.TokenID.Bytes())
+	copy(b[11:13], amountFloat16.Bytes())
+	copy(b[13+2:19], tx.ToIdx.Bytes())
+	copy(b[19+2:25], tx.FromIdx.Bytes())
 
-	bi := new(big.Int).SetBytes(SwapEndianness(b[:]))
+	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
 }
 

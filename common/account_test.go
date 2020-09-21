@@ -106,7 +106,7 @@ func TestAccountHashValue(t *testing.T) {
 
 	v, err := account.HashValue()
 	assert.Nil(t, err)
-	assert.Equal(t, "16085711911723375585301279875451049849443101031421093098714359651259271023730", v.String())
+	assert.Equal(t, "9478468711598093334066833736294178928569163287501434518121324135729106649559", v.String())
 }
 
 func TestAccountErrNotInFF(t *testing.T) {

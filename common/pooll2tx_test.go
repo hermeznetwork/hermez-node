@@ -15,7 +15,7 @@ func TestNonceParser(t *testing.T) {
 	nBytes, err := n.Bytes()
 	assert.Nil(t, err)
 	assert.Equal(t, 5, len(nBytes))
-	assert.Equal(t, "0100000000", hex.EncodeToString(nBytes[:]))
+	assert.Equal(t, "0000000001", hex.EncodeToString(nBytes[:]))
 	n2 := NonceFromBytes(nBytes)
 	assert.Equal(t, n, n2)
 
@@ -51,7 +51,11 @@ func TestTxCompressedData(t *testing.T) {
 	txCompressedData, err := tx.TxCompressedData()
 	assert.Nil(t, err)
 	// test vector value generated from javascript implementation
-	assert.Equal(t, "1766847064778421992193717128424891165872736891548909569553540449389241871", txCompressedData.String())
+	expectedStr := "1766847064778421992193717128424891165872736891548909569553540449389241871"
+	assert.Equal(t, expectedStr, txCompressedData.String())
+	expected, ok := new(big.Int).SetString(expectedStr, 10)
+	assert.True(t, ok)
+	assert.Equal(t, expected.Bytes(), txCompressedData.Bytes())
 	assert.Equal(t, "10000000000060000000500040000000000030000000000020001c60be60f", hex.EncodeToString(txCompressedData.Bytes())[1:])
 
 	tx = PoolL2Tx{
@@ -66,7 +70,11 @@ func TestTxCompressedData(t *testing.T) {
 	txCompressedData, err = tx.TxCompressedDataV2()
 	assert.Nil(t, err)
 	// test vector value generated from javascript implementation
-	assert.Equal(t, "6571340879233176732837827812956721483162819083004853354503", txCompressedData.String())
+	expectedStr = "6571340879233176732837827812956721483162819083004853354503"
+	assert.Equal(t, expectedStr, txCompressedData.String())
+	expected, ok = new(big.Int).SetString(expectedStr, 10)
+	assert.True(t, ok)
+	assert.Equal(t, expected.Bytes(), txCompressedData.Bytes())
 	assert.Equal(t, "10c000000000b0000000a0009000000000008000000000007", hex.EncodeToString(txCompressedData.Bytes())[1:])
 }
 
