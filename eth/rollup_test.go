@@ -27,7 +27,7 @@ func TestNewRollupClient(t *testing.T) {
 	require.Nil(t, err)
 	ethereumClient := NewEthereumClient(ethClient, &account, ks, nil)
 	if integration != "" {
-		rollupClient = NewRollupClient(ethereumClient, HERMEZROLLUP)
+		rollupClient = NewRollupClient(ethereumClient, hermezRollupAddressConst)
 	}
 }
 
