@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/big"
 
@@ -9,7 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	HermezAuctionProtocol "github.com/hermeznetwork/hermez-node/eth/contracts/auction"
+	ERC777 "github.com/hermeznetwork/hermez-node/eth/contracts/erc777"
 	"github.com/hermeznetwork/hermez-node/log"
+	"golang.org/x/crypto/sha3"
 )
 
 // AuctionConstants are the constants of the Rollup Smart Contract
@@ -241,8 +244,7 @@ type AuctionInterface interface {
 	// AuctionTokensReceived(operator, from, to ethCommon.Address, amount *big.Int,
 	// 	userData, operatorData []byte) error // Only called from another smart contract
 	AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (*types.Transaction, error)
-	AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool,
-		maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error)
+	AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error)
 
 	// Forge
 	AuctionCanForge(forger ethCommon.Address, blockNum int64) (bool, error)
@@ -265,17 +267,19 @@ type AuctionInterface interface {
 
 // AuctionClient is the implementation of the interface to the Auction Smart Contract in ethereum.
 type AuctionClient struct {
-	client   *EthereumClient
-	address  ethCommon.Address
-	gasLimit uint64
+	client       *EthereumClient
+	address      ethCommon.Address
+	tokenAddress ethCommon.Address
+	gasLimit     uint64
 }
 
-// NewAuctionClient creates a new AuctionClient
-func NewAuctionClient(client *EthereumClient, address ethCommon.Address) *AuctionClient {
+// NewAuctionClient creates a new AuctionClient.  `tokenAddress` is the address of the HEZ tokens.
+func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Address) *AuctionClient {
 	return &AuctionClient{
-		client:   client,
-		address:  address,
-		gasLimit: 1000000, //nolint:gomnd
+		client:       client,
+		address:      address,
+		tokenAddress: tokenAddress,
+		gasLimit:     1000000, //nolint:gomnd
 	}
 }
 
@@ -539,9 +543,25 @@ func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitial
 			return auction.ChangeDefaultSlotSetBid(auth, slotSetToSend, newInitialMinBid)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed changing epoch minBid: %w", err)
+		return nil, fmt.Errorf("Failed changing slotSet Bid: %w", err)
 	}
 	return tx, nil
+}
+
+// AuctionGetClaimableHEZ is the interface to call the smart contract function
+func (c *AuctionClient) AuctionGetClaimableHEZ(claimAddress ethCommon.Address) (*big.Int, error) {
+	var claimableHEZ *big.Int
+	if err := c.client.Call(func(ec *ethclient.Client) error {
+		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
+		if err != nil {
+			return err
+		}
+		claimableHEZ, err = auction.GetClaimableHEZ(nil, claimAddress)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return claimableHEZ, nil
 }
 
 // AuctionRegisterCoordinator is the interface to call the smart contract function
@@ -632,6 +652,23 @@ func (c *AuctionClient) AuctionGetMinBidBySlot(slot int64) (*big.Int, error) {
 	return minBid, nil
 }
 
+// AuctionGetSlotSet is the interface to call the smart contract function
+func (c *AuctionClient) AuctionGetSlotSet(slot int64) (*big.Int, error) {
+	var slotSet *big.Int
+	if err := c.client.Call(func(ec *ethclient.Client) error {
+		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
+		if err != nil {
+			return err
+		}
+		slotToSend := big.NewInt(slot)
+		slotSet, err = auction.GetSlotSet(nil, slotToSend)
+		return err
+	}); err != nil {
+		return big.NewInt(0), err
+	}
+	return slotSet, nil
+}
+
 // AuctionGetDefaultSlotSetBid is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, error) {
 	var minBidSlotSet *big.Int
@@ -655,14 +692,89 @@ func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, er
 
 // AuctionBid is the interface to call the smart contract function
 func (c *AuctionClient) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			tokens, err := ERC777.NewERC777(c.tokenAddress, ec)
+			if err != nil {
+				return nil, err
+			}
+			bidFnSignature := []byte("bid(uint128,uint128,address)")
+			hash := sha3.NewLegacyKeccak256()
+			_, err = hash.Write(bidFnSignature)
+			if err != nil {
+				return nil, err
+			}
+			methodID := hash.Sum(nil)[:4]
+			slotBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(slotBytes, uint64(slot))
+			paddedSlot := ethCommon.LeftPadBytes(slotBytes, 32)
+			paddedAmount := ethCommon.LeftPadBytes(bidAmount.Bytes(), 32)
+			paddedAddress := ethCommon.LeftPadBytes(forger.Bytes(), 32)
+			var userData []byte
+			userData = append(userData, methodID...)
+			userData = append(userData, paddedSlot...)
+			userData = append(userData, paddedAmount...)
+			userData = append(userData, paddedAddress...)
+			return tokens.Send(auth, c.address, bidAmount, userData)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed bid: %w", err)
+	}
+	return tx, nil
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
 func (c *AuctionClient) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			tokens, err := ERC777.NewERC777(c.tokenAddress, ec)
+			if err != nil {
+				return nil, err
+			}
+			multiBidFnSignature := []byte("multiBid(uint128,uint128,bool[6],uint128,uint128,address)")
+			hash := sha3.NewLegacyKeccak256()
+			_, err = hash.Write(multiBidFnSignature)
+			if err != nil {
+				return nil, err
+			}
+			methodID := hash.Sum(nil)[:4]
+			startingSlotBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(startingSlotBytes, uint64(startingSlot))
+			paddedStartingSlot := ethCommon.LeftPadBytes(startingSlotBytes, 32)
+			endingSlotBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(endingSlotBytes, uint64(endingSlot))
+			paddedEndingSlot := ethCommon.LeftPadBytes(endingSlotBytes, 32)
+			paddedMinBid := ethCommon.LeftPadBytes(closedMinBid.Bytes(), 32)
+			paddedMaxBid := ethCommon.LeftPadBytes(maxBid.Bytes(), 32)
+			paddedAddress := ethCommon.LeftPadBytes(forger.Bytes(), 32)
+			var userData []byte
+			userData = append(userData, methodID...)
+			userData = append(userData, paddedStartingSlot...)
+			userData = append(userData, paddedEndingSlot...)
+			for i := 0; i < len(slotSet); i++ {
+				if slotSet[i] {
+					paddedSlotSet := ethCommon.LeftPadBytes([]byte{1}, 32)
+					userData = append(userData, paddedSlotSet...)
+				} else {
+					paddedSlotSet := ethCommon.LeftPadBytes([]byte{0}, 32)
+					userData = append(userData, paddedSlotSet...)
+				}
+			}
+			userData = append(userData, paddedMaxBid...)
+			userData = append(userData, paddedMinBid...)
+			userData = append(userData, paddedAddress...)
+			return tokens.Send(auth, c.address, budget, userData)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed multibid: %w", err)
+	}
+	return tx, nil
 }
 
 // AuctionCanForge is the interface to call the smart contract function

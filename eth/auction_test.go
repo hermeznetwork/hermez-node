@@ -26,28 +26,31 @@ var auctionClient *AuctionClient
 
 /*var donationAddressStr = os.Getenv("DONATION_ADDRESS")
 var bootCoordinatorStr = os.Getenv("BOOT_COORDINATOR_ADDRESS")
-var ehtClientDialURL = os.Getenv("ETHCLIENT_DIAL_URL")
-var auctionAddressStr = os.Getenv("AUCTION_ADDRESS")*/
+var auctionAddressStr = os.Getenv("AUCTION_ADDRESS")
+var tokenHezStr = os.Getenv("TOKEN_ADDRESS")
+var hermezStr = os.Getenv("HERMEZ_ADDRESS")
+var governanceAddressStr = os.Getenv("GOV_ADDRESS")
+var governancePrivateKey = os.Getenv("GOV_PK")
+var ehtClientDialURL = os.Getenv("ETHCLIENT_DIAL_URL")*/
 var integration = os.Getenv("INTEGRATION")
 
 var donationAddressStr = "0x6c365935CA8710200C7595F0a72EB6023A7706Cd"
 var bootCoordinatorStr = "0xc783df8a850f42e7f7e57013759c285caa701eb6"
-var DONATION = common.HexToAddress(donationAddressStr)
-var BOOTCOORDINATOR = common.HexToAddress(bootCoordinatorStr)
-
-var ehtClientDialURL = "http://localhost:8545"
 var auctionAddressStr = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5"
-
-// var ownerAddressStr = "0xc783df8a850f42e7F7e57013759C285caa701eB6"
+var tokenHezStr = "0xf4e77E5Da47AC3125140c470c71cBca77B5c638c" //nolint:gosec
+var hermezStr = "0xc4905364b78a742ccce7B890A89514061E47068D"
 var governanceAddressStr = "0xead9c93b79ae7c1591b1fb5323bd777e86e150d4"
 var governancePrivateKey = "d49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb"
+var ehtClientDialURL = "http://localhost:8545"
+var DONATION = common.HexToAddress(donationAddressStr)
+var BOOTCOORDINATOR = common.HexToAddress(bootCoordinatorStr)
+var TOKENHEZ = common.HexToAddress(tokenHezStr)
+var HERMEZROLLUP = common.HexToAddress(hermezStr)
+
 var minBidStr = "10000000000000000000"
 var URL = "http://localhost:3000"
 var newURL = "http://localhost:3002"
 var BLOCKSPERSLOT = uint8(40)
-var TOKENHEZ = common.HexToAddress("0xf4e77E5Da47AC3125140c470c71cBca77B5c638c")
-var HERMEZROLLUP = common.HexToAddress("0xc4905364b78a742ccce7B890A89514061E47068D")
-
 var password = "pass"
 
 func TestNewAction(t *testing.T) {
@@ -65,8 +68,9 @@ func TestNewAction(t *testing.T) {
 	require.Nil(t, err)
 	ethereumClient := NewEthereumClient(ethClient, &account, ks, nil)
 	auctionAddress := common.HexToAddress(auctionAddressStr)
+	tokenAddress := common.HexToAddress(tokenHezStr)
 	if integration != "" {
-		auctionClient = NewAuctionClient(ethereumClient, auctionAddress)
+		auctionClient = NewAuctionClient(ethereumClient, auctionAddress, tokenAddress)
 	}
 }
 
@@ -101,10 +105,10 @@ func TestAuctionVariables(t *testing.T) {
 		auctionVariables, err := auctionClient.AuctionVariables()
 		require.Nil(t, err)
 		assert.Equal(t, auctionVariables.AllocationRatio, allocationRatioConst)
-		assert.Equal(t, auctionVariables.BootCoordinator, &BOOTCOORDINATOR)
+		assert.Equal(t, auctionVariables.BootCoordinator, BOOTCOORDINATOR)
 		assert.Equal(t, auctionVariables.ClosedAuctionSlots, closedAuctionSlotsConst)
 		assert.Equal(t, auctionVariables.DefaultSlotSetBid, defaultSlotSetBid)
-		assert.Equal(t, auctionVariables.DonationAddress, &DONATION)
+		assert.Equal(t, auctionVariables.DonationAddress, DONATION)
 		assert.Equal(t, auctionVariables.OpenAuctionSlots, openAuctionSlotsConst)
 		assert.Equal(t, auctionVariables.Outbidding, outbiddingConst)
 		assert.Equal(t, auctionVariables.SlotDeadline, slotDeadlineConst)
@@ -262,6 +266,15 @@ func TestAuctionSetBootCoordinator(t *testing.T) {
 	}
 }
 
+func TestAuctionGetSlotSet(t *testing.T) {
+	slot := int64(10)
+	if auctionClient != nil {
+		slotSet, err := auctionClient.AuctionGetSlotSet(slot)
+		require.Nil(t, err)
+		assert.Equal(t, slotSet, big.NewInt(4))
+	}
+}
+
 func TestAuctionGetDefaultSlotSetBid(t *testing.T) {
 	slotSet := uint8(3)
 	if auctionClient != nil {
@@ -271,7 +284,7 @@ func TestAuctionGetDefaultSlotSetBid(t *testing.T) {
 	}
 }
 
-func TestAuctionChangeEpochMinBid(t *testing.T) {
+func TestAuctionChangeDefaultSlotSetBid(t *testing.T) {
 	slotSet := int64(3)
 	set := uint8(3)
 	newInitialMinBid := new(big.Int)
@@ -286,6 +299,15 @@ func TestAuctionChangeEpochMinBid(t *testing.T) {
 		newMinBid.SetString("10000000000000000000", 10)
 		_, err = auctionClient.AuctionChangeDefaultSlotSetBid(slotSet, newMinBid)
 		require.Nil(t, err)
+	}
+}
+
+func TestAuctionGetClaimableHEZ(t *testing.T) {
+	forgerAddress := common.HexToAddress(governanceAddressStr)
+	if auctionClient != nil {
+		claimableHEZ, err := auctionClient.AuctionGetClaimableHEZ(forgerAddress)
+		require.Nil(t, err)
+		assert.Equal(t, claimableHEZ.Int64(), int64(0))
 	}
 }
 
@@ -319,6 +341,35 @@ func TestAuctionUpdateCoordinatorInfo(t *testing.T) {
 	forgerAddress := common.HexToAddress(governanceAddressStr)
 	if auctionClient != nil {
 		_, err := auctionClient.AuctionUpdateCoordinatorInfo(forgerAddress, forgerAddress, newURL)
+		require.Nil(t, err)
+	}
+}
+
+func TestAuctionBid(t *testing.T) {
+	if auctionClient != nil {
+		currentSlot, err := auctionClient.AuctionGetCurrentSlotNumber()
+		require.Nil(t, err)
+		bidAmount := new(big.Int)
+		bidAmount.SetString("11000000000000000000", 10)
+		forgerAddress := common.HexToAddress(governanceAddressStr)
+		_, err = auctionClient.AuctionBid(currentSlot+4, bidAmount, forgerAddress)
+		require.Nil(t, err)
+	}
+}
+
+func TestAuctionMultiBid(t *testing.T) {
+	if auctionClient != nil {
+		currentSlot, err := auctionClient.AuctionGetCurrentSlotNumber()
+		require.Nil(t, err)
+		slotSet := [6]bool{false, true, false, true, false, true}
+		maxBid := new(big.Int)
+		maxBid.SetString("11000000000000000000", 10)
+		minBid := new(big.Int)
+		minBid.SetString("11000000000000000000", 10)
+		budget := new(big.Int)
+		budget.SetString("110000000000000000000", 10)
+		forgerAddress := common.HexToAddress(governanceAddressStr)
+		_, err = auctionClient.AuctionMultiBid(currentSlot+5, currentSlot+10, slotSet, maxBid, minBid, budget, forgerAddress)
 		require.Nil(t, err)
 	}
 }
