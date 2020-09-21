@@ -19,7 +19,7 @@ const (
 type L1Tx struct {
 	// Stored in DB: mandatory fileds
 	TxID            TxID
-	ToForgeL1TxsNum uint32 // toForgeL1TxsNum in which the tx was forged / will be forged
+	ToForgeL1TxsNum int64 // toForgeL1TxsNum in which the tx was forged / will be forged
 	Position        int
 	UserOrigin      bool // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
 	FromIdx         Idx  // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
