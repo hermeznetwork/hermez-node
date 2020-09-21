@@ -1004,7 +1004,7 @@ func (c *Client) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL
 		eth.AuctionEventNewCoordinator{
 			ForgerAddress:     forgerAddress,
 			WithdrawalAddress: c.addr,
-			URL:               URL,
+			CoordinatorURL:    URL,
 		})
 
 	type data struct {
@@ -1054,6 +1054,24 @@ func (c *Client) AuctionGetMinBidBySlot(slot int64) (*big.Int, error) {
 
 // AuctionGetDefaultSlotSetBid is the interface to call the smart contract function
 func (c *Client) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// AuctionGetSlotSet is the interface to call the smart contract function
+func (c *Client) AuctionGetSlotSet(slot int64) (*big.Int, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// AuctionGetSlotNumber is the interface to call the smart contract function
+func (c *Client) AuctionGetSlotNumber(blockNum int64) (*big.Int, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
