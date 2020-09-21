@@ -243,8 +243,8 @@ type AuctionInterface interface {
 	// Bidding
 	// AuctionTokensReceived(operator, from, to ethCommon.Address, amount *big.Int,
 	// 	userData, operatorData []byte) error // Only called from another smart contract
-	AuctionBid(slot int64, bidAmount *big.Int, forger, tokenAddress ethCommon.Address) (*types.Transaction, error)
-	AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger, tokenAddress ethCommon.Address) (*types.Transaction, error)
+	AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (*types.Transaction, error)
+	AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error)
 
 	// Forge
 	AuctionCanForge(forger ethCommon.Address, blockNum int64) (bool, error)
@@ -267,17 +267,19 @@ type AuctionInterface interface {
 
 // AuctionClient is the implementation of the interface to the Auction Smart Contract in ethereum.
 type AuctionClient struct {
-	client   *EthereumClient
-	address  ethCommon.Address
-	gasLimit uint64
+	client       *EthereumClient
+	address      ethCommon.Address
+	tokenAddress ethCommon.Address
+	gasLimit     uint64
 }
 
-// NewAuctionClient creates a new AuctionClient
-func NewAuctionClient(client *EthereumClient, address ethCommon.Address) *AuctionClient {
+// NewAuctionClient creates a new AuctionClient.  `tokenAddress` is the address of the HEZ tokens.
+func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Address) *AuctionClient {
 	return &AuctionClient{
-		client:   client,
-		address:  address,
-		gasLimit: 1000000, //nolint:gomnd
+		client:       client,
+		address:      address,
+		tokenAddress: tokenAddress,
+		gasLimit:     1000000, //nolint:gomnd
 	}
 }
 
@@ -689,13 +691,13 @@ func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, er
 // }
 
 // AuctionBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionBid(slot int64, bidAmount *big.Int, forger, tokenAddress ethCommon.Address) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
 		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokens, err := ERC777.NewERC777(tokenAddress, ec)
+			tokens, err := ERC777.NewERC777(c.tokenAddress, ec)
 			if err != nil {
 				return nil, err
 			}
@@ -725,13 +727,13 @@ func (c *AuctionClient) AuctionBid(slot int64, bidAmount *big.Int, forger, token
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger, tokenAddress ethCommon.Address) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
 		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokens, err := ERC777.NewERC777(tokenAddress, ec)
+			tokens, err := ERC777.NewERC777(c.tokenAddress, ec)
 			if err != nil {
 				return nil, err
 			}

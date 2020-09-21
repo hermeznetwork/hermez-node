@@ -68,8 +68,9 @@ func TestNewAction(t *testing.T) {
 	require.Nil(t, err)
 	ethereumClient := NewEthereumClient(ethClient, &account, ks, nil)
 	auctionAddress := common.HexToAddress(auctionAddressStr)
+	tokenAddress := common.HexToAddress(tokenHezStr)
 	if integration != "" {
-		auctionClient = NewAuctionClient(ethereumClient, auctionAddress)
+		auctionClient = NewAuctionClient(ethereumClient, auctionAddress, tokenAddress)
 	}
 }
 
@@ -351,7 +352,7 @@ func TestAuctionBid(t *testing.T) {
 		bidAmount := new(big.Int)
 		bidAmount.SetString("11000000000000000000", 10)
 		forgerAddress := common.HexToAddress(governanceAddressStr)
-		_, err = auctionClient.AuctionBid(currentSlot+4, bidAmount, forgerAddress, TOKENHEZ)
+		_, err = auctionClient.AuctionBid(currentSlot+4, bidAmount, forgerAddress)
 		require.Nil(t, err)
 	}
 }
@@ -368,7 +369,7 @@ func TestAuctionMultiBid(t *testing.T) {
 		budget := new(big.Int)
 		budget.SetString("110000000000000000000", 10)
 		forgerAddress := common.HexToAddress(governanceAddressStr)
-		_, err = auctionClient.AuctionMultiBid(currentSlot+5, currentSlot+10, slotSet, maxBid, minBid, budget, forgerAddress, TOKENHEZ)
+		_, err = auctionClient.AuctionMultiBid(currentSlot+5, currentSlot+10, slotSet, maxBid, minBid, budget, forgerAddress)
 		require.Nil(t, err)
 	}
 }
