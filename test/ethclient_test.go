@@ -68,6 +68,7 @@ func TestClientAuction(t *testing.T) {
 	addrWithdraw := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
 	addrForge := ethCommon.HexToAddress("0xCfAA413eEb796f328620a3630Ae39124cabcEa92")
 	addrForge2 := ethCommon.HexToAddress("0x1fCb4ac309428feCc61B1C8cA5823C15A5e1a800")
+	token1Addr := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
 
 	var timer timer
 	clientSetup := NewClientSetupExample()
@@ -80,33 +81,33 @@ func TestClientAuction(t *testing.T) {
 
 	// Check several cases in which bid doesn't succed, and also do 2 successful bids.
 
-	_, err := c.AuctionBid(0, big.NewInt(1), addrForge)
+	_, err := c.AuctionBid(0, big.NewInt(1), addrForge, token1Addr)
 	assert.Equal(t, errBidClosed, err)
 
-	_, err = c.AuctionBid(4322, big.NewInt(1), addrForge)
+	_, err = c.AuctionBid(4322, big.NewInt(1), addrForge, token1Addr)
 	assert.Equal(t, errBidNotOpen, err)
 
 	// 101 % 6 = 5;  defaultSlotSetBid[5] = 1500;  1500 + 10% = 1650
-	_, err = c.AuctionBid(101, big.NewInt(1650), addrForge)
+	_, err = c.AuctionBid(101, big.NewInt(1650), addrForge, token1Addr)
 	assert.Equal(t, errCoordNotReg, err)
 
 	_, err = c.AuctionRegisterCoordinator(addrForge, "https://foo.bar")
 	assert.Nil(t, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(1), addrForge)
+	_, err = c.AuctionBid(3, big.NewInt(1), addrForge, token1Addr)
 	assert.Equal(t, errBidBelowMin, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(1650), addrForge)
+	_, err = c.AuctionBid(3, big.NewInt(1650), addrForge, token1Addr)
 	assert.Nil(t, err)
 
 	_, err = c.AuctionRegisterCoordinator(addrForge2, "https://foo2.bar")
 	assert.Nil(t, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(16), addrForge2)
+	_, err = c.AuctionBid(3, big.NewInt(16), addrForge2, token1Addr)
 	assert.Equal(t, errBidBelowMin, err)
 
 	// 1650 + 10% = 1815
-	_, err = c.AuctionBid(3, big.NewInt(1815), addrForge2)
+	_, err = c.AuctionBid(3, big.NewInt(1815), addrForge2, token1Addr)
 	assert.Nil(t, err)
 
 	c.CtlMineBlock()

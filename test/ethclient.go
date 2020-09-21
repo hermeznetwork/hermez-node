@@ -1068,7 +1068,7 @@ func (c *Client) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, error) {
 // }
 
 // AuctionBid is the interface to call the smart contract function
-func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger, tokenAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1117,7 +1117,7 @@ func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Add
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
-func (c *Client) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger, tokenAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
