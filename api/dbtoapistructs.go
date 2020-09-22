@@ -54,7 +54,7 @@ type l2Info struct {
 
 type historyTxAPI struct {
 	IsL1        string           `json:"L1orL2"`
-	TxID        common.TxID      `json:"id"`
+	TxID        string           `json:"id"`
 	Type        common.TxType    `json:"type"`
 	Position    int              `json:"position"`
 	FromIdx     string           `json:"fromAccountIndex"`
@@ -75,7 +75,7 @@ func historyTxsToAPI(dbTxs []*historydb.HistoryTx) []historyTxAPI {
 	apiTxs := []historyTxAPI{}
 	for i := 0; i < len(dbTxs); i++ {
 		apiTx := historyTxAPI{
-			TxID:        dbTxs[i].TxID,
+			TxID:        dbTxs[i].TxID.String(),
 			Type:        dbTxs[i].Type,
 			Position:    dbTxs[i].Position,
 			FromIdx:     "hez:" + dbTxs[i].TokenSymbol + ":" + strconv.Itoa(int(dbTxs[i].FromIdx)),

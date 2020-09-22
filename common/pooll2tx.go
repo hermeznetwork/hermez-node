@@ -13,6 +13,13 @@ import (
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
 type PoolL2Tx struct {
 	// Stored in DB: mandatory fileds
+
+	// TxID (12 bytes) for L2Tx is:
+	// bytes:  |  1   |    6    |   5   |
+	// values: | type | FromIdx | Nonce |
+	// where type:
+	// 	- L1UserTx: 0
+	// 	- L1CoordinatorTx: 1
 	TxID        TxID               `meddler:"tx_id"`
 	FromIdx     Idx                `meddler:"from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	ToIdx       Idx                `meddler:"to_idx"`   // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
@@ -42,6 +49,44 @@ type PoolL2Tx struct {
 	Type              TxType             `meddler:"tx_type"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
+}
+
+// NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated
+// from the L2Tx values
+func NewPoolL2Tx(poolL2Tx *PoolL2Tx) (*PoolL2Tx, error) {
+	// calculate TxType
+	var txType TxType
+	if poolL2Tx.ToIdx == Idx(0) {
+		txType = TxTypeTransfer
+	} else if poolL2Tx.ToIdx == Idx(1) {
+		txType = TxTypeExit
+	} else if poolL2Tx.ToIdx >= IdxUserThreshold {
+		txType = TxTypeTransfer
+	} else {
+		return poolL2Tx, fmt.Errorf("Can not determine type of PoolL2Tx, invalid ToIdx value: %d", poolL2Tx.ToIdx)
+	}
+
+	// if TxType!=poolL2Tx.TxType return error
+	if poolL2Tx.Type != "" && poolL2Tx.Type != txType {
+		return poolL2Tx, fmt.Errorf("PoolL2Tx.Type: %s, should be: %s", poolL2Tx.Type, txType)
+	}
+	poolL2Tx.Type = txType
+
+	var txid [TxIDLen]byte
+	txid[0] = TxIDPrefixL2Tx
+	fromIdxBytes, err := poolL2Tx.FromIdx.Bytes()
+	if err != nil {
+		return poolL2Tx, err
+	}
+	copy(txid[1:7], fromIdxBytes[:])
+	nonceBytes, err := poolL2Tx.Nonce.Bytes()
+	if err != nil {
+		return poolL2Tx, err
+	}
+	copy(txid[7:12], nonceBytes[:])
+	poolL2Tx.TxID = TxID(txid)
+
+	return poolL2Tx, nil
 }
 
 // TxCompressedData spec:

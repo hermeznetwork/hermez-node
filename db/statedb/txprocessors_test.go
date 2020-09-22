@@ -40,7 +40,7 @@ func TestProcessTxs(t *testing.T) {
 		require.Nil(t, err)
 	}
 
-	acc, err := sdb.GetAccount(common.Idx(1))
+	acc, err := sdb.GetAccount(common.Idx(256))
 	assert.Nil(t, err)
 	assert.Equal(t, "23", acc.Balance.String())
 }
@@ -73,7 +73,7 @@ func TestProcessTxsBatchByBatch(t *testing.T) {
 	_, exitInfos, err := sdb.ProcessTxs(true, true, l1Txs[0], coordinatorL1Txs[0], poolL2Txs[0])
 	require.Nil(t, err)
 	assert.Equal(t, 0, len(exitInfos))
-	acc, err := sdb.GetAccount(common.Idx(1))
+	acc, err := sdb.GetAccount(common.Idx(256))
 	assert.Nil(t, err)
 	assert.Equal(t, "28", acc.Balance.String())
 
@@ -82,7 +82,7 @@ func TestProcessTxsBatchByBatch(t *testing.T) {
 	_, exitInfos, err = sdb.ProcessTxs(true, true, l1Txs[1], coordinatorL1Txs[1], poolL2Txs[1])
 	require.Nil(t, err)
 	assert.Equal(t, 5, len(exitInfos))
-	acc, err = sdb.GetAccount(common.Idx(1))
+	acc, err = sdb.GetAccount(common.Idx(256))
 	assert.Nil(t, err)
 	assert.Equal(t, "48", acc.Balance.String())
 
@@ -91,7 +91,7 @@ func TestProcessTxsBatchByBatch(t *testing.T) {
 	_, exitInfos, err = sdb.ProcessTxs(true, true, l1Txs[2], coordinatorL1Txs[2], poolL2Txs[2])
 	require.Nil(t, err)
 	assert.Equal(t, 1, len(exitInfos))
-	acc, err = sdb.GetAccount(common.Idx(1))
+	acc, err = sdb.GetAccount(common.Idx(256))
 	assert.Nil(t, err)
 	assert.Equal(t, "23", acc.Balance.String())
 }

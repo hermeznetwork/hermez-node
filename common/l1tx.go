@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/big"
 
@@ -16,6 +17,13 @@ const (
 // L1Tx is a struct that represents a L1 tx
 type L1Tx struct {
 	// Stored in DB: mandatory fileds
+
+	// TxID (12 bytes) for L1Tx is:
+	// bytes:  |  1   |        8        |    2     |      1      |
+	// values: | type | ToForgeL1TxsNum | Position | 0 (padding) |
+	// where type:
+	// 	- L1UserTx: 0
+	// 	- L1CoordinatorTx: 1
 	TxID            TxID
 	ToForgeL1TxsNum int64 // toForgeL1TxsNum in which the tx was forged / will be forged
 	Position        int
@@ -30,6 +38,58 @@ type L1Tx struct {
 	EthBlockNum     int64 // Ethereum Block Number in which this L1Tx was added to the queue
 	Type            TxType
 	BatchNum        BatchNum
+}
+
+// NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated
+// from the L1Tx values
+func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
+	// calculate TxType
+	var txType TxType
+	if l1Tx.FromIdx == Idx(0) {
+		if l1Tx.ToIdx == Idx(0) {
+			txType = TxTypeCreateAccountDeposit
+		} else if l1Tx.ToIdx >= IdxUserThreshold {
+			txType = TxTypeCreateAccountDepositTransfer
+		} else {
+			return l1Tx, fmt.Errorf("Can not determine type of L1Tx, invalid ToIdx value: %d", l1Tx.ToIdx)
+		}
+	} else if l1Tx.FromIdx >= IdxUserThreshold {
+		if l1Tx.ToIdx == Idx(0) {
+			txType = TxTypeDeposit
+		} else if l1Tx.ToIdx == Idx(1) {
+			txType = TxTypeExit
+		} else if l1Tx.ToIdx >= IdxUserThreshold {
+			if l1Tx.LoadAmount.Int64() == int64(0) {
+				txType = TxTypeForceTransfer
+			} else {
+				txType = TxTypeDepositTransfer
+			}
+		} else {
+			return l1Tx, fmt.Errorf("Can not determine type of L1Tx, invalid ToIdx value: %d", l1Tx.ToIdx)
+		}
+	} else {
+		return l1Tx, fmt.Errorf("Can not determine type of L1Tx, invalid FromIdx value: %d", l1Tx.FromIdx)
+	}
+
+	if l1Tx.Type != "" && l1Tx.Type != txType {
+		return l1Tx, fmt.Errorf("L1Tx.Type: %s, should be: %s", l1Tx.Type, txType)
+	}
+	l1Tx.Type = txType
+
+	var txid [TxIDLen]byte
+	if !l1Tx.UserOrigin {
+		txid[0] = TxIDPrefixL1CoordTx
+	}
+	var toForgeL1TxsNumBytes [8]byte
+	binary.BigEndian.PutUint64(toForgeL1TxsNumBytes[:], uint64(l1Tx.ToForgeL1TxsNum))
+	copy(txid[1:9], toForgeL1TxsNumBytes[:])
+
+	var positionBytes [2]byte
+	binary.BigEndian.PutUint16(positionBytes[:], uint16(l1Tx.Position))
+	copy(txid[9:11], positionBytes[:])
+	l1Tx.TxID = TxID(txid)
+
+	return l1Tx, nil
 }
 
 // Tx returns a *Tx from the L1Tx

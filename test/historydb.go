@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -85,10 +84,10 @@ func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAdd
 		panic("totalAccounts must be greater than userAccounts")
 	}
 	accs := []common.Account{}
-	for i := 0; i < totalAccounts; i++ {
+	for i := 256; i < 256+totalAccounts; i++ {
 		var addr ethCommon.Address
 		var pubK *babyjub.PublicKey
-		if i < userAccounts {
+		if i < 256+userAccounts {
 			addr = *userAddr
 			pubK = userBjj
 		} else {
@@ -122,27 +121,30 @@ func GenL1Txs(
 	}
 	userTxs := []common.L1Tx{}
 	othersTxs := []common.L1Tx{}
-	for i := 0; i < totalTxs; i++ {
+	for i := fromIdx; i < fromIdx+totalTxs; i++ {
 		var tx common.L1Tx
 		if batches[i%len(batches)].ForgeL1TxsNum != 0 {
 			tx = common.L1Tx{
-				TxID:            common.TxID(common.Hash([]byte("L1_" + strconv.Itoa(fromIdx+i)))),
 				ToForgeL1TxsNum: batches[i%len(batches)].ForgeL1TxsNum,
-				Position:        i,
+				Position:        i - fromIdx,
 				UserOrigin:      i%2 == 0,
 				TokenID:         tokens[i%len(tokens)].TokenID,
 				Amount:          big.NewInt(int64(i + 1)),
 				LoadAmount:      big.NewInt(int64(i + 1)),
 				EthBlockNum:     blocks[i%len(blocks)].EthBlockNum,
-				Type:            randomTxType(i),
 			}
+			nTx, err := common.NewL1Tx(&tx)
+			if err != nil {
+				panic(err)
+			}
+			tx = *nTx
 			if i%4 == 0 {
 				tx.BatchNum = batches[i%len(batches)].BatchNum
 			}
 		} else {
 			continue
 		}
-		if i < nUserTxs {
+		if i < fromIdx+nUserTxs {
 			var from, to *common.Account
 			var err error
 			if i%2 == 0 {
@@ -203,11 +205,11 @@ func GenL2Txs(
 	}
 	userTxs := []common.L2Tx{}
 	othersTxs := []common.L2Tx{}
-	for i := 0; i < totalTxs; i++ {
+	for i := fromIdx; i < fromIdx+totalTxs; i++ {
 		tx := common.L2Tx{
-			TxID:     common.TxID(common.Hash([]byte("L2_" + strconv.Itoa(fromIdx+i)))),
+			TxID:     common.TxID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, byte(i)}), // only for testing purposes
 			BatchNum: batches[i%len(batches)].BatchNum,
-			Position: i,
+			Position: i - fromIdx,
 			//nolint:gomnd
 			Amount: big.NewInt(int64(i + 1)),
 			//nolint:gomnd
@@ -216,6 +218,11 @@ func GenL2Txs(
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			Type:        randomTxType(i),
 		}
+		// nTx, err := common.NewL2Tx(&tx)
+		// if err != nil {
+		//         panic(err)
+		// }
+		// tx = *nTx
 		if i < nUserTxs {
 			var from, to *common.Account
 			var err error

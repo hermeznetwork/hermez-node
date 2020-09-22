@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -17,6 +18,42 @@ type L2Tx struct {
 	Nonce       Nonce
 	Type        TxType
 	EthBlockNum int64 // Ethereum Block Number in which this L2Tx was added to the queue
+}
+
+// NewL2Tx returns the given L2Tx with the TxId & Type parameters calculated
+// from the L2Tx values
+func NewL2Tx(l2Tx *L2Tx) (*L2Tx, error) {
+	// calculate TxType
+	var txType TxType
+	if l2Tx.ToIdx == Idx(1) {
+		txType = TxTypeExit
+	} else if l2Tx.ToIdx >= IdxUserThreshold {
+		txType = TxTypeTransfer
+	} else {
+		return l2Tx, fmt.Errorf("Can not determine type of L2Tx, invalid ToIdx value: %d", l2Tx.ToIdx)
+	}
+
+	// if TxType!=l2Tx.TxType return error
+	if l2Tx.Type != "" && l2Tx.Type != txType {
+		return l2Tx, fmt.Errorf("L2Tx.Type: %s, should be: %s", l2Tx.Type, txType)
+	}
+	l2Tx.Type = txType
+
+	var txid [TxIDLen]byte
+	txid[0] = TxIDPrefixL2Tx
+	fromIdxBytes, err := l2Tx.FromIdx.Bytes()
+	if err != nil {
+		return l2Tx, err
+	}
+	copy(txid[1:7], fromIdxBytes[:])
+	nonceBytes, err := l2Tx.Nonce.Bytes()
+	if err != nil {
+		return l2Tx, err
+	}
+	copy(txid[7:12], nonceBytes[:])
+	l2Tx.TxID = TxID(txid)
+
+	return l2Tx, nil
 }
 
 // Tx returns a *Tx from the L2Tx
