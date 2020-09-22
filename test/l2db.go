@@ -24,7 +24,7 @@ func CleanL2DB(db *sqlx.DB) {
 // GenPoolTxs generates L2 pool txs.
 // WARNING: This tx doesn't follow the protocol (signature, txID, ...)
 // it's just to test getting/setting from/to the DB.
-func GenPoolTxs(n int) []*common.PoolL2Tx {
+func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 	txs := make([]*common.PoolL2Tx, 0, n)
 	privK := babyjub.NewRandPrivKey()
 	for i := 0; i < n; i++ {
@@ -50,15 +50,18 @@ func GenPoolTxs(n int) []*common.PoolL2Tx {
 			ToIdx:       common.Idx(i + 1),
 			ToEthAddr:   ethCommon.BigToAddress(big.NewInt(int64(i))),
 			ToBJJ:       privK.Public(),
-			TokenID:     common.TokenID(i),
+			TokenID:     tokens[i%len(tokens)].TokenID,
 			Amount:      big.NewInt(int64(i)),
 			AmountFloat: amountF,
+			USD:         tokens[i%len(tokens)].USD * amountF,
 			//nolint:gomnd
-			Fee:       common.FeeSelector(i % 255),
-			Nonce:     common.Nonce(i),
-			State:     state,
-			Signature: privK.SignPoseidon(big.NewInt(int64(i))),
-			Timestamp: time.Now().UTC(),
+			Fee:         common.FeeSelector(i % 255),
+			Nonce:       common.Nonce(i),
+			State:       state,
+			Signature:   privK.SignPoseidon(big.NewInt(int64(i))),
+			Timestamp:   time.Now().UTC(),
+			TokenSymbol: tokens[i%len(tokens)].Symbol,
+			// AbsoluteFee:
 		}
 		if i%2 == 0 { // Optional parameters: rq
 			tx.RqFromIdx = common.Idx(i)

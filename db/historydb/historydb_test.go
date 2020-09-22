@@ -9,6 +9,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
@@ -26,16 +27,19 @@ var historyDB *HistoryDB
 
 func TestMain(m *testing.M) {
 	// init DB
-	var err error
-	pass := os.Getenv("POSTGRES_PASS")
-	historyDB, err = NewHistoryDB(5432, "localhost", "hermez", pass, "history")
+	pass := "yourpasswordhere" // os.Getenv("POSTGRES_PASS")
+	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	if err != nil {
+		panic(err)
+	}
+	historyDB = NewHistoryDB(db)
 	if err != nil {
 		panic(err)
 	}
 	// Run tests
 	result := m.Run()
 	// Close DB
-	if err := historyDB.Close(); err != nil {
+	if err := db.Close(); err != nil {
 		fmt.Println("Error closing the history DB:", err)
 	}
 	os.Exit(result)

@@ -17,7 +17,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Postgres
-      run: docker run --rm --name hermez-db-test -p 5432:5432 -e POSTGRES_DB=history -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASS }}" -d postgres && sleep 2s && docker exec hermez-db-test psql -a history -U hermez -c "CREATE DATABASE l2;"
+      run: docker run --rm --name hermez-db-test -p 5432:5432 -e POSTGRES_DB=hermez -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASS }}" -d postgres
     - name: Test
       env:
         POSTGRES_PASS: ${{ secrets.POSTGRES_PASS }}

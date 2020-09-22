@@ -7,11 +7,45 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/gobuffalo/packr/v2"
+	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/jmoiron/sqlx"
+	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 )
 
-// InitMeddler registers tags to be used to read/write from SQL DBs using meddler
-func InitMeddler() {
+// InitSQLDB runs migrations and registers meddlers
+func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
+	// Init meddler
+	initMeddler()
+	meddler.Default = meddler.PostgreSQL
+	// Stablish connection
+	psqlconn := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		host,
+		port,
+		user,
+		password,
+		name,
+	)
+	db, err := sqlx.Connect("postgres", psqlconn)
+	if err != nil {
+		return nil, err
+	}
+	// Run DB migrations
+	migrations := &migrate.PackrMigrationSource{
+		Box: packr.New("hermez-db-migrations", "./migrations"),
+	}
+	nMigrations, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Successfuly runt ", nMigrations, " migrations")
+	return db, nil
+}
+
+// initMeddler registers tags to be used to read/write from SQL DBs using meddler
+func initMeddler() {
 	meddler.Register("bigint", BigIntMeddler{})
 	meddler.Register("bigintnull", BigIntNullMeddler{})
 }

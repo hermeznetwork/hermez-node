@@ -6,16 +6,13 @@ import (
 	"fmt"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/gobuffalo/packr/v2"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
 	//nolint:errcheck // driver for postgres DB
 	_ "github.com/lib/pq"
-	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 )
 
@@ -57,28 +54,8 @@ type BatchData struct {
 }
 
 // NewHistoryDB initialize the DB
-func NewHistoryDB(port int, host, user, password, dbname string) (*HistoryDB, error) {
-	// Connect to DB
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	hdb, err := sqlx.Connect("postgres", psqlconn)
-	if err != nil {
-		return nil, err
-	}
-	// Init meddler
-	db.InitMeddler()
-	meddler.Default = meddler.PostgreSQL
-
-	// Run DB migrations
-	migrations := &migrate.PackrMigrationSource{
-		Box: packr.New("history-migrations", "./migrations"),
-	}
-	nMigrations, err := migrate.Exec(hdb.DB, "postgres", migrations, migrate.Up)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("HistoryDB applied ", nMigrations, " migrations for ", dbname, " database")
-
-	return &HistoryDB{hdb}, nil
+func NewHistoryDB(db *sqlx.DB) *HistoryDB {
+	return &HistoryDB{db: db}
 }
 
 // AddBlock insert a block into the DB
@@ -633,9 +610,4 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 	}
 
 	return txn.Commit()
-}
-
-// Close frees the resources used by HistoryDB
-func (hdb *HistoryDB) Close() error {
-	return hdb.db.Close()
 }

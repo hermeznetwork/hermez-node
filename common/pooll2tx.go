@@ -42,6 +42,7 @@ type PoolL2Tx struct {
 	Type              TxType             `meddler:"tx_type"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
+	TokenSymbol        string `meddler:"token_symbol"`
 }
 
 // TxCompressedData spec:
