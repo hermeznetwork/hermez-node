@@ -235,7 +235,11 @@ func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
 // getAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  GetAccount returns the account for the given Idx
 func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
-	vBytes, err := sto.Get(idx.Bytes())
+	idxBytes, err := idx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	vBytes, err := sto.Get(idxBytes[:])
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +286,11 @@ func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 		return nil, err
 	}
 
-	_, err = tx.Get(idx.Bytes())
+	idxBytes, err := idx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	_, err = tx.Get(idxBytes[:])
 	if err != db.ErrNotFound {
 		return nil, ErrAccountAlreadyExists
 	}
@@ -291,7 +299,7 @@ func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 	if err != nil {
 		return nil, err
 	}
-	err = tx.Put(idx.Bytes(), v.Bytes())
+	err = tx.Put(idxBytes[:], v.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +345,11 @@ func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 	if err != nil {
 		return nil, err
 	}
-	err = tx.Put(idx.Bytes(), v.Bytes())
+	idxBytes, err := idx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Put(idxBytes[:], v.Bytes())
 	if err != nil {
 		return nil, err
 	}

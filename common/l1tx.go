@@ -10,7 +10,7 @@ import (
 
 const (
 	// L1TxBytesLen is the length of the byte array that represents the L1Tx
-	L1TxBytesLen = 68
+	L1TxBytesLen = 72
 )
 
 // L1Tx is a struct that represents a L1 tx
@@ -63,23 +63,31 @@ func (tx *L1Tx) Tx() *Tx {
 
 // Bytes encodes a L1Tx into []byte
 func (tx *L1Tx) Bytes(nLevels int) ([]byte, error) {
-	var b [68]byte
+	var b [L1TxBytesLen]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
 	pkComp := tx.FromBJJ.Compress()
 	copy(b[20:52], pkComp[:])
-	copy(b[52:56], tx.FromIdx.Bytes())
+	fromIdxBytes, err := tx.FromIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[52:58], fromIdxBytes[:])
 	loadAmountFloat16, err := NewFloat16(tx.LoadAmount)
 	if err != nil {
 		return nil, err
 	}
-	copy(b[56:58], loadAmountFloat16.Bytes())
+	copy(b[58:60], loadAmountFloat16.Bytes())
 	amountFloat16, err := NewFloat16(tx.Amount)
 	if err != nil {
 		return nil, err
 	}
-	copy(b[58:60], amountFloat16.Bytes())
-	copy(b[60:64], tx.TokenID.Bytes())
-	copy(b[64:68], tx.ToIdx.Bytes())
+	copy(b[60:62], amountFloat16.Bytes())
+	copy(b[62:66], tx.TokenID.Bytes())
+	toIdxBytes, err := tx.ToIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[66:72], toIdxBytes[:])
 	return b[:], nil
 }
 
@@ -99,17 +107,17 @@ func L1TxFromBytes(b []byte) (*L1Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	tx.FromIdx, err = IdxFromBytes(b[52:56])
+	tx.FromIdx, err = IdxFromBytes(b[52:58])
 	if err != nil {
 		return nil, err
 	}
-	tx.LoadAmount = Float16FromBytes(b[56:58]).BigInt()
-	tx.Amount = Float16FromBytes(b[58:60]).BigInt()
-	tx.TokenID, err = TokenIDFromBytes(b[60:64])
+	tx.LoadAmount = Float16FromBytes(b[58:60]).BigInt()
+	tx.Amount = Float16FromBytes(b[60:62]).BigInt()
+	tx.TokenID, err = TokenIDFromBytes(b[62:66])
 	if err != nil {
 		return nil, err
 	}
-	tx.ToIdx, err = IdxFromBytes(b[64:68])
+	tx.ToIdx, err = IdxFromBytes(b[66:72])
 	if err != nil {
 		return nil, err
 	}

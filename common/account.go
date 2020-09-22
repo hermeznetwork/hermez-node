@@ -21,9 +21,9 @@ const (
 	// maxBalanceBytes is the maximum bytes that can use the Account.Balance *big.Int
 	maxBalanceBytes = 24
 
-	idxBytesLen = 4
-	// maxIdxValue is the maximum value that Idx can have (32 bits: maxIdxValue=2**32-1)
-	maxIdxValue = 0xffffffff
+	idxBytesLen = 6
+	// maxIdxValue is the maximum value that Idx can have (48 bits: maxIdxValue=2**48-1)
+	maxIdxValue = 0xffffffffffff
 
 	// userThreshold determines the threshold from the User Idxs can be
 	userThreshold = 256
@@ -40,7 +40,7 @@ var (
 )
 
 // Idx represents the account Index in the MerkleTree
-type Idx uint32
+type Idx uint64
 
 // String returns a string representation of the Idx
 func (idx Idx) String() string {
@@ -48,10 +48,15 @@ func (idx Idx) String() string {
 }
 
 // Bytes returns a byte array representing the Idx
-func (idx Idx) Bytes() []byte {
-	var b [4]byte
-	binary.BigEndian.PutUint32(b[:], uint32(idx))
-	return b[:]
+func (idx Idx) Bytes() ([6]byte, error) {
+	if idx > maxIdxValue {
+		return [6]byte{}, ErrIdxOverflow
+	}
+	var idxBytes [8]byte
+	binary.BigEndian.PutUint64(idxBytes[:], uint64(idx))
+	var b [6]byte
+	copy(b[:], idxBytes[2:])
+	return b, nil
 }
 
 // BigInt returns a *big.Int representing the Idx
@@ -62,9 +67,11 @@ func (idx Idx) BigInt() *big.Int {
 // IdxFromBytes returns Idx from a byte array
 func IdxFromBytes(b []byte) (Idx, error) {
 	if len(b) != idxBytesLen {
-		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected 4", len(b))
+		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected %d", len(b), idxBytesLen)
 	}
-	idx := binary.BigEndian.Uint32(b[:4])
+	var idxBytes [8]byte
+	copy(idxBytes[2:], b[:])
+	idx := binary.BigEndian.Uint64(idxBytes[:])
 	return Idx(idx), nil
 }
 
@@ -73,7 +80,35 @@ func IdxFromBigInt(b *big.Int) (Idx, error) {
 	if b.Int64() > maxIdxValue {
 		return 0, ErrNumOverflow
 	}
-	return Idx(uint32(b.Int64())), nil
+	return Idx(uint64(b.Int64())), nil
+}
+
+// Nonce represents the nonce value in a uint64, which has the method Bytes that returns a byte array of length 5 (40 bits).
+type Nonce uint64
+
+// Bytes returns a byte array of length 5 representing the Nonce
+func (n Nonce) Bytes() ([5]byte, error) {
+	if n > maxNonceValue {
+		return [5]byte{}, ErrNonceOverflow
+	}
+	var nonceBytes [8]byte
+	binary.BigEndian.PutUint64(nonceBytes[:], uint64(n))
+	var b [5]byte
+	copy(b[:], nonceBytes[3:])
+	return b, nil
+}
+
+// BigInt returns the *big.Int representation of the Nonce value
+func (n Nonce) BigInt() *big.Int {
+	return big.NewInt(int64(n))
+}
+
+// NonceFromBytes returns Nonce from a [5]byte
+func NonceFromBytes(b [5]byte) Nonce {
+	var nonceBytes [8]byte
+	copy(nonceBytes[3:], b[:])
+	nonce := binary.BigEndian.Uint64(nonceBytes[:])
+	return Nonce(nonce)
 }
 
 // Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree

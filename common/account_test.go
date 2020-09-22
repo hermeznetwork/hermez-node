@@ -15,6 +15,61 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIdxParser(t *testing.T) {
+	i := Idx(1)
+	iBytes, err := i.Bytes()
+	assert.Nil(t, err)
+	assert.Equal(t, 6, len(iBytes))
+	assert.Equal(t, "000000000001", hex.EncodeToString(iBytes[:]))
+	i2, err := IdxFromBytes(iBytes[:])
+	assert.Nil(t, err)
+	assert.Equal(t, i, i2)
+
+	i = Idx(100)
+	assert.Equal(t, big.NewInt(100), i.BigInt())
+
+	// value before overflow
+	i = Idx(281474976710655)
+	iBytes, err = i.Bytes()
+	assert.Nil(t, err)
+	assert.Equal(t, 6, len(iBytes))
+	assert.Equal(t, "ffffffffffff", hex.EncodeToString(iBytes[:]))
+	i2, err = IdxFromBytes(iBytes[:])
+	assert.Nil(t, err)
+	assert.Equal(t, i, i2)
+
+	// expect value overflow
+	i = Idx(281474976710656)
+	iBytes, err = i.Bytes()
+	assert.NotNil(t, err)
+	assert.Equal(t, ErrIdxOverflow, err)
+}
+
+func TestNonceParser(t *testing.T) {
+	n := Nonce(1)
+	nBytes, err := n.Bytes()
+	assert.Nil(t, err)
+	assert.Equal(t, 5, len(nBytes))
+	assert.Equal(t, "0000000001", hex.EncodeToString(nBytes[:]))
+	n2 := NonceFromBytes(nBytes)
+	assert.Equal(t, n, n2)
+
+	// value before overflow
+	n = Nonce(1099511627775)
+	nBytes, err = n.Bytes()
+	assert.Nil(t, err)
+	assert.Equal(t, 5, len(nBytes))
+	assert.Equal(t, "ffffffffff", hex.EncodeToString(nBytes[:]))
+	n2 = NonceFromBytes(nBytes)
+	assert.Equal(t, n, n2)
+
+	// expect value overflow
+	n = Nonce(1099511627776)
+	nBytes, err = n.Bytes()
+	assert.NotNil(t, err)
+	assert.Equal(t, ErrNonceOverflow, err)
+}
+
 func TestAccount(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))

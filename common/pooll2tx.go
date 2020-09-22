@@ -1,7 +1,6 @@
 package common
 
 import (
-	"encoding/binary"
 	"fmt"
 	"math/big"
 	"time"
@@ -10,34 +9,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
-
-// Nonce represents the nonce value in a uint64, which has the method Bytes that returns a byte array of length 5 (40 bits).
-type Nonce uint64
-
-// Bytes returns a byte array of length 5 representing the Nonce
-func (n Nonce) Bytes() ([5]byte, error) {
-	if n > maxNonceValue {
-		return [5]byte{}, ErrNonceOverflow
-	}
-	var nonceBytes [8]byte
-	binary.BigEndian.PutUint64(nonceBytes[:], uint64(n))
-	var b [5]byte
-	copy(b[:], nonceBytes[3:])
-	return b, nil
-}
-
-// BigInt returns the *big.Int representation of the Nonce value
-func (n Nonce) BigInt() *big.Int {
-	return big.NewInt(int64(n))
-}
-
-// NonceFromBytes returns Nonce from a [5]byte
-func NonceFromBytes(b [5]byte) Nonce {
-	var nonceBytes [8]byte
-	copy(nonceBytes[3:], b[:])
-	nonce := binary.BigEndian.Uint64(nonceBytes[:])
-	return Nonce(nonce)
-}
 
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
 type PoolL2Tx struct {
@@ -109,8 +80,16 @@ func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 	copy(b[2:7], nonceBytes[:])
 	copy(b[7:11], tx.TokenID.Bytes())
 	copy(b[11:13], amountFloat16.Bytes())
-	copy(b[13+2:19], tx.ToIdx.Bytes())
-	copy(b[19+2:25], tx.FromIdx.Bytes())
+	toIdxBytes, err := tx.ToIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[13:19], toIdxBytes[:])
+	fromIdxBytes, err := tx.FromIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[19:25], fromIdxBytes[:])
 	copy(b[25:27], []byte{0, 1, 0, 0}) // TODO check js implementation (unexpected behaviour from test vector generated from js)
 	copy(b[27:31], sc.Bytes())
 
@@ -146,8 +125,16 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 	copy(b[2:7], nonceBytes[:])
 	copy(b[7:11], tx.TokenID.Bytes())
 	copy(b[11:13], amountFloat16.Bytes())
-	copy(b[13+2:19], tx.ToIdx.Bytes())
-	copy(b[19+2:25], tx.FromIdx.Bytes())
+	toIdxBytes, err := tx.ToIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[13:19], toIdxBytes[:])
+	fromIdxBytes, err := tx.FromIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[19:25], fromIdxBytes[:])
 
 	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
