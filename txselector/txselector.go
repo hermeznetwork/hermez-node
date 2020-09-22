@@ -124,16 +124,16 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 			// Account found in the DB, include the l2Tx in the selection
 			validTxs = append(validTxs, l2TxsRaw[i])
 		} else if l2TxsRaw[i].ToIdx == common.Idx(0) {
-			idx := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
-			if idx != common.Idx(0) {
-				// account for ToEthAddr/ToBJJ already exist,
+			_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
+			if err == nil {
+				// account for ToEthAddr&ToBJJ already exist,
 				// there is no need to create a new one.
 				// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
 				validTxs = append(validTxs, l2TxsRaw[i])
 				continue
 			}
 			// check if ToEthAddr is in AccountCreationAuths
-			_, err := txsel.l2db.GetAccountCreationAuth(l2TxsRaw[i].ToEthAddr) // TODO once l2db.GetAccountCreationAuth is ready, use the value returned as 'accAuth'
+			_, err = txsel.l2db.GetAccountCreationAuth(l2TxsRaw[i].ToEthAddr) // TODO once l2db.GetAccountCreationAuth is ready, use the value returned as 'accAuth'
 			if err != nil {
 				// not found, l2Tx will not be added in the selection
 				continue

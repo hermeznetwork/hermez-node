@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -33,6 +34,11 @@ const (
 
 // Idx represents the account Index in the MerkleTree
 type Idx uint32
+
+// String returns a string representation of the Idx
+func (idx Idx) String() string {
+	return strconv.Itoa(int(idx))
+}
 
 // Bytes returns a byte array representing the Idx
 func (idx Idx) Bytes() []byte {

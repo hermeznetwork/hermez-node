@@ -3,7 +3,6 @@ package statedb
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -20,7 +19,8 @@ var (
 	// keyidx is used as key in the db to store the current Idx
 	keyidx = []byte("idx")
 
-	ffAddr = ethCommon.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
+	// ffAddr    = ethCommon.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
+	emptyAddr = ethCommon.HexToAddress("0x0000000000000000000000000000000000000000")
 )
 
 func (s *StateDB) resetZKInputs() {
@@ -322,6 +322,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 // related to the Exit (in case of): Idx, ExitAccount, boolean determining if
 // the Exit created a new Leaf in the ExitTree.
 func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
+	var err error
 	// ZKInputs
 	if s.zki != nil {
 		// Txs
@@ -332,18 +333,22 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 
 		// fill AuxToIdx if needed
 		if tx.ToIdx == common.Idx(0) {
-			// Idx not set in the Tx, get it from DB through ToEthAddr or ToBJJ
 			var idx common.Idx
-			if !bytes.Equal(tx.ToEthAddr.Bytes(), ffAddr.Bytes()) {
-				idx = s.GetIdxByEthAddr(tx.ToEthAddr)
-				if idx == common.Idx(0) {
-					return nil, nil, false, fmt.Errorf("Idx can not be found for given tx.FromEthAddr")
+			if !bytes.Equal(tx.ToEthAddr.Bytes(), emptyAddr.Bytes()) && tx.ToBJJ == nil {
+				// case ToEthAddr!=0 && ToBJJ=0
+				idx, err = s.GetIdxByEthAddr(tx.ToEthAddr)
+				if err != nil {
+					return nil, nil, false, ErrToIdxNotFound
+				}
+			} else if !bytes.Equal(tx.ToEthAddr.Bytes(), emptyAddr.Bytes()) && tx.ToBJJ != nil {
+				// case ToEthAddr!=0 && ToBJJ!=0
+				idx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
+				if err != nil {
+					return nil, nil, false, ErrToIdxNotFound
 				}
 			} else {
-				idx = s.GetIdxByBJJ(tx.ToBJJ)
-				if idx == common.Idx(0) {
-					return nil, nil, false, fmt.Errorf("Idx can not be found for given tx.FromBJJ")
-				}
+				// rest of cases (included case ToEthAddr==0) are not possible
+				return nil, nil, false, ErrToIdxNotFound
 			}
 			s.zki.AuxToIdx[s.i] = idx.BigInt()
 		}
@@ -367,7 +372,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	case common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update
 		// balance & nonce
-		err := s.applyTransfer(tx.Tx())
+		err = s.applyTransfer(tx.Tx())
 		if err != nil {
 			return nil, nil, false, err
 		}
