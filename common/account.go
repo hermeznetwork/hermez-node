@@ -32,6 +32,13 @@ const (
 	IdxUserThreshold = Idx(userThreshold)
 )
 
+var (
+	// FFAddr is used to check if an ethereum address is 0xff..ff
+	FFAddr = ethCommon.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
+	// EmptyAddr is used to check if an ethereum address is 0
+	EmptyAddr = ethCommon.HexToAddress("0x0000000000000000000000000000000000000000")
+)
+
 // Idx represents the account Index in the MerkleTree
 type Idx uint32
 
