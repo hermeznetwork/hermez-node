@@ -678,7 +678,11 @@ func (s *StateDB) setIdx(idx common.Idx) error {
 	if err != nil {
 		return err
 	}
-	err = tx.Put(keyidx, idx.Bytes())
+	idxBytes, err := idx.Bytes()
+	if err != nil {
+		return err
+	}
+	err = tx.Put(keyidx, idxBytes[:])
 	if err != nil {
 		return err
 	}

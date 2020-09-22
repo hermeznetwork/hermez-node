@@ -46,12 +46,16 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 	}
 	k := concatEthAddrBJJ(addr, pk)
 	// store Addr&BJJ-idx
-	err = tx.Put(k, idx.Bytes())
+	idxBytes, err := idx.Bytes()
+	if err != nil {
+		return err
+	}
+	err = tx.Put(k, idxBytes[:])
 	if err != nil {
 		return err
 	}
 	// store Addr-idx
-	err = tx.Put(addr.Bytes(), idx.Bytes())
+	err = tx.Put(addr.Bytes(), idxBytes[:])
 	if err != nil {
 		return err
 	}
