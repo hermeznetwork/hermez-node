@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math/big"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -18,9 +17,6 @@ import (
 var (
 	// keyidx is used as key in the db to store the current Idx
 	keyidx = []byte("idx")
-
-	// ffAddr    = ethCommon.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
-	emptyAddr = ethCommon.HexToAddress("0x0000000000000000000000000000000000000000")
 )
 
 func (s *StateDB) resetZKInputs() {
@@ -334,13 +330,13 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		// fill AuxToIdx if needed
 		if tx.ToIdx == common.Idx(0) {
 			var idx common.Idx
-			if !bytes.Equal(tx.ToEthAddr.Bytes(), emptyAddr.Bytes()) && tx.ToBJJ == nil {
+			if !bytes.Equal(tx.ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) && tx.ToBJJ == nil {
 				// case ToEthAddr!=0 && ToBJJ=0
 				idx, err = s.GetIdxByEthAddr(tx.ToEthAddr)
 				if err != nil {
 					return nil, nil, false, ErrToIdxNotFound
 				}
-			} else if !bytes.Equal(tx.ToEthAddr.Bytes(), emptyAddr.Bytes()) && tx.ToBJJ != nil {
+			} else if !bytes.Equal(tx.ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) && tx.ToBJJ != nil {
 				// case ToEthAddr!=0 && ToBJJ!=0
 				idx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
 				if err != nil {

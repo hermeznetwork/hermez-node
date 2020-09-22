@@ -3,12 +3,16 @@ package txselector
 // current: very simple version of TxSelector
 
 import (
+	"bytes"
 	"math/big"
 	"sort"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 // txs implements the interface Sort for an array of Tx
@@ -119,37 +123,105 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 			_, err = txsel.localAccountsDB.GetAccount(l2TxsRaw[i].ToIdx)
 			if err != nil {
 				// tx not valid
+				log.Debugw("invalid L2Tx: ToIdx not found in StateDB", "ToIdx", l2TxsRaw[i].ToIdx)
 				continue
 			}
 			// Account found in the DB, include the l2Tx in the selection
 			validTxs = append(validTxs, l2TxsRaw[i])
 		} else if l2TxsRaw[i].ToIdx == common.Idx(0) {
-			_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
-			if err == nil {
-				// account for ToEthAddr&ToBJJ already exist,
-				// there is no need to create a new one.
-				// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
+			if checkAlreadyPendingToCreate(l1CoordinatorTxs, l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ) {
+				// if L2Tx needs a new L1CoordinatorTx of CreateAccount type,
+				// and a previous L2Tx in the current process already created
+				// a L1CoordinatorTx of this type, in the DB there still seem
+				// that needs to create a new L1CoordinatorTx, but as is already
+				// created, the tx is valid
 				validTxs = append(validTxs, l2TxsRaw[i])
 				continue
 			}
-			// check if ToEthAddr is in AccountCreationAuths
-			_, err = txsel.l2db.GetAccountCreationAuth(l2TxsRaw[i].ToEthAddr) // TODO once l2db.GetAccountCreationAuth is ready, use the value returned as 'accAuth'
-			if err != nil {
-				// not found, l2Tx will not be added in the selection
-				continue
-			}
-			validTxs = append(validTxs, l2TxsRaw[i])
 
-			// create L1CoordinatorTx for the accountCreation
-			l1CoordinatorTx := &common.L1Tx{
-				UserOrigin: false,
-				// FromEthAddr: accAuth.EthAddr, // TODO This 2 lines will panic, as l2db.GetAccountCreationAuth is not implemented yet and returns nil. Uncomment this 2 lines once l2db method is done.
-				// FromBJJ:     accAuth.BJJ,
-				TokenID:    l2TxsRaw[i].TokenID,
-				LoadAmount: big.NewInt(0),
-				Type:       common.TxTypeCreateAccountDeposit,
+			if !bytes.Equal(l2TxsRaw[i].ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) &&
+				!bytes.Equal(l2TxsRaw[i].ToEthAddr.Bytes(), common.FFAddr.Bytes()) {
+				// case: ToEthAddr != 0x00 neither 0xff
+				var accAuth *common.AccountCreationAuth
+				if l2TxsRaw[i].ToBJJ != nil {
+					// case: ToBJJ!=0:
+					// if idx exist for EthAddr&BJJ use it
+					_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
+					if err == nil {
+						// account for ToEthAddr&ToBJJ already exist,
+						// there is no need to create a new one.
+						// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
+						validTxs = append(validTxs, l2TxsRaw[i])
+						continue
+					}
+					// if not, check if AccountCreationAuth exist for that ToEthAddr&BJJ
+					// accAuth, err = txsel.l2db.GetAccountCreationAuthBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
+					accAuth, err = txsel.l2db.GetAccountCreationAuth(l2TxsRaw[i].ToEthAddr)
+					if err != nil {
+						// not found, l2Tx will not be added in the selection
+						log.Debugw("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr & ToBJJ found in AccountCreationAuths L2DB", "ToIdx", l2TxsRaw[i].ToIdx, "ToEthAddr", l2TxsRaw[i].ToEthAddr)
+						continue
+					}
+					if accAuth.BJJ != l2TxsRaw[i].ToBJJ {
+						// if AccountCreationAuth.BJJ is not the same than in the tx, tx is not accepted
+						log.Debugw("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr & ToBJJ found in AccountCreationAuths L2DB", "ToIdx", l2TxsRaw[i].ToIdx, "ToEthAddr", l2TxsRaw[i].ToEthAddr, "ToBJJ", l2TxsRaw[i].ToBJJ)
+						continue
+					}
+					validTxs = append(validTxs, l2TxsRaw[i])
+				} else {
+					// case: ToBJJ==0:
+					// if idx exist for EthAddr use it
+					_, err := txsel.localAccountsDB.GetIdxByEthAddr(l2TxsRaw[i].ToEthAddr)
+					if err == nil {
+						// account for ToEthAddr already exist,
+						// there is no need to create a new one.
+						// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
+						validTxs = append(validTxs, l2TxsRaw[i])
+						continue
+					}
+					// if not, check if AccountCreationAuth exist for that ToEthAddr
+					accAuth, err = txsel.l2db.GetAccountCreationAuth(l2TxsRaw[i].ToEthAddr)
+					if err != nil {
+						// not found, l2Tx will not be added in the selection
+						log.Debugw("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB", "ToIdx", l2TxsRaw[i].ToIdx, "ToEthAddr", l2TxsRaw[i].ToEthAddr)
+						continue
+					}
+					validTxs = append(validTxs, l2TxsRaw[i])
+				}
+				// create L1CoordinatorTx for the accountCreation
+				l1CoordinatorTx := &common.L1Tx{
+					UserOrigin:  false,
+					FromEthAddr: accAuth.EthAddr,
+					FromBJJ:     accAuth.BJJ,
+					TokenID:     l2TxsRaw[i].TokenID,
+					LoadAmount:  big.NewInt(0),
+					Type:        common.TxTypeCreateAccountDeposit,
+				}
+				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
+			} else if bytes.Equal(l2TxsRaw[i].ToEthAddr.Bytes(), common.FFAddr.Bytes()) && l2TxsRaw[i].ToBJJ != nil {
+				// if idx exist for EthAddr&BJJ use it
+				_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
+				if err == nil {
+					// account for ToEthAddr&ToBJJ already exist, (where ToEthAddr==0xff)
+					// there is no need to create a new one.
+					// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
+					validTxs = append(validTxs, l2TxsRaw[i])
+					continue
+				}
+				// if idx don't exist for EthAddr&BJJ,
+				// coordinator can create a new account without
+				// L1Authorization, as ToEthAddr==0xff
+				// create L1CoordinatorTx for the accountCreation
+				l1CoordinatorTx := &common.L1Tx{
+					UserOrigin:  false,
+					FromEthAddr: l2TxsRaw[i].ToEthAddr,
+					FromBJJ:     l2TxsRaw[i].ToBJJ,
+					TokenID:     l2TxsRaw[i].TokenID,
+					LoadAmount:  big.NewInt(0),
+					Type:        common.TxTypeCreateAccountDeposit,
+				}
+				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 			}
-			l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 		} else if l2TxsRaw[i].ToIdx == common.Idx(1) {
 			// valid txs (of Exit type)
 			validTxs = append(validTxs, l2TxsRaw[i])
@@ -160,18 +232,31 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 	maxL2Txs := txsel.MaxTxs - uint64(len(l1CoordinatorTxs)) // - len(l1UserTxs)
 	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
 
-	// TODO This 3 lines will panic, as l2db.GetAccountCreationAuth is not implemented yet and returns nil. Uncomment this lines once l2db method is done.
 	// process the txs in the local AccountsDB
-	// _, _, err = txsel.localAccountsDB.ProcessTxs(false, false, l1Txs, l1CoordinatorTxs, l2Txs)
-	// if err != nil {
-	//         return nil, nil, nil, err
-	// }
+	_, _, err = txsel.localAccountsDB.ProcessTxs(false, false, l1Txs, l1CoordinatorTxs, l2Txs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	err = txsel.localAccountsDB.MakeCheckpoint()
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	return l1Txs, l1CoordinatorTxs, l2Txs, nil
+}
+
+func checkAlreadyPendingToCreate(l1CoordinatorTxs []*common.L1Tx, addr ethCommon.Address, bjj *babyjub.PublicKey) bool {
+	for i := 0; i < len(l1CoordinatorTxs); i++ {
+		if bytes.Equal(l1CoordinatorTxs[i].FromEthAddr.Bytes(), addr.Bytes()) {
+			if bjj == nil {
+				return true
+			}
+			if l1CoordinatorTxs[i].FromBJJ == bjj {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (txsel *TxSelector) getL2Profitable(txs txs, max uint64) txs {
