@@ -21,7 +21,10 @@ func TestMain(m *testing.M) {
 	pass := os.Getenv("POSTGRES_PASS")
 	l2DB, err = NewL2DB(5432, "localhost", "hermez", pass, "l2", 10, 100, 24*time.Hour)
 	if err != nil {
+		log.Error("L2DB migration failed: " + err.Error())
 		panic(err)
+	} else {
+		log.Debug("L2DB migration succed")
 	}
 	// Run tests
 	result := m.Run()
@@ -34,7 +37,7 @@ func TestMain(m *testing.M) {
 
 func TestAddTx(t *testing.T) {
 	const nInserts = 20
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	for _, tx := range txs {
 		err := l2DB.AddTx(tx)
@@ -52,7 +55,7 @@ func TestAddTx(t *testing.T) {
 
 func BenchmarkAddTx(b *testing.B) {
 	const nInserts = 20
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	now := time.Now()
 	for _, tx := range txs {
@@ -64,7 +67,7 @@ func BenchmarkAddTx(b *testing.B) {
 
 func TestGetPending(t *testing.T) {
 	const nInserts = 20
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	var pendingTxs []*common.PoolL2Tx
 	for _, tx := range txs {
@@ -90,7 +93,7 @@ func TestStartForging(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	var startForgingTxIDs []common.TxID
 	randomizer := 0
@@ -119,7 +122,7 @@ func TestDoneForging(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	var doneForgingTxIDs []common.TxID
 	randomizer := 0
@@ -148,7 +151,7 @@ func TestInvalidate(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	var invalidTxIDs []common.TxID
 	randomizer := 0
@@ -177,7 +180,7 @@ func TestCheckNonces(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	var invalidTxIDs []common.TxID
 	// Generate accounts
@@ -219,7 +222,7 @@ func TestCheckNonces(t *testing.T) {
 func TestUpdateTxValue(t *testing.T) {
 	// Generate txs
 	const nInserts = 255 // Force all possible fee selector values
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	// Generate tokens
 	const nTokens = 2
@@ -277,7 +280,7 @@ func TestReorg(t *testing.T) {
 	const nInserts = 20
 	const lastValidBatch common.BatchNum = 20
 	const reorgBatch common.BatchNum = lastValidBatch + 1
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts)
 	// Add txs to the DB
 	reorgedTxIDs := []common.TxID{}
@@ -312,7 +315,7 @@ func TestReorg(t *testing.T) {
 func TestPurge(t *testing.T) {
 	// Generate txs
 	nInserts := l2DB.maxTxs + 20
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(int(nInserts))
 	deletedIDs := []common.TxID{}
 	keepedIDs := []common.TxID{}
@@ -360,7 +363,7 @@ func TestPurge(t *testing.T) {
 }
 
 func TestAuth(t *testing.T) {
-	cleanDB()
+	test.CleanL2DB(l2DB.DB())
 	const nAuths = 5
 	// Generate authorizations
 	auths := test.GenAuths(nAuths)
@@ -376,14 +379,5 @@ func TestAuth(t *testing.T) {
 		assert.Equal(t, auths[i].BJJ, auth.BJJ)
 		assert.Equal(t, auths[i].Signature, auth.Signature)
 		assert.Equal(t, auths[i].Timestamp.Unix(), auths[i].Timestamp.Unix())
-	}
-}
-
-func cleanDB() {
-	if _, err := l2DB.db.Exec("DELETE FROM tx_pool"); err != nil {
-		panic(err)
-	}
-	if _, err := l2DB.db.Exec("DELETE FROM account_creation_auth"); err != nil {
-		panic(err)
 	}
 }

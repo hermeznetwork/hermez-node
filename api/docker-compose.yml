@@ -1,0 +1,32 @@
+version: "3"
+services:
+    hermez-api-doc:
+        container_name: hermez-api-doc
+        image: swaggerapi/swagger-ui
+        restart: unless-stopped
+        ports:
+            - 8001:8080
+        volumes:
+            - .:/spec
+        environment: 
+            - SWAGGER_JSON=/spec/swagger.yml
+    hermez-api-mock:
+        container_name: hermez-api-mock
+        image: stoplight/prism
+        restart: unless-stopped
+        ports:
+            - 4010:4010
+        volumes:
+            - .:/spec
+        command: mock -h 0.0.0.0 "/spec/swagger.yml"
+        #docker run -d -p 80:8080 -e URL=/foo/swagger.json -v /bar:/usr/share/nginx/html/foo swaggerapi/swagger-editor
+    hermez-api-editor:
+        container_name: hermez-api-editor
+        image: swaggerapi/swagger-editor
+        restart: unless-stopped
+        ports:
+            - 8002:8080
+        volumes:
+            - .:/spec
+        environment: 
+            - SWAGGER_FILE=/spec/swagger.yml

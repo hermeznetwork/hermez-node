@@ -1,5 +1,7 @@
 package common
 
+import "math"
+
 // Fee is a type that represents the percentage of tokens that will be paid in a transaction
 // to incentivaise the materialization of it
 type Fee float64
@@ -15,6 +17,20 @@ type RecommendedFee struct {
 
 // FeeSelector is used to select a percentage from the FeePlan.
 type FeeSelector uint8
+
+// Percentage returns the associated percentage of the FeeSelector
+func (f FeeSelector) Percentage() float64 {
+	if f == 0 {
+		return 0
+		//nolint:gomnd
+	} else if f <= 32 { //nolint:gomnd
+		return math.Pow(10, -24+(float64(f)/2)) //nolint:gomnd
+	} else if f <= 223 { //nolint:gomnd
+		return math.Pow(10, -8+(0.041666666666667*(float64(f)-32))) //nolint:gomnd
+	} else {
+		return math.Pow(10, float64(f)-224) //nolint:gomnd
+	}
+}
 
 // MaxFeePlan is the maximum value of the FeePlan
 const MaxFeePlan = 256

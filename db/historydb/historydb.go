@@ -1,11 +1,16 @@
 package historydb
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
 	//nolint:errcheck // driver for postgres DB
@@ -37,9 +42,11 @@ func NewHistoryDB(port int, host, user, password, dbname string) (*HistoryDB, er
 	migrations := &migrate.PackrMigrationSource{
 		Box: packr.New("history-migrations", "./migrations"),
 	}
-	if _, err := migrate.Exec(hdb.DB, "postgres", migrations, migrate.Up); err != nil {
+	nMigrations, err := migrate.Exec(hdb.DB, "postgres", migrations, migrate.Up)
+	if err != nil {
 		return nil, err
 	}
+	log.Debug("HistoryDB applied ", nMigrations, " migrations for ", dbname, " database")
 
 	return &HistoryDB{hdb}, nil
 }
@@ -318,6 +325,107 @@ func (hdb *HistoryDB) GetTxs() ([]*common.Tx, error) {
 		ORDER BY (batch_num, position) ASC`,
 	)
 	return txs, err
+}
+
+// GetHistoryTxs returns a list of txs from the DB using the HistoryTx struct
+func (hdb *HistoryDB) GetHistoryTxs(
+	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
+	tokenID, idx, batchNum *uint, txType *common.TxType,
+	offset, limit *uint, last bool,
+) ([]*HistoryTx, int, error) {
+	if ethAddr != nil && bjj != nil {
+		return nil, 0, errors.New("ethAddr and bjj are incompatible")
+	}
+	var query string
+	var args []interface{}
+	queryStr := `SELECT tx.*, tx.amount_f * token.usd AS current_usd,
+	token.symbol, token.usd_update, block.timestamp, count(*) OVER() AS total_items FROM tx 
+	INNER JOIN token ON tx.token_id = token.token_id 
+	INNER JOIN block ON tx.eth_block_num = block.eth_block_num `
+	// Apply filters
+	nextIsAnd := false
+	// ethAddr filter
+	if ethAddr != nil {
+		queryStr = `WITH acc AS 
+		(select idx from account where eth_addr = ?) ` + queryStr
+		queryStr += ", acc WHERE (tx.from_idx IN(acc.idx) OR tx.to_idx IN(acc.idx)) "
+		nextIsAnd = true
+		args = append(args, ethAddr)
+	} else if bjj != nil { // bjj filter
+		queryStr = `WITH acc AS 
+		(select idx from account where bjj = ?) ` + queryStr
+		queryStr += ", acc WHERE (tx.from_idx IN(acc.idx) OR tx.to_idx IN(acc.idx)) "
+		nextIsAnd = true
+		args = append(args, bjj)
+	}
+	// tokenID filter
+	if tokenID != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx.token_id = ? "
+		args = append(args, tokenID)
+		nextIsAnd = true
+	}
+	// idx filter
+	if idx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "(tx.from_idx = ? OR tx.to_idx = ?) "
+		args = append(args, idx, idx)
+		nextIsAnd = true
+	}
+	// batchNum filter
+	if batchNum != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx.batch_num = ? "
+		args = append(args, batchNum)
+		nextIsAnd = true
+	}
+	// txType filter
+	if txType != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx.type = ? "
+		args = append(args, txType)
+		// nextIsAnd = true
+	}
+	// pagination
+	if last {
+		queryStr += "ORDER BY (batch_num, position) DESC NULLS FIRST "
+	} else {
+		queryStr += "ORDER BY (batch_num, position) ASC NULLS LAST "
+		queryStr += fmt.Sprintf("OFFSET %d ", *offset)
+	}
+	queryStr += fmt.Sprintf("LIMIT %d ", *limit)
+	query = hdb.db.Rebind(queryStr)
+	// log.Debug(query)
+	txs := []*HistoryTx{}
+	if err := meddler.QueryAll(hdb.db, &txs, query, args...); err != nil {
+		return nil, 0, err
+	}
+	if len(txs) == 0 {
+		return nil, 0, sql.ErrNoRows
+	} else if last {
+		tmp := []*HistoryTx{}
+		for i := len(txs) - 1; i >= 0; i-- {
+			tmp = append(tmp, txs[i])
+		}
+		txs = tmp
+	}
+	return txs, txs[0].TotalItems, nil
 }
 
 // GetTx returns a tx from the DB

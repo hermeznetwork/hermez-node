@@ -5,7 +5,7 @@ CREATE TABLE block (
     hash BYTEA NOT NULL
 );
 
-CREATE TABLE coordianator (
+CREATE TABLE coordinator (
     forger_addr BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     withdraw_addr BYTEA NOT NULL,
@@ -98,6 +98,8 @@ CREATE TABLE tx (
     fee_usd NUMERIC,
     nonce BIGINT
 );
+
+CREATE INDEX tx_order ON tx (batch_num, position);
 
 -- +migrate StatementBegin
 CREATE FUNCTION set_tx()
@@ -197,11 +199,10 @@ CREATE TABLE consensus_vars (
 DROP TABLE consensus_vars;
 DROP TABLE rollup_vars;
 DROP TABLE account;
-DROP TABLE l2tx;
-DROP TABLE l1tx;
+DROP TABLE tx;
 DROP TABLE token;
 DROP TABLE bid;
 DROP TABLE exit_tree;
 DROP TABLE batch;
-DROP TABLE coordianator;
+DROP TABLE coordinator;
 DROP TABLE block;

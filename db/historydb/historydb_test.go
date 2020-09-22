@@ -2,7 +2,6 @@ package historydb
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 	"os"
 	"testing"
@@ -186,7 +185,7 @@ func TestAccounts(t *testing.T) {
 	assert.NoError(t, err)
 	// Generate fake accounts
 	const nAccounts = 3
-	accs := test.GenAccounts(nAccounts, 0, tokens, nil, batches)
+	accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
 	err = historyDB.AddAccounts(accs)
 	assert.NoError(t, err)
 	// Fetch accounts
@@ -219,7 +218,7 @@ func TestTxs(t *testing.T) {
 	assert.NoError(t, err)
 	// Generate fake accounts
 	const nAccounts = 3
-	accs := test.GenAccounts(nAccounts, 0, tokens, nil, batches)
+	accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
 	err = historyDB.AddAccounts(accs)
 	assert.NoError(t, err)
 	// Generate fake L1 txs
@@ -265,15 +264,7 @@ func TestTxs(t *testing.T) {
 		} else {
 			assert.Less(t, 0.999, fetchedTx.USD/tx.USD)
 		}
-		if tx.Fee == 0 {
-			tx.FeeUSD = 0
-		} else if tx.Fee <= 32 {
-			tx.FeeUSD = tx.USD * math.Pow(10, -24+(float64(tx.Fee)/2))
-		} else if tx.Fee <= 223 {
-			tx.FeeUSD = tx.USD * math.Pow(10, -8+(0.041666666666667*(float64(tx.Fee)-32)))
-		} else {
-			tx.FeeUSD = tx.USD * math.Pow(10, float64(tx.Fee)-224)
-		}
+		tx.FeeUSD = tx.USD * tx.Fee.Percentage()
 		if fetchedTx.FeeUSD > tx.FeeUSD {
 			assert.Less(t, 0.999, tx.FeeUSD/fetchedTx.FeeUSD)
 		} else if fetchedTx.FeeUSD < tx.FeeUSD {
