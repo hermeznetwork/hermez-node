@@ -27,11 +27,12 @@ CREATE TABLE batch (
 
 CREATE TABLE exit_tree (
     batch_num BIGINT REFERENCES batch (batch_num) ON DELETE CASCADE,
-    withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
     account_idx BIGINT,
     merkle_proof BYTEA NOT NULL,
-    balance NUMERIC NOT NULL,
-    nullifier BYTEA NOT NULL,
+    balance BYTEA NOT NULL,
+    instant_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
+    delayed_withdraw_request BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
+    delayed_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
     PRIMARY KEY (batch_num, account_idx)
 );
 

@@ -26,6 +26,36 @@ type HistoryDB struct {
 	db *sqlx.DB
 }
 
+// BlockData contains the information of a Block
+type BlockData struct {
+	block *common.Block
+	// Rollup
+	// L1UserTxs that were submitted in the block
+	L1UserTxs        []common.L1Tx
+	Batches          []BatchData
+	RegisteredTokens []common.Token
+	RollupVars       *common.RollupVars
+	// Auction
+	Bids         []common.Bid
+	Coordinators []common.Coordinator
+	AuctionVars  *common.AuctionVars
+	// WithdrawalDelayer
+	// TODO: enable when common.WithdrawalDelayerVars is Merged from Synchronizer PR
+	// WithdrawalDelayerVars *common.WithdrawalDelayerVars
+}
+
+// BatchData contains the information of a Batch
+type BatchData struct {
+	// L1UserTxs that were forged in the batch
+	L1Batch          bool // TODO: Remove once Batch.ForgeL1TxsNum is a pointer
+	L1UserTxs        []common.L1Tx
+	L1CoordinatorTxs []common.L1Tx
+	L2Txs            []common.L2Tx
+	CreatedAccounts  []common.Account
+	ExitTree         []common.ExitInfo
+	Batch            *common.Batch
+}
+
 // NewHistoryDB initialize the DB
 func NewHistoryDB(port int, host, user, password, dbname string) (*HistoryDB, error) {
 	// Connect to DB
@@ -52,14 +82,19 @@ func NewHistoryDB(port int, host, user, password, dbname string) (*HistoryDB, er
 }
 
 // AddBlock insert a block into the DB
-func (hdb *HistoryDB) AddBlock(block *common.Block) error {
-	return meddler.Insert(hdb.db, "block", block)
+func (hdb *HistoryDB) AddBlock(block *common.Block) error { return hdb.addBlock(hdb.db, block) }
+func (hdb *HistoryDB) addBlock(d meddler.DB, block *common.Block) error {
+	return meddler.Insert(d, "block", block)
 }
 
 // AddBlocks inserts blocks into the DB
 func (hdb *HistoryDB) AddBlocks(blocks []common.Block) error {
+	return hdb.addBlocks(hdb.db, blocks)
+}
+
+func (hdb *HistoryDB) addBlocks(d meddler.DB, blocks []common.Block) error {
 	return db.BulkInsert(
-		hdb.db,
+		d,
 		`INSERT INTO block (
 			eth_block_num,
 			timestamp,
@@ -84,7 +119,7 @@ func (hdb *HistoryDB) GetBlocks(from, to int64) ([]*common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
 		hdb.db, &blocks,
-		"SELECT * FROM block WHERE $1 <= eth_block_num AND eth_block_num < $2",
+		"SELECT * FROM block WHERE $1 <= eth_block_num AND eth_block_num < $2;",
 		from, to,
 	)
 	return blocks, err
@@ -99,10 +134,19 @@ func (hdb *HistoryDB) GetLastBlock() (*common.Block, error) {
 	return block, err
 }
 
+// AddBatch insert a Batch into the DB
+func (hdb *HistoryDB) AddBatch(batch *common.Batch) error { return hdb.addBatch(hdb.db, batch) }
+func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
+	return meddler.Insert(d, "batch", batch)
+}
+
 // AddBatches insert Bids into the DB
 func (hdb *HistoryDB) AddBatches(batches []common.Batch) error {
+	return hdb.addBatches(hdb.db, batches)
+}
+func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 	return db.BulkInsert(
-		hdb.db,
+		d,
 		`INSERT INTO batch (
 			batch_num,
 			eth_block_num,
@@ -123,7 +167,7 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]*common.Batch, err
 	var batches []*common.Batch
 	err := meddler.QueryAll(
 		hdb.db, &batches,
-		"SELECT * FROM batch WHERE $1 <= batch_num AND batch_num < $2",
+		"SELECT * FROM batch WHERE $1 <= batch_num AND batch_num < $2;",
 		from, to,
 	)
 	return batches, err
@@ -144,29 +188,17 @@ func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
 	return lastL1TxsNum, row.Scan(&lastL1TxsNum)
 }
 
-// Reorg deletes all the information that was added into the DB after the lastValidBlock
+// Reorg deletes all the information that was added into the DB after the
+// lastValidBlock.  If lastValidBlock is negative, all block information is
+// deleted.
 func (hdb *HistoryDB) Reorg(lastValidBlock int64) error {
-	_, err := hdb.db.Exec("DELETE FROM block WHERE eth_block_num > $1;", lastValidBlock)
-	return err
-}
-
-// SyncRollup stores all the data that can be changed / added on a block in the Rollup SC
-func (hdb *HistoryDB) SyncRollup(
-	blockNum uint64,
-	l1txs []common.L1Tx,
-	l2txs []common.L2Tx,
-	registeredAccounts []common.Account,
-	exitTree common.ExitInfo,
-	withdrawals common.ExitInfo,
-	registeredTokens []common.Token,
-	batches []common.Batch,
-	vars *common.RollupVars,
-) error {
-	// TODO: make all in a single DB commit
-	if err := hdb.AddBatches(batches); err != nil {
-		return err
+	var err error
+	if lastValidBlock < 0 {
+		_, err = hdb.db.Exec("DELETE FROM block;")
+	} else {
+		_, err = hdb.db.Exec("DELETE FROM block WHERE eth_block_num > $1;", lastValidBlock)
 	}
-	return nil
+	return err
 }
 
 // SyncPoD stores all the data that can be changed / added on a block in the PoD SC
@@ -179,12 +211,13 @@ func (hdb *HistoryDB) SyncPoD(
 	return nil
 }
 
-// addBids insert Bids into the DB
-func (hdb *HistoryDB) addBids(bids []common.Bid) error {
+// AddBids insert Bids into the DB
+func (hdb *HistoryDB) AddBids(bids []common.Bid) error { return hdb.addBids(hdb.db, bids) }
+func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	// TODO: check the coordinator info
 	return db.BulkInsert(
-		hdb.db,
-		"INSERT INTO bid (slot_num, forger_addr, bid_value, eth_block_num) VALUES %s",
+		d,
+		"INSERT INTO bid (slot_num, forger_addr, bid_value, eth_block_num) VALUES %s;",
 		bids[:],
 	)
 }
@@ -199,15 +232,41 @@ func (hdb *HistoryDB) GetBids() ([]*common.Bid, error) {
 	return bids, err
 }
 
+// AddCoordinators insert Coordinators into the DB
+func (hdb *HistoryDB) AddCoordinators(coordinators []common.Coordinator) error {
+	return hdb.addCoordinators(hdb.db, coordinators)
+}
+func (hdb *HistoryDB) addCoordinators(d meddler.DB, coordinators []common.Coordinator) error {
+	return db.BulkInsert(
+		d,
+		"INSERT INTO coordinator (forger_addr, eth_block_num, withdraw_addr, url) VALUES %s;",
+		coordinators[:],
+	)
+}
+
+// AddExitTree insert Exit tree into the DB
+func (hdb *HistoryDB) AddExitTree(exitTree []common.ExitInfo) error {
+	return hdb.addExitTree(hdb.db, exitTree)
+}
+func (hdb *HistoryDB) addExitTree(d meddler.DB, exitTree []common.ExitInfo) error {
+	return db.BulkInsert(
+		d,
+		"INSERT INTO exit_tree (batch_num, account_idx, merkle_proof, balance, "+
+			"instant_withdrawn, delayed_withdraw_request, delayed_withdrawn) VALUES %s;",
+		exitTree[:],
+	)
+}
+
 // AddToken insert a token into the DB
 func (hdb *HistoryDB) AddToken(token *common.Token) error {
 	return meddler.Insert(hdb.db, "token", token)
 }
 
 // AddTokens insert tokens into the DB
-func (hdb *HistoryDB) AddTokens(tokens []common.Token) error {
+func (hdb *HistoryDB) AddTokens(tokens []common.Token) error { return hdb.addTokens(hdb.db, tokens) }
+func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 	return db.BulkInsert(
-		hdb.db,
+		d,
 		`INSERT INTO token (
 			token_id,
 			eth_block_num,
@@ -243,8 +302,11 @@ func (hdb *HistoryDB) GetTokens() ([]*common.Token, error) {
 
 // AddAccounts insert accounts into the DB
 func (hdb *HistoryDB) AddAccounts(accounts []common.Account) error {
+	return hdb.addAccounts(hdb.db, accounts)
+}
+func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error {
 	return db.BulkInsert(
-		hdb.db,
+		d,
 		`INSERT INTO account (
 			idx,
 			token_id,
@@ -267,27 +329,30 @@ func (hdb *HistoryDB) GetAccounts() ([]*common.Account, error) {
 }
 
 // AddL1Txs inserts L1 txs to the DB
-func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error {
+func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error { return hdb.addL1Txs(hdb.db, l1txs) }
+func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 	txs := []common.Tx{}
 	for _, tx := range l1txs {
-		txs = append(txs, *tx.Tx())
+		txs = append(txs, *(tx.Tx()))
 	}
-	return hdb.AddTxs(txs)
+	return hdb.addTxs(d, txs)
 }
 
 // AddL2Txs inserts L2 txs to the DB
-func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error {
+func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error { return hdb.addL2Txs(hdb.db, l2txs) }
+func (hdb *HistoryDB) addL2Txs(d meddler.DB, l2txs []common.L2Tx) error {
 	txs := []common.Tx{}
 	for _, tx := range l2txs {
-		txs = append(txs, *tx.Tx())
+		txs = append(txs, *(tx.Tx()))
 	}
-	return hdb.AddTxs(txs)
+	return hdb.addTxs(d, txs)
 }
 
 // AddTxs insert L1 txs into the DB
-func (hdb *HistoryDB) AddTxs(txs []common.Tx) error {
+func (hdb *HistoryDB) AddTxs(txs []common.Tx) error { return hdb.addTxs(hdb.db, txs) }
+func (hdb *HistoryDB) addTxs(d meddler.DB, txs []common.Tx) error {
 	return db.BulkInsert(
-		hdb.db,
+		d,
 		`INSERT INTO tx (
 			is_l1,
 			id,
@@ -314,6 +379,16 @@ func (hdb *HistoryDB) AddTxs(txs []common.Tx) error {
 		) VALUES %s;`,
 		txs[:],
 	)
+}
+
+// SetBatchNumL1UserTxs sets the batchNum in all the L1UserTxs with toForgeL1TxsNum.
+func (hdb *HistoryDB) SetBatchNumL1UserTxs(toForgeL1TxsNum, batchNum int64) error {
+	return hdb.setBatchNumL1UserTxs(hdb.db, toForgeL1TxsNum, batchNum)
+}
+func (hdb *HistoryDB) setBatchNumL1UserTxs(d meddler.DB, toForgeL1TxsNum, batchNum int64) error {
+	_, err := d.Exec("UPDATE tx SET batch_num = $1 WHERE to_forge_l1_txs_num = $2 AND is_l1 = TRUE AND user_origin = TRUE;",
+		batchNum, toForgeL1TxsNum)
+	return err
 }
 
 // GetTxs returns a list of txs from the DB
@@ -409,7 +484,7 @@ func (hdb *HistoryDB) GetHistoryTxs(
 		queryStr += "ORDER BY (batch_num, position) ASC NULLS LAST "
 		queryStr += fmt.Sprintf("OFFSET %d ", *offset)
 	}
-	queryStr += fmt.Sprintf("LIMIT %d ", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query = hdb.db.Rebind(queryStr)
 	// log.Debug(query)
 	txs := []*HistoryTx{}
@@ -436,6 +511,128 @@ func (hdb *HistoryDB) GetTx(txID common.TxID) (*common.Tx, error) {
 		"SELECT * FROM tx WHERE id = $1;",
 		txID,
 	)
+}
+
+// GetL1UserTxs gets L1 User Txs to be forged in a batch that will create an account
+// TODO: This is currently not used.  Figure out if it should be used somewhere or removed.
+func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]*common.Tx, error) {
+	var txs []*common.Tx
+	err := meddler.QueryAll(
+		hdb.db, &txs,
+		"SELECT * FROM tx WHERE to_forge_l1_txs_num = $1 AND is_l1 = TRUE AND user_origin = TRUE;",
+		toForgeL1TxsNum,
+	)
+	return txs, err
+}
+
+// TODO: Think about chaning all the queries that return a last value, to queries that return the next valid value.
+
+// GetLastTxsPosition for a given to_forge_l1_txs_num
+func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {
+	row := hdb.db.QueryRow("SELECT MAX(position) FROM tx WHERE to_forge_l1_txs_num = $1;", toForgeL1TxsNum)
+	var lastL1TxsPosition int
+	return lastL1TxsPosition, row.Scan(&lastL1TxsPosition)
+}
+
+// AddBlockSCData stores all the information of a block retrieved by the Synchronizer
+func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
+	txn, err := hdb.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			err = txn.Rollback()
+		}
+	}()
+
+	// Add block
+	err = hdb.addBlock(txn, blockData.block)
+	if err != nil {
+		return err
+	}
+
+	// Add l1 Txs
+	if len(blockData.L1UserTxs) > 0 {
+		err = hdb.addL1Txs(txn, blockData.L1UserTxs)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add Tokens
+	if len(blockData.RegisteredTokens) > 0 {
+		err = hdb.addTokens(txn, blockData.RegisteredTokens)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add Bids
+	if len(blockData.Bids) > 0 {
+		err = hdb.addBids(txn, blockData.Bids)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add Coordinators
+	if len(blockData.Coordinators) > 0 {
+		err = hdb.addCoordinators(txn, blockData.Coordinators)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add Batches
+	for _, batch := range blockData.Batches {
+		if batch.L1Batch {
+			err = hdb.setBatchNumL1UserTxs(txn, batch.Batch.ForgeL1TxsNum, int64(batch.Batch.BatchNum))
+			if err != nil {
+				return err
+			}
+			if len(batch.L1CoordinatorTxs) > 0 {
+				err = hdb.addL1Txs(txn, batch.L1CoordinatorTxs)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Add l2 Txs
+		if len(batch.L2Txs) > 0 {
+			err = hdb.addL2Txs(txn, batch.L2Txs)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Add accounts
+		if len(batch.CreatedAccounts) > 0 {
+			err = hdb.addAccounts(txn, batch.CreatedAccounts)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Add exit tree
+		if len(batch.ExitTree) > 0 {
+			err = hdb.addExitTree(txn, batch.ExitTree)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Add Batch
+		err = hdb.addBatch(txn, batch.Batch)
+		if err != nil {
+			return err
+		}
+
+		// TODO: INSERT CONTRACTS VARS
+	}
+
+	return txn.Commit()
 }
 
 // Close frees the resources used by HistoryDB

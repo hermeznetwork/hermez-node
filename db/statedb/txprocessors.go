@@ -8,7 +8,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
 	"github.com/iden3/go-merkletree/db/memory"
@@ -142,24 +141,10 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 		if err != nil {
 			return nil, nil, err
 		}
-		// 1. compute nullifier
-		exitAccStateValue, err := exitAccount.HashValue()
-		if err != nil {
-			return nil, nil, err
-		}
-		nullifier, err := poseidon.Hash([]*big.Int{
-			exitAccStateValue,
-			big.NewInt(int64(s.currentBatch)),
-			exitTree.Root().BigInt(),
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		// 2. generate common.ExitInfo
+		// 1. generate common.ExitInfo
 		ei := &common.ExitInfo{
 			AccountIdx:  exitIdx,
 			MerkleProof: p,
-			Nullifier:   nullifier,
 			Balance:     exitAccount.Balance,
 		}
 		exitInfos = append(exitInfos, ei)

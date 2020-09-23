@@ -13,8 +13,12 @@ POSTGRES_PASS=yourpasswordhere; sudo docker run --rm --name hermez-db-test -p 54
 - Then, run the tests with the password as env var
 
 ```
-POSTGRES_PASS=yourpasswordhere ETHCLIENT_DIAL_URL=yourethereumurlhere go test ./...
+POSTGRES_PASS=yourpasswordhere ETHCLIENT_DIAL_URL=yourethereumurlhere go test -p 1 ./...
 ```
+
+NOTE: `-p 1` forces execution of package test in serial.  Otherwise they may be
+executed in paralel and the test may find unexpected entries in the SQL
+databse because it's shared among all tests.
 
 ## Lint
 

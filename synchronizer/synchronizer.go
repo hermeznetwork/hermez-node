@@ -501,9 +501,9 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 	// Get Coordinators
 	for _, eNewCoordinator := range auctionEvents.NewCoordinator {
 		coordinator := &common.Coordinator{
-			Forger:   eNewCoordinator.ForgerAddress,
-			Withdraw: eNewCoordinator.WithdrawalAddress,
-			URL:      eNewCoordinator.URL,
+			Forger:       eNewCoordinator.ForgerAddress,
+			WithdrawAddr: eNewCoordinator.WithdrawalAddress,
+			URL:          eNewCoordinator.URL,
 		}
 		auctionData.coordinators = append(auctionData.coordinators, coordinator)
 	}
@@ -525,9 +525,9 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 	// Get Coordinators from updates
 	for _, eCoordinatorUpdated := range auctionEvents.CoordinatorUpdated {
 		coordinator := &common.Coordinator{
-			Forger:   eCoordinatorUpdated.ForgerAddress,
-			Withdraw: eCoordinatorUpdated.WithdrawalAddress,
-			URL:      eCoordinatorUpdated.URL,
+			Forger:       eCoordinatorUpdated.ForgerAddress,
+			WithdrawAddr: eCoordinatorUpdated.WithdrawalAddress,
+			URL:          eCoordinatorUpdated.URL,
 		}
 		auctionData.coordinators = append(auctionData.coordinators, coordinator)
 	}

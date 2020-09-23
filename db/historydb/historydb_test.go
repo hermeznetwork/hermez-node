@@ -119,10 +119,12 @@ func TestBids(t *testing.T) {
 	// Generate fake coordinators
 	const nCoords = 5
 	coords := test.GenCoordinators(nCoords, blocks)
+	err := historyDB.AddCoordinators(coords)
+	assert.NoError(t, err)
 	// Generate fake bids
 	const nBids = 20
 	bids := test.GenBids(nBids, blocks, coords)
-	err := historyDB.addBids(bids)
+	err = historyDB.AddBids(bids)
 	assert.NoError(t, err)
 	// Fetch bids
 	fetchedBids, err := historyDB.GetBids()
@@ -302,6 +304,35 @@ func TestTxs(t *testing.T) {
 	l2txs[0].Nonce = 0
 	err = historyDB.AddL2Txs(l2txs)
 	assert.Error(t, err)
+	// Test helper functions for Synchronizer
+	txs, err := historyDB.GetL1UserTxs(2)
+	assert.NoError(t, err)
+	assert.NotZero(t, len(txs))
+	position, err := historyDB.GetLastTxsPosition(2)
+	assert.NoError(t, err)
+	assert.Equal(t, 22, position)
+	// Test Update L1 TX Batch_num
+	assert.Equal(t, common.BatchNum(0), txs[0].BatchNum)
+	txs[0].BatchNum = common.BatchNum(1)
+	// err = historyDB.UpdateTxsBatchNum(txs)
+	err = historyDB.SetBatchNumL1UserTxs(2, 1)
+	assert.NoError(t, err)
+	txs, err = historyDB.GetL1UserTxs(2)
+	assert.NoError(t, err)
+	assert.NotZero(t, len(txs))
+	assert.Equal(t, common.BatchNum(1), txs[0].BatchNum)
+}
+
+func TestExitTree(t *testing.T) {
+	nBatches := 17
+	blocks := setTestBlocks(0, 10)
+	batches := test.GenBatches(nBatches, blocks)
+	err := historyDB.AddBatches(batches)
+	assert.NoError(t, err)
+
+	exitTree := test.GenExitTree(nBatches)
+	err = historyDB.AddExitTree(exitTree)
+	assert.NoError(t, err)
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them
@@ -317,5 +348,5 @@ func setTestBlocks(from, to int64) []common.Block {
 }
 
 func cleanHistoryDB() error {
-	return historyDB.Reorg(0)
+	return historyDB.Reorg(-1)
 }
