@@ -111,7 +111,7 @@ $BODY$
 DECLARE perc NUMERIC;
 BEGIN
     SELECT CASE 
-        WHEN $1 = 0 THEN 0.000000e+00
+        WHEN $1 = 0 THEN 0
         WHEN $1 = 1 THEN 3.162278e-24
         WHEN $1 = 2 THEN 1.000000e-23
         WHEN $1 = 3 THEN 3.162278e-23
@@ -379,7 +379,7 @@ CREATE FUNCTION set_tx()
     RETURNS TRIGGER 
 AS 
 $BODY$
-DECLARE token_value NUMERIC := (SELECT usd FROM token WHERE token_id = NEW.token_id);
+DECLARE token_value NUMERIC;
 BEGIN
     -- Validate L1/L2 constrains
     IF NEW.is_l1 AND (( -- L1 mandatory fields
@@ -399,14 +399,15 @@ BEGIN
         END IF;
     END IF;
     -- If is L2, add token_id
-    IF NEW.token_id IS NULL THEN
+    IF NOT NEW.is_l1 THEN
         NEW."token_id" = (SELECT token_id FROM account WHERE idx = NEW."from_idx");
     END IF;
     -- Set value_usd
+    token_value = (SELECT usd FROM token WHERE token_id = NEW.token_id);
     NEW."amount_usd" = (SELECT token_value * NEW.amount_f);
     NEW."load_amount_usd" = (SELECT token_value * NEW.load_amount_f);
     IF NOT NEW.is_l1 THEN
-        NEW."fee_usd" = (SELECT token_value * NEW.amount_f * fee_percentage(NEW.fee::NUMERIC));
+        NEW."fee_usd" = (SELECT NEW."amount_usd" * fee_percentage(NEW.fee::NUMERIC));
     END IF;
     RETURN NEW;
 END;

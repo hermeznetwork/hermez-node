@@ -30,6 +30,8 @@ type L1Tx struct {
 	EthBlockNum     int64 // Ethereum Block Number in which this L1Tx was added to the queue
 	Type            TxType
 	BatchNum        BatchNum
+	USD             *float64
+	LoadAmountUSD   *float64
 }
 
 // Tx returns a *Tx from the L1Tx
@@ -52,6 +54,8 @@ func (tx *L1Tx) Tx() *Tx {
 		FromBJJ:         tx.FromBJJ,
 		LoadAmount:      tx.LoadAmount,
 		EthBlockNum:     tx.EthBlockNum,
+		USD:             tx.USD,
+		LoadAmountUSD:   tx.LoadAmountUSD,
 	}
 	if tx.LoadAmount != nil {
 		lf := new(big.Float).SetInt(tx.LoadAmount)

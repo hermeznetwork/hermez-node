@@ -29,10 +29,7 @@ func TestMain(m *testing.M) {
 	l2DB = NewL2DB(db, 10, 100, 24*time.Hour)
 	tokens, err = prepareHistoryDB(db)
 	if err != nil {
-		log.Error("L2DB migration failed: " + err.Error())
 		panic(err)
-	} else {
-		log.Debug("L2DB migration succed")
 	}
 	// Run tests
 	result := m.Run()
@@ -72,13 +69,21 @@ func TestAddTx(t *testing.T) {
 		assert.NoError(t, err)
 		fetchedTx, err := l2DB.GetTx(tx.TxID)
 		assert.NoError(t, err)
-		assert.Equal(t, tx.Timestamp.Unix(), fetchedTx.Timestamp.Unix())
-		tx.Timestamp = fetchedTx.Timestamp
-		assert.Equal(t, tx.AbsoluteFeeUpdate.Unix(), fetchedTx.AbsoluteFeeUpdate.Unix())
-		tx.Timestamp = fetchedTx.Timestamp
-		tx.AbsoluteFeeUpdate = fetchedTx.AbsoluteFeeUpdate
-		assert.Equal(t, tx, fetchedTx)
+		assertTx(t, tx, fetchedTx)
 	}
+}
+
+func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
+	assert.Equal(t, expected.Timestamp.Unix(), actual.Timestamp.Unix())
+	expected.Timestamp = actual.Timestamp
+	if expected.AbsoluteFeeUpdate != nil {
+		assert.Equal(t, expected.AbsoluteFeeUpdate.Unix(), actual.AbsoluteFeeUpdate.Unix())
+		expected.AbsoluteFeeUpdate = actual.AbsoluteFeeUpdate
+	} else {
+		assert.Equal(t, expected.AbsoluteFeeUpdate, actual.AbsoluteFeeUpdate)
+	}
+	test.AssertUSD(t, expected.AbsoluteFee, actual.AbsoluteFee)
+	assert.Equal(t, expected, actual)
 }
 
 func BenchmarkAddTx(b *testing.B) {
@@ -101,7 +106,7 @@ func TestGetPending(t *testing.T) {
 	for _, tx := range txs {
 		err := l2DB.AddTx(tx)
 		assert.NoError(t, err)
-		if tx.State == common.PoolL2TxStatePending {
+		if tx.State == common.PoolL2TxStatePending && tx.AbsoluteFee != nil {
 			pendingTxs = append(pendingTxs, tx)
 		}
 	}
@@ -109,11 +114,7 @@ func TestGetPending(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
 	for i, fetchedTx := range fetchedTxs {
-		assert.Equal(t, pendingTxs[i].Timestamp.Unix(), fetchedTx.Timestamp.Unix())
-		pendingTxs[i].Timestamp = fetchedTx.Timestamp
-		assert.Equal(t, pendingTxs[i].AbsoluteFeeUpdate.Unix(), fetchedTx.AbsoluteFeeUpdate.Unix())
-		pendingTxs[i].AbsoluteFeeUpdate = fetchedTx.AbsoluteFeeUpdate
-		assert.Equal(t, pendingTxs[i], fetchedTx)
+		assertTx(t, pendingTxs[i], fetchedTx)
 	}
 }
 

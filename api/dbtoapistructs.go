@@ -37,18 +37,18 @@ func (htx *historyTxsAPI) GetPagination() pagination { return htx.Pagination }
 func (htx *historyTxsAPI) Len() int                  { return len(htx.Txs) }
 
 type l1Info struct {
-	ToForgeL1TxsNum int64   `json:"toForgeL1TransactionsNum"`
-	UserOrigin      bool    `json:"userOrigin"`
-	FromEthAddr     string  `json:"fromEthereumAddress"`
-	FromBJJ         string  `json:"fromBJJ"`
-	LoadAmount      string  `json:"loadAmount"`
-	LoadAmountUSD   float64 `json:"loadAmountUSD"`
-	EthBlockNum     int64   `json:"ethereumBlockNum"`
+	ToForgeL1TxsNum int64    `json:"toForgeL1TransactionsNum"`
+	UserOrigin      bool     `json:"userOrigin"`
+	FromEthAddr     string   `json:"fromEthereumAddress"`
+	FromBJJ         string   `json:"fromBJJ"`
+	LoadAmount      string   `json:"loadAmount"`
+	LoadAmountUSD   *float64 `json:"loadAmountUSD"`
+	EthBlockNum     int64    `json:"ethereumBlockNum"`
 }
 
 type l2Info struct {
 	Fee    common.FeeSelector `json:"fee"`
-	FeeUSD float64            `json:"feeUSD"`
+	FeeUSD *float64           `json:"feeUSD"`
 	Nonce  common.Nonce       `json:"nonce"`
 }
 
@@ -63,10 +63,10 @@ type historyTxAPI struct {
 	BatchNum    *common.BatchNum `json:"batchNum"`
 	TokenID     common.TokenID   `json:"tokenId"`
 	TokenSymbol string           `json:"tokenSymbol"`
-	USD         float64          `json:"historicUSD"`
+	USD         *float64         `json:"historicUSD"`
 	Timestamp   time.Time        `json:"timestamp"`
-	CurrentUSD  float64          `json:"currentUSD"`
-	USDUpdate   time.Time        `json:"fiatUpdate"`
+	CurrentUSD  *float64         `json:"currentUSD"`
+	USDUpdate   *time.Time       `json:"fiatUpdate"`
 	L1Info      *l1Info          `json:"L1Info"`
 	L2Info      *l2Info          `json:"L2Info"`
 }

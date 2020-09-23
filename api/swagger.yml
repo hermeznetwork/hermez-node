@@ -1255,6 +1255,7 @@ components:
           type: string
           format: date-time
           description: Timestamp of the moment the `USD` value was updated.
+          nullable: true
         amount:
           allOf:
             - $ref: '#/components/schemas/BigInt'
@@ -1483,14 +1484,17 @@ components:
           type: number
           description: Value in USD at the moment the transaction was forged.
           example: 49.7
+          nullable: true
         currentUSD:
           type: number
           description: Value in USD at the current token/USD conversion.
           example: 50.01
+          nullable: true
         fiatUpdate:
           type: string
           format: date-time
           description: Timestamp of the moment the `currentUSD` value was updated.
+          nullable: true
         timestamp:
           type: string
           format: date-time
@@ -1543,6 +1547,7 @@ components:
               type: number
               description: Fee in USD, at the moment the transaction was forged.
               example: 263.89
+              nullable: true
             nonce:
               $ref: '#/components/schemas/Nonce'
           example: null

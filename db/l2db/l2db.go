@@ -127,12 +127,12 @@ func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
 	)
 }
 
-// GetPendingTxs return all the pending txs of the L2DB
+// GetPendingTxs return all the pending txs of the L2DB, that have a non NULL AbsoluteFee
 func (l2db *L2DB) GetPendingTxs() ([]*common.PoolL2Tx, error) {
 	var txs []*common.PoolL2Tx
 	err := meddler.QueryAll(
 		l2db.db, &txs,
-		selectPoolTx+"WHERE state = $1",
+		selectPoolTx+"WHERE state = $1 AND token.usd IS NOT NULL",
 		common.PoolL2TxStatePending,
 	)
 	return txs, err

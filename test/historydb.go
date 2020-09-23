@@ -43,8 +43,10 @@ func GenTokens(nTokens int, blocks []common.Block) []common.Token {
 			EthAddr:     ethCommon.BigToAddress(big.NewInt(int64(i))),
 		}
 		if i%2 == 0 {
-			token.USD = 3
-			token.USDUpdate = time.Now()
+			usd := 3.0
+			token.USD = &usd
+			now := time.Now()
+			token.USDUpdate = &now
 		}
 		tokens = append(tokens, token)
 	}
@@ -124,15 +126,29 @@ func GenL1Txs(
 	othersTxs := []common.L1Tx{}
 	for i := 0; i < totalTxs; i++ {
 		var tx common.L1Tx
+		token := tokens[i%len(tokens)]
 		if batches[i%len(batches)].ForgeL1TxsNum != 0 {
+			var usd *float64
+			var lUSD *float64
+			amount := big.NewInt(int64(i + 1))
+			if token.USD != nil {
+				f := new(big.Float).SetInt(amount)
+				af, _ := f.Float64()
+				usd = new(float64)
+				lUSD = new(float64)
+				*usd = *token.USD * af
+				*lUSD = *token.USD * af
+			}
 			tx = common.L1Tx{
 				TxID:            common.TxID(common.Hash([]byte("L1_" + strconv.Itoa(fromIdx+i)))),
 				ToForgeL1TxsNum: batches[i%len(batches)].ForgeL1TxsNum,
 				Position:        i,
 				UserOrigin:      i%2 == 0,
-				TokenID:         tokens[i%len(tokens)].TokenID,
-				Amount:          big.NewInt(int64(i + 1)),
-				LoadAmount:      big.NewInt(int64(i + 1)),
+				TokenID:         token.TokenID,
+				Amount:          amount,
+				USD:             usd,
+				LoadAmount:      amount,
+				LoadAmountUSD:   lUSD,
 				EthBlockNum:     blocks[i%len(blocks)].EthBlockNum,
 				Type:            randomTxType(i),
 			}
@@ -204,14 +220,14 @@ func GenL2Txs(
 	userTxs := []common.L2Tx{}
 	othersTxs := []common.L2Tx{}
 	for i := 0; i < totalTxs; i++ {
+		amount := big.NewInt(int64(i + 1))
+		fee := common.FeeSelector(i % 256)
 		tx := common.L2Tx{
-			TxID:     common.TxID(common.Hash([]byte("L2_" + strconv.Itoa(fromIdx+i)))),
-			BatchNum: batches[i%len(batches)].BatchNum,
-			Position: i,
-			//nolint:gomnd
-			Amount: big.NewInt(int64(i + 1)),
-			//nolint:gomnd
-			Fee:         common.FeeSelector(i % 256),
+			TxID:        common.TxID(common.Hash([]byte("L2_" + strconv.Itoa(fromIdx+i)))),
+			BatchNum:    batches[i%len(batches)].BatchNum,
+			Position:    i,
+			Amount:      amount,
+			Fee:         fee,
 			Nonce:       common.Nonce(i + 1),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			Type:        randomTxType(i),
@@ -240,7 +256,6 @@ func GenL2Txs(
 			}
 			tx.FromIdx = from.Idx
 			tx.ToIdx = to.Idx
-			userTxs = append(userTxs, tx)
 		} else {
 			from, err := randomAccount(i, false, userAddr, accounts)
 			if err != nil {
@@ -252,10 +267,49 @@ func GenL2Txs(
 			}
 			tx.FromIdx = from.Idx
 			tx.ToIdx = to.Idx
+		}
+
+		var usd *float64
+		var fUSD *float64
+		token := GetToken(tx.FromIdx, accounts, tokens)
+		if token.USD != nil {
+			f := new(big.Float).SetInt(amount)
+			af, _ := f.Float64()
+			usd = new(float64)
+			fUSD = new(float64)
+			*usd = *token.USD * af
+			*fUSD = *token.USD * af * fee.Percentage()
+		}
+		tx.USD = usd
+		tx.FeeUSD = fUSD
+		if i < nUserTxs {
+			userTxs = append(userTxs, tx)
+		} else {
 			othersTxs = append(othersTxs, tx)
 		}
 	}
 	return userTxs, othersTxs
+}
+
+func GetToken(idx common.Idx, accs []common.Account, tokens []common.Token) common.Token {
+	var id common.TokenID
+	found := false
+	for _, acc := range accs {
+		if acc.Idx == idx {
+			found = true
+			id = acc.TokenID
+			break
+		}
+	}
+	if !found {
+		panic("tokenID not found")
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].TokenID == id {
+			return tokens[i]
+		}
+	}
+	panic("token not found")
 }
 
 // GenCoordinators generates coordinators. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.

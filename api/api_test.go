@@ -19,13 +19,14 @@ import (
 	swagger "github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/jinzhu/copier"
+	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,16 +78,18 @@ func TestMain(m *testing.M) {
 	// Init swagger
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// Init DBs
-	pass := os.Getenv("POSTGRES_PASS")
-	hdb, err := historydb.NewHistoryDB(5432, "localhost", "hermez", pass, "history")
+	// HistoryDB
+	pass := "yourpasswordhere" // os.Getenv("POSTGRES_PASS")
+	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
 		panic(err)
 	}
-	// Reset DB
+	hdb := historydb.NewHistoryDB(db)
 	err = hdb.Reorg(-1)
 	if err != nil {
 		panic(err)
 	}
+	// StateDB
 	dir, err := ioutil.TempDir("", "tmpdb")
 	if err != nil {
 		panic(err)
@@ -95,11 +98,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	l2db, err := l2db.NewL2DB(5432, "localhost", "hermez", pass, "l2", 10, 512, 24*time.Hour)
-	if err != nil {
-		panic(err)
-	}
+	// L2DB
+	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
 	test.CleanL2DB(l2db.DB())
+
 	// Init API
 	api := gin.Default()
 	if err := SetAPIEndpoints(
@@ -108,7 +110,7 @@ func TestMain(m *testing.M) {
 		api,
 		hdb,
 		sdb,
-		l2db,
+		l2DB,
 	); err != nil {
 		panic(err)
 	}
@@ -120,6 +122,7 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}()
+
 	// Populate DBs
 	// Clean DB
 	err = h.Reorg(0)
@@ -203,11 +206,33 @@ func TestMain(m *testing.M) {
 				}
 			}
 			// find token
-			token := common.Token{}
-			for i := 0; i < len(tokens); i++ {
-				if tokens[i].TokenID == genericTx.TokenID {
-					token = tokens[i]
-					break
+			var token common.Token
+			if genericTx.IsL1 {
+				tokenID := genericTx.TokenID
+				found := false
+				for i := 0; i < len(tokens); i++ {
+					if tokens[i].TokenID == tokenID {
+						token = tokens[i]
+						found = true
+						break
+					}
+				}
+				if !found {
+					panic("Token not found")
+				}
+			} else {
+				token = test.GetToken(genericTx.FromIdx, accs, tokens)
+			}
+			var usd, loadUSD, feeUSD *float64
+			if token.USD != nil {
+				usd = new(float64)
+				*usd = *token.USD * genericTx.AmountFloat
+				if genericTx.IsL1 {
+					loadUSD = new(float64)
+					*loadUSD = *token.USD * genericTx.LoadAmountFloat
+				} else {
+					feeUSD = new(float64)
+					*feeUSD = *usd * genericTx.Fee.Percentage()
 				}
 			}
 			historyTxs = append(historyTxs, &historydb.HistoryTx{
@@ -219,8 +244,8 @@ func TestMain(m *testing.M) {
 				ToIdx:           genericTx.ToIdx,
 				Amount:          genericTx.Amount,
 				AmountFloat:     genericTx.AmountFloat,
-				TokenID:         genericTx.TokenID,
-				USD:             token.USD * genericTx.AmountFloat,
+				TokenID:         token.TokenID,
+				USD:             usd,
 				BatchNum:        genericTx.BatchNum,
 				EthBlockNum:     genericTx.EthBlockNum,
 				ToForgeL1TxsNum: genericTx.ToForgeL1TxsNum,
@@ -229,13 +254,13 @@ func TestMain(m *testing.M) {
 				FromBJJ:         genericTx.FromBJJ,
 				LoadAmount:      genericTx.LoadAmount,
 				LoadAmountFloat: genericTx.LoadAmountFloat,
-				LoadAmountUSD:   token.USD * genericTx.LoadAmountFloat,
+				LoadAmountUSD:   loadUSD,
 				Fee:             genericTx.Fee,
-				FeeUSD:          genericTx.Fee.Percentage() * token.USD * genericTx.AmountFloat,
+				FeeUSD:          feeUSD,
 				Nonce:           genericTx.Nonce,
 				Timestamp:       timestamp,
 				TokenSymbol:     token.Symbol,
-				CurrentUSD:      token.USD * genericTx.AmountFloat,
+				CurrentUSD:      usd,
 				USDUpdate:       token.USDUpdate,
 			})
 		}
@@ -265,10 +290,7 @@ func TestMain(m *testing.M) {
 	if err := server.Shutdown(context.Background()); err != nil {
 		panic(err)
 	}
-	if err := h.Close(); err != nil {
-		panic(err)
-	}
-	if err := l2.Close(); err != nil {
+	if err := db.Close(); err != nil {
 		panic(err)
 	}
 	os.Exit(result)
@@ -279,11 +301,11 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs := historyTxAPIs{}
 	appendIter := func(intr interface{}) {
 		for i := 0; i < len(intr.(*historyTxsAPI).Txs); i++ {
-			tmp := &historyTxAPI{}
-			if err := copier.Copy(tmp, &intr.(*historyTxsAPI).Txs[i]); err != nil {
+			tmp, err := copystructure.Copy(intr.(*historyTxsAPI).Txs[i])
+			if err != nil {
 				panic(err)
 			}
-			fetchedTxs = append(fetchedTxs, *tmp)
+			fetchedTxs = append(fetchedTxs, tmp.(historyTxAPI))
 		}
 	}
 	// Get all (no filters)
@@ -420,11 +442,11 @@ func TestGetHistoryTxs(t *testing.T) {
 	appendIterRev := func(intr interface{}) {
 		tmpAll := historyTxAPIs{}
 		for i := 0; i < len(intr.(*historyTxsAPI).Txs); i++ {
-			tmpItem := &historyTxAPI{}
-			if err := copier.Copy(tmpItem, &intr.(*historyTxsAPI).Txs[i]); err != nil {
+			tmp, err := copystructure.Copy(intr.(*historyTxsAPI).Txs[i])
+			if err != nil {
 				panic(err)
 			}
-			tmpAll = append(tmpAll, *tmpItem)
+			tmpAll = append(tmpAll, tmp.(historyTxAPI))
 		}
 		fetchedTxs = append(tmpAll, fetchedTxs...)
 	}
@@ -455,15 +477,19 @@ func assertHistoryTxAPIs(t *testing.T, expected, actual historyTxAPIs) {
 	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
 		assert.Equal(t, expected[i].Timestamp.Unix(), actual[i].Timestamp.Unix())
 		expected[i].Timestamp = actual[i].Timestamp
-		assert.Equal(t, expected[i].USDUpdate.Unix(), actual[i].USDUpdate.Unix())
-		expected[i].USDUpdate = actual[i].USDUpdate
+		if expected[i].USDUpdate == nil {
+			assert.Equal(t, expected[i].USDUpdate, actual[i].USDUpdate)
+		} else {
+			assert.Equal(t, expected[i].USDUpdate.Unix(), actual[i].USDUpdate.Unix())
+			expected[i].USDUpdate = actual[i].USDUpdate
+		}
 		if expected[i].L2Info != nil {
-			if expected[i].L2Info.FeeUSD > actual[i].L2Info.FeeUSD {
-				assert.Less(t, 0.999, actual[i].L2Info.FeeUSD/expected[i].L2Info.FeeUSD)
-			} else if expected[i].L2Info.FeeUSD < actual[i].L2Info.FeeUSD {
-				assert.Less(t, 0.999, expected[i].L2Info.FeeUSD/actual[i].L2Info.FeeUSD)
+			if expected[i].L2Info.FeeUSD != nil {
+				fmt.Printf("%s: %e vs %e \n", expected[i].TxID, *expected[i].L2Info.FeeUSD, *actual[i].L2Info.FeeUSD)
+			} else {
+				fmt.Printf("%s: %p vs %p \n", expected[i].TxID, expected[i].L2Info.FeeUSD, actual[i].L2Info.FeeUSD)
 			}
-			expected[i].L2Info.FeeUSD = actual[i].L2Info.FeeUSD
+			test.AssertUSD(t, expected[i].L2Info.FeeUSD, actual[i].L2Info.FeeUSD)
 		}
 		assert.Equal(t, expected[i], actual[i])
 	}

@@ -50,7 +50,7 @@ type Tx struct {
 	Amount      *big.Int `meddler:"amount,bigint"`
 	AmountFloat float64  `meddler:"amount_f"`
 	TokenID     TokenID  `meddler:"token_id"`
-	USD         float64  `meddler:"amount_usd,zeroisnull"`
+	USD         *float64 `meddler:"amount_usd"`
 	BatchNum    BatchNum `meddler:"batch_num,zeroisnull"` // batchNum in which this tx was forged. If the tx is L2, this must be != 0
 	EthBlockNum int64    `meddler:"eth_block_num"`        // Ethereum Block Number in which this L1Tx was added to the queue
 	// L1
@@ -59,11 +59,11 @@ type Tx struct {
 	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr"`
 	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj"`
 	LoadAmount      *big.Int           `meddler:"load_amount,bigintnull"`
-	LoadAmountFloat float64            `meddler:"load_amount_f"`
-	LoadAmountUSD   float64            `meddler:"load_amount_usd,zeroisnull"`
+	LoadAmountFloat float64            `meddler:"load_amount_f,zeroisnull"`
+	LoadAmountUSD   *float64           `meddler:"load_amount_usd"`
 	// L2
 	Fee    FeeSelector `meddler:"fee,zeroisnull"`
-	FeeUSD float64     `meddler:"fee_usd,zeroisnull"`
+	FeeUSD *float64    `meddler:"fee_usd"`
 	Nonce  Nonce       `meddler:"nonce,zeroisnull"`
 }
 

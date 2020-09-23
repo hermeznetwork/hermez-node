@@ -44,24 +44,33 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 		}
 		f := new(big.Float).SetInt(big.NewInt(int64(i)))
 		amountF, _ := f.Float64()
+		var usd, absFee *float64
+		fee := common.FeeSelector(i % 255)
+		token := tokens[i%len(tokens)]
+		if token.USD != nil {
+			usd = new(float64)
+			absFee = new(float64)
+			*usd = *token.USD * amountF
+			*absFee = fee.Percentage() * *usd
+		}
 		tx := &common.PoolL2Tx{
-			TxID:        common.TxID(common.Hash([]byte(strconv.Itoa(i)))),
-			FromIdx:     common.Idx(i),
-			ToIdx:       common.Idx(i + 1),
-			ToEthAddr:   ethCommon.BigToAddress(big.NewInt(int64(i))),
-			ToBJJ:       privK.Public(),
-			TokenID:     tokens[i%len(tokens)].TokenID,
-			Amount:      big.NewInt(int64(i)),
-			AmountFloat: amountF,
-			USD:         tokens[i%len(tokens)].USD * amountF,
-			//nolint:gomnd
-			Fee:         common.FeeSelector(i % 255),
-			Nonce:       common.Nonce(i),
-			State:       state,
-			Signature:   privK.SignPoseidon(big.NewInt(int64(i))),
-			Timestamp:   time.Now().UTC(),
-			TokenSymbol: tokens[i%len(tokens)].Symbol,
-			// AbsoluteFee:
+			TxID:              common.TxID(common.Hash([]byte(strconv.Itoa(i)))),
+			FromIdx:           common.Idx(i),
+			ToIdx:             common.Idx(i + 1),
+			ToEthAddr:         ethCommon.BigToAddress(big.NewInt(int64(i))),
+			ToBJJ:             privK.Public(),
+			TokenID:           token.TokenID,
+			Amount:            big.NewInt(int64(i)),
+			AmountFloat:       amountF,
+			USD:               usd,
+			Fee:               fee,
+			Nonce:             common.Nonce(i),
+			State:             state,
+			Signature:         privK.SignPoseidon(big.NewInt(int64(i))),
+			Timestamp:         time.Now().UTC(),
+			TokenSymbol:       token.Symbol,
+			AbsoluteFee:       absFee,
+			AbsoluteFeeUpdate: token.USDUpdate,
 		}
 		if i%2 == 0 { // Optional parameters: rq
 			tx.RqFromIdx = common.Idx(i)
@@ -75,8 +84,6 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 		}
 		if i%3 == 0 { // Optional parameters: things that get updated "a posteriori"
 			tx.BatchNum = 489
-			tx.AbsoluteFee = 39.12345
-			tx.AbsoluteFeeUpdate = time.Now().UTC()
 		}
 		txs = append(txs, tx)
 	}

@@ -13,7 +13,9 @@ type L2Tx struct {
 	FromIdx     Idx
 	ToIdx       Idx
 	Amount      *big.Int
+	USD         *float64
 	Fee         FeeSelector
+	FeeUSD      *float64
 	Nonce       Nonce
 	Type        TxType
 	EthBlockNum int64 // Ethereum Block Number in which this L2Tx was added to the queue
@@ -31,10 +33,12 @@ func (tx *L2Tx) Tx() *Tx {
 		FromIdx:     tx.FromIdx,
 		ToIdx:       tx.ToIdx,
 		Amount:      tx.Amount,
+		USD:         tx.USD,
 		AmountFloat: amountFloat,
 		BatchNum:    tx.BatchNum,
 		EthBlockNum: tx.EthBlockNum,
 		Fee:         tx.Fee,
+		FeeUSD:      tx.FeeUSD,
 		Nonce:       tx.Nonce,
 	}
 }

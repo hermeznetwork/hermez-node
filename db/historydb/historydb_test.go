@@ -149,15 +149,6 @@ func TestTokens(t *testing.T) {
 	tokens := test.GenTokens(nTokens, blocks)
 	err := historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
-	// Update price of generated tokens without price
-	for i := 0; i < len(tokens); i++ {
-		if tokens[i].USD == 0 {
-			value := 3.33 + float64(i)
-			tokens[i].USD = value
-			err := historyDB.UpdateTokenValue(tokens[i].TokenID, value)
-			assert.NoError(t, err)
-		}
-	}
 	// Fetch tokens
 	fetchedTokens, err := historyDB.GetTokens()
 	assert.NoError(t, err)
@@ -170,7 +161,11 @@ func TestTokens(t *testing.T) {
 		assert.Equal(t, tokens[i].Name, token.Name)
 		assert.Equal(t, tokens[i].Symbol, token.Symbol)
 		assert.Equal(t, tokens[i].USD, token.USD)
-		assert.Greater(t, int64(1*time.Second), int64(time.Since(token.USDUpdate)))
+		if token.USDUpdate != nil {
+			assert.Greater(t, int64(1*time.Second), int64(time.Since(*token.USDUpdate)))
+		} else {
+			assert.Equal(t, tokens[i].USDUpdate, token.USDUpdate)
+		}
 	}
 }
 
@@ -210,11 +205,7 @@ func TestTxs(t *testing.T) {
 	blocks := setTestBlocks(fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 5
-	const tokenValue = 1.23456
 	tokens := test.GenTokens(nTokens, blocks)
-	for i := 0; i < len(tokens); i++ {
-		tokens[i].USD = tokenValue
-	}
 	err := historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
 	// Generate fake batches
@@ -231,6 +222,7 @@ func TestTxs(t *testing.T) {
 	const nL1s = 30
 	_, l1txs := test.GenL1Txs(0, nL1s, 0, nil, accs, tokens, blocks, batches)
 	err = historyDB.AddL1Txs(l1txs)
+	fmt.Println(err)
 	assert.NoError(t, err)
 	// Generate fake L2 txs
 	const nL2s = 20
@@ -242,44 +234,17 @@ func TestTxs(t *testing.T) {
 		tx := l1txs[i].Tx()
 		fetchedTx, err := historyDB.GetTx(tx.TxID)
 		assert.NoError(t, err)
-		tx.USD = tokenValue * tx.AmountFloat
-		if fetchedTx.USD > tx.USD {
-			assert.Less(t, 0.999, tx.USD/fetchedTx.USD)
-		} else {
-			assert.Less(t, 0.999, fetchedTx.USD/tx.USD)
-		}
-		tx.LoadAmountUSD = tokenValue * tx.LoadAmountFloat
-		if fetchedTx.LoadAmountUSD > tx.LoadAmountUSD {
-			assert.Less(t, 0.999, tx.LoadAmountUSD/fetchedTx.LoadAmountUSD)
-		} else {
-			assert.Less(t, 0.999, fetchedTx.LoadAmountUSD/tx.LoadAmountUSD)
-		}
-		tx.LoadAmountUSD = 0
-		tx.USD = 0
-		fetchedTx.LoadAmountUSD = 0
-		fetchedTx.USD = 0
+		test.AssertUSD(t, tx.USD, fetchedTx.USD)
+		test.AssertUSD(t, tx.LoadAmountUSD, fetchedTx.LoadAmountUSD)
 		assert.Equal(t, tx, fetchedTx)
 	}
 	for i := 0; i < len(l2txs); i++ {
 		tx := l2txs[i].Tx()
 		fetchedTx, err := historyDB.GetTx(tx.TxID)
+		tx.TokenID = fetchedTx.TokenID
 		assert.NoError(t, err)
-		tx.USD = tokenValue * tx.AmountFloat
-		if fetchedTx.USD > tx.USD {
-			assert.Less(t, 0.999, tx.USD/fetchedTx.USD)
-		} else {
-			assert.Less(t, 0.999, fetchedTx.USD/tx.USD)
-		}
-		tx.FeeUSD = tx.USD * tx.Fee.Percentage()
-		if fetchedTx.FeeUSD > tx.FeeUSD {
-			assert.Less(t, 0.999, tx.FeeUSD/fetchedTx.FeeUSD)
-		} else if fetchedTx.FeeUSD < tx.FeeUSD {
-			assert.Less(t, 0.999, fetchedTx.FeeUSD/tx.FeeUSD)
-		}
-		tx.FeeUSD = 0
-		tx.USD = 0
-		fetchedTx.FeeUSD = 0
-		fetchedTx.USD = 0
+		test.AssertUSD(t, fetchedTx.USD, tx.USD)
+		test.AssertUSD(t, fetchedTx.FeeUSD, tx.FeeUSD)
 		assert.Equal(t, tx, fetchedTx)
 	}
 	// Test trigger: L1 integrity
