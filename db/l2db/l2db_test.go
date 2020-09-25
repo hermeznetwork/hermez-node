@@ -1,18 +1,16 @@
 package l2db
 
 import (
-	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/jmoiron/sqlx"
-
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +19,7 @@ var tokens []common.Token
 
 func TestMain(m *testing.M) {
 	// init DB
-	pass := "yourpasswordhere" // os.Getenv("POSTGRES_PASS")
+	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
 		panic(err)
@@ -35,7 +33,7 @@ func TestMain(m *testing.M) {
 	result := m.Run()
 	// Close DB
 	if err := db.Close(); err != nil {
-		fmt.Println("Error closing the history DB:", err)
+		log.Error("Error closing the history DB:", err)
 	}
 	os.Exit(result)
 }
@@ -45,7 +43,7 @@ func prepareHistoryDB(db *sqlx.DB) ([]common.Token, error) {
 	const fromBlock int64 = 1
 	const toBlock int64 = 5
 	// Clean historyDB
-	if err := historyDB.Reorg(0); err != nil {
+	if err := historyDB.Reorg(-1); err != nil {
 		panic(err)
 	}
 	// Store blocks to historyDB
@@ -59,13 +57,13 @@ func prepareHistoryDB(db *sqlx.DB) ([]common.Token, error) {
 	return tokens, historyDB.AddTokens(tokens)
 }
 
-func TestAddTx(t *testing.T) {
+func TestAddTxTest(t *testing.T) {
 	// Gen poolTxs
 	const nInserts = 20
 	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	for _, tx := range txs {
-		err := l2DB.AddTx(tx)
+		err := l2DB.AddTxTest(tx)
 		assert.NoError(t, err)
 		fetchedTx, err := l2DB.GetTx(tx.TxID)
 		assert.NoError(t, err)
@@ -86,16 +84,16 @@ func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
 	assert.Equal(t, expected, actual)
 }
 
-func BenchmarkAddTx(b *testing.B) {
+func BenchmarkAddTxTest(b *testing.B) {
 	const nInserts = 20
 	test.CleanL2DB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	now := time.Now()
 	for _, tx := range txs {
-		_ = l2DB.AddTx(tx)
+		_ = l2DB.AddTxTest(tx)
 	}
 	elapsedTime := time.Since(now)
-	fmt.Println("Time to insert 2048 txs:", elapsedTime)
+	log.Info("Time to insert 2048 txs:", elapsedTime)
 }
 
 func TestGetPending(t *testing.T) {
@@ -104,7 +102,7 @@ func TestGetPending(t *testing.T) {
 	txs := test.GenPoolTxs(nInserts, tokens)
 	var pendingTxs []*common.PoolL2Tx
 	for _, tx := range txs {
-		err := l2DB.AddTx(tx)
+		err := l2DB.AddTxTest(tx)
 		assert.NoError(t, err)
 		if tx.State == common.PoolL2TxStatePending && tx.AbsoluteFee != nil {
 			pendingTxs = append(pendingTxs, tx)
@@ -128,7 +126,7 @@ func TestStartForging(t *testing.T) {
 	randomizer := 0
 	// Add txs to DB
 	for _, tx := range txs {
-		err := l2DB.AddTx(tx)
+		err := l2DB.AddTxTest(tx)
 		assert.NoError(t, err)
 		if tx.State == common.PoolL2TxStatePending && randomizer%2 == 0 {
 			randomizer++
@@ -157,7 +155,7 @@ func TestDoneForging(t *testing.T) {
 	randomizer := 0
 	// Add txs to DB
 	for _, tx := range txs {
-		err := l2DB.AddTx(tx)
+		err := l2DB.AddTxTest(tx)
 		assert.NoError(t, err)
 		if tx.State == common.PoolL2TxStateForging && randomizer%2 == 0 {
 			randomizer++
@@ -186,7 +184,7 @@ func TestInvalidate(t *testing.T) {
 	randomizer := 0
 	// Add txs to DB
 	for _, tx := range txs {
-		err := l2DB.AddTx(tx)
+		err := l2DB.AddTxTest(tx)
 		assert.NoError(t, err)
 		if tx.State != common.PoolL2TxStateInvalid && randomizer%2 == 0 {
 			randomizer++
@@ -233,7 +231,7 @@ func TestCheckNonces(t *testing.T) {
 				txs[i].Nonce = currentNonce + 1
 			}
 		}
-		err := l2DB.AddTx(txs[i])
+		err := l2DB.AddTxTest(txs[i])
 		assert.NoError(t, err)
 	}
 	// Start forging txs
@@ -266,7 +264,7 @@ func TestReorg(t *testing.T) {
 			txs[i].BatchNum = lastValidBatch
 			nonReorgedTxIDs = append(nonReorgedTxIDs, txs[i].TxID)
 		}
-		err := l2DB.AddTx(txs[i])
+		err := l2DB.AddTxTest(txs[i])
 		assert.NoError(t, err)
 	}
 	err := l2DB.Reorg(lastValidBatch)
@@ -308,14 +306,14 @@ func TestPurge(t *testing.T) {
 			}
 			deletedIDs = append(deletedIDs, txs[i].TxID)
 		}
-		err := l2DB.AddTx(txs[i])
+		err := l2DB.AddTxTest(txs[i])
 		assert.NoError(t, err)
 	}
 	for i := int(l2DB.maxTxs); i < len(txs); i++ {
 		// Delete after TTL
 		txs[i].Timestamp = time.Unix(time.Now().UTC().Unix()-int64(l2DB.ttl.Seconds()+float64(4*time.Second)), 0)
 		deletedIDs = append(deletedIDs, txs[i].TxID)
-		err := l2DB.AddTx(txs[i])
+		err := l2DB.AddTxTest(txs[i])
 		assert.NoError(t, err)
 	}
 	// Purge txs

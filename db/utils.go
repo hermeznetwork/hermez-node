@@ -40,7 +40,7 @@ func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Successfuly runt ", nMigrations, " migrations")
+	log.Info("successfully runt ", nMigrations, " migrations")
 	return db, nil
 }
 

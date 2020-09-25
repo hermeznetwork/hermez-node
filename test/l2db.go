@@ -45,7 +45,7 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 		f := new(big.Float).SetInt(big.NewInt(int64(i)))
 		amountF, _ := f.Float64()
 		var usd, absFee *float64
-		fee := common.FeeSelector(i % 255)
+		fee := common.FeeSelector(i % 255) //nolint:gomnd
 		token := tokens[i%len(tokens)]
 		if token.USD != nil {
 			usd = new(float64)

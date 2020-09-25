@@ -305,8 +305,14 @@ func (hdb *HistoryDB) GetAccounts() ([]*common.Account, error) {
 	return accs, err
 }
 
-// AddL1Txs inserts L1 txs to the DB
+// AddL1Txs inserts L1 txs to the DB. USD and LoadAmountUSD will be set automatically before storing the tx.
+// If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
+// BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
 func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error { return hdb.addL1Txs(hdb.db, l1txs) }
+
+// addL1Txs inserts L1 txs to the DB. USD and LoadAmountUSD will be set automatically before storing the tx.
+// If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
+// BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
 func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 	txs := []common.Tx{}
 	for _, tx := range l1txs {
@@ -315,8 +321,10 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 	return hdb.addTxs(d, txs)
 }
 
-// AddL2Txs inserts L2 txs to the DB
+// AddL2Txs inserts L2 txs to the DB. USD and FeeUSD will be set automatically before storing the tx.
 func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error { return hdb.addL2Txs(hdb.db, l2txs) }
+
+// addL2Txs inserts L2 txs to the DB. USD and FeeUSD will be set automatically before storing the tx.
 func (hdb *HistoryDB) addL2Txs(d meddler.DB, l2txs []common.L2Tx) error {
 	txs := []common.Tx{}
 	for _, tx := range l2txs {
@@ -325,8 +333,6 @@ func (hdb *HistoryDB) addL2Txs(d meddler.DB, l2txs []common.L2Tx) error {
 	return hdb.addTxs(d, txs)
 }
 
-// AddTxs insert L1 txs into the DB
-func (hdb *HistoryDB) AddTxs(txs []common.Tx) error { return hdb.addTxs(hdb.db, txs) }
 func (hdb *HistoryDB) addTxs(d meddler.DB, txs []common.Tx) error {
 	return db.BulkInsert(
 		d,
@@ -358,16 +364,6 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []common.Tx) error {
 	)
 }
 
-// SetBatchNumL1UserTxs sets the batchNum in all the L1UserTxs with toForgeL1TxsNum.
-func (hdb *HistoryDB) SetBatchNumL1UserTxs(toForgeL1TxsNum, batchNum int64) error {
-	return hdb.setBatchNumL1UserTxs(hdb.db, toForgeL1TxsNum, batchNum)
-}
-func (hdb *HistoryDB) setBatchNumL1UserTxs(d meddler.DB, toForgeL1TxsNum, batchNum int64) error {
-	_, err := d.Exec("UPDATE tx SET batch_num = $1 WHERE to_forge_l1_txs_num = $2 AND is_l1 = TRUE AND user_origin = TRUE;",
-		batchNum, toForgeL1TxsNum)
-	return err
-}
-
 // GetTxs returns a list of txs from the DB
 func (hdb *HistoryDB) GetTxs() ([]*common.Tx, error) {
 	var txs []*common.Tx
@@ -390,8 +386,10 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	}
 	var query string
 	var args []interface{}
-	queryStr := `SELECT tx.*, tx.amount_f * token.usd AS current_usd,
-	token.symbol, token.usd_update, block.timestamp, count(*) OVER() AS total_items FROM tx 
+	queryStr := `SELECT tx.*, token.token_id, token.eth_block_num AS token_block,
+	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
+	token.usd_update, block.timestamp, count(*) OVER() AS total_items 
+	FROM tx 
 	INNER JOIN token ON tx.token_id = token.token_id 
 	INNER JOIN block ON tx.eth_block_num = block.eth_block_num `
 	// Apply filters
@@ -490,17 +488,17 @@ func (hdb *HistoryDB) GetTx(txID common.TxID) (*common.Tx, error) {
 	)
 }
 
-// GetL1UserTxs gets L1 User Txs to be forged in a batch that will create an account
-// TODO: This is currently not used.  Figure out if it should be used somewhere or removed.
-func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]*common.Tx, error) {
-	var txs []*common.Tx
-	err := meddler.QueryAll(
-		hdb.db, &txs,
-		"SELECT * FROM tx WHERE to_forge_l1_txs_num = $1 AND is_l1 = TRUE AND user_origin = TRUE;",
-		toForgeL1TxsNum,
-	)
-	return txs, err
-}
+// // GetL1UserTxs gets L1 User Txs to be forged in a batch that will create an account
+// // TODO: This is currently not used.  Figure out if it should be used somewhere or removed.
+// func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]*common.Tx, error) {
+// 	var txs []*common.Tx
+// 	err := meddler.QueryAll(
+// 		hdb.db, &txs,
+// 		"SELECT * FROM tx WHERE to_forge_l1_txs_num = $1 AND is_l1 = TRUE AND user_origin = TRUE;",
+// 		toForgeL1TxsNum,
+// 	)
+// 	return txs, err
+// }
 
 // TODO: Think about chaning all the queries that return a last value, to queries that return the next valid value.
 
@@ -563,11 +561,15 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 
 	// Add Batches
 	for _, batch := range blockData.Batches {
+		// Add Batch: this will trigger an update on the DB
+		// that will set the batch num of forged L1 txs in this batch
+		err = hdb.addBatch(txn, batch.Batch)
+		if err != nil {
+			return err
+		}
+
+		// Add unforged l1 Txs
 		if batch.L1Batch {
-			err = hdb.setBatchNumL1UserTxs(txn, batch.Batch.ForgeL1TxsNum, int64(batch.Batch.BatchNum))
-			if err != nil {
-				return err
-			}
 			if len(batch.L1CoordinatorTxs) > 0 {
 				err = hdb.addL1Txs(txn, batch.L1CoordinatorTxs)
 				if err != nil {
@@ -598,12 +600,6 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 			if err != nil {
 				return err
 			}
-		}
-
-		// Add Batch
-		err = hdb.addBatch(txn, batch.Batch)
-		if err != nil {
-			return err
 		}
 
 		// TODO: INSERT CONTRACTS VARS

@@ -2,23 +2,23 @@ package txselector
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/jmoiron/sqlx"
-
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/test"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func initTest(t *testing.T, testSet string) *TxSelector {
-	pass := "yourpasswordhere" // os.Getenv("POSTGRES_PASS")
+	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.Nil(t, err)
 	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
@@ -37,7 +37,7 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 }
 func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []*common.PoolL2Tx) {
 	for i := 0; i < len(poolL2Txs); i++ {
-		err := txsel.l2db.AddTx(poolL2Txs[i])
+		err := txsel.l2db.AddTxTest(poolL2Txs[i])
 		require.Nil(t, err)
 	}
 }

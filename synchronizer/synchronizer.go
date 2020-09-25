@@ -397,7 +397,9 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 				l1CoordinatorTx.TxID = common.TxID(common.Hash([]byte("0x01" + strconv.FormatInt(int64(nextForgeL1TxsNum), 10) + strconv.FormatInt(int64(l1CoordinatorTx.Position), 10) + "00")))
 				l1CoordinatorTx.UserOrigin = false
 				l1CoordinatorTx.EthBlockNum = blockNum
-				l1CoordinatorTx.BatchNum = common.BatchNum(fbEvent.BatchNum)
+				bn := new(common.BatchNum)
+				*bn = common.BatchNum(fbEvent.BatchNum)
+				l1CoordinatorTx.BatchNum = bn
 
 				batchData.l1CoordinatorTxs = append(batchData.l1CoordinatorTxs, l1CoordinatorTx)
 
@@ -571,7 +573,6 @@ func getL1UserTx(l1UserTxEvents []eth.RollupEventL1UserTx, blockNum int64) []*co
 		eL1UserTx.L1Tx.Position = eL1UserTx.Position
 		eL1UserTx.L1Tx.UserOrigin = true
 		eL1UserTx.L1Tx.EthBlockNum = blockNum
-		eL1UserTx.L1Tx.BatchNum = 0
 
 		l1Txs = append(l1Txs, &eL1UserTx.L1Tx)
 	}

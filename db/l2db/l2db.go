@@ -58,8 +58,9 @@ func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.Accoun
 	)
 }
 
-// AddTx inserts a tx into the L2DB
-func (l2db *L2DB) AddTx(tx *common.PoolL2Tx) error {
+// AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
+// but in production txs will only be inserted through the API (method TBD)
+func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	type withouUSD struct {
 		TxID        common.TxID          `meddler:"tx_id"`
 		FromIdx     common.Idx           `meddler:"from_idx"`

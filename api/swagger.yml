@@ -96,7 +96,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/account-creation-authorization/{hermezEthereumAddress}':
+  '/account-creation-authorization/{hezEthereumAddress}':
     get:
       tags:
         - Account
@@ -105,12 +105,12 @@ paths:
         True if the coordinator has the required authorization to perform an account creation with the given Ethereum address on behalf of the Ethereum address holder.
       operationId: getAccountCreationAuthorization
       parameters:
-        - name: hermezEthereumAddress
+        - name: hezEthereumAddress
           in: path
           description: Ethereum address.
           required: true
           schema:
-            $ref: '#/components/schemas/HermezEthereumAddress'
+            $ref: '#/components/schemas/HezEthereumAddress'
       responses:
         '200':
           description: Successful operation.
@@ -144,15 +144,15 @@ paths:
       description: Get accounts balances and other associated information.
       operationId: getAccounts
       parameters:
-        - name: hermezEthereumAddress
+        - name: hezEthereumAddress
           in: query
           description: Only get accounts associated to an Ethereum address. Incompatible with the query `BJJ`.
           required: false
           schema:
-            $ref: '#/components/schemas/HermezEthereumAddress'
+            $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
           in: query
-          description: Only get accounts associated to a BabyJubJub public key.  Incompatible with the query `hermezEthereumAddress`.
+          description: Only get accounts associated to a BabyJubJub public key.  Incompatible with the query `hezEthereumAddress`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
@@ -258,21 +258,21 @@ paths:
       description: Get exit information. This information is required to perform a withdraw.
       operationId: getExits
       parameters:
-        - name: hermezEthereumAddress
+        - name: hezEthereumAddress
           in: query
           description: Get exits associated to a Ethereum address. Incompatible with query `BJJ` and `accountIndex`.
           required: false
           schema:
-            $ref: '#/components/schemas/HermezEthereumAddress'
+            $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
           in: query
-          description: Get exits associated to a BabyJubJub public key. Incompatible with query `hermezEthereumAddress` and `accountIndex`.
+          description: Get exits associated to a BabyJubJub public key. Incompatible with query `hezEthereumAddress` and `accountIndex`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
         - name: accountIndex
           in: query
-          description: Get exits associated to a specific account. Incompatible with queries `hermezEthereumAddress` and `BJJ`.
+          description: Get exits associated to a specific account. Incompatible with queries `hezEthereumAddress` and `BJJ`.
           required: false
           schema:
             $ref: '#/components/schemas/AccountIndex'
@@ -388,7 +388,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PoolL2Transaction'
+              $ref: '#/components/schemas/PostPoolL2Transaction'
       responses:
         '200':
           description: Successful operation.
@@ -468,22 +468,22 @@ paths:
           description: Only get transactions of specific token
           schema:
             $ref: '#/components/schemas/TokenId'
-        - name: hermezEthereumAddress
+        - name: hezEthereumAddress
           in: query
           required: false
           description: Only get transactions sent from or to an account associated to an Ethereum address Incompatible with the queries `BJJ` and `accountIndex`.
           schema:
-            $ref: '#/components/schemas/HermezEthereumAddress'
+            $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
           in: query
-          description: Only get transactions associated to a BabyJubJub public key. Incompatible with the queries `hermezEthereumAddress` and `accountIndex`.
+          description: Only get transactions associated to a BabyJubJub public key. Incompatible with the queries `hezEthereumAddress` and `accountIndex`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
         - name: accountIndex
           in: query
           required: false
-          description: Only get transactions sent from or to a specific account. Incompatible with the queries `tokenId`, `hermezEthereumAddress` and `BJJ`.
+          description: Only get transactions sent from or to a specific account. Incompatible with the queries `tokenId`, `hezEthereumAddress` and `BJJ`.
           schema:
             $ref: '#/components/schemas/AccountIndex'
         - name: batchNum
@@ -1228,6 +1228,101 @@ paths:
                 $ref: '#/components/schemas/Error500'
 components:
   schemas:
+    PostPoolL2Transaction:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/TransactionId'
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        tokenId:
+          $ref: '#/components/schemas/TokenId'
+        fromAccountIndex:
+          $ref: '#/components/schemas/AccountIndex'
+        toAccountIndex:
+          allOf:
+            - $ref: '#/components/schemas/AccountIndex'
+            - example: "hez:DAI:672"
+        toHezEthereumAddress:
+          $ref: '#/components/schemas/HezEthereumAddress'
+        toBjj:
+          $ref: '#/components/schemas/BJJ'
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/BigInt'
+            - description: Amount of tokens to be sent.
+              example: "63"
+        fee:
+          $ref: '#/components/schemas/FeeSelector'
+        nonce:
+          $ref: '#/components/schemas/Nonce'
+        signature:
+          allOf:
+            - $ref: '#/components/schemas/Signature'
+            - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
+            - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+        requestFromAccountIndex:
+          type: string
+          description: References the `fromAccountIndex` of the requested transaction.
+          example: null
+          nullable: true
+        requestToAccountIndex:
+          type: string
+          description: References the `toAccountIndex` of the requested transaction.
+          example: null
+          nullable: true
+        requestToHezEthereumAddress:
+          type: string
+          description: References the `toHezEthereumAddress` of the requested transaction.
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          example: null
+          nullable: true
+        requestToBJJ:
+          type: string
+          description: References the `toBJJ` of the requested transaction.
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          example: null
+          nullable: true
+        requestTokenId:
+          type: integer
+          description: References the `tokenId` of the requested transaction.
+          example: null
+          nullable: true
+        requestAmount:
+          type: string
+          description: References the `amount` of the requested transaction.
+          example: null
+          nullable: true
+        requestFee:
+          type: integer
+          description: References the `fee` of the requested transaction.
+          example: null
+          nullable: true
+        requestNonce:
+          type: integer
+          description: References the `nonce` of the requested transaction.
+          example: null
+          nullable: true
+      required:
+      - id
+      - type
+      - tokenId
+      - fromAccountIndex
+      - toHezAccountIndex
+      - toHezEthereumAddress
+      - toBjj
+      - amount
+      - fee
+      - nonce
+      - signature
+      - requestFromAccountIndex
+      - requestToAccountIndex
+      - requestToHezEthereumAddress
+      - requestToBJJ
+      - requestTokenId
+      - requestAmount
+      - requestFee
+      - requestNonce  
     PoolL2Transaction:
       type: object
       properties:
@@ -1241,21 +1336,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/AccountIndex'
             - example: "hez:DAI:672"
-        toEthereumAddress:
-          $ref: '#/components/schemas/HermezEthereumAddress'
+        toHezEthereumAddress:
+          $ref: '#/components/schemas/HezEthereumAddress'
         toBjj:
           $ref: '#/components/schemas/BJJ'
-        tokenId:
-          $ref: '#/components/schemas/TokenId'
-        USD:
-          type: number
-          description: Value of the token in USD.
-          example: 4.53
-        fiatUpdate:
-          type: string
-          format: date-time
-          description: Timestamp of the moment the `USD` value was updated.
-          nullable: true
         amount:
           allOf:
             - $ref: '#/components/schemas/BigInt'
@@ -1263,10 +1347,6 @@ components:
               example: "63"
         fee:
           $ref: '#/components/schemas/FeeSelector'
-        feeUSD:
-          type: number
-          description: Fee in USD.
-          example: 0.75
         nonce:
           $ref: '#/components/schemas/Nonce'
         state:
@@ -1295,9 +1375,9 @@ components:
             - $ref: '#/components/schemas/AccountIndex'
             - nullable: true
             - example: "hez:DAI:33"
-        requestToEthereumAddress:
+        requestToHezEthereumAddress:
           allOf:
-            - $ref: '#/components/schemas/HermezEthereumAddress'
+            - $ref: '#/components/schemas/HezEthereumAddress'
             - nullable: true
             - example: "hez:0xbb942cfcd25ad4d90a62358b0dd84f33b3982699" 
         requestToBJJ:
@@ -1326,12 +1406,12 @@ components:
             - $ref: '#/components/schemas/Nonce'
             - nullable: true
             - example: 6
-        tokenSymbol:
-          $ref: '#/components/schemas/TokenSymbol'
+        token:
+          $ref: '#/components/schemas/Token'
       required:
       - fromAccountIndex
-      - toAccountIndex
-      - toEthereumAddress
+      - toHezAccountIndex
+      - toHezEthereumAddress
       - toBjj
       - tokenId
       - amount
@@ -1347,14 +1427,14 @@ components:
       description: "Address of an Etherum account."
       pattern: "^0x[a-fA-F0-9]{40}$"
       example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
-    HermezEthereumAddress:
+    HezEthereumAddress:
       type: string
       description: "Address of an Etherum account linked to the Hermez network."
       pattern: "^hez:0x[a-fA-F0-9]{40}$"
       example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     BJJ:
       type: string
-      description: "BabyJubJub public key, encoded as base64, which result in 33 bytes (last byte used as checksum)."
+      description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
       pattern: "^hez:[A-Za-z0-9_-]{44}$"
       example: "hez:rR7LXKal-av7I56Y0dEBCVmwc9zpoLY5ERhy5w7G-xwe"
     AccountIndex:
@@ -1430,8 +1510,8 @@ components:
         timestamp:
           type: string
           format: date-time
-        ethereumAddress:
-          $ref: '#/components/schemas/HermezEthereumAddress'
+        hezEthereumAddress:
+          $ref: '#/components/schemas/HezEthereumAddress'
         bjj:
           $ref: '#/components/schemas/BJJ'
         signature:
@@ -1476,29 +1556,17 @@ components:
           maximum: 4294967295
           example: 5432
           nullable: true
-        tokenId:
-          $ref: '#/components/schemas/TokenId'
-        tokenSymbol:
-          $ref: '#/components/schemas/TokenSymbol'
         historicUSD:
           type: number
           description: Value in USD at the moment the transaction was forged.
           example: 49.7
           nullable: true
-        currentUSD:
-          type: number
-          description: Value in USD at the current token/USD conversion.
-          example: 50.01
-          nullable: true
-        fiatUpdate:
-          type: string
-          format: date-time
-          description: Timestamp of the moment the `currentUSD` value was updated.
-          nullable: true
         timestamp:
           type: string
           format: date-time
           description: In the case of L1 indicates the moment where the transaction was added in the smart contract. For L2 indicates when the transaction was forged.
+        token:
+          $ref: '#/components/schemas/Token'
         L1Info:
           type: object
           description: Additional information that only applies to L1 transactions.
@@ -1509,8 +1577,8 @@ components:
             userOrigin:
               type: boolean
               description: True if the transaction was sent by a user. False if it was sent by a coordinator.
-            fromEthereumAddress:
-              $ref: '#/components/schemas/HermezEthereumAddress'
+            fromHezEthereumAddress:
+              $ref: '#/components/schemas/HezEthereumAddress'
             fromBJJ:
               $ref: '#/components/schemas/BJJ'
             loadAmount:
@@ -1518,10 +1586,11 @@ components:
                 - $ref: '#/components/schemas/BigInt'
                 - description: Tokens transfered from L1 to L2.
                 - example: "49"
-            loadAmountUSD:
+            historicLoadAmountUSD:
               type: number
               description: Load amount in USD, at the moment the transaction was made.
               example: 3.897
+              nullable: true
             ethereumBlockNum:
               allOf:
                 - $ref: '#/components/schemas/EthBlockNum'
@@ -1530,10 +1599,10 @@ components:
           required:
             - toForgeL1TransactionsNum
             - userOrigin
-            - fromEthereumAddress
+            - fromHezEthereumAddress
             - fromBJJ
             - loadAmount
-            - loadAmountUSD
+            - historicLoadAmountUSD
             - ethereumBlockNum
           additionalProperties: false
         L2Info:
@@ -1543,7 +1612,7 @@ components:
           properties:
             fee:
               $ref: '#/components/schemas/FeeSelector'
-            feeUSD:
+            historicFeeUSD:
               type: number
               description: Fee in USD, at the moment the transaction was forged.
               example: 263.89
@@ -1553,7 +1622,7 @@ components:
           example: null
           required:
             - fee
-            - feeUSD
+            - historicFeeUSD
             - nonce
           additionalProperties: false
       required:
@@ -1565,12 +1634,9 @@ components:
         - toAccountIndex
         - amount
         - batchNum
-        - tokenId
-        - tokenSymbol
         - historicUSD
-        - currentUSD
-        - fiatUpdate
         - timestamp
+        - token
         - L1Info
         - L2Info
       additionalProperties: false
@@ -1623,10 +1689,8 @@ components:
       items:
         type: object 
         properties:
-          tokenId:
-            $ref: '#/components/schemas/TokenId'
-          tokenSymbol:
-            $ref: '#/components/schemas/TokenSymbol'
+          token:
+            $ref: '#/components/schemas/Token'
           amount:
             allOf:
               - $ref: '#/components/schemas/BigInt'
@@ -1640,13 +1704,21 @@ components:
           $ref: '#/components/schemas/BatchNum'
         ethereumBlockNum:
           $ref: '#/components/schemas/EthBlockNum'
+        ethereumBlockHash:
+          type: string
+          description: hash of the Ethereum block in which the batch was forged
+          example: "0xfe88c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
+        timestamp:
+          type: string
+          format: date-time
+          description: Time in which the batch was forged.
         forgerAddr:
           $ref: '#/components/schemas/EthereumAddress'
         collectedFees:
           $ref: '#/components/schemas/CollectedFees'
-        totalCollectedFeesUSD:
+        historicTotalCollectedFeesUSD:
           type: number
-          description: Sum of the all the fees collected, in USD.
+          description: Sum of the all the fees collected, in USD, at the moment the batch was forged.
           example: 23.3
         stateRoot:
           allOf:
@@ -1673,35 +1745,8 @@ components:
       type: object
       description: Group of transactions forged in a coordinator and sent and validated in Ethereum.
       properties:
-        batchNum:
-          $ref: '#/components/schemas/BatchNum'
-        forgerAddr:
-          $ref: '#/components/schemas/EthereumAddress'
-        collectedFees:
-          $ref: '#/components/schemas/CollectedFees'
-        ethereumBlockNum:
-          $ref: '#/components/schemas/EthBlockNum'
-        stateRoot:
-          allOf:
-            - $ref: '#/components/schemas/Hash'
-            - description: Root of the accounts Merkle Tree.
-            - example: "2734657026572a8708d883"
-        numAccounts:
-          type: integer
-          description: Number of registered accounts in this batch.
-        exitRoot:
-          allOf:
-            - $ref: '#/components/schemas/Hash'
-            - description: Root of the exit Merkle Tree associated to this batch.
-            - example: "2734657026572a8708d883"
-        forgeL1TransactionsNum:
-          allOf:
-            - $ref: '#/components/schemas/ToForgeL1TransactionsNum'
-            - description: Identifier that corresponds to the group of L1 transactions forged in the current batch.
-            - nullable: true
-            - example: 9
-        slotNum:
-          $ref: '#/components/schemas/SlotNum'
+        batch:
+          $ref: '#/components/schemas/Batch'
         transactions:
           type: array
           description: List of forged transactions in the batch
@@ -1757,6 +1802,8 @@ components:
       properties:
         forgerAddr:
           $ref: '#/components/schemas/EthereumAddress'
+        slotNum:
+          $ref: '#/components/schemas/SlotNum'
         withdrawAddr:
           $ref: '#/components/schemas/EthereumAddress'
         URL:
@@ -1819,7 +1866,7 @@ components:
         decimals:
           type: integer
           description: Number of decimals of the token.
-          example: 5
+          example: 18
         ethereumBlockNum:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
@@ -1828,11 +1875,23 @@ components:
         USD:
           type: number
           description: Value of the token in USD.
-          example: 4.53
+          example: 1.01
+          nullable: true
         fiatUpdate:
           type: string
           format: date-time
           description: Timestamp of the moment the `USD` value was updated.
+          nullable: true
+      required:
+        - id
+        - ethereumAddress
+        - name
+        - symbol
+        - decimals
+        - ethereumBlockNum
+        - USD
+        - fiatUpdate
+      additionalProperties: false
     Tokens:
       type: object
       properties:
@@ -1860,8 +1919,6 @@ components:
           example: "0x347089321de8971320489793a823470918fffeab"
         balance:
           $ref: '#/components/schemas/BigInt'
-        nullifier:
-          $ref: '#/components/schemas/BigInt'
         instantWithdrawn:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
@@ -1877,6 +1934,8 @@ components:
             - $ref: '#/components/schemas/EthBlockNum'
             - description: Block in which the exit balance was delayed withdrawn after a delay withdraw request. Null indicates that a delay withdraw hasn't been performed.
             - example: null
+        token:
+          $ref: '#/components/schemas/Token'
     Exits:
       type: object
       properties:
@@ -1893,24 +1952,16 @@ components:
       properties:
         accountIndex:
           $ref: '#/components/schemas/AccountIndex'
-        tokenId:
-          $ref: '#/components/schemas/TokenId'
-        tokenSymbol:
-          $ref: '#/components/schemas/TokenSymbol'
-        tokenName:
-          $ref: '#/components/schemas/TokenName'
         nonce:
           $ref: '#/components/schemas/Nonce'      
         balance:
           $ref: '#/components/schemas/BigInt'
-        balanceUSD:
-          type: integer
-          description: Balance of the account in USD
-          example: 1304
         bjj:
           $ref: '#/components/schemas/BJJ'      
-        ethereumAddress:
-          $ref: '#/components/schemas/HermezEthereumAddress'
+        hezEthereumAddress:
+          $ref: '#/components/schemas/HezEthereumAddress'
+        token:
+          $ref: '#/components/schemas/Token'
     Accounts:
       type: object
       properties:
@@ -2058,6 +2109,7 @@ components:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
                     - description: Ethereum address of the boot coordinator.
+                    - example: "0x997dc4262BCDbf85190C01c996b4C06a461d2430"
                 slotDeadline:
                   type: integer
                   description: Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before.
@@ -2083,6 +2135,7 @@ components:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
                     - description: Ethereum address where the donations will go to.
+                    - example: "0x887dc4262BCDbf85190C01c996b4C06a461d2430"
                 allocationRatio:
                   type: array
                   description: Percentage in which fees will be splitted between donations, governance and burning. The sum of the tree values should be 100.
@@ -2097,22 +2150,27 @@ components:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
                     - description: Ethereum address of the rollup smart contract.
+                    - example: "0x777dc4262BCDbf85190C01c996b4C06a461d2430"
                 governanceAddress:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
                     - description: Ethereum address of the governance mechanism.
+                    - example: "0x667dc4262BCDbf85190C01c996b4C06a461d2430"
                 whitheHackerGroupAddress:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
                     - description: Ethereum Address that can claim the funds in an emergency when the maximum emergency mode time is exceeded.
+                    - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
                 keeperAddress:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
                     - description: Ethereum Address that can enable emergency mode and modify the delay to make a withdrawal.
+                    - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
                 withdrawalDelay:
                   allOf:
                     - $ref: '#/components/schemas/EthBlockNum'
                     - description: The time that anyone needs to wait until a withdrawal of the funds is allowed, in Ethereum blocks.
+                    - example: 539573849
                 emergencyModeStartingTime:
                   type: integer
                   description: Ethereum block in which the emergency mode will be activated.
@@ -2145,6 +2203,7 @@ components:
               allOf:
                 - $ref: '#/components/schemas/EthereumAddress'
                 - description: Ethereum address of the HEZ token.
+                - example: "0x444dc4262BCDbf85190C01c996b4C06a461d2430"
             maxTxVerifiers:
               type: integer
               description: Maximum transactions of the verifiers.
@@ -2219,10 +2278,12 @@ components:
               allOf:
                 - $ref: '#/components/schemas/EthereumAddress'
                 - description: Ethereum address of the HEZ token.
+                - example: "0x333dc4262BCDbf85190C01c996b4C06a461d2430"
             rollupAddress:
               allOf:
                 - $ref: '#/components/schemas/EthereumAddress'
                 - description: Ethereum address of the rollup smart contract.
+                - example: "0x222dc4262BCDbf85190C01c996b4C06a461d2430"
             genesisBlockNum:
               allOf:
                 - $ref: '#/components/schemas/EthBlockNum'

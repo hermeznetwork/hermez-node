@@ -25,6 +25,12 @@ type L2Tx struct {
 func (tx *L2Tx) Tx() *Tx {
 	f := new(big.Float).SetInt(tx.Amount)
 	amountFloat, _ := f.Float64()
+	batchNum := new(BatchNum)
+	*batchNum = tx.BatchNum
+	fee := new(FeeSelector)
+	*fee = tx.Fee
+	nonce := new(Nonce)
+	*nonce = tx.Nonce
 	return &Tx{
 		IsL1:        false,
 		TxID:        tx.TxID,
@@ -35,11 +41,11 @@ func (tx *L2Tx) Tx() *Tx {
 		Amount:      tx.Amount,
 		USD:         tx.USD,
 		AmountFloat: amountFloat,
-		BatchNum:    tx.BatchNum,
+		BatchNum:    batchNum,
 		EthBlockNum: tx.EthBlockNum,
-		Fee:         tx.Fee,
+		Fee:         fee,
 		FeeUSD:      tx.FeeUSD,
-		Nonce:       tx.Nonce,
+		Nonce:       nonce,
 	}
 }
 

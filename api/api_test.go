@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"net/http"
 	"os"
@@ -79,7 +80,7 @@ func TestMain(m *testing.M) {
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// Init DBs
 	// HistoryDB
-	pass := "yourpasswordhere" // os.Getenv("POSTGRES_PASS")
+	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
 		panic(err)
@@ -100,7 +101,7 @@ func TestMain(m *testing.M) {
 	}
 	// L2DB
 	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
-	test.CleanL2DB(l2db.DB())
+	test.CleanL2DB(l2DB.DB())
 
 	// Init API
 	api := gin.Default()
@@ -225,43 +226,48 @@ func TestMain(m *testing.M) {
 			}
 			var usd, loadUSD, feeUSD *float64
 			if token.USD != nil {
+				noDecimalsUSD := *token.USD / math.Pow(10, float64(token.Decimals))
 				usd = new(float64)
-				*usd = *token.USD * genericTx.AmountFloat
+				*usd = noDecimalsUSD * genericTx.AmountFloat
 				if genericTx.IsL1 {
 					loadUSD = new(float64)
-					*loadUSD = *token.USD * genericTx.LoadAmountFloat
+					*loadUSD = noDecimalsUSD * *genericTx.LoadAmountFloat
 				} else {
 					feeUSD = new(float64)
 					*feeUSD = *usd * genericTx.Fee.Percentage()
 				}
 			}
 			historyTxs = append(historyTxs, &historydb.HistoryTx{
-				IsL1:            genericTx.IsL1,
-				TxID:            genericTx.TxID,
-				Type:            genericTx.Type,
-				Position:        genericTx.Position,
-				FromIdx:         genericTx.FromIdx,
-				ToIdx:           genericTx.ToIdx,
-				Amount:          genericTx.Amount,
-				AmountFloat:     genericTx.AmountFloat,
-				TokenID:         token.TokenID,
-				USD:             usd,
-				BatchNum:        genericTx.BatchNum,
-				EthBlockNum:     genericTx.EthBlockNum,
-				ToForgeL1TxsNum: genericTx.ToForgeL1TxsNum,
-				UserOrigin:      genericTx.UserOrigin,
-				FromEthAddr:     genericTx.FromEthAddr,
-				FromBJJ:         genericTx.FromBJJ,
-				LoadAmount:      genericTx.LoadAmount,
-				LoadAmountFloat: genericTx.LoadAmountFloat,
-				LoadAmountUSD:   loadUSD,
-				Fee:             genericTx.Fee,
-				FeeUSD:          feeUSD,
-				Nonce:           genericTx.Nonce,
-				Timestamp:       timestamp,
-				TokenSymbol:     token.Symbol,
-				CurrentUSD:      usd,
-				USDUpdate:       token.USDUpdate,
+				IsL1:                  genericTx.IsL1,
+				TxID:                  genericTx.TxID,
+				Type:                  genericTx.Type,
+				Position:              genericTx.Position,
+				FromIdx:               genericTx.FromIdx,
+				ToIdx:                 genericTx.ToIdx,
+				Amount:                genericTx.Amount,
+				AmountFloat:           genericTx.AmountFloat,
+				HistoricUSD:           usd,
+				BatchNum:              genericTx.BatchNum,
+				EthBlockNum:           genericTx.EthBlockNum,
+				ToForgeL1TxsNum:       genericTx.ToForgeL1TxsNum,
+				UserOrigin:            genericTx.UserOrigin,
+				FromEthAddr:           genericTx.FromEthAddr,
+				FromBJJ:               genericTx.FromBJJ,
+				LoadAmount:            genericTx.LoadAmount,
+				LoadAmountFloat:       genericTx.LoadAmountFloat,
+				HistoricLoadAmountUSD: loadUSD,
+				Fee:                   genericTx.Fee,
+				HistoricFeeUSD:        feeUSD,
+				Nonce:                 genericTx.Nonce,
+				Timestamp:             timestamp,
+				TokenID:               token.TokenID,
+				TokenEthBlockNum:      token.EthBlockNum,
+				TokenEthAddr:          token.EthAddr,
+				TokenName:             token.Name,
+				TokenSymbol:           token.Symbol,
+				TokenDecimals:         token.Decimals,
+				TokenUSD:              token.USD,
+				TokenUSDUpdate:        token.USDUpdate,
 			})
 		}
 		return historyTxAPIs(historyTxsToAPI(historyTxs))
@@ -337,7 +343,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// Get by tokenID
 	fetchedTxs = historyTxAPIs{}
 	limit = 5
-	tokenID := tc.allTxs[0].TokenID
+	tokenID := tc.allTxs[0].Token.TokenID
 	path = fmt.Sprintf(
 		"%s?tokenId=%d&limit=%d&offset=",
 		endpoint, tokenID, limit,
@@ -346,7 +352,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	tokenIDTxs := historyTxAPIs{}
 	for i := 0; i < len(tc.allTxs); i++ {
-		if tc.allTxs[i].TokenID == tokenID {
+		if tc.allTxs[i].Token.TokenID == tokenID {
 			tokenIDTxs = append(tokenIDTxs, tc.allTxs[i])
 		}
 	}
@@ -429,7 +435,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	mixedTxs := historyTxAPIs{}
 	for i := 0; i < len(tc.allTxs); i++ {
 		if tc.allTxs[i].BatchNum != nil {
-			if *tc.allTxs[i].BatchNum == *batchNum && tc.allTxs[i].TokenID == tokenID {
+			if *tc.allTxs[i].BatchNum == *batchNum && tc.allTxs[i].Token.TokenID == tokenID {
 				mixedTxs = append(mixedTxs, tc.allTxs[i])
 			}
 		}
@@ -477,19 +483,17 @@ func assertHistoryTxAPIs(t *testing.T, expected, actual historyTxAPIs) {
 	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
 		assert.Equal(t, expected[i].Timestamp.Unix(), actual[i].Timestamp.Unix())
 		expected[i].Timestamp = actual[i].Timestamp
-		if expected[i].USDUpdate == nil {
-			assert.Equal(t, expected[i].USDUpdate, actual[i].USDUpdate)
+		if expected[i].Token.USDUpdate == nil {
+			assert.Equal(t, expected[i].Token.USDUpdate, actual[i].Token.USDUpdate)
 		} else {
-			assert.Equal(t, expected[i].USDUpdate.Unix(), actual[i].USDUpdate.Unix())
-			expected[i].USDUpdate = actual[i].USDUpdate
+			assert.Equal(t, expected[i].Token.USDUpdate.Unix(), actual[i].Token.USDUpdate.Unix())
+			expected[i].Token.USDUpdate = actual[i].Token.USDUpdate
 		}
+		test.AssertUSD(t, expected[i].HistoricUSD, actual[i].HistoricUSD)
 		if expected[i].L2Info != nil {
-			if expected[i].L2Info.FeeUSD != nil {
-				fmt.Printf("%s: %e vs %e \n", expected[i].TxID, *expected[i].L2Info.FeeUSD, *actual[i].L2Info.FeeUSD)
-			} else {
-				fmt.Printf("%s: %p vs %p \n", expected[i].TxID, expected[i].L2Info.FeeUSD, actual[i].L2Info.FeeUSD)
-			}
-			test.AssertUSD(t, expected[i].L2Info.FeeUSD, actual[i].L2Info.FeeUSD)
+			test.AssertUSD(t, expected[i].L2Info.HistoricFeeUSD, actual[i].L2Info.HistoricFeeUSD)
+		} else {
+			test.AssertUSD(t, expected[i].L1Info.HistoricLoadAmountUSD, actual[i].L1Info.HistoricLoadAmountUSD)
 		}
 		assert.Equal(t, expected[i], actual[i])
 	}

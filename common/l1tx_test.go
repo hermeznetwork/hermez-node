@@ -1,8 +1,6 @@
 package common
 
 import (
-	"fmt"
-	"math"
 	"math/big"
 	"testing"
 
@@ -12,23 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestFoo(t *testing.T) {
-	for f := 0; f < 256; f++ {
-		perc := 0.0
-		if f == 0 {
-			perc = 0
-			//nolint:gomnd
-		} else if f <= 32 { //nolint:gomnd
-			perc = math.Pow(10, -24+(float64(f)/2)) //nolint:gomnd
-		} else if f <= 223 { //nolint:gomnd
-			perc = math.Pow(10, -8+(0.041666666666667*(float64(f)-32))) //nolint:gomnd
-		} else {
-			perc = math.Pow(10, float64(f)-224) //nolint:gomnd
-		}
-		fmt.Printf("WHEN $1 = %d THEN %e\n", f, perc)
-	}
-}
 
 func TestL1TxByteParsers(t *testing.T) {
 	var pkComp babyjub.PublicKeyComp
