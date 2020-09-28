@@ -503,7 +503,7 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 		coordinator := &common.Coordinator{
 			Forger:       eNewCoordinator.ForgerAddress,
 			WithdrawAddr: eNewCoordinator.WithdrawalAddress,
-			URL:          eNewCoordinator.URL,
+			URL:          eNewCoordinator.CoordinatorURL,
 		}
 		auctionData.coordinators = append(auctionData.coordinators, coordinator)
 	}
@@ -527,7 +527,7 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 		coordinator := &common.Coordinator{
 			Forger:       eCoordinatorUpdated.ForgerAddress,
 			WithdrawAddr: eCoordinatorUpdated.WithdrawalAddress,
-			URL:          eCoordinatorUpdated.URL,
+			URL:          eCoordinatorUpdated.CoordinatorURL,
 		}
 		auctionData.coordinators = append(auctionData.coordinators, coordinator)
 	}
