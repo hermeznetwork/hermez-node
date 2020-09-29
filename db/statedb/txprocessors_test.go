@@ -27,7 +27,7 @@ func TestProcessTxs(t *testing.T) {
 	instructions, err := parser.Parse()
 	assert.Nil(t, err)
 
-	l1Txs, coordinatorL1Txs, poolL2Txs := test.GenerateTestTxs(t, instructions)
+	l1Txs, coordinatorL1Txs, poolL2Txs, _ := test.GenerateTestTxs(t, instructions)
 	assert.Equal(t, 29, len(l1Txs[0]))
 	assert.Equal(t, 0, len(coordinatorL1Txs[0]))
 	assert.Equal(t, 21, len(poolL2Txs[0]))
@@ -57,7 +57,7 @@ func TestProcessTxsBatchByBatch(t *testing.T) {
 	instructions, err := parser.Parse()
 	assert.Nil(t, err)
 
-	l1Txs, coordinatorL1Txs, poolL2Txs := test.GenerateTestTxs(t, instructions)
+	l1Txs, coordinatorL1Txs, poolL2Txs, _ := test.GenerateTestTxs(t, instructions)
 	assert.Equal(t, 29, len(l1Txs[0]))
 	assert.Equal(t, 0, len(coordinatorL1Txs[0]))
 	assert.Equal(t, 21, len(poolL2Txs[0]))
@@ -108,7 +108,7 @@ func TestZKInputsGeneration(t *testing.T) {
 	instructions, err := parser.Parse()
 	assert.Nil(t, err)
 
-	l1Txs, coordinatorL1Txs, poolL2Txs := test.GenerateTestTxs(t, instructions)
+	l1Txs, coordinatorL1Txs, poolL2Txs, _ := test.GenerateTestTxs(t, instructions)
 	assert.Equal(t, 29, len(l1Txs[0]))
 	assert.Equal(t, 0, len(coordinatorL1Txs[0]))
 	assert.Equal(t, 21, len(poolL2Txs[0]))

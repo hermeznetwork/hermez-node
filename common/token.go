@@ -14,14 +14,14 @@ const tokenIDBytesLen = 4
 
 // Token is a struct that represents an Ethereum token that is supported in Hermez network
 type Token struct {
-	TokenID     TokenID           `meddler:"token_id"`
-	EthBlockNum int64             `meddler:"eth_block_num"` // Ethereum block number in which this token was registered
-	EthAddr     ethCommon.Address `meddler:"eth_addr"`
-	Name        string            `meddler:"name"`
-	Symbol      string            `meddler:"symbol"`
-	Decimals    uint64            `meddler:"decimals"`
-	USD         float64           `meddler:"usd,zeroisnull"`
-	USDUpdate   time.Time         `meddler:"usd_update,utctimez"`
+	TokenID     TokenID           `json:"id" meddler:"token_id"`
+	EthBlockNum int64             `json:"ethereumBlockNum" meddler:"eth_block_num"` // Ethereum block number in which this token was registered
+	EthAddr     ethCommon.Address `json:"ethereumAddress" meddler:"eth_addr"`
+	Name        string            `json:"name" meddler:"name"`
+	Symbol      string            `json:"symbol" meddler:"symbol"`
+	Decimals    uint64            `json:"decimals" meddler:"decimals"`
+	USD         *float64          `json:"USD" meddler:"usd"`
+	USDUpdate   *time.Time        `json:"fiatUpdate" meddler:"usd_update,utctime"`
 }
 
 // TokenInfo provides the price of the token in USD

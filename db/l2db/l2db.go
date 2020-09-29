@@ -1,19 +1,16 @@
 package l2db
 
 import (
-	"fmt"
+	"math/big"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/gobuffalo/packr/v2"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
-	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
 	//nolint:errcheck // driver for postgres DB
 	_ "github.com/lib/pq"
-	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 )
 
@@ -29,40 +26,15 @@ type L2DB struct {
 }
 
 // NewL2DB creates a L2DB.
-// To create it, it's needed postgres configuration, safety period expressed in batches,
+// To create it, it's needed db connection, safety period expressed in batches,
 // maxTxs that the DB should have and TTL (time to live) for pending txs.
-func NewL2DB(
-	port int, host, user, password, dbname string,
-	safetyPeriod common.BatchNum,
-	maxTxs uint32,
-	TTL time.Duration,
-) (*L2DB, error) {
-	// init meddler
-	db.InitMeddler()
-	meddler.Default = meddler.PostgreSQL
-	// Stablish DB connection
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	db, err := sqlx.Connect("postgres", psqlconn)
-	if err != nil {
-		return nil, err
-	}
-
-	// Run DB migrations
-	migrations := &migrate.PackrMigrationSource{
-		Box: packr.New("l2db-migrations", "./migrations"),
-	}
-	nMigrations, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("L2DB applied ", nMigrations, " migrations for ", dbname, " database")
-
+func NewL2DB(db *sqlx.DB, safetyPeriod common.BatchNum, maxTxs uint32, TTL time.Duration) *L2DB {
 	return &L2DB{
 		db:           db,
 		safetyPeriod: safetyPeriod,
 		ttl:          TTL,
 		maxTxs:       maxTxs,
-	}, nil
+	}
 }
 
 // DB returns a pointer to the L2DB.db. This method should be used only for
@@ -86,27 +58,82 @@ func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.Accoun
 	)
 }
 
-// AddTx inserts a tx into the L2DB
-func (l2db *L2DB) AddTx(tx *common.PoolL2Tx) error {
-	return meddler.Insert(l2db.db, "tx_pool", tx)
+// AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
+// but in production txs will only be inserted through the API (method TBD)
+func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
+	type withouUSD struct {
+		TxID        common.TxID          `meddler:"tx_id"`
+		FromIdx     common.Idx           `meddler:"from_idx"`
+		ToIdx       common.Idx           `meddler:"to_idx"`
+		ToEthAddr   ethCommon.Address    `meddler:"to_eth_addr"`
+		ToBJJ       *babyjub.PublicKey   `meddler:"to_bjj"`
+		TokenID     common.TokenID       `meddler:"token_id"`
+		Amount      *big.Int             `meddler:"amount,bigint"`
+		AmountFloat float64              `meddler:"amount_f"`
+		Fee         common.FeeSelector   `meddler:"fee"`
+		Nonce       common.Nonce         `meddler:"nonce"`
+		State       common.PoolL2TxState `meddler:"state"`
+		Signature   *babyjub.Signature   `meddler:"signature"`
+		Timestamp   time.Time            `meddler:"timestamp,utctime"`
+		BatchNum    common.BatchNum      `meddler:"batch_num,zeroisnull"`
+		RqFromIdx   common.Idx           `meddler:"rq_from_idx,zeroisnull"`
+		RqToIdx     common.Idx           `meddler:"rq_to_idx,zeroisnull"`
+		RqToEthAddr ethCommon.Address    `meddler:"rq_to_eth_addr"`
+		RqToBJJ     *babyjub.PublicKey   `meddler:"rq_to_bjj"`
+		RqTokenID   common.TokenID       `meddler:"rq_token_id,zeroisnull"`
+		RqAmount    *big.Int             `meddler:"rq_amount,bigintnull"`
+		RqFee       common.FeeSelector   `meddler:"rq_fee,zeroisnull"`
+		RqNonce     uint64               `meddler:"rq_nonce,zeroisnull"`
+		Type        common.TxType        `meddler:"tx_type"`
+	}
+	return meddler.Insert(l2db.db, "tx_pool", &withouUSD{
+		TxID:        tx.TxID,
+		FromIdx:     tx.FromIdx,
+		ToIdx:       tx.ToIdx,
+		ToEthAddr:   tx.ToEthAddr,
+		ToBJJ:       tx.ToBJJ,
+		TokenID:     tx.TokenID,
+		Amount:      tx.Amount,
+		AmountFloat: tx.AmountFloat,
+		Fee:         tx.Fee,
+		Nonce:       tx.Nonce,
+		State:       tx.State,
+		Signature:   tx.Signature,
+		Timestamp:   tx.Timestamp,
+		BatchNum:    tx.BatchNum,
+		RqFromIdx:   tx.RqFromIdx,
+		RqToIdx:     tx.RqToIdx,
+		RqToEthAddr: tx.RqToEthAddr,
+		RqToBJJ:     tx.RqToBJJ,
+		RqTokenID:   tx.RqTokenID,
+		RqAmount:    tx.RqAmount,
+		RqFee:       tx.RqFee,
+		RqNonce:     tx.RqNonce,
+		Type:        tx.Type,
+	})
 }
+
+// selectPoolTx select part of queries to get common.PoolL2Tx
+const selectPoolTx = `SELECT tx_pool.*, token.usd * tx_pool.amount_f AS value_usd, 
+fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f AS fee_usd, token.usd_update, 
+token.symbol AS token_symbol FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
 // GetTx return the specified Tx
 func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
 	tx := new(common.PoolL2Tx)
 	return tx, meddler.QueryRow(
 		l2db.db, tx,
-		"SELECT * FROM tx_pool WHERE tx_id = $1;",
+		selectPoolTx+"WHERE tx_id = $1;",
 		txID,
 	)
 }
 
-// GetPendingTxs return all the pending txs of the L2DB
+// GetPendingTxs return all the pending txs of the L2DB, that have a non NULL AbsoluteFee
 func (l2db *L2DB) GetPendingTxs() ([]*common.PoolL2Tx, error) {
 	var txs []*common.PoolL2Tx
 	err := meddler.QueryAll(
 		l2db.db, &txs,
-		"SELECT * FROM tx_pool WHERE state = $1",
+		selectPoolTx+"WHERE state = $1 AND token.usd IS NOT NULL",
 		common.PoolL2TxStatePending,
 	)
 	return txs, err
@@ -202,40 +229,6 @@ func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.
 	return txn.Commit()
 }
 
-// UpdateTxValue updates the absolute fee and value of txs given a token list that include their price in USD
-func (l2db *L2DB) UpdateTxValue(tokens []common.Token) (err error) {
-	// WARNING: this is very slow and should be optimized
-	txn, err := l2db.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		// Rollback the transaction if there was an error.
-		if err != nil {
-			err = txn.Rollback()
-		}
-	}()
-	now := time.Now()
-	for i := 0; i < len(tokens); i++ {
-		_, err = txn.Exec(
-			`UPDATE tx_pool
-			SET usd_update = $1, value_usd = amount_f * $2, fee_usd = $2 * amount_f * CASE
-				WHEN fee = 0 THEN 0	
-				WHEN fee >= 1 AND fee <= 32 THEN POWER(10,-24+(fee::float/2))	
-				WHEN fee >= 33 AND fee <= 223 THEN POWER(10,-8+(0.041666666666667*(fee::float-32)))	
-				WHEN fee >= 224 AND fee <= 255 THEN POWER(10,fee-224) END
-			WHERE token_id = $3;`,
-			now,
-			tokens[i].USD,
-			tokens[i].TokenID,
-		)
-		if err != nil {
-			return err
-		}
-	}
-	return txn.Commit()
-}
-
 // Reorg updates the state of txs that were updated in a batch that has been discarted due to a blockchain reorg.
 // The state of the affected txs can change form Forged -> Pending or from Invalid -> Pending
 func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
@@ -285,9 +278,4 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 		return err
 	}
 	return txn.Commit()
-}
-
-// Close frees the resources used by the L2DB
-func (l2db *L2DB) Close() error {
-	return l2db.db.Close()
 }

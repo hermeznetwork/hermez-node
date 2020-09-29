@@ -6,15 +6,12 @@ Port     = 5432
 Host     = "localhost"
 User     = "hermez"
 Password = "yourpasswordhere"
+Name     = "hermez"
 
 [L2DB]
-Name         = "l2"
 SafetyPeriod = 10
 MaxTxs       = 512
 TTL          = "24h"
-
-[HistoryDB]
-Name = "history"
 
 [Web3]
 URL = "XXX"

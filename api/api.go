@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -11,8 +10,9 @@ import (
 )
 
 var h *historydb.HistoryDB
-var s *statedb.StateDB // Not 100% sure if this is needed
-var l2 *l2db.L2DB
+
+// var s *statedb.StateDB // Not 100% sure if this is needed
+// var l2 *l2db.L2DB
 
 // SetAPIEndpoints sets the endpoints and the appropriate handlers, but doesn't start the server
 func SetAPIEndpoints(
@@ -32,11 +32,9 @@ func SetAPIEndpoints(
 	}
 
 	h = hdb
-	s = sdb
-	l2 = l2db
+	// s = sdb
+	// l2 = l2db
 
-	// tmp
-	fmt.Println(h, s, l2)
 	// Add coordinator endpoints
 	if coordinatorEndpoints {
 		// Account

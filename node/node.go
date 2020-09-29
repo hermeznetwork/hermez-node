@@ -7,6 +7,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/config"
 	"github.com/hermeznetwork/hermez-node/coordinator"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
@@ -14,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/txselector"
+	"github.com/jmoiron/sqlx"
 )
 
 // Mode sets the working mode of the node (synchronizer or coordinator)
@@ -49,22 +51,26 @@ type Node struct {
 	stoppedSync chan bool
 
 	// General
-	cfg  *config.Node
-	mode Mode
+	cfg     *config.Node
+	mode    Mode
+	sqlConn *sqlx.DB
 }
 
 // NewNode creates a Node
 func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, error) {
-	historyDB, err := historydb.NewHistoryDB(
+	// Stablish DB connection
+	db, err := dbUtils.InitSQLDB(
 		cfg.PostgreSQL.Port,
 		cfg.PostgreSQL.Host,
 		cfg.PostgreSQL.User,
 		cfg.PostgreSQL.Password,
-		cfg.HistoryDB.Name,
+		cfg.PostgreSQL.Name,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	historyDB := historydb.NewHistoryDB(db)
 
 	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, true, 32)
 	if err != nil {
@@ -81,19 +87,12 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 
 	var coord *coordinator.Coordinator
 	if mode == ModeCoordinator {
-		l2DB, err := l2db.NewL2DB(
-			cfg.PostgreSQL.Port,
-			cfg.PostgreSQL.Host,
-			cfg.PostgreSQL.User,
-			cfg.PostgreSQL.Password,
-			coordCfg.L2DB.Name,
+		l2DB := l2db.NewL2DB(
+			db,
 			coordCfg.L2DB.SafetyPeriod,
 			coordCfg.L2DB.MaxTxs,
 			coordCfg.L2DB.TTL.Duration,
 		)
-		if err != nil {
-			return nil, err
-		}
 		// TODO: Get (maxL1UserTxs, maxL1OperatorTxs, maxTxs) from the smart contract
 		txSelector, err := txselector.NewTxSelector(coordCfg.TxSelector.Path, stateDB, l2DB, 10, 10, 10)
 		if err != nil {
@@ -129,6 +128,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		sync:     sync,
 		cfg:      cfg,
 		mode:     mode,
+		sqlConn:  db,
 	}, nil
 }
 

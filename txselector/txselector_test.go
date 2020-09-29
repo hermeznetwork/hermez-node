@@ -7,17 +7,21 @@ import (
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/test"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func initTest(t *testing.T, testSet string) *TxSelector {
 	pass := os.Getenv("POSTGRES_PASS")
-	l2DB, err := l2db.NewL2DB(5432, "localhost", "hermez", pass, "l2", 10, 512, 24*time.Hour)
+	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.Nil(t, err)
+	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
@@ -33,9 +37,18 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 }
 func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []*common.PoolL2Tx) {
 	for i := 0; i < len(poolL2Txs); i++ {
-		err := txsel.l2db.AddTx(poolL2Txs[i])
+		err := txsel.l2db.AddTxTest(poolL2Txs[i])
 		require.Nil(t, err)
 	}
+}
+
+func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
+	hdb := historydb.NewHistoryDB(db)
+	assert.NoError(t, hdb.Reorg(-1))
+	assert.NoError(t, hdb.AddBlock(&common.Block{
+		EthBlockNum: 1,
+	}))
+	assert.NoError(t, hdb.AddTokens(tokens))
 }
 
 func TestGetL2TxSelection(t *testing.T) {
@@ -43,8 +56,10 @@ func TestGetL2TxSelection(t *testing.T) {
 	test.CleanL2DB(txsel.l2db.DB())
 
 	// generate test transactions
-	l1Txs, _, poolL2Txs := test.GenerateTestTxsFromSet(t, test.SetTest0)
+	l1Txs, _, poolL2Txs, tokens := test.GenerateTestTxsFromSet(t, test.SetTest0)
 
+	// add tokens to HistoryDB to avoid breaking FK constrains
+	addTokens(t, tokens, txsel.l2db.DB())
 	// add the first batch of transactions to the TxSelector
 	addL2Txs(t, txsel, poolL2Txs[0])
 

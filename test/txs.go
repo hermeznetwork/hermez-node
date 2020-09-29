@@ -52,7 +52,7 @@ func GenerateKeys(t *testing.T, accNames []string) map[string]*Account {
 
 // GenerateTestTxs generates L1Tx & PoolL2Tx in a deterministic way for the
 // given Instructions.
-func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx) {
+func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx, []common.Token) {
 	accounts := GenerateKeys(t, instructions.Accounts)
 	l1CreatedAccounts := make(map[string]*Account)
 
@@ -148,13 +148,32 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 	l1Txs = append(l1Txs, batchL1Txs)
 	coordinatorL1Txs = append(coordinatorL1Txs, batchCoordinatorL1Txs)
 	poolL2Txs = append(poolL2Txs, batchPoolL2Txs)
-
-	return l1Txs, coordinatorL1Txs, poolL2Txs
+	tokens := []common.Token{}
+	for i := 0; i < len(poolL2Txs); i++ {
+		for j := 0; j < len(poolL2Txs[i]); j++ {
+			id := poolL2Txs[i][j].TokenID
+			found := false
+			for k := 0; k < len(tokens); k++ {
+				if tokens[k].TokenID == id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				tokens = append(tokens, common.Token{
+					TokenID:     id,
+					EthBlockNum: 1,
+					EthAddr:     ethCommon.BigToAddress(big.NewInt(int64(i*10000 + j))),
+				})
+			}
+		}
+	}
+	return l1Txs, coordinatorL1Txs, poolL2Txs, tokens
 }
 
 // GenerateTestTxsFromSet reurns the L1 & L2 transactions for a given Set of
 // Instructions code
-func GenerateTestTxsFromSet(t *testing.T, set string) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx) {
+func GenerateTestTxsFromSet(t *testing.T, set string) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx, []common.Token) {
 	parser := NewParser(strings.NewReader(set))
 	instructions, err := parser.Parse()
 	require.Nil(t, err)

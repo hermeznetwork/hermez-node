@@ -21,7 +21,7 @@ type PoolL2Tx struct {
 	TokenID     TokenID            `meddler:"token_id"`
 	Amount      *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
 	AmountFloat float64            `meddler:"amount_f"`      // TODO: change to float16
-	USD         float64            `meddler:"value_usd"`     // TODO: change to float16
+	USD         *float64           `meddler:"value_usd"`     // TODO: change to float16
 	Fee         FeeSelector        `meddler:"fee"`
 	Nonce       Nonce              `meddler:"nonce"` // effective 40 bits used
 	State       PoolL2TxState      `meddler:"state"`
@@ -37,11 +37,12 @@ type PoolL2Tx struct {
 	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16
 	RqFee             FeeSelector        `meddler:"rq_fee,zeroisnull"`
 	RqNonce           uint64             `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
-	AbsoluteFee       float64            `meddler:"fee_usd,zeroisnull"`
-	AbsoluteFeeUpdate time.Time          `meddler:"usd_update,utctimez"`
+	AbsoluteFee       *float64           `meddler:"fee_usd"`
+	AbsoluteFeeUpdate *time.Time         `meddler:"usd_update,utctime"`
 	Type              TxType             `meddler:"tx_type"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
+	TokenSymbol        string `meddler:"token_symbol"`
 }
 
 // TxCompressedData spec:
@@ -186,8 +187,8 @@ func (tx *PoolL2Tx) Tx() *Tx {
 		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
 		Amount:  tx.Amount,
-		Nonce:   tx.Nonce,
-		Fee:     tx.Fee,
+		Nonce:   &tx.Nonce,
+		Fee:     &tx.Fee,
 		Type:    tx.Type,
 	}
 }

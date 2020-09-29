@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"net/http"
 	"os"
@@ -19,13 +20,14 @@ import (
 	swagger "github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/jinzhu/copier"
+	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,16 +79,18 @@ func TestMain(m *testing.M) {
 	// Init swagger
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// Init DBs
+	// HistoryDB
 	pass := os.Getenv("POSTGRES_PASS")
-	hdb, err := historydb.NewHistoryDB(5432, "localhost", "hermez", pass, "history")
+	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
 		panic(err)
 	}
-	// Reset DB
+	hdb := historydb.NewHistoryDB(db)
 	err = hdb.Reorg(-1)
 	if err != nil {
 		panic(err)
 	}
+	// StateDB
 	dir, err := ioutil.TempDir("", "tmpdb")
 	if err != nil {
 		panic(err)
@@ -95,11 +99,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	l2db, err := l2db.NewL2DB(5432, "localhost", "hermez", pass, "l2", 10, 512, 24*time.Hour)
-	if err != nil {
-		panic(err)
-	}
-	test.CleanL2DB(l2db.DB())
+	// L2DB
+	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
+	test.CleanL2DB(l2DB.DB())
+
 	// Init API
 	api := gin.Default()
 	if err := SetAPIEndpoints(
@@ -108,7 +111,7 @@ func TestMain(m *testing.M) {
 		api,
 		hdb,
 		sdb,
-		l2db,
+		l2DB,
 	); err != nil {
 		panic(err)
 	}
@@ -120,6 +123,7 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}()
+
 	// Populate DBs
 	// Clean DB
 	err = h.Reorg(0)
@@ -203,40 +207,67 @@ func TestMain(m *testing.M) {
 				}
 			}
 			// find token
-			token := common.Token{}
-			for i := 0; i < len(tokens); i++ {
-				if tokens[i].TokenID == genericTx.TokenID {
-					token = tokens[i]
-					break
+			var token common.Token
+			if genericTx.IsL1 {
+				tokenID := genericTx.TokenID
+				found := false
+				for i := 0; i < len(tokens); i++ {
+					if tokens[i].TokenID == tokenID {
+						token = tokens[i]
+						found = true
+						break
+					}
+				}
+				if !found {
+					panic("Token not found")
+				}
+			} else {
+				token = test.GetToken(genericTx.FromIdx, accs, tokens)
+			}
+			var usd, loadUSD, feeUSD *float64
+			if token.USD != nil {
+				noDecimalsUSD := *token.USD / math.Pow(10, float64(token.Decimals))
+				usd = new(float64)
+				*usd = noDecimalsUSD * genericTx.AmountFloat
+				if genericTx.IsL1 {
+					loadUSD = new(float64)
+					*loadUSD = noDecimalsUSD * *genericTx.LoadAmountFloat
+				} else {
+					feeUSD = new(float64)
+					*feeUSD = *usd * genericTx.Fee.Percentage()
 				}
 			}
 			historyTxs = append(historyTxs, &historydb.HistoryTx{
-				IsL1:            genericTx.IsL1,
-				TxID:            genericTx.TxID,
-				Type:            genericTx.Type,
-				Position:        genericTx.Position,
-				FromIdx:         genericTx.FromIdx,
-				ToIdx:           genericTx.ToIdx,
-				Amount:          genericTx.Amount,
-				AmountFloat:     genericTx.AmountFloat,
-				TokenID:         genericTx.TokenID,
-				USD:             token.USD * genericTx.AmountFloat,
-				BatchNum:        genericTx.BatchNum,
-				EthBlockNum:     genericTx.EthBlockNum,
-				ToForgeL1TxsNum: genericTx.ToForgeL1TxsNum,
-				UserOrigin:      genericTx.UserOrigin,
-				FromEthAddr:     genericTx.FromEthAddr,
-				FromBJJ:         genericTx.FromBJJ,
-				LoadAmount:      genericTx.LoadAmount,
-				LoadAmountFloat: genericTx.LoadAmountFloat,
-				LoadAmountUSD:   token.USD * genericTx.LoadAmountFloat,
-				Fee:             genericTx.Fee,
-				FeeUSD:          genericTx.Fee.Percentage() * token.USD * genericTx.AmountFloat,
-				Nonce:           genericTx.Nonce,
-				Timestamp:       timestamp,
-				TokenSymbol:     token.Symbol,
-				CurrentUSD:      token.USD * genericTx.AmountFloat,
-				USDUpdate:       token.USDUpdate,
+				IsL1:                  genericTx.IsL1,
+				TxID:                  genericTx.TxID,
+				Type:                  genericTx.Type,
+				Position:              genericTx.Position,
+				FromIdx:               genericTx.FromIdx,
+				ToIdx:                 genericTx.ToIdx,
+				Amount:                genericTx.Amount,
+				AmountFloat:           genericTx.AmountFloat,
+				HistoricUSD:           usd,
+				BatchNum:              genericTx.BatchNum,
+				EthBlockNum:           genericTx.EthBlockNum,
+				ToForgeL1TxsNum:       genericTx.ToForgeL1TxsNum,
+				UserOrigin:            genericTx.UserOrigin,
+				FromEthAddr:           genericTx.FromEthAddr,
+				FromBJJ:               genericTx.FromBJJ,
+				LoadAmount:            genericTx.LoadAmount,
+				LoadAmountFloat:       genericTx.LoadAmountFloat,
+				HistoricLoadAmountUSD: loadUSD,
+				Fee:                   genericTx.Fee,
+				HistoricFeeUSD:        feeUSD,
+				Nonce:                 genericTx.Nonce,
+				Timestamp:             timestamp,
+				TokenID:               token.TokenID,
+				TokenEthBlockNum:      token.EthBlockNum,
+				TokenEthAddr:          token.EthAddr,
+				TokenName:             token.Name,
+				TokenSymbol:           token.Symbol,
+				TokenDecimals:         token.Decimals,
+				TokenUSD:              token.USD,
+				TokenUSDUpdate:        token.USDUpdate,
 			})
 		}
 		return historyTxAPIs(historyTxsToAPI(historyTxs))
@@ -265,10 +296,7 @@ func TestMain(m *testing.M) {
 	if err := server.Shutdown(context.Background()); err != nil {
 		panic(err)
 	}
-	if err := h.Close(); err != nil {
-		panic(err)
-	}
-	if err := l2.Close(); err != nil {
+	if err := db.Close(); err != nil {
 		panic(err)
 	}
 	os.Exit(result)
@@ -279,11 +307,11 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs := historyTxAPIs{}
 	appendIter := func(intr interface{}) {
 		for i := 0; i < len(intr.(*historyTxsAPI).Txs); i++ {
-			tmp := &historyTxAPI{}
-			if err := copier.Copy(tmp, &intr.(*historyTxsAPI).Txs[i]); err != nil {
+			tmp, err := copystructure.Copy(intr.(*historyTxsAPI).Txs[i])
+			if err != nil {
 				panic(err)
 			}
-			fetchedTxs = append(fetchedTxs, *tmp)
+			fetchedTxs = append(fetchedTxs, tmp.(historyTxAPI))
 		}
 	}
 	// Get all (no filters)
@@ -315,7 +343,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// Get by tokenID
 	fetchedTxs = historyTxAPIs{}
 	limit = 5
-	tokenID := tc.allTxs[0].TokenID
+	tokenID := tc.allTxs[0].Token.TokenID
 	path = fmt.Sprintf(
 		"%s?tokenId=%d&limit=%d&offset=",
 		endpoint, tokenID, limit,
@@ -324,7 +352,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	tokenIDTxs := historyTxAPIs{}
 	for i := 0; i < len(tc.allTxs); i++ {
-		if tc.allTxs[i].TokenID == tokenID {
+		if tc.allTxs[i].Token.TokenID == tokenID {
 			tokenIDTxs = append(tokenIDTxs, tc.allTxs[i])
 		}
 	}
@@ -407,7 +435,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	mixedTxs := historyTxAPIs{}
 	for i := 0; i < len(tc.allTxs); i++ {
 		if tc.allTxs[i].BatchNum != nil {
-			if *tc.allTxs[i].BatchNum == *batchNum && tc.allTxs[i].TokenID == tokenID {
+			if *tc.allTxs[i].BatchNum == *batchNum && tc.allTxs[i].Token.TokenID == tokenID {
 				mixedTxs = append(mixedTxs, tc.allTxs[i])
 			}
 		}
@@ -420,11 +448,11 @@ func TestGetHistoryTxs(t *testing.T) {
 	appendIterRev := func(intr interface{}) {
 		tmpAll := historyTxAPIs{}
 		for i := 0; i < len(intr.(*historyTxsAPI).Txs); i++ {
-			tmpItem := &historyTxAPI{}
-			if err := copier.Copy(tmpItem, &intr.(*historyTxsAPI).Txs[i]); err != nil {
+			tmp, err := copystructure.Copy(intr.(*historyTxsAPI).Txs[i])
+			if err != nil {
 				panic(err)
 			}
-			tmpAll = append(tmpAll, *tmpItem)
+			tmpAll = append(tmpAll, tmp.(historyTxAPI))
 		}
 		fetchedTxs = append(tmpAll, fetchedTxs...)
 	}
@@ -455,15 +483,17 @@ func assertHistoryTxAPIs(t *testing.T, expected, actual historyTxAPIs) {
 	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
 		assert.Equal(t, expected[i].Timestamp.Unix(), actual[i].Timestamp.Unix())
 		expected[i].Timestamp = actual[i].Timestamp
-		assert.Equal(t, expected[i].USDUpdate.Unix(), actual[i].USDUpdate.Unix())
-		expected[i].USDUpdate = actual[i].USDUpdate
+		if expected[i].Token.USDUpdate == nil {
+			assert.Equal(t, expected[i].Token.USDUpdate, actual[i].Token.USDUpdate)
+		} else {
+			assert.Equal(t, expected[i].Token.USDUpdate.Unix(), actual[i].Token.USDUpdate.Unix())
+			expected[i].Token.USDUpdate = actual[i].Token.USDUpdate
+		}
+		test.AssertUSD(t, expected[i].HistoricUSD, actual[i].HistoricUSD)
 		if expected[i].L2Info != nil {
-			if expected[i].L2Info.FeeUSD > actual[i].L2Info.FeeUSD {
-				assert.Less(t, 0.999, actual[i].L2Info.FeeUSD/expected[i].L2Info.FeeUSD)
-			} else if expected[i].L2Info.FeeUSD < actual[i].L2Info.FeeUSD {
-				assert.Less(t, 0.999, expected[i].L2Info.FeeUSD/actual[i].L2Info.FeeUSD)
-			}
-			expected[i].L2Info.FeeUSD = actual[i].L2Info.FeeUSD
+			test.AssertUSD(t, expected[i].L2Info.HistoricFeeUSD, actual[i].L2Info.HistoricFeeUSD)
+		} else {
+			test.AssertUSD(t, expected[i].L1Info.HistoricLoadAmountUSD, actual[i].L1Info.HistoricLoadAmountUSD)
 		}
 		assert.Equal(t, expected[i], actual[i])
 	}

@@ -25,7 +25,7 @@ func (t txs) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
 }
 func (t txs) Less(i, j int) bool {
-	return t[i].AbsoluteFee > t[j].AbsoluteFee
+	return *t[i].AbsoluteFee > *t[j].AbsoluteFee
 }
 
 // TxSelector implements all the functionalities to select the txs for the next batch

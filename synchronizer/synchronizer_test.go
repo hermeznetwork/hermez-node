@@ -1,12 +1,12 @@
 package synchronizer
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/ethclient"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
@@ -24,8 +24,9 @@ func Test(t *testing.T) {
 
 	// Init History DB
 	pass := os.Getenv("POSTGRES_PASS")
-	historyDB, err := historydb.NewHistoryDB(5432, "localhost", "hermez", pass, "history")
+	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.Nil(t, err)
+	historyDB := historydb.NewHistoryDB(db)
 	err = historyDB.Reorg(0)
 	assert.Nil(t, err)
 
@@ -65,9 +66,4 @@ func Test(t *testing.T) {
 		err = s.Sync()
 		require.Nil(t, err)
 	*/
-
-	// Close History DB
-	if err := historyDB.Close(); err != nil {
-		fmt.Println("Error closing the history DB:", err)
-	}
 }

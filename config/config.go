@@ -36,7 +36,6 @@ type Coordinator struct {
 	ForgerAddress     ethCommon.Address `validate:"required"`
 	ForgeLoopInterval Duration          `validate:"required"`
 	L2DB              struct {
-		Name         string          `validate:"required"`
 		SafetyPeriod common.BatchNum `validate:"required"`
 		MaxTxs       uint32          `validate:"required"`
 		TTL          Duration        `validate:"required"`
@@ -60,9 +59,7 @@ type Node struct {
 		Host     string `validate:"required"`
 		User     string `validate:"required"`
 		Password string `validate:"required"`
-	} `validate:"required"`
-	HistoryDB struct {
-		Name string `validate:"required"`
+		Name     string `validate:"required"`
 	} `validate:"required"`
 	Web3 struct {
 		URL string `validate:"required"`

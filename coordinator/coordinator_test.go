@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
@@ -26,8 +27,9 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 	assert.Nil(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
-	l2DB, err := l2db.NewL2DB(5432, "localhost", "hermez", pass, "l2", 10, 512, 24*time.Hour)
+	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.Nil(t, err)
+	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.Nil(t, err)

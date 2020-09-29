@@ -29,7 +29,7 @@ func TestGenerateTestL2Txs(t *testing.T) {
 	instructions, err := parser.Parse()
 	assert.Nil(t, err)
 
-	l1txs, coordinatorL1txs, l2txs := GenerateTestTxs(t, instructions)
+	l1txs, coordinatorL1txs, l2txs, _ := GenerateTestTxs(t, instructions)
 	assert.Equal(t, 2, len(l1txs))
 	assert.Equal(t, 3, len(l1txs[0]))
 	assert.Equal(t, 1, len(coordinatorL1txs[0]))
