@@ -5,9 +5,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
-	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -325,7 +323,7 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (*types.
 // RollupConstants returns the Constants of the Rollup Smart Contract
 func (c *RollupClient) RollupConstants() (*RollupConstants, error) {
 	rollupConstants := new(RollupConstants)
-	if err := c.client.Call(func(ec *ethclient.Client) error {
+	/* if err := c.client.Call(func(ec *ethclient.Client) error {
 		rollup, err := Hermez.NewHermez(c.address, ec)
 		if err != nil {
 			return err
@@ -399,7 +397,7 @@ func (c *RollupClient) RollupConstants() (*RollupConstants, error) {
 		return nil
 	}); err != nil {
 		return nil, err
-	}
+	} */
 	return rollupConstants, nil
 }
 

@@ -116,19 +116,19 @@ func TestWDelayerDeposit(t *testing.T) {
 	amount.SetString("1100000000000000000", 10)
 	wdelayerClientHermez, err := NewWDelayerClient(ethereumClientHermez, wdelayerAddressConst)
 	require.Nil(t, err)
-	_, err = wdelayerClientHermez.WDelayerDeposit(auxAddressConst, tokenHezAddressConst, amount)
+	_, err = wdelayerClientHermez.WDelayerDeposit(auxAddressConst, tokenERC20AddressConst, amount)
 	require.Nil(t, err)
 	currentBlockNum, _ := wdelayerClient.client.EthCurrentBlock()
 	wdelayerEvents, _, _ := wdelayerClient.WDelayerEventsByBlock(currentBlockNum)
 	assert.Equal(t, amount, wdelayerEvents.Deposit[0].Amount)
 	assert.Equal(t, auxAddressConst, wdelayerEvents.Deposit[0].Owner)
-	assert.Equal(t, tokenHezAddressConst, wdelayerEvents.Deposit[0].Token)
+	assert.Equal(t, tokenERC20AddressConst, wdelayerEvents.Deposit[0].Token)
 }
 
 func TestWDelayerDepositInfo(t *testing.T) {
 	amount := new(big.Int)
 	amount.SetString("1100000000000000000", 10)
-	state, err := wdelayerClient.WDelayerDepositInfo(auxAddressConst, tokenHezAddressConst)
+	state, err := wdelayerClient.WDelayerDepositInfo(auxAddressConst, tokenERC20AddressConst)
 	require.Nil(t, err)
 	assert.Equal(t, state.Amount, amount)
 }
@@ -136,16 +136,30 @@ func TestWDelayerDepositInfo(t *testing.T) {
 func TestWDelayerWithdrawal(t *testing.T) {
 	amount := new(big.Int)
 	amount.SetString("1100000000000000000", 10)
-	_, err := wdelayerClient.WDelayerWithdrawal(auxAddressConst, tokenHezAddressConst)
+	_, err := wdelayerClient.WDelayerWithdrawal(auxAddressConst, tokenERC20AddressConst)
 	require.Contains(t, err.Error(), "Withdrawal not allowed yet")
 	addBlocks(newWithdrawalDelay.Int64(), ethClientDialURL)
-	_, err = wdelayerClient.WDelayerWithdrawal(auxAddressConst, tokenHezAddressConst)
+	_, err = wdelayerClient.WDelayerWithdrawal(auxAddressConst, tokenERC20AddressConst)
 	require.Nil(t, err)
 	currentBlockNum, _ := wdelayerClient.client.EthCurrentBlock()
 	wdelayerEvents, _, _ := wdelayerClient.WDelayerEventsByBlock(currentBlockNum)
 	assert.Equal(t, amount, wdelayerEvents.Withdraw[0].Amount)
 	assert.Equal(t, auxAddressConst, wdelayerEvents.Withdraw[0].Owner)
-	assert.Equal(t, tokenHezAddressConst, wdelayerEvents.Withdraw[0].Token)
+	assert.Equal(t, tokenERC20AddressConst, wdelayerEvents.Withdraw[0].Token)
+}
+
+func TestWDelayerSecondDeposit(t *testing.T) {
+	amount := new(big.Int)
+	amount.SetString("1100000000000000000", 10)
+	wdelayerClientHermez, err := NewWDelayerClient(ethereumClientHermez, wdelayerAddressConst)
+	require.Nil(t, err)
+	_, err = wdelayerClientHermez.WDelayerDeposit(auxAddressConst, tokenERC20AddressConst, amount)
+	require.Nil(t, err)
+	currentBlockNum, _ := wdelayerClient.client.EthCurrentBlock()
+	wdelayerEvents, _, _ := wdelayerClient.WDelayerEventsByBlock(currentBlockNum)
+	assert.Equal(t, amount, wdelayerEvents.Deposit[0].Amount)
+	assert.Equal(t, auxAddressConst, wdelayerEvents.Deposit[0].Owner)
+	assert.Equal(t, tokenERC20AddressConst, wdelayerEvents.Deposit[0].Token)
 }
 
 func TestWDelayerEnableEmergencyMode(t *testing.T) {
@@ -173,17 +187,20 @@ func TestWDelayerGetEmergencyModeStartingTime(t *testing.T) {
 }
 
 func TestWDelayerEscapeHatchWithdrawal(t *testing.T) {
+	amount := new(big.Int)
+	amount.SetString("10000000000000000", 10)
 	wdelayerClientWhite, err := NewWDelayerClient(ethereumClientWhite, wdelayerAddressConst)
 	require.Nil(t, err)
-	_, err = wdelayerClientWhite.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHezAddressConst)
+	_, err = wdelayerClientWhite.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenERC20AddressConst, amount)
 	require.Contains(t, err.Error(), "NO MAX_EMERGENCY_MODE_TIME")
 	seconds := maxEmergencyModeTime.Seconds()
 	addTime(seconds, ethClientDialURL)
-	_, err = wdelayerClientWhite.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHezAddressConst)
+	_, err = wdelayerClientWhite.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenERC20AddressConst, amount)
 	require.Nil(t, err)
 	currentBlockNum, _ := wdelayerClient.client.EthCurrentBlock()
 	wdelayerEvents, _, _ := wdelayerClient.WDelayerEventsByBlock(currentBlockNum)
-	assert.Equal(t, tokenHezAddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].Token)
+	assert.Equal(t, tokenERC20AddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].Token)
 	assert.Equal(t, governanceAddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].To)
 	assert.Equal(t, whiteHackGroupAddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].Who)
+	assert.Equal(t, amount, wdelayerEvents.EscapeHatchWithdrawal[0].Amount)
 }

@@ -39,25 +39,25 @@ type AuctionConstants struct {
 // SlotState is the state of a slot
 type SlotState struct {
 	Forger       ethCommon.Address
+	Fulfilled    bool
 	BidAmount    *big.Int
 	ClosedMinBid *big.Int
-	Fulfilled    bool
 }
 
 // NewSlotState returns an empty SlotState
 func NewSlotState() *SlotState {
 	return &SlotState{
 		Forger:       ethCommon.Address{},
+		Fulfilled:    false,
 		BidAmount:    big.NewInt(0),
 		ClosedMinBid: big.NewInt(0),
-		Fulfilled:    false,
 	}
 }
 
 // Coordinator is the details of the Coordinator identified by the forger address
 type Coordinator struct {
-	WithdrawalAddress ethCommon.Address
-	URL               string
+	Registered bool
+	URL        string
 }
 
 // AuctionVariables are the variables of the Auction Smart Contract
@@ -134,16 +134,14 @@ type AuctionEventNewAllocationRatio struct {
 
 // AuctionEventNewCoordinator is an event of the Auction Smart Contract
 type AuctionEventNewCoordinator struct {
-	ForgerAddress     ethCommon.Address
-	WithdrawalAddress ethCommon.Address
-	CoordinatorURL    string
+	ForgerAddress  ethCommon.Address
+	CoordinatorURL string
 }
 
 // AuctionEventCoordinatorUpdated is an event of the Auction Smart Contract
 type AuctionEventCoordinatorUpdated struct {
-	ForgerAddress     ethCommon.Address
-	WithdrawalAddress ethCommon.Address
-	CoordinatorURL    string
+	ForgerAddress  ethCommon.Address
+	CoordinatorURL string
 }
 
 // AuctionEventNewForgeAllocated is an event of the Auction Smart Contract
@@ -235,9 +233,9 @@ type AuctionInterface interface {
 	AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid *big.Int) (*types.Transaction, error)
 
 	// Coordinator Management
-	AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL string) (*types.Transaction, error)
+	AuctionRegisterCoordinator(URL string) (*types.Transaction, error)
 	AuctionIsRegisteredCoordinator(forgerAddress ethCommon.Address) (bool, error)
-	AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address, newWithdrawAddress ethCommon.Address, newURL string) (*types.Transaction, error)
+	AuctionUpdateCoordinatorInfo(newURL string) (*types.Transaction, error)
 
 	// Slot Info
 	AuctionGetCurrentSlotNumber() (int64, error)
@@ -257,7 +255,7 @@ type AuctionInterface interface {
 	// AuctionForge(forger ethCommon.Address) (bool, error) // Only called from another smart contract
 
 	// Fees
-	AuctionClaimHEZ(claimAddress ethCommon.Address) (*types.Transaction, error)
+	AuctionClaimHEZ() (*types.Transaction, error)
 
 	//
 	// Smart Contract Status
@@ -577,7 +575,7 @@ func (c *AuctionClient) AuctionGetClaimableHEZ(claimAddress ethCommon.Address) (
 }
 
 // AuctionRegisterCoordinator is the interface to call the smart contract function
-func (c *AuctionClient) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL string) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionRegisterCoordinator(URL string) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
@@ -587,7 +585,7 @@ func (c *AuctionClient) AuctionRegisterCoordinator(forgerAddress ethCommon.Addre
 			if err != nil {
 				return nil, err
 			}
-			return auction.RegisterCoordinator(auth, forgerAddress, URL)
+			return auction.RegisterCoordinator(auth, URL)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed register coordinator: %w", err)
@@ -612,7 +610,7 @@ func (c *AuctionClient) AuctionIsRegisteredCoordinator(forgerAddress ethCommon.A
 }
 
 // AuctionUpdateCoordinatorInfo is the interface to call the smart contract function
-func (c *AuctionClient) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address, newWithdrawAddress ethCommon.Address, newURL string) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionUpdateCoordinatorInfo(newURL string) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
@@ -622,7 +620,7 @@ func (c *AuctionClient) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Add
 			if err != nil {
 				return nil, err
 			}
-			return auction.UpdateCoordinatorInfo(auth, forgerAddress, newWithdrawAddress, newURL)
+			return auction.UpdateCoordinatorInfo(auth, newURL)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed update coordinator info: %w", err)
@@ -823,7 +821,7 @@ func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNum int64
 // }
 
 // AuctionClaimHEZ is the interface to call the smart contract function
-func (c *AuctionClient) AuctionClaimHEZ(claimAddress ethCommon.Address) (*types.Transaction, error) {
+func (c *AuctionClient) AuctionClaimHEZ() (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
@@ -833,7 +831,7 @@ func (c *AuctionClient) AuctionClaimHEZ(claimAddress ethCommon.Address) (*types.
 			if err != nil {
 				return nil, err
 			}
-			return auction.ClaimHEZ(auth, claimAddress)
+			return auction.ClaimHEZ(auth)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed claim HEZ: %w", err)
@@ -950,8 +948,8 @@ var (
 	logNewBootCoordinator    = crypto.Keccak256Hash([]byte("NewBootCoordinator(address)"))
 	logNewOpenAuctionSlots   = crypto.Keccak256Hash([]byte("NewOpenAuctionSlots(uint16)"))
 	logNewAllocationRatio    = crypto.Keccak256Hash([]byte("NewAllocationRatio(uint16[3])"))
-	logNewCoordinator        = crypto.Keccak256Hash([]byte("NewCoordinator(address,address,string)"))
-	logCoordinatorUpdated    = crypto.Keccak256Hash([]byte("CoordinatorUpdated(address,address,string)"))
+	logNewCoordinator        = crypto.Keccak256Hash([]byte("NewCoordinator(address,string)"))
+	logCoordinatorUpdated    = crypto.Keccak256Hash([]byte("CoordinatorUpdated(address,string)"))
 	logNewForgeAllocated     = crypto.Keccak256Hash([]byte("NewForgeAllocated(address,uint128,uint128,uint128,uint128)"))
 	logNewDefaultSlotSetBid  = crypto.Keccak256Hash([]byte("NewDefaultSlotSetBid(uint128,uint128)"))
 	logNewForge              = crypto.Keccak256Hash([]byte("NewForge(address,uint128)"))
@@ -1020,15 +1018,11 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			auctionEvents.NewOutbidding = append(auctionEvents.NewOutbidding, newOutbidding)
 		case logNewDonationAddress:
 			var newDonationAddress AuctionEventNewDonationAddress
-			if err := c.contractAbi.Unpack(&newDonationAddress, "NewDonationAddress", vLog.Data); err != nil {
-				return nil, nil, err
-			}
+			newDonationAddress.NewDonationAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.NewDonationAddress = append(auctionEvents.NewDonationAddress, newDonationAddress)
 		case logNewBootCoordinator:
 			var newBootCoordinator AuctionEventNewBootCoordinator
-			if err := c.contractAbi.Unpack(&newBootCoordinator, "NewBootCoordinator", vLog.Data); err != nil {
-				return nil, nil, err
-			}
+			newBootCoordinator.NewBootCoordinator = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.NewBootCoordinator = append(auctionEvents.NewBootCoordinator, newBootCoordinator)
 		case logNewOpenAuctionSlots:
 			var newOpenAuctionSlots AuctionEventNewOpenAuctionSlots
@@ -1047,12 +1041,14 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			if err := c.contractAbi.Unpack(&newCoordinator, "NewCoordinator", vLog.Data); err != nil {
 				return nil, nil, err
 			}
+			newCoordinator.ForgerAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.NewCoordinator = append(auctionEvents.NewCoordinator, newCoordinator)
 		case logCoordinatorUpdated:
 			var coordinatorUpdated AuctionEventCoordinatorUpdated
 			if err := c.contractAbi.Unpack(&coordinatorUpdated, "CoordinatorUpdated", vLog.Data); err != nil {
 				return nil, nil, err
 			}
+			coordinatorUpdated.ForgerAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.CoordinatorUpdated = append(auctionEvents.CoordinatorUpdated, coordinatorUpdated)
 		case logNewForgeAllocated:
 			var newForgeAllocated AuctionEventNewForgeAllocated

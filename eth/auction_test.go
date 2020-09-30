@@ -18,8 +18,8 @@ var allocationRatioConst [3]uint16 = [3]uint16{4000, 4000, 2000}
 
 var auctionClient *AuctionClient
 
-//var genesisBlock = 91
-var genesisBlock = 98
+//var genesisBlock = 93
+var genesisBlock = 100
 
 var minBidStr = "10000000000000000000"
 var URL = "http://localhost:3000"
@@ -40,10 +40,10 @@ func TestAuctionConstants(t *testing.T) {
 	auctionConstants, err := auctionClient.AuctionConstants()
 	require.Nil(t, err)
 	assert.Equal(t, auctionConstants.BlocksPerSlot, BLOCKSPERSLOT)
-	// assert.Equal(t, auctionConstants.GenesisBlockNum, GENESISBLOCKNUM)
+	assert.Equal(t, auctionConstants.GenesisBlockNum, int64(genesisBlock))
 	assert.Equal(t, auctionConstants.HermezRollup, hermezRollupAddressTestConst)
 	assert.Equal(t, auctionConstants.InitialMinimalBidding, INITMINBID)
-	assert.Equal(t, auctionConstants.TokenHEZ, tokenHezAddressConst)
+	assert.Equal(t, auctionConstants.TokenHEZ, tokenERC777AddressConst)
 }
 
 func TestAuctionVariables(t *testing.T) {
@@ -262,12 +262,11 @@ func TestAuctionIsRegisteredCoordinator(t *testing.T) {
 func TestAuctionRegisterCoordinator(t *testing.T) {
 	forgerAddress := governanceAddressConst
 
-	_, err := auctionClient.AuctionRegisterCoordinator(forgerAddress, URL)
+	_, err := auctionClient.AuctionRegisterCoordinator(URL)
 	require.Nil(t, err)
 	currentBlockNum, _ := auctionClient.client.EthCurrentBlock()
 	auctionEvents, _, _ := auctionClient.AuctionEventsByBlock(currentBlockNum)
 	assert.Equal(t, forgerAddress, auctionEvents.NewCoordinator[0].ForgerAddress)
-	assert.Equal(t, forgerAddress, auctionEvents.NewCoordinator[0].WithdrawalAddress)
 	assert.Equal(t, URL, auctionEvents.NewCoordinator[0].CoordinatorURL)
 }
 
@@ -282,12 +281,11 @@ func TestAuctionIsRegisteredCoordinatorTrue(t *testing.T) {
 func TestAuctionUpdateCoordinatorInfo(t *testing.T) {
 	forgerAddress := governanceAddressConst
 
-	_, err := auctionClient.AuctionUpdateCoordinatorInfo(forgerAddress, forgerAddress, newURL)
+	_, err := auctionClient.AuctionUpdateCoordinatorInfo(newURL)
 	require.Nil(t, err)
 	currentBlockNum, _ := auctionClient.client.EthCurrentBlock()
 	auctionEvents, _, _ := auctionClient.AuctionEventsByBlock(currentBlockNum)
 	assert.Equal(t, forgerAddress, auctionEvents.CoordinatorUpdated[0].ForgerAddress)
-	assert.Equal(t, forgerAddress, auctionEvents.CoordinatorUpdated[0].WithdrawalAddress)
 	assert.Equal(t, newURL, auctionEvents.CoordinatorUpdated[0].CoordinatorURL)
 }
 
@@ -363,7 +361,7 @@ func TestAuctionClaimHEZ(t *testing.T) {
 	amount := new(big.Int)
 	amount.SetString("11000000000000000000", 10)
 
-	_, err := auctionClient.AuctionClaimHEZ(governanceAddressConst)
+	_, err := auctionClient.AuctionClaimHEZ()
 	require.Nil(t, err)
 	currentBlockNum, _ := auctionClient.client.EthCurrentBlock()
 	auctionEvents, _, _ := auctionClient.AuctionEventsByBlock(currentBlockNum)
@@ -372,7 +370,7 @@ func TestAuctionClaimHEZ(t *testing.T) {
 }
 
 func TestAuctionForge(t *testing.T) {
-	auctionClientHermez, err := NewAuctionClient(ethereumClientHermez, auctionAddressConst, tokenHezAddressConst)
+	auctionClientHermez, err := NewAuctionClient(ethereumClientHermez, auctionAddressConst, tokenERC777AddressConst)
 	require.Nil(t, err)
 	slotConst := 4
 	blockNum := int64(int(BLOCKSPERSLOT)*slotConst + genesisBlock)
