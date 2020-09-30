@@ -958,7 +958,9 @@ var (
 	logHEZClaimed            = crypto.Keccak256Hash([]byte("HEZClaimed(address,uint128)"))
 )
 
-// AuctionEventsByBlock returns the events in a block that happened in the Auction Smart Contract
+// AuctionEventsByBlock returns the events in a block that happened in the
+// Auction Smart Contract and the blockHash where the eents happened.  If there
+// are no events in that block, blockHash is nil.
 func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error) {
 	var auctionEvents AuctionEvents
 	var blockHash ethCommon.Hash
@@ -974,14 +976,14 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 
 	logs, err := c.client.client.FilterLogs(context.TODO(), query)
 	if err != nil {
-		fmt.Println(err)
+		return nil, nil, err
 	}
 	if len(logs) > 0 {
 		blockHash = logs[0].BlockHash
 	}
 	for _, vLog := range logs {
 		if vLog.BlockHash != blockHash {
-			return nil, nil, err
+			return nil, nil, ErrBlockHashMismatchEvent
 		}
 		switch vLog.Topics[0] {
 		case logNewBid:

@@ -126,9 +126,15 @@ func TestMain(m *testing.M) {
 		// Controllable Governance Address
 
 		ethereumClientGov := NewEthereumClient(ethClient, accountGov, ks, nil)
-		auctionClient, _ = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHezAddressConst)
+		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHezAddressConst)
+		if err != nil {
+			panic(err)
+		}
 		rollupClient = NewRollupClient(ethereumClientGov, hermezRollupAddressConst)
-		wdelayerClient, _ = NewWDelayerClient(ethereumClientGov, wdelayerAddressConst)
+		wdelayerClient, err = NewWDelayerClient(ethereumClientGov, wdelayerAddressConst)
+		if err != nil {
+			panic(err)
+		}
 
 		ethereumClientKep = NewEthereumClient(ethClient, accountKep, ks, nil)
 		ethereumClientWhite = NewEthereumClient(ethClient, accountWhite, ks, nil)

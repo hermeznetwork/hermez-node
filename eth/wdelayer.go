@@ -430,7 +430,9 @@ var (
 	logNewHermezGovernanceDAOAddress = crypto.Keccak256Hash([]byte("NewHermezGovernanceDAOAddress(address)"))
 )
 
-// WDelayerEventsByBlock returns the events in a block that happened in the WDelayer Smart Contract
+// WDelayerEventsByBlock returns the events in a block that happened in the
+// WDelayer Smart Contract and the blockHash where the eents happened.  If
+// there are no events in that block, blockHash is nil.
 func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error) {
 	var wdelayerEvents WDelayerEvents
 	var blockHash ethCommon.Hash
@@ -447,14 +449,14 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 
 	logs, err := c.client.client.FilterLogs(context.Background(), query)
 	if err != nil {
-		fmt.Println(err)
+		return nil, nil, err
 	}
 	if len(logs) > 0 {
 		blockHash = logs[0].BlockHash
 	}
 	for _, vLog := range logs {
 		if vLog.BlockHash != blockHash {
-			return nil, nil, err
+			return nil, nil, ErrBlockHashMismatchEvent
 		}
 		switch vLog.Topics[0] {
 		case logDeposit:
