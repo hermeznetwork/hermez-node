@@ -10,6 +10,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewPoolL2Tx(t *testing.T) {
+	poolL2Tx := &PoolL2Tx{
+		FromIdx: 87654,
+		ToIdx:   300,
+		Amount:  big.NewInt(4),
+		TokenID: 5,
+		Nonce:   144,
+	}
+	poolL2Tx, err := NewPoolL2Tx(poolL2Tx)
+	assert.Nil(t, err)
+	assert.Equal(t, "0x020000000156660000000090", poolL2Tx.TxID.String())
+}
+
 func TestTxCompressedData(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))

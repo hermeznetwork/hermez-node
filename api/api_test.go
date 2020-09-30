@@ -29,6 +29,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const apiPort = ":4010"
@@ -165,7 +166,7 @@ func TestMain(m *testing.M) {
 	// Gen L1Txs and add them to DB
 	const totalL1Txs = 40
 	const userL1Txs = 4
-	usrL1Txs, othrL1Txs := test.GenL1Txs(0, totalL1Txs, userL1Txs, &usrAddr, accs, tokens, blocks, batches)
+	usrL1Txs, othrL1Txs := test.GenL1Txs(256, totalL1Txs, userL1Txs, &usrAddr, accs, tokens, blocks, batches)
 	var l1Txs []common.L1Tx
 	l1Txs = append(l1Txs, usrL1Txs...)
 	l1Txs = append(l1Txs, othrL1Txs...)
@@ -176,7 +177,7 @@ func TestMain(m *testing.M) {
 	// Gen L2Txs and add them to DB
 	const totalL2Txs = 20
 	const userL2Txs = 4
-	usrL2Txs, othrL2Txs := test.GenL2Txs(totalL1Txs, totalL2Txs, userL2Txs, &usrAddr, accs, tokens, blocks, batches)
+	usrL2Txs, othrL2Txs := test.GenL2Txs(256+totalL1Txs, totalL2Txs, userL2Txs, &usrAddr, accs, tokens, blocks, batches)
 	var l2Txs []common.L2Tx
 	l2Txs = append(l2Txs, usrL2Txs...)
 	l2Txs = append(l2Txs, othrL2Txs...)
@@ -369,7 +370,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	idxTxs := historyTxAPIs{}
 	for i := 0; i < len(tc.allTxs); i++ {
-		if tc.allTxs[i].FromIdx == idx {
+		if tc.allTxs[i].FromIdx[6:] == idx[6:] {
 			idxTxs = append(idxTxs, tc.allTxs[i])
 		}
 	}
@@ -479,7 +480,7 @@ func TestGetHistoryTxs(t *testing.T) {
 }
 
 func assertHistoryTxAPIs(t *testing.T, expected, actual historyTxAPIs) {
-	assert.Equal(t, len(expected), len(actual))
+	require.Equal(t, len(expected), len(actual))
 	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
 		assert.Equal(t, expected[i].Timestamp.Unix(), actual[i].Timestamp.Unix())
 		expected[i].Timestamp = actual[i].Timestamp

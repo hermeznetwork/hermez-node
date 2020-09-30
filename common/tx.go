@@ -1,14 +1,55 @@
 package common
 
 import (
+	"database/sql/driver"
+	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+const (
+	// TXIDPrefixL1CoordTx is the prefix that determines that the TxID is
+	// for a L1CoordinatorTx
+	//nolinter:gomnd
+	TxIDPrefixL1CoordTx = byte(1)
+
+	// TxIDPrefixL2Tx is the prefix that determines that the TxID is for a
+	// L2Tx (or PoolL2Tx)
+	//nolinter:gomnd
+	TxIDPrefixL2Tx = byte(2)
+
+	// TxIDLen is the length of the TxID byte array
+	TxIDLen = 12
+)
+
 // TxID is the identifier of a Hermez network transaction
-type TxID Hash // Hash is a guess
+type TxID [TxIDLen]byte
+
+// Scan implements Scanner for database/sql.
+func (txid *TxID) Scan(src interface{}) error {
+	srcB, ok := src.([]byte)
+	if !ok {
+		return fmt.Errorf("can't scan %T into TxID", src)
+	}
+	if len(srcB) != TxIDLen {
+		return fmt.Errorf("can't scan []byte of len %d into TxID, need %d", len(srcB), TxIDLen)
+	}
+	copy(txid[:], srcB)
+	return nil
+}
+
+// Value implements valuer for database/sql.
+func (txid TxID) Value() (driver.Value, error) {
+	return txid[:], nil
+}
+
+// String returns a string hexadecimal representation of the TxID
+func (txid TxID) String() string {
+	return "0x" + hex.EncodeToString(txid[:])
+}
 
 // TxType is a string that represents the type of a Hermez network transaction
 type TxType string

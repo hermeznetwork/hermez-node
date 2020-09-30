@@ -62,8 +62,8 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 	var l1Txs [][]*common.L1Tx
 	var coordinatorL1Txs [][]*common.L1Tx
 	var poolL2Txs [][]*common.PoolL2Tx
-	idx := 1
-	for i, inst := range instructions.Instructions {
+	idx := 256
+	for _, inst := range instructions.Instructions {
 		switch inst.Type {
 		case common.TxTypeCreateAccountDeposit:
 			tx := common.L1Tx{
@@ -98,7 +98,6 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 			}
 
 			tx := common.PoolL2Tx{
-				TxID:        common.TxID([]byte{byte(i)}), // TODO this is for the moment, once TxID Hash is implemented use it
 				FromIdx:     accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
 				ToIdx:       accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx,
 				ToEthAddr:   accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
@@ -114,6 +113,11 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 				RqToBJJ:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
 				Type:        common.TxTypeTransfer,
 			}
+			nTx, err := common.NewPoolL2Tx(&tx)
+			if err != nil {
+				panic(err)
+			}
+			tx = *nTx
 			// perform signature and set it to tx.Signature
 			toSign, err := tx.HashToSign()
 			if err != nil {
