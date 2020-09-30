@@ -11,6 +11,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewL1Tx(t *testing.T) {
+	l1Tx := &L1Tx{
+		ToForgeL1TxsNum: int64(123456),
+		Position:        71,
+		ToIdx:           301,
+		TokenID:         5,
+		Amount:          big.NewInt(1),
+		LoadAmount:      big.NewInt(2),
+		FromIdx:         300,
+	}
+	l1Tx, err := NewL1Tx(l1Tx)
+	assert.Nil(t, err)
+	assert.Equal(t, "0x01000000000001e240004700", l1Tx.TxID.String())
+}
+
 func TestL1TxByteParsers(t *testing.T) {
 	var pkComp babyjub.PublicKeyComp
 	err := pkComp.UnmarshalText([]byte("0x56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c"))

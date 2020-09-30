@@ -185,7 +185,7 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 			return err
 		}
 		s.db = sto
-		s.idx = 0
+		s.idx = 255
 		s.currentBatch = batchNum
 		return nil
 	}

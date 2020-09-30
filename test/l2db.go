@@ -27,7 +27,7 @@ func CleanL2DB(db *sqlx.DB) {
 func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 	txs := make([]*common.PoolL2Tx, 0, n)
 	privK := babyjub.NewRandPrivKey()
-	for i := 0; i < n; i++ {
+	for i := 256; i < 256+n; i++ {
 		var state common.PoolL2TxState
 		//nolint:gomnd
 		if i%4 == 0 {
@@ -54,7 +54,6 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 			*absFee = fee.Percentage() * *usd
 		}
 		tx := &common.PoolL2Tx{
-			TxID:              common.TxID(common.Hash([]byte(strconv.Itoa(i)))),
 			FromIdx:           common.Idx(i),
 			ToIdx:             common.Idx(i + 1),
 			ToEthAddr:         ethCommon.BigToAddress(big.NewInt(int64(i))),
@@ -71,6 +70,11 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 			TokenSymbol:       token.Symbol,
 			AbsoluteFee:       absFee,
 			AbsoluteFeeUpdate: token.USDUpdate,
+		}
+		var err error
+		tx, err = common.NewPoolL2Tx(tx)
+		if err != nil {
+			panic(err)
 		}
 		if i%2 == 0 { // Optional parameters: rq
 			tx.RqFromIdx = common.Idx(i)

@@ -1421,7 +1421,7 @@ components:
     TransactionId:
       type: string
       description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
-      example: "0x0040e2010000000000470000" 
+      example: "0x00000000000001e240004700" 
     EthereumAddress:
       type: string
       description: "Address of an Etherum account."

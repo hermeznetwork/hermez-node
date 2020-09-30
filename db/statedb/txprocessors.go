@@ -319,16 +319,19 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 				// case ToEthAddr!=0 && ToBJJ=0
 				idx, err = s.GetIdxByEthAddr(tx.ToEthAddr)
 				if err != nil {
+					log.Error(err)
 					return nil, nil, false, ErrToIdxNotFound
 				}
 			} else if !bytes.Equal(tx.ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) && tx.ToBJJ != nil {
 				// case ToEthAddr!=0 && ToBJJ!=0
 				idx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
 				if err != nil {
+					log.Error(err)
 					return nil, nil, false, ErrToIdxNotFound
 				}
 			} else {
 				// rest of cases (included case ToEthAddr==0) are not possible
+				log.Error(err)
 				return nil, nil, false, ErrToIdxNotFound
 			}
 			s.zki.AuxToIdx[s.i] = idx.BigInt()

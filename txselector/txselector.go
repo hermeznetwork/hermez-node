@@ -112,6 +112,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 
 	var validTxs txs
 	var l1CoordinatorTxs []*common.L1Tx
+	positionL1 := len(l1Txs)
 
 	// if tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB, if so,
 	// tx is used.  if tx.ToIdx==0, check if tx.ToEthAddr/tx.ToBJJ exist in
@@ -190,6 +191,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 				}
 				// create L1CoordinatorTx for the accountCreation
 				l1CoordinatorTx := &common.L1Tx{
+					Position:    positionL1,
 					UserOrigin:  false,
 					FromEthAddr: accAuth.EthAddr,
 					FromBJJ:     accAuth.BJJ,
@@ -197,6 +199,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 					LoadAmount:  big.NewInt(0),
 					Type:        common.TxTypeCreateAccountDeposit,
 				}
+				positionL1++
 				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 			} else if bytes.Equal(l2TxsRaw[i].ToEthAddr.Bytes(), common.FFAddr.Bytes()) && l2TxsRaw[i].ToBJJ != nil {
 				// if idx exist for EthAddr&BJJ use it
@@ -213,6 +216,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 				// L1Authorization, as ToEthAddr==0xff
 				// create L1CoordinatorTx for the accountCreation
 				l1CoordinatorTx := &common.L1Tx{
+					Position:    positionL1,
 					UserOrigin:  false,
 					FromEthAddr: l2TxsRaw[i].ToEthAddr,
 					FromBJJ:     l2TxsRaw[i].ToBJJ,
@@ -220,6 +224,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 					LoadAmount:  big.NewInt(0),
 					Type:        common.TxTypeCreateAccountDeposit,
 				}
+				positionL1++
 				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 			}
 		} else if l2TxsRaw[i].ToIdx == common.Idx(1) {
