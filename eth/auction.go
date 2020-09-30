@@ -281,10 +281,10 @@ type AuctionClient struct {
 }
 
 // NewAuctionClient creates a new AuctionClient.  `tokenAddress` is the address of the HEZ tokens.
-func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Address) *AuctionClient {
+func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Address) (*AuctionClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(HermezAuctionProtocol.HermezAuctionProtocolABI)))
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 	return &AuctionClient{
 		client:       client,
@@ -292,7 +292,7 @@ func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Ad
 		tokenAddress: tokenAddress,
 		gasLimit:     1000000, //nolint:gomnd
 		contractAbi:  contractAbi,
-	}
+	}, nil
 }
 
 // AuctionSetSlotDeadline is the interface to call the smart contract function
@@ -841,6 +841,25 @@ func (c *AuctionClient) AuctionClaimHEZ(claimAddress ethCommon.Address) (*types.
 	return tx, nil
 }
 
+// AuctionForge is the interface to call the smart contract function
+func (c *AuctionClient) AuctionForge(forger ethCommon.Address) (*types.Transaction, error) {
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
+			if err != nil {
+				return nil, err
+			}
+			return auction.Forge(auth, forger)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed forge: %w", err)
+	}
+	return tx, nil
+}
+
 // AuctionConstants returns the Constants of the Auction Smart Contract
 func (c *AuctionClient) AuctionConstants() (*AuctionConstants, error) {
 	auctionConstants := new(AuctionConstants)
@@ -939,9 +958,12 @@ var (
 	logHEZClaimed            = crypto.Keccak256Hash([]byte("HEZClaimed(address,uint128)"))
 )
 
-// AuctionEventsByBlock returns the events in a block that happened in the Auction Smart Contract
+// AuctionEventsByBlock returns the events in a block that happened in the
+// Auction Smart Contract and the blockHash where the eents happened.  If there
+// are no events in that block, blockHash is nil.
 func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error) {
 	var auctionEvents AuctionEvents
+	var blockHash ethCommon.Hash
 
 	query := ethereum.FilterQuery{
 		FromBlock: big.NewInt(blockNum),
@@ -949,15 +971,20 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		Addresses: []ethCommon.Address{
 			c.address,
 		},
-		BlockHash: nil, // TODO: Maybe we can put the blockHash here to make sure we get the results from the known block.
-		Topics:    [][]ethCommon.Hash{},
+		Topics: [][]ethCommon.Hash{},
 	}
 
 	logs, err := c.client.client.FilterLogs(context.TODO(), query)
 	if err != nil {
-		fmt.Println(err)
+		return nil, nil, err
+	}
+	if len(logs) > 0 {
+		blockHash = logs[0].BlockHash
 	}
 	for _, vLog := range logs {
+		if vLog.BlockHash != blockHash {
+			return nil, nil, ErrBlockHashMismatchEvent
+		}
 		switch vLog.Topics[0] {
 		case logNewBid:
 			var auxNewBid struct {
@@ -1061,5 +1088,5 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			auctionEvents.HEZClaimed = append(auctionEvents.HEZClaimed, HEZClaimed)
 		}
 	}
-	return &auctionEvents, nil, nil
+	return &auctionEvents, &blockHash, nil
 }

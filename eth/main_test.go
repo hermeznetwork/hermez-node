@@ -19,13 +19,15 @@ var tokenHezStr = os.Getenv("TOKEN_ADDRESS")
 var hermezStr = os.Getenv("HERMEZ_ADDRESS")
 var governanceAddressStr = os.Getenv("GOV_ADDRESS")
 var governancePrivateKey = os.Getenv("GOV_PK")
-var ehtClientDialURL = os.Getenv("ETHCLIENT_DIAL_URL")*/
-var ehtClientDialURL = "http://localhost:8545"
+var ethClientDialURL = os.Getenv("ETHCLIENT_DIAL_URL")*/
+var ethClientDialURL = "http://localhost:8545"
 var password = "pass"
 
 // Smart Contract Addresses
 var (
-	auctionAddressStr           = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5"
+	// auctionAddressStr           = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5"
+	// wdelayerAddressStr          = "0x1A1FEe7EeD918BD762173e4dc5EfDB8a78C924A8"
+	auctionAddressStr           = "0x8B5B7a6055E54a36fF574bbE40cf2eA68d5554b3"
 	auctionAddressConst         = ethCommon.HexToAddress(auctionAddressStr)
 	donationAddressStr          = "0x6c365935CA8710200C7595F0a72EB6023A7706Cd"
 	donationAddressConst        = ethCommon.HexToAddress(donationAddressStr)
@@ -35,7 +37,7 @@ var (
 	tokenHezAddressConst        = ethCommon.HexToAddress(tokenHezAddressStr)
 	hermezRollupAddressStr      = "0xc4905364b78a742ccce7B890A89514061E47068D"
 	hermezRollupAddressConst    = ethCommon.HexToAddress(hermezRollupAddressStr)
-	wdelayerAddressStr          = "0x1A1FEe7EeD918BD762173e4dc5EfDB8a78C924A8"
+	wdelayerAddressStr          = "0x20Ce94F404343aD2752A2D01b43fa407db9E0D00"
 	wdelayerAddressConst        = ethCommon.HexToAddress(wdelayerAddressStr)
 )
 
@@ -60,6 +62,10 @@ var (
 	auxAddressSK    = "28d1bfbbafe9d1d4f5a11c3c16ab6bf9084de48d99fbac4058bdfa3c80b29089"
 	auxAddressStr   = "0x3d91185a02774C70287F6c74Dd26d13DFB58ff16"
 	auxAddressConst = ethCommon.HexToAddress(auxAddressStr)
+
+	hermezRollupTestSK           = "28d1bfbbafe9d1d4f5a11c3c16ab6bf9084de48d99fbac4058bdfa3c80b29088"
+	hermezRollupTestAddressStr   = "0xEa960515F8b4C237730F028cBAcF0a28E7F45dE0"
+	hermezRollupAddressTestConst = ethCommon.HexToAddress(hermezRollupTestAddressStr)
 )
 
 var (
@@ -68,12 +74,14 @@ var (
 	accountWhite         *accounts.Account
 	accountGovDAO        *accounts.Account
 	accountAux           *accounts.Account
+	accountHermez        *accounts.Account
 	ks                   *keystore.KeyStore
 	ethClient            *ethclient.Client
 	ethereumClientWhite  *EthereumClient
 	ethereumClientKep    *EthereumClient
 	ethereumClientGovDAO *EthereumClient
 	ethereumClientAux    *EthereumClient
+	ethereumClientHermez *EthereumClient
 )
 
 func addKey(ks *keystore.KeyStore, skHex string) *accounts.Account {
@@ -108,8 +116,9 @@ func TestMain(m *testing.M) {
 		accountWhite = addKey(ks, whiteHackGroupAddressSK)
 		accountGovDAO = addKey(ks, hermezGovernanceDAOAddressSK)
 		accountAux = addKey(ks, auxAddressSK)
+		accountHermez = addKey(ks, hermezRollupTestSK)
 
-		ethClient, err = ethclient.Dial(ehtClientDialURL)
+		ethClient, err = ethclient.Dial(ethClientDialURL)
 		if err != nil {
 			panic(err)
 		}
@@ -117,14 +126,21 @@ func TestMain(m *testing.M) {
 		// Controllable Governance Address
 
 		ethereumClientGov := NewEthereumClient(ethClient, accountGov, ks, nil)
-		auctionClient = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHezAddressConst)
+		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHezAddressConst)
+		if err != nil {
+			panic(err)
+		}
 		rollupClient = NewRollupClient(ethereumClientGov, hermezRollupAddressConst)
-		wdelayerClient = NewWDelayerClient(ethereumClientGov, wdelayerAddressConst)
+		wdelayerClient, err = NewWDelayerClient(ethereumClientGov, wdelayerAddressConst)
+		if err != nil {
+			panic(err)
+		}
 
 		ethereumClientKep = NewEthereumClient(ethClient, accountKep, ks, nil)
 		ethereumClientWhite = NewEthereumClient(ethClient, accountWhite, ks, nil)
 		ethereumClientGovDAO = NewEthereumClient(ethClient, accountGovDAO, ks, nil)
 		ethereumClientAux = NewEthereumClient(ethClient, accountAux, ks, nil)
+		ethereumClientHermez = NewEthereumClient(ethClient, accountHermez, ks, nil)
 
 		exitVal = m.Run()
 	}

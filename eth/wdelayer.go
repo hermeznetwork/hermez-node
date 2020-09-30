@@ -1,12 +1,17 @@
 package eth
 
 import (
+	"context"
 	"fmt"
 	"math/big"
+	"strings"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	WithdrawalDelayer "github.com/hermeznetwork/hermez-node/eth/contracts/withdrawdelayer"
 )
@@ -128,18 +133,24 @@ type WDelayerInterface interface {
 
 // WDelayerClient is the implementation of the interface to the WithdrawDelayer Smart Contract in ethereum.
 type WDelayerClient struct {
-	client   *EthereumClient
-	address  ethCommon.Address
-	gasLimit uint64
+	client      *EthereumClient
+	address     ethCommon.Address
+	gasLimit    uint64
+	contractAbi abi.ABI
 }
 
 // NewWDelayerClient creates a new WDelayerClient
-func NewWDelayerClient(client *EthereumClient, address ethCommon.Address) *WDelayerClient {
-	return &WDelayerClient{
-		client:   client,
-		address:  address,
-		gasLimit: 1000000, //nolint:gomnd
+func NewWDelayerClient(client *EthereumClient, address ethCommon.Address) (*WDelayerClient, error) {
+	contractAbi, err := abi.JSON(strings.NewReader(string(WithdrawalDelayer.WithdrawalDelayerABI)))
+	if err != nil {
+		return nil, err
 	}
+	return &WDelayerClient{
+		client:      client,
+		address:     address,
+		gasLimit:    1000000, //nolint:gomnd
+		contractAbi: contractAbi,
+	}, nil
 }
 
 // WDelayerGetHermezGovernanceDAOAddress is the interface to call the smart contract function
@@ -406,4 +417,111 @@ func (c *WDelayerClient) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Addre
 		return nil, fmt.Errorf("Failed escapeHatchWithdrawal: %w", err)
 	}
 	return tx, nil
+}
+
+var (
+	logDeposit                       = crypto.Keccak256Hash([]byte("Deposit(address,address,uint192,uint64)"))
+	logWithdraw                      = crypto.Keccak256Hash([]byte("Withdraw(address,address,uint192)"))
+	logEmergencyModeEnabled          = crypto.Keccak256Hash([]byte("EmergencyModeEnabled()"))
+	logNewWithdrawalDelay            = crypto.Keccak256Hash([]byte("NewWithdrawalDelay(uint64)"))
+	logEscapeHatchWithdrawal         = crypto.Keccak256Hash([]byte("EscapeHatchWithdrawal(address,address,address)"))
+	logNewHermezKeeperAddress        = crypto.Keccak256Hash([]byte("NewHermezKeeperAddress(address)"))
+	logNewWhiteHackGroupAddress      = crypto.Keccak256Hash([]byte("NewWhiteHackGroupAddress(address)"))
+	logNewHermezGovernanceDAOAddress = crypto.Keccak256Hash([]byte("NewHermezGovernanceDAOAddress(address)"))
+)
+
+// WDelayerEventsByBlock returns the events in a block that happened in the
+// WDelayer Smart Contract and the blockHash where the eents happened.  If
+// there are no events in that block, blockHash is nil.
+func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error) {
+	var wdelayerEvents WDelayerEvents
+	var blockHash ethCommon.Hash
+
+	query := ethereum.FilterQuery{
+		FromBlock: big.NewInt(blockNum),
+		ToBlock:   big.NewInt(blockNum),
+		Addresses: []ethCommon.Address{
+			c.address,
+		},
+		BlockHash: nil,
+		Topics:    [][]ethCommon.Hash{},
+	}
+
+	logs, err := c.client.client.FilterLogs(context.Background(), query)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(logs) > 0 {
+		blockHash = logs[0].BlockHash
+	}
+	for _, vLog := range logs {
+		if vLog.BlockHash != blockHash {
+			return nil, nil, ErrBlockHashMismatchEvent
+		}
+		switch vLog.Topics[0] {
+		case logDeposit:
+			var deposit WDelayerEventDeposit
+			err := c.contractAbi.Unpack(&deposit, "Deposit", vLog.Data)
+			if err != nil {
+				return nil, nil, err
+			}
+			deposit.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+			deposit.Token = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+			wdelayerEvents.Deposit = append(wdelayerEvents.Deposit, deposit)
+
+		case logWithdraw:
+			var withdraw WDelayerEventWithdraw
+			err := c.contractAbi.Unpack(&withdraw, "Withdraw", vLog.Data)
+			if err != nil {
+				return nil, nil, err
+			}
+			withdraw.Token = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+			withdraw.Owner = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+			wdelayerEvents.Withdraw = append(wdelayerEvents.Withdraw, withdraw)
+
+		case logEmergencyModeEnabled:
+			var emergencyModeEnabled WDelayerEventEmergencyModeEnabled
+			wdelayerEvents.EmergencyModeEnabled = append(wdelayerEvents.EmergencyModeEnabled, emergencyModeEnabled)
+
+		case logNewWithdrawalDelay:
+			var withdrawalDelay WDelayerEventNewWithdrawalDelay
+			err := c.contractAbi.Unpack(&withdrawalDelay, "NewWithdrawalDelay", vLog.Data)
+			if err != nil {
+				return nil, nil, err
+			}
+			wdelayerEvents.NewWithdrawalDelay = append(wdelayerEvents.NewWithdrawalDelay, withdrawalDelay)
+
+		case logEscapeHatchWithdrawal:
+			var escapeHatchWithdrawal WDelayerEventEscapeHatchWithdrawal
+			escapeHatchWithdrawal.Who = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+			escapeHatchWithdrawal.To = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+			escapeHatchWithdrawal.Token = ethCommon.BytesToAddress(vLog.Topics[3].Bytes())
+			wdelayerEvents.EscapeHatchWithdrawal = append(wdelayerEvents.EscapeHatchWithdrawal, escapeHatchWithdrawal)
+
+		case logNewHermezKeeperAddress:
+			var keeperAddress WDelayerEventNewHermezKeeperAddress
+			err := c.contractAbi.Unpack(&keeperAddress, "NewHermezKeeperAddress", vLog.Data)
+			if err != nil {
+				return nil, nil, err
+			}
+			wdelayerEvents.NewHermezKeeperAddress = append(wdelayerEvents.NewHermezKeeperAddress, keeperAddress)
+
+		case logNewWhiteHackGroupAddress:
+			var whiteHackGroupAddress WDelayerEventNewWhiteHackGroupAddress
+			err := c.contractAbi.Unpack(&whiteHackGroupAddress, "NewWhiteHackGroupAddress", vLog.Data)
+			if err != nil {
+				return nil, nil, err
+			}
+			wdelayerEvents.NewWhiteHackGroupAddress = append(wdelayerEvents.NewWhiteHackGroupAddress, whiteHackGroupAddress)
+
+		case logNewHermezGovernanceDAOAddress:
+			var governanceDAOAddress WDelayerEventNewHermezGovernanceDAOAddress
+			err := c.contractAbi.Unpack(&governanceDAOAddress, "NewHermezGovernanceDAOAddress", vLog.Data)
+			if err != nil {
+				return nil, nil, err
+			}
+			wdelayerEvents.NewHermezGovernanceDAOAddress = append(wdelayerEvents.NewHermezGovernanceDAOAddress, governanceDAOAddress)
+		}
+	}
+	return &wdelayerEvents, &blockHash, nil
 }

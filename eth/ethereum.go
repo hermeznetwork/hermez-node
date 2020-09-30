@@ -30,6 +30,9 @@ var (
 	ErrReceiptStatusFailed = fmt.Errorf("receipt status is failed")
 	// ErrReceiptNotReceived is used when unable to retrieve a transaction
 	ErrReceiptNotReceived = fmt.Errorf("receipt not available")
+	// ErrBlockHashMismatchEvent is used when there's a block hash mismatch
+	// beetween different events of the same block
+	ErrBlockHashMismatchEvent = fmt.Errorf("block hash mismatch in event log")
 )
 
 const (
