@@ -8,7 +8,6 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -75,7 +74,7 @@ func TestGetIdx(t *testing.T) {
 	// expect error when trying to get Idx by addr2 & pk2
 	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2)
 	assert.NotNil(t, err)
-	assert.Equal(t, db.ErrNotFound, err)
+	assert.Equal(t, ErrToIdxNotFound, err)
 	assert.Equal(t, common.Idx(0), idxR)
 }
 

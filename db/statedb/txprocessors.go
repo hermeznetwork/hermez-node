@@ -1,7 +1,6 @@
 package statedb
 
 import (
-	"bytes"
 	"errors"
 	"math/big"
 
@@ -245,7 +244,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	case common.TxTypeForceTransfer, common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update balance
 		// & nonce
-		err := s.applyTransfer(tx.Tx())
+		err := s.applyTransfer(tx.Tx(), 0) // 0 for the parameter toIdx, as at L1Tx ToIdx can only be 0 in the Deposit type case.
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -304,6 +303,16 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 // the Exit created a new Leaf in the ExitTree.
 func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
 	var err error
+	var auxToIdx common.Idx
+	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
+	if tx.ToIdx == common.Idx(0) {
+		auxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
+		if err != nil {
+			log.Error(err)
+			return nil, nil, false, err
+		}
+	}
+
 	// ZKInputs
 	if s.zki != nil {
 		// Txs
@@ -314,28 +323,12 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 
 		// fill AuxToIdx if needed
 		if tx.ToIdx == common.Idx(0) {
-			var idx common.Idx
-			if !bytes.Equal(tx.ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) && tx.ToBJJ == nil {
-				// case ToEthAddr!=0 && ToBJJ=0
-				idx, err = s.GetIdxByEthAddr(tx.ToEthAddr)
-				if err != nil {
-					log.Error(err)
-					return nil, nil, false, ErrToIdxNotFound
-				}
-			} else if !bytes.Equal(tx.ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) && tx.ToBJJ != nil {
-				// case ToEthAddr!=0 && ToBJJ!=0
-				idx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
-				if err != nil {
-					log.Error(err)
-					return nil, nil, false, ErrToIdxNotFound
-				}
-			} else {
-				// rest of cases (included case ToEthAddr==0) are not possible
-				log.Error(err)
-				return nil, nil, false, ErrToIdxNotFound
-			}
-			s.zki.AuxToIdx[s.i] = idx.BigInt()
+			// use toIdx that can have been filled by tx.ToIdx or
+			// if tx.Idx==0 (this case), toIdx is filled by the Idx
+			// from db by ToEthAddr&ToBJJ
+			s.zki.AuxToIdx[s.i] = auxToIdx.BigInt()
 		}
+
 		s.zki.ToBJJAy[s.i] = tx.ToBJJ.Y
 		s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(tx.ToEthAddr)
 
@@ -356,7 +349,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	case common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update
 		// balance & nonce
-		err = s.applyTransfer(tx.Tx())
+		err = s.applyTransfer(tx.Tx(), auxToIdx)
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -474,14 +467,21 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 }
 
 // applyTransfer updates the balance & nonce in the account of the sender, and
-// the balance in the account of the receiver
-func (s *StateDB) applyTransfer(tx *common.Tx) error {
+// the balance in the account of the receiver.
+// Parameter 'toIdx' should be at 0 if the tx already has tx.ToIdx!=0, if
+// tx.ToIdx==0, then toIdx!=0, and will be used the toIdx parameter as Idx of
+// the receiver. This parameter is used when the tx.ToIdx is not specified and
+// the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
+func (s *StateDB) applyTransfer(tx *common.Tx, auxToIdx common.Idx) error {
+	if auxToIdx == 0 {
+		auxToIdx = tx.ToIdx
+	}
 	// get sender and receiver accounts from localStateDB
 	accSender, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
 		return err
 	}
-	accReceiver, err := s.GetAccount(tx.ToIdx)
+	accReceiver, err := s.GetAccount(auxToIdx)
 	if err != nil {
 		return err
 	}
@@ -512,7 +512,7 @@ func (s *StateDB) applyTransfer(tx *common.Tx) error {
 	}
 
 	// update receiver account in localStateDB
-	pReceiver, err := s.UpdateAccount(tx.ToIdx, accReceiver)
+	pReceiver, err := s.UpdateAccount(auxToIdx, accReceiver)
 	if err != nil {
 		return err
 	}
