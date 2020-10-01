@@ -340,13 +340,15 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 	}
 
 	// TODO: Replace GetLastL1TxsNum by GetNextL1TxsNum
-	nextForgeL1TxsNum := int64(0)
+	nextForgeL1TxsNum := new(int64)
 	nextForgeL1TxsNumPtr, err := s.historyDB.GetLastL1TxsNum()
 	if err != nil {
 		return nil, err
 	}
 	if nextForgeL1TxsNumPtr != nil {
-		nextForgeL1TxsNum = *nextForgeL1TxsNumPtr + 1
+		*nextForgeL1TxsNum = *nextForgeL1TxsNumPtr + 1
+	} else {
+		*nextForgeL1TxsNum = 0
 	}
 
 	// Get newLastIdx that will be used to complete the accounts
@@ -371,11 +373,10 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		if err != nil {
 			return nil, err
 		}
-		forgeL1TxsNum := int64(0)
+		forgeL1TxsNum := new(int64)
+		*forgeL1TxsNum = *nextForgeL1TxsNum
 		// Check if this is a L1Batch to get L1 Tx from it
 		if forgeBatchArgs.L1Batch {
-			forgeL1TxsNum = nextForgeL1TxsNum
-
 			// Get L1 User Txs from History DB
 			// TODO: Get L1TX from HistoryDB filtered by toforgeL1txNum & fromidx = 0 and
 			// update batch number and add accounts to createdAccounts updating idx
@@ -396,6 +397,10 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 			for _, l1CoordinatorTx := range forgeBatchArgs.L1CoordinatorTxs {
 				l1CoordinatorTx.Position = position
 				l1CoordinatorTx.ToForgeL1TxsNum = nextForgeL1TxsNum
+<<<<<<< HEAD
+=======
+				l1CoordinatorTx.TxID = common.TxID(common.Hash([]byte("0x01" + strconv.FormatInt(int64(*nextForgeL1TxsNum), 10) + strconv.FormatInt(int64(l1CoordinatorTx.Position), 10) + "00")))
+>>>>>>> WIP: rebase
 				l1CoordinatorTx.UserOrigin = false
 				l1CoordinatorTx.EthBlockNum = blockNum
 				bn := new(common.BatchNum)
@@ -425,7 +430,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 				// }
 				position++
 			}
-			nextForgeL1TxsNum++
+			*nextForgeL1TxsNum++
 		}
 
 		// Get L2Txs
@@ -440,7 +445,10 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 			return nil, err
 		}
 
-		l2Txs := common.PoolL2TxsToL2Txs(poolL2Txs) // TODO: This is a big uggly, find a better way
+		l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // TODO: This is a big uggly, find a better way
+		if err != nil {
+			return nil, err
+		}
 		batchData.l2Txs = append(batchData.l2Txs, l2Txs...)
 
 		batchData.exitTree = exitInfo

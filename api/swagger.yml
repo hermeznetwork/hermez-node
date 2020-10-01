@@ -1448,7 +1448,6 @@ components:
       description: Type of transaction.
       enum:
       - Exit
-      - Withdrawn
       - Transfer
       - Deposit
       - CreateAccountDeposit
@@ -1666,6 +1665,7 @@ components:
       minimum: 0
       maximum: 4294967295
       example: 784
+      nullable: true
     TransactionPosition:
       type: integer
       description: Position that a transaction occupies in a batch.
@@ -1737,7 +1737,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/ToForgeL1TransactionsNum'
             - description: Identifier that corresponds to the group of L1 transactions forged in the current batch.
-            - nullable: true
             - example: 5
         slotNum:
           $ref: '#/components/schemas/SlotNum'

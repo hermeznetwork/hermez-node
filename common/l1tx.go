@@ -25,7 +25,7 @@ type L1Tx struct {
 	// 	- L1UserTx: 0
 	// 	- L1CoordinatorTx: 1
 	TxID            TxID
-	ToForgeL1TxsNum int64 // toForgeL1TxsNum in which the tx was forged / will be forged
+	ToForgeL1TxsNum *int64 // toForgeL1TxsNum in which the tx was forged / will be forged
 	Position        int
 	UserOrigin      bool // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
 	FromIdx         Idx  // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
@@ -98,6 +98,10 @@ func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 func (tx *L1Tx) Tx() *Tx {
 	f := new(big.Float).SetInt(tx.Amount)
 	amountFloat, _ := f.Float64()
+	userOrigin := new(bool)
+	*userOrigin = tx.UserOrigin
+	fromEthAddr := new(ethCommon.Address)
+	*fromEthAddr = tx.FromEthAddr
 	genericTx := &Tx{
 		IsL1:            true,
 		TxID:            tx.TxID,
@@ -109,8 +113,8 @@ func (tx *L1Tx) Tx() *Tx {
 		AmountFloat:     amountFloat,
 		TokenID:         tx.TokenID,
 		ToForgeL1TxsNum: tx.ToForgeL1TxsNum,
-		UserOrigin:      tx.UserOrigin,
-		FromEthAddr:     tx.FromEthAddr,
+		UserOrigin:      userOrigin,
+		FromEthAddr:     fromEthAddr,
 		FromBJJ:         tx.FromBJJ,
 		LoadAmount:      tx.LoadAmount,
 		EthBlockNum:     tx.EthBlockNum,

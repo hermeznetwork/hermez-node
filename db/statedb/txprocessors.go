@@ -205,7 +205,10 @@ func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []*common.L1Tx, 
 	for i := 0; i < len(l2txs); i++ {
 		// as L2Tx does not have parameter TokenID, get it from the
 		// AccountsDB (in the StateDB)
-		acc, err := s.GetAccount(l2txs[i].ToIdx)
+		if l2txs[i].ToIdx == nil {
+			return nil, errors.New("L2Tx must have ToIdx setted in order to get the associated account")
+		}
+		acc, err := s.GetAccount(*l2txs[i].ToIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +327,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
 
 		// fill AuxToIdx if needed
-		if tx.ToIdx == common.Idx(0) {
+		if tx.ToIdx == nil {
 			// use toIdx that can have been filled by tx.ToIdx or
 			// if tx.Idx==0 (this case), toIdx is filled by the Idx
 			// from db by ToEthAddr&ToBJJ
@@ -332,7 +335,12 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		}
 
 		s.zki.ToBJJAy[s.i] = tx.ToBJJ.Y
-		s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(tx.ToEthAddr)
+		if tx.ToEthAddr != nil {
+			s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(*tx.ToEthAddr)
+		} else {
+			// Not sure if this should throw an error
+			s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(common.EmptyAddr)
+		}
 
 		s.zki.OnChain[s.i] = big.NewInt(0)
 		s.zki.NewAccount[s.i] = big.NewInt(0)
@@ -368,7 +376,11 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		}
 	case common.TxTypeExit:
 		// execute exit flow
-		exitAccount, newExit, err := s.applyExit(exitTree, tx.Tx())
+		tmpTx, err := tx.Tx()
+		if err != nil {
+			return nil, nil, false, err
+		}
+		exitAccount, newExit, err := s.applyExit(exitTree, tmpTx)
 		if err != nil {
 			return nil, nil, false, err
 		}

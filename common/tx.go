@@ -3,6 +3,7 @@ package common
 import (
 	"database/sql/driver"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -57,8 +58,6 @@ type TxType string
 const (
 	// TxTypeExit represents L2->L1 token transfer.  A leaf for this account appears in the exit tree of the block
 	TxTypeExit TxType = "Exit"
-	// TxTypeWithdrawn represents the balance that was moved from L2->L1 has been widthrawn from the smart contract
-	TxTypeWithdrawn TxType = "Withdrawn"
 	// TxTypeTransfer represents L2->L2 token transfer
 	TxTypeTransfer TxType = "Transfer"
 	// TxTypeDeposit represents L1->L2 transfer
@@ -95,9 +94,9 @@ type Tx struct {
 	BatchNum    *BatchNum `meddler:"batch_num"`     // batchNum in which this tx was forged. If the tx is L2, this must be != 0
 	EthBlockNum int64     `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
 	// L1
-	ToForgeL1TxsNum int64              `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
-	UserOrigin      bool               `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr"`
+	ToForgeL1TxsNum *int64             `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
+	UserOrigin      *bool              `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
+	FromEthAddr     *ethCommon.Address `meddler:"from_eth_addr"`
 	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj"`
 	LoadAmount      *big.Int           `meddler:"load_amount,bigintnull"`
 	LoadAmountFloat *float64           `meddler:"load_amount_f"`
@@ -109,14 +108,17 @@ type Tx struct {
 }
 
 // L1Tx returns a *L1Tx from the Tx
-func (tx *Tx) L1Tx() *L1Tx {
-	l1Tx := &L1Tx{
+func (tx *Tx) L1Tx() (*L1Tx, error) {
+	if tx.UserOrigin == nil || tx.FromEthAddr == nil {
+		return nil, errors.New("Tx must have UserOrigin != nil and FromEthAddr != nil in order to be able to transform to L1Tx")
+	}
+	return &L1Tx{
 		TxID:            tx.TxID,
 		ToForgeL1TxsNum: tx.ToForgeL1TxsNum,
 		Position:        tx.Position,
-		UserOrigin:      tx.UserOrigin,
+		UserOrigin:      *tx.UserOrigin,
 		FromIdx:         tx.FromIdx,
-		FromEthAddr:     tx.FromEthAddr,
+		FromEthAddr:     *tx.FromEthAddr,
 		FromBJJ:         tx.FromBJJ,
 		ToIdx:           tx.ToIdx,
 		TokenID:         tx.TokenID,
@@ -125,6 +127,5 @@ func (tx *Tx) L1Tx() *L1Tx {
 		EthBlockNum:     tx.EthBlockNum,
 		Type:            tx.Type,
 		BatchNum:        tx.BatchNum,
-	}
-	return l1Tx
+	}, nil
 }

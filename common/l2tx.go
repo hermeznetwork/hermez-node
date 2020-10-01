@@ -89,11 +89,15 @@ func (tx *L2Tx) Tx() *Tx {
 // PoolL2Tx returns the data structure of PoolL2Tx with the parameters of a
 // L2Tx filled
 func (tx *L2Tx) PoolL2Tx() *PoolL2Tx {
+	batchNum := new(BatchNum)
+	*batchNum = tx.BatchNum
+	toIdx := new(Idx)
+	*toIdx = tx.ToIdx
 	return &PoolL2Tx{
 		TxID:     tx.TxID,
-		BatchNum: tx.BatchNum,
+		BatchNum: batchNum,
 		FromIdx:  tx.FromIdx,
-		ToIdx:    tx.ToIdx,
+		ToIdx:    toIdx,
 		Amount:   tx.Amount,
 		Fee:      tx.Fee,
 		Nonce:    tx.Nonce,

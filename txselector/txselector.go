@@ -120,8 +120,8 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 	// in AccountCreationAuthDB, if so, tx is used and L1CoordinatorTx of
 	// CreateAccountAndDeposit is created.
 	for i := 0; i < len(l2TxsRaw); i++ {
-		if l2TxsRaw[i].ToIdx >= common.IdxUserThreshold {
-			_, err = txsel.localAccountsDB.GetAccount(l2TxsRaw[i].ToIdx)
+		if l2TxsRaw[i].ToIdx != nil && *l2TxsRaw[i].ToIdx >= common.IdxUserThreshold {
+			_, err = txsel.localAccountsDB.GetAccount(*l2TxsRaw[i].ToIdx)
 			if err != nil {
 				// tx not valid
 				log.Debugw("invalid L2Tx: ToIdx not found in StateDB", "ToIdx", l2TxsRaw[i].ToIdx)
@@ -129,7 +129,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 			}
 			// Account found in the DB, include the l2Tx in the selection
 			validTxs = append(validTxs, l2TxsRaw[i])
-		} else if l2TxsRaw[i].ToIdx == common.Idx(0) {
+		} else if l2TxsRaw[i].ToIdx == nil {
 			if checkAlreadyPendingToCreate(l1CoordinatorTxs, l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ) {
 				// if L2Tx needs a new L1CoordinatorTx of CreateAccount type,
 				// and a previous L2Tx in the current process already created

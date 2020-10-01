@@ -11,7 +11,7 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
-func concatEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) []byte {
+func concatEthAddrBJJ(addr *ethCommon.Address, pk *babyjub.PublicKey) []byte {
 	pkComp := pk.Compress()
 	var b []byte
 	b = append(b, addr.Bytes()...)
@@ -24,7 +24,7 @@ func concatEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) []byte {
 // - key: EthAddr & BabyJubJub PublicKey Compressed, value: idx
 // If Idx already exist for the given EthAddr & BJJ, the remaining Idx will be
 // always the smallest one.
-func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk *babyjub.PublicKey) error {
+func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr *ethCommon.Address, pk *babyjub.PublicKey) error {
 	oldIdx, err := s.GetIdxByEthAddrBJJ(addr, pk)
 	if err == nil {
 		// EthAddr & BJJ already have an Idx
