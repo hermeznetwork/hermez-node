@@ -16,7 +16,7 @@ func TestGetIdx(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	sdb, err := NewStateDB(dir, false, 0)
+	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)
 
 	var sk babyjub.PrivateKey

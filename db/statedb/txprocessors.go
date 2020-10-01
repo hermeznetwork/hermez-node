@@ -30,11 +30,13 @@ type processedExit struct {
 }
 
 // ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
-// the StateDB depending on the transaction Type. Returns the common.ZKInputs
-// to generate the SnarkProof later used by the BatchBuilder, and if
-// cmpExitTree is set to true, returns common.ExitTreeLeaf that is later used
-// by the Synchronizer to update the HistoryDB.
-func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) (*common.ZKInputs, []*common.ExitInfo, error) {
+// the StateDB depending on the transaction Type.  If StateDB
+// type==TypeBatchBuilder, returns the common.ZKInputs to generate the
+// SnarkProof later used by the BatchBuilder.  If StateDB
+// type==TypeSynchronizer, assumes that the call is done from the Synchronizer,
+// returns common.ExitTreeLeaf that is later used by the Synchronizer to update
+// the HistoryDB, and adds Nonce & TokenID to the L2Txs.
+func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 
@@ -50,7 +52,7 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 	}
 	exits := make([]processedExit, nTx)
 
-	if cmpZKInputs {
+	if s.typ == TypeBatchBuilder {
 		s.zki = common.NewZKInputs(nTx, 24, 32) // TODO this values will be parameters of the function, taken from config file/coordinator call
 		s.zki.OldLastIdx = (s.idx - 1).BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
@@ -58,7 +60,7 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
 	// only needed in memory
-	if cmpExitTree {
+	if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 		exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
 		if err != nil {
 			return nil, nil, err
@@ -71,15 +73,15 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 		if err != nil {
 			return nil, nil, err
 		}
-		if exitIdx != nil && cmpExitTree {
-			exits[s.i] = processedExit{
-				exit:    true,
-				newExit: newExit,
-				idx:     *exitIdx,
-				acc:     *exitAccount,
+		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
+			if exitIdx != nil && exitTree != nil {
+				exits[s.i] = processedExit{
+					exit:    true,
+					newExit: newExit,
+					idx:     *exitIdx,
+					acc:     *exitAccount,
+				}
 			}
-		}
-		if s.zki != nil {
 			s.i++
 		}
 	}
@@ -91,15 +93,15 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 		if exitIdx != nil {
 			log.Error("Unexpected Exit in L1CoordinatorTx")
 		}
-		if exitIdx != nil && cmpExitTree {
-			exits[s.i] = processedExit{
-				exit:    true,
-				newExit: newExit,
-				idx:     *exitIdx,
-				acc:     *exitAccount,
+		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
+			if exitIdx != nil && exitTree != nil {
+				exits[s.i] = processedExit{
+					exit:    true,
+					newExit: newExit,
+					idx:     *exitIdx,
+					acc:     *exitAccount,
+				}
 			}
-		}
-		if s.zki != nil {
 			s.i++
 		}
 	}
@@ -108,26 +110,26 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 		if err != nil {
 			return nil, nil, err
 		}
-		if exitIdx != nil && cmpExitTree {
-			exits[s.i] = processedExit{
-				exit:    true,
-				newExit: newExit,
-				idx:     *exitIdx,
-				acc:     *exitAccount,
+		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
+			if exitIdx != nil && exitTree != nil {
+				exits[s.i] = processedExit{
+					exit:    true,
+					newExit: newExit,
+					idx:     *exitIdx,
+					acc:     *exitAccount,
+				}
 			}
-		}
-		if s.zki != nil {
 			s.i++
 		}
 	}
 
-	if !cmpExitTree && !cmpZKInputs {
+	if s.typ == TypeTxSelector {
 		return nil, nil, nil
 	}
 
 	// once all txs processed (exitTree root frozen), for each Exit,
 	// generate common.ExitInfo data
-	var exitInfos []*common.ExitInfo
+	var exitInfos []common.ExitInfo
 	for i := 0; i < nTx; i++ {
 		if !exits[i].exit {
 			continue
@@ -141,7 +143,7 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 			return nil, nil, err
 		}
 		// 1. generate common.ExitInfo
-		ei := &common.ExitInfo{
+		ei := common.ExitInfo{
 			AccountIdx:  exitIdx,
 			MerkleProof: p,
 			Balance:     exitAccount.Balance,
@@ -168,7 +170,7 @@ func (s *StateDB) ProcessTxs(cmpExitTree, cmpZKInputs bool, l1usertxs, l1coordin
 			s.zki.OldValue2[i] = p.OldValue.BigInt()
 		}
 	}
-	if !cmpZKInputs {
+	if s.typ == TypeSynchronizer {
 		return nil, exitInfos, nil
 	}
 
@@ -343,6 +345,17 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		s.zki.S[s.i] = tx.Signature.S
 		s.zki.R8x[s.i] = tx.Signature.R8.X
 		s.zki.R8y[s.i] = tx.Signature.R8.Y
+	}
+
+	// if StateDB type==TypeSynchronizer, will need to add Nonce and
+	// TokenID to the transaction
+	if s.typ == TypeSynchronizer {
+		acc, err := s.GetAccount(tx.ToIdx)
+		if err != nil {
+			return nil, nil, false, err
+		}
+		tx.Nonce = acc.Nonce
+		tx.TokenID = acc.TokenID
 	}
 
 	switch tx.Type {

@@ -25,7 +25,7 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
-	sdb, err := statedb.NewStateDB(dir, false, 0)
+	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
 	require.Nil(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")

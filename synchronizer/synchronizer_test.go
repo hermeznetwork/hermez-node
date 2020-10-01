@@ -19,7 +19,7 @@ func Test(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	sdb, err := statedb.NewStateDB(dir, true, 32)
+	sdb, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32)
 	assert.Nil(t, err)
 
 	// Init History DB

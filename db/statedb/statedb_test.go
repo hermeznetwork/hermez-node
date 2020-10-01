@@ -38,7 +38,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	sdb, err := NewStateDB(dir, false, 0)
+	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)
 
 	// test values
@@ -60,7 +60,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey0'&'testvalue0' data)
-	sdb, err = NewStateDB(dir, false, 0)
+	sdb, err = NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)
 	v, err = sdb.db.Get(k0)
 	assert.NotNil(t, err)
@@ -102,7 +102,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey1'&'testvalue1' data)
-	sdb, err = NewStateDB(dir, false, 0)
+	sdb, err = NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)
 
 	v, err = sdb.db.Get(k0)
@@ -119,7 +119,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	sdb, err := NewStateDB(dir, false, 0)
+	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)
 
 	// create test accounts
@@ -168,7 +168,7 @@ func TestStateDBWithMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	sdb, err := NewStateDB(dir, true, 32)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
 	assert.Nil(t, err)
 
 	// create test accounts
@@ -219,7 +219,7 @@ func TestCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "sdb")
 	require.Nil(t, err)
 
-	sdb, err := NewStateDB(dir, true, 32)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
 	assert.Nil(t, err)
 
 	// create test accounts
@@ -285,7 +285,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a LocalStateDB from the initial StateDB
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.Nil(t, err)
-	ldb, err := NewLocalStateDB(dirLocal, sdb, true, 32)
+	ldb, err := NewLocalStateDB(dirLocal, sdb, TypeBatchBuilder, 32)
 	assert.Nil(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
@@ -305,7 +305,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a 2nd LocalStateDB from the initial StateDB
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.Nil(t, err)
-	ldb2, err := NewLocalStateDB(dirLocal2, sdb, true, 32)
+	ldb2, err := NewLocalStateDB(dirLocal2, sdb, TypeBatchBuilder, 32)
 	assert.Nil(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)

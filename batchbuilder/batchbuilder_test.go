@@ -13,7 +13,7 @@ func TestBatchBuilder(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	synchDB, err := statedb.NewStateDB(dir, false, 0)
+	synchDB, err := statedb.NewStateDB(dir, statedb.TypeBatchBuilder, 0)
 	assert.Nil(t, err)
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
