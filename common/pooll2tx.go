@@ -33,15 +33,15 @@ type PoolL2Tx struct {
 	Signature   *babyjub.Signature `meddler:"signature"`         // tx signature
 	Timestamp   time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
-	BatchNum          *BatchNum          `meddler:"batch_num,zeroisnull"`   // batchNum in which this tx was forged. Presence indicates "forged" state.
-	RqFromIdx         *Idx               `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	RqToIdx           *Idx               `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	BatchNum          *BatchNum          `meddler:"batch_num"`   // batchNum in which this tx was forged. Presence indicates "forged" state.
+	RqFromIdx         *Idx               `meddler:"rq_from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	RqToIdx           *Idx               `meddler:"rq_to_idx"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	RqToEthAddr       *ethCommon.Address `meddler:"rq_to_eth_addr"`
 	RqToBJJ           *babyjub.PublicKey `meddler:"rq_to_bjj"` // TODO: stop using json, use scanner/valuer
-	RqTokenID         *TokenID           `meddler:"rq_token_id,zeroisnull"`
+	RqTokenID         *TokenID           `meddler:"rq_token_id"`
 	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16
-	RqFee             *FeeSelector       `meddler:"rq_fee,zeroisnull"`
-	RqNonce           *uint64            `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
+	RqFee             *FeeSelector       `meddler:"rq_fee"`
+	RqNonce           *uint64            `meddler:"rq_nonce"` // effective 48 bits used
 	AbsoluteFee       *float64           `meddler:"fee_usd"`
 	AbsoluteFeeUpdate *time.Time         `meddler:"usd_update,utctime"`
 	Type              TxType             `meddler:"tx_type"`
@@ -54,11 +54,11 @@ type PoolL2Tx struct {
 func NewPoolL2Tx(poolL2Tx *PoolL2Tx) (*PoolL2Tx, error) {
 	// calculate TxType
 	var txType TxType
-	if poolL2Tx.ToIdx == Idx(0) {
+	if poolL2Tx.ToIdx == nil || *poolL2Tx.ToIdx == Idx(0) {
 		txType = TxTypeTransfer
-	} else if poolL2Tx.ToIdx == Idx(1) {
+	} else if *poolL2Tx.ToIdx == Idx(1) {
 		txType = TxTypeExit
-	} else if poolL2Tx.ToIdx >= IdxUserThreshold {
+	} else if *poolL2Tx.ToIdx >= IdxUserThreshold {
 		txType = TxTypeTransfer
 	} else {
 		return poolL2Tx, fmt.Errorf("Can not determine type of PoolL2Tx, invalid ToIdx value: %d", poolL2Tx.ToIdx)
@@ -237,10 +237,12 @@ func (tx *PoolL2Tx) Tx() (*Tx, error) {
 	if tx.ToIdx == nil {
 		return nil, errors.New("PoolL2Tx must have ToIdx != nil in order to be able to transform to Tx")
 	}
+	fromIdx := new(Idx)
+	*fromIdx = tx.FromIdx
 	return &Tx{
 		TxID:    tx.TxID,
-		FromIdx: tx.FromIdx,
-		ToIdx:   *tx.ToIdx,
+		FromIdx: fromIdx,
+		ToIdx:   tx.ToIdx,
 		Amount:  tx.Amount,
 		Nonce:   &tx.Nonce,
 		Fee:     &tx.Fee,

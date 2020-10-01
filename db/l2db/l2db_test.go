@@ -141,7 +141,7 @@ func TestStartForging(t *testing.T) {
 		fetchedTx, err := l2DB.GetTx(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForging, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, fetchedTx.BatchNum)
+		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
 	}
 }
 
@@ -170,7 +170,7 @@ func TestDoneForging(t *testing.T) {
 		fetchedTx, err := l2DB.GetTx(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForged, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, fetchedTx.BatchNum)
+		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
 	}
 }
 
@@ -199,7 +199,7 @@ func TestInvalidate(t *testing.T) {
 		fetchedTx, err := l2DB.GetTx(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, fetchedTx.BatchNum)
+		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
 	}
 }
 
@@ -242,7 +242,7 @@ func TestCheckNonces(t *testing.T) {
 		fetchedTx, err := l2DB.GetTx(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, fetchedTx.BatchNum)
+		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
 	}
 }
 
@@ -257,11 +257,12 @@ func TestReorg(t *testing.T) {
 	reorgedTxIDs := []common.TxID{}
 	nonReorgedTxIDs := []common.TxID{}
 	for i := 0; i < len(txs); i++ {
+		txs[i].BatchNum = new(common.BatchNum)
 		if txs[i].State == common.PoolL2TxStateForged || txs[i].State == common.PoolL2TxStateInvalid {
-			txs[i].BatchNum = reorgBatch
+			*txs[i].BatchNum = reorgBatch
 			reorgedTxIDs = append(reorgedTxIDs, txs[i].TxID)
 		} else {
-			txs[i].BatchNum = lastValidBatch
+			*txs[i].BatchNum = lastValidBatch
 			nonReorgedTxIDs = append(nonReorgedTxIDs, txs[i].TxID)
 		}
 		err := l2DB.AddTxTest(txs[i])
@@ -269,17 +270,16 @@ func TestReorg(t *testing.T) {
 	}
 	err := l2DB.Reorg(lastValidBatch)
 	assert.NoError(t, err)
-	var nullBatchNum common.BatchNum
 	for _, id := range reorgedTxIDs {
 		tx, err := l2DB.GetTx(id)
 		assert.NoError(t, err)
-		assert.Equal(t, nullBatchNum, tx.BatchNum)
+		assert.Nil(t, tx.BatchNum)
 		assert.Equal(t, common.PoolL2TxStatePending, tx.State)
 	}
 	for _, id := range nonReorgedTxIDs {
 		tx, err := l2DB.GetTx(id)
 		assert.NoError(t, err)
-		assert.Equal(t, lastValidBatch, tx.BatchNum)
+		assert.Equal(t, lastValidBatch, *tx.BatchNum)
 	}
 }
 
@@ -294,11 +294,12 @@ func TestPurge(t *testing.T) {
 	safeBatchNum := toDeleteBatchNum + l2DB.safetyPeriod + 1
 	// Add txs to the DB
 	for i := 0; i < int(l2DB.maxTxs); i++ {
+		txs[i].BatchNum = new(common.BatchNum)
 		if i%1 == 0 { // keep tx
-			txs[i].BatchNum = safeBatchNum
+			*txs[i].BatchNum = safeBatchNum
 			keepedIDs = append(keepedIDs, txs[i].TxID)
 		} else if i%2 == 0 { // delete after safety period
-			txs[i].BatchNum = toDeleteBatchNum
+			*txs[i].BatchNum = toDeleteBatchNum
 			if i%3 == 0 {
 				txs[i].State = common.PoolL2TxStateForged
 			} else {
@@ -343,7 +344,7 @@ func TestAuth(t *testing.T) {
 		err := l2DB.AddAccountCreationAuth(auths[i])
 		assert.NoError(t, err)
 		// Fetch from DB
-		auth, err := l2DB.GetAccountCreationAuth(auths[i].EthAddr)
+		auth, err := l2DB.GetAccountCreationAuth(&auths[i].EthAddr)
 		assert.NoError(t, err)
 		// Check fetched vs generated
 		assert.Equal(t, auths[i].EthAddr, auth.EthAddr)

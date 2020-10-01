@@ -133,7 +133,8 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 			num_accounts,
 			exit_root,
 			forge_l1_txs_num,
-			slot_num
+			slot_num,
+			total_fees_usd
 		) VALUES %s;`,
 		batches[:],
 	)

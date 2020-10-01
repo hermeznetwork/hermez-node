@@ -223,7 +223,7 @@ func TestMain(m *testing.M) {
 					panic("Token not found")
 				}
 			} else {
-				token = test.GetToken(genericTx.FromIdx, accs, tokens)
+				token = test.GetToken(*genericTx.FromIdx, accs, tokens)
 			}
 			var usd, loadUSD, feeUSD *float64
 			if token.USD != nil {
@@ -244,7 +244,7 @@ func TestMain(m *testing.M) {
 				Type:                  genericTx.Type,
 				Position:              genericTx.Position,
 				FromIdx:               genericTx.FromIdx,
-				ToIdx:                 genericTx.ToIdx,
+				ToIdx:                 *genericTx.ToIdx,
 				Amount:                genericTx.Amount,
 				AmountFloat:           genericTx.AmountFloat,
 				HistoricUSD:           usd,
@@ -361,7 +361,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// idx
 	fetchedTxs = historyTxAPIs{}
 	limit = 4
-	idx := tc.allTxs[0].FromIdx
+	idx := tc.allTxs[0].ToIdx
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&limit=%d&offset=",
 		endpoint, idx, limit,
@@ -370,7 +370,8 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	idxTxs := historyTxAPIs{}
 	for i := 0; i < len(tc.allTxs); i++ {
-		if tc.allTxs[i].FromIdx[6:] == idx[6:] {
+		if (tc.allTxs[i].FromIdx != nil && (*tc.allTxs[i].FromIdx)[6:] == idx[6:]) ||
+			tc.allTxs[i].ToIdx[6:] == idx[6:] {
 			idxTxs = append(idxTxs, tc.allTxs[i])
 		}
 	}
@@ -396,7 +397,6 @@ func TestGetHistoryTxs(t *testing.T) {
 	// type
 	txTypes := []common.TxType{
 		common.TxTypeExit,
-		common.TxTypeWithdrawn,
 		common.TxTypeTransfer,
 		common.TxTypeDeposit,
 		common.TxTypeCreateAccountDeposit,

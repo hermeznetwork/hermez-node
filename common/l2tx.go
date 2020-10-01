@@ -68,13 +68,17 @@ func (tx *L2Tx) Tx() *Tx {
 	*fee = tx.Fee
 	nonce := new(Nonce)
 	*nonce = tx.Nonce
+	fromIdx := new(Idx)
+	*fromIdx = tx.FromIdx
+	toIdx := new(Idx)
+	*toIdx = tx.ToIdx
 	return &Tx{
 		IsL1:        false,
 		TxID:        tx.TxID,
 		Type:        tx.Type,
 		Position:    tx.Position,
-		FromIdx:     tx.FromIdx,
-		ToIdx:       tx.ToIdx,
+		FromIdx:     fromIdx,
+		ToIdx:       toIdx,
 		Amount:      tx.Amount,
 		USD:         tx.USD,
 		AmountFloat: amountFloat,

@@ -1240,13 +1240,24 @@ components:
         fromAccountIndex:
           $ref: '#/components/schemas/AccountIndex'
         toAccountIndex:
-          allOf:
-            - $ref: '#/components/schemas/AccountIndex'
-            - example: "hez:DAI:672"
+          type: string
+          description: >-
+            Identifier of the destination account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`
+          example: null
+          nullable: true
         toHezEthereumAddress:
-          $ref: '#/components/schemas/HezEthereumAddress'
+          type: string
+          description: "Address of an Etherum account linked to the Hermez network."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+          nullable: true
         toBjj:
-          $ref: '#/components/schemas/BJJ'
+          type: string
+          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          example: null
+          nullable: true
         amount:
           allOf:
             - $ref: '#/components/schemas/BigInt'
@@ -1308,6 +1319,7 @@ components:
       - type
       - tokenId
       - fromAccountIndex
+      - toAccountIndex
       - toHezAccountIndex
       - toHezEthereumAddress
       - toBjj
@@ -1333,13 +1345,24 @@ components:
         fromAccountIndex:
           $ref: '#/components/schemas/AccountIndex'
         toAccountIndex:
-          allOf:
-            - $ref: '#/components/schemas/AccountIndex'
-            - example: "hez:DAI:672"
+          type: string
+          description: >-
+            Identifier of the destination account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`
+          example: "hez:DAI:309"
+          nullable: true
         toHezEthereumAddress:
-          $ref: '#/components/schemas/HezEthereumAddress'
+          type: string
+          description: "Address of an Etherum account linked to the Hermez network."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          example: null
+          nullable: true
         toBjj:
-          $ref: '#/components/schemas/BJJ'
+          type: string
+          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          example: null
+          nullable: true
         amount:
           allOf:
             - $ref: '#/components/schemas/BigInt'
@@ -1538,7 +1561,12 @@ components:
         position:
           $ref: '#/components/schemas/TransactionPosition'
         fromAccountIndex:
-          $ref: '#/components/schemas/AccountIndex'
+          type: string
+          description: >-
+            Identifier of an account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`
+          example: "hez:DAI:4444"
+          nullable: true
         toAccountIndex:
           allOf:
             - $ref: '#/components/schemas/AccountIndex'
@@ -1689,8 +1717,8 @@ components:
       items:
         type: object 
         properties:
-          token:
-            $ref: '#/components/schemas/Token'
+          tokenId:
+            $ref: '#/components/schemas/TokenId'
           amount:
             allOf:
               - $ref: '#/components/schemas/BigInt'
@@ -1716,6 +1744,9 @@ components:
           $ref: '#/components/schemas/EthereumAddress'
         collectedFees:
           $ref: '#/components/schemas/CollectedFees'
+        totalCollectedFeesUSD:
+          type: number
+          description: Value in USD of the collected tokens by the forger in concept of fees. This is calculated at the moment the batch is forged, with the conversion rates at that time.
         historicTotalCollectedFeesUSD:
           type: number
           description: Sum of the all the fees collected, in USD, at the moment the batch was forged.

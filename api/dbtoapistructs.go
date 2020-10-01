@@ -38,7 +38,7 @@ func (htx *historyTxsAPI) GetPagination() pagination { return htx.Pagination }
 func (htx *historyTxsAPI) Len() int                  { return len(htx.Txs) }
 
 type l1Info struct {
-	ToForgeL1TxsNum       int64    `json:"toForgeL1TransactionsNum"`
+	ToForgeL1TxsNum       *int64   `json:"toForgeL1TransactionsNum"`
 	UserOrigin            bool     `json:"userOrigin"`
 	FromEthAddr           string   `json:"fromHezEthereumAddress"`
 	FromBJJ               string   `json:"fromBJJ"`
@@ -58,7 +58,7 @@ type historyTxAPI struct {
 	TxID        string           `json:"id"`
 	Type        common.TxType    `json:"type"`
 	Position    int              `json:"position"`
-	FromIdx     string           `json:"fromAccountIndex"`
+	FromIdx     *string          `json:"fromAccountIndex"`
 	ToIdx       string           `json:"toAccountIndex"`
 	Amount      string           `json:"amount"`
 	BatchNum    *common.BatchNum `json:"batchNum"`
@@ -76,7 +76,6 @@ func historyTxsToAPI(dbTxs []*historydb.HistoryTx) []historyTxAPI {
 			TxID:        dbTxs[i].TxID.String(),
 			Type:        dbTxs[i].Type,
 			Position:    dbTxs[i].Position,
-			FromIdx:     idxToHez(dbTxs[i].FromIdx, dbTxs[i].TokenSymbol),
 			ToIdx:       idxToHez(dbTxs[i].ToIdx, dbTxs[i].TokenSymbol),
 			Amount:      dbTxs[i].Amount.String(),
 			HistoricUSD: dbTxs[i].HistoricUSD,
@@ -95,12 +94,17 @@ func historyTxsToAPI(dbTxs []*historydb.HistoryTx) []historyTxAPI {
 			L1Info: nil,
 			L2Info: nil,
 		}
+		if dbTxs[i].FromIdx != nil {
+			fromIdx := new(string)
+			*fromIdx = idxToHez(*dbTxs[i].FromIdx, dbTxs[i].TokenSymbol)
+			apiTx.FromIdx = fromIdx
+		}
 		if dbTxs[i].IsL1 {
 			apiTx.IsL1 = "L1"
 			apiTx.L1Info = &l1Info{
 				ToForgeL1TxsNum:       dbTxs[i].ToForgeL1TxsNum,
-				UserOrigin:            dbTxs[i].UserOrigin,
-				FromEthAddr:           ethAddrToHez(dbTxs[i].FromEthAddr),
+				UserOrigin:            *dbTxs[i].UserOrigin,
+				FromEthAddr:           ethAddrToHez(*dbTxs[i].FromEthAddr),
 				FromBJJ:               bjjToString(dbTxs[i].FromBJJ),
 				LoadAmount:            dbTxs[i].LoadAmount.String(),
 				HistoricLoadAmountUSD: dbTxs[i].HistoricLoadAmountUSD,

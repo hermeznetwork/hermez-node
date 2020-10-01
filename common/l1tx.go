@@ -28,7 +28,7 @@ type L1Tx struct {
 	ToForgeL1TxsNum *int64 // toForgeL1TxsNum in which the tx was forged / will be forged
 	Position        int
 	UserOrigin      bool // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx         Idx  // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	FromIdx         *Idx // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	FromEthAddr     ethCommon.Address
 	FromBJJ         *babyjub.PublicKey
 	ToIdx           Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
@@ -47,7 +47,7 @@ type L1Tx struct {
 func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 	// calculate TxType
 	var txType TxType
-	if l1Tx.FromIdx == Idx(0) {
+	if l1Tx.FromIdx == nil {
 		if l1Tx.ToIdx == Idx(0) {
 			txType = TxTypeCreateAccountDeposit
 		} else if l1Tx.ToIdx >= IdxUserThreshold {
@@ -55,7 +55,7 @@ func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 		} else {
 			return l1Tx, fmt.Errorf("Can not determine type of L1Tx, invalid ToIdx value: %d", l1Tx.ToIdx)
 		}
-	} else if l1Tx.FromIdx >= IdxUserThreshold {
+	} else if *l1Tx.FromIdx >= IdxUserThreshold {
 		if l1Tx.ToIdx == Idx(0) {
 			txType = TxTypeDeposit
 		} else if l1Tx.ToIdx == Idx(1) {
@@ -83,7 +83,11 @@ func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 		txid[0] = TxIDPrefixL1CoordTx
 	}
 	var toForgeL1TxsNumBytes [8]byte
-	binary.BigEndian.PutUint64(toForgeL1TxsNumBytes[:], uint64(l1Tx.ToForgeL1TxsNum))
+	var toForge uint64 = 0
+	if l1Tx.ToForgeL1TxsNum != nil {
+		toForge = uint64(*l1Tx.ToForgeL1TxsNum)
+	}
+	binary.BigEndian.PutUint64(toForgeL1TxsNumBytes[:], toForge)
 	copy(txid[1:9], toForgeL1TxsNumBytes[:])
 
 	var positionBytes [2]byte
@@ -102,13 +106,15 @@ func (tx *L1Tx) Tx() *Tx {
 	*userOrigin = tx.UserOrigin
 	fromEthAddr := new(ethCommon.Address)
 	*fromEthAddr = tx.FromEthAddr
+	toIdx := new(Idx)
+	*toIdx = tx.ToIdx
 	genericTx := &Tx{
 		IsL1:            true,
 		TxID:            tx.TxID,
 		Type:            tx.Type,
 		Position:        tx.Position,
 		FromIdx:         tx.FromIdx,
-		ToIdx:           tx.ToIdx,
+		ToIdx:           toIdx,
 		Amount:          tx.Amount,
 		AmountFloat:     amountFloat,
 		TokenID:         tx.TokenID,
@@ -175,9 +181,13 @@ func L1TxFromBytes(b []byte) (*L1Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	tx.FromIdx, err = IdxFromBytes(b[52:58])
+	fromIdx, err := IdxFromBytes(b[52:58])
 	if err != nil {
 		return nil, err
+	}
+	if fromIdx != 0 {
+		tx.FromIdx = new(Idx)
+		*tx.FromIdx = fromIdx
 	}
 	tx.LoadAmount = Float16FromBytes(b[58:60]).BigInt()
 	tx.Amount = Float16FromBytes(b[60:62]).BigInt()

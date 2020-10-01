@@ -2,6 +2,7 @@ package statedb
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -70,7 +71,10 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr *ethCommon.Address, pk
 // GetIdxByEthAddr returns the smallest Idx in the StateDB for the given
 // Ethereum Address. Will return common.Idx(0) and error in case that Idx is
 // not found in the StateDB.
-func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
+func (s *StateDB) GetIdxByEthAddr(addr *ethCommon.Address) (common.Idx, error) {
+	if addr == nil {
+		return 0, errors.New("addr cannot be nil")
+	}
 	b, err := s.db.Get(addr.Bytes())
 	if err != nil {
 		return common.Idx(0), ErrToIdxNotFound
@@ -87,7 +91,10 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
 // address, it's ignored in the query.  If `pk` is nil, it's ignored in the
 // query.  Will return common.Idx(0) and error in case that Idx is not found in
 // the StateDB.
-func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) (common.Idx, error) {
+func (s *StateDB) GetIdxByEthAddrBJJ(addr *ethCommon.Address, pk *babyjub.PublicKey) (common.Idx, error) {
+	if addr == nil {
+		return 0, errors.New("addr cannot be nil")
+	}
 	if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk == nil {
 		// case ToEthAddr!=0 && ToBJJ=0
 		return s.GetIdxByEthAddr(addr)

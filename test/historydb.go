@@ -220,7 +220,9 @@ func setFromToAndAppend(
 				panic(err)
 			}
 		}
-		tx.FromIdx = from.Idx
+		fromIdx := new(common.Idx)
+		*fromIdx = from.Idx
+		tx.FromIdx = fromIdx
 		tx.FromEthAddr = from.EthAddr
 		tx.FromBJJ = from.PublicKey
 		tx.ToIdx = to.Idx
@@ -234,7 +236,9 @@ func setFromToAndAppend(
 		if err != nil {
 			panic(err)
 		}
-		tx.FromIdx = from.Idx
+		fromIdx := new(common.Idx)
+		*fromIdx = from.Idx
+		tx.FromIdx = fromIdx
 		tx.FromEthAddr = from.EthAddr
 		tx.FromBJJ = from.PublicKey
 		tx.ToIdx = to.Idx

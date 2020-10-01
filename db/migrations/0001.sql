@@ -24,7 +24,8 @@ CREATE TABLE batch (
     num_accounts BIGINT NOT NULL,
     exit_root BYTEA NOT NULL,
     forge_l1_txs_num BIGINT,
-    slot_num BIGINT NOT NULL
+    slot_num BIGINT NOT NULL,
+    total_fees_usd NUMERIC
 );
 
 CREATE TABLE exit_tree (
@@ -80,7 +81,7 @@ CREATE TABLE tx (
     id BYTEA PRIMARY KEY,
     type VARCHAR(40) NOT NULL,
     position INT NOT NULL,
-    from_idx BIGINT NOT NULL,
+    from_idx BIGINT,
     to_idx BIGINT NOT NULL,
     amount BYTEA NOT NULL,
     amount_f NUMERIC NOT NULL,

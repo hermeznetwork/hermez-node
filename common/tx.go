@@ -85,8 +85,8 @@ type Tx struct {
 	TxID        TxID      `meddler:"id"`
 	Type        TxType    `meddler:"type"`
 	Position    int       `meddler:"position"`
-	FromIdx     Idx       `meddler:"from_idx"`
-	ToIdx       Idx       `meddler:"to_idx"`
+	FromIdx     *Idx      `meddler:"from_idx"`
+	ToIdx       *Idx      `meddler:"to_idx"`
 	Amount      *big.Int  `meddler:"amount,bigint"`
 	AmountFloat float64   `meddler:"amount_f"`
 	TokenID     TokenID   `meddler:"token_id"`
@@ -120,7 +120,7 @@ func (tx *Tx) L1Tx() (*L1Tx, error) {
 		FromIdx:         tx.FromIdx,
 		FromEthAddr:     *tx.FromEthAddr,
 		FromBJJ:         tx.FromBJJ,
-		ToIdx:           tx.ToIdx,
+		ToIdx:           *tx.ToIdx,
 		TokenID:         tx.TokenID,
 		Amount:          tx.Amount,
 		LoadAmount:      tx.LoadAmount,

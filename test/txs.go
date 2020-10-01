@@ -135,8 +135,10 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 			batchPoolL2Txs = append(batchPoolL2Txs, &tx)
 
 		case common.TxTypeExit, common.TxTypeForceExit:
+			fromIdx := new(common.Idx)
+			*fromIdx = accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx
 			tx := common.L1Tx{
-				FromIdx: accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
+				FromIdx: fromIdx,
 				ToIdx:   common.Idx(1), // as is an Exit
 				TokenID: inst.TokenID,
 				Amount:  big.NewInt(int64(inst.Amount)),

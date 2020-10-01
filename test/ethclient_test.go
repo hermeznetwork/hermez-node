@@ -140,7 +140,7 @@ func TestClientRollup(t *testing.T) {
 	for i := 0; i < N; i++ {
 		keys[i] = genKeys(int64(i))
 		l1UserTx := common.L1Tx{
-			FromIdx:     common.Idx(0),
+			FromIdx:     nil,
 			FromEthAddr: keys[i].Addr,
 			FromBJJ:     keys[i].BJJPublicKey,
 			TokenID:     common.TokenID(0),

@@ -12,14 +12,18 @@ import (
 )
 
 func TestNewL1Tx(t *testing.T) {
+	toForge := new(int64)
+	*toForge = 123456
+	fromIdx := new(Idx)
+	*fromIdx = 300
 	l1Tx := &L1Tx{
-		ToForgeL1TxsNum: int64(123456),
+		ToForgeL1TxsNum: toForge,
 		Position:        71,
 		ToIdx:           301,
 		TokenID:         5,
 		Amount:          big.NewInt(1),
 		LoadAmount:      big.NewInt(2),
-		FromIdx:         300,
+		FromIdx:         fromIdx,
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.Nil(t, err)
@@ -34,12 +38,14 @@ func TestL1TxByteParsers(t *testing.T) {
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
 
+	fromIdx := new(Idx)
+	*fromIdx = 2
 	l1Tx := &L1Tx{
 		ToIdx:       3,
 		TokenID:     5,
 		Amount:      big.NewInt(1),
 		LoadAmount:  big.NewInt(2),
-		FromIdx:     2,
+		FromIdx:     fromIdx,
 		FromBJJ:     pk,
 		FromEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}

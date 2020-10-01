@@ -340,15 +340,15 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 	}
 
 	// TODO: Replace GetLastL1TxsNum by GetNextL1TxsNum
-	nextForgeL1TxsNum := new(int64)
+	var nextForgeL1TxsNum int64
 	nextForgeL1TxsNumPtr, err := s.historyDB.GetLastL1TxsNum()
 	if err != nil {
 		return nil, err
 	}
 	if nextForgeL1TxsNumPtr != nil {
-		*nextForgeL1TxsNum = *nextForgeL1TxsNumPtr + 1
+		nextForgeL1TxsNum = *nextForgeL1TxsNumPtr + 1
 	} else {
-		*nextForgeL1TxsNum = 0
+		nextForgeL1TxsNum = 0
 	}
 
 	// Get newLastIdx that will be used to complete the accounts
@@ -373,8 +373,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		if err != nil {
 			return nil, err
 		}
-		forgeL1TxsNum := new(int64)
-		*forgeL1TxsNum = *nextForgeL1TxsNum
+		forgeL1TxsNum := nextForgeL1TxsNum
 		// Check if this is a L1Batch to get L1 Tx from it
 		if forgeBatchArgs.L1Batch {
 			// Get L1 User Txs from History DB
@@ -396,11 +395,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 			// Get L1 Coordinator Txs
 			for _, l1CoordinatorTx := range forgeBatchArgs.L1CoordinatorTxs {
 				l1CoordinatorTx.Position = position
-				l1CoordinatorTx.ToForgeL1TxsNum = nextForgeL1TxsNum
-<<<<<<< HEAD
-=======
-				l1CoordinatorTx.TxID = common.TxID(common.Hash([]byte("0x01" + strconv.FormatInt(int64(*nextForgeL1TxsNum), 10) + strconv.FormatInt(int64(l1CoordinatorTx.Position), 10) + "00")))
->>>>>>> WIP: rebase
+				l1CoordinatorTx.ToForgeL1TxsNum = &forgeL1TxsNum
 				l1CoordinatorTx.UserOrigin = false
 				l1CoordinatorTx.EthBlockNum = blockNum
 				bn := new(common.BatchNum)
@@ -430,7 +425,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 				// }
 				position++
 			}
-			*nextForgeL1TxsNum++
+			nextForgeL1TxsNum++
 		}
 
 		// Get L2Txs
@@ -462,7 +457,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 			StateRoot:     common.Hash(forgeBatchArgs.NewStRoot.Bytes()),
 			NumAccounts:   numAccounts,
 			ExitRoot:      common.Hash(forgeBatchArgs.NewExitRoot.Bytes()),
-			ForgeL1TxsNum: forgeL1TxsNum,
+			ForgeL1TxsNum: &forgeL1TxsNum,
 			// SlotNum: TODO: Calculate once ethClient provides the info // calculate from blockNum + ethClient Constants
 		}
 		batchData.batch = batch
@@ -581,7 +576,9 @@ func getL1UserTx(l1UserTxEvents []eth.RollupEventL1UserTx, blockNum int64) ([]*c
 
 	for _, eL1UserTx := range l1UserTxEvents {
 		// Fill aditional Tx fields
-		eL1UserTx.L1Tx.ToForgeL1TxsNum = eL1UserTx.ToForgeL1TxsNum
+		toForge := new(int64)
+		*toForge = eL1UserTx.ToForgeL1TxsNum
+		eL1UserTx.L1Tx.ToForgeL1TxsNum = toForge
 		eL1UserTx.L1Tx.Position = eL1UserTx.Position
 		eL1UserTx.L1Tx.UserOrigin = true
 		eL1UserTx.L1Tx.EthBlockNum = blockNum

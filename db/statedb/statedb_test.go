@@ -129,7 +129,8 @@ func TestStateDBWithoutMT(t *testing.T) {
 	}
 
 	// get non-existing account, expecting an error
-	_, err = sdb.GetAccount(common.Idx(1))
+	unexistingAccount := common.Idx(1)
+	_, err = sdb.GetAccount(&unexistingAccount)
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, err)
 
@@ -140,13 +141,15 @@ func TestStateDBWithoutMT(t *testing.T) {
 	}
 
 	for i := 0; i < len(accounts); i++ {
-		accGetted, err := sdb.GetAccount(common.Idx(i))
+		existingAccount := common.Idx(i)
+		accGetted, err := sdb.GetAccount(&existingAccount)
 		assert.Nil(t, err)
 		assert.Equal(t, accounts[i], accGetted)
 	}
 
 	// try already existing idx and get error
-	_, err = sdb.GetAccount(common.Idx(1)) // check that exist
+	existingAccount := common.Idx(1)
+	_, err = sdb.GetAccount(&existingAccount) // check that exist
 	assert.Nil(t, err)
 	_, err = sdb.CreateAccount(common.Idx(1), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
@@ -155,7 +158,8 @@ func TestStateDBWithoutMT(t *testing.T) {
 	// update accounts
 	for i := 0; i < len(accounts); i++ {
 		accounts[i].Nonce = accounts[i].Nonce + 1
-		_, err = sdb.UpdateAccount(common.Idx(i), accounts[i])
+		existingAccount = common.Idx(i)
+		_, err = sdb.UpdateAccount(&existingAccount, accounts[i])
 		assert.Nil(t, err)
 	}
 
@@ -178,7 +182,8 @@ func TestStateDBWithMT(t *testing.T) {
 	}
 
 	// get non-existing account, expecting an error
-	_, err = sdb.GetAccount(common.Idx(1))
+	accountIdx := common.Idx(1)
+	_, err = sdb.GetAccount(&accountIdx)
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, err)
 
@@ -189,13 +194,15 @@ func TestStateDBWithMT(t *testing.T) {
 	}
 
 	for i := 0; i < len(accounts); i++ {
-		accGetted, err := sdb.GetAccount(common.Idx(i))
+		accountIdx = common.Idx(i)
+		accGetted, err := sdb.GetAccount(&accountIdx)
 		assert.Nil(t, err)
 		assert.Equal(t, accounts[i], accGetted)
 	}
 
 	// try already existing idx and get error
-	_, err = sdb.GetAccount(common.Idx(1)) // check that exist
+	accountIdx = 1
+	_, err = sdb.GetAccount(&accountIdx) // check that exist
 	assert.Nil(t, err)
 	_, err = sdb.CreateAccount(common.Idx(1), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
@@ -207,10 +214,12 @@ func TestStateDBWithMT(t *testing.T) {
 	// update accounts
 	for i := 0; i < len(accounts); i++ {
 		accounts[i].Nonce = accounts[i].Nonce + 1
-		_, err = sdb.UpdateAccount(common.Idx(i), accounts[i])
+		accountIdx = common.Idx(i)
+		_, err = sdb.UpdateAccount(&accountIdx, accounts[i])
 		assert.Nil(t, err)
 	}
-	a, err := sdb.GetAccount(common.Idx(1)) // check that account value has been updated
+	accountIdx = 1
+	a, err := sdb.GetAccount(&accountIdx) // check that account value has been updated
 	assert.Nil(t, err)
 	assert.Equal(t, accounts[1].Nonce, a.Nonce)
 }
