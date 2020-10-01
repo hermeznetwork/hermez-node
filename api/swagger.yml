@@ -1467,7 +1467,7 @@ components:
     BigInt:
       type: string
       description: BigInt is an integer encoded as a string for numbers that are very large.
-      example: "870885693"
+      example: "8708856933496328593"
     FeeSelector:
       type: integer
       description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
