@@ -21,7 +21,8 @@ const (
 	// maxBalanceBytes is the maximum bytes that can use the Account.Balance *big.Int
 	maxBalanceBytes = 24
 
-	idxBytesLen = 6
+	// IdxBytesLen idx bytes
+	IdxBytesLen = 6
 	// maxIdxValue is the maximum value that Idx can have (48 bits: maxIdxValue=2**48-1)
 	maxIdxValue = 0xffffffffffff
 
@@ -66,8 +67,8 @@ func (idx Idx) BigInt() *big.Int {
 
 // IdxFromBytes returns Idx from a byte array
 func IdxFromBytes(b []byte) (Idx, error) {
-	if len(b) != idxBytesLen {
-		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected %d", len(b), idxBytesLen)
+	if len(b) != IdxBytesLen {
+		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected %d", len(b), IdxBytesLen)
 	}
 	var idxBytes [8]byte
 	copy(idxBytes[2:], b[:])
