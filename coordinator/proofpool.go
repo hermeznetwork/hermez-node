@@ -28,11 +28,13 @@ func NewServerProof(URL string) *ServerProof {
 // CalculateProof sends the *common.ZKInputs to the ServerProof to compute the
 // Proof
 func (p *ServerProof) CalculateProof(zkInputs *common.ZKInputs) error {
+	log.Error("TODO")
 	return errTODO
 }
 
 // GetProof retreives the Proof from the ServerProof
 func (p *ServerProof) GetProof(stopCh chan bool) (*Proof, error) {
+	log.Error("TODO")
 	return nil, errTODO
 }
 

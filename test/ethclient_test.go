@@ -31,7 +31,7 @@ func TestClientInterface(t *testing.T) {
 	var c eth.ClientInterface
 	var timer timer
 	clientSetup := NewClientSetupExample()
-	client := NewClient(true, &timer, ethCommon.Address{}, clientSetup)
+	client := NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 	c = client
 	require.NotNil(t, c)
 }
@@ -39,7 +39,7 @@ func TestClientInterface(t *testing.T) {
 func TestClientEth(t *testing.T) {
 	var timer timer
 	clientSetup := NewClientSetupExample()
-	c := NewClient(true, &timer, ethCommon.Address{}, clientSetup)
+	c := NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 	blockNum, err := c.EthCurrentBlock()
 	require.Nil(t, err)
 	assert.Equal(t, int64(0), blockNum)
@@ -76,7 +76,7 @@ func TestClientAuction(t *testing.T) {
 	clientSetup.AuctionVariables.DefaultSlotSetBid = [6]*big.Int{
 		big.NewInt(1000), big.NewInt(1100), big.NewInt(1200),
 		big.NewInt(1300), big.NewInt(1400), big.NewInt(1500)}
-	c := NewClient(true, &timer, addrWithdraw, clientSetup)
+	c := NewClient(true, &timer, &addrWithdraw, clientSetup)
 
 	// Check several cases in which bid doesn't succed, and also do 2 successful bids.
 
@@ -124,7 +124,7 @@ func TestClientRollup(t *testing.T) {
 
 	var timer timer
 	clientSetup := NewClientSetupExample()
-	c := NewClient(true, &timer, ethCommon.Address{}, clientSetup)
+	c := NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 
 	// Add a token
 

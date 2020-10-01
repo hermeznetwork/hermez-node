@@ -33,8 +33,15 @@ type RollupBlock struct {
 	State     eth.RollupState
 	Vars      eth.RollupVariables
 	Events    eth.RollupEvents
+	Txs       map[ethCommon.Hash]*types.Transaction
 	Constants *eth.RollupConstants
 	Eth       *EthereumBlock
+}
+
+func (r *RollupBlock) addTransaction(tx *types.Transaction) *types.Transaction {
+	txHash := tx.Hash()
+	r.Txs[txHash] = tx
+	return tx
 }
 
 var (
@@ -49,8 +56,15 @@ type AuctionBlock struct {
 	State     eth.AuctionState
 	Vars      eth.AuctionVariables
 	Events    eth.AuctionEvents
+	Txs       map[ethCommon.Hash]*types.Transaction
 	Constants *eth.AuctionConstants
 	Eth       *EthereumBlock
+}
+
+func (a *AuctionBlock) addTransaction(tx *types.Transaction) *types.Transaction {
+	txHash := tx.Hash()
+	a.Txs[txHash] = tx
+	return tx
 }
 
 func (a *AuctionBlock) getSlotNumber(blockNumber int64) int64 {
@@ -286,7 +300,7 @@ type Timer interface {
 type Client struct {
 	rw               *sync.RWMutex
 	log              bool
-	addr             ethCommon.Address
+	addr             *ethCommon.Address
 	rollupConstants  *eth.RollupConstants
 	auctionConstants *eth.AuctionConstants
 	blocks           map[int64]*Block
@@ -302,7 +316,7 @@ type Client struct {
 
 // NewClient returns a new test Client that implements the eth.IClient
 // interface, at the given initialBlockNumber.
-func NewClient(l bool, timer Timer, addr ethCommon.Address, setup *ClientSetup) *Client {
+func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup) *Client {
 	blocks := make(map[int64]*Block)
 	blockNum := int64(0)
 
@@ -326,6 +340,7 @@ func NewClient(l bool, timer Timer, addr ethCommon.Address, setup *ClientSetup) 
 				CurrentIdx:             0,
 			},
 			Vars:      *setup.RollupVariables,
+			Txs:       make(map[ethCommon.Hash]*types.Transaction),
 			Events:    eth.NewRollupEvents(),
 			Constants: setup.RollupConstants,
 		},
@@ -336,6 +351,7 @@ func NewClient(l bool, timer Timer, addr ethCommon.Address, setup *ClientSetup) 
 				Coordinators:    make(map[ethCommon.Address]*eth.Coordinator),
 			},
 			Vars:      *setup.AuctionVariables,
+			Txs:       make(map[ethCommon.Hash]*types.Transaction),
 			Events:    eth.NewAuctionEvents(),
 			Constants: setup.AuctionConstants,
 		},
@@ -468,6 +484,30 @@ func (c *Client) EthCurrentBlock() (int64, error) {
 	return c.blockNum, nil
 }
 
+// EthTransactionReceipt returns the transaction receipt of the given txHash
+func (c *Client) EthTransactionReceipt(ctx context.Context, txHash ethCommon.Hash) (*types.Receipt, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	for i := int64(0); i < c.blockNum; i++ {
+		b := c.blocks[i]
+		_, ok := b.Rollup.Txs[txHash]
+		if !ok {
+			_, ok = b.Auction.Txs[txHash]
+		}
+		if ok {
+			return &types.Receipt{
+				TxHash:      txHash,
+				Status:      types.ReceiptStatusSuccessful,
+				BlockHash:   b.Eth.Hash,
+				BlockNumber: big.NewInt(b.Eth.BlockNum),
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
 // func newHeader(number *big.Int) *types.Header {
 // 	return &types.Header{
 // 		Number: number,
@@ -497,6 +537,14 @@ func (c *Client) EthBlockByNumber(ctx context.Context, blockNum int64) (*common.
 		Hash:        block.Eth.Hash,
 		ParentHash:  block.Eth.ParentHash,
 	}, nil
+}
+
+// EthAddress returns the ethereum address of the account loaded into the Client
+func (c *Client) EthAddress() (*ethCommon.Address, error) {
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+	return c.addr, nil
 }
 
 var errTODO = fmt.Errorf("TODO: Not implemented yet")
@@ -533,7 +581,7 @@ type transactionData struct {
 	Value interface{}
 }
 
-func (c *Client) newTransaction(name string, value interface{}) *types.Transaction {
+func newTransaction(name string, value interface{}) *types.Transaction {
 	data, err := json.Marshal(transactionData{name, value})
 	if err != nil {
 		panic(err)
@@ -548,9 +596,12 @@ func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs) (tx *types.Tra
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	a := c.nextBlock().Auction
-	ok, err := a.canForge(c.addr, a.Eth.BlockNum)
+	ok, err := a.canForge(*c.addr, a.Eth.BlockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -561,10 +612,14 @@ func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs) (tx *types.Tra
 	// TODO: Verify proof
 
 	// Auction
-	err = a.forge(c.addr)
+	err = a.forge(*c.addr)
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: If successful, store the tx in a successful array.
+	// TODO: If failed, store the tx in a failed array.
+	// TODO: Add method to move the tx to another block, reapply it there, and possibly go from successful to failed.
 
 	return c.addBatch(args)
 }
@@ -595,7 +650,7 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 			r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum] = eth.NewQueueStruct()
 		}
 	}
-	ethTx := c.newTransaction("forgebatch", args)
+	ethTx := r.addTransaction(newTransaction("forgebatch", args))
 	c.forgeBatchArgsPending[ethTx.Hash()] = args
 	r.Events.ForgeBatch = append(r.Events.ForgeBatch, eth.RollupEventForgeBatch{
 		BatchNum:  int64(len(r.State.ExitRoots)),
@@ -611,6 +666,9 @@ func (c *Client) RollupAddToken(tokenAddress ethCommon.Address) (tx *types.Trans
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	nextBlock := c.nextBlock()
 	r := nextBlock.Rollup
@@ -622,7 +680,7 @@ func (c *Client) RollupAddToken(tokenAddress ethCommon.Address) (tx *types.Trans
 	r.State.TokenList = append(r.State.TokenList, tokenAddress)
 	r.Events.AddToken = append(r.Events.AddToken, eth.RollupEventAddToken{Address: tokenAddress,
 		TokenID: uint32(len(r.State.TokenList) - 1)})
-	return c.newTransaction("addtoken", tokenAddress), nil
+	return r.addTransaction(newTransaction("addtoken", tokenAddress)), nil
 }
 
 // RollupWithdrawSNARK is the interface to call the smart contract function
@@ -636,6 +694,9 @@ func (c *Client) RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *bab
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -647,6 +708,9 @@ func (c *Client) RollupForceExit(fromIdx int64, amountF common.Float16, tokenID 
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -658,6 +722,9 @@ func (c *Client) RollupForceTransfer(fromIdx int64, amountF common.Float16, toke
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -669,6 +736,9 @@ func (c *Client) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -689,6 +759,9 @@ func (c *Client) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF commo
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -700,6 +773,9 @@ func (c *Client) RollupDeposit(fromIdx int64, loadAmountF common.Float16, tokenI
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -711,6 +787,9 @@ func (c *Client) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -722,6 +801,9 @@ func (c *Client) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAm
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -760,6 +842,9 @@ func (c *Client) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (tx 
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -771,6 +856,9 @@ func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Tra
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -835,6 +923,9 @@ func (c *Client) AuctionSetSlotDeadline(newDeadline uint8) (tx *types.Transactio
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -855,6 +946,9 @@ func (c *Client) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (tx *typ
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -875,6 +969,9 @@ func (c *Client) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint16) (tx 
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -895,6 +992,9 @@ func (c *Client) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Transacti
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -915,6 +1015,9 @@ func (c *Client) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) (tx *ty
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -935,6 +1038,9 @@ func (c *Client) AuctionSetDonationAddress(newDonationAddress ethCommon.Address)
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -955,6 +1061,9 @@ func (c *Client) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address)
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -977,6 +1086,9 @@ func (c *Client) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid 
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -988,6 +1100,9 @@ func (c *Client) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	nextBlock := c.nextBlock()
 	a := nextBlock.Auction
@@ -996,14 +1111,14 @@ func (c *Client) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL
 		return nil, fmt.Errorf("Already registered")
 	}
 	a.State.Coordinators[forgerAddress] = &eth.Coordinator{
-		WithdrawalAddress: c.addr,
+		WithdrawalAddress: *c.addr,
 		URL:               URL,
 	}
 
 	a.Events.NewCoordinator = append(a.Events.NewCoordinator,
 		eth.AuctionEventNewCoordinator{
 			ForgerAddress:     forgerAddress,
-			WithdrawalAddress: c.addr,
+			WithdrawalAddress: *c.addr,
 			CoordinatorURL:    URL,
 		})
 
@@ -1011,7 +1126,7 @@ func (c *Client) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL
 		ForgerAddress ethCommon.Address
 		URL           string
 	}
-	return c.newTransaction("registercoordinator", data{forgerAddress, URL}), nil
+	return a.addTransaction(newTransaction("registercoordinator", data{forgerAddress, URL})), nil
 }
 
 // AuctionIsRegisteredCoordinator is the interface to call the smart contract function
@@ -1029,9 +1144,22 @@ func (c *Client) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address, n
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
+}
+
+// AuctionGetSlotNumber is the interface to call the smart contract function
+func (c *Client) AuctionGetSlotNumber(blockNum int64) (int64, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	currentBlock := c.currentBlock()
+	a := currentBlock.Auction
+	return a.getSlotNumber(blockNum), nil
 }
 
 // AuctionGetCurrentSlotNumber is the interface to call the smart contract function
@@ -1070,15 +1198,6 @@ func (c *Client) AuctionGetSlotSet(slot int64) (*big.Int, error) {
 	return nil, errTODO
 }
 
-// AuctionGetSlotNumber is the interface to call the smart contract function
-func (c *Client) AuctionGetSlotNumber(blockNum int64) (*big.Int, error) {
-	c.rw.RLock()
-	defer c.rw.RUnlock()
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
 // AuctionTokensReceived is the interface to call the smart contract function
 // func (c *Client) AuctionTokensReceived(operator, from, to ethCommon.Address, amount *big.Int, userData, operatorData []byte) error {
 // 	return errTODO
@@ -1090,6 +1209,9 @@ func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Add
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { func() { c.revertIfErr(err, cpy) }() }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	nextBlock := c.nextBlock()
 	a := nextBlock.Auction
@@ -1130,7 +1252,7 @@ func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Add
 		BidAmount *big.Int
 		Forger    ethCommon.Address
 	}
-	return c.newTransaction("bid", data{slot, bidAmount, forger}), nil
+	return a.addTransaction(newTransaction("bid", data{slot, bidAmount, forger})), nil
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
@@ -1139,6 +1261,9 @@ func (c *Client) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO
@@ -1165,6 +1290,9 @@ func (c *Client) AuctionClaimHEZ(claimAddress ethCommon.Address) (tx *types.Tran
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
 
 	log.Error("TODO")
 	return nil, errTODO

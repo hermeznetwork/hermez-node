@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
 )
 
@@ -18,6 +19,7 @@ type BatchInfo struct {
 	L1OperatorTxs  []*common.L1Tx
 	L2Txs          []*common.PoolL2Tx
 	// FeesInfo
+	ethTx *types.Transaction
 }
 
 // NewBatchInfo creates a new BatchInfo with the given batchNum &
@@ -51,4 +53,9 @@ func (bi *BatchInfo) SetServerProof(serverProof ServerProofInterface) {
 // SetProof sets the Proof to the BatchInfo data structure
 func (bi *BatchInfo) SetProof(proof *Proof) {
 	bi.proof = proof
+}
+
+// SetEthTx sets the ethTx to the BatchInfo data structure
+func (bi *BatchInfo) SetEthTx(ethTx *types.Transaction) {
+	bi.ethTx = ethTx
 }

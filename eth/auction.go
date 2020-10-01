@@ -240,11 +240,11 @@ type AuctionInterface interface {
 	AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address, newWithdrawAddress ethCommon.Address, newURL string) (*types.Transaction, error)
 
 	// Slot Info
+	AuctionGetSlotNumber(blockNum int64) (int64, error)
 	AuctionGetCurrentSlotNumber() (int64, error)
 	AuctionGetMinBidBySlot(slot int64) (*big.Int, error)
 	AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, error)
 	AuctionGetSlotSet(slot int64) (*big.Int, error)
-	AuctionGetSlotNumber(blockNum int64) (*big.Int, error)
 
 	// Bidding
 	// AuctionTokensReceived(operator, from, to ethCommon.Address, amount *big.Int,
@@ -698,7 +698,7 @@ func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, er
 }
 
 // AuctionGetSlotNumber is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetSlotNumber(blockNum int64) (*big.Int, error) {
+func (c *AuctionClient) AuctionGetSlotNumber(blockNum int64) (int64, error) {
 	var slot *big.Int
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(c.address, ec)
@@ -709,9 +709,9 @@ func (c *AuctionClient) AuctionGetSlotNumber(blockNum int64) (*big.Int, error) {
 		slot, err = auction.GetSlotNumber(nil, blockNumBig)
 		return err
 	}); err != nil {
-		return big.NewInt(0), err
+		return 0, err
 	}
-	return slot, nil
+	return slot.Int64(), nil
 }
 
 // AuctionBid is the interface to call the smart contract function

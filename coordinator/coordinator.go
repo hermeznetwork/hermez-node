@@ -1,18 +1,18 @@
 package coordinator
 
 import (
+	"context"
 	"fmt"
-	"sync"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/txselector"
-	kvdb "github.com/iden3/go-merkletree/db"
-	"github.com/iden3/go-merkletree/db/memory"
 )
 
 var errTODO = fmt.Errorf("TODO")
@@ -28,9 +28,9 @@ type Config struct {
 
 // Coordinator implements the Coordinator type
 type Coordinator struct {
-	forging    bool
-	rw         *sync.RWMutex
-	isForgeSeq bool // WIP just for testing while implementing
+	forging bool
+	// rw         *sync.RWMutex
+	// isForgeSeq bool // WIP just for testing while implementing
 
 	config Config
 
@@ -42,8 +42,9 @@ type Coordinator struct {
 	txsel        *txselector.TxSelector
 	batchBuilder *batchbuilder.BatchBuilder
 
-	ethClient  eth.ClientInterface
-	ethTxStore kvdb.Storage
+	ethClient eth.ClientInterface
+	ethTxs    []*types.Transaction
+	// ethTxStore kvdb.Storage
 }
 
 // NewCoordinator creates a new Coordinator
@@ -64,17 +65,30 @@ func NewCoordinator(conf Config,
 		txsel:           txsel,
 		batchBuilder:    bb,
 		ethClient:       ethClient,
-		ethTxStore:      memory.NewMemoryStorage(),
-		rw:              &sync.RWMutex{},
+
+		ethTxs: make([]*types.Transaction, 0),
+		// ethTxStore:      memory.NewMemoryStorage(),
+		// rw:              &sync.RWMutex{},
 	}
 	return &c
 }
+
+// TODO(Edu): Change the current design of the coordinator structur:
+// - Move Start and Stop functions (from node/node.go) here
+// - Add concept of StartPipeline, StopPipeline, that spawns and stops the goroutines
+// - Add a Manager that calls StartPipeline and StopPipeline, checks when it's time to forge, schedules new batches, etc.
+// - Add a TxMonitor that monitors successful ForgeBatch ethereum transactions and waits for N blocks of confirmation, and reports back errors to the Manager.
 
 // ForgeLoopFn is the function ran in a loop that checks if it's time to forge
 // and forges a batch if so and sends it to outBatchCh.  Returns true if it's
 // the coordinator turn to forge.
 func (c *Coordinator) ForgeLoopFn(outBatchCh chan *BatchInfo, stopCh chan bool) (forgetime bool, err error) {
-	if !c.isForgeSequence() {
+	// TODO: Move the logic to check if it's forge time or not outside the pipeline
+	isForgeSequence, err := c.isForgeSequence()
+	if err != nil {
+		return false, err
+	}
+	if !isForgeSequence {
 		if c.forging {
 			log.Info("ForgeLoopFn: forging state end")
 			c.forging = false
@@ -106,6 +120,12 @@ func (c *Coordinator) ForgeLoopFn(outBatchCh chan *BatchInfo, stopCh chan bool) 
 	// if c.synchronizer.Reorg():
 	_ = c.handleReorg()
 
+	defer func() {
+		if err == ErrStop {
+			log.Info("ForgeLoopFn: forgeLoopFn stopped")
+		}
+	}()
+
 	// 0. Wait for an available server proof
 	// blocking call
 	serverProof, err := c.serverProofPool.Get(stopCh)
@@ -134,10 +154,14 @@ func (c *Coordinator) ForgeLoopFn(outBatchCh chan *BatchInfo, stopCh chan bool) 
 // GetProofCallForgeLoopFn is the function ran in a loop that gets a forged
 // batch via inBatchCh, waits for the proof server to finish, calls the ForgeBatch
 // function in the Rollup Smart Contract, and sends the batch to outBatchCh.
-func (c *Coordinator) GetProofCallForgeLoopFn(inBatchCh, outBatchCh chan *BatchInfo, stopCh chan bool) error {
+func (c *Coordinator) GetProofCallForgeLoopFn(inBatchCh, outBatchCh chan *BatchInfo, stopCh chan bool) (err error) {
+	defer func() {
+		if err == ErrStop {
+			log.Info("GetProofCallForgeLoopFn: forgeLoopFn stopped")
+		}
+	}()
 	select {
 	case <-stopCh:
-		log.Info("GetProofCallForgeLoopFn: forgeLoopFn stopped")
 		return ErrStop
 	case batchInfo := <-inBatchCh:
 		log.Debugw("GetProofCallForgeLoopFn: getProofCallForge start", "batchNum", batchInfo.batchNum)
@@ -153,14 +177,18 @@ func (c *Coordinator) GetProofCallForgeLoopFn(inBatchCh, outBatchCh chan *BatchI
 // ForgeCallConfirmLoopFn is the function ran in a loop that gets a batch that
 // has been sent to the Rollup Smart Contract via inBatchCh and waits for the
 // ethereum transaction confirmation.
-func (c *Coordinator) ForgeCallConfirmLoopFn(inBatchCh chan *BatchInfo, stopCh chan bool) error {
+func (c *Coordinator) ForgeCallConfirmLoopFn(inBatchCh chan *BatchInfo, stopCh chan bool) (err error) {
+	defer func() {
+		if err == ErrStop {
+			log.Info("ForgeCallConfirmLoopFn: forgeConfirmLoopFn stopped")
+		}
+	}()
 	select {
 	case <-stopCh:
-		log.Info("ForgeCallConfirmLoopFn: forgeConfirmLoopFn stopped")
 		return ErrStop
 	case batchInfo := <-inBatchCh:
 		log.Debugw("ForgeCallConfirmLoopFn: forgeCallConfirm start", "batchNum", batchInfo.batchNum)
-		if err := c.forgeCallConfirm(batchInfo); err != nil {
+		if err := c.forgeCallConfirm(batchInfo, stopCh); err != nil {
 			return err
 		}
 		log.Debugw("ForgeCallConfirmLoopFn: forgeCallConfirm  end", "batchNum", batchInfo.batchNum)
@@ -244,13 +272,15 @@ func (c *Coordinator) getProofCallForge(batchInfo *BatchInfo, stopCh chan bool) 
 	}
 	batchInfo.SetProof(proof)
 	forgeBatchArgs := c.prepareForgeBatchArgs(batchInfo)
-	_, err = c.ethClient.RollupForgeBatch(forgeBatchArgs)
+	ethTx, err := c.ethClient.RollupForgeBatch(forgeBatchArgs)
 	if err != nil {
 		return err
 	}
+	// TODO: Move this to the next step (forgeCallConfirm)
 	log.Debugf("ethClient ForgeCall sent, batchNum: %d", c.batchNum)
+	batchInfo.SetEthTx(ethTx)
 
-	// TODO once tx data type is defined, store ethTx (returned by ForgeCall)
+	// TODO(FUTURE) once tx data type is defined, store ethTx (returned by ForgeCall)
 	// TBD if use ethTxStore as a disk k-v database, or use a Queue
 	// tx, err := c.ethTxStore.NewTx()
 	// if err != nil {
@@ -264,13 +294,46 @@ func (c *Coordinator) getProofCallForge(batchInfo *BatchInfo, stopCh chan bool) 
 	return nil
 }
 
-func (c *Coordinator) forgeCallConfirm(batchInfo *BatchInfo) error {
+func (c *Coordinator) forgeCallConfirm(batchInfo *BatchInfo, stopCh chan bool) error {
 	// TODO strategy of this sequence TBD
 	// confirm eth txs and mark them as accepted sequence
+	// IDEA: Keep an array in Coordinator with the list of sent ethTx.
+	// Here, loop over them and only delete them once the number of
+	// confirmed blocks is over a configured value.  If the tx is rejected,
+	// return error.
 	// ethTx := ethTxStore.GetFirstPending()
 	// waitForAccepted(ethTx) // blocking call, returns once the ethTx is mined
 	// ethTxStore.MarkAccepted(ethTx)
-	return nil
+	txID := batchInfo.ethTx.Hash()
+	// TODO: Follow EthereumClient.waitReceipt logic
+	count := 0
+	// TODO: Define this waitTime in the config
+	waitTime := 100 * time.Millisecond //nolint:gomnd
+	select {
+	case <-time.After(waitTime):
+		receipt, err := c.ethClient.EthTransactionReceipt(context.TODO(), txID)
+		if err != nil {
+			return err
+		}
+		if receipt != nil {
+			if receipt.Status == types.ReceiptStatusFailed {
+				return fmt.Errorf("receipt status is failed")
+			} else if receipt.Status == types.ReceiptStatusSuccessful {
+				return nil
+			}
+		}
+		// TODO: Call go-ethereum:
+		// if err == nil && receipt == nil :
+		// `func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {`
+		count++
+		if time.Duration(count)*waitTime > 60*time.Second {
+			log.Warnw("Waiting for ethTx receipt for more than 60 seconds", "tx", batchInfo.ethTx)
+			// TODO: Decide if we resend the Tx with higher gas price
+		}
+	case <-stopCh:
+		return ErrStop
+	}
+	return fmt.Errorf("timeout")
 }
 
 func (c *Coordinator) handleReorg() error {
@@ -278,10 +341,17 @@ func (c *Coordinator) handleReorg() error {
 }
 
 // isForgeSequence returns true if the node is the Forger in the current ethereum block
-func (c *Coordinator) isForgeSequence() bool {
-	c.rw.RLock()
-	defer c.rw.RUnlock()
-	return c.isForgeSeq // TODO
+func (c *Coordinator) isForgeSequence() (bool, error) {
+	// TODO: Consider checking if we can forge by quering the Synchronizer instead of using ethClient
+	blockNum, err := c.ethClient.EthCurrentBlock()
+	if err != nil {
+		return false, err
+	}
+	addr, err := c.ethClient.EthAddress()
+	if err != nil {
+		return false, err
+	}
+	return c.ethClient.AuctionCanForge(*addr, blockNum+1)
 }
 
 func (c *Coordinator) purgeRemoveByTimeout() error {
