@@ -1,6 +1,7 @@
 package statedb
 
 import (
+	"bytes"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -72,11 +73,11 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
 	b, err := s.db.Get(addr.Bytes())
 	if err != nil {
-		return common.Idx(0), err
+		return common.Idx(0), ErrToIdxNotFound
 	}
 	idx, err := common.IdxFromBytes(b)
 	if err != nil {
-		return common.Idx(0), err
+		return common.Idx(0), ErrToIdxNotFound
 	}
 	return idx, nil
 }
@@ -87,20 +88,24 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
 // query.  Will return common.Idx(0) and error in case that Idx is not found in
 // the StateDB.
 func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) (common.Idx, error) {
-	if pk == nil {
+	if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk == nil {
+		// case ToEthAddr!=0 && ToBJJ=0
 		return s.GetIdxByEthAddr(addr)
+	} else if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk != nil {
+		// case ToEthAddr!=0 && ToBJJ!=0
+		k := concatEthAddrBJJ(addr, pk)
+		b, err := s.db.Get(k)
+		if err != nil {
+			return common.Idx(0), ErrToIdxNotFound
+		}
+		idx, err := common.IdxFromBytes(b)
+		if err != nil {
+			return common.Idx(0), ErrToIdxNotFound
+		}
+		return idx, nil
 	}
-
-	k := concatEthAddrBJJ(addr, pk)
-	b, err := s.db.Get(k)
-	if err != nil {
-		return common.Idx(0), err
-	}
-	idx, err := common.IdxFromBytes(b)
-	if err != nil {
-		return common.Idx(0), err
-	}
-	return idx, nil
+	// rest of cases (included case ToEthAddr==0) are not possible
+	return common.Idx(0), ErrToIdxNotFound
 }
 
 func siblingsToZKInputFormat(s []*merkletree.Hash) []*big.Int {
