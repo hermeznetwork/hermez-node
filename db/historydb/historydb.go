@@ -259,10 +259,10 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 }
 
 // UpdateTokenValue updates the USD value of a token
-func (hdb *HistoryDB) UpdateTokenValue(tokenID common.TokenID, value float64) error {
+func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error {
 	_, err := hdb.db.Exec(
-		"UPDATE token SET usd = $1 WHERE token_id = $2;",
-		value, tokenID,
+		"UPDATE token SET usd = $1 WHERE symbol = $2;",
+		value, tokenSymbol,
 	)
 	return err
 }
@@ -275,6 +275,24 @@ func (hdb *HistoryDB) GetTokens() ([]*common.Token, error) {
 		"SELECT * FROM token ORDER BY token_id;",
 	)
 	return tokens, err
+}
+
+// GetTokenSymbols returns all the token symbols from the DB
+func (hdb *HistoryDB) GetTokenSymbols() ([]string, error) {
+	var tokenSymbols []string
+	rows, err := hdb.db.Query("SELECT symbol FROM token;")
+	if err != nil {
+		return nil, err
+	}
+	sym := new(string)
+	for rows.Next() {
+		err = rows.Scan(sym)
+		if err != nil {
+			return nil, err
+		}
+		tokenSymbols = append(tokenSymbols, *sym)
+	}
+	return tokenSymbols, nil
 }
 
 // AddAccounts insert accounts into the DB
