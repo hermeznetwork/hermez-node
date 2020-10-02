@@ -28,7 +28,7 @@ type ConfigBatch struct {
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset
 // method
 func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) (*BatchBuilder, error) {
-	localStateDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, true, int(nLevels))
+	localStateDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, statedb.TypeBatchBuilder, int(nLevels))
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (bb *BatchBuilder) Reset(batchNum common.BatchNum, fromSynchronizer bool) e
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
 func (bb *BatchBuilder) BuildBatch(configBatch *ConfigBatch, l1usertxs, l1coordinatortxs []*common.L1Tx, pooll2txs []*common.PoolL2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
-	zkInputs, _, err := bb.localStateDB.ProcessTxs(false, true, l1usertxs, l1coordinatortxs, pooll2txs)
+	zkInputs, _, err := bb.localStateDB.ProcessTxs(l1usertxs, l1coordinatortxs, pooll2txs)
 	if err != nil {
 		return nil, err
 	}

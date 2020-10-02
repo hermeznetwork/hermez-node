@@ -23,10 +23,19 @@ import (
 func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBuilder) { // FUTURE once Synchronizer is ready, should return it also
 	nLevels := 32
 
-	synchDB, err := ioutil.TempDir("", "tmpSynchDB")
+	synchDBPath, err := ioutil.TempDir("", "tmpSynchDB")
 	require.Nil(t, err)
-	sdb, err := statedb.NewStateDB(synchDB, true, nLevels)
+	synchSdb, err := statedb.NewStateDB(synchDBPath, statedb.TypeSynchronizer, nLevels)
 	assert.Nil(t, err)
+
+	// txselDBPath, err := ioutil.TempDir("", "tmpTxSelDB")
+	// require.Nil(t, err)
+	// bbDBPath, err := ioutil.TempDir("", "tmpBBDB")
+	// require.Nil(t, err)
+	// txselSdb, err := statedb.NewLocalStateDB(txselDBPath, synchSdb, statedb.TypeTxSelector, nLevels)
+	// assert.Nil(t, err)
+	// bbSdb, err := statedb.NewLocalStateDB(bbDBPath, synchSdb, statedb.TypeBatchBuilder, nLevels)
+	// assert.Nil(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
@@ -35,12 +44,12 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.Nil(t, err)
-	txsel, err := txselector.NewTxSelector(txselDir, sdb, l2DB, 10, 10, 10)
+	txsel, err := txselector.NewTxSelector(txselDir, synchSdb, l2DB, 10, 10, 10)
 	assert.Nil(t, err)
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.Nil(t, err)
-	bb, err := batchbuilder.NewBatchBuilder(bbDir, sdb, nil, 0, uint64(nLevels))
+	bb, err := batchbuilder.NewBatchBuilder(bbDir, synchSdb, nil, 0, uint64(nLevels))
 	assert.Nil(t, err)
 
 	// l1Txs, coordinatorL1Txs, poolL2Txs := test.GenerateTestTxsFromSet(t, test.SetTest0)

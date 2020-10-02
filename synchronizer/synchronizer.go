@@ -58,7 +58,7 @@ type BatchData struct {
 	l1CoordinatorTxs []*common.L1Tx
 	l2Txs            []*common.L2Tx
 	createdAccounts  []*common.Account
-	exitTree         []*common.ExitInfo
+	exitTree         []common.ExitInfo
 	batch            *common.Batch
 }
 
@@ -69,7 +69,7 @@ func NewBatchData() *BatchData {
 		l1CoordinatorTxs: make([]*common.L1Tx, 0),
 		l2Txs:            make([]*common.L2Tx, 0),
 		createdAccounts:  make([]*common.Account, 0),
-		exitTree:         make([]*common.ExitInfo, 0),
+		exitTree:         make([]common.ExitInfo, 0),
 	}
 }
 
@@ -435,7 +435,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		// TODO: Get createdAccounts from ProcessTxs()
 		// TODO: Get CollectedFees from ProcessTxs()
 		// TODO: Pass forgeBatchArgs.FeeIdxCoordinator to ProcessTxs()
-		_, exitInfo, err := s.stateDB.ProcessTxs(true, false, batchData.l1UserTxs, batchData.l1CoordinatorTxs, poolL2Txs)
+		_, exitInfo, err := s.stateDB.ProcessTxs(batchData.l1UserTxs, batchData.l1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, err
 		}

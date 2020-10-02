@@ -72,7 +72,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 
 	historyDB := historydb.NewHistoryDB(db)
 
-	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, true, 32)
+	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32)
 	if err != nil {
 		return nil, err
 	}

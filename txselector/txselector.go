@@ -43,7 +43,7 @@ type TxSelector struct {
 
 // NewTxSelector returns a *TxSelector
 func NewTxSelector(dbpath string, synchronizerStateDB *statedb.StateDB, l2 *l2db.L2DB, maxL1UserTxs, maxL1OperatorTxs, maxTxs uint64) (*TxSelector, error) {
-	localAccountsDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, false, 0) // without merkletree
+	localAccountsDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, statedb.TypeTxSelector, 0) // without merkletree
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]*common.P
 	txs := txsel.getL2Profitable(validTxs, txsel.MaxTxs)
 
 	// process the txs in the local AccountsDB
-	_, _, err = txsel.localAccountsDB.ProcessTxs(false, false, nil, nil, txs)
+	_, _, err = txsel.localAccountsDB.ProcessTxs(nil, nil, txs)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
 
 	// process the txs in the local AccountsDB
-	_, _, err = txsel.localAccountsDB.ProcessTxs(false, false, l1Txs, l1CoordinatorTxs, l2Txs)
+	_, _, err = txsel.localAccountsDB.ProcessTxs(l1Txs, l1CoordinatorTxs, l2Txs)
 	if err != nil {
 		return nil, nil, nil, err
 	}

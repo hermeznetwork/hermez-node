@@ -96,7 +96,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	sdb, err := statedb.NewStateDB(dir, false, 0)
+	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
 	if err != nil {
 		panic(err)
 	}

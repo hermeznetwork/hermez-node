@@ -15,31 +15,45 @@ import (
 
 // TODO(Edu): Document here how StateDB is kept consistent
 
-// ErrStateDBWithoutMT is used when a method that requires a MerkleTree is
-// called in a StateDB that does not have a MerkleTree defined
-var ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a StateDB without MerkleTree")
+var (
+	// ErrStateDBWithoutMT is used when a method that requires a MerkleTree
+	// is called in a StateDB that does not have a MerkleTree defined
+	ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a StateDB without MerkleTree")
 
-// ErrAccountAlreadyExists is used when CreateAccount is called and the Account
-// already exists
-var ErrAccountAlreadyExists = errors.New("Can not CreateAccount because Account already exists")
+	// ErrAccountAlreadyExists is used when CreateAccount is called and the
+	// Account already exists
+	ErrAccountAlreadyExists = errors.New("Can not CreateAccount because Account already exists")
 
-// ErrToIdxNotFound is used when trying to get the ToIdx from ToEthAddr or
-// ToEthAddr&ToBJJ
-var ErrToIdxNotFound = errors.New("ToIdx can not be found")
+	// ErrToIdxNotFound is used when trying to get the ToIdx from ToEthAddr
+	// or ToEthAddr&ToBJJ
+	ErrToIdxNotFound = errors.New("ToIdx can not be found")
 
-// KeyCurrentBatch is used as key in the db to store the current BatchNum
-var KeyCurrentBatch = []byte("currentbatch")
+	// KeyCurrentBatch is used as key in the db to store the current BatchNum
+	KeyCurrentBatch = []byte("currentbatch")
+)
 
-// PathStateDB defines the subpath of the StateDB
-const PathStateDB = "/statedb"
+const (
+	// PathStateDB defines the subpath of the StateDB
+	PathStateDB = "/statedb"
+	// PathBatchNum defines the subpath of the Batch Checkpoint in the
+	// subpath of the StateDB
+	PathBatchNum = "/BatchNum"
+	// PathCurrent defines the subpath of the current Batch in the subpath
+	// of the StateDB
+	PathCurrent = "/current"
+	// TypeSynchronizer defines a StateDB used by the Synchronizer, that
+	// generates the ExitTree when processing the txs
+	TypeSynchronizer = "synchronizer"
+	// TypeTxSelector defines a StateDB used by the TxSelector, without
+	// computing ExitTree neither the ZKInputs
+	TypeTxSelector = "txselector"
+	// TypeBatchBuilder defines a StateDB used by the BatchBuilder, that
+	// generates the ExitTree and the ZKInput when processing the txs
+	TypeBatchBuilder = "batchbuilder"
+)
 
-// PathBatchNum defines the subpath of the Batch Checkpoint in the subpath of
-// the StateDB
-const PathBatchNum = "/BatchNum"
-
-// PathCurrent defines the subpath of the current Batch in the subpath of the
-// StateDB
-const PathCurrent = "/current"
+// TypeStateDB determines the type of StateDB
+type TypeStateDB string
 
 // StateDB represents the StateDB object
 type StateDB struct {
@@ -47,6 +61,7 @@ type StateDB struct {
 	currentBatch common.BatchNum
 	db           *pebble.PebbleStorage
 	mt           *merkletree.MerkleTree
+	typ          TypeStateDB
 	// idx holds the current Idx that the BatchBuilder is using
 	idx common.Idx
 	zki *common.ZKInputs
@@ -55,7 +70,7 @@ type StateDB struct {
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
 // storage
-func NewStateDB(path string, withMT bool, nLevels int) (*StateDB, error) {
+func NewStateDB(path string, typ TypeStateDB, nLevels int) (*StateDB, error) {
 	var sto *pebble.PebbleStorage
 	var err error
 	sto, err = pebble.NewPebbleStorage(path+PathStateDB+PathCurrent, false)
@@ -64,17 +79,21 @@ func NewStateDB(path string, withMT bool, nLevels int) (*StateDB, error) {
 	}
 
 	var mt *merkletree.MerkleTree = nil
-	if withMT {
+	if typ == TypeSynchronizer || typ == TypeBatchBuilder {
 		mt, err = merkletree.NewMerkleTree(sto, nLevels)
 		if err != nil {
 			return nil, err
 		}
+	}
+	if typ == TypeTxSelector && nLevels != 0 {
+		return nil, fmt.Errorf("invalid StateDB parameters: StateDB type==TypeStateDB can not have nLevels!=0")
 	}
 
 	sdb := &StateDB{
 		path: path + PathStateDB,
 		db:   sto,
 		mt:   mt,
+		typ:  typ,
 	}
 
 	// load currentBatch
@@ -382,8 +401,8 @@ type LocalStateDB struct {
 
 // NewLocalStateDB returns a new LocalStateDB connected to the given
 // synchronizerDB
-func NewLocalStateDB(path string, synchronizerDB *StateDB, withMT bool, nLevels int) (*LocalStateDB, error) {
-	s, err := NewStateDB(path, withMT, nLevels)
+func NewLocalStateDB(path string, synchronizerDB *StateDB, typ TypeStateDB, nLevels int) (*LocalStateDB, error) {
+	s, err := NewStateDB(path, typ, nLevels)
 	if err != nil {
 		return nil, err
 	}
