@@ -36,7 +36,7 @@ type processedExit struct {
 // type==TypeSynchronizer, assumes that the call is done from the Synchronizer,
 // returns common.ExitTreeLeaf that is later used by the Synchronizer to update
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
-func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
+func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 
@@ -68,8 +68,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 	}
 
 	// assumption: l1usertx are sorted by L1Tx.Position
-	for _, tx := range l1usertxs {
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
+	for i := 0; i < len(l1usertxs); i++ {
+		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &l1usertxs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -85,8 +85,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 			s.i++
 		}
 	}
-	for _, tx := range l1coordinatortxs {
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
+	for i := 0; i < len(l1coordinatortxs); i++ {
+		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -105,8 +105,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 			s.i++
 		}
 	}
-	for _, tx := range l2txs {
-		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, tx)
+	for i := 0; i < len(l2txs); i++ {
+		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, &l2txs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -194,7 +194,7 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 }
 
 // getTokenIDsBigInt returns the list of TokenIDs in *big.Int format
-func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) ([]*big.Int, error) {
+func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) ([]*big.Int, error) {
 	tokenIDs := make(map[common.TokenID]bool)
 	for i := 0; i < len(l1usertxs); i++ {
 		tokenIDs[l1usertxs[i].TokenID] = true
@@ -256,6 +256,9 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		if err != nil {
 			return nil, nil, false, err
 		}
+		// TODO applyCreateAccount will return the created account,
+		// which in the case type==TypeSynchronizer will be added to an
+		// array of created accounts that will be returned
 
 		if s.zki != nil {
 			s.zki.AuxFromIdx[s.i] = s.idx.BigInt() // last s.idx is the one used for creating the new account
@@ -307,8 +310,8 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	var err error
 	var auxToIdx common.Idx
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
-	if tx.ToIdx == common.Idx(0) {
-		auxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
+	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
+		tx.AuxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
@@ -347,15 +350,18 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		s.zki.R8y[s.i] = tx.Signature.R8.Y
 	}
 
-	// if StateDB type==TypeSynchronizer, will need to add Nonce and
-	// TokenID to the transaction
+	// if StateDB type==TypeSynchronizer, will need to add Nonce
 	if s.typ == TypeSynchronizer {
+		// as type==TypeSynchronizer, always tx.ToIdx!=0
 		acc, err := s.GetAccount(tx.ToIdx)
 		if err != nil {
 			return nil, nil, false, err
 		}
 		tx.Nonce = acc.Nonce
-		tx.TokenID = acc.TokenID
+		// TokenID is also not set in the L2Txs from the blockchain
+		// that the Synchronizer works with, but does not need to be
+		// defined because is not used later for the L2Txs processing
+		// (Transfer & Exit)
 	}
 
 	switch tx.Type {

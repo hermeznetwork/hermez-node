@@ -155,9 +155,9 @@ type RollupForgeBatchArgs struct {
 	NewLastIdx            int64
 	NewStRoot             *big.Int
 	NewExitRoot           *big.Int
-	L1CoordinatorTxs      []*common.L1Tx
+	L1CoordinatorTxs      []common.L1Tx
 	L1CoordinatorTxsAuths [][]byte // Authorization for accountCreations for each L1CoordinatorTxs
-	L2Txs                 []*common.L2Tx
+	L2Txs                 []common.L2Tx
 	FeeIdxCoordinator     []common.Idx
 	// Circuit selector
 	VerifierIdx int64

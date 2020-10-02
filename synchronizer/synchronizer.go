@@ -54,10 +54,10 @@ func newAuctionData() *auctionData {
 
 // BatchData contains information about Batches from the contracts
 type BatchData struct {
-	l1UserTxs        []*common.L1Tx
-	l1CoordinatorTxs []*common.L1Tx
-	l2Txs            []*common.L2Tx
-	createdAccounts  []*common.Account
+	l1UserTxs        []common.L1Tx
+	l1CoordinatorTxs []common.L1Tx
+	l2Txs            []common.L2Tx
+	createdAccounts  []common.Account
 	exitTree         []common.ExitInfo
 	batch            *common.Batch
 }
@@ -65,10 +65,10 @@ type BatchData struct {
 // NewBatchData creates an empty BatchData with the slices initialized.
 func NewBatchData() *BatchData {
 	return &BatchData{
-		l1UserTxs:        make([]*common.L1Tx, 0),
-		l1CoordinatorTxs: make([]*common.L1Tx, 0),
-		l2Txs:            make([]*common.L2Tx, 0),
-		createdAccounts:  make([]*common.Account, 0),
+		l1UserTxs:        make([]common.L1Tx, 0),
+		l1CoordinatorTxs: make([]common.L1Tx, 0),
+		l2Txs:            make([]common.L2Tx, 0),
+		createdAccounts:  make([]common.Account, 0),
 		exitTree:         make([]common.ExitInfo, 0),
 	}
 }
@@ -393,7 +393,8 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 			position = len(l1UserTxs)
 
 			// Get L1 Coordinator Txs
-			for _, l1CoordinatorTx := range forgeBatchArgs.L1CoordinatorTxs {
+			for i := 0; i < len(forgeBatchArgs.L1CoordinatorTxs); i++ {
+				l1CoordinatorTx := &forgeBatchArgs.L1CoordinatorTxs[i]
 				l1CoordinatorTx.Position = position
 				l1CoordinatorTx.ToForgeL1TxsNum = nextForgeL1TxsNum
 				l1CoordinatorTx.UserOrigin = false
@@ -406,7 +407,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 					return nil, err
 				}
 
-				batchData.l1CoordinatorTxs = append(batchData.l1CoordinatorTxs, l1CoordinatorTx)
+				batchData.l1CoordinatorTxs = append(batchData.l1CoordinatorTxs, *l1CoordinatorTx)
 
 				// Check if we have to register an account
 				// if l1CoordinatorTx.FromIdx == 0 {

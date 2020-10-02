@@ -16,7 +16,7 @@ import (
 )
 
 // txs implements the interface Sort for an array of Tx
-type txs []*common.PoolL2Tx
+type txs []common.PoolL2Tx
 
 func (t txs) Len() int {
 	return len(t)
@@ -68,11 +68,18 @@ func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 }
 
 // GetL2TxSelection returns a selection of the L2Txs for the next batch, from the L2DB pool
-func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]*common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]common.PoolL2Tx, error) {
 	// get pending l2-tx from tx-pool
-	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // once l2db ready, maybe use parameter 'batchNum'
+	l2TxsRawFromL2DB, err := txsel.l2db.GetPendingTxs() // once l2db ready, maybe use parameter 'batchNum'
 	if err != nil {
+		log.Errorf("error on GetPendingTxs: %s", err)
 		return nil, err
+	}
+	// convert []*common.PoolL2Tx to []common.PoolL2Tx as the db meddler
+	// outputs it with an slice of pointers
+	var l2TxsRaw []common.PoolL2Tx
+	for i := 0; i < len(l2TxsRawFromL2DB); i++ {
+		l2TxsRaw = append(l2TxsRaw, *l2TxsRawFromL2DB[i])
 	}
 
 	// discard the txs that don't have an Account in the AccountDB
@@ -98,20 +105,26 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]*common.P
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
-func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*common.L1Tx) ([]*common.L1Tx, []*common.L1Tx, []*common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.L1Tx, []common.L1Tx, []common.PoolL2Tx, error) {
 	// apply l1-user-tx to localAccountDB
 	//     create new leaves
 	//     update balances
 	//     update nonces
 
 	// get pending l2-tx from tx-pool
-	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // (batchID)
+	l2TxsRawFromL2DB, err := txsel.l2db.GetPendingTxs() // (batchID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	// convert []*common.PoolL2Tx to []common.PoolL2Tx as the db meddler
+	// outputs it with an slice of pointers
+	var l2TxsRaw []common.PoolL2Tx
+	for i := 0; i < len(l2TxsRawFromL2DB); i++ {
+		l2TxsRaw = append(l2TxsRaw, *l2TxsRawFromL2DB[i])
+	}
 
 	var validTxs txs
-	var l1CoordinatorTxs []*common.L1Tx
+	var l1CoordinatorTxs []common.L1Tx
 	positionL1 := len(l1Txs)
 
 	// if tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB, if so,
@@ -190,7 +203,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 					validTxs = append(validTxs, l2TxsRaw[i])
 				}
 				// create L1CoordinatorTx for the accountCreation
-				l1CoordinatorTx := &common.L1Tx{
+				l1CoordinatorTx := common.L1Tx{
 					Position:    positionL1,
 					UserOrigin:  false,
 					FromEthAddr: accAuth.EthAddr,
@@ -215,7 +228,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 				// coordinator can create a new account without
 				// L1Authorization, as ToEthAddr==0xff
 				// create L1CoordinatorTx for the accountCreation
-				l1CoordinatorTx := &common.L1Tx{
+				l1CoordinatorTx := common.L1Tx{
 					Position:    positionL1,
 					UserOrigin:  false,
 					FromEthAddr: l2TxsRaw[i].ToEthAddr,
@@ -250,7 +263,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 	return l1Txs, l1CoordinatorTxs, l2Txs, nil
 }
 
-func checkAlreadyPendingToCreate(l1CoordinatorTxs []*common.L1Tx, addr ethCommon.Address, bjj *babyjub.PublicKey) bool {
+func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, addr ethCommon.Address, bjj *babyjub.PublicKey) bool {
 	for i := 0; i < len(l1CoordinatorTxs); i++ {
 		if bytes.Equal(l1CoordinatorTxs[i].FromEthAddr.Bytes(), addr.Bytes()) {
 			if bjj == nil {
@@ -264,10 +277,22 @@ func checkAlreadyPendingToCreate(l1CoordinatorTxs []*common.L1Tx, addr ethCommon
 	return false
 }
 
+// getL2Profitable returns the profitable selection of L2Txs sorted by Nonce
 func (txsel *TxSelector) getL2Profitable(txs txs, max uint64) txs {
 	sort.Sort(txs)
 	if len(txs) < int(max) {
 		return txs
 	}
-	return txs[:max]
+	txs = txs[:max]
+
+	// sort l2Txs by Nonce. This can be done in many different ways, what
+	// is needed is to output the txs where the Nonce of txs for each
+	// Account is sorted, but the txs can not be grouped by sender Account
+	// neither by Fee. This is because later on the Nonces will need to be
+	// sequential for the zkproof generation.
+	sort.SliceStable(txs, func(i, j int) bool {
+		return txs[i].Nonce < txs[j].Nonce
+	})
+
+	return txs
 }

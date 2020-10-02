@@ -52,16 +52,16 @@ func GenerateKeys(t *testing.T, accNames []string) map[string]*Account {
 
 // GenerateTestTxs generates L1Tx & PoolL2Tx in a deterministic way for the
 // given Instructions.
-func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx, []common.Token) {
+func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]common.L1Tx, [][]common.L1Tx, [][]common.PoolL2Tx, []common.Token) {
 	accounts := GenerateKeys(t, instructions.Accounts)
 	l1CreatedAccounts := make(map[string]*Account)
 
-	var batchL1Txs []*common.L1Tx
-	var batchCoordinatorL1Txs []*common.L1Tx
-	var batchPoolL2Txs []*common.PoolL2Tx
-	var l1Txs [][]*common.L1Tx
-	var coordinatorL1Txs [][]*common.L1Tx
-	var poolL2Txs [][]*common.PoolL2Tx
+	var batchL1Txs []common.L1Tx
+	var batchCoordinatorL1Txs []common.L1Tx
+	var batchPoolL2Txs []common.PoolL2Tx
+	var l1Txs [][]common.L1Tx
+	var coordinatorL1Txs [][]common.L1Tx
+	var poolL2Txs [][]common.PoolL2Tx
 	idx := 256
 	for _, inst := range instructions.Instructions {
 		switch inst.Type {
@@ -74,7 +74,7 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 				LoadAmount:  big.NewInt(int64(inst.Amount)),
 				Type:        common.TxTypeCreateAccountDeposit,
 			}
-			batchL1Txs = append(batchL1Txs, &tx)
+			batchL1Txs = append(batchL1Txs, tx)
 			if accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx == common.Idx(0) { // if account.Idx is not set yet, set it and increment idx
 				accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx = common.Idx(idx)
 
@@ -93,7 +93,7 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 				}
 				accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx = common.Idx(idx)
 				l1CreatedAccounts[idxTokenIDToString(inst.To, inst.TokenID)] = accounts[idxTokenIDToString(inst.To, inst.TokenID)]
-				batchCoordinatorL1Txs = append(batchCoordinatorL1Txs, &tx)
+				batchCoordinatorL1Txs = append(batchCoordinatorL1Txs, tx)
 				idx++
 			}
 
@@ -127,7 +127,7 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 			tx.Signature = sig
 
 			accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce++
-			batchPoolL2Txs = append(batchPoolL2Txs, &tx)
+			batchPoolL2Txs = append(batchPoolL2Txs, tx)
 
 		case common.TxTypeExit, common.TxTypeForceExit:
 			tx := common.L1Tx{
@@ -137,14 +137,14 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 				Amount:  big.NewInt(int64(inst.Amount)),
 				Type:    common.TxTypeExit,
 			}
-			batchL1Txs = append(batchL1Txs, &tx)
+			batchL1Txs = append(batchL1Txs, tx)
 		case TypeNewBatch:
 			l1Txs = append(l1Txs, batchL1Txs)
 			coordinatorL1Txs = append(coordinatorL1Txs, batchCoordinatorL1Txs)
 			poolL2Txs = append(poolL2Txs, batchPoolL2Txs)
-			batchL1Txs = []*common.L1Tx{}
-			batchCoordinatorL1Txs = []*common.L1Tx{}
-			batchPoolL2Txs = []*common.PoolL2Tx{}
+			batchL1Txs = []common.L1Tx{}
+			batchCoordinatorL1Txs = []common.L1Tx{}
+			batchPoolL2Txs = []common.PoolL2Tx{}
 		default:
 			continue
 		}
@@ -177,7 +177,7 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 
 // GenerateTestTxsFromSet reurns the L1 & L2 transactions for a given Set of
 // Instructions code
-func GenerateTestTxsFromSet(t *testing.T, set string) ([][]*common.L1Tx, [][]*common.L1Tx, [][]*common.PoolL2Tx, []common.Token) {
+func GenerateTestTxsFromSet(t *testing.T, set string) ([][]common.L1Tx, [][]common.L1Tx, [][]common.PoolL2Tx, []common.Token) {
 	parser := NewParser(strings.NewReader(set))
 	instructions, err := parser.Parse()
 	require.Nil(t, err)

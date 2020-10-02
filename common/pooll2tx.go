@@ -20,6 +20,7 @@ type PoolL2Tx struct {
 	TxID        TxID               `meddler:"tx_id"`
 	FromIdx     Idx                `meddler:"from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	ToIdx       Idx                `meddler:"to_idx"`   // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	AuxToIdx    Idx                `meddler:"-"`        // AuxToIdx is only used internally at the StateDB to avoid repeated computation when processing transactions
 	ToEthAddr   ethCommon.Address  `meddler:"to_eth_addr"`
 	ToBJJ       *babyjub.PublicKey `meddler:"to_bjj"` // TODO: stop using json, use scanner/valuer
 	TokenID     TokenID            `meddler:"token_id"`
@@ -209,8 +210,8 @@ func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
 }
 
 // L2Tx returns a *L2Tx from the PoolL2Tx
-func (tx *PoolL2Tx) L2Tx() *L2Tx {
-	return &L2Tx{
+func (tx *PoolL2Tx) L2Tx() L2Tx {
+	return L2Tx{
 		TxID:     tx.TxID,
 		BatchNum: tx.BatchNum,
 		FromIdx:  tx.FromIdx,
@@ -236,8 +237,8 @@ func (tx *PoolL2Tx) Tx() *Tx {
 }
 
 // PoolL2TxsToL2Txs returns an array of []*L2Tx from an array of []*PoolL2Tx
-func PoolL2TxsToL2Txs(txs []*PoolL2Tx) []*L2Tx {
-	var r []*L2Tx
+func PoolL2TxsToL2Txs(txs []PoolL2Tx) []L2Tx {
+	var r []L2Tx
 	for _, tx := range txs {
 		r = append(r, tx.L2Tx())
 	}
