@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -83,7 +84,10 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	}
 	client := eth.NewClient(ethClient, nil, nil, nil)
 
-	sync := synchronizer.NewSynchronizer(client, historyDB, stateDB)
+	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB)
+	if err != nil {
+		return nil, err
+	}
 
 	var coord *coordinator.Coordinator
 	if mode == ModeCoordinator {
@@ -223,7 +227,7 @@ func (n *Node) StartSynchronizer() {
 				log.Info("Coordinator stopped")
 				return
 			case <-time.After(n.cfg.Synchronizer.SyncLoopInterval.Duration):
-				if err := n.sync.Sync(); err != nil {
+				if err := n.sync.Sync(context.TODO()); err != nil {
 					log.Errorw("Synchronizer.Sync", "error", err)
 				}
 			}

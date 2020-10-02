@@ -329,10 +329,11 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 	blockCurrent := Block{
 		Rollup: &RollupBlock{
 			State: eth.RollupState{
-				StateRoot:              big.NewInt(0),
-				ExitRoots:              make([]*big.Int, 0),
-				ExitNullifierMap:       make(map[[256 / 8]byte]bool),
-				TokenList:              make([]ethCommon.Address, 0),
+				StateRoot:        big.NewInt(0),
+				ExitRoots:        make([]*big.Int, 0),
+				ExitNullifierMap: make(map[[256 / 8]byte]bool),
+				// TokenID = 0 is ETH.  Set first entry in TokenList with 0x0 address for ETH.
+				TokenList:              []ethCommon.Address{ethCommon.Address{}},
 				TokenMap:               make(map[ethCommon.Address]bool),
 				MapL1TxQueue:           mapL1TxQueue,
 				LastL1L2Batch:          0,
@@ -597,7 +598,11 @@ func (c *Client) CtlAddL1TxUser(l1Tx *common.L1Tx) {
 		panic("l1Tx.TokenID + 1 > len(r.State.TokenList)")
 	}
 	queue.L1TxQueue = append(queue.L1TxQueue, *l1Tx)
-	r.Events.L1UserTx = append(r.Events.L1UserTx, eth.RollupEventL1UserTx{L1Tx: *l1Tx})
+	r.Events.L1UserTx = append(r.Events.L1UserTx, eth.RollupEventL1UserTx{
+		L1Tx:            *l1Tx,
+		ToForgeL1TxsNum: r.State.LastToForgeL1TxsNum,
+		Position:        len(queue.L1TxQueue) - 1,
+	})
 }
 
 type transactionData struct {

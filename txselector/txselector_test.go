@@ -35,9 +35,9 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 
 	return txsel
 }
-func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []*common.PoolL2Tx) {
+func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []common.PoolL2Tx) {
 	for i := 0; i < len(poolL2Txs); i++ {
-		err := txsel.l2db.AddTxTest(poolL2Txs[i])
+		err := txsel.l2db.AddTxTest(&poolL2Txs[i])
 		require.Nil(t, err)
 	}
 }

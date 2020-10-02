@@ -250,15 +250,15 @@ func (tx *PoolL2Tx) Tx() (*Tx, error) {
 	}, nil
 }
 
-// PoolL2TxsToL2Txs returns an array of []*L2Tx from an array of []*PoolL2Tx
-func PoolL2TxsToL2Txs(txs []*PoolL2Tx) ([]*L2Tx, error) {
-	var r []*L2Tx
+// PoolL2TxsToL2Txs returns an array of []L2Tx from an array of []PoolL2Tx
+func PoolL2TxsToL2Txs(txs []PoolL2Tx) ([]L2Tx, error) {
+	var r []L2Tx
 	for _, poolTx := range txs {
 		tx, err := poolTx.L2Tx()
 		if err != nil {
 			return nil, err
 		}
-		r = append(r, tx)
+		r = append(r, *tx)
 	}
 	return r, nil
 }

@@ -12,6 +12,11 @@ import (
 )
 
 const (
+	// TXIDPrefixL1UserTx is the prefix that determines that the TxID is
+	// for a L1UserTx
+	//nolinter:gomnd
+	TxIDPrefixL1UserTx = byte(0)
+
 	// TXIDPrefixL1CoordTx is the prefix that determines that the TxID is
 	// for a L1CoordinatorTx
 	//nolinter:gomnd

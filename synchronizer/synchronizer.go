@@ -20,93 +20,102 @@ var (
 
 // rollupData contains information returned by the Rollup SC
 type rollupData struct {
-	l1Txs   []*common.L1Tx
-	batches []*BatchData
+	l1UserTxs []common.L1Tx
+	batches   []historydb.BatchData
 	// withdrawals      []*common.ExitInfo
-	registeredTokens []*common.Token
-	rollupVars       *common.RollupVars
+	registeredTokens []common.Token
+	vars             *common.RollupVars
 }
 
 // NewRollupData creates an empty rollupData with the slices initialized.
 func newRollupData() rollupData {
 	return rollupData{
-		l1Txs:   make([]*common.L1Tx, 0),
-		batches: make([]*BatchData, 0),
+		l1UserTxs: make([]common.L1Tx, 0),
+		batches:   make([]historydb.BatchData, 0),
 		// withdrawals:      make([]*common.ExitInfo, 0),
-		registeredTokens: make([]*common.Token, 0),
+		registeredTokens: make([]common.Token, 0),
 	}
 }
 
 // auctionData contains information returned by the Action SC
 type auctionData struct {
-	bids         []*common.Bid
-	coordinators []*common.Coordinator
-	auctionVars  *common.AuctionVars
+	bids         []common.Bid
+	coordinators []common.Coordinator
+	vars         *common.AuctionVars
 }
 
 // newAuctionData creates an empty auctionData with the slices initialized.
 func newAuctionData() *auctionData {
 	return &auctionData{
-		bids:         make([]*common.Bid, 0),
-		coordinators: make([]*common.Coordinator, 0),
+		bids:         make([]common.Bid, 0),
+		coordinators: make([]common.Coordinator, 0),
 	}
+}
+
+type wdelayerData struct {
+	vars *common.WithdrawDelayerVars
 }
 
 // BatchData contains information about Batches from the contracts
-type BatchData struct {
-	l1UserTxs        []*common.L1Tx
-	l1CoordinatorTxs []*common.L1Tx
-	l2Txs            []*common.L2Tx
-	createdAccounts  []*common.Account
-	exitTree         []common.ExitInfo
-	batch            *common.Batch
-}
+// type BatchData struct {
+// 	l1UserTxs        []*common.L1Tx
+// 	l1CoordinatorTxs []*common.L1Tx
+// 	l2Txs            []*common.L2Tx
+// 	createdAccounts  []*common.Account
+// 	exitTree         []*common.ExitInfo
+// 	batch            *common.Batch
+// }
 
 // NewBatchData creates an empty BatchData with the slices initialized.
-func NewBatchData() *BatchData {
-	return &BatchData{
-		l1UserTxs:        make([]*common.L1Tx, 0),
-		l1CoordinatorTxs: make([]*common.L1Tx, 0),
-		l2Txs:            make([]*common.L2Tx, 0),
-		createdAccounts:  make([]*common.Account, 0),
-		exitTree:         make([]common.ExitInfo, 0),
-	}
-}
+// func NewBatchData() *BatchData {
+// 	return &BatchData{
+// 		l1UserTxs:        make([]*common.L1Tx, 0),
+// 		l1CoordinatorTxs: make([]*common.L1Tx, 0),
+// 		l2Txs:            make([]*common.L2Tx, 0),
+// 		createdAccounts:  make([]*common.Account, 0),
+// 		exitTree:         make([]*common.ExitInfo, 0),
+// 	}
+// }
 
 // BlockData contains information about Blocks from the contracts
-type BlockData struct {
-	block *common.Block
-	// Rollup
-	l1Txs   []*common.L1Tx // TODO: Answer: User? Coordinator? Both?
-	batches []*BatchData   // TODO: Also contains L1Txs!
-	// withdrawals      []*common.ExitInfo // TODO
-	registeredTokens []*common.Token
-	rollupVars       *common.RollupVars
-	// Auction
-	bids         []*common.Bid
-	coordinators []*common.Coordinator
-	auctionVars  *common.AuctionVars
-	// WithdrawalDelayer
-	withdrawalDelayerVars *common.WithdrawalDelayerVars
-}
+// type blockData struct {
+// 	Block *common.Block
+// 	// Rollup
+// 	L1Txs   []*common.L1Tx // TODO: Answer: User? Coordinator? Both?
+// 	Batches []*BatchData   // TODO: Also contains L1Txs!
+// 	// withdrawals      []*common.ExitInfo // TODO
+// 	RegisteredTokens []common.Token
+// 	RollupVars       *common.RollupVars
+// 	// Auction
+// 	Bids         []*common.Bid
+// 	Coordinators []*common.Coordinator
+// 	AuctionVars  *common.AuctionVars
+// 	// WithdrawalDelayer
+// 	WithdrawalDelayerVars *common.WithdrawalDelayerVars
+// }
 
 // Synchronizer implements the Synchronizer type
 type Synchronizer struct {
-	ethClient       *eth.Client
-	historyDB       *historydb.HistoryDB
-	stateDB         *statedb.StateDB
-	firstSavedBlock *common.Block
-	mux             sync.Mutex
+	ethClient        eth.ClientInterface
+	auctionConstants eth.AuctionConstants
+	historyDB        *historydb.HistoryDB
+	stateDB          *statedb.StateDB
+	firstSavedBlock  *common.Block
+	mux              sync.Mutex
 }
 
 // NewSynchronizer creates a new Synchronizer
-func NewSynchronizer(ethClient *eth.Client, historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *Synchronizer {
-	s := &Synchronizer{
-		ethClient: ethClient,
-		historyDB: historyDB,
-		stateDB:   stateDB,
+func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) (*Synchronizer, error) {
+	auctionConstants, err := ethClient.AuctionConstants()
+	if err != nil {
+		return nil, err
 	}
-	return s
+	return &Synchronizer{
+		ethClient:        ethClient,
+		auctionConstants: *auctionConstants,
+		historyDB:        historyDB,
+		stateDB:          stateDB,
+	}, nil
 }
 
 // TODO: Be smart about locking: only lock during the read/write operations
@@ -116,7 +125,7 @@ func NewSynchronizer(ethClient *eth.Client, historyDB *historydb.HistoryDB, stat
 // TODO: Add argument: maximum number of blocks to process
 // TODO: Check reorgs in the middle of syncing a block.  Probably make
 // rollupSync, auctionSync and withdrawalSync return the block hash.
-func (s *Synchronizer) Sync() error {
+func (s *Synchronizer) Sync(ctx context.Context) error {
 	// Avoid new sync while performing one
 	s.mux.Lock()
 	defer s.mux.Unlock()
@@ -130,11 +139,10 @@ func (s *Synchronizer) Sync() error {
 	}
 	// If we don't have any stored block, we must do a full sync starting from the rollup genesis block
 	if err == sql.ErrNoRows {
-		// TODO: Query rollup constants and genesis information, store them
-		nextBlockNum = 1234 // TODO: Replace this with genesisBlockNum
+		nextBlockNum = s.auctionConstants.GenesisBlockNum
 	} else {
 		// Get the latest block we have in History DB from blockchain to detect a reorg
-		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), lastSavedBlock.EthBlockNum)
+		ethBlock, err := s.ethClient.EthBlockByNumber(ctx, lastSavedBlock.EthBlockNum)
 		if err != nil {
 			return err
 		}
@@ -165,7 +173,7 @@ func (s *Synchronizer) Sync() error {
 
 	log.Debugf("Blocks to sync: %v (firstBlockToSync: %v, latestBlock: %v)", latestBlockNum-nextBlockNum+1, nextBlockNum, latestBlockNum)
 
-	for nextBlockNum < latestBlockNum {
+	for nextBlockNum <= latestBlockNum {
 		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), nextBlockNum)
 		if err != nil {
 			return err
@@ -195,34 +203,40 @@ func (s *Synchronizer) Sync() error {
 		}
 
 		// Group all the block data into the structs to save into HistoryDB
-		var blockData BlockData
+		var blockData historydb.BlockData
 
-		blockData.block = ethBlock
+		blockData.Block = ethBlock
 
 		if rollupData != nil {
-			blockData.l1Txs = rollupData.l1Txs
-			blockData.batches = rollupData.batches
+			blockData.L1UserTxs = rollupData.l1UserTxs
+			blockData.Batches = rollupData.batches
 			// blockData.withdrawals = rollupData.withdrawals // TODO
-			blockData.registeredTokens = rollupData.registeredTokens
-			blockData.rollupVars = rollupData.rollupVars
+			blockData.RegisteredTokens = rollupData.registeredTokens
+			blockData.RollupVars = rollupData.vars
 		}
 
 		if auctionData != nil {
-			blockData.bids = auctionData.bids
-			blockData.coordinators = auctionData.coordinators
-			blockData.auctionVars = auctionData.auctionVars
+			blockData.Bids = auctionData.bids
+			blockData.Coordinators = auctionData.coordinators
+			blockData.AuctionVars = auctionData.vars
 		}
 
 		if wdelayerData != nil {
-			blockData.withdrawalDelayerVars = wdelayerData
+			blockData.WithdrawDelayerVars = wdelayerData.vars
 		}
 
 		// Add rollupData and auctionData once the method is updated
 		// TODO: Save Whole Struct -> AddBlockSCData(blockData)
-		err = s.historyDB.AddBlock(blockData.block)
+		log.Debugw("Sync()", "block", blockData)
+		// err = s.historyDB.AddBlock(blockData.Block)
+		// if err != nil {
+		// 	return err
+		// }
+		err = s.historyDB.AddBlockSCData(&blockData)
 		if err != nil {
 			return err
 		}
+		nextBlockNum++
 	}
 
 	return nil
@@ -358,18 +372,18 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 	// }
 
 	// Get L1UserTX
-	rollupData.l1Txs, err = getL1UserTx(rollupEvents.L1UserTx, blockNum)
+	rollupData.l1UserTxs, err = getL1UserTx(rollupEvents.L1UserTx, blockNum)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get ForgeBatch events to get the L1CoordinatorTxs
-	for _, fbEvent := range rollupEvents.ForgeBatch {
-		batchData := NewBatchData()
+	for _, evtForgeBatch := range rollupEvents.ForgeBatch {
+		batchData := historydb.NewBatchData()
 		position := 0
 
 		// Get the input for each Tx
-		forgeBatchArgs, err := s.ethClient.RollupForgeBatchArgs(fbEvent.EthTxHash)
+		forgeBatchArgs, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash)
 		if err != nil {
 			return nil, err
 		}
@@ -399,14 +413,14 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 				l1CoordinatorTx.UserOrigin = false
 				l1CoordinatorTx.EthBlockNum = blockNum
 				bn := new(common.BatchNum)
-				*bn = common.BatchNum(fbEvent.BatchNum)
+				*bn = common.BatchNum(evtForgeBatch.BatchNum)
 				l1CoordinatorTx.BatchNum = bn
-				l1CoordinatorTx, err = common.NewL1Tx(l1CoordinatorTx)
+				l1Tx, err := common.NewL1Tx(l1CoordinatorTx)
 				if err != nil {
 					return nil, err
 				}
 
-				batchData.l1CoordinatorTxs = append(batchData.l1CoordinatorTxs, l1CoordinatorTx)
+				batchData.L1CoordinatorTxs = append(batchData.L1CoordinatorTxs, *l1Tx)
 
 				// Check if we have to register an account
 				// if l1CoordinatorTx.FromIdx == 0 {
@@ -435,7 +449,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		// TODO: Get createdAccounts from ProcessTxs()
 		// TODO: Get CollectedFees from ProcessTxs()
 		// TODO: Pass forgeBatchArgs.FeeIdxCoordinator to ProcessTxs()
-		_, exitInfo, err := s.stateDB.ProcessTxs(batchData.l1UserTxs, batchData.l1CoordinatorTxs, poolL2Txs)
+		_, exitInfo, err := s.stateDB.ProcessTxs(batchData.L1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, err
 		}
@@ -444,13 +458,13 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		if err != nil {
 			return nil, err
 		}
-		batchData.l2Txs = append(batchData.l2Txs, l2Txs...)
+		batchData.L2Txs = append(batchData.L2Txs, l2Txs...)
 
-		batchData.exitTree = exitInfo
+		batchData.ExitTree = exitInfo
 
 		// Get Batch information
 		batch := &common.Batch{
-			BatchNum:    common.BatchNum(fbEvent.BatchNum),
+			BatchNum:    common.BatchNum(evtForgeBatch.BatchNum),
 			EthBlockNum: blockNum,
 			// ForgerAddr: , TODO: Get it from ethClient -> Add ForgerAddr to RollupEventForgeBatch
 			// CollectedFees: , TODO: Clarify where to get them if they are still needed
@@ -460,19 +474,23 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 			ForgeL1TxsNum: &forgeL1TxsNum,
 			// SlotNum: TODO: Calculate once ethClient provides the info // calculate from blockNum + ethClient Constants
 		}
-		batchData.batch = batch
-		rollupData.batches = append(rollupData.batches, batchData)
+		batchData.Batch = batch
+		rollupData.batches = append(rollupData.batches, *batchData)
 	}
 
 	// Get Registered Tokens
-	for _, eAddToken := range rollupEvents.AddToken {
-		var token *common.Token
+	for _, evtAddToken := range rollupEvents.AddToken {
+		var token common.Token
 
-		token.TokenID = common.TokenID(eAddToken.TokenID)
-		token.EthAddr = eAddToken.Address
+		token.TokenID = common.TokenID(evtAddToken.TokenID)
+		token.EthAddr = evtAddToken.Address
 		token.EthBlockNum = blockNum
 
 		// TODO: Add external information consulting SC about it using Address
+		token.Name = "TODO"
+		token.Symbol = "TODO"
+		token.Decimals = 8 // TODO
+
 		rollupData.registeredTokens = append(rollupData.registeredTokens, token)
 	}
 
@@ -498,22 +516,22 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 	}
 
 	// Get bids
-	for _, eNewBid := range auctionEvents.NewBid {
-		bid := &common.Bid{
-			SlotNum:     common.SlotNum(eNewBid.Slot),
-			BidValue:    eNewBid.BidAmount,
-			Bidder:      eNewBid.Bidder,
+	for _, evtNewBid := range auctionEvents.NewBid {
+		bid := common.Bid{
+			SlotNum:     common.SlotNum(evtNewBid.Slot),
+			BidValue:    evtNewBid.BidAmount,
+			Bidder:      evtNewBid.Bidder,
 			EthBlockNum: blockNum,
 		}
 		auctionData.bids = append(auctionData.bids, bid)
 	}
 
 	// Get Coordinators
-	for _, eNewCoordinator := range auctionEvents.SetCoordinator {
-		coordinator := &common.Coordinator{
-			Bidder: eNewCoordinator.BidderAddress,
-			Forger: eNewCoordinator.ForgerAddress,
-			URL:    eNewCoordinator.CoordinatorURL,
+	for _, evtSetCoordinator := range auctionEvents.SetCoordinator {
+		coordinator := common.Coordinator{
+			Bidder: evtSetCoordinator.BidderAddress,
+			Forger: evtSetCoordinator.ForgerAddress,
+			URL:    evtSetCoordinator.CoordinatorURL,
 		}
 		auctionData.coordinators = append(auctionData.coordinators, coordinator)
 	}
@@ -537,7 +555,7 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 }
 
 // wdelayerSync gets information from the Withdrawal Delayer Contract
-func (s *Synchronizer) wdelayerSync(blockNum int64) (*common.WithdrawalDelayerVars, error) {
+func (s *Synchronizer) wdelayerSync(blockNum int64) (*wdelayerData, error) {
 	// TODO: VARS
 	// TODO: CONSTANTS
 
@@ -559,24 +577,23 @@ func (s *Synchronizer) wdelayerSync(blockNum int64) (*common.WithdrawalDelayerVa
 // 	return forgeBatchArgs.NewLastIdx + 1, nil
 // }
 
-func getL1UserTx(l1UserTxEvents []eth.RollupEventL1UserTx, blockNum int64) ([]*common.L1Tx, error) {
-	l1Txs := make([]*common.L1Tx, 0)
+func getL1UserTx(eventsL1UserTx []eth.RollupEventL1UserTx, blockNum int64) ([]common.L1Tx, error) {
+	l1Txs := make([]common.L1Tx, 0)
 
-	for _, eL1UserTx := range l1UserTxEvents {
+	for _, evtL1UserTx := range eventsL1UserTx {
 		// Fill aditional Tx fields
-		toForge := new(int64)
-		*toForge = eL1UserTx.ToForgeL1TxsNum
-		eL1UserTx.L1Tx.ToForgeL1TxsNum = toForge
-		eL1UserTx.L1Tx.Position = eL1UserTx.Position
-		eL1UserTx.L1Tx.UserOrigin = true
-		eL1UserTx.L1Tx.EthBlockNum = blockNum
-		nL1Tx, err := common.NewL1Tx(&eL1UserTx.L1Tx)
+		toForge := evtL1UserTx.ToForgeL1TxsNum
+		evtL1UserTx.L1Tx.ToForgeL1TxsNum = &toForge
+		evtL1UserTx.L1Tx.Position = evtL1UserTx.Position
+		evtL1UserTx.L1Tx.UserOrigin = true
+		evtL1UserTx.L1Tx.EthBlockNum = blockNum
+		nL1Tx, err := common.NewL1Tx(&evtL1UserTx.L1Tx)
 		if err != nil {
 			return nil, err
 		}
-		eL1UserTx.L1Tx = *nL1Tx
+		evtL1UserTx.L1Tx = *nL1Tx
 
-		l1Txs = append(l1Txs, &eL1UserTx.L1Tx)
+		l1Txs = append(l1Txs, evtL1UserTx.L1Tx)
 	}
 	return l1Txs, nil
 }

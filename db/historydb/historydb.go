@@ -8,6 +8,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
@@ -25,7 +26,7 @@ type HistoryDB struct {
 
 // BlockData contains the information of a Block
 type BlockData struct {
-	block *common.Block
+	Block *common.Block
 	// Rollup
 	// L1UserTxs that were submitted in the block
 	L1UserTxs        []common.L1Tx
@@ -33,10 +34,10 @@ type BlockData struct {
 	RegisteredTokens []common.Token
 	RollupVars       *common.RollupVars
 	// Auction
-	Bids         []common.Bid
-	Coordinators []common.Coordinator
-	AuctionVars  *common.AuctionVars
-	// WithdrawalDelayer
+	Bids                []common.Bid
+	Coordinators        []common.Coordinator
+	AuctionVars         *common.AuctionVars
+	WithdrawDelayerVars *common.WithdrawDelayerVars
 	// TODO: enable when common.WithdrawalDelayerVars is Merged from Synchronizer PR
 	// WithdrawalDelayerVars *common.WithdrawalDelayerVars
 }
@@ -51,6 +52,19 @@ type BatchData struct {
 	CreatedAccounts  []common.Account
 	ExitTree         []common.ExitInfo
 	Batch            *common.Batch
+}
+
+// NewBatchData creates an empty BatchData with the slices initialized.
+func NewBatchData() *BatchData {
+	return &BatchData{
+		L1Batch:          false,
+		L1UserTxs:        make([]common.L1Tx, 0),
+		L1CoordinatorTxs: make([]common.L1Tx, 0),
+		L2Txs:            make([]common.L2Tx, 0),
+		CreatedAccounts:  make([]common.Account, 0),
+		ExitTree:         make([]common.ExitInfo, 0),
+		Batch:            &common.Batch{},
+	}
 }
 
 // NewHistoryDB initialize the DB
@@ -536,27 +550,22 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 	}
 	defer func() {
 		if err != nil {
-			err = txn.Rollback()
+			errRollback := txn.Rollback()
+			if errRollback != nil {
+				log.Errorw("Rollback", "err", errRollback)
+			}
 		}
 	}()
 
 	// Add block
-	err = hdb.addBlock(txn, blockData.block)
+	err = hdb.addBlock(txn, blockData.Block)
 	if err != nil {
 		return err
 	}
 
-	// Add l1 Txs
-	if len(blockData.L1UserTxs) > 0 {
-		err = hdb.addL1Txs(txn, blockData.L1UserTxs)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Add Tokens
-	if len(blockData.RegisteredTokens) > 0 {
-		err = hdb.addTokens(txn, blockData.RegisteredTokens)
+	// Add Coordinators
+	if len(blockData.Coordinators) > 0 {
+		err = hdb.addCoordinators(txn, blockData.Coordinators)
 		if err != nil {
 			return err
 		}
@@ -570,9 +579,17 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 		}
 	}
 
-	// Add Coordinators
-	if len(blockData.Coordinators) > 0 {
-		err = hdb.addCoordinators(txn, blockData.Coordinators)
+	// Add Tokens
+	if len(blockData.RegisteredTokens) > 0 {
+		err = hdb.addTokens(txn, blockData.RegisteredTokens)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add l1 Txs
+	if len(blockData.L1UserTxs) > 0 {
+		err = hdb.addL1Txs(txn, blockData.L1UserTxs)
 		if err != nil {
 			return err
 		}
