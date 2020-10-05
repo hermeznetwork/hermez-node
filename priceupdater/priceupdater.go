@@ -1,13 +1,13 @@
 package priceupdater
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
-	"sync"
+	"strconv"
 	"time"
 
 	"github.com/dghubble/sling"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/log"
 )
 
 const (
@@ -15,116 +15,59 @@ const (
 	defaultIdleConnTimeout = 10
 )
 
-var (
-	// ErrSymbolDoesNotExistInDatabase is used when trying to get a token that is not in the DB
-	ErrSymbolDoesNotExistInDatabase = errors.New("symbol does not exist in database")
-)
-
-// ConfigPriceUpdater contains the configuration set by the coordinator
-type ConfigPriceUpdater struct {
-	RecommendedFee              uint64 // in dollars
-	RecommendedCreateAccountFee uint64 // in dollars
-	TokensList                  []string
-	APIURL                      string
-}
-
-// TokenInfo contains the updated value for the token
-type TokenInfo struct {
-	Symbol      string
-	Value       float64
-	LastUpdated time.Time
-}
-
 // PriceUpdater definition
 type PriceUpdater struct {
-	db     map[string]TokenInfo
-	config ConfigPriceUpdater
-	mu     sync.RWMutex
+	db           *historydb.HistoryDB
+	apiURL       string
+	tokenSymbols []string
 }
 
 // NewPriceUpdater is the constructor for the updater
-func NewPriceUpdater(config ConfigPriceUpdater) PriceUpdater {
+func NewPriceUpdater(apiURL string, db *historydb.HistoryDB) PriceUpdater {
+	tokenSymbols := []string{}
 	return PriceUpdater{
-		db:     make(map[string]TokenInfo),
-		config: config,
+		db:           db,
+		apiURL:       apiURL,
+		tokenSymbols: tokenSymbols,
 	}
 }
 
 // UpdatePrices is triggered by the Coordinator, and internally will update the token prices in the db
-func (p *PriceUpdater) UpdatePrices() error {
+func (p *PriceUpdater) UpdatePrices() {
 	tr := &http.Transport{
 		MaxIdleConns:       defaultMaxIdleConns,
 		IdleConnTimeout:    defaultIdleConnTimeout * time.Second,
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
-	client := sling.New().Base(p.config.APIURL).Client(httpClient)
+	client := sling.New().Base(p.apiURL).Client(httpClient)
 
 	state := [10]float64{}
 
-	for _, tokenSymbol := range p.config.TokensList {
+	for _, tokenSymbol := range p.tokenSymbols {
 		resp, err := client.New().Get("ticker/t" + tokenSymbol + "USD").ReceiveSuccess(&state)
+		errString := tokenSymbol + " not updated, error: "
 		if err != nil {
-			return err
+			log.Error(errString + err.Error())
+			continue
 		}
-		// if resp.StatusCode != 200 {
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("Unexpected response status code: %v", resp.StatusCode)
+			log.Error(errString + "response is not 200, is " + strconv.Itoa(resp.StatusCode))
+			continue
 		}
-
-		tinfo := TokenInfo{
-			Symbol:      tokenSymbol,
-			Value:       state[6],
-			LastUpdated: time.Now(),
+		err = p.db.UpdateTokenValue(tokenSymbol, state[6])
+		if err != nil {
+			log.Error(errString + err.Error())
 		}
-
-		p.UpdateTokenInfo(tinfo)
 	}
+}
 
+// UpdateTokenList get the registered token symbols from HistoryDB
+func (p *PriceUpdater) UpdateTokenList() error {
+	tokenSymbols, err := p.db.GetTokenSymbols()
+	if err != nil {
+		return err
+	}
+	p.tokenSymbols = tokenSymbols
 	return nil
-}
-
-// UpdateConfig allows to update the price-updater configuration
-func (p *PriceUpdater) UpdateConfig(config ConfigPriceUpdater) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.config = config
-}
-
-// Get one token information
-func (p *PriceUpdater) Get(tokenSymbol string) (TokenInfo, error) {
-	var info TokenInfo
-
-	// Check if symbol exists in database
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	if info, ok := p.db[tokenSymbol]; ok {
-		return info, nil
-	}
-
-	return info, ErrSymbolDoesNotExistInDatabase
-}
-
-// GetPrices gets all the prices contained in the db
-func (p *PriceUpdater) GetPrices() map[string]TokenInfo {
-	var info = make(map[string]TokenInfo)
-
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	for key, value := range p.db {
-		info[key] = value
-	}
-
-	return info
-}
-
-// UpdateTokenInfo updates one token info
-func (p *PriceUpdater) UpdateTokenInfo(tokenInfo TokenInfo) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.db[tokenInfo.Symbol] = tokenInfo
 }
