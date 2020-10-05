@@ -18,6 +18,13 @@ import (
 	"github.com/russross/meddler"
 )
 
+const (
+	// OrderAsc indicates ascending order when using pagination
+	OrderAsc = "ASC"
+	// OrderDesc indicates descending order when using pagination
+	OrderDesc = "DESC"
+)
+
 // TODO(Edu): Document here how HistoryDB is kept consistent
 
 // HistoryDB persist the historic of the rollup
@@ -445,25 +452,47 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 // 	return db.SlicePtrsToSlice(txs).([]common.Tx), err
 // }
 
+// GetHistoryTx returns a tx from the DB given a TxID
+func (hdb *HistoryDB) GetHistoryTx(txID common.TxID) (*HistoryTx, error) {
+	tx := &HistoryTx{}
+	err := meddler.QueryRow(
+		hdb.db, tx, `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
+		tx.from_idx, tx.to_idx, tx.amount, tx.token_id, tx.amount_usd, 
+		tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
+		tx.from_eth_addr, tx.from_bjj, tx.load_amount, 
+		tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
+		token.token_id, token.eth_block_num AS token_block,
+		token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
+		token.usd_update, block.timestamp
+		FROM tx INNER JOIN token ON tx.token_id = token.token_id 
+		INNER JOIN block ON tx.eth_block_num = block.eth_block_num 
+		WHERE tx.id = $1;`, txID,
+	)
+	return tx, err
+}
+
 // GetHistoryTxs returns a list of txs from the DB using the HistoryTx struct
+// and pagination info
 func (hdb *HistoryDB) GetHistoryTxs(
 	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
-	tokenID, idx, batchNum *uint, txType *common.TxType,
-	offset, limit *uint, last bool,
-) ([]HistoryTx, int, error) {
+	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
+	fromItem, limit *uint, order string,
+) ([]HistoryTx, *db.Pagination, error) {
 	if ethAddr != nil && bjj != nil {
-		return nil, 0, errors.New("ethAddr and bjj are incompatible")
+		return nil, nil, errors.New("ethAddr and bjj are incompatible")
 	}
 	var query string
 	var args []interface{}
-	queryStr := `SELECT tx.is_l1, tx.id, tx.type, tx.position, tx.from_idx, tx.to_idx, 
-	tx.amount, tx.token_id, tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, 
-	tx.user_origin, tx.from_eth_addr, tx.from_bjj, tx.load_amount, tx.fee, tx.nonce,
+	queryStr := `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
+	tx.from_idx, tx.to_idx, tx.amount, tx.token_id, tx.amount_usd, 
+	tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
+	tx.from_eth_addr, tx.from_bjj, tx.load_amount, 
+	tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
 	token.token_id, token.eth_block_num AS token_block,
 	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
-	token.usd_update, block.timestamp, count(*) OVER() AS total_items 
-	FROM tx 
-	INNER JOIN token ON tx.token_id = token.token_id 
+	token.usd_update, block.timestamp, count(*) OVER() AS total_items, 
+	MIN(tx.item_id)  OVER() AS first_item, MAX(tx.item_id) OVER() AS last_item 
+	FROM tx INNER JOIN token ON tx.token_id = token.token_id 
 	INNER JOIN block ON tx.eth_block_num = block.eth_block_num `
 	// Apply filters
 	nextIsAnd := false
@@ -523,33 +552,164 @@ func (hdb *HistoryDB) GetHistoryTxs(
 		}
 		queryStr += "tx.type = ? "
 		args = append(args, txType)
+		nextIsAnd = true
+	}
+	if fromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if order == OrderAsc {
+			queryStr += "tx.item_id >= ? "
+		} else {
+			queryStr += "tx.item_id <= ? "
+		}
+		args = append(args, fromItem)
+		nextIsAnd = true
+	}
+	if nextIsAnd {
+		queryStr += "AND "
+	} else {
+		queryStr += "WHERE "
+	}
+	queryStr += "tx.batch_num IS NOT NULL "
+
+	// pagination
+	queryStr += "ORDER BY tx.item_id "
+	if order == OrderAsc {
+		queryStr += " ASC "
+	} else {
+		queryStr += " DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	query = hdb.db.Rebind(queryStr)
+	log.Debug(query)
+	txsPtrs := []*HistoryTx{}
+	if err := meddler.QueryAll(hdb.db, &txsPtrs, query, args...); err != nil {
+		return nil, nil, err
+	}
+	txs := db.SlicePtrsToSlice(txsPtrs).([]HistoryTx)
+	if len(txs) == 0 {
+		return nil, nil, sql.ErrNoRows
+	}
+	return txs, &db.Pagination{
+		TotalItems: txs[0].TotalItems,
+		FirstItem:  txs[0].FirstItem,
+		LastItem:   txs[0].LastItem,
+	}, nil
+}
+
+// GetExit returns a exit from the DB
+func (hdb *HistoryDB) GetExit(batchNum *uint, idx *common.Idx) (*HistoryExit, error) {
+	exit := &HistoryExit{}
+	err := meddler.QueryRow(
+		hdb.db, exit, `SELECT exit_tree.*, token.token_id, token.eth_block_num AS token_block,
+		token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update
+		FROM exit_tree INNER JOIN account ON exit_tree.account_idx = account.idx 
+		INNER JOIN token ON account.token_id = token.token_id 
+		WHERE exit_tree.batch_num = $1 AND exit_tree.account_idx = $2;`, batchNum, idx,
+	)
+	return exit, err
+}
+
+// GetExits returns a list of exits from the DB and pagination info
+func (hdb *HistoryDB) GetExits(
+	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
+	tokenID *common.TokenID, idx *common.Idx, batchNum *uint,
+	fromItem, limit *uint, order string,
+) ([]HistoryExit, *db.Pagination, error) {
+	if ethAddr != nil && bjj != nil {
+		return nil, nil, errors.New("ethAddr and bjj are incompatible")
+	}
+	var query string
+	var args []interface{}
+	queryStr := `SELECT exit_tree.*, token.token_id, token.eth_block_num AS token_block,
+	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
+	token.usd_update, COUNT(*) OVER() AS total_items, MIN(exit_tree.item_id) OVER() AS first_item, MAX(exit_tree.item_id) OVER() AS last_item
+	FROM exit_tree INNER JOIN account ON exit_tree.account_idx = account.idx 
+	INNER JOIN token ON account.token_id = token.token_id `
+	// Apply filters
+	nextIsAnd := false
+	// ethAddr filter
+	if ethAddr != nil {
+		queryStr += "WHERE account.eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, ethAddr)
+	} else if bjj != nil { // bjj filter
+		queryStr += "WHERE account.bjj = ? "
+		nextIsAnd = true
+		args = append(args, bjj)
+	}
+	// tokenID filter
+	if tokenID != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "account.token_id = ? "
+		args = append(args, tokenID)
+		nextIsAnd = true
+	}
+	// idx filter
+	if idx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "exit_tree.account_idx = ? "
+		args = append(args, idx)
+		nextIsAnd = true
+	}
+	// batchNum filter
+	if batchNum != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "exit_tree.batch_num = ? "
+		args = append(args, batchNum)
+		nextIsAnd = true
+	}
+	if fromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if order == OrderAsc {
+			queryStr += "exit_tree.item_id >= ? "
+		} else {
+			queryStr += "exit_tree.item_id <= ? "
+		}
+		args = append(args, fromItem)
 		// nextIsAnd = true
 	}
 	// pagination
-	if last {
-		queryStr += "ORDER BY (batch_num, position) DESC NULLS FIRST "
+	queryStr += "ORDER BY exit_tree.item_id "
+	if order == OrderAsc {
+		queryStr += " ASC "
 	} else {
-		queryStr += "ORDER BY (batch_num, position) ASC NULLS LAST "
-		queryStr += fmt.Sprintf("OFFSET %d ", *offset)
+		queryStr += " DESC "
 	}
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query = hdb.db.Rebind(queryStr)
 	// log.Debug(query)
-	txsPtrs := []*HistoryTx{}
-	if err := meddler.QueryAll(hdb.db, &txsPtrs, query, args...); err != nil {
-		return nil, 0, err
+	exits := []*HistoryExit{}
+	if err := meddler.QueryAll(hdb.db, &exits, query, args...); err != nil {
+		return nil, nil, err
 	}
-	txs := db.SlicePtrsToSlice(txsPtrs).([]HistoryTx)
-	if len(txs) == 0 {
-		return nil, 0, sql.ErrNoRows
-	} else if last {
-		tmp := []HistoryTx{}
-		for i := len(txs) - 1; i >= 0; i-- {
-			tmp = append(tmp, txs[i])
-		}
-		txs = tmp
+	if len(exits) == 0 {
+		return nil, nil, sql.ErrNoRows
 	}
-	return txs, txs[0].TotalItems, nil
+	return db.SlicePtrsToSlice(exits).([]HistoryExit), &db.Pagination{
+		TotalItems: exits[0].TotalItems,
+		FirstItem:  exits[0].FirstItem,
+		LastItem:   exits[0].LastItem,
+	}, nil
 }
 
 // // GetTx returns a tx from the DB

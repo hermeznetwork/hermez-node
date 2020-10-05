@@ -7,31 +7,27 @@ info:
     * Explorer: List transactions, slots, batches, ...
     * Exchange integrations
     
+    ### Pagination
+    
+    #### Usage
+
     All the endpoints that return a list of undefined size use pagination. Unless the opposite is explicitly said.
-    All the retunred items are ordered by ascending chronological order. 
-    This may not be trivial to deduce as the atributes used to order are not timestamps but the protocol ensures that those atributes follow the mentioned chronological order.
-    Each endpoint description clarify this in the `offset` description.
-
-    The response of the calls to these endpoints will always include a `pagination` object that includes `totalItems` and `lastReturnedItem`.
-    To iterate over the items the following query parameters are used:
-      - `offset`: Indicates the first item that will be returned. Defaul 0. Incompatible with `last`.
-      - `limit`: Indicates the maximum number of returned items. Default 20. Maximum 2049.
-      - `last`: When true the last `limit` items are returned. Default false. Incompatible with `offset`.
-
-    Iterate items in ascending chronological order:
-
-      1. Call the endpoint with no `offset` nor `last`.
-      2. Call the endpoint with `offset=<lastReturnedItem + 1>` until `lastReturnedItem == totalItems - 1`.
-
-    Iterate items in descending chronological order:
-
-      1. Call the endpoint with `last`.
-      2. Call the endpoint with `offset=<min(0, lastReturnedItem - 2*limit)>`. Once the `calculated offset == 0`, it will be known that that call will return the first item and therefore no subsequent calls need to be done.
-    If the `totalItems` change while iterating, it means that new items have been added at the end of the list. To fetch this items, use the following: `offset=<first received lastReturnedItem + 1>`, and from there iterate as decribed in *Iterate items in ascending chronological order*.
+    In order to use pagination, three query parameters are used:
+    * `fromItem`: indicates the first item to be returned. In general, this parameter shouldn't be provided in the first call to the endpoint, and use the `itemId` of the last returned item (+/-) 1, if the order is (ascending/descending).
+    * `order`: all pginated items are ordered chronologicaly. However the specific fields to guarantee this order depend on each endpoint. For this purpose, `itemId` is used (itemId follows ascending chronological order except for unforged L1 user transactions). If the parameter is not provided, ascending order will be used by default. 
+    * `limit`: maximum amount of items to include in each response. Default is 20, maximum 2049.
     
-    **Note:** The returned list will alway be in ascending chronlogical order, so the returned arrays must be iterated from end to start in order to achieve reverse chronological order.
-    
-    **Note:** Pagination safety can be affected by Ethereum reorgs. In most of the cases this means that the last page can be changed, but older items should be safe.
+    Responses for those endpoint will always include a `pagination` object. This object includes the total amount of items that the endpoint will return at a given time with the given filters. Apart from that, it also includes the `itemId` of the last and first items that will be returned (not in a single response but within the total items). These two properties can be used to know when to stop querying. 
+
+    #### Reorgs and safetyness
+
+    Since all the items are ordered chronologicaly, there are no safety problems when fetching items in ascending order, except for reorgs (more on this later).
+    On the other hand, when iterating in descending order, new items will be added at the beginning. This doesn't cause any safety problem, but to get those new items, it's necessary to start queryng without the `fromItem` set to `pagination.lastItem`.
+    To handle reorgs, the `itemId` can be used since it will change. This is important since other identifiers may be the same but with different content. As an example, if the batch 424 get's reorged, it will be deleted, but eventualy, a new batch 424 will appear with potentialy different content.
+
+    ### Signatures
+
+    The POST endpoint require to be signed using BabyJubJub or Ethereum keys. TODO: add references to libraries / examples / ...
 
   version: "0.0.1"
   title: Hermez Network API
@@ -164,20 +160,22 @@ paths:
             type: string
             description: Comma separated list of token identifiers.
             example: "3,87,91"
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: accounts will be ordered by increasing account index.
-            - Default first item: the first account to be returned will be the one that has the smallest account index.
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. Accounts will be ordered by increasing account index.
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -258,6 +256,12 @@ paths:
       description: Get exit information. This information is required to perform a withdraw.
       operationId: getExits
       parameters:
+        - name: tokenId
+          in: query
+          required: false
+          description: Only get exits of specific token
+          schema:
+            $ref: '#/components/schemas/TokenId'
         - name: hezEthereumAddress
           in: query
           description: Get exits associated to a Ethereum address. Incompatible with query `BJJ` and `accountIndex`.
@@ -272,7 +276,7 @@ paths:
             $ref: '#/components/schemas/BJJ'
         - name: accountIndex
           in: query
-          description: Get exits associated to a specific account. Incompatible with queries `hezEthereumAddress` and `BJJ`.
+          description: Get exits associated to a specific account. Incompatible with queries `tokenId`, `hezEthereumAddress` and `BJJ`.
           required: false
           schema:
             $ref: '#/components/schemas/AccountIndex'
@@ -282,20 +286,22 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/BatchNum'
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: exits will be ordered by increasing (batchNum, accountIndex).
-            - Default first item: the first exit to be returned will be the one that has the smallest (baychNum, accountIndex).
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. Exits will be ordered by increasing (batchNum, accountIndex).
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -459,7 +465,7 @@ paths:
       description: >-
         Get historical transactions. This endpoint will return all the different types of transactions except for:
           - Transactions that are still in the transaction pool of any coordinator. These transactions can be fetched using `GET /transactions-pool/{id}`.
-          - L1 transactions that have not been forged yet. These transactions can be fetched using `GET /transactions-history/{id}`.
+          - L1 transactions sent by users that have not been forged yet. These transactions can be fetched using `GET /transactions-history/{id}`.
       operationId: getHistoryTxs
       parameters:
         - name: tokenId
@@ -498,20 +504,22 @@ paths:
           description: Only get transactions of a specific type.
           schema:
             $ref: '#/components/schemas/TransactionType'
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: History transactions will be ordered by increasing (batchNum, position).
-            - Default first item: the first transaction to be returned will be the one that has the smallest (batchNum, position).
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. History transactions will be ordered by (batchNum, position).
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -612,20 +620,22 @@ paths:
           description: Include only batches forged by `forgerAddr`
           schema:
             $ref: '#/components/schemas/EthereumAddress'
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: batches will be ordered by increasing `batchNum`.
-            - Default first item: the first batch to be returned will be the one that has the smallest `batchNum`.
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. Batches will be ordered by increasing `batchNum`.
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -773,20 +783,22 @@ paths:
           description: If set to true, only include slots whose auction has finished.
           schema:
             type: boolean
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: slots will be ordered by increasing `slotNum`.
-            - Default first item: the first slot to be returned will be the one that has the smallest `slotNum`.
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. Slots will be ordered by increasing `slotNum`.
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -880,20 +892,22 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/EthereumAddress'
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: bids will be ordered by increasing (slotNum, bidValue)`.
-            - Default first item: the first bid to be returned will be the one that has the smallest (slotNum, bidValue).
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. Bids will be ordered by increasing (slotNum, bidValue)`.
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -1031,20 +1045,22 @@ paths:
           description: Include token(s) by their names (or a substring of the name).
           schema:
             type: string
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: tokens will be ordered by increasing tokenID.
-            - Default first item: the first token to be returned will be the one that has the smallest tokenID.
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. Tokens will be ordered by increasing tokenID.
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -1146,20 +1162,22 @@ paths:
       description: Get information about coordinators.
       operationId: getCoordinators
       parameters:
-        - name: offset
+        - name: fromItem
           in: query
           required: false
-          description: |
-            - Order: coordinators will be ordered by increasing (ethereumBlock, forgerAddr).
-            - Default first item: the first token to be returned will be the one that has the smallest (ethereumBlock, forgerAddr).
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
           schema:
             type: number
-        - name: last
+        - name: order
           in: query
           required: false
-          description: Get the last page.
+          description: Order of the returned items. Coordinators will be ordered by increasing (ethereumBlock, forgerAddr).
           schema:
-            type: boolean
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
         - name: limit
           in: query
           required: false
@@ -1228,13 +1246,16 @@ paths:
                 $ref: '#/components/schemas/Error500'
 components:
   schemas:
+    ItemId:
+      type: integer
+      description: Position of the item in the DB. This is useful for pagination, but has  nothing to do with the protocol.
     PostPoolL2Transaction:
       type: object
       properties:
         id:
           $ref: '#/components/schemas/TransactionId'
         type:
-          $ref: '#/components/schemas/TransactionType'
+          $ref: '#/components/schemas/TransactionTypeL2'
         tokenId:
           $ref: '#/components/schemas/TokenId'
         fromAccountIndex:
@@ -1341,7 +1362,7 @@ components:
         id:
           $ref: '#/components/schemas/TransactionId'
         type:
-          $ref: '#/components/schemas/TransactionType'
+          $ref: '#/components/schemas/TransactionTypeL2'
         fromAccountIndex:
           $ref: '#/components/schemas/AccountIndex'
         toAccountIndex:
@@ -1480,6 +1501,14 @@ components:
       - ForceExit
       - TransferToEthAddr
       - TransferToBJJ
+    TransactionTypeL2:
+      type: string
+      description: Type of transaction.
+      enum:
+      - Exit
+      - Transfer
+      - TransferToEthAddr
+      - TransferToBJJ
     TokenId:
       type: integer
       description: Identifier of a token registered in the network.
@@ -1556,6 +1585,8 @@ components:
             - L2
         id:
           $ref: '#/components/schemas/TransactionId'
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         type:
           $ref: '#/components/schemas/TransactionType'
         position:
@@ -1655,6 +1686,7 @@ components:
       required:
         - L1orL2
         - id
+        - itemId
         - type
         - position
         - fromAccountIndex
@@ -1943,29 +1975,87 @@ components:
             - example: 7394
         accountIndex:
           $ref: '#/components/schemas/AccountIndex'
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         merkleProof:
-          type: string
+          type: object
           description: Existence proof of a leaf in a given Merkle Root. Encoded as hexadecimal string.
-          example: "0x347089321de8971320489793a823470918fffeab"
+          properties:
+              Root:
+                type: array
+                items: 
+                  type: integer
+              Siblings:
+                type: array
+                items:
+                  type: integer
+              OldKey:
+                type: array
+                items:
+                  type: integer
+              OldValue:
+                type: array
+                items:
+                  type: integer
+              IsOld0:
+                type: boolean
+              Key:
+                type: array
+                items:
+                  type: integer
+              Value:
+                type: array
+                items:
+                  type: integer
+              Fnc:
+                type: integer
+          required:
+            - Root
+            - Siblings
+            - OldKey
+            - OldValue
+            - IsOld0
+            - Key
+            - Value
+            - Fnc
+          additionalProperties: false
+          example: {"Root":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"Siblings":[0,1,2],"OldKey":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"OldValue":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"IsOld0":true,"Key":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"Value":[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"Fnc":0}
         balance:
           $ref: '#/components/schemas/BigInt'
         instantWithdrawn:
-          allOf:
-            - $ref: '#/components/schemas/EthBlockNum'
-            - description: Block in which the exit balance was instantly withdrawn. Null indicates that an instant withdrawn hasn't been performed.
-            - example: 74747363
+          type: integer
+          description: Block in which the exit balance was instantly withdrawn. Null indicates that an instant withdrawn hasn't been performed.
+          minimum: 0
+          maximum: 1.84467440737096e+19
+          example: 74747363
+          nullable: true
         delayedWithdrawRequest:
-          allOf:
-            - $ref: '#/components/schemas/EthBlockNum'
-            - description: Block in which the exit balance was requested to delay withdraw. Null indicates that a delay withdraw hasn't been performed.
-            - example: null
+          type: integer
+          description: Block in which the exit balance was requested to delay withdraw. Null indicates that a delay withdraw hasn't been performed.
+          minimum: 0
+          maximum: 1.84467440737096e+19
+          example: null
+          nullable: true
         delayedWithdrawn:
-          allOf:
-            - $ref: '#/components/schemas/EthBlockNum'
-            - description: Block in which the exit balance was delayed withdrawn after a delay withdraw request. Null indicates that a delay withdraw hasn't been performed.
-            - example: null
+          type: integer
+          description: Block in which the exit balance was delayed withdrawn after a delay withdraw request. Null indicates that a delay withdraw hasn't been performed.
+          minimum: 0
+          maximum: 1.84467440737096e+19
+          example: null
+          nullable: true
         token:
           $ref: '#/components/schemas/Token'
+      required:
+          - batchNum
+          - accountIndex
+          - itemId
+          - merkleProof
+          - balance
+          - instantWithdrawn
+          - delayedWithdrawRequest
+          - delayedWithdrawn
+          - token
+      additionalProperties: false
     Exits:
       type: object
       properties:
@@ -1975,7 +2065,11 @@ components:
           items: 
             $ref: '#/components/schemas/Exit'
         pagination:
-          $ref: '#/components/schemas/PaginationInfo'    
+          $ref: '#/components/schemas/PaginationInfo'   
+      required:
+          - exits
+          - pagination
+      additionalProperties: false 
     Account:
       type: object
       description: State tree leaf. It contains balance and nonce of an account.
@@ -2217,10 +2311,14 @@ components:
           type: integer
           description: Amount of items that the endpoint can return given the filters and the current state of the database.
           example: 2048
-        lastReturnedItem:
+        firstItem:
           type: integer
-          description: Index of the last returned item. Useful to query next items.
-          example: 439
+          description: The smallest itemId that the endpoint will return with the given filters.
+          example: 50
+        lastItem:
+          type: integer
+          description: The greatest itemId that the endpoint will return with the given filters.
+          example: 2130
     Config:
       type: object
       description: Configuration parameters of the different smart contracts that power the Hermez network.

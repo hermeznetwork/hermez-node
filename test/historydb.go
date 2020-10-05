@@ -68,7 +68,7 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 		}
 		if i%2 == 0 {
 			toForge := new(int64)
-			*toForge = int64(i)
+			*toForge = int64(i + 1)
 			batch.ForgeL1TxsNum = toForge
 		}
 		batches = append(batches, batch)
@@ -142,7 +142,9 @@ func GenL1Txs(
 			panic(err)
 		}
 		tx = *nTx
-		if batches[i%len(batches)].ForgeL1TxsNum != nil {
+		if !tx.UserOrigin {
+			tx.BatchNum = &batches[i%len(batches)].BatchNum
+		} else if batches[i%len(batches)].ForgeL1TxsNum != nil {
 			// Add already forged txs
 			tx.BatchNum = &batches[i%len(batches)].BatchNum
 			setFromToAndAppend(fromIdx, tx, i, nUserTxs, userAddr, accounts, &userTxs, &othersTxs)
@@ -332,15 +334,15 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 
 // GenExitTree generates an exitTree (as an array of Exits)
 //nolint:gomnd
-func GenExitTree(n int) []common.ExitInfo {
+func GenExitTree(n int, batches []common.Batch, accounts []common.Account) []common.ExitInfo {
 	exitTree := make([]common.ExitInfo, n)
 	for i := 0; i < n; i++ {
 		exitTree[i] = common.ExitInfo{
-			BatchNum:               common.BatchNum(i + 1),
+			BatchNum:               batches[i%len(batches)].BatchNum,
 			InstantWithdrawn:       nil,
 			DelayedWithdrawRequest: nil,
 			DelayedWithdrawn:       nil,
-			AccountIdx:             common.Idx(i * 10),
+			AccountIdx:             accounts[i%len(accounts)].Idx,
 			MerkleProof: &merkletree.CircomVerifierProof{
 				Root: &merkletree.Hash{byte(i), byte(i + 1)},
 				Siblings: []*big.Int{
@@ -355,6 +357,20 @@ func GenExitTree(n int) []common.ExitInfo {
 				Fnc:      i % 2,
 			},
 			Balance: big.NewInt(int64(i) * 1000),
+		}
+		if i%2 == 0 {
+			instant := new(int64)
+			*instant = int64(batches[(i+1)%len(batches)].BatchNum)
+			exitTree[i].InstantWithdrawn = instant
+		} else if i%3 == 0 {
+			delayedReq := new(int64)
+			*delayedReq = int64(batches[(i+1)%len(batches)].BatchNum)
+			exitTree[i].DelayedWithdrawRequest = delayedReq
+			if i%9 == 0 {
+				delayed := new(int64)
+				*delayed = int64(batches[(i+2)%len(batches)].BatchNum)
+				exitTree[i].DelayedWithdrawn = delayed
+			}
 		}
 	}
 	return exitTree

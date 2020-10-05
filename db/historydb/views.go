@@ -7,6 +7,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree"
 )
 
 // HistoryTx is a representation of a generic Tx with additional information
@@ -15,6 +16,7 @@ type HistoryTx struct {
 	// Generic
 	IsL1        bool             `meddler:"is_l1"`
 	TxID        common.TxID      `meddler:"id"`
+	ItemID      int              `meddler:"item_id"`
 	Type        common.TxType    `meddler:"type"`
 	Position    int              `meddler:"position"`
 	FromIdx     *common.Idx      `meddler:"from_idx"`
@@ -38,6 +40,8 @@ type HistoryTx struct {
 	// API extras
 	Timestamp        time.Time         `meddler:"timestamp,utctime"`
 	TotalItems       int               `meddler:"total_items"`
+	FirstItem        int               `meddler:"first_item"`
+	LastItem         int               `meddler:"last_item"`
 	TokenID          common.TokenID    `meddler:"token_id"`
 	TokenEthBlockNum int64             `meddler:"token_block"`
 	TokenEthAddr     ethCommon.Address `meddler:"eth_addr"`
@@ -85,4 +89,28 @@ type TokenRead struct {
 	Decimals    uint64            `json:"decimals" meddler:"decimals"`
 	USD         *float64          `json:"USD" meddler:"usd"`
 	USDUpdate   *time.Time        `json:"fiatUpdate" meddler:"usd_update,utctime"`
+}
+
+// HistoryExit is a representation of a exit with additional information
+// required by the API, and extracted by joining token table
+type HistoryExit struct {
+	ItemID                 int                             `meddler:"item_id"`
+	BatchNum               common.BatchNum                 `meddler:"batch_num"`
+	AccountIdx             common.Idx                      `meddler:"account_idx"`
+	MerkleProof            *merkletree.CircomVerifierProof `meddler:"merkle_proof,json"`
+	Balance                *big.Int                        `meddler:"balance,bigint"`
+	InstantWithdrawn       *int64                          `meddler:"instant_withdrawn"`
+	DelayedWithdrawRequest *int64                          `meddler:"delayed_withdraw_request"`
+	DelayedWithdrawn       *int64                          `meddler:"delayed_withdrawn"`
+	TotalItems             int                             `meddler:"total_items"`
+	FirstItem              int                             `meddler:"first_item"`
+	LastItem               int                             `meddler:"last_item"`
+	TokenID                common.TokenID                  `meddler:"token_id"`
+	TokenEthBlockNum       int64                           `meddler:"token_block"`
+	TokenEthAddr           ethCommon.Address               `meddler:"eth_addr"`
+	TokenName              string                          `meddler:"name"`
+	TokenSymbol            string                          `meddler:"symbol"`
+	TokenDecimals          uint64                          `meddler:"decimals"`
+	TokenUSD               *float64                        `meddler:"usd"`
+	TokenUSDUpdate         *time.Time                      `meddler:"usd_update"`
 }
