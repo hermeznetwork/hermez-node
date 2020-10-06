@@ -27,10 +27,10 @@ var (
 )
 
 // HermezABI is the input ABI used to generate the binding from.
-const HermezABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"AddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"batchNum\",\"type\":\"uint256\"}],\"name\":\"ForgeBatch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"l1UserTx\",\"type\":\"bytes\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"queueIndex\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"transactionIndex\",\"type\":\"uint256\"}],\"name\":\"L1UserTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"UpdateFeeAddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint256\"}],\"name\":\"UpdateForgeL1L2BatchTimeout\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"idx\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"numExitRoot\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"WithdrawEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"EXIT_IDX\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"L1_COORDINATOR_BYTES\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"L1_USER_BYTES\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"L2_BYTES\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"LAST_IDX\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_AMOUNT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_L1_TX\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_L1_USER_TX\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_LOAD_AMOUNT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_TOKENS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_WITHDRAWAL_DELAY\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"NO_LIMIT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"NUM_BUCKETS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RESERVED_IDX\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RFIELD\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"}],\"name\":\"addToken\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"buckets\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"ceilUSD\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockWithdrawalRate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxWithdrawals\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"circuitVerifiers\",\"outputs\":[{\"internalType\":\"contractVerifierInterface\",\"name\":\"verifierInt\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxTx\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"createAccountDeposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"accountCreationAuthSig\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"createAccountDepositFromRelayer\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"toIdx\",\"type\":\"uint32\"}],\"name\":\"createAccountDepositTransfer\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentIdx\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"fromIdx\",\"type\":\"uint32\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"fromIdx\",\"type\":\"uint32\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"toIdx\",\"type\":\"uint32\"}],\"name\":\"depositTransfer\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"exitNullifierMap\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"exitRoots\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"feeAddToken\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"fromIdx\",\"type\":\"uint32\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"forceExit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"fromIdx\",\"type\":\"uint32\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"toIdx\",\"type\":\"uint32\"}],\"name\":\"forceTransfer\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint32\",\"name\":\"newLastIdx\",\"type\":\"uint32\"},{\"internalType\":\"uint256\",\"name\":\"newStRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newExitRoot\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"encodedL1CoordinatorTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"l2TxsData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"feeIdxCoordinator\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"verifierIdx\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"l1Batch\",\"type\":\"bool\"}],\"name\":\"forgeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"forgeL1L2BatchTimeout\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentBatch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentTokens\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"governanceAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezAuctionContract\",\"outputs\":[{\"internalType\":\"contractConsensusInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_verifiers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_maxTxVerifiers\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"_tokenHEZ\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_governanceAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_safetyAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezAuctionContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_withdrawDelayerContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon2Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon3Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon4Elements\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_feeAddToken\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_forgeL1L2BatchTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"_withdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"instantWithdrawalViewer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastL1L2Batch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"mapL1TxQueue\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextForgedQueue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1FillingQueue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safeMode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safetyAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"stateRoot\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenExchange\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenHEZ\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"updateBucketsParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"updateFeeAddToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint256\"}],\"name\":\"updateForgeL1L2BatchTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"valueArray\",\"type\":\"uint256[]\"}],\"name\":\"updateTokenExchange\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"updateWithdrawalDelay\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"balance\",\"type\":\"uint192\"},{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"numExitRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"siblings\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"idx\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawDelayerContract\",\"outputs\":[{\"internalType\":\"contractWithdrawalDelayerInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawalDelay\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const HermezABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"AddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"batchNum\",\"type\":\"uint64\"}],\"name\":\"ForgeBatch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"queueIndex\",\"type\":\"uint64\"},{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"position\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"l1UserTx\",\"type\":\"bytes\"}],\"name\":\"L1UserTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"UpdateFeeAddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"UpdateForgeL1L2BatchTimeout\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"indexed\":true,\"internalType\":\"uint48\",\"name\":\"numExitRoot\",\"type\":\"uint48\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"WithdrawEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ABSOLUTE_MAX_L1L2BATCHTIMEOUT\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint48\",\"name\":\"fromIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"toIdx\",\"type\":\"uint48\"}],\"name\":\"addL1Transaction\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"buckets\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"ceilUSD\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockWithdrawalRate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxWithdrawals\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"},{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"name\":\"exitNullifierMap\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"exitRootsMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"feeAddToken\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint48\",\"name\":\"newLastIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint256\",\"name\":\"newStRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newExitRoot\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"encodedL1CoordinatorTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"l2TxsData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"feeIdxCoordinator\",\"type\":\"bytes\"},{\"internalType\":\"uint8\",\"name\":\"verifierIdx\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"l1Batch\",\"type\":\"bool\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"}],\"name\":\"forgeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"forgeL1L2BatchTimeout\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezAuctionContract\",\"outputs\":[{\"internalType\":\"contractAuctionInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezGovernanceDAOAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_verifiers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_verifiersParams\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"_withdrawVerifier\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezAuctionContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenHEZ\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"_forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_feeAddToken\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_poseidon2Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon3Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon4Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezGovernanceDAOAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_safetyAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_withdrawalDelay\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"_withdrawDelayerContract\",\"type\":\"address\"}],\"name\":\"initializeHermez\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"}],\"name\":\"instantWithdrawalViewer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastForgedBatch\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastIdx\",\"outputs\":[{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastL1L2Batch\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"mapL1TxQueue\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1FillingQueue\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1ToForgeQueue\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registerTokensCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"rollupVerifiers\",\"outputs\":[{\"internalType\":\"contractVerifierRollupInterface\",\"name\":\"verifierInterface\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxTx\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nLevels\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safeMode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safetyAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"stateRootMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenExchange\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenHEZ\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"operatorData\",\"type\":\"bytes\"}],\"name\":\"tokensReceived\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"updateBucketsParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"updateFeeAddToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"updateForgeL1L2BatchTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"updateTokenExchange\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"updateWithdrawalDelay\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint48\",\"name\":\"numExitRoot\",\"type\":\"uint48\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawCircuit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawDelayerContract\",\"outputs\":[{\"internalType\":\"contractWithdrawalDelayerInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint48\",\"name\":\"numExitRoot\",\"type\":\"uint48\"},{\"internalType\":\"uint256[]\",\"name\":\"siblings\",\"type\":\"uint256[]\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawMerkleProof\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawVerifier\",\"outputs\":[{\"internalType\":\"contractVerifierWithdrawInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawalDelay\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // HermezBin is the compiled bytecode used for deploying new contracts.
-var HermezBin = "0x608060405234801561001057600080fd5b50614950806100206000396000f3fe60806040526004361061036a5760003560e01c80639588eca2116101c6578063c8464ed1116100f7578063e56e27ae11610095578063ef4a5c4a1161006f578063ef4a5c4a146110af578063f47c84c5146110e3578063ffd3dcf9146110f8578063fff699701461110d5761036a565b8063e56e27ae14610ed1578063e617115014610ee6578063ee67f32e14610f1d5761036a565b8063cc77828d116100d1578063cc77828d14610dc8578063d40dc87014610ddd578063d48bfca714610df2578063d7d207c014610e185761036a565b8063c8464ed114610b35578063c970ea8e14610c83578063cadedd8214610c985761036a565b8063a60034fb11610164578063ac3851cd1161013e578063ac3851cd14610a1a578063bded9bb814610a2f578063be8e25db14610a44578063c56ca84e14610b205761036a565b8063a60034fb146109be578063a7ab6961146109d3578063abe3219c14610a055761036a565b80639ead7222116101a05780639ead72221461091d578063a238f9df14610947578063a32758381461095c578063a4b457ca146109715761036a565b80639588eca21461086a5780639612518a1461087f5780639b51fb0d146108c85761036a565b80634d09f3fd116102a05780635f59f58e1161023e578063795053d311610218578063795053d31461081657806379a135e31461082b57806384ef9ed4146108405780638e65ab4f146108555761036a565b80635f59f58e1461073757806368e95e53146107705780636d78e572146108015761036a565b806351ff68b01161027a57806351ff68b01461069a578063568bc1c5146106af57806358de75c4146106f45780635bfac41f146107095761036a565b80634d09f3fd146106465780634fc515591461065b57806350263f8c146106705761036a565b806330501fcb1161030d5780633787f591116102e75780633787f5911461052b57806339cd0581146105685780633ec0b07c1461059257806345d1c25b146106315761036a565b806330501fcb14610495578063314e5eda146104ca578063363e2a22146104f45761036a565b80631b0a8223116103495780631b0a8223146103fc57806320f6a08f1461042d5780632bd83626146104425780632bf41a2f146104575761036a565b80624aca6e1461036f5780630dd94b96146103b45780630ee8e52b146103e7575b600080fd5b34801561037b57600080fd5b506103a26004803603602081101561039257600080fd5b50356001600160a01b0316611122565b60408051918252519081900360200190f35b3480156103c057600080fd5b506103a2600480360360208110156103d757600080fd5b50356001600160a01b0316611134565b3480156103f357600080fd5b506103a2611146565b34801561040857600080fd5b5061041161114c565b604080516001600160a01b039092168252519081900360200190f35b34801561043957600080fd5b506103a261115b565b34801561044e57600080fd5b50610411611163565b34801561046357600080fd5b506104816004803603602081101561047a57600080fd5b5035611172565b604080519115158252519081900360200190f35b6104c8600480360360608110156104ab57600080fd5b50803590602081013561ffff16906040013563ffffffff16611187565b005b3480156104d657600080fd5b506104c8600480360360208110156104ed57600080fd5b5035611318565b6104c86004803603606081101561050a57600080fd5b5063ffffffff813581169161ffff60208201351691604090910135166113ab565b6104c86004803603608081101561054157600080fd5b5063ffffffff813581169161ffff602082013516916040820135811691606001351661157f565b34801561057457600080fd5b506104c86004803603602081101561058b57600080fd5b503561177f565b34801561059e57600080fd5b506105bc600480360360208110156105b557600080fd5b5035611852565b6040805160208082528351818301528351919283929083019185019080838360005b838110156105f65781810151838201526020016105de565b50505050905090810190601f1680156106235780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561063d57600080fd5b506103a26118ed565b34801561065257600080fd5b506103a26118f3565b34801561066757600080fd5b506103a26118f8565b34801561067c57600080fd5b506103a26004803603602081101561069357600080fd5b50356118fd565b3480156106a657600080fd5b506103a261191b565b6104c8600480360360a08110156106c557600080fd5b5080359061ffff602082013581169160408101359091169063ffffffff60608201358116916080013516611920565b34801561070057600080fd5b506103a2611b8d565b34801561071557600080fd5b5061071e611bb1565b6040805163ffffffff9092168252519081900360200190f35b34801561074357600080fd5b506104816004803603604081101561075a57600080fd5b506001600160a01b038135169060200135611bbd565b34801561077c57600080fd5b506104c8600480360361028081101561079457600080fd5b6040805160a0810190915290820191906102808201908260056000835b828210156107f257604080516080818101909252908084028601906004908390839080828437600092019190915250505081526001909101906020016107b1565b50929550611c4f945050505050565b34801561080d57600080fd5b506103a2611e23565b34801561082257600080fd5b50610411611e28565b34801561083757600080fd5b50610411611e37565b34801561084c57600080fd5b506103a2611e46565b34801561086157600080fd5b5061071e611e4c565b34801561087657600080fd5b506103a2611e54565b6104c8600480360360a081101561089557600080fd5b5063ffffffff813581169161ffff6020820135811692604083013590911691606081013582169160809091013516611e5a565b3480156108d457600080fd5b506108f2600480360360208110156108eb57600080fd5b50356120f8565b6040805195865260208601949094528484019290925260608401526080830152519081900360a00190f35b34801561092957600080fd5b506104116004803603602081101561094057600080fd5b503561212a565b34801561095357600080fd5b506103a2612151565b34801561096857600080fd5b506103a2612158565b34801561097d57600080fd5b5061099b6004803603602081101561099457600080fd5b503561215e565b604080516001600160a01b03909316835260208301919091528051918290030190f35b3480156109ca57600080fd5b506103a2612193565b3480156109df57600080fd5b506109e8612199565b6040805167ffffffffffffffff9092168252519081900360200190f35b348015610a1157600080fd5b506104c86121b0565b348015610a2657600080fd5b506103a261232f565b348015610a3b57600080fd5b506103a2612335565b348015610a5057600080fd5b506104c8600480360360e0811015610a6757600080fd5b63ffffffff823516916001600160c01b036020820135169160408201359160608101359181019060a081016080820135600160201b811115610aa857600080fd5b820183602082011115610aba57600080fd5b803590602001918460208302840111600160201b83111715610adb57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295505082359350505060200135151561233b565b348015610b2c57600080fd5b506103a2612819565b348015610b4157600080fd5b506104c86004803603610200811015610b5957600080fd5b604082019060c083019063ffffffff610100850135169061012085013590610140860135908601866101808101610160820135600160201b811115610b9d57600080fd5b820183602082011115610baf57600080fd5b803590602001918460018302840111600160201b83111715610bd057600080fd5b919390929091602081019035600160201b811115610bed57600080fd5b820183602082011115610bff57600080fd5b803590602001918460018302840111600160201b83111715610c2057600080fd5b919390929091602081019035600160201b811115610c3d57600080fd5b820183602082011115610c4f57600080fd5b803590602001918460018302840111600160201b83111715610c7057600080fd5b919350915080359060200135151561281e565b348015610c8f57600080fd5b506103a2612aeb565b348015610ca457600080fd5b506104c860048036036040811015610cbb57600080fd5b810190602081018135600160201b811115610cd557600080fd5b820183602082011115610ce757600080fd5b803590602001918460208302840111600160201b83111715610d0857600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b811115610d5757600080fd5b820183602082011115610d6957600080fd5b803590602001918460208302840111600160201b83111715610d8a57600080fd5b919080806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250929550612af1945050505050565b348015610dd457600080fd5b506103a2612bbc565b348015610de957600080fd5b506103a2612bc2565b6104c860048036036020811015610e0857600080fd5b50356001600160a01b0316612bca565b6104c860048036036080811015610e2e57600080fd5b810190602081018135600160201b811115610e4857600080fd5b820183602082011115610e5a57600080fd5b803590602001918460018302840111600160201b83111715610e7b57600080fd5b91908080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525092955050823593505050602081013561ffff16906040013563ffffffff16612dd3565b348015610edd57600080fd5b50610411612f7f565b6104c860048036036060811015610efc57600080fd5b5063ffffffff813581169161ffff6020820135169160409091013516612f8e565b348015610f2957600080fd5b506104c860048036036101a0811015610f4157600080fd5b810190602081018135600160201b811115610f5b57600080fd5b820183602082011115610f6d57600080fd5b803590602001918460208302840111600160201b83111715610f8e57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b811115610fdd57600080fd5b820183602082011115610fef57600080fd5b803590602001918460208302840111600160201b8311171561101057600080fd5b919080806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250929550506001600160a01b038335811694506020840135811693604081013582169350606081013582169250608081013582169160a082013581169160c081013582169160e08201351690610100810135906101208101359067ffffffffffffffff6101409091013516613124565b3480156110bb57600080fd5b506104c8600480360360208110156110d257600080fd5b503567ffffffffffffffff16613288565b3480156110ef57600080fd5b506103a2611e4c565b34801561110457600080fd5b5061071e613370565b34801561111957600080fd5b5061071e613375565b60586020526000908152604090205481565b60526020526000908152604090205481565b60605481565b6051546001600160a01b031681565b600160801b81565b605b546001600160a01b031681565b60566020526000908152604090205460ff1681565b60006111928361337a565b9050600160801b81106111da576040805162461bcd60e51b815260206004820152601e60248201526000805160206148fb833981519152604482015290519081900360640190fd5b63ffffffff8216611234573481101561122f576040805162461bcd60e51b8152602060048201526012602482015271195d1a195c880f081b1bd859105b5bdd5b9d60721b604482015290519081900360640190fd5b6112a5565b61126660578363ffffffff168154811061124a57fe5b6000918252602090912001546001600160a01b031682306133c0565b6112a5576040805162461bcd60e51b815260206004820152601e602482015260008051602061486f833981519152604482015290519081900360640190fd5b6040805133606090811b6020830152603482018790526000605483018190526001600160f01b031960f088901b166058840152605a83018190526001600160e01b031960e087901b16605c840152908201528151604481830301815260649091019091526113129061344d565b50505050565b604f546001600160a01b03163314611370576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b605a8190556040805182815290517fd1c873cd16013f0dc5f37992c0d12794389698512895ec036a568e393b46e3c19181900360200190a150565b60006113b68361337a565b9050600160801b81106113fe576040805162461bcd60e51b815260206004820152601e60248201526000805160206148fb833981519152604482015290519081900360640190fd5b60ff63ffffffff8516118015611420575060615463ffffffff90811690851611155b611463576040805162461bcd60e51b815260206004820152600f60248201526e0d2dcecc2d8d2c840cce4deda92c8f608b1b604482015290519081900360640190fd5b63ffffffff82166114bd57348110156114b8576040805162461bcd60e51b8152602060048201526012602482015271195d1a195c880f081b1bd859105b5bdd5b9d60721b604482015290519081900360640190fd5b611512565b6114d360578363ffffffff168154811061124a57fe5b611512576040805162461bcd60e51b815260206004820152601e602482015260008051602061486f833981519152604482015290519081900360640190fd5b60408051600060208201819052603482018190526001600160e01b031960e088811b821660548501526001600160f01b031960f089901b166058850152605a840183905286901b16605c83015260608201528151604481830301815260649091019091526113129061344d565b60575463ffffffff8316106115db576040805162461bcd60e51b815260206004820152601d60248201527f746f6b656e20686173206e6f74206265656e2072656769737465726564000000604482015290519081900360640190fd5b60006115e68461337a565b9050600160c01b8110611639576040805162461bcd60e51b81526020600482015260166024820152750c2dadeeadce840d8c2e4cecae440e8d0c2dc40dac2f60531b604482015290519081900360640190fd5b60ff63ffffffff861611801561165b575060615463ffffffff90811690861611155b61169e576040805162461bcd60e51b815260206004820152600f60248201526e0d2dcecc2d8d2c840cce4deda92c8f608b1b604482015290519081900360640190fd5b60ff63ffffffff83161180156116c0575060615463ffffffff90811690831611155b611701576040805162461bcd60e51b815260206004820152600d60248201526c0d2dcecc2d8d2c840e8de92c8f609b1b604482015290519081900360640190fd5b6040805133606090811b60208301526000603483018190526001600160e01b031960e08a811b8216605486015260588501929092526001600160f01b031960f08a901b16605a85015287821b8116605c8501529086901b16908201528151604481830301815260649091019091526117789061344d565b5050505050565b604f546001600160a01b031633146117d7576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b60f08111156118175760405162461bcd60e51b815260040180806020018281038252602a81526020018061488f602a913960400191505060405180910390fd5b605d8190556040805182815290517f6df2dd186033d1083891be7a27ab27fd480094118e909a1780f9c2a2c49a7aa09181900360200190a150565b605c6020908152600091825260409182902080548351601f6002600019610100600186161502019093169290920491820184900484028101840190945280845290918301828280156118e55780601f106118ba576101008083540402835291602001916118e5565b820191906000526020600020905b8154815290600101906020018083116118c857829003601f168201915b505050505081565b61010081565b606581565b600b81565b6055818154811061190a57fe5b600091825260209091200154905081565b608081565b600061192b8561337a565b9050600160801b8110611985576040805162461bcd60e51b815260206004820152601e60248201527f6465706f73697420616d6f756e74206c6172676572207468616e204d61780000604482015290519081900360640190fd5b60006119908561337a565b9050600160c01b81106119e3576040805162461bcd60e51b81526020600482015260166024820152750c2dadeeadce840d8c2e4cecae440e8d0c2dc40dac2f60531b604482015290519081900360640190fd5b60ff63ffffffff8416118015611a05575060615463ffffffff90811690841611155b611a46576040805162461bcd60e51b815260206004820152600d60248201526c0d2dcecc2d8d2c840e8de92c8f609b1b604482015290519081900360640190fd5b63ffffffff8416611aa05734821015611a9b576040805162461bcd60e51b8152602060048201526012602482015271195d1a195c880f081b1bd859105b5bdd5b9d60721b604482015290519081900360640190fd5b611b11565b611ad260578563ffffffff1681548110611ab657fe5b6000918252602090912001546001600160a01b031683306133c0565b611b11576040805162461bcd60e51b815260206004820152601e602482015260008051602061486f833981519152604482015290519081900360640190fd5b6040805133606090811b6020830152603482018a9052600060548301526001600160f01b031960f08a811b8216605885015289901b16605a8301526001600160e01b031960e088811b8216605c85015287901b1690820152815160448183030181526064909101909152611b849061344d565b50505050505050565b7f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f000000181565b60615463ffffffff1681565b600080611bca848461361d565b90506000611bd78261366d565b905061ffff811415611bee57600192505050611c49565b600060368260058110611bfd57fe5b600502019050600081600201541115611c1c5760019350505050611c49565b60008160010154430390508160030154811015611c40576000945050505050611c49565b60019450505050505b92915050565b604f546001600160a01b03163314611ca7576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b60005b60058163ffffffff161015611e1f57818163ffffffff1660058110611ccb57fe5b602002015160016020020151828263ffffffff1660058110611ce957fe5b6020020151606001511015611d2f5760405162461bcd60e51b815260040180806020018281038252602e815260200180614813602e913960400191505060405180910390fd5b6040518060a00160405280838363ffffffff1660058110611d4c57fe5b6020020151600060200201518152602001438152602001838363ffffffff1660058110611d7557fe5b6020020151600160200201518152602001838363ffffffff1660058110611d9857fe5b6020020151600260200201518152602001838363ffffffff1660058110611dbb57fe5b6020020151606001519052603663ffffffff831660058110611dd957fe5b6005020160008201518160000155602082015181600101556040820151816002015560608201518160030155608082015181600401559050508080600101915050611caa565b5050565b604481565b604f546001600160a01b031681565b6059546001600160a01b031681565b605e5481565b63ffffffff81565b60545481565b6000611e658561337a565b9050600160801b8110611ead576040805162461bcd60e51b815260206004820152601e60248201526000805160206148fb833981519152604482015290519081900360640190fd5b6000611eb88561337a565b9050600160c01b8110611f0b576040805162461bcd60e51b81526020600482015260166024820152750c2dadeeadce840d8c2e4cecae440e8d0c2dc40dac2f60531b604482015290519081900360640190fd5b60ff63ffffffff8816118015611f2d575060615463ffffffff90811690881611155b611f70576040805162461bcd60e51b815260206004820152600f60248201526e0d2dcecc2d8d2c840cce4deda92c8f608b1b604482015290519081900360640190fd5b60ff63ffffffff8416118015611f92575060615463ffffffff90811690841611155b611fd3576040805162461bcd60e51b815260206004820152600d60248201526c0d2dcecc2d8d2c840e8de92c8f609b1b604482015290519081900360640190fd5b63ffffffff841661202d5734821015612028576040805162461bcd60e51b8152602060048201526012602482015271195d1a195c880f081b1bd859105b5bdd5b9d60721b604482015290519081900360640190fd5b612082565b61204360578563ffffffff1681548110611ab657fe5b612082576040805162461bcd60e51b815260206004820152601e602482015260008051602061486f833981519152604482015290519081900360640190fd5b6040805133606090811b6020830152600060348301526001600160e01b031960e08b811b821660548501526001600160f01b031960f08c811b821660588701528b901b16605a85015288811b8216605c85015287901b1690820152815160448183030181526064909101909152611b849061344d565b6036816005811061210557fe5b6005020180546001820154600283015460038401546004909401549294509092909185565b6057818154811061213757fe5b6000918252602090912001546001600160a01b0316905081565b6212750081565b605d5481565b6053818154811061216b57fe5b6000918252602090912060029091020180546001909101546001600160a01b03909116915082565b61ffff81565b605054600160a01b900467ffffffffffffffff1681565b6050546001600160a01b03163314806121d35750604f546001600160a01b031633145b612224576040805162461bcd60e51b815260206004820152601a60248201527f4f6e6c79207361666520626f74206f7220676f766572616e6365000000000000604482015290519081900360640190fd5b60005b60058163ffffffff1610156122bb576040518060a0016040528060008152602001600081526020016000815260200160008152602001600081525060368263ffffffff166005811061227557fe5b6005020160008201518160000155602082015181600101556040820151816002015560608201518160030155608082015181600401559050508080600101915050612227565b5060515460505460408051630e670af560e01b8152600160a01b90920467ffffffffffffffff166004830152516001600160a01b0390921691630e670af59160248082019260009290919082900301818387803b15801561231b57600080fd5b505af1158015611312573d6000803e3d6000fd5b60555490565b605a5481565b80156123d15761237b60578863ffffffff168154811061235757fe5b6000918252602090912001546001600160a01b03166001600160c01b038816613704565b15156001146123d1576040805162461bcd60e51b815260206004820152601860248201527f6d7573742062652064656c617965642077697468647261770000000000000000604482015290519081900360640190fd5b60606123ea886000896001600160c01b0316893361380d565b905060006123f78261391a565b905060006055600188038154811061240b57fe5b600091825260209182902001546040805160038082526080820190925291935060609282018380368337019050509050828160008151811061244957fe5b602002602001018181525050600188038160018151811061246657fe5b602002602001018181525050818160028151811061248057fe5b6020026020010181815250506000612497826139cf565b60008181526056602052604090205490915060ff16156124fe576040805162461bcd60e51b815260206004820152601e60248201527f776974686472617720686173206265656e20616c726561647920646f6e650000604482015290519081900360640190fd5b61250a83898987613a2c565b1515600114612550576040805162461bcd60e51b815260206004820152600d60248201526c34b73b30b634b210383937b7b360991b604482015290519081900360640190fd5b6000818152605660205260409020805460ff19166001179055851561263c5763ffffffff8c166125b55760405133906001600160c01b038d1680156108fc02916000818181858888f193505050501580156125af573d6000803e3d6000fd5b50612637565b6125f060578d63ffffffff16815481106125cb57fe5b6000918252602090912001546001600160a01b0316336001600160c01b038e16613ab3565b612637576040805162461bcd60e51b81526020600482015260136024820152724661696c20455243323020776974686472617760681b604482015290519081900360640190fd5b6127da565b63ffffffff8c166126c8576051546040805163cfc0b64160e01b81523360048201526000602482018190526001600160c01b038f166044830181905292516001600160a01b039094169363cfc0b6419392606480820193929182900301818588803b1580156126aa57600080fd5b505af11580156126be573d6000803e3d6000fd5b50505050506127da565b61270a60578d63ffffffff16815481106126de57fe5b6000918252602090912001546051546001600160a01b03918216916001600160c01b038f169116613b0c565b50605160009054906101000a90046001600160a01b03166001600160a01b031663cfc0b6413360578f63ffffffff168154811061274357fe5b9060005260206000200160009054906101000a90046001600160a01b03168e6040518463ffffffff1660e01b815260040180846001600160a01b03168152602001836001600160a01b03168152602001826001600160c01b031681526020019350505050600060405180830381600087803b1580156127c157600080fd5b505af11580156127d5573d6000803e3d6000fd5b505050505b85151589887f1b9bced8515592200c493bd85d3b9e8508df7ea146ee075c252f034d226fdac660405160405180910390a4505050505050505050505050565b600581565b605b546040805163041d8fb560e51b815233600482015243602482015290516001600160a01b03909216916383b1f6a091604480820192602092909190829003018186803b15801561286f57600080fd5b505afa158015612883573d6000803e3d6000fd5b505050506040513d602081101561289957600080fd5b505115156001146128e2576040805162461bcd60e51b815260206004820152600e60248201526d1a5b98dbdc9c9958dd081cdb1bdd60921b604482015290519081900360640190fd5b806129415743605d54605e540111612941576040805162461bcd60e51b815260206004820152601d60248201527f74696d656f75742c206d75737420666f726765204c314c324261746368000000604482015290519081900360640190fd5b60006129d08c8c8c8c8c8c8c8080601f016020809104026020016040519081016040528093929190818152602001838380828437600081840152601f19601f820116905080830192505050505050508b8b8080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152508c92508d9150613b659050565b90506129df8f8f8f8487613e0d565b60548b9055605580546001810182556000919091527f71beda120aafdd3bb922b360a066d10b7ce81d7ac2ad9874daac46e2282f6b45018a90556061805463ffffffff191663ffffffff8e161790558115612a405743605e55612a40613f4d565b605b54604080516309cb4a2f60e31b815233600482015290516001600160a01b0390921691634e5a51789160248082019260009290919082900301818387803b158015612a8c57600080fd5b505af1158015612aa0573d6000803e3d6000fd5b505060555460408051918252517f9b346777a734ffed277bddd87dee3490eb9dcc5378c095eac5af3e0f5da04f419350908190036020019150a1505050505050505050505050505050565b605f5481565b604f546001600160a01b03163314612b49576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b60005b82518163ffffffff161015612bb757818163ffffffff1681518110612b6d57fe5b602002602001015160526000858463ffffffff1681518110612b8b57fe5b6020908102919091018101516001600160a01b0316825281019190915260400160002055600101612b4c565b505050565b60575490565b600160c01b81565b60575463ffffffff811115612c1b576040805162461bcd60e51b81526020600482015260126024820152711d1bdad95b881b1a5cdd081a5cc8199d5b1b60721b604482015290519081900360640190fd5b6001600160a01b038216612c6b576040805162461bcd60e51b8152602060048201526012602482015271063616e2774206265206164647265737320360741b604482015290519081900360640190fd5b6001600160a01b03821660009081526058602052604090205415612cd6576040805162461bcd60e51b815260206004820152601b60248201527f746f6b656e206164647265737320616c72656164792061646465640000000000604482015290519081900360640190fd5b605954605a54604f54612cf6926001600160a01b039081169291166133c0565b612d35576040805162461bcd60e51b815260206004820152601e602482015260008051602061486f833981519152604482015290519081900360640190fd5b60578054600181019091557fe8e5595d268aaa85b36c3557e9d96c14a4fffaee9f45bcae0c407968a71096300180546001600160a01b0319166001600160a01b038416908117909155600081815260586020908152604091829020849055815192835263ffffffff84169083015280517fcb73d161edb7cd4fb1d92fedfd2555384fd997fd44ab507656f8c81e15747dde9281900390910190a15050565b6000612dde8361337a565b9050600160801b8110612e26576040805162461bcd60e51b815260206004820152601e60248201526000805160206148fb833981519152604482015290519081900360640190fd5b63ffffffff8216612e805734811015612e7b576040805162461bcd60e51b8152602060048201526012602482015271195d1a195c880f081b1bd859105b5bdd5b9d60721b604482015290519081900360640190fd5b612ed5565b612e9660578363ffffffff168154811061124a57fe5b612ed5576040805162461bcd60e51b815260206004820152601e602482015260008051602061486f833981519152604482015290519081900360640190fd5b602085015160408601516060870151600090811a90612ef688858585613f87565b60408051606083811b6bffffffffffffffffffffffff19166020830152603482018c905260006054830181905260f08c901b6001600160f01b0319166058840152605a830181905260e08b901b6001600160e01b031916605c84015290820152815180820360440181526064909101909152909150612f749061344d565b505050505050505050565b6050546001600160a01b031681565b60575463ffffffff821610612fea576040805162461bcd60e51b815260206004820152601d60248201527f746f6b656e20686173206e6f74206265656e2072656769737465726564000000604482015290519081900360640190fd5b6000612ff58361337a565b9050600160c01b8110613048576040805162461bcd60e51b81526020600482015260166024820152750c2dadeeadce840d8c2e4cecae440e8d0c2dc40dac2f60531b604482015290519081900360640190fd5b60ff63ffffffff851611801561306a575060615463ffffffff90811690851611155b6130ad576040805162461bcd60e51b815260206004820152600f60248201526e0d2dcecc2d8d2c840cce4deda92c8f608b1b604482015290519081900360640190fd5b6040805133606090811b60208301526000603483018190526001600160e01b031960e089811b8216605486015260588501929092526001600160f01b031960f089901b16605a8501529086901b16605c830152600160e01b908201528151604481830301815260649091019091526113129061344d565b600054610100900460ff168061313d575061313d614055565b8061314b575060005460ff16155b6131865760405162461bcd60e51b815260040180806020018281038252602e815260200180614841602e913960400191505060405180910390fd5b600054610100900460ff161580156131b1576000805460ff1961ff0019909116610100171660011790555b6131bb8e8e61405b565b605b80546001600160a01b03808c166001600160a01b031992831617909255605a869055605d8590556061805463ffffffff191660ff17905560598054928f16929091169190911790556000605e55600160605561321a878787614101565b6132268b8b848b6141e2565b605780546001810182556000919091527fe8e5595d268aaa85b36c3557e9d96c14a4fffaee9f45bcae0c407968a71096300180546001600160a01b03191690558015613278576000805461ff00191690555b5050505050505050505050505050565b604f546001600160a01b031633146132e0576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b621275008167ffffffffffffffff161115613342576040805162461bcd60e51b815260206004820152601c60248201527f45786365656473204d41585f5749544844524157414c5f44454c415900000000604482015290519081900360640190fd5b6050805467ffffffffffffffff909216600160a01b0267ffffffffffffffff60a01b19909216919091179055565b600181565b60ff81565b60006103ff8216601f600b84901c166001600a85811c8216919083900a9081850290831480156133a957508315155b156133b45760028204015b9450505050505b919050565b604080516323b872dd60e01b81523360048201526001600160a01b0383811660248301526044820185905291516000928616916323b872dd91606480830192602092919082900301818787803b15801561341957600080fd5b505af115801561342d573d6000803e3d6000fd5b505050506040513d602081101561344357600080fd5b5051949350505050565b605c600060605481526020019081526020016000208160405160200180838054600181600116156101000203166002900480156134c15780601f1061349f5761010080835404028352918201916134c1565b820191906000526020600020905b8154815290600101906020018083116134ad575b5050825160208401908083835b602083106134ed5780518252601f1990920191602091820191016134ce565b51815160209384036101000a60001901801990921691161790526040805192909401828103601f1901835284526060546000908152605c825293909320815161353f97509095509201925061473f9050565b506060546000908152605c602052604081205460449060026000196101006001841615020190911604049050806060547f44ed7960659190edb7acf74ac1bd6c7e8803bfa3aebe02c4599a0770fac3f884846040518080602001828103825283818151815260200191508051906020019080838360005b838110156135ce5781810151838201526020016135b6565b50505050905090810190601f1680156135fb5780820380516001836020036101000a031916815260200191505b509250505060405180910390a360808110611e1f576060805460010190555050565b6001600160a01b03821660009081526052602052604081205461364257506000611c49565b506001600160a01b0391909116600090815260526020526040902054670de0b6b3a764000091020490565b60008161367d575061ffff6133bb565b60005b60058163ffffffff1610156136c25760368163ffffffff16600581106136a257fe5b600502015483116136ba5763ffffffff1690506133bb565b600101613680565b506040805162461bcd60e51b8152602060048201526011602482015270195e18d95959081b585e08185b5bdd5b9d607a1b604482015290519081900360640190fd5b600080613711848461361d565b9050600061371e8261366d565b905061ffff811461380257613732816142e5565b60006036826005811061374157fe5b60050201600201541161379b576040805162461bcd60e51b815260206004820152601a60248201527f696e7374616e74207769746864726177616c7320776173746564000000000000604482015290519081900360640190fd5b603681600581106137a857fe5b6005020160040154603682600581106137bd57fe5b600502016002015414156137e55743603682600581106137d957fe5b60050201600101819055505b603681600581106137f257fe5b6005020160020180546000190190555b506001949350505050565b60408051600480825260a08201909252606091829190602082016080803683370190505090508663ffffffff168160008151811061384757fe5b60200260200101818152505060208665ffffffffffff16901b65ffffffffffff168160008151811061387557fe5b602002602001018181511791508181525050604860ff85901c901b8160008151811061389d57fe5b60200260200101818151179150818152505084816001815181106138bd57fe5b602090810291909101015280516001600160ff1b03851690829060029081106138e257fe5b602002602001018181525050826001600160a01b03168160038151811061390557fe5b60209081029190910101529695505050505050565b60355460405163311083ed60e21b81526020600482018181528451602484015284516000946001600160a01b03169363c4420fb49387939283926044019180860191028083838b5b8381101561397a578181015183820152602001613962565b505050509050019250505060206040518083038186803b15801561399d57600080fd5b505afa1580156139b1573d6000803e3d6000fd5b505050506040513d60208110156139c757600080fd5b505192915050565b60345460405163311083ed60e21b81526020600482018181528451602484015284516000946001600160a01b03169363c4420fb49387939283926044019185810191028083838b831561397a578181015183820152602001613962565b600080613a398484614381565b8551909150600090600019015b60008112613aa657868181518110613a5a57fe5b60200260200101519150600081876000821215613a7357fe5b6001911c811614905080613a9057613a8b8484614407565b613a9a565b613a9a8385614407565b93505060001901613a46565b5050909414949350505050565b6000836001600160a01b031663a9059cbb84846040518363ffffffff1660e01b815260040180836001600160a01b0316815260200182815260200192505050602060405180830381600087803b15801561341957600080fd5b6000836001600160a01b031663095ea7b383856040518363ffffffff1660e01b815260040180836001600160a01b0316815260200182815260200192505050602060405180830381600087803b15801561341957600080fd5b60004660608415613bb657613baf89898080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525061446a92505050565b9050613bd9565b604080516144008082526144208201909252906020820181803683370190505090505b6060600b60538681548110613bea57fe5b9060005260206000209060020201600101540261456a0167ffffffffffffffff81118015613c1757600080fd5b506040519080825280601f01601f191660200182016040528015613c42576020820181803683370190505b5090506060606160009054906101000a900463ffffffff168e6054548f8f604051602001808663ffffffff1660e01b81526004018563ffffffff1660e01b8152600401848152602001838152602001828152602001955050505050506040516020818303038152906040529050600080602083019150602084019050613cca828285516146a1565b825181019050602085019150613ce2828287516146a1565b84518101905060208b0191508a51600b60538a81548110613cff57fe5b906000526020600020906002020160010154020381019050613d2382828d516146a1565b8a518101905060208a019150613d3b82828c516146a1565b8951810190508560f01b81527f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f00000016002856040518082805190602001908083835b60208310613d9a5780518252601f199092019160209182019101613d7b565b51815160209384036101000a60001901801990921691161790526040519190930194509192505080830381855afa158015613dd9573d6000803e3d6000fd5b5050506040513d6020811015613dee57600080fd5b505181613df757fe5b0696505050505050509998505050505050505050565b60538181548110613e1a57fe5b60009182526020909120600290910201546040805163624c8f8760e01b81526001600160a01b039092169163624c8f879188918891889188916004909101908190869080828437600083820152601f01601f1916909101905084608080828437600083820152601f01601f1916909101905083604080828437600083820152601f01601f19169091019283525050604051602080830195509350915081900382018186803b158015613ecb57600080fd5b505afa158015613edf573d6000803e3d6000fd5b505050506040513d6020811015613ef557600080fd5b50511515600114611778576040805162461bcd60e51b815260206004820152601b60248201527f7a6b2d736e61726b2070726f6f66206973206e6f742076616c69640000000000604482015290519081900360640190fd5b605f546000908152605c60205260408120613f67916147bd565b605f8054600101908190556060541415613f85576060805460010190555b565b6000808560405160200180807f19457468657265756d205369676e6564204d6573736167653a0a393800000000815250601c01806148b96042913960420182815260200191505060405160208183030381529060405280519060200120905060018184878760405160008152602001604052604051808581526020018460ff1681526020018381526020018281526020019450505050506020604051602081039080840390855afa158015614040573d6000803e3d6000fd5b5050604051601f190151979650505050505050565b303b1590565b60005b82518161ffff161015612bb75760536040518060400160405280858461ffff168151811061408857fe5b60200260200101516001600160a01b03168152602001848461ffff16815181106140ae57fe5b602090810291909101810151909152825460018082018555600094855293829020835160029092020180546001600160a01b0319166001600160a01b03909216919091178155910151908201550161405e565b600054610100900460ff168061411a575061411a614055565b80614128575060005460ff16155b6141635760405162461bcd60e51b815260040180806020018281038252602e815260200180614841602e913960400191505060405180910390fd5b600054610100900460ff1615801561418e576000805460ff1961ff0019909116610100171660011790555b603380546001600160a01b038087166001600160a01b0319928316179092556034805486841690831617905560358054928516929091169190911790558015611312576000805461ff001916905550505050565b600054610100900460ff16806141fb57506141fb614055565b80614209575060005460ff16155b6142445760405162461bcd60e51b815260040180806020018281038252602e815260200180614841602e913960400191505060405180910390fd5b600054610100900460ff1615801561426f576000805460ff1961ff0019909116610100171660011790555b604f80546001600160a01b03199081166001600160a01b03888116919091179092556050805482168784161767ffffffffffffffff60a01b1916600160a01b67ffffffffffffffff881602179055605180549091169184169190911790558015611778576000805461ff00191690555050505050565b6000603682600581106142f457fe5b600502019050600081600101544303905081600401548260020154148061431e5750816003015481105b1561432a57505061437e565b60008260030154828161433957fe5b0490508260040154818460020154011061435c5760048301546002840155611312565b6002830180548201905560038301546001840180549183029190910190555050505b50565b604080516003808252608082019092526000916060919060208201838036833701905050905083816000815181106143b557fe5b60200260200101818152505082816001815181106143cf57fe5b6020026020010181815250506001816002815181106143ea57fe5b6020026020010181815250506143ff816139cf565b949350505050565b6040805160028082526060808301845260009390929190602083019080368337019050509050838160008151811061443b57fe5b602002602001018181525050828160018151811061445557fe5b6020026020010181815250506143ff816146e2565b60606000606583518161447957fe5b605f546000908152605c60209081526040918290208054835160026001831615610100026000190190921691909104601f81018490048402820184019094528381529490930494506060939291908301828280156145185780601f106144ed57610100808354040283529160200191614518565b820191906000526020600020905b8154815290600101906020018083116144fb57829003601f168201915b505050505090506000604482518161452c57fe5b0490506101008382011115614579576040805162461bcd60e51b815260206004820152600e60248201526d4c31205458206f766572666c6f7760901b604482015290519081900360640190fd5b6040805161440080825261442082019092526060916020820181803683370190505090506000806020850191506020830190506145b8828287516146a1565b6020888101906044860285010160005b888110156146925782516001840151602185015160418601516061870151605754606590980197909460f81c9392919060e086901c908110614651576040805162461bcd60e51b815260206004820152601d60248201527f746f6b656e20686173206e6f74206265656e2072656769737465726564000000604482015290519081900360640190fd5b600060ff86161561466b5761466883858789613f87565b90505b60601b8852601488019190915260e01b603c870152505060449093019250506001016145c8565b50939998505050505050505050565b5b602081106146c1578251825260209283019290910190601f19016146a2565b915181516020939093036101000a6000190180199091169216919091179052565b60335460405163311083ed60e21b81526020600482018181528451602484015284516000946001600160a01b03169363c4420fb49387939283926044019185810191028083838b831561397a578181015183820152602001613962565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061478057805160ff19168380011785556147ad565b828001600101855582156147ad579182015b828111156147ad578251825591602001919060010190614792565b506147b99291506147fd565b5090565b50805460018160011615610100020316600290046000825580601f106147e3575061437e565b601f01602090049060005260206000209081019061437e91905b5b808211156147b957600081556001016147fe56fe63616e2774206265206d6f7265207769746864726177616c73207468616e204d6178207769746864726177616c73436f6e747261637420696e7374616e63652068617320616c7265616479206265656e20696e697469616c697a65644661696c206465706f736974204552433230207472616e73616374696f6e0000666f7267652074696d656f7574206d757374206265206c657373207468616e2032343020626c6f636b734920617574686f72697a65207468697320626162796a75626a7562206b657920666f72206865726d657a20726f6c6c7570206163636f756e74206372656174696f6e6465706f73697420616d6f756e74206c6172676572207468616e206d61780000a26469706673582212200176189133de85bb288b8c50dabcb1b8969841d43650a1f1f18c4943a908ab0264736f6c634300060c0033"
+var HermezBin = "0x608060405234801561001057600080fd5b5061586680620000216000396000f3fe6080604052600436106102235760003560e01c806386c6acc111610123578063bded9bb8116100ab578063dd46bf841161006f578063dd46bf8414610d79578063e56e27ae14610d8e578063e796fcf314610da3578063e9b5269c14610e4b578063ef4a5c4a14610e8c57610223565b8063bded9bb814610c86578063c63cc3a014610c9b578063cbd7b5fb14610d07578063d0f32e6714610d34578063d486645c14610d4957610223565b80639f34e9a3116100f25780639f34e9a314610bdd578063a327583814610bf2578063a7ab696114610c07578063abe3219c14610c1c578063ac171d2814610c3157610223565b806386c6acc114610b0057806395a09f2a14610b335780639b51fb0d14610b5e5780639ead722214610bb357610223565b806338330200116101b157806368e95e531161017557806368e95e53146108de5780636e7e13651461096f57806379a135e314610ac157806384ef9ed414610ad6578063864eb16414610aeb57610223565b806338330200146105bc578063432dd51f1461060e57806344e0b2ce146106fa5780634ee51c261461070f578063506d5463146108ab57610223565b80631a748c2d116101f85780631a748c2d146103c65780631b0a8223146104f65780632bd8362614610527578063314e5eda1461053c578063375110aa1461056657610223565b806223de29146102285780624aca6e1461031d5780630dd94b96146103625780630ee8e52b146103b1575b600080fd5b34801561023457600080fd5b5061031b600480360360c081101561024b57600080fd5b6001600160a01b03823581169260208101358216926040820135909216916060820135919081019060a081016080820135600160201b81111561028d57600080fd5b82018360208201111561029f57600080fd5b803590602001918460018302840111600160201b831117156102c057600080fd5b919390929091602081019035600160201b8111156102dd57600080fd5b8201836020820111156102ef57600080fd5b803590602001918460018302840111600160201b8311171561031057600080fd5b509092509050610ebf565b005b34801561032957600080fd5b506103506004803603602081101561034057600080fd5b50356001600160a01b0316611241565b60408051918252519081900360200190f35b34801561036e57600080fd5b506103956004803603602081101561038557600080fd5b50356001600160a01b0316611253565b604080516001600160401b039092168252519081900360200190f35b3480156103bd57600080fd5b5061039561126e565b3480156103d257600080fd5b5061031b600480360360408110156103e957600080fd5b810190602081018135600160201b81111561040357600080fd5b82018360208201111561041557600080fd5b803590602001918460208302840111600160201b8311171561043657600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b81111561048557600080fd5b82018360208201111561049757600080fd5b803590602001918460208302840111600160201b831117156104b857600080fd5b919080806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250929550611284945050505050565b34801561050257600080fd5b5061050b6113b1565b604080516001600160a01b039092168252519081900360200190f35b34801561053357600080fd5b5061050b6113c0565b34801561054857600080fd5b5061031b6004803603602081101561055f57600080fd5b50356113cf565b34801561057257600080fd5b506105a86004803603604081101561058957600080fd5b5080356001600160a01b031690602001356001600160c01b0316611462565b604080519115158252519081900360200190f35b3480156105c857600080fd5b506105e6600480360360208110156105df57600080fd5b50356114fe565b604080516001600160a01b039094168452602084019290925282820152519081900360600190f35b34801561061a57600080fd5b5061031b600480360360e081101561063157600080fd5b63ffffffff823516916001600160c01b036020820135169160408201359165ffffffffffff6060820135169181019060a081016080820135600160201b81111561067a57600080fd5b82018360208201111561068c57600080fd5b803590602001918460208302840111600160201b831117156106ad57600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295505065ffffffffffff83351693505050602001351515611538565b34801561070657600080fd5b5061039561173d565b34801561071b57600080fd5b5061031b60048036036101c081101561073357600080fd5b810190602081018135600160201b81111561074d57600080fd5b82018360208201111561075f57600080fd5b803590602001918460208302840111600160201b8311171561078057600080fd5b9190808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152509295949360208101935035915050600160201b8111156107cf57600080fd5b8201836020820111156107e157600080fd5b803590602001918460208302840111600160201b8311171561080257600080fd5b919080806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250929550505081356001600160a01b0390811693506020830135811692604081013582169250606081013560ff169160808201359160a081013582169160c082013581169160e08101358216916101008201358116916101208101358216916101408201356001600160401b03169161016001351661174c565b3480156108b757600080fd5b50610350600480360360208110156108ce57600080fd5b50356001600160401b0316611a00565b3480156108ea57600080fd5b5061031b600480360361028081101561090257600080fd5b6040805160a0810190915290820191906102808201908260056000835b82821015610960576040805160808181019092529080840286019060049083908390808284376000920191909152505050815260019091019060200161091f565b50929550611a12945050505050565b34801561097b57600080fd5b5061031b600480360361020081101561099357600080fd5b65ffffffffffff8235169160208101359160408201359190810190608081016060820135600160201b8111156109c857600080fd5b8201836020820111156109da57600080fd5b803590602001918460018302840111600160201b831117156109fb57600080fd5b919390929091602081019035600160201b811115610a1857600080fd5b820183602082011115610a2a57600080fd5b803590602001918460018302840111600160201b83111715610a4b57600080fd5b919390929091602081019035600160201b811115610a6857600080fd5b820183602082011115610a7a57600080fd5b803590602001918460018302840111600160201b83111715610a9b57600080fd5b919350915060ff8135169060208101351515906040810190608081019061010001611b9b565b348015610acd57600080fd5b5061050b61204a565b348015610ae257600080fd5b50610395612059565b348015610af757600080fd5b5061050b612068565b348015610b0c57600080fd5b5061035060048036036020811015610b2357600080fd5b50356001600160401b0316612077565b348015610b3f57600080fd5b50610b48612089565b6040805160ff9092168252519081900360200190f35b348015610b6a57600080fd5b50610b8860048036036020811015610b8157600080fd5b503561208e565b6040805195865260208601949094528484019290925260608401526080830152519081900360a00190f35b348015610bbf57600080fd5b5061050b60048036036020811015610bd657600080fd5b50356120c0565b348015610be957600080fd5b506103506120e7565b348015610bfe57600080fd5b50610b486120ed565b348015610c1357600080fd5b506103956120fd565b348015610c2857600080fd5b5061031b612113565b61031b600480360360c0811015610c4757600080fd5b5080359065ffffffffffff602082013581169161ffff604082013581169260608301359091169163ffffffff6080820135169160a0909101351661228b565b348015610c9257600080fd5b50610350612401565b348015610ca757600080fd5b5061031b60048036036101a0811015610cbf57600080fd5b506040810160c0820163ffffffff610100840135166001600160c01b036101208501351665ffffffffffff610140860135811690610160870135166101808701351515612407565b348015610d1357600080fd5b5061031b60048036036020811015610d2a57600080fd5b503560ff16612802565b348015610d4057600080fd5b506103956128ff565b348015610d5557600080fd5b50610d5e612915565b6040805165ffffffffffff9092168252519081900360200190f35b348015610d8557600080fd5b5061050b61292a565b348015610d9a57600080fd5b5061050b612939565b348015610daf57600080fd5b50610dd660048036036020811015610dc657600080fd5b50356001600160401b0316612948565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610e10578181015183820152602001610df8565b50505050905090810190601f168015610e3d5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b348015610e5757600080fd5b506105a860048036036040811015610e6e57600080fd5b5080356001600160401b0316906020013565ffffffffffff166129e3565b348015610e9857600080fd5b5061031b60048036036020811015610eaf57600080fd5b50356001600160401b0316612a03565b82610f11576040805162461bcd60e51b815260206004820152601860248201527f53656e642045524337373720776974686f757420646174610000000000000000604482015290519081900360640190fd5b600084846020811015610f2357600080fd5b50356001600160e01b0319169050631582e3a560e31b8114156111105760008080808080610f548a6004818e61564f565b60c0811015610f6257600080fd5b50605980548235985065ffffffffffff60208401358116985061ffff604085013581169850606085013516965063ffffffff608085013516955060a0909301359092169250339184908110610fb357fe5b6000918252602090912001546001600160a01b03161461101a576040805162461bcd60e51b815260206004820152601760248201527f746f6b656e20494420646f6573206e6f74206d61746368000000000000000000604482015290519081900360640190fd5b600061102533612ae9565b905061ffff8516156110f557600061103c86612c3a565b9050600160801b8110611096576040805162461bcd60e51b815260206004820181905260248201527f6465706f73697420616d6f756e74206c6172676572207468616e206c696d6974604482015290519081900360640190fd5b818e8161109f57fe5b0481146110f3576040805162461bcd60e51b815260206004820152601a60248201527f6c6f6164416d6f756e7420213d20746f6b656e20616d6f756e74000000000000604482015290519081900360640190fd5b505b6111048f888888888888612c7e565b50505050505050611236565b6001600160e01b0319811663d48bfca760e01b14156111f457605f546001600160a01b0316331461117a576040805162461bcd60e51b815260206004820152600f60248201526e36bab9ba103830bc9034b7102422ad60891b604482015290519081900360640190fd5b605b5486146111c1576040805162461bcd60e51b815260206004820152600e60248201526d3737ba1032b737bab3b4102422ad60911b604482015290519081900360640190fd5b6111ef6111d1856004818961564f565b60208110156111df57600080fd5b50356001600160a01b0316612edd565b611236565b6040805162461bcd60e51b81526020600482015260126024820152714e6f742076616c69642063616c6c6461746160701b604482015290519081900360640190fd5b505050505050505050565b605a6020526000908152604090205481565b6052602052600090815260409020546001600160401b031681565b605e54600160801b90046001600160401b031681565b604f546001600160a01b031633146112dc576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b8051825114611332576040805162461bcd60e51b815260206004820152601760248201527f646966666572656e74206172726179206c656e67746820000000000000000000604482015290519081900360640190fd5b60005b82518110156113ac5781818151811061134a57fe5b60200260200101516052600085848151811061136257fe5b6020908102919091018101516001600160a01b03168252810191909152604001600020805467ffffffffffffffff19166001600160401b0392909216919091179055600101611335565b505050565b6051546001600160a01b031681565b605c546001600160a01b031681565b604f546001600160a01b03163314611427576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b605b8190556040805182815290517fd1c873cd16013f0dc5f37992c0d12794389698512895ec036a568e393b46e3c19181900360200190a150565b60008061146f8484613081565b9050806114805760019150506114f8565b600061148b82613357565b905060006036826005811061149c57fe5b6005020190506000816002015411156114bb57600193505050506114f8565b60006114d48260010154436133cd90919063ffffffff16565b905081600301548110156114ef5760009450505050506114f8565b60019450505050505b92915050565b6053818154811061150b57fe5b60009182526020909120600390910201805460018201546002909201546001600160a01b03909116925083565b80156115aa5761156f60598863ffffffff168154811061155457fe5b6000918252602090912001546001600160a01b031687613416565b6115aa5760405162461bcd60e51b815260040180806020018281038252602d815260200180615713602d913960400191505060405180910390fd5b60606115c3886000896001600160c01b03168933613560565b905060006115d08261366d565b65ffffffffffff80881660009081526057602090815260408083205460588352818420948a168452939091529020549192509060ff1615611658576040805162461bcd60e51b815260206004820152601e60248201527f776974686472617720686173206265656e20616c726561647920646f6e650000604482015290519081900360640190fd5b61166c81878765ffffffffffff1685613722565b15156001146116b6576040805162461bcd60e51b81526020600482015260116024820152701cdb5d081c1c9bdbd9881a5b9d985b1a59607a1b604482015290519081900360640190fd5b65ffffffffffff8088166000908152605860209081526040808320938916835292905220805460ff191660011790556116f0898b866137a9565b8315158765ffffffffffff168665ffffffffffff167f92dd99230eaf5e3f1238fbbd0d72b34e8c2ad759886075bfc9f426ebeeea34f060405160405180910390a450505050505050505050565b6055546001600160401b031681565b600054610100900460ff16806117655750611765613ca9565b80611773575060005460ff16155b6117ae5760405162461bcd60e51b815260040180806020018281038252602e815260200180615795602e913960400191505060405180910390fd5b600054610100900460ff161580156117d9576000805460ff1961ff0019909116610100171660011790555b6117e38f8f613caf565b8c605460006101000a8154816001600160a01b0302191690836001600160a01b031602179055508b605c60006101000a8154816001600160a01b0302191690836001600160a01b031602179055508a605f60006101000a8154816001600160a01b0302191690836001600160a01b0316021790555089605e60186101000a81548160ff021916908360ff16021790555088605b8190555060ff605460146101000a81548165ffffffffffff021916908365ffffffffffff1602179055506001605e60106101000a8154816001600160401b0302191690836001600160401b03160217905550605960009080600181540180825580915050600190039060005260206000200160009091909190916101000a8154816001600160a01b0302191690836001600160a01b03160217905550731820a4b7618bde71dce8cdc73aab6c95905fad246001600160a01b03166329965a1d307fb281fc8c12954d22544db45de3159a39272895b169a852b314f9cc762e44c53b306040518463ffffffff1660e01b815260040180846001600160a01b03168152602001838152602001826001600160a01b031681526020019350505050600060405180830381600087803b1580156119ae57600080fd5b505af11580156119c2573d6000803e3d6000fd5b505050506119d1888888613d7b565b6119dd85858585613e5c565b80156119ef576000805461ff00191690555b505050505050505050505050505050565b60576020526000908152604090205481565b604f546001600160a01b03163314611a6a576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b60005b6005811015611b97576000828260058110611a8457fe5b60200201515190506000838360058110611a9a57fe5b60200201516001602002015190506000848460058110611ab657fe5b60200201516040015190506000858560058110611acf57fe5b602002015160600151905080831115611b195760405162461bcd60e51b815260040180806020018281038252602c8152602001806156a0602c913960400191505060405180910390fd5b6040518060a001604052808581526020014381526020018481526020018381526020018281525060368660058110611b4d57fe5b600502016000820151816000015560208201518160010155604082015181600201556060820151816003015560808201518160040155905050505050508080600101915050611a6d565b5050565b333214611bd95760405162461bcd60e51b81526004018080602001828103825260348152602001806157406034913960400191505060405180910390fd5b605c546040805163041d8fb560e51b815233600482015243602482015290516001600160a01b03909216916383b1f6a091604480820192602092909190829003018186803b158015611c2a57600080fd5b505afa158015611c3e573d6000803e3d6000fd5b505050506040513d6020811015611c5457600080fd5b50511515600114611cac576040805162461bcd60e51b815260206004820152601860248201527f61756374696f6e2064656e6965642074686520666f7267650000000000000000604482015290519081900360640190fd5b83611d1357605e54600160c01b810460ff166001600160401b0391821601164310611d13576040805162461bcd60e51b8152602060048201526012602482015271130c530c90985d18da081c995c5d5a5c995960721b604482015290519081900360640190fd5b6000611d228f8f8f888a613f5e565b905060538660ff1681548110611d3457fe5b60009182526020918290206003909102015460408051928301815283835280516343753b4d60e01b81526001600160a01b03909216926343753b4d9288928892889290916004909101908190869080828437600083820152601f01601f1916909101905084608080828437600083820152601f01601f1916909101905083604080828437600081840152601f19601f82011690508083019250505082600160200280838360005b83811015611df3578181015183820152602001611ddb565b5050505090500194505050505060206040518083038186803b158015611e1857600080fd5b505afa158015611e2c573d6000803e3d6000fd5b505050506040513d6020811015611e4257600080fd5b5051611e8c576040805162461bcd60e51b815260206004820152601460248201527334b73b30b634b2103937b6363ab810383937b7b360611b604482015290519081900360640190fd5b6055600081819054906101000a90046001600160401b03168092919060010191906101000a8154816001600160401b0302191690836001600160401b03160217905550508e605460146101000a81548165ffffffffffff021916908365ffffffffffff1602179055508d60566000605560009054906101000a90046001600160401b03166001600160401b03166001600160401b03168152602001908152602001600020819055508c60576000605560009054906101000a90046001600160401b03166001600160401b03166001600160401b03168152602001908152602001600020819055508415611f9d57605e805467ffffffffffffffff1916436001600160401b0316179055611f9d614228565b605c54604080516309cb4a2f60e31b815233600482015290516001600160a01b0390921691634e5a51789160248082019260009290919082900301818387803b158015611fe957600080fd5b505af1158015611ffd573d6000803e3d6000fd5b50506055546040516001600160401b0390911692507fd7ab70a9e6ed0d6985e74c5cb553d300a13a2217d58266922b275b72fe7869829150600090a2505050505050505050505050505050565b605f546001600160a01b031681565b605e546001600160401b031681565b6054546001600160a01b031681565b60566020526000908152604090205481565b60f081565b6036816005811061209b57fe5b6005020180546001820154600283015460038401546004909401549294509092909185565b605981815481106120cd57fe5b6000918252602090912001546001600160a01b0316905081565b60595490565b605e54600160c01b900460ff1681565b605054600160a01b90046001600160401b031681565b6050546001600160a01b03163314806121365750604f546001600160a01b031633145b612187576040805162461bcd60e51b815260206004820152601a60248201527f4f6e6c79207361666520626f74206f7220676f766572616e6365000000000000604482015290519081900360640190fd5b60005b6005811015612212576040518060a00160405280600081526020016000815260200160008152602001600081526020016000815250603682600581106121cc57fe5b600502016000820151816000015560208201518160010155604082015181600201556060820151816003015560808201518160040155905050808060010191505061218a565b5060515460505460408051630e670af560e01b8152600160a01b9092046001600160401b03166004830152516001600160a01b0390921691630e670af59160248082019260009290919082900301818387803b15801561227157600080fd5b505af1158015612285573d6000803e3d6000fd5b50505050565b60595463ffffffff8316106122e7576040805162461bcd60e51b815260206004820152601d60248201527f746f6b656e20686173206e6f74206265656e2072656769737465726564000000604482015290519081900360640190fd5b60006122f285612c3a565b9050600160801b811061234c576040805162461bcd60e51b815260206004820181905260248201527f6465706f73697420616d6f756e74206c6172676572207468616e206c696d6974604482015290519081900360640190fd5b80156123e95763ffffffff83166123b6573481146123b1576040805162461bcd60e51b815260206004820152601760248201527f6c6f6164416d6f756e7420213d206d73672e76616c7565000000000000000000604482015290519081900360640190fd5b6123e9565b6123e960598463ffffffff16815481106123cc57fe5b6000918252602090912001546001600160a01b03163330846142d6565b6123f833888888888888612c7e565b50505050505050565b605b5481565b80156124795761243e60598663ffffffff168154811061242357fe5b6000918252602090912001546001600160a01b031685613416565b6124795760405162461bcd60e51b815260040180806020018281038252602d815260200180615713602d913960400191505060405180910390fd5b65ffffffffffff80841660009081526058602090815260408083209386168352929052205460ff16156124f3576040805162461bcd60e51b815260206004820152601e60248201527f776974686472617720686173206265656e20616c726561647920646f6e650000604482015290519081900360640190fd5b65ffffffffffff831660009081526057602090815260408083205481518084018290523360601b818401526001600160e01b031960e08b901b16605482015267ffffffffffffffff1989841b1660588201526001600160d01b031960d088901b1660708201528251605681830301815260769091019283905280519194937f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f00000019360029390918291908401908083835b602083106125c15780518252601f1990920191602091820191016125a2565b51815160209384036101000a60001901801990921691161790526040519190930194509192505080830381855afa158015612600573d6000803e3d6000fd5b5050506040513d602081101561261557600080fd5b50518161261e57fe5b605454604080516020810182529390920680845282516343753b4d60e01b81529094506001600160a01b03909116926343753b4d928e928e928e929091600401908190869080828437600083820152601f01601f1916909101905084608080828437600083820152601f01601f1916909101905083604080828437600081840152601f19601f82011690508083019250505082600160200280838360005b838110156126d45781810151838201526020016126bc565b5050505090500194505050505060206040518083038186803b1580156126f957600080fd5b505afa15801561270d573d6000803e3d6000fd5b505050506040513d602081101561272357600080fd5b5051151560011461277b576040805162461bcd60e51b815260206004820152601b60248201527f7a6b2d736e61726b2070726f6f66206973206e6f742076616c69640000000000604482015290519081900360640190fd5b65ffffffffffff8086166000908152605860209081526040808320938816835292905220805460ff191660011790556127b58688856137a9565b8215158565ffffffffffff168565ffffffffffff167f92dd99230eaf5e3f1238fbbd0d72b34e8c2ad759886075bfc9f426ebeeea34f060405160405180910390a450505050505050505050565b604f546001600160a01b0316331461285a576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b60f060ff821611156128ab576040805162461bcd60e51b8152602060048201526015602482015274199bdc99d9481d1a5b595bdd5d08195e18d9591959605a1b604482015290519081900360640190fd5b605e805460ff8316600160c01b810260ff60c01b199092169190911790915560408051918252517fff6221781ac525b04585dbb55cd2ebd2a92c828ca3e42b23813a1137ac9744319181900360200190a150565b605e54600160401b90046001600160401b031681565b605454600160a01b900465ffffffffffff1681565b604f546001600160a01b031681565b6050546001600160a01b031681565b605d6020908152600091825260409182902080548351601f6002600019610100600186161502019093169290920491820184900484028101840190945280845290918301828280156129db5780601f106129b0576101008083540402835291602001916129db565b820191906000526020600020905b8154815290600101906020018083116129be57829003601f168201915b505050505081565b605860209081526000928352604080842090915290825290205460ff1681565b604f546001600160a01b03163314612a5b576040805162461bcd60e51b81526020600482015260166024820152754f6e6c7920676f766572616e6365206164647265737360501b604482015290519081900360640190fd5b62127500816001600160401b03161115612abc576040805162461bcd60e51b815260206004820152601c60248201527f45786365656473204d41585f5749544844524157414c5f44454c415900000000604482015290519081900360640190fd5b605080546001600160401b03909216600160a01b0267ffffffffffffffff60a01b19909216919091179055565b604080518082018252600d81526c6772616e756c6172697479282960981b60209182015281516004815260248101835290810180516001600160e01b031663556f0dc760e01b1781529151815160009384936060936001600160a01b03881693919290918291908083835b60208310612b735780518252601f199092019160209182019101612b54565b6001836020036101000a038019825116818451168082178552505050505050905001915050600060405180830381855afa9150503d8060008114612bd3576040519150601f19603f3d011682016040523d82523d6000602084013e612bd8565b606091505b509150915081612c195760405162461bcd60e51b81526004018080602001828103825260228152602001806156f16022913960400191505060405180910390fd5b808060200190516020811015612c2e57600080fd5b5051925050505b919050565b60006103ff8216601f600b84901c166001600a85811c8216919083900a908185029083148015612c6957508315155b15612c745760028204015b9695505050505050565b6000612c8984612c3a565b9050600160c01b8110612ce3576040805162461bcd60e51b815260206004820152601860248201527f616d6f756e74206c6172676572207468616e206c696d69740000000000000000604482015290519081900360640190fd5b65ffffffffffff8216612d48578015612d43576040805162461bcd60e51b815260206004820152601e60248201527f616d6f756e74206d757374206265203020696620746f49647820697320300000604482015290519081900360640190fd5b612dc9565b60ff65ffffffffffff8316118015612d75575060545465ffffffffffff600160a01b909104811690831611155b80612d88575065ffffffffffff82166001145b612dc9576040805162461bcd60e51b815260206004820152600d60248201526c0d2dcecc2d8d2c840e8de92c8f609b1b604482015290519081900360640190fd5b65ffffffffffff8616612e175786612e125760405162461bcd60e51b81526004018080602001828103825260288152602001806156786028913960400191505060405180910390fd5b612ec4565b60ff65ffffffffffff8716118015612e44575060545465ffffffffffff600160a01b909104811690871611155b612e87576040805162461bcd60e51b815260206004820152600f60248201526e0d2dcecc2d8d2c840cce4deda92c8f608b1b604482015290519081900360640190fd5b8615612ec45760405162461bcd60e51b815260040180806020018281038252602c8152602001806157c3602c913960400191505060405180910390fd5b612ed388888888888888614471565b5050505050505050565b605954600160201b8110612f2d576040805162461bcd60e51b81526020600482015260126024820152711d1bdad95b881b1a5cdd081a5cc8199d5b1b60721b604482015290519081900360640190fd5b6001600160a01b038216612f7d576040805162461bcd60e51b8152602060048201526012602482015271063616e2774206265206164647265737320360741b604482015290519081900360640190fd5b6001600160a01b0382166000908152605a602052604090205415612fe8576040805162461bcd60e51b815260206004820152601b60248201527f746f6b656e206164647265737320616c72656164792061646465640000000000604482015290519081900360640190fd5b60598054600181019091557fd73956b9e00d8f8bc5e44f7184df1387cdd652e7726b8ccda3db4859e02f31bf0180546001600160a01b0319166001600160a01b0384169081179091556000818152605a6020908152604091829020849055815163ffffffff8516815291517fcb73d161edb7cd4fb1d92fedfd2555384fd997fd44ab507656f8c81e15747dde9281900390910190a25050565b6001600160a01b0382166000908152605260205260408120546001600160401b03166130af575060006114f8565b6001600160a01b038316600090815260526020526040812054655af3107a4000906001600160401b03166001600160c01b0385160204905060008060006001600160a01b0316731820a4b7618bde71dce8cdc73aab6c95905fad246001600160a01b031663aabbb8ca887fac7fbab5f54a3ca8194167523c6753bfeb96a445279294b6125b68cce21770546040518363ffffffff1660e01b815260040180836001600160a01b031681526020018281526020019250505060206040518083038186803b15801561317e57600080fd5b505afa158015613192573d6000803e3d6000fd5b505050506040513d60208110156131a857600080fd5b50516001600160a01b031614156131c05760006131c3565b60015b905080156131d457601291506132e5565b604080518082018252600a815269646563696d616c73282960b01b60209182015281516004815260248101835290810180516001600160e01b031663313ce56760e01b178152915181516000936060936001600160a01b038c16939092909182918083835b602083106132585780518252601f199092019160209182019101613239565b6001836020036101000a038019825116818451168082178552505050505050905001915050600060405180830381855afa9150503d80600081146132b8576040519150601f19603f3d011682016040523d82523d6000602084013e6132bd565b606091505b509150915081156132e2578080602001905160208110156132dd57600080fd5b505193505b50505b604d8260ff161061333d576040805162461bcd60e51b815260206004820152601a60248201527f746f6b656e55534420646563696d616c73206f766572666c6f77000000000000604482015290519081900360640190fd5b8160ff16600a0a838161334c57fe5b049695505050505050565b6000805b600581101561338b576036816005811061337157fe5b60050201548311613383579050612c35565b60010161335b565b506040805162461bcd60e51b8152602060048201526011602482015270195e18d95959081b585e08185b5bdd5b9d607a1b604482015290519081900360640190fd5b600061340f83836040518060400160405280601e81526020017f536166654d6174683a207375627472616374696f6e206f766572666c6f77000081525061464b565b9392505050565b6000806134238484613081565b9050806134345760019150506114f8565b600061343f82613357565b905060006036826005811061345057fe5b600502019050600061346f8260010154436133cd90919063ffffffff16565b905081600301548110156134c3576002820154156134b65781600401548260020154141561349e574360018301555b50600201805460001901905550600191506114f89050565b60009450505050506114f8565b60006134dc8360030154836146e290919063ffffffff16565b905082600401546134fa82856002015461472490919063ffffffff16565b1061351f57600483015461350f9060016133cd565b6002840155436001840155613552565b6002830180548201600019019055600383015461354c9061354190839061477e565b600185015490614724565b60018401555b6001955050505050506114f8565b60408051600480825260a08201909252606091829190602082016080803683370190505090508663ffffffff168160008151811061359a57fe5b60200260200101818152505060208665ffffffffffff16901b65ffffffffffff16816000815181106135c857fe5b602002602001018181511791508181525050604860ff85901c901b816000815181106135f057fe5b602002602001018181511791508181525050848160018151811061361057fe5b602090810291909101015280516001600160ff1b038516908290600290811061363557fe5b602002602001018181525050826001600160a01b03168160038151811061365857fe5b60209081029190910101529695505050505050565b60355460405163311083ed60e21b81526020600482018181528451602484015284516000946001600160a01b03169363c4420fb49387939283926044019180860191028083838b5b838110156136cd5781810151838201526020016136b5565b505050509050019250505060206040518083038186803b1580156136f057600080fd5b505afa158015613704573d6000803e3d6000fd5b505050506040513d602081101561371a57600080fd5b505192915050565b60008061372f84846147d7565b8551909150600090600019015b6000811261379c5786818151811061375057fe5b6020026020010151915060008187600082121561376957fe5b6001911c81161490508061378657613781848461485d565b613790565b613790838561485d565b9350506000190161373c565b5050909414949350505050565b80156137ef576137ea60598363ffffffff16815481106137c557fe5b6000918252602090912001546001600160a01b0316336001600160c01b0386166148c0565b6113ac565b63ffffffff821661387b576051546040805163cfc0b64160e01b81523360048201526000602482018190526001600160c01b0387166044830181905292516001600160a01b039094169363cfc0b6419392606480820193929182900301818588803b15801561385d57600080fd5b505af1158015613871573d6000803e3d6000fd5b50505050506113ac565b600060598363ffffffff168154811061389057fe5b60009182526020808320909101546040805163555ddc6560e11b81526001600160a01b03909216600483018190527fac7fbab5f54a3ca8194167523c6753bfeb96a445279294b6125b68cce2177054602484015290519094508392731820a4b7618bde71dce8cdc73aab6c95905fad249263aabbb8ca9260448083019392829003018186803b15801561392257600080fd5b505afa158015613936573d6000803e3d6000fd5b505050506040513d602081101561394c57600080fd5b50516001600160a01b03161415613964576000613967565b60015b90508015613c0a57600061397a83612ae9565b604080518082018252601b81527f73656e6428616464726573732c75696e743235362c6279746573290000000000602091820152605154825180840184528281527f6465706f73697428616464726573732c616464726573732c75696e7431393229908301528251336024808301919091526001600160a01b03808a1660448085018290526001600160c01b038f168902606480870182905289518088038201815260849788018b5298890180516001600160e01b031663cfc0b64160e01b1781529951979094169487018581529187018190526060938701938452875195870195909552865198995060009891977f9bd9bbc68c9d2d57236e56ab2cc196bd1614295e6e32ba6eba9004e8c27143b697949691939260a4909201918083838d5b83811015613ab3578181015183820152602001613a9b565b50505050905090810190601f168015613ae05780820380516001836020036101000a031916815260200191505b5060408051601f198184030181529181526020820180516001600160e01b03166001600160e01b031990991698909817885251815191979096508695509350915081905083835b60208310613b465780518252601f199092019160209182019101613b27565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d8060008114613ba8576040519150601f19603f3d011682016040523d82523d6000602084013e613bad565b606091505b5050905080613c03576040805162461bcd60e51b815260206004820152601f60248201527f7769746864726177616c2064656c61796572206465706f736974206661696c00604482015290519081900360640190fd5b5050613ca2565b605154613c2b9083906001600160a01b03166001600160c01b038816614e77565b6051546040805163cfc0b64160e01b81523360048201526001600160a01b0385811660248301526001600160c01b03891660448301529151919092169163cfc0b64191606480830192600092919082900301818387803b158015613c8e57600080fd5b505af1158015611236573d6000803e3d6000fd5b5050505050565b303b1590565b60005b82518110156113ac5760536040518060600160405280858481518110613cd457fe5b60200260200101516001600160a01b03168152602001600880868681518110613cf957fe5b6020026020010151901b901c815260200160f8858581518110613d1857fe5b60209081029190910181015190911c909152825460018082018555600094855293829020835160039092020180546001600160a01b0319166001600160a01b03909216919091178155908201518184015560409091015160029091015501613cb2565b600054610100900460ff1680613d945750613d94613ca9565b80613da2575060005460ff16155b613ddd5760405162461bcd60e51b815260040180806020018281038252602e815260200180615795602e913960400191505060405180910390fd5b600054610100900460ff16158015613e08576000805460ff1961ff0019909116610100171660011790555b603380546001600160a01b038087166001600160a01b0319928316179092556034805486841690831617905560358054928516929091169190911790558015612285576000805461ff001916905550505050565b600054610100900460ff1680613e755750613e75613ca9565b80613e83575060005460ff16155b613ebe5760405162461bcd60e51b815260040180806020018281038252602e815260200180615795602e913960400191505060405180910390fd5b600054610100900460ff16158015613ee9576000805460ff1961ff0019909116610100171660011790555b604f80546001600160a01b03199081166001600160a01b03888116919091179092556050805482168784161767ffffffffffffffff60a01b1916600160a01b6001600160401b03881602179055605180549091169184169190911790558015613ca2576000805461ff00191690555050505050565b6055546001600160401b031660009081526056602052604081205460545460538054600160a01b90920465ffffffffffff16918491829182919060ff8916908110613fa557fe5b906000526020600020906003020160010154600860538960ff1681548110613fc957fe5b90600052602060002090600302016002015481613fe257fe5b046002026003010290506000600860538960ff168154811061400057fe5b9060005260206000209060030201600201548161401957fe5b604080519290910481028481018084016148ae0190925261486e909101825260d087811b60208401528e901b6026830152602c8201889052604c82018d9052606c82018c90529150608c810161406f818c614ffb565b6148000161407d6004615249565b9096509450838511156140cd576040805162461bcd60e51b81526020600482015260136024820152726c322074782064617461206f766572666c6f7760681b604482015290519081900360640190fd5b8486823784016140df8186860361525d565b848403016140ed6005615249565b9096509450828514614146576040805162461bcd60e51b815260206004820181905260248201527f666565496478436f6f7264696e61746f72206c656e67746820696e76616c6964604482015290519081900360640190fd5b8486823784016141588186850361525d565b848303810190504660f01b81527f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f00000016002836040518082805190602001908083835b602083106141b85780518252601f199092019160209182019101614199565b51815160209384036101000a60001901801990921691161790526040519190930194509192505080830381855afa1580156141f7573d6000803e3d6000fd5b5050506040513d602081101561420c57600080fd5b50518161421557fe5b069e9d5050505050505050505050505050565b605e54600160401b90046001600160401b03166000908152605d60205260408120614252916155ef565b605e805460016001600160401b03600160401b808404821692909201811682026fffffffffffffffff000000000000000019909316929092179283905582048116600160801b9092041614156142d457605e805460016001600160401b03600160801b808404821692909201160267ffffffffffffffff60801b199091161790555b565b60006060856001600160a01b03166040518060600160405280602581526020016156cc602591398051602091820120604080516001600160a01b03808b166024830152891660448201526064808201899052825180830390910181526084909101825292830180516001600160e01b03166001600160e01b0319909316929092178252518251909182918083835b602083106143835780518252601f199092019160209182019101614364565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d80600081146143e5576040519150601f19603f3d011682016040523d82523d6000602084013e6143ea565b606091505b5091509150818015614418575080511580614418575080806020019051602081101561441557600080fd5b50515b614469576040805162461bcd60e51b815260206004820152601960248201527f73616665207472616e736665722066726f6d206661696c656400000000000000604482015290519081900360640190fd5b505050505050565b604080516bffffffffffffffffffffffff1960608a901b16602080830191909152603482018990526001600160d01b031960d089811b821660548501526001600160f01b031960f08a811b8216605a87015289901b16605c8501526001600160e01b031960e088901b16605e808601919091529086901b90911660628401528351604881850301815260689093018452546001600160401b03600160801b909104166000908152605d9091529190912061452b9082615276565b605e54600160801b90046001600160401b03166000818152605d602090815260408083205481518381528651818501528651604860026101006001861615026000190190941693909304929092049560ff87169590947f7f40be4e420c002c02fa9cad961f6a7620769d32d272f3f8c15e3ff59de9310e9489948493918401928601918190849084905b838110156145cd5781810151838201526020016145b5565b50505050905090810190601f1680156145fa5780820380516001836020036101000a031916815260200191505b509250505060405180910390a36080811061123657605e805460016001600160401b03600160801b808404821692909201160267ffffffffffffffff60801b19909116179055505050505050505050565b600081848411156146da5760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561469f578181015183820152602001614687565b50505050905090810190601f1680156146cc5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b505050900390565b600061340f83836040518060400160405280601a81526020017f536166654d6174683a206469766973696f6e206279207a65726f0000000000008152506153c0565b60008282018381101561340f576040805162461bcd60e51b815260206004820152601b60248201527f536166654d6174683a206164646974696f6e206f766572666c6f770000000000604482015290519081900360640190fd5b60008261478d575060006114f8565b8282028284828161479a57fe5b041461340f5760405162461bcd60e51b81526004018080602001828103825260218152602001806157746021913960400191505060405180910390fd5b6040805160038082526080820190925260009160609190602082018380368337019050509050838160008151811061480b57fe5b602002602001018181525050828160018151811061482557fe5b60200260200101818152505060018160028151811061484057fe5b60200260200101818152505061485581615425565b949350505050565b6040805160028082526060808301845260009390929190602083019080368337019050509050838160008151811061489157fe5b60200260200101818152505082816001815181106148ab57fe5b60200260200101818152505061485581615482565b6001600160a01b0383166149ca5760408051600080825260208201909252339083906040518082805190602001908083835b602083106149115780518252601f1990920191602091820191016148f2565b6001836020036101000a03801982511681845116808217855250505050505090500191505060006040518083038185875af1925050503d8060008114614973576040519150601f19603f3d011682016040523d82523d6000602084013e614978565b606091505b50509050806149c4576040805162461bcd60e51b8152602060048201526013602482015272115512081d1c985b9cd9995c8819985a5b1959606a1b604482015290519081900360640190fd5b506113ac565b6040805163555ddc6560e11b81526001600160a01b03851660048201527fac7fbab5f54a3ca8194167523c6753bfeb96a445279294b6125b68cce2177054602482015290516000918291731820a4b7618bde71dce8cdc73aab6c95905fad249163aabbb8ca916044808301926020929190829003018186803b158015614a4f57600080fd5b505afa158015614a63573d6000803e3d6000fd5b505050506040513d6020811015614a7957600080fd5b50516001600160a01b03161415614a91576000614a94565b60015b90508015614cec576000614aa785612ae9565b604080518082018252601b81527f73656e6428616464726573732c75696e743235362c6279746573290000000000602091820152815160008082529181019092529192506060906001600160a01b038816907f9bd9bbc68c9d2d57236e56ab2cc196bd1614295e6e32ba6eba9004e8c27143b69088908887029060405160240180846001600160a01b0316815260200183815260200180602001828103825283818151815260200191508051906020019080838360005b83811015614b76578181015183820152602001614b5e565b50505050905090810190601f168015614ba35780820380516001836020036101000a031916815260200191505b5060408051601f198184030181529181526020820180516001600160e01b03166001600160e01b031990991698909817885251815191979096508695509350915081905083835b60208310614c095780518252601f199092019160209182019101614bea565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d8060008114614c6b576040519150601f19603f3d011682016040523d82523d6000602084013e614c70565b606091505b5091509150818015614c9e575080511580614c9e5750808060200190516020811015614c9b57600080fd5b50515b614ce4576040805162461bcd60e51b8152602060048201526012602482015271115490cdcdcdc81cd95b990819985a5b195960721b604482015290519081900360640190fd5b505050612285565b604080518082018252601981527f7472616e7366657228616464726573732c75696e74323536290000000000000060209182015281516001600160a01b0386811660248301526044808301879052845180840390910181526064909201845291810180516001600160e01b031663a9059cbb60e01b178152925181516000946060948a169392918291908083835b60208310614d995780518252601f199092019160209182019101614d7a565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d8060008114614dfb576040519150601f19603f3d011682016040523d82523d6000602084013e614e00565b606091505b5091509150818015614e2e575080511580614e2e5750808060200190516020811015614e2b57600080fd5b50515b614469576040805162461bcd60e51b8152602060048201526015602482015274115490cc8c081d1c985b9cd9995c8819985a5b1959605a1b604482015290519081900360640190fd5b604080518082018252601881527f617070726f766528616464726573732c75696e7432353629000000000000000060209182015281516001600160a01b0385811660248301526044808301869052845180840390910181526064909201845291810180516001600160e01b031663095ea7b360e01b1781529251815160009460609489169392918291908083835b60208310614f245780518252601f199092019160209182019101614f05565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d8060008114614f86576040519150601f19603f3d011682016040523d82523d6000602084013e614f8b565b606091505b5091509150818015614fb9575080511580614fb95750808060200190516020811015614fb657600080fd5b50515b613ca2576040805162461bcd60e51b815260206004820152600e60248201526d1054141493d59157d1905253115160921b604482015290519081900360640190fd5b6000806150086003615249565b9092509050606581046000606085156150db57605e54600160401b90046001600160401b03166000908152605d60209081526040918290208054835160026101006001841615026000190190921691909104601f81018490048402820184019094528381529290918301828280156150c15780601f10615096576101008083540402835291602001916150c1565b820191906000526020600020905b8154815290600101906020018083116150a457829003601f168201915b5050505050905060488151816150d357fe5b0491506150e0565b600091505b610100838301111561512a576040805162461bcd60e51b815260206004820152600e60248201526d4c31205458206f766572666c6f7760901b604482015290519081900360640190fd5b8115615158576048820287019660208201905b8881101561515557815181526020918201910161513d565b50505b60005b83811015615235576059546065870196803560001a916001820135916021810135916041820135916061013560e01c9081106151de576040805162461bcd60e51b815260206004820152601d60248201527f746f6b656e20686173206e6f74206265656e2072656769737465726564000000604482015290519081900360640190fd5b6001600160a01b0360ff8616156151fe576151fb838587896154df565b90505b60601b8d5260148d0191909152600060348d0181905260e09190911b603e8d015260428c015250506048909801975060010161515b565b506123f8876048858561010003030261525d565b602002600490810135602481019291013590565b808201915b828110156113ac5760008152602001615262565b8154600260018083161561010002038216048251808201602081106020841001600281146153205760018114615345578660005260208404602060002001600160028402018855602085068060200390508088018589016001836101000a0392508282511684540184556001840193506020820191505b8082101561530a57815184556001840193506020820191506152ed565b815191036101000a9081900402909155506123f8565b60028302826020036101000a846020036101000a6020890151040201850187556123f8565b8660005260208404602060002001600160028402018855846020038088018589016001836101000a0392508282511660ff198a160184556020820191506001840193505b808210156153a65781518455600184019350602082019150615389565b815191036101000a90819004029091555050505050505050565b6000818361540f5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561469f578181015183820152602001614687565b50600083858161541b57fe5b0495945050505050565b60345460405163311083ed60e21b81526020600482018181528451602484015284516000946001600160a01b03169363c4420fb49387939283926044019185810191028083838b83156136cd5781810151838201526020016136b5565b60335460405163311083ed60e21b81526020600482018181528451602484015284516000946001600160a01b03169363c4420fb49387939283926044019185810191028083838b83156136cd5781810151838201526020016136b5565b6000808560405160200180807f19457468657265756d205369676e6564204d6573736167653a0a393800000000815250601c01806157ef60429139604201828152602001915050604051602081830303815290604052805190602001209050600060018285888860405160008152602001604052604051808581526020018460ff1681526020018381526020018281526020019450505050506020604051602081039080840390855afa15801561559a573d6000803e3d6000fd5b5050604051601f1901519150506001600160a01b038116612c74576040805162461bcd60e51b815260206004820152600a6024820152690657265636f7665722d360b41b604482015290519081900360640190fd5b50805460018160011615610100020316600290046000825580601f106156155750615633565b601f0160209004906000526020600020908101906156339190615636565b50565b5b8082111561564b5760008155600101615637565b5090565b6000808585111561565e578182fd5b8386111561566a578182fd5b505082019391909203915056fe63616e277420637265617465206163636f756e74207769746820626162795075624b6579203d20307769746864726177616c73206d757374206265206c657373207468616e206d61785769746864726177616c737472616e7366657246726f6d28616464726573732c616464726573732c75696e743235362945524337373720646f6e277420696d706c656d656e74206772616e756c6172697479696e7374616e74207769746864726177616c732077617374656420666f722074686973205553442072616e6765666f72676542617463682063616e27742062652063616c6c6564206173206120696e7465726e616c207472616e73616374696f6e536166654d6174683a206d756c7469706c69636174696f6e206f766572666c6f77436f6e747261637420696e7374616e63652068617320616c7265616479206265656e20696e697469616c697a6564626162795075624b6579206d757374206265203020696620757365206578697374696e67206163636f756e744920617574686f72697a65207468697320626162796a75626a7562206b657920666f72206865726d657a20726f6c6c7570206163636f756e74206372656174696f6ea264697066735822122077a11aa776267abae219dc837550f3496a4d51cfa531362d18028a33eb9415d364736f6c634300060c0033"
 
 // DeployHermez deploys a new Ethereum contract, binding an instance of Hermez to it.
 func DeployHermez(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Hermez, error) {
@@ -188,394 +188,30 @@ func (_Hermez *HermezTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _Hermez.Contract.contract.Transact(opts, method, params...)
 }
 
-// EXITIDX is a free data retrieval call binding the contract method 0xffd3dcf9.
+// ABSOLUTEMAXL1L2BATCHTIMEOUT is a free data retrieval call binding the contract method 0x95a09f2a.
 //
-// Solidity: function EXIT_IDX() view returns(uint32)
-func (_Hermez *HermezCaller) EXITIDX(opts *bind.CallOpts) (uint32, error) {
+// Solidity: function ABSOLUTE_MAX_L1L2BATCHTIMEOUT() view returns(uint8)
+func (_Hermez *HermezCaller) ABSOLUTEMAXL1L2BATCHTIMEOUT(opts *bind.CallOpts) (uint8, error) {
 	var (
-		ret0 = new(uint32)
+		ret0 = new(uint8)
 	)
 	out := ret0
-	err := _Hermez.contract.Call(opts, out, "EXIT_IDX")
+	err := _Hermez.contract.Call(opts, out, "ABSOLUTE_MAX_L1L2BATCHTIMEOUT")
 	return *ret0, err
 }
 
-// EXITIDX is a free data retrieval call binding the contract method 0xffd3dcf9.
+// ABSOLUTEMAXL1L2BATCHTIMEOUT is a free data retrieval call binding the contract method 0x95a09f2a.
 //
-// Solidity: function EXIT_IDX() view returns(uint32)
-func (_Hermez *HermezSession) EXITIDX() (uint32, error) {
-	return _Hermez.Contract.EXITIDX(&_Hermez.CallOpts)
+// Solidity: function ABSOLUTE_MAX_L1L2BATCHTIMEOUT() view returns(uint8)
+func (_Hermez *HermezSession) ABSOLUTEMAXL1L2BATCHTIMEOUT() (uint8, error) {
+	return _Hermez.Contract.ABSOLUTEMAXL1L2BATCHTIMEOUT(&_Hermez.CallOpts)
 }
 
-// EXITIDX is a free data retrieval call binding the contract method 0xffd3dcf9.
+// ABSOLUTEMAXL1L2BATCHTIMEOUT is a free data retrieval call binding the contract method 0x95a09f2a.
 //
-// Solidity: function EXIT_IDX() view returns(uint32)
-func (_Hermez *HermezCallerSession) EXITIDX() (uint32, error) {
-	return _Hermez.Contract.EXITIDX(&_Hermez.CallOpts)
-}
-
-// L1COORDINATORBYTES is a free data retrieval call binding the contract method 0x4d09f3fd.
-//
-// Solidity: function L1_COORDINATOR_BYTES() view returns(uint256)
-func (_Hermez *HermezCaller) L1COORDINATORBYTES(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "L1_COORDINATOR_BYTES")
-	return *ret0, err
-}
-
-// L1COORDINATORBYTES is a free data retrieval call binding the contract method 0x4d09f3fd.
-//
-// Solidity: function L1_COORDINATOR_BYTES() view returns(uint256)
-func (_Hermez *HermezSession) L1COORDINATORBYTES() (*big.Int, error) {
-	return _Hermez.Contract.L1COORDINATORBYTES(&_Hermez.CallOpts)
-}
-
-// L1COORDINATORBYTES is a free data retrieval call binding the contract method 0x4d09f3fd.
-//
-// Solidity: function L1_COORDINATOR_BYTES() view returns(uint256)
-func (_Hermez *HermezCallerSession) L1COORDINATORBYTES() (*big.Int, error) {
-	return _Hermez.Contract.L1COORDINATORBYTES(&_Hermez.CallOpts)
-}
-
-// L1USERBYTES is a free data retrieval call binding the contract method 0x6d78e572.
-//
-// Solidity: function L1_USER_BYTES() view returns(uint256)
-func (_Hermez *HermezCaller) L1USERBYTES(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "L1_USER_BYTES")
-	return *ret0, err
-}
-
-// L1USERBYTES is a free data retrieval call binding the contract method 0x6d78e572.
-//
-// Solidity: function L1_USER_BYTES() view returns(uint256)
-func (_Hermez *HermezSession) L1USERBYTES() (*big.Int, error) {
-	return _Hermez.Contract.L1USERBYTES(&_Hermez.CallOpts)
-}
-
-// L1USERBYTES is a free data retrieval call binding the contract method 0x6d78e572.
-//
-// Solidity: function L1_USER_BYTES() view returns(uint256)
-func (_Hermez *HermezCallerSession) L1USERBYTES() (*big.Int, error) {
-	return _Hermez.Contract.L1USERBYTES(&_Hermez.CallOpts)
-}
-
-// L2BYTES is a free data retrieval call binding the contract method 0x4fc51559.
-//
-// Solidity: function L2_BYTES() view returns(uint256)
-func (_Hermez *HermezCaller) L2BYTES(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "L2_BYTES")
-	return *ret0, err
-}
-
-// L2BYTES is a free data retrieval call binding the contract method 0x4fc51559.
-//
-// Solidity: function L2_BYTES() view returns(uint256)
-func (_Hermez *HermezSession) L2BYTES() (*big.Int, error) {
-	return _Hermez.Contract.L2BYTES(&_Hermez.CallOpts)
-}
-
-// L2BYTES is a free data retrieval call binding the contract method 0x4fc51559.
-//
-// Solidity: function L2_BYTES() view returns(uint256)
-func (_Hermez *HermezCallerSession) L2BYTES() (*big.Int, error) {
-	return _Hermez.Contract.L2BYTES(&_Hermez.CallOpts)
-}
-
-// LASTIDX is a free data retrieval call binding the contract method 0x8e65ab4f.
-//
-// Solidity: function LAST_IDX() view returns(uint32)
-func (_Hermez *HermezCaller) LASTIDX(opts *bind.CallOpts) (uint32, error) {
-	var (
-		ret0 = new(uint32)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "LAST_IDX")
-	return *ret0, err
-}
-
-// LASTIDX is a free data retrieval call binding the contract method 0x8e65ab4f.
-//
-// Solidity: function LAST_IDX() view returns(uint32)
-func (_Hermez *HermezSession) LASTIDX() (uint32, error) {
-	return _Hermez.Contract.LASTIDX(&_Hermez.CallOpts)
-}
-
-// LASTIDX is a free data retrieval call binding the contract method 0x8e65ab4f.
-//
-// Solidity: function LAST_IDX() view returns(uint32)
-func (_Hermez *HermezCallerSession) LASTIDX() (uint32, error) {
-	return _Hermez.Contract.LASTIDX(&_Hermez.CallOpts)
-}
-
-// MAXAMOUNT is a free data retrieval call binding the contract method 0xd40dc870.
-//
-// Solidity: function MAX_AMOUNT() view returns(uint256)
-func (_Hermez *HermezCaller) MAXAMOUNT(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "MAX_AMOUNT")
-	return *ret0, err
-}
-
-// MAXAMOUNT is a free data retrieval call binding the contract method 0xd40dc870.
-//
-// Solidity: function MAX_AMOUNT() view returns(uint256)
-func (_Hermez *HermezSession) MAXAMOUNT() (*big.Int, error) {
-	return _Hermez.Contract.MAXAMOUNT(&_Hermez.CallOpts)
-}
-
-// MAXAMOUNT is a free data retrieval call binding the contract method 0xd40dc870.
-//
-// Solidity: function MAX_AMOUNT() view returns(uint256)
-func (_Hermez *HermezCallerSession) MAXAMOUNT() (*big.Int, error) {
-	return _Hermez.Contract.MAXAMOUNT(&_Hermez.CallOpts)
-}
-
-// MAXL1TX is a free data retrieval call binding the contract method 0x45d1c25b.
-//
-// Solidity: function MAX_L1_TX() view returns(uint256)
-func (_Hermez *HermezCaller) MAXL1TX(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "MAX_L1_TX")
-	return *ret0, err
-}
-
-// MAXL1TX is a free data retrieval call binding the contract method 0x45d1c25b.
-//
-// Solidity: function MAX_L1_TX() view returns(uint256)
-func (_Hermez *HermezSession) MAXL1TX() (*big.Int, error) {
-	return _Hermez.Contract.MAXL1TX(&_Hermez.CallOpts)
-}
-
-// MAXL1TX is a free data retrieval call binding the contract method 0x45d1c25b.
-//
-// Solidity: function MAX_L1_TX() view returns(uint256)
-func (_Hermez *HermezCallerSession) MAXL1TX() (*big.Int, error) {
-	return _Hermez.Contract.MAXL1TX(&_Hermez.CallOpts)
-}
-
-// MAXL1USERTX is a free data retrieval call binding the contract method 0x51ff68b0.
-//
-// Solidity: function MAX_L1_USER_TX() view returns(uint256)
-func (_Hermez *HermezCaller) MAXL1USERTX(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "MAX_L1_USER_TX")
-	return *ret0, err
-}
-
-// MAXL1USERTX is a free data retrieval call binding the contract method 0x51ff68b0.
-//
-// Solidity: function MAX_L1_USER_TX() view returns(uint256)
-func (_Hermez *HermezSession) MAXL1USERTX() (*big.Int, error) {
-	return _Hermez.Contract.MAXL1USERTX(&_Hermez.CallOpts)
-}
-
-// MAXL1USERTX is a free data retrieval call binding the contract method 0x51ff68b0.
-//
-// Solidity: function MAX_L1_USER_TX() view returns(uint256)
-func (_Hermez *HermezCallerSession) MAXL1USERTX() (*big.Int, error) {
-	return _Hermez.Contract.MAXL1USERTX(&_Hermez.CallOpts)
-}
-
-// MAXLOADAMOUNT is a free data retrieval call binding the contract method 0x20f6a08f.
-//
-// Solidity: function MAX_LOAD_AMOUNT() view returns(uint256)
-func (_Hermez *HermezCaller) MAXLOADAMOUNT(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "MAX_LOAD_AMOUNT")
-	return *ret0, err
-}
-
-// MAXLOADAMOUNT is a free data retrieval call binding the contract method 0x20f6a08f.
-//
-// Solidity: function MAX_LOAD_AMOUNT() view returns(uint256)
-func (_Hermez *HermezSession) MAXLOADAMOUNT() (*big.Int, error) {
-	return _Hermez.Contract.MAXLOADAMOUNT(&_Hermez.CallOpts)
-}
-
-// MAXLOADAMOUNT is a free data retrieval call binding the contract method 0x20f6a08f.
-//
-// Solidity: function MAX_LOAD_AMOUNT() view returns(uint256)
-func (_Hermez *HermezCallerSession) MAXLOADAMOUNT() (*big.Int, error) {
-	return _Hermez.Contract.MAXLOADAMOUNT(&_Hermez.CallOpts)
-}
-
-// MAXTOKENS is a free data retrieval call binding the contract method 0xf47c84c5.
-//
-// Solidity: function MAX_TOKENS() view returns(uint256)
-func (_Hermez *HermezCaller) MAXTOKENS(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "MAX_TOKENS")
-	return *ret0, err
-}
-
-// MAXTOKENS is a free data retrieval call binding the contract method 0xf47c84c5.
-//
-// Solidity: function MAX_TOKENS() view returns(uint256)
-func (_Hermez *HermezSession) MAXTOKENS() (*big.Int, error) {
-	return _Hermez.Contract.MAXTOKENS(&_Hermez.CallOpts)
-}
-
-// MAXTOKENS is a free data retrieval call binding the contract method 0xf47c84c5.
-//
-// Solidity: function MAX_TOKENS() view returns(uint256)
-func (_Hermez *HermezCallerSession) MAXTOKENS() (*big.Int, error) {
-	return _Hermez.Contract.MAXTOKENS(&_Hermez.CallOpts)
-}
-
-// MAXWITHDRAWALDELAY is a free data retrieval call binding the contract method 0xa238f9df.
-//
-// Solidity: function MAX_WITHDRAWAL_DELAY() view returns(uint256)
-func (_Hermez *HermezCaller) MAXWITHDRAWALDELAY(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "MAX_WITHDRAWAL_DELAY")
-	return *ret0, err
-}
-
-// MAXWITHDRAWALDELAY is a free data retrieval call binding the contract method 0xa238f9df.
-//
-// Solidity: function MAX_WITHDRAWAL_DELAY() view returns(uint256)
-func (_Hermez *HermezSession) MAXWITHDRAWALDELAY() (*big.Int, error) {
-	return _Hermez.Contract.MAXWITHDRAWALDELAY(&_Hermez.CallOpts)
-}
-
-// MAXWITHDRAWALDELAY is a free data retrieval call binding the contract method 0xa238f9df.
-//
-// Solidity: function MAX_WITHDRAWAL_DELAY() view returns(uint256)
-func (_Hermez *HermezCallerSession) MAXWITHDRAWALDELAY() (*big.Int, error) {
-	return _Hermez.Contract.MAXWITHDRAWALDELAY(&_Hermez.CallOpts)
-}
-
-// NOLIMIT is a free data retrieval call binding the contract method 0xa60034fb.
-//
-// Solidity: function NO_LIMIT() view returns(uint256)
-func (_Hermez *HermezCaller) NOLIMIT(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "NO_LIMIT")
-	return *ret0, err
-}
-
-// NOLIMIT is a free data retrieval call binding the contract method 0xa60034fb.
-//
-// Solidity: function NO_LIMIT() view returns(uint256)
-func (_Hermez *HermezSession) NOLIMIT() (*big.Int, error) {
-	return _Hermez.Contract.NOLIMIT(&_Hermez.CallOpts)
-}
-
-// NOLIMIT is a free data retrieval call binding the contract method 0xa60034fb.
-//
-// Solidity: function NO_LIMIT() view returns(uint256)
-func (_Hermez *HermezCallerSession) NOLIMIT() (*big.Int, error) {
-	return _Hermez.Contract.NOLIMIT(&_Hermez.CallOpts)
-}
-
-// NUMBUCKETS is a free data retrieval call binding the contract method 0xc56ca84e.
-//
-// Solidity: function NUM_BUCKETS() view returns(uint256)
-func (_Hermez *HermezCaller) NUMBUCKETS(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "NUM_BUCKETS")
-	return *ret0, err
-}
-
-// NUMBUCKETS is a free data retrieval call binding the contract method 0xc56ca84e.
-//
-// Solidity: function NUM_BUCKETS() view returns(uint256)
-func (_Hermez *HermezSession) NUMBUCKETS() (*big.Int, error) {
-	return _Hermez.Contract.NUMBUCKETS(&_Hermez.CallOpts)
-}
-
-// NUMBUCKETS is a free data retrieval call binding the contract method 0xc56ca84e.
-//
-// Solidity: function NUM_BUCKETS() view returns(uint256)
-func (_Hermez *HermezCallerSession) NUMBUCKETS() (*big.Int, error) {
-	return _Hermez.Contract.NUMBUCKETS(&_Hermez.CallOpts)
-}
-
-// RESERVEDIDX is a free data retrieval call binding the contract method 0xfff69970.
-//
-// Solidity: function RESERVED_IDX() view returns(uint32)
-func (_Hermez *HermezCaller) RESERVEDIDX(opts *bind.CallOpts) (uint32, error) {
-	var (
-		ret0 = new(uint32)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "RESERVED_IDX")
-	return *ret0, err
-}
-
-// RESERVEDIDX is a free data retrieval call binding the contract method 0xfff69970.
-//
-// Solidity: function RESERVED_IDX() view returns(uint32)
-func (_Hermez *HermezSession) RESERVEDIDX() (uint32, error) {
-	return _Hermez.Contract.RESERVEDIDX(&_Hermez.CallOpts)
-}
-
-// RESERVEDIDX is a free data retrieval call binding the contract method 0xfff69970.
-//
-// Solidity: function RESERVED_IDX() view returns(uint32)
-func (_Hermez *HermezCallerSession) RESERVEDIDX() (uint32, error) {
-	return _Hermez.Contract.RESERVEDIDX(&_Hermez.CallOpts)
-}
-
-// RFIELD is a free data retrieval call binding the contract method 0x58de75c4.
-//
-// Solidity: function RFIELD() view returns(uint256)
-func (_Hermez *HermezCaller) RFIELD(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "RFIELD")
-	return *ret0, err
-}
-
-// RFIELD is a free data retrieval call binding the contract method 0x58de75c4.
-//
-// Solidity: function RFIELD() view returns(uint256)
-func (_Hermez *HermezSession) RFIELD() (*big.Int, error) {
-	return _Hermez.Contract.RFIELD(&_Hermez.CallOpts)
-}
-
-// RFIELD is a free data retrieval call binding the contract method 0x58de75c4.
-//
-// Solidity: function RFIELD() view returns(uint256)
-func (_Hermez *HermezCallerSession) RFIELD() (*big.Int, error) {
-	return _Hermez.Contract.RFIELD(&_Hermez.CallOpts)
+// Solidity: function ABSOLUTE_MAX_L1L2BATCHTIMEOUT() view returns(uint8)
+func (_Hermez *HermezCallerSession) ABSOLUTEMAXL1L2BATCHTIMEOUT() (uint8, error) {
+	return _Hermez.Contract.ABSOLUTEMAXL1L2BATCHTIMEOUT(&_Hermez.CallOpts)
 }
 
 // Buckets is a free data retrieval call binding the contract method 0x9b51fb0d.
@@ -626,118 +262,56 @@ func (_Hermez *HermezCallerSession) Buckets(arg0 *big.Int) (struct {
 	return _Hermez.Contract.Buckets(&_Hermez.CallOpts, arg0)
 }
 
-// CircuitVerifiers is a free data retrieval call binding the contract method 0xa4b457ca.
+// ExitNullifierMap is a free data retrieval call binding the contract method 0xe9b5269c.
 //
-// Solidity: function circuitVerifiers(uint256 ) view returns(address verifierInt, uint256 maxTx)
-func (_Hermez *HermezCaller) CircuitVerifiers(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	VerifierInt common.Address
-	MaxTx       *big.Int
-}, error) {
-	ret := new(struct {
-		VerifierInt common.Address
-		MaxTx       *big.Int
-	})
-	out := ret
-	err := _Hermez.contract.Call(opts, out, "circuitVerifiers", arg0)
-	return *ret, err
-}
-
-// CircuitVerifiers is a free data retrieval call binding the contract method 0xa4b457ca.
-//
-// Solidity: function circuitVerifiers(uint256 ) view returns(address verifierInt, uint256 maxTx)
-func (_Hermez *HermezSession) CircuitVerifiers(arg0 *big.Int) (struct {
-	VerifierInt common.Address
-	MaxTx       *big.Int
-}, error) {
-	return _Hermez.Contract.CircuitVerifiers(&_Hermez.CallOpts, arg0)
-}
-
-// CircuitVerifiers is a free data retrieval call binding the contract method 0xa4b457ca.
-//
-// Solidity: function circuitVerifiers(uint256 ) view returns(address verifierInt, uint256 maxTx)
-func (_Hermez *HermezCallerSession) CircuitVerifiers(arg0 *big.Int) (struct {
-	VerifierInt common.Address
-	MaxTx       *big.Int
-}, error) {
-	return _Hermez.Contract.CircuitVerifiers(&_Hermez.CallOpts, arg0)
-}
-
-// CurrentIdx is a free data retrieval call binding the contract method 0x5bfac41f.
-//
-// Solidity: function currentIdx() view returns(uint32)
-func (_Hermez *HermezCaller) CurrentIdx(opts *bind.CallOpts) (uint32, error) {
-	var (
-		ret0 = new(uint32)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "currentIdx")
-	return *ret0, err
-}
-
-// CurrentIdx is a free data retrieval call binding the contract method 0x5bfac41f.
-//
-// Solidity: function currentIdx() view returns(uint32)
-func (_Hermez *HermezSession) CurrentIdx() (uint32, error) {
-	return _Hermez.Contract.CurrentIdx(&_Hermez.CallOpts)
-}
-
-// CurrentIdx is a free data retrieval call binding the contract method 0x5bfac41f.
-//
-// Solidity: function currentIdx() view returns(uint32)
-func (_Hermez *HermezCallerSession) CurrentIdx() (uint32, error) {
-	return _Hermez.Contract.CurrentIdx(&_Hermez.CallOpts)
-}
-
-// ExitNullifierMap is a free data retrieval call binding the contract method 0x2bf41a2f.
-//
-// Solidity: function exitNullifierMap(uint256 ) view returns(bool)
-func (_Hermez *HermezCaller) ExitNullifierMap(opts *bind.CallOpts, arg0 *big.Int) (bool, error) {
+// Solidity: function exitNullifierMap(uint64 , uint48 ) view returns(bool)
+func (_Hermez *HermezCaller) ExitNullifierMap(opts *bind.CallOpts, arg0 uint64, arg1 *big.Int) (bool, error) {
 	var (
 		ret0 = new(bool)
 	)
 	out := ret0
-	err := _Hermez.contract.Call(opts, out, "exitNullifierMap", arg0)
+	err := _Hermez.contract.Call(opts, out, "exitNullifierMap", arg0, arg1)
 	return *ret0, err
 }
 
-// ExitNullifierMap is a free data retrieval call binding the contract method 0x2bf41a2f.
+// ExitNullifierMap is a free data retrieval call binding the contract method 0xe9b5269c.
 //
-// Solidity: function exitNullifierMap(uint256 ) view returns(bool)
-func (_Hermez *HermezSession) ExitNullifierMap(arg0 *big.Int) (bool, error) {
-	return _Hermez.Contract.ExitNullifierMap(&_Hermez.CallOpts, arg0)
+// Solidity: function exitNullifierMap(uint64 , uint48 ) view returns(bool)
+func (_Hermez *HermezSession) ExitNullifierMap(arg0 uint64, arg1 *big.Int) (bool, error) {
+	return _Hermez.Contract.ExitNullifierMap(&_Hermez.CallOpts, arg0, arg1)
 }
 
-// ExitNullifierMap is a free data retrieval call binding the contract method 0x2bf41a2f.
+// ExitNullifierMap is a free data retrieval call binding the contract method 0xe9b5269c.
 //
-// Solidity: function exitNullifierMap(uint256 ) view returns(bool)
-func (_Hermez *HermezCallerSession) ExitNullifierMap(arg0 *big.Int) (bool, error) {
-	return _Hermez.Contract.ExitNullifierMap(&_Hermez.CallOpts, arg0)
+// Solidity: function exitNullifierMap(uint64 , uint48 ) view returns(bool)
+func (_Hermez *HermezCallerSession) ExitNullifierMap(arg0 uint64, arg1 *big.Int) (bool, error) {
+	return _Hermez.Contract.ExitNullifierMap(&_Hermez.CallOpts, arg0, arg1)
 }
 
-// ExitRoots is a free data retrieval call binding the contract method 0x50263f8c.
+// ExitRootsMap is a free data retrieval call binding the contract method 0x506d5463.
 //
-// Solidity: function exitRoots(uint256 ) view returns(uint256)
-func (_Hermez *HermezCaller) ExitRoots(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+// Solidity: function exitRootsMap(uint64 ) view returns(uint256)
+func (_Hermez *HermezCaller) ExitRootsMap(opts *bind.CallOpts, arg0 uint64) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _Hermez.contract.Call(opts, out, "exitRoots", arg0)
+	err := _Hermez.contract.Call(opts, out, "exitRootsMap", arg0)
 	return *ret0, err
 }
 
-// ExitRoots is a free data retrieval call binding the contract method 0x50263f8c.
+// ExitRootsMap is a free data retrieval call binding the contract method 0x506d5463.
 //
-// Solidity: function exitRoots(uint256 ) view returns(uint256)
-func (_Hermez *HermezSession) ExitRoots(arg0 *big.Int) (*big.Int, error) {
-	return _Hermez.Contract.ExitRoots(&_Hermez.CallOpts, arg0)
+// Solidity: function exitRootsMap(uint64 ) view returns(uint256)
+func (_Hermez *HermezSession) ExitRootsMap(arg0 uint64) (*big.Int, error) {
+	return _Hermez.Contract.ExitRootsMap(&_Hermez.CallOpts, arg0)
 }
 
-// ExitRoots is a free data retrieval call binding the contract method 0x50263f8c.
+// ExitRootsMap is a free data retrieval call binding the contract method 0x506d5463.
 //
-// Solidity: function exitRoots(uint256 ) view returns(uint256)
-func (_Hermez *HermezCallerSession) ExitRoots(arg0 *big.Int) (*big.Int, error) {
-	return _Hermez.Contract.ExitRoots(&_Hermez.CallOpts, arg0)
+// Solidity: function exitRootsMap(uint64 ) view returns(uint256)
+func (_Hermez *HermezCallerSession) ExitRootsMap(arg0 uint64) (*big.Int, error) {
+	return _Hermez.Contract.ExitRootsMap(&_Hermez.CallOpts, arg0)
 }
 
 // FeeAddToken is a free data retrieval call binding the contract method 0xbded9bb8.
@@ -768,10 +342,10 @@ func (_Hermez *HermezCallerSession) FeeAddToken() (*big.Int, error) {
 
 // ForgeL1L2BatchTimeout is a free data retrieval call binding the contract method 0xa3275838.
 //
-// Solidity: function forgeL1L2BatchTimeout() view returns(uint256)
-func (_Hermez *HermezCaller) ForgeL1L2BatchTimeout(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function forgeL1L2BatchTimeout() view returns(uint8)
+func (_Hermez *HermezCaller) ForgeL1L2BatchTimeout(opts *bind.CallOpts) (uint8, error) {
 	var (
-		ret0 = new(*big.Int)
+		ret0 = new(uint8)
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "forgeL1L2BatchTimeout")
@@ -780,94 +354,16 @@ func (_Hermez *HermezCaller) ForgeL1L2BatchTimeout(opts *bind.CallOpts) (*big.In
 
 // ForgeL1L2BatchTimeout is a free data retrieval call binding the contract method 0xa3275838.
 //
-// Solidity: function forgeL1L2BatchTimeout() view returns(uint256)
-func (_Hermez *HermezSession) ForgeL1L2BatchTimeout() (*big.Int, error) {
+// Solidity: function forgeL1L2BatchTimeout() view returns(uint8)
+func (_Hermez *HermezSession) ForgeL1L2BatchTimeout() (uint8, error) {
 	return _Hermez.Contract.ForgeL1L2BatchTimeout(&_Hermez.CallOpts)
 }
 
 // ForgeL1L2BatchTimeout is a free data retrieval call binding the contract method 0xa3275838.
 //
-// Solidity: function forgeL1L2BatchTimeout() view returns(uint256)
-func (_Hermez *HermezCallerSession) ForgeL1L2BatchTimeout() (*big.Int, error) {
+// Solidity: function forgeL1L2BatchTimeout() view returns(uint8)
+func (_Hermez *HermezCallerSession) ForgeL1L2BatchTimeout() (uint8, error) {
 	return _Hermez.Contract.ForgeL1L2BatchTimeout(&_Hermez.CallOpts)
-}
-
-// GetCurrentBatch is a free data retrieval call binding the contract method 0xac3851cd.
-//
-// Solidity: function getCurrentBatch() view returns(uint256)
-func (_Hermez *HermezCaller) GetCurrentBatch(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "getCurrentBatch")
-	return *ret0, err
-}
-
-// GetCurrentBatch is a free data retrieval call binding the contract method 0xac3851cd.
-//
-// Solidity: function getCurrentBatch() view returns(uint256)
-func (_Hermez *HermezSession) GetCurrentBatch() (*big.Int, error) {
-	return _Hermez.Contract.GetCurrentBatch(&_Hermez.CallOpts)
-}
-
-// GetCurrentBatch is a free data retrieval call binding the contract method 0xac3851cd.
-//
-// Solidity: function getCurrentBatch() view returns(uint256)
-func (_Hermez *HermezCallerSession) GetCurrentBatch() (*big.Int, error) {
-	return _Hermez.Contract.GetCurrentBatch(&_Hermez.CallOpts)
-}
-
-// GetCurrentTokens is a free data retrieval call binding the contract method 0xcc77828d.
-//
-// Solidity: function getCurrentTokens() view returns(uint256)
-func (_Hermez *HermezCaller) GetCurrentTokens(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "getCurrentTokens")
-	return *ret0, err
-}
-
-// GetCurrentTokens is a free data retrieval call binding the contract method 0xcc77828d.
-//
-// Solidity: function getCurrentTokens() view returns(uint256)
-func (_Hermez *HermezSession) GetCurrentTokens() (*big.Int, error) {
-	return _Hermez.Contract.GetCurrentTokens(&_Hermez.CallOpts)
-}
-
-// GetCurrentTokens is a free data retrieval call binding the contract method 0xcc77828d.
-//
-// Solidity: function getCurrentTokens() view returns(uint256)
-func (_Hermez *HermezCallerSession) GetCurrentTokens() (*big.Int, error) {
-	return _Hermez.Contract.GetCurrentTokens(&_Hermez.CallOpts)
-}
-
-// GovernanceAddress is a free data retrieval call binding the contract method 0x795053d3.
-//
-// Solidity: function governanceAddress() view returns(address)
-func (_Hermez *HermezCaller) GovernanceAddress(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "governanceAddress")
-	return *ret0, err
-}
-
-// GovernanceAddress is a free data retrieval call binding the contract method 0x795053d3.
-//
-// Solidity: function governanceAddress() view returns(address)
-func (_Hermez *HermezSession) GovernanceAddress() (common.Address, error) {
-	return _Hermez.Contract.GovernanceAddress(&_Hermez.CallOpts)
-}
-
-// GovernanceAddress is a free data retrieval call binding the contract method 0x795053d3.
-//
-// Solidity: function governanceAddress() view returns(address)
-func (_Hermez *HermezCallerSession) GovernanceAddress() (common.Address, error) {
-	return _Hermez.Contract.GovernanceAddress(&_Hermez.CallOpts)
 }
 
 // HermezAuctionContract is a free data retrieval call binding the contract method 0x2bd83626.
@@ -896,9 +392,35 @@ func (_Hermez *HermezCallerSession) HermezAuctionContract() (common.Address, err
 	return _Hermez.Contract.HermezAuctionContract(&_Hermez.CallOpts)
 }
 
-// InstantWithdrawalViewer is a free data retrieval call binding the contract method 0x5f59f58e.
+// HermezGovernanceDAOAddress is a free data retrieval call binding the contract method 0xdd46bf84.
 //
-// Solidity: function instantWithdrawalViewer(address tokenAddress, uint256 amount) view returns(bool)
+// Solidity: function hermezGovernanceDAOAddress() view returns(address)
+func (_Hermez *HermezCaller) HermezGovernanceDAOAddress(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Hermez.contract.Call(opts, out, "hermezGovernanceDAOAddress")
+	return *ret0, err
+}
+
+// HermezGovernanceDAOAddress is a free data retrieval call binding the contract method 0xdd46bf84.
+//
+// Solidity: function hermezGovernanceDAOAddress() view returns(address)
+func (_Hermez *HermezSession) HermezGovernanceDAOAddress() (common.Address, error) {
+	return _Hermez.Contract.HermezGovernanceDAOAddress(&_Hermez.CallOpts)
+}
+
+// HermezGovernanceDAOAddress is a free data retrieval call binding the contract method 0xdd46bf84.
+//
+// Solidity: function hermezGovernanceDAOAddress() view returns(address)
+func (_Hermez *HermezCallerSession) HermezGovernanceDAOAddress() (common.Address, error) {
+	return _Hermez.Contract.HermezGovernanceDAOAddress(&_Hermez.CallOpts)
+}
+
+// InstantWithdrawalViewer is a free data retrieval call binding the contract method 0x375110aa.
+//
+// Solidity: function instantWithdrawalViewer(address tokenAddress, uint192 amount) view returns(bool)
 func (_Hermez *HermezCaller) InstantWithdrawalViewer(opts *bind.CallOpts, tokenAddress common.Address, amount *big.Int) (bool, error) {
 	var (
 		ret0 = new(bool)
@@ -908,26 +430,78 @@ func (_Hermez *HermezCaller) InstantWithdrawalViewer(opts *bind.CallOpts, tokenA
 	return *ret0, err
 }
 
-// InstantWithdrawalViewer is a free data retrieval call binding the contract method 0x5f59f58e.
+// InstantWithdrawalViewer is a free data retrieval call binding the contract method 0x375110aa.
 //
-// Solidity: function instantWithdrawalViewer(address tokenAddress, uint256 amount) view returns(bool)
+// Solidity: function instantWithdrawalViewer(address tokenAddress, uint192 amount) view returns(bool)
 func (_Hermez *HermezSession) InstantWithdrawalViewer(tokenAddress common.Address, amount *big.Int) (bool, error) {
 	return _Hermez.Contract.InstantWithdrawalViewer(&_Hermez.CallOpts, tokenAddress, amount)
 }
 
-// InstantWithdrawalViewer is a free data retrieval call binding the contract method 0x5f59f58e.
+// InstantWithdrawalViewer is a free data retrieval call binding the contract method 0x375110aa.
 //
-// Solidity: function instantWithdrawalViewer(address tokenAddress, uint256 amount) view returns(bool)
+// Solidity: function instantWithdrawalViewer(address tokenAddress, uint192 amount) view returns(bool)
 func (_Hermez *HermezCallerSession) InstantWithdrawalViewer(tokenAddress common.Address, amount *big.Int) (bool, error) {
 	return _Hermez.Contract.InstantWithdrawalViewer(&_Hermez.CallOpts, tokenAddress, amount)
 }
 
-// LastL1L2Batch is a free data retrieval call binding the contract method 0x84ef9ed4.
+// LastForgedBatch is a free data retrieval call binding the contract method 0x44e0b2ce.
 //
-// Solidity: function lastL1L2Batch() view returns(uint256)
-func (_Hermez *HermezCaller) LastL1L2Batch(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function lastForgedBatch() view returns(uint64)
+func (_Hermez *HermezCaller) LastForgedBatch(opts *bind.CallOpts) (uint64, error) {
+	var (
+		ret0 = new(uint64)
+	)
+	out := ret0
+	err := _Hermez.contract.Call(opts, out, "lastForgedBatch")
+	return *ret0, err
+}
+
+// LastForgedBatch is a free data retrieval call binding the contract method 0x44e0b2ce.
+//
+// Solidity: function lastForgedBatch() view returns(uint64)
+func (_Hermez *HermezSession) LastForgedBatch() (uint64, error) {
+	return _Hermez.Contract.LastForgedBatch(&_Hermez.CallOpts)
+}
+
+// LastForgedBatch is a free data retrieval call binding the contract method 0x44e0b2ce.
+//
+// Solidity: function lastForgedBatch() view returns(uint64)
+func (_Hermez *HermezCallerSession) LastForgedBatch() (uint64, error) {
+	return _Hermez.Contract.LastForgedBatch(&_Hermez.CallOpts)
+}
+
+// LastIdx is a free data retrieval call binding the contract method 0xd486645c.
+//
+// Solidity: function lastIdx() view returns(uint48)
+func (_Hermez *HermezCaller) LastIdx(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _Hermez.contract.Call(opts, out, "lastIdx")
+	return *ret0, err
+}
+
+// LastIdx is a free data retrieval call binding the contract method 0xd486645c.
+//
+// Solidity: function lastIdx() view returns(uint48)
+func (_Hermez *HermezSession) LastIdx() (*big.Int, error) {
+	return _Hermez.Contract.LastIdx(&_Hermez.CallOpts)
+}
+
+// LastIdx is a free data retrieval call binding the contract method 0xd486645c.
+//
+// Solidity: function lastIdx() view returns(uint48)
+func (_Hermez *HermezCallerSession) LastIdx() (*big.Int, error) {
+	return _Hermez.Contract.LastIdx(&_Hermez.CallOpts)
+}
+
+// LastL1L2Batch is a free data retrieval call binding the contract method 0x84ef9ed4.
+//
+// Solidity: function lastL1L2Batch() view returns(uint64)
+func (_Hermez *HermezCaller) LastL1L2Batch(opts *bind.CallOpts) (uint64, error) {
+	var (
+		ret0 = new(uint64)
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "lastL1L2Batch")
@@ -936,22 +510,22 @@ func (_Hermez *HermezCaller) LastL1L2Batch(opts *bind.CallOpts) (*big.Int, error
 
 // LastL1L2Batch is a free data retrieval call binding the contract method 0x84ef9ed4.
 //
-// Solidity: function lastL1L2Batch() view returns(uint256)
-func (_Hermez *HermezSession) LastL1L2Batch() (*big.Int, error) {
+// Solidity: function lastL1L2Batch() view returns(uint64)
+func (_Hermez *HermezSession) LastL1L2Batch() (uint64, error) {
 	return _Hermez.Contract.LastL1L2Batch(&_Hermez.CallOpts)
 }
 
 // LastL1L2Batch is a free data retrieval call binding the contract method 0x84ef9ed4.
 //
-// Solidity: function lastL1L2Batch() view returns(uint256)
-func (_Hermez *HermezCallerSession) LastL1L2Batch() (*big.Int, error) {
+// Solidity: function lastL1L2Batch() view returns(uint64)
+func (_Hermez *HermezCallerSession) LastL1L2Batch() (uint64, error) {
 	return _Hermez.Contract.LastL1L2Batch(&_Hermez.CallOpts)
 }
 
-// MapL1TxQueue is a free data retrieval call binding the contract method 0x3ec0b07c.
+// MapL1TxQueue is a free data retrieval call binding the contract method 0xe796fcf3.
 //
-// Solidity: function mapL1TxQueue(uint256 ) view returns(bytes)
-func (_Hermez *HermezCaller) MapL1TxQueue(opts *bind.CallOpts, arg0 *big.Int) ([]byte, error) {
+// Solidity: function mapL1TxQueue(uint64 ) view returns(bytes)
+func (_Hermez *HermezCaller) MapL1TxQueue(opts *bind.CallOpts, arg0 uint64) ([]byte, error) {
 	var (
 		ret0 = new([]byte)
 	)
@@ -960,52 +534,26 @@ func (_Hermez *HermezCaller) MapL1TxQueue(opts *bind.CallOpts, arg0 *big.Int) ([
 	return *ret0, err
 }
 
-// MapL1TxQueue is a free data retrieval call binding the contract method 0x3ec0b07c.
+// MapL1TxQueue is a free data retrieval call binding the contract method 0xe796fcf3.
 //
-// Solidity: function mapL1TxQueue(uint256 ) view returns(bytes)
-func (_Hermez *HermezSession) MapL1TxQueue(arg0 *big.Int) ([]byte, error) {
+// Solidity: function mapL1TxQueue(uint64 ) view returns(bytes)
+func (_Hermez *HermezSession) MapL1TxQueue(arg0 uint64) ([]byte, error) {
 	return _Hermez.Contract.MapL1TxQueue(&_Hermez.CallOpts, arg0)
 }
 
-// MapL1TxQueue is a free data retrieval call binding the contract method 0x3ec0b07c.
+// MapL1TxQueue is a free data retrieval call binding the contract method 0xe796fcf3.
 //
-// Solidity: function mapL1TxQueue(uint256 ) view returns(bytes)
-func (_Hermez *HermezCallerSession) MapL1TxQueue(arg0 *big.Int) ([]byte, error) {
+// Solidity: function mapL1TxQueue(uint64 ) view returns(bytes)
+func (_Hermez *HermezCallerSession) MapL1TxQueue(arg0 uint64) ([]byte, error) {
 	return _Hermez.Contract.MapL1TxQueue(&_Hermez.CallOpts, arg0)
-}
-
-// NextForgedQueue is a free data retrieval call binding the contract method 0xc970ea8e.
-//
-// Solidity: function nextForgedQueue() view returns(uint256)
-func (_Hermez *HermezCaller) NextForgedQueue(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Hermez.contract.Call(opts, out, "nextForgedQueue")
-	return *ret0, err
-}
-
-// NextForgedQueue is a free data retrieval call binding the contract method 0xc970ea8e.
-//
-// Solidity: function nextForgedQueue() view returns(uint256)
-func (_Hermez *HermezSession) NextForgedQueue() (*big.Int, error) {
-	return _Hermez.Contract.NextForgedQueue(&_Hermez.CallOpts)
-}
-
-// NextForgedQueue is a free data retrieval call binding the contract method 0xc970ea8e.
-//
-// Solidity: function nextForgedQueue() view returns(uint256)
-func (_Hermez *HermezCallerSession) NextForgedQueue() (*big.Int, error) {
-	return _Hermez.Contract.NextForgedQueue(&_Hermez.CallOpts)
 }
 
 // NextL1FillingQueue is a free data retrieval call binding the contract method 0x0ee8e52b.
 //
-// Solidity: function nextL1FillingQueue() view returns(uint256)
-func (_Hermez *HermezCaller) NextL1FillingQueue(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function nextL1FillingQueue() view returns(uint64)
+func (_Hermez *HermezCaller) NextL1FillingQueue(opts *bind.CallOpts) (uint64, error) {
 	var (
-		ret0 = new(*big.Int)
+		ret0 = new(uint64)
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "nextL1FillingQueue")
@@ -1014,16 +562,108 @@ func (_Hermez *HermezCaller) NextL1FillingQueue(opts *bind.CallOpts) (*big.Int, 
 
 // NextL1FillingQueue is a free data retrieval call binding the contract method 0x0ee8e52b.
 //
-// Solidity: function nextL1FillingQueue() view returns(uint256)
-func (_Hermez *HermezSession) NextL1FillingQueue() (*big.Int, error) {
+// Solidity: function nextL1FillingQueue() view returns(uint64)
+func (_Hermez *HermezSession) NextL1FillingQueue() (uint64, error) {
 	return _Hermez.Contract.NextL1FillingQueue(&_Hermez.CallOpts)
 }
 
 // NextL1FillingQueue is a free data retrieval call binding the contract method 0x0ee8e52b.
 //
-// Solidity: function nextL1FillingQueue() view returns(uint256)
-func (_Hermez *HermezCallerSession) NextL1FillingQueue() (*big.Int, error) {
+// Solidity: function nextL1FillingQueue() view returns(uint64)
+func (_Hermez *HermezCallerSession) NextL1FillingQueue() (uint64, error) {
 	return _Hermez.Contract.NextL1FillingQueue(&_Hermez.CallOpts)
+}
+
+// NextL1ToForgeQueue is a free data retrieval call binding the contract method 0xd0f32e67.
+//
+// Solidity: function nextL1ToForgeQueue() view returns(uint64)
+func (_Hermez *HermezCaller) NextL1ToForgeQueue(opts *bind.CallOpts) (uint64, error) {
+	var (
+		ret0 = new(uint64)
+	)
+	out := ret0
+	err := _Hermez.contract.Call(opts, out, "nextL1ToForgeQueue")
+	return *ret0, err
+}
+
+// NextL1ToForgeQueue is a free data retrieval call binding the contract method 0xd0f32e67.
+//
+// Solidity: function nextL1ToForgeQueue() view returns(uint64)
+func (_Hermez *HermezSession) NextL1ToForgeQueue() (uint64, error) {
+	return _Hermez.Contract.NextL1ToForgeQueue(&_Hermez.CallOpts)
+}
+
+// NextL1ToForgeQueue is a free data retrieval call binding the contract method 0xd0f32e67.
+//
+// Solidity: function nextL1ToForgeQueue() view returns(uint64)
+func (_Hermez *HermezCallerSession) NextL1ToForgeQueue() (uint64, error) {
+	return _Hermez.Contract.NextL1ToForgeQueue(&_Hermez.CallOpts)
+}
+
+// RegisterTokensCount is a free data retrieval call binding the contract method 0x9f34e9a3.
+//
+// Solidity: function registerTokensCount() view returns(uint256)
+func (_Hermez *HermezCaller) RegisterTokensCount(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _Hermez.contract.Call(opts, out, "registerTokensCount")
+	return *ret0, err
+}
+
+// RegisterTokensCount is a free data retrieval call binding the contract method 0x9f34e9a3.
+//
+// Solidity: function registerTokensCount() view returns(uint256)
+func (_Hermez *HermezSession) RegisterTokensCount() (*big.Int, error) {
+	return _Hermez.Contract.RegisterTokensCount(&_Hermez.CallOpts)
+}
+
+// RegisterTokensCount is a free data retrieval call binding the contract method 0x9f34e9a3.
+//
+// Solidity: function registerTokensCount() view returns(uint256)
+func (_Hermez *HermezCallerSession) RegisterTokensCount() (*big.Int, error) {
+	return _Hermez.Contract.RegisterTokensCount(&_Hermez.CallOpts)
+}
+
+// RollupVerifiers is a free data retrieval call binding the contract method 0x38330200.
+//
+// Solidity: function rollupVerifiers(uint256 ) view returns(address verifierInterface, uint256 maxTx, uint256 nLevels)
+func (_Hermez *HermezCaller) RollupVerifiers(opts *bind.CallOpts, arg0 *big.Int) (struct {
+	VerifierInterface common.Address
+	MaxTx             *big.Int
+	NLevels           *big.Int
+}, error) {
+	ret := new(struct {
+		VerifierInterface common.Address
+		MaxTx             *big.Int
+		NLevels           *big.Int
+	})
+	out := ret
+	err := _Hermez.contract.Call(opts, out, "rollupVerifiers", arg0)
+	return *ret, err
+}
+
+// RollupVerifiers is a free data retrieval call binding the contract method 0x38330200.
+//
+// Solidity: function rollupVerifiers(uint256 ) view returns(address verifierInterface, uint256 maxTx, uint256 nLevels)
+func (_Hermez *HermezSession) RollupVerifiers(arg0 *big.Int) (struct {
+	VerifierInterface common.Address
+	MaxTx             *big.Int
+	NLevels           *big.Int
+}, error) {
+	return _Hermez.Contract.RollupVerifiers(&_Hermez.CallOpts, arg0)
+}
+
+// RollupVerifiers is a free data retrieval call binding the contract method 0x38330200.
+//
+// Solidity: function rollupVerifiers(uint256 ) view returns(address verifierInterface, uint256 maxTx, uint256 nLevels)
+func (_Hermez *HermezCallerSession) RollupVerifiers(arg0 *big.Int) (struct {
+	VerifierInterface common.Address
+	MaxTx             *big.Int
+	NLevels           *big.Int
+}, error) {
+	return _Hermez.Contract.RollupVerifiers(&_Hermez.CallOpts, arg0)
 }
 
 // SafetyAddress is a free data retrieval call binding the contract method 0xe56e27ae.
@@ -1052,38 +692,38 @@ func (_Hermez *HermezCallerSession) SafetyAddress() (common.Address, error) {
 	return _Hermez.Contract.SafetyAddress(&_Hermez.CallOpts)
 }
 
-// StateRoot is a free data retrieval call binding the contract method 0x9588eca2.
+// StateRootMap is a free data retrieval call binding the contract method 0x86c6acc1.
 //
-// Solidity: function stateRoot() view returns(uint256)
-func (_Hermez *HermezCaller) StateRoot(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function stateRootMap(uint64 ) view returns(uint256)
+func (_Hermez *HermezCaller) StateRootMap(opts *bind.CallOpts, arg0 uint64) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _Hermez.contract.Call(opts, out, "stateRoot")
+	err := _Hermez.contract.Call(opts, out, "stateRootMap", arg0)
 	return *ret0, err
 }
 
-// StateRoot is a free data retrieval call binding the contract method 0x9588eca2.
+// StateRootMap is a free data retrieval call binding the contract method 0x86c6acc1.
 //
-// Solidity: function stateRoot() view returns(uint256)
-func (_Hermez *HermezSession) StateRoot() (*big.Int, error) {
-	return _Hermez.Contract.StateRoot(&_Hermez.CallOpts)
+// Solidity: function stateRootMap(uint64 ) view returns(uint256)
+func (_Hermez *HermezSession) StateRootMap(arg0 uint64) (*big.Int, error) {
+	return _Hermez.Contract.StateRootMap(&_Hermez.CallOpts, arg0)
 }
 
-// StateRoot is a free data retrieval call binding the contract method 0x9588eca2.
+// StateRootMap is a free data retrieval call binding the contract method 0x86c6acc1.
 //
-// Solidity: function stateRoot() view returns(uint256)
-func (_Hermez *HermezCallerSession) StateRoot() (*big.Int, error) {
-	return _Hermez.Contract.StateRoot(&_Hermez.CallOpts)
+// Solidity: function stateRootMap(uint64 ) view returns(uint256)
+func (_Hermez *HermezCallerSession) StateRootMap(arg0 uint64) (*big.Int, error) {
+	return _Hermez.Contract.StateRootMap(&_Hermez.CallOpts, arg0)
 }
 
 // TokenExchange is a free data retrieval call binding the contract method 0x0dd94b96.
 //
-// Solidity: function tokenExchange(address ) view returns(uint256)
-func (_Hermez *HermezCaller) TokenExchange(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
+// Solidity: function tokenExchange(address ) view returns(uint64)
+func (_Hermez *HermezCaller) TokenExchange(opts *bind.CallOpts, arg0 common.Address) (uint64, error) {
 	var (
-		ret0 = new(*big.Int)
+		ret0 = new(uint64)
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "tokenExchange", arg0)
@@ -1092,15 +732,15 @@ func (_Hermez *HermezCaller) TokenExchange(opts *bind.CallOpts, arg0 common.Addr
 
 // TokenExchange is a free data retrieval call binding the contract method 0x0dd94b96.
 //
-// Solidity: function tokenExchange(address ) view returns(uint256)
-func (_Hermez *HermezSession) TokenExchange(arg0 common.Address) (*big.Int, error) {
+// Solidity: function tokenExchange(address ) view returns(uint64)
+func (_Hermez *HermezSession) TokenExchange(arg0 common.Address) (uint64, error) {
 	return _Hermez.Contract.TokenExchange(&_Hermez.CallOpts, arg0)
 }
 
 // TokenExchange is a free data retrieval call binding the contract method 0x0dd94b96.
 //
-// Solidity: function tokenExchange(address ) view returns(uint256)
-func (_Hermez *HermezCallerSession) TokenExchange(arg0 common.Address) (*big.Int, error) {
+// Solidity: function tokenExchange(address ) view returns(uint64)
+func (_Hermez *HermezCallerSession) TokenExchange(arg0 common.Address) (uint64, error) {
 	return _Hermez.Contract.TokenExchange(&_Hermez.CallOpts, arg0)
 }
 
@@ -1208,6 +848,32 @@ func (_Hermez *HermezCallerSession) WithdrawDelayerContract() (common.Address, e
 	return _Hermez.Contract.WithdrawDelayerContract(&_Hermez.CallOpts)
 }
 
+// WithdrawVerifier is a free data retrieval call binding the contract method 0x864eb164.
+//
+// Solidity: function withdrawVerifier() view returns(address)
+func (_Hermez *HermezCaller) WithdrawVerifier(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Hermez.contract.Call(opts, out, "withdrawVerifier")
+	return *ret0, err
+}
+
+// WithdrawVerifier is a free data retrieval call binding the contract method 0x864eb164.
+//
+// Solidity: function withdrawVerifier() view returns(address)
+func (_Hermez *HermezSession) WithdrawVerifier() (common.Address, error) {
+	return _Hermez.Contract.WithdrawVerifier(&_Hermez.CallOpts)
+}
+
+// WithdrawVerifier is a free data retrieval call binding the contract method 0x864eb164.
+//
+// Solidity: function withdrawVerifier() view returns(address)
+func (_Hermez *HermezCallerSession) WithdrawVerifier() (common.Address, error) {
+	return _Hermez.Contract.WithdrawVerifier(&_Hermez.CallOpts)
+}
+
 // WithdrawalDelay is a free data retrieval call binding the contract method 0xa7ab6961.
 //
 // Solidity: function withdrawalDelay() view returns(uint64)
@@ -1234,214 +900,67 @@ func (_Hermez *HermezCallerSession) WithdrawalDelay() (uint64, error) {
 	return _Hermez.Contract.WithdrawalDelay(&_Hermez.CallOpts)
 }
 
-// AddToken is a paid mutator transaction binding the contract method 0xd48bfca7.
+// AddL1Transaction is a paid mutator transaction binding the contract method 0xac171d28.
 //
-// Solidity: function addToken(address tokenAddress) payable returns()
-func (_Hermez *HermezTransactor) AddToken(opts *bind.TransactOpts, tokenAddress common.Address) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "addToken", tokenAddress)
+// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint48 toIdx) payable returns()
+func (_Hermez *HermezTransactor) AddL1Transaction(opts *bind.TransactOpts, babyPubKey *big.Int, fromIdx *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx *big.Int) (*types.Transaction, error) {
+	return _Hermez.contract.Transact(opts, "addL1Transaction", babyPubKey, fromIdx, loadAmountF, amountF, tokenID, toIdx)
 }
 
-// AddToken is a paid mutator transaction binding the contract method 0xd48bfca7.
+// AddL1Transaction is a paid mutator transaction binding the contract method 0xac171d28.
 //
-// Solidity: function addToken(address tokenAddress) payable returns()
-func (_Hermez *HermezSession) AddToken(tokenAddress common.Address) (*types.Transaction, error) {
-	return _Hermez.Contract.AddToken(&_Hermez.TransactOpts, tokenAddress)
+// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint48 toIdx) payable returns()
+func (_Hermez *HermezSession) AddL1Transaction(babyPubKey *big.Int, fromIdx *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx *big.Int) (*types.Transaction, error) {
+	return _Hermez.Contract.AddL1Transaction(&_Hermez.TransactOpts, babyPubKey, fromIdx, loadAmountF, amountF, tokenID, toIdx)
 }
 
-// AddToken is a paid mutator transaction binding the contract method 0xd48bfca7.
+// AddL1Transaction is a paid mutator transaction binding the contract method 0xac171d28.
 //
-// Solidity: function addToken(address tokenAddress) payable returns()
-func (_Hermez *HermezTransactorSession) AddToken(tokenAddress common.Address) (*types.Transaction, error) {
-	return _Hermez.Contract.AddToken(&_Hermez.TransactOpts, tokenAddress)
+// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint48 toIdx) payable returns()
+func (_Hermez *HermezTransactorSession) AddL1Transaction(babyPubKey *big.Int, fromIdx *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx *big.Int) (*types.Transaction, error) {
+	return _Hermez.Contract.AddL1Transaction(&_Hermez.TransactOpts, babyPubKey, fromIdx, loadAmountF, amountF, tokenID, toIdx)
 }
 
-// CreateAccountDeposit is a paid mutator transaction binding the contract method 0x30501fcb.
+// ForgeBatch is a paid mutator transaction binding the contract method 0x6e7e1365.
 //
-// Solidity: function createAccountDeposit(uint256 babyPubKey, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactor) CreateAccountDeposit(opts *bind.TransactOpts, babyPubKey *big.Int, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "createAccountDeposit", babyPubKey, loadAmountF, tokenID)
+// Solidity: function forgeBatch(uint48 newLastIdx, uint256 newStRoot, uint256 newExitRoot, bytes encodedL1CoordinatorTx, bytes l2TxsData, bytes feeIdxCoordinator, uint8 verifierIdx, bool l1Batch, uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC) returns()
+func (_Hermez *HermezTransactor) ForgeBatch(opts *bind.TransactOpts, newLastIdx *big.Int, newStRoot *big.Int, newExitRoot *big.Int, encodedL1CoordinatorTx []byte, l2TxsData []byte, feeIdxCoordinator []byte, verifierIdx uint8, l1Batch bool, proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int) (*types.Transaction, error) {
+	return _Hermez.contract.Transact(opts, "forgeBatch", newLastIdx, newStRoot, newExitRoot, encodedL1CoordinatorTx, l2TxsData, feeIdxCoordinator, verifierIdx, l1Batch, proofA, proofB, proofC)
 }
 
-// CreateAccountDeposit is a paid mutator transaction binding the contract method 0x30501fcb.
+// ForgeBatch is a paid mutator transaction binding the contract method 0x6e7e1365.
 //
-// Solidity: function createAccountDeposit(uint256 babyPubKey, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezSession) CreateAccountDeposit(babyPubKey *big.Int, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.CreateAccountDeposit(&_Hermez.TransactOpts, babyPubKey, loadAmountF, tokenID)
+// Solidity: function forgeBatch(uint48 newLastIdx, uint256 newStRoot, uint256 newExitRoot, bytes encodedL1CoordinatorTx, bytes l2TxsData, bytes feeIdxCoordinator, uint8 verifierIdx, bool l1Batch, uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC) returns()
+func (_Hermez *HermezSession) ForgeBatch(newLastIdx *big.Int, newStRoot *big.Int, newExitRoot *big.Int, encodedL1CoordinatorTx []byte, l2TxsData []byte, feeIdxCoordinator []byte, verifierIdx uint8, l1Batch bool, proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int) (*types.Transaction, error) {
+	return _Hermez.Contract.ForgeBatch(&_Hermez.TransactOpts, newLastIdx, newStRoot, newExitRoot, encodedL1CoordinatorTx, l2TxsData, feeIdxCoordinator, verifierIdx, l1Batch, proofA, proofB, proofC)
 }
 
-// CreateAccountDeposit is a paid mutator transaction binding the contract method 0x30501fcb.
+// ForgeBatch is a paid mutator transaction binding the contract method 0x6e7e1365.
 //
-// Solidity: function createAccountDeposit(uint256 babyPubKey, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactorSession) CreateAccountDeposit(babyPubKey *big.Int, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.CreateAccountDeposit(&_Hermez.TransactOpts, babyPubKey, loadAmountF, tokenID)
+// Solidity: function forgeBatch(uint48 newLastIdx, uint256 newStRoot, uint256 newExitRoot, bytes encodedL1CoordinatorTx, bytes l2TxsData, bytes feeIdxCoordinator, uint8 verifierIdx, bool l1Batch, uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC) returns()
+func (_Hermez *HermezTransactorSession) ForgeBatch(newLastIdx *big.Int, newStRoot *big.Int, newExitRoot *big.Int, encodedL1CoordinatorTx []byte, l2TxsData []byte, feeIdxCoordinator []byte, verifierIdx uint8, l1Batch bool, proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int) (*types.Transaction, error) {
+	return _Hermez.Contract.ForgeBatch(&_Hermez.TransactOpts, newLastIdx, newStRoot, newExitRoot, encodedL1CoordinatorTx, l2TxsData, feeIdxCoordinator, verifierIdx, l1Batch, proofA, proofB, proofC)
 }
 
-// CreateAccountDepositFromRelayer is a paid mutator transaction binding the contract method 0xd7d207c0.
+// InitializeHermez is a paid mutator transaction binding the contract method 0x4ee51c26.
 //
-// Solidity: function createAccountDepositFromRelayer(bytes accountCreationAuthSig, uint256 babyPubKey, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactor) CreateAccountDepositFromRelayer(opts *bind.TransactOpts, accountCreationAuthSig []byte, babyPubKey *big.Int, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "createAccountDepositFromRelayer", accountCreationAuthSig, babyPubKey, loadAmountF, tokenID)
+// Solidity: function initializeHermez(address[] _verifiers, uint256[] _verifiersParams, address _withdrawVerifier, address _hermezAuctionContract, address _tokenHEZ, uint8 _forgeL1L2BatchTimeout, uint256 _feeAddToken, address _poseidon2Elements, address _poseidon3Elements, address _poseidon4Elements, address _hermezGovernanceDAOAddress, address _safetyAddress, uint64 _withdrawalDelay, address _withdrawDelayerContract) returns()
+func (_Hermez *HermezTransactor) InitializeHermez(opts *bind.TransactOpts, _verifiers []common.Address, _verifiersParams []*big.Int, _withdrawVerifier common.Address, _hermezAuctionContract common.Address, _tokenHEZ common.Address, _forgeL1L2BatchTimeout uint8, _feeAddToken *big.Int, _poseidon2Elements common.Address, _poseidon3Elements common.Address, _poseidon4Elements common.Address, _hermezGovernanceDAOAddress common.Address, _safetyAddress common.Address, _withdrawalDelay uint64, _withdrawDelayerContract common.Address) (*types.Transaction, error) {
+	return _Hermez.contract.Transact(opts, "initializeHermez", _verifiers, _verifiersParams, _withdrawVerifier, _hermezAuctionContract, _tokenHEZ, _forgeL1L2BatchTimeout, _feeAddToken, _poseidon2Elements, _poseidon3Elements, _poseidon4Elements, _hermezGovernanceDAOAddress, _safetyAddress, _withdrawalDelay, _withdrawDelayerContract)
 }
 
-// CreateAccountDepositFromRelayer is a paid mutator transaction binding the contract method 0xd7d207c0.
+// InitializeHermez is a paid mutator transaction binding the contract method 0x4ee51c26.
 //
-// Solidity: function createAccountDepositFromRelayer(bytes accountCreationAuthSig, uint256 babyPubKey, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezSession) CreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey *big.Int, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.CreateAccountDepositFromRelayer(&_Hermez.TransactOpts, accountCreationAuthSig, babyPubKey, loadAmountF, tokenID)
+// Solidity: function initializeHermez(address[] _verifiers, uint256[] _verifiersParams, address _withdrawVerifier, address _hermezAuctionContract, address _tokenHEZ, uint8 _forgeL1L2BatchTimeout, uint256 _feeAddToken, address _poseidon2Elements, address _poseidon3Elements, address _poseidon4Elements, address _hermezGovernanceDAOAddress, address _safetyAddress, uint64 _withdrawalDelay, address _withdrawDelayerContract) returns()
+func (_Hermez *HermezSession) InitializeHermez(_verifiers []common.Address, _verifiersParams []*big.Int, _withdrawVerifier common.Address, _hermezAuctionContract common.Address, _tokenHEZ common.Address, _forgeL1L2BatchTimeout uint8, _feeAddToken *big.Int, _poseidon2Elements common.Address, _poseidon3Elements common.Address, _poseidon4Elements common.Address, _hermezGovernanceDAOAddress common.Address, _safetyAddress common.Address, _withdrawalDelay uint64, _withdrawDelayerContract common.Address) (*types.Transaction, error) {
+	return _Hermez.Contract.InitializeHermez(&_Hermez.TransactOpts, _verifiers, _verifiersParams, _withdrawVerifier, _hermezAuctionContract, _tokenHEZ, _forgeL1L2BatchTimeout, _feeAddToken, _poseidon2Elements, _poseidon3Elements, _poseidon4Elements, _hermezGovernanceDAOAddress, _safetyAddress, _withdrawalDelay, _withdrawDelayerContract)
 }
 
-// CreateAccountDepositFromRelayer is a paid mutator transaction binding the contract method 0xd7d207c0.
+// InitializeHermez is a paid mutator transaction binding the contract method 0x4ee51c26.
 //
-// Solidity: function createAccountDepositFromRelayer(bytes accountCreationAuthSig, uint256 babyPubKey, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactorSession) CreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey *big.Int, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.CreateAccountDepositFromRelayer(&_Hermez.TransactOpts, accountCreationAuthSig, babyPubKey, loadAmountF, tokenID)
-}
-
-// CreateAccountDepositTransfer is a paid mutator transaction binding the contract method 0x568bc1c5.
-//
-// Solidity: function createAccountDepositTransfer(uint256 babyPubKey, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezTransactor) CreateAccountDepositTransfer(opts *bind.TransactOpts, babyPubKey *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "createAccountDepositTransfer", babyPubKey, loadAmountF, amountF, tokenID, toIdx)
-}
-
-// CreateAccountDepositTransfer is a paid mutator transaction binding the contract method 0x568bc1c5.
-//
-// Solidity: function createAccountDepositTransfer(uint256 babyPubKey, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezSession) CreateAccountDepositTransfer(babyPubKey *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.CreateAccountDepositTransfer(&_Hermez.TransactOpts, babyPubKey, loadAmountF, amountF, tokenID, toIdx)
-}
-
-// CreateAccountDepositTransfer is a paid mutator transaction binding the contract method 0x568bc1c5.
-//
-// Solidity: function createAccountDepositTransfer(uint256 babyPubKey, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezTransactorSession) CreateAccountDepositTransfer(babyPubKey *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.CreateAccountDepositTransfer(&_Hermez.TransactOpts, babyPubKey, loadAmountF, amountF, tokenID, toIdx)
-}
-
-// Deposit is a paid mutator transaction binding the contract method 0x363e2a22.
-//
-// Solidity: function deposit(uint32 fromIdx, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactor) Deposit(opts *bind.TransactOpts, fromIdx uint32, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "deposit", fromIdx, loadAmountF, tokenID)
-}
-
-// Deposit is a paid mutator transaction binding the contract method 0x363e2a22.
-//
-// Solidity: function deposit(uint32 fromIdx, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezSession) Deposit(fromIdx uint32, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.Deposit(&_Hermez.TransactOpts, fromIdx, loadAmountF, tokenID)
-}
-
-// Deposit is a paid mutator transaction binding the contract method 0x363e2a22.
-//
-// Solidity: function deposit(uint32 fromIdx, uint16 loadAmountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactorSession) Deposit(fromIdx uint32, loadAmountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.Deposit(&_Hermez.TransactOpts, fromIdx, loadAmountF, tokenID)
-}
-
-// DepositTransfer is a paid mutator transaction binding the contract method 0x9612518a.
-//
-// Solidity: function depositTransfer(uint32 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezTransactor) DepositTransfer(opts *bind.TransactOpts, fromIdx uint32, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "depositTransfer", fromIdx, loadAmountF, amountF, tokenID, toIdx)
-}
-
-// DepositTransfer is a paid mutator transaction binding the contract method 0x9612518a.
-//
-// Solidity: function depositTransfer(uint32 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezSession) DepositTransfer(fromIdx uint32, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.DepositTransfer(&_Hermez.TransactOpts, fromIdx, loadAmountF, amountF, tokenID, toIdx)
-}
-
-// DepositTransfer is a paid mutator transaction binding the contract method 0x9612518a.
-//
-// Solidity: function depositTransfer(uint32 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezTransactorSession) DepositTransfer(fromIdx uint32, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.DepositTransfer(&_Hermez.TransactOpts, fromIdx, loadAmountF, amountF, tokenID, toIdx)
-}
-
-// ForceExit is a paid mutator transaction binding the contract method 0xe6171150.
-//
-// Solidity: function forceExit(uint32 fromIdx, uint16 amountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactor) ForceExit(opts *bind.TransactOpts, fromIdx uint32, amountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "forceExit", fromIdx, amountF, tokenID)
-}
-
-// ForceExit is a paid mutator transaction binding the contract method 0xe6171150.
-//
-// Solidity: function forceExit(uint32 fromIdx, uint16 amountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezSession) ForceExit(fromIdx uint32, amountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.ForceExit(&_Hermez.TransactOpts, fromIdx, amountF, tokenID)
-}
-
-// ForceExit is a paid mutator transaction binding the contract method 0xe6171150.
-//
-// Solidity: function forceExit(uint32 fromIdx, uint16 amountF, uint32 tokenID) payable returns()
-func (_Hermez *HermezTransactorSession) ForceExit(fromIdx uint32, amountF uint16, tokenID uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.ForceExit(&_Hermez.TransactOpts, fromIdx, amountF, tokenID)
-}
-
-// ForceTransfer is a paid mutator transaction binding the contract method 0x3787f591.
-//
-// Solidity: function forceTransfer(uint32 fromIdx, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezTransactor) ForceTransfer(opts *bind.TransactOpts, fromIdx uint32, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "forceTransfer", fromIdx, amountF, tokenID, toIdx)
-}
-
-// ForceTransfer is a paid mutator transaction binding the contract method 0x3787f591.
-//
-// Solidity: function forceTransfer(uint32 fromIdx, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezSession) ForceTransfer(fromIdx uint32, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.ForceTransfer(&_Hermez.TransactOpts, fromIdx, amountF, tokenID, toIdx)
-}
-
-// ForceTransfer is a paid mutator transaction binding the contract method 0x3787f591.
-//
-// Solidity: function forceTransfer(uint32 fromIdx, uint16 amountF, uint32 tokenID, uint32 toIdx) payable returns()
-func (_Hermez *HermezTransactorSession) ForceTransfer(fromIdx uint32, amountF uint16, tokenID uint32, toIdx uint32) (*types.Transaction, error) {
-	return _Hermez.Contract.ForceTransfer(&_Hermez.TransactOpts, fromIdx, amountF, tokenID, toIdx)
-}
-
-// ForgeBatch is a paid mutator transaction binding the contract method 0xc8464ed1.
-//
-// Solidity: function forgeBatch(uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC, uint32 newLastIdx, uint256 newStRoot, uint256 newExitRoot, bytes encodedL1CoordinatorTx, bytes l2TxsData, bytes feeIdxCoordinator, uint256 verifierIdx, bool l1Batch) returns()
-func (_Hermez *HermezTransactor) ForgeBatch(opts *bind.TransactOpts, proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int, newLastIdx uint32, newStRoot *big.Int, newExitRoot *big.Int, encodedL1CoordinatorTx []byte, l2TxsData []byte, feeIdxCoordinator []byte, verifierIdx *big.Int, l1Batch bool) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "forgeBatch", proofA, proofB, proofC, newLastIdx, newStRoot, newExitRoot, encodedL1CoordinatorTx, l2TxsData, feeIdxCoordinator, verifierIdx, l1Batch)
-}
-
-// ForgeBatch is a paid mutator transaction binding the contract method 0xc8464ed1.
-//
-// Solidity: function forgeBatch(uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC, uint32 newLastIdx, uint256 newStRoot, uint256 newExitRoot, bytes encodedL1CoordinatorTx, bytes l2TxsData, bytes feeIdxCoordinator, uint256 verifierIdx, bool l1Batch) returns()
-func (_Hermez *HermezSession) ForgeBatch(proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int, newLastIdx uint32, newStRoot *big.Int, newExitRoot *big.Int, encodedL1CoordinatorTx []byte, l2TxsData []byte, feeIdxCoordinator []byte, verifierIdx *big.Int, l1Batch bool) (*types.Transaction, error) {
-	return _Hermez.Contract.ForgeBatch(&_Hermez.TransactOpts, proofA, proofB, proofC, newLastIdx, newStRoot, newExitRoot, encodedL1CoordinatorTx, l2TxsData, feeIdxCoordinator, verifierIdx, l1Batch)
-}
-
-// ForgeBatch is a paid mutator transaction binding the contract method 0xc8464ed1.
-//
-// Solidity: function forgeBatch(uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC, uint32 newLastIdx, uint256 newStRoot, uint256 newExitRoot, bytes encodedL1CoordinatorTx, bytes l2TxsData, bytes feeIdxCoordinator, uint256 verifierIdx, bool l1Batch) returns()
-func (_Hermez *HermezTransactorSession) ForgeBatch(proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int, newLastIdx uint32, newStRoot *big.Int, newExitRoot *big.Int, encodedL1CoordinatorTx []byte, l2TxsData []byte, feeIdxCoordinator []byte, verifierIdx *big.Int, l1Batch bool) (*types.Transaction, error) {
-	return _Hermez.Contract.ForgeBatch(&_Hermez.TransactOpts, proofA, proofB, proofC, newLastIdx, newStRoot, newExitRoot, encodedL1CoordinatorTx, l2TxsData, feeIdxCoordinator, verifierIdx, l1Batch)
-}
-
-// Initialize is a paid mutator transaction binding the contract method 0xee67f32e.
-//
-// Solidity: function initialize(address[] _verifiers, uint256[] _maxTxVerifiers, address _tokenHEZ, address _governanceAddress, address _safetyAddress, address _hermezAuctionContract, address _withdrawDelayerContract, address _poseidon2Elements, address _poseidon3Elements, address _poseidon4Elements, uint256 _feeAddToken, uint256 _forgeL1L2BatchTimeout, uint64 _withdrawalDelay) returns()
-func (_Hermez *HermezTransactor) Initialize(opts *bind.TransactOpts, _verifiers []common.Address, _maxTxVerifiers []*big.Int, _tokenHEZ common.Address, _governanceAddress common.Address, _safetyAddress common.Address, _hermezAuctionContract common.Address, _withdrawDelayerContract common.Address, _poseidon2Elements common.Address, _poseidon3Elements common.Address, _poseidon4Elements common.Address, _feeAddToken *big.Int, _forgeL1L2BatchTimeout *big.Int, _withdrawalDelay uint64) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "initialize", _verifiers, _maxTxVerifiers, _tokenHEZ, _governanceAddress, _safetyAddress, _hermezAuctionContract, _withdrawDelayerContract, _poseidon2Elements, _poseidon3Elements, _poseidon4Elements, _feeAddToken, _forgeL1L2BatchTimeout, _withdrawalDelay)
-}
-
-// Initialize is a paid mutator transaction binding the contract method 0xee67f32e.
-//
-// Solidity: function initialize(address[] _verifiers, uint256[] _maxTxVerifiers, address _tokenHEZ, address _governanceAddress, address _safetyAddress, address _hermezAuctionContract, address _withdrawDelayerContract, address _poseidon2Elements, address _poseidon3Elements, address _poseidon4Elements, uint256 _feeAddToken, uint256 _forgeL1L2BatchTimeout, uint64 _withdrawalDelay) returns()
-func (_Hermez *HermezSession) Initialize(_verifiers []common.Address, _maxTxVerifiers []*big.Int, _tokenHEZ common.Address, _governanceAddress common.Address, _safetyAddress common.Address, _hermezAuctionContract common.Address, _withdrawDelayerContract common.Address, _poseidon2Elements common.Address, _poseidon3Elements common.Address, _poseidon4Elements common.Address, _feeAddToken *big.Int, _forgeL1L2BatchTimeout *big.Int, _withdrawalDelay uint64) (*types.Transaction, error) {
-	return _Hermez.Contract.Initialize(&_Hermez.TransactOpts, _verifiers, _maxTxVerifiers, _tokenHEZ, _governanceAddress, _safetyAddress, _hermezAuctionContract, _withdrawDelayerContract, _poseidon2Elements, _poseidon3Elements, _poseidon4Elements, _feeAddToken, _forgeL1L2BatchTimeout, _withdrawalDelay)
-}
-
-// Initialize is a paid mutator transaction binding the contract method 0xee67f32e.
-//
-// Solidity: function initialize(address[] _verifiers, uint256[] _maxTxVerifiers, address _tokenHEZ, address _governanceAddress, address _safetyAddress, address _hermezAuctionContract, address _withdrawDelayerContract, address _poseidon2Elements, address _poseidon3Elements, address _poseidon4Elements, uint256 _feeAddToken, uint256 _forgeL1L2BatchTimeout, uint64 _withdrawalDelay) returns()
-func (_Hermez *HermezTransactorSession) Initialize(_verifiers []common.Address, _maxTxVerifiers []*big.Int, _tokenHEZ common.Address, _governanceAddress common.Address, _safetyAddress common.Address, _hermezAuctionContract common.Address, _withdrawDelayerContract common.Address, _poseidon2Elements common.Address, _poseidon3Elements common.Address, _poseidon4Elements common.Address, _feeAddToken *big.Int, _forgeL1L2BatchTimeout *big.Int, _withdrawalDelay uint64) (*types.Transaction, error) {
-	return _Hermez.Contract.Initialize(&_Hermez.TransactOpts, _verifiers, _maxTxVerifiers, _tokenHEZ, _governanceAddress, _safetyAddress, _hermezAuctionContract, _withdrawDelayerContract, _poseidon2Elements, _poseidon3Elements, _poseidon4Elements, _feeAddToken, _forgeL1L2BatchTimeout, _withdrawalDelay)
+// Solidity: function initializeHermez(address[] _verifiers, uint256[] _verifiersParams, address _withdrawVerifier, address _hermezAuctionContract, address _tokenHEZ, uint8 _forgeL1L2BatchTimeout, uint256 _feeAddToken, address _poseidon2Elements, address _poseidon3Elements, address _poseidon4Elements, address _hermezGovernanceDAOAddress, address _safetyAddress, uint64 _withdrawalDelay, address _withdrawDelayerContract) returns()
+func (_Hermez *HermezTransactorSession) InitializeHermez(_verifiers []common.Address, _verifiersParams []*big.Int, _withdrawVerifier common.Address, _hermezAuctionContract common.Address, _tokenHEZ common.Address, _forgeL1L2BatchTimeout uint8, _feeAddToken *big.Int, _poseidon2Elements common.Address, _poseidon3Elements common.Address, _poseidon4Elements common.Address, _hermezGovernanceDAOAddress common.Address, _safetyAddress common.Address, _withdrawalDelay uint64, _withdrawDelayerContract common.Address) (*types.Transaction, error) {
+	return _Hermez.Contract.InitializeHermez(&_Hermez.TransactOpts, _verifiers, _verifiersParams, _withdrawVerifier, _hermezAuctionContract, _tokenHEZ, _forgeL1L2BatchTimeout, _feeAddToken, _poseidon2Elements, _poseidon3Elements, _poseidon4Elements, _hermezGovernanceDAOAddress, _safetyAddress, _withdrawalDelay, _withdrawDelayerContract)
 }
 
 // SafeMode is a paid mutator transaction binding the contract method 0xabe3219c.
@@ -1463,6 +982,27 @@ func (_Hermez *HermezSession) SafeMode() (*types.Transaction, error) {
 // Solidity: function safeMode() returns()
 func (_Hermez *HermezTransactorSession) SafeMode() (*types.Transaction, error) {
 	return _Hermez.Contract.SafeMode(&_Hermez.TransactOpts)
+}
+
+// TokensReceived is a paid mutator transaction binding the contract method 0x0023de29.
+//
+// Solidity: function tokensReceived(address operator, address from, address to, uint256 amount, bytes userData, bytes operatorData) returns()
+func (_Hermez *HermezTransactor) TokensReceived(opts *bind.TransactOpts, operator common.Address, from common.Address, to common.Address, amount *big.Int, userData []byte, operatorData []byte) (*types.Transaction, error) {
+	return _Hermez.contract.Transact(opts, "tokensReceived", operator, from, to, amount, userData, operatorData)
+}
+
+// TokensReceived is a paid mutator transaction binding the contract method 0x0023de29.
+//
+// Solidity: function tokensReceived(address operator, address from, address to, uint256 amount, bytes userData, bytes operatorData) returns()
+func (_Hermez *HermezSession) TokensReceived(operator common.Address, from common.Address, to common.Address, amount *big.Int, userData []byte, operatorData []byte) (*types.Transaction, error) {
+	return _Hermez.Contract.TokensReceived(&_Hermez.TransactOpts, operator, from, to, amount, userData, operatorData)
+}
+
+// TokensReceived is a paid mutator transaction binding the contract method 0x0023de29.
+//
+// Solidity: function tokensReceived(address operator, address from, address to, uint256 amount, bytes userData, bytes operatorData) returns()
+func (_Hermez *HermezTransactorSession) TokensReceived(operator common.Address, from common.Address, to common.Address, amount *big.Int, userData []byte, operatorData []byte) (*types.Transaction, error) {
+	return _Hermez.Contract.TokensReceived(&_Hermez.TransactOpts, operator, from, to, amount, userData, operatorData)
 }
 
 // UpdateBucketsParameters is a paid mutator transaction binding the contract method 0x68e95e53.
@@ -1507,45 +1047,45 @@ func (_Hermez *HermezTransactorSession) UpdateFeeAddToken(newFeeAddToken *big.In
 	return _Hermez.Contract.UpdateFeeAddToken(&_Hermez.TransactOpts, newFeeAddToken)
 }
 
-// UpdateForgeL1L2BatchTimeout is a paid mutator transaction binding the contract method 0x39cd0581.
+// UpdateForgeL1L2BatchTimeout is a paid mutator transaction binding the contract method 0xcbd7b5fb.
 //
-// Solidity: function updateForgeL1L2BatchTimeout(uint256 newForgeL1L2BatchTimeout) returns()
-func (_Hermez *HermezTransactor) UpdateForgeL1L2BatchTimeout(opts *bind.TransactOpts, newForgeL1L2BatchTimeout *big.Int) (*types.Transaction, error) {
+// Solidity: function updateForgeL1L2BatchTimeout(uint8 newForgeL1L2BatchTimeout) returns()
+func (_Hermez *HermezTransactor) UpdateForgeL1L2BatchTimeout(opts *bind.TransactOpts, newForgeL1L2BatchTimeout uint8) (*types.Transaction, error) {
 	return _Hermez.contract.Transact(opts, "updateForgeL1L2BatchTimeout", newForgeL1L2BatchTimeout)
 }
 
-// UpdateForgeL1L2BatchTimeout is a paid mutator transaction binding the contract method 0x39cd0581.
+// UpdateForgeL1L2BatchTimeout is a paid mutator transaction binding the contract method 0xcbd7b5fb.
 //
-// Solidity: function updateForgeL1L2BatchTimeout(uint256 newForgeL1L2BatchTimeout) returns()
-func (_Hermez *HermezSession) UpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout *big.Int) (*types.Transaction, error) {
+// Solidity: function updateForgeL1L2BatchTimeout(uint8 newForgeL1L2BatchTimeout) returns()
+func (_Hermez *HermezSession) UpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout uint8) (*types.Transaction, error) {
 	return _Hermez.Contract.UpdateForgeL1L2BatchTimeout(&_Hermez.TransactOpts, newForgeL1L2BatchTimeout)
 }
 
-// UpdateForgeL1L2BatchTimeout is a paid mutator transaction binding the contract method 0x39cd0581.
+// UpdateForgeL1L2BatchTimeout is a paid mutator transaction binding the contract method 0xcbd7b5fb.
 //
-// Solidity: function updateForgeL1L2BatchTimeout(uint256 newForgeL1L2BatchTimeout) returns()
-func (_Hermez *HermezTransactorSession) UpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout *big.Int) (*types.Transaction, error) {
+// Solidity: function updateForgeL1L2BatchTimeout(uint8 newForgeL1L2BatchTimeout) returns()
+func (_Hermez *HermezTransactorSession) UpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout uint8) (*types.Transaction, error) {
 	return _Hermez.Contract.UpdateForgeL1L2BatchTimeout(&_Hermez.TransactOpts, newForgeL1L2BatchTimeout)
 }
 
-// UpdateTokenExchange is a paid mutator transaction binding the contract method 0xcadedd82.
+// UpdateTokenExchange is a paid mutator transaction binding the contract method 0x1a748c2d.
 //
-// Solidity: function updateTokenExchange(address[] addressArray, uint256[] valueArray) returns()
-func (_Hermez *HermezTransactor) UpdateTokenExchange(opts *bind.TransactOpts, addressArray []common.Address, valueArray []*big.Int) (*types.Transaction, error) {
+// Solidity: function updateTokenExchange(address[] addressArray, uint64[] valueArray) returns()
+func (_Hermez *HermezTransactor) UpdateTokenExchange(opts *bind.TransactOpts, addressArray []common.Address, valueArray []uint64) (*types.Transaction, error) {
 	return _Hermez.contract.Transact(opts, "updateTokenExchange", addressArray, valueArray)
 }
 
-// UpdateTokenExchange is a paid mutator transaction binding the contract method 0xcadedd82.
+// UpdateTokenExchange is a paid mutator transaction binding the contract method 0x1a748c2d.
 //
-// Solidity: function updateTokenExchange(address[] addressArray, uint256[] valueArray) returns()
-func (_Hermez *HermezSession) UpdateTokenExchange(addressArray []common.Address, valueArray []*big.Int) (*types.Transaction, error) {
+// Solidity: function updateTokenExchange(address[] addressArray, uint64[] valueArray) returns()
+func (_Hermez *HermezSession) UpdateTokenExchange(addressArray []common.Address, valueArray []uint64) (*types.Transaction, error) {
 	return _Hermez.Contract.UpdateTokenExchange(&_Hermez.TransactOpts, addressArray, valueArray)
 }
 
-// UpdateTokenExchange is a paid mutator transaction binding the contract method 0xcadedd82.
+// UpdateTokenExchange is a paid mutator transaction binding the contract method 0x1a748c2d.
 //
-// Solidity: function updateTokenExchange(address[] addressArray, uint256[] valueArray) returns()
-func (_Hermez *HermezTransactorSession) UpdateTokenExchange(addressArray []common.Address, valueArray []*big.Int) (*types.Transaction, error) {
+// Solidity: function updateTokenExchange(address[] addressArray, uint64[] valueArray) returns()
+func (_Hermez *HermezTransactorSession) UpdateTokenExchange(addressArray []common.Address, valueArray []uint64) (*types.Transaction, error) {
 	return _Hermez.Contract.UpdateTokenExchange(&_Hermez.TransactOpts, addressArray, valueArray)
 }
 
@@ -1570,25 +1110,46 @@ func (_Hermez *HermezTransactorSession) UpdateWithdrawalDelay(newWithdrawalDelay
 	return _Hermez.Contract.UpdateWithdrawalDelay(&_Hermez.TransactOpts, newWithdrawalDelay)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0xbe8e25db.
+// WithdrawCircuit is a paid mutator transaction binding the contract method 0xc63cc3a0.
 //
-// Solidity: function withdraw(uint32 tokenID, uint192 balance, uint256 babyPubKey, uint256 numExitRoot, uint256[] siblings, uint256 idx, bool instantWithdraw) returns()
-func (_Hermez *HermezTransactor) Withdraw(opts *bind.TransactOpts, tokenID uint32, balance *big.Int, babyPubKey *big.Int, numExitRoot *big.Int, siblings []*big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "withdraw", tokenID, balance, babyPubKey, numExitRoot, siblings, idx, instantWithdraw)
+// Solidity: function withdrawCircuit(uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC, uint32 tokenID, uint192 amount, uint48 numExitRoot, uint48 idx, bool instantWithdraw) returns()
+func (_Hermez *HermezTransactor) WithdrawCircuit(opts *bind.TransactOpts, proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int, tokenID uint32, amount *big.Int, numExitRoot *big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	return _Hermez.contract.Transact(opts, "withdrawCircuit", proofA, proofB, proofC, tokenID, amount, numExitRoot, idx, instantWithdraw)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0xbe8e25db.
+// WithdrawCircuit is a paid mutator transaction binding the contract method 0xc63cc3a0.
 //
-// Solidity: function withdraw(uint32 tokenID, uint192 balance, uint256 babyPubKey, uint256 numExitRoot, uint256[] siblings, uint256 idx, bool instantWithdraw) returns()
-func (_Hermez *HermezSession) Withdraw(tokenID uint32, balance *big.Int, babyPubKey *big.Int, numExitRoot *big.Int, siblings []*big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
-	return _Hermez.Contract.Withdraw(&_Hermez.TransactOpts, tokenID, balance, babyPubKey, numExitRoot, siblings, idx, instantWithdraw)
+// Solidity: function withdrawCircuit(uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC, uint32 tokenID, uint192 amount, uint48 numExitRoot, uint48 idx, bool instantWithdraw) returns()
+func (_Hermez *HermezSession) WithdrawCircuit(proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int, tokenID uint32, amount *big.Int, numExitRoot *big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	return _Hermez.Contract.WithdrawCircuit(&_Hermez.TransactOpts, proofA, proofB, proofC, tokenID, amount, numExitRoot, idx, instantWithdraw)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0xbe8e25db.
+// WithdrawCircuit is a paid mutator transaction binding the contract method 0xc63cc3a0.
 //
-// Solidity: function withdraw(uint32 tokenID, uint192 balance, uint256 babyPubKey, uint256 numExitRoot, uint256[] siblings, uint256 idx, bool instantWithdraw) returns()
-func (_Hermez *HermezTransactorSession) Withdraw(tokenID uint32, balance *big.Int, babyPubKey *big.Int, numExitRoot *big.Int, siblings []*big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
-	return _Hermez.Contract.Withdraw(&_Hermez.TransactOpts, tokenID, balance, babyPubKey, numExitRoot, siblings, idx, instantWithdraw)
+// Solidity: function withdrawCircuit(uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC, uint32 tokenID, uint192 amount, uint48 numExitRoot, uint48 idx, bool instantWithdraw) returns()
+func (_Hermez *HermezTransactorSession) WithdrawCircuit(proofA [2]*big.Int, proofB [2][2]*big.Int, proofC [2]*big.Int, tokenID uint32, amount *big.Int, numExitRoot *big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	return _Hermez.Contract.WithdrawCircuit(&_Hermez.TransactOpts, proofA, proofB, proofC, tokenID, amount, numExitRoot, idx, instantWithdraw)
+}
+
+// WithdrawMerkleProof is a paid mutator transaction binding the contract method 0x432dd51f.
+//
+// Solidity: function withdrawMerkleProof(uint32 tokenID, uint192 amount, uint256 babyPubKey, uint48 numExitRoot, uint256[] siblings, uint48 idx, bool instantWithdraw) returns()
+func (_Hermez *HermezTransactor) WithdrawMerkleProof(opts *bind.TransactOpts, tokenID uint32, amount *big.Int, babyPubKey *big.Int, numExitRoot *big.Int, siblings []*big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	return _Hermez.contract.Transact(opts, "withdrawMerkleProof", tokenID, amount, babyPubKey, numExitRoot, siblings, idx, instantWithdraw)
+}
+
+// WithdrawMerkleProof is a paid mutator transaction binding the contract method 0x432dd51f.
+//
+// Solidity: function withdrawMerkleProof(uint32 tokenID, uint192 amount, uint256 babyPubKey, uint48 numExitRoot, uint256[] siblings, uint48 idx, bool instantWithdraw) returns()
+func (_Hermez *HermezSession) WithdrawMerkleProof(tokenID uint32, amount *big.Int, babyPubKey *big.Int, numExitRoot *big.Int, siblings []*big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	return _Hermez.Contract.WithdrawMerkleProof(&_Hermez.TransactOpts, tokenID, amount, babyPubKey, numExitRoot, siblings, idx, instantWithdraw)
+}
+
+// WithdrawMerkleProof is a paid mutator transaction binding the contract method 0x432dd51f.
+//
+// Solidity: function withdrawMerkleProof(uint32 tokenID, uint192 amount, uint256 babyPubKey, uint48 numExitRoot, uint256[] siblings, uint48 idx, bool instantWithdraw) returns()
+func (_Hermez *HermezTransactorSession) WithdrawMerkleProof(tokenID uint32, amount *big.Int, babyPubKey *big.Int, numExitRoot *big.Int, siblings []*big.Int, idx *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	return _Hermez.Contract.WithdrawMerkleProof(&_Hermez.TransactOpts, tokenID, amount, babyPubKey, numExitRoot, siblings, idx, instantWithdraw)
 }
 
 // HermezAddTokenIterator is returned from FilterAddToken and is used to iterate over the raw logs and unpacked data for AddToken events raised by the Hermez contract.
@@ -1667,10 +1228,15 @@ type HermezAddToken struct {
 
 // FilterAddToken is a free log retrieval operation binding the contract event 0xcb73d161edb7cd4fb1d92fedfd2555384fd997fd44ab507656f8c81e15747dde.
 //
-// Solidity: event AddToken(address tokenAddress, uint32 tokenID)
-func (_Hermez *HermezFilterer) FilterAddToken(opts *bind.FilterOpts) (*HermezAddTokenIterator, error) {
+// Solidity: event AddToken(address indexed tokenAddress, uint32 tokenID)
+func (_Hermez *HermezFilterer) FilterAddToken(opts *bind.FilterOpts, tokenAddress []common.Address) (*HermezAddTokenIterator, error) {
 
-	logs, sub, err := _Hermez.contract.FilterLogs(opts, "AddToken")
+	var tokenAddressRule []interface{}
+	for _, tokenAddressItem := range tokenAddress {
+		tokenAddressRule = append(tokenAddressRule, tokenAddressItem)
+	}
+
+	logs, sub, err := _Hermez.contract.FilterLogs(opts, "AddToken", tokenAddressRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1679,10 +1245,15 @@ func (_Hermez *HermezFilterer) FilterAddToken(opts *bind.FilterOpts) (*HermezAdd
 
 // WatchAddToken is a free log subscription operation binding the contract event 0xcb73d161edb7cd4fb1d92fedfd2555384fd997fd44ab507656f8c81e15747dde.
 //
-// Solidity: event AddToken(address tokenAddress, uint32 tokenID)
-func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *HermezAddToken) (event.Subscription, error) {
+// Solidity: event AddToken(address indexed tokenAddress, uint32 tokenID)
+func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *HermezAddToken, tokenAddress []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _Hermez.contract.WatchLogs(opts, "AddToken")
+	var tokenAddressRule []interface{}
+	for _, tokenAddressItem := range tokenAddress {
+		tokenAddressRule = append(tokenAddressRule, tokenAddressItem)
+	}
+
+	logs, sub, err := _Hermez.contract.WatchLogs(opts, "AddToken", tokenAddressRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1716,7 +1287,7 @@ func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *
 
 // ParseAddToken is a log parse operation binding the contract event 0xcb73d161edb7cd4fb1d92fedfd2555384fd997fd44ab507656f8c81e15747dde.
 //
-// Solidity: event AddToken(address tokenAddress, uint32 tokenID)
+// Solidity: event AddToken(address indexed tokenAddress, uint32 tokenID)
 func (_Hermez *HermezFilterer) ParseAddToken(log types.Log) (*HermezAddToken, error) {
 	event := new(HermezAddToken)
 	if err := _Hermez.contract.UnpackLog(event, "AddToken", log); err != nil {
@@ -1794,28 +1365,38 @@ func (it *HermezForgeBatchIterator) Close() error {
 
 // HermezForgeBatch represents a ForgeBatch event raised by the Hermez contract.
 type HermezForgeBatch struct {
-	BatchNum *big.Int
+	BatchNum uint64
 	Raw      types.Log // Blockchain specific contextual infos
 }
 
-// FilterForgeBatch is a free log retrieval operation binding the contract event 0x9b346777a734ffed277bddd87dee3490eb9dcc5378c095eac5af3e0f5da04f41.
+// FilterForgeBatch is a free log retrieval operation binding the contract event 0xd7ab70a9e6ed0d6985e74c5cb553d300a13a2217d58266922b275b72fe786982.
 //
-// Solidity: event ForgeBatch(uint256 batchNum)
-func (_Hermez *HermezFilterer) FilterForgeBatch(opts *bind.FilterOpts) (*HermezForgeBatchIterator, error) {
+// Solidity: event ForgeBatch(uint64 indexed batchNum)
+func (_Hermez *HermezFilterer) FilterForgeBatch(opts *bind.FilterOpts, batchNum []uint64) (*HermezForgeBatchIterator, error) {
 
-	logs, sub, err := _Hermez.contract.FilterLogs(opts, "ForgeBatch")
+	var batchNumRule []interface{}
+	for _, batchNumItem := range batchNum {
+		batchNumRule = append(batchNumRule, batchNumItem)
+	}
+
+	logs, sub, err := _Hermez.contract.FilterLogs(opts, "ForgeBatch", batchNumRule)
 	if err != nil {
 		return nil, err
 	}
 	return &HermezForgeBatchIterator{contract: _Hermez.contract, event: "ForgeBatch", logs: logs, sub: sub}, nil
 }
 
-// WatchForgeBatch is a free log subscription operation binding the contract event 0x9b346777a734ffed277bddd87dee3490eb9dcc5378c095eac5af3e0f5da04f41.
+// WatchForgeBatch is a free log subscription operation binding the contract event 0xd7ab70a9e6ed0d6985e74c5cb553d300a13a2217d58266922b275b72fe786982.
 //
-// Solidity: event ForgeBatch(uint256 batchNum)
-func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<- *HermezForgeBatch) (event.Subscription, error) {
+// Solidity: event ForgeBatch(uint64 indexed batchNum)
+func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<- *HermezForgeBatch, batchNum []uint64) (event.Subscription, error) {
 
-	logs, sub, err := _Hermez.contract.WatchLogs(opts, "ForgeBatch")
+	var batchNumRule []interface{}
+	for _, batchNumItem := range batchNum {
+		batchNumRule = append(batchNumRule, batchNumItem)
+	}
+
+	logs, sub, err := _Hermez.contract.WatchLogs(opts, "ForgeBatch", batchNumRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1847,9 +1428,9 @@ func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<-
 	}), nil
 }
 
-// ParseForgeBatch is a log parse operation binding the contract event 0x9b346777a734ffed277bddd87dee3490eb9dcc5378c095eac5af3e0f5da04f41.
+// ParseForgeBatch is a log parse operation binding the contract event 0xd7ab70a9e6ed0d6985e74c5cb553d300a13a2217d58266922b275b72fe786982.
 //
-// Solidity: event ForgeBatch(uint256 batchNum)
+// Solidity: event ForgeBatch(uint64 indexed batchNum)
 func (_Hermez *HermezFilterer) ParseForgeBatch(log types.Log) (*HermezForgeBatch, error) {
 	event := new(HermezForgeBatch)
 	if err := _Hermez.contract.UnpackLog(event, "ForgeBatch", log); err != nil {
@@ -1927,48 +1508,48 @@ func (it *HermezL1UserTxEventIterator) Close() error {
 
 // HermezL1UserTxEvent represents a L1UserTxEvent event raised by the Hermez contract.
 type HermezL1UserTxEvent struct {
-	L1UserTx         []byte
-	QueueIndex       *big.Int
-	TransactionIndex *big.Int
-	Raw              types.Log // Blockchain specific contextual infos
+	QueueIndex uint64
+	Position   uint8
+	L1UserTx   []byte
+	Raw        types.Log // Blockchain specific contextual infos
 }
 
-// FilterL1UserTxEvent is a free log retrieval operation binding the contract event 0x44ed7960659190edb7acf74ac1bd6c7e8803bfa3aebe02c4599a0770fac3f884.
+// FilterL1UserTxEvent is a free log retrieval operation binding the contract event 0x7f40be4e420c002c02fa9cad961f6a7620769d32d272f3f8c15e3ff59de9310e.
 //
-// Solidity: event L1UserTxEvent(bytes l1UserTx, uint256 indexed queueIndex, uint256 indexed transactionIndex)
-func (_Hermez *HermezFilterer) FilterL1UserTxEvent(opts *bind.FilterOpts, queueIndex []*big.Int, transactionIndex []*big.Int) (*HermezL1UserTxEventIterator, error) {
+// Solidity: event L1UserTxEvent(uint64 indexed queueIndex, uint8 indexed position, bytes l1UserTx)
+func (_Hermez *HermezFilterer) FilterL1UserTxEvent(opts *bind.FilterOpts, queueIndex []uint64, position []uint8) (*HermezL1UserTxEventIterator, error) {
 
 	var queueIndexRule []interface{}
 	for _, queueIndexItem := range queueIndex {
 		queueIndexRule = append(queueIndexRule, queueIndexItem)
 	}
-	var transactionIndexRule []interface{}
-	for _, transactionIndexItem := range transactionIndex {
-		transactionIndexRule = append(transactionIndexRule, transactionIndexItem)
+	var positionRule []interface{}
+	for _, positionItem := range position {
+		positionRule = append(positionRule, positionItem)
 	}
 
-	logs, sub, err := _Hermez.contract.FilterLogs(opts, "L1UserTxEvent", queueIndexRule, transactionIndexRule)
+	logs, sub, err := _Hermez.contract.FilterLogs(opts, "L1UserTxEvent", queueIndexRule, positionRule)
 	if err != nil {
 		return nil, err
 	}
 	return &HermezL1UserTxEventIterator{contract: _Hermez.contract, event: "L1UserTxEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchL1UserTxEvent is a free log subscription operation binding the contract event 0x44ed7960659190edb7acf74ac1bd6c7e8803bfa3aebe02c4599a0770fac3f884.
+// WatchL1UserTxEvent is a free log subscription operation binding the contract event 0x7f40be4e420c002c02fa9cad961f6a7620769d32d272f3f8c15e3ff59de9310e.
 //
-// Solidity: event L1UserTxEvent(bytes l1UserTx, uint256 indexed queueIndex, uint256 indexed transactionIndex)
-func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink chan<- *HermezL1UserTxEvent, queueIndex []*big.Int, transactionIndex []*big.Int) (event.Subscription, error) {
+// Solidity: event L1UserTxEvent(uint64 indexed queueIndex, uint8 indexed position, bytes l1UserTx)
+func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink chan<- *HermezL1UserTxEvent, queueIndex []uint64, position []uint8) (event.Subscription, error) {
 
 	var queueIndexRule []interface{}
 	for _, queueIndexItem := range queueIndex {
 		queueIndexRule = append(queueIndexRule, queueIndexItem)
 	}
-	var transactionIndexRule []interface{}
-	for _, transactionIndexItem := range transactionIndex {
-		transactionIndexRule = append(transactionIndexRule, transactionIndexItem)
+	var positionRule []interface{}
+	for _, positionItem := range position {
+		positionRule = append(positionRule, positionItem)
 	}
 
-	logs, sub, err := _Hermez.contract.WatchLogs(opts, "L1UserTxEvent", queueIndexRule, transactionIndexRule)
+	logs, sub, err := _Hermez.contract.WatchLogs(opts, "L1UserTxEvent", queueIndexRule, positionRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2000,9 +1581,9 @@ func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink cha
 	}), nil
 }
 
-// ParseL1UserTxEvent is a log parse operation binding the contract event 0x44ed7960659190edb7acf74ac1bd6c7e8803bfa3aebe02c4599a0770fac3f884.
+// ParseL1UserTxEvent is a log parse operation binding the contract event 0x7f40be4e420c002c02fa9cad961f6a7620769d32d272f3f8c15e3ff59de9310e.
 //
-// Solidity: event L1UserTxEvent(bytes l1UserTx, uint256 indexed queueIndex, uint256 indexed transactionIndex)
+// Solidity: event L1UserTxEvent(uint64 indexed queueIndex, uint8 indexed position, bytes l1UserTx)
 func (_Hermez *HermezFilterer) ParseL1UserTxEvent(log types.Log) (*HermezL1UserTxEvent, error) {
 	event := new(HermezL1UserTxEvent)
 	if err := _Hermez.contract.UnpackLog(event, "L1UserTxEvent", log); err != nil {
@@ -2213,13 +1794,13 @@ func (it *HermezUpdateForgeL1L2BatchTimeoutIterator) Close() error {
 
 // HermezUpdateForgeL1L2BatchTimeout represents a UpdateForgeL1L2BatchTimeout event raised by the Hermez contract.
 type HermezUpdateForgeL1L2BatchTimeout struct {
-	NewForgeL1L2BatchTimeout *big.Int
+	NewForgeL1L2BatchTimeout uint8
 	Raw                      types.Log // Blockchain specific contextual infos
 }
 
-// FilterUpdateForgeL1L2BatchTimeout is a free log retrieval operation binding the contract event 0x6df2dd186033d1083891be7a27ab27fd480094118e909a1780f9c2a2c49a7aa0.
+// FilterUpdateForgeL1L2BatchTimeout is a free log retrieval operation binding the contract event 0xff6221781ac525b04585dbb55cd2ebd2a92c828ca3e42b23813a1137ac974431.
 //
-// Solidity: event UpdateForgeL1L2BatchTimeout(uint256 newForgeL1L2BatchTimeout)
+// Solidity: event UpdateForgeL1L2BatchTimeout(uint8 newForgeL1L2BatchTimeout)
 func (_Hermez *HermezFilterer) FilterUpdateForgeL1L2BatchTimeout(opts *bind.FilterOpts) (*HermezUpdateForgeL1L2BatchTimeoutIterator, error) {
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateForgeL1L2BatchTimeout")
@@ -2229,9 +1810,9 @@ func (_Hermez *HermezFilterer) FilterUpdateForgeL1L2BatchTimeout(opts *bind.Filt
 	return &HermezUpdateForgeL1L2BatchTimeoutIterator{contract: _Hermez.contract, event: "UpdateForgeL1L2BatchTimeout", logs: logs, sub: sub}, nil
 }
 
-// WatchUpdateForgeL1L2BatchTimeout is a free log subscription operation binding the contract event 0x6df2dd186033d1083891be7a27ab27fd480094118e909a1780f9c2a2c49a7aa0.
+// WatchUpdateForgeL1L2BatchTimeout is a free log subscription operation binding the contract event 0xff6221781ac525b04585dbb55cd2ebd2a92c828ca3e42b23813a1137ac974431.
 //
-// Solidity: event UpdateForgeL1L2BatchTimeout(uint256 newForgeL1L2BatchTimeout)
+// Solidity: event UpdateForgeL1L2BatchTimeout(uint8 newForgeL1L2BatchTimeout)
 func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.WatchOpts, sink chan<- *HermezUpdateForgeL1L2BatchTimeout) (event.Subscription, error) {
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateForgeL1L2BatchTimeout")
@@ -2266,9 +1847,9 @@ func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.Watch
 	}), nil
 }
 
-// ParseUpdateForgeL1L2BatchTimeout is a log parse operation binding the contract event 0x6df2dd186033d1083891be7a27ab27fd480094118e909a1780f9c2a2c49a7aa0.
+// ParseUpdateForgeL1L2BatchTimeout is a log parse operation binding the contract event 0xff6221781ac525b04585dbb55cd2ebd2a92c828ca3e42b23813a1137ac974431.
 //
-// Solidity: event UpdateForgeL1L2BatchTimeout(uint256 newForgeL1L2BatchTimeout)
+// Solidity: event UpdateForgeL1L2BatchTimeout(uint8 newForgeL1L2BatchTimeout)
 func (_Hermez *HermezFilterer) ParseUpdateForgeL1L2BatchTimeout(log types.Log) (*HermezUpdateForgeL1L2BatchTimeout, error) {
 	event := new(HermezUpdateForgeL1L2BatchTimeout)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateForgeL1L2BatchTimeout", log); err != nil {
@@ -2352,9 +1933,9 @@ type HermezWithdrawEvent struct {
 	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterWithdrawEvent is a free log retrieval operation binding the contract event 0x1b9bced8515592200c493bd85d3b9e8508df7ea146ee075c252f034d226fdac6.
+// FilterWithdrawEvent is a free log retrieval operation binding the contract event 0x92dd99230eaf5e3f1238fbbd0d72b34e8c2ad759886075bfc9f426ebeeea34f0.
 //
-// Solidity: event WithdrawEvent(uint256 indexed idx, uint256 indexed numExitRoot, bool indexed instantWithdraw)
+// Solidity: event WithdrawEvent(uint48 indexed idx, uint48 indexed numExitRoot, bool indexed instantWithdraw)
 func (_Hermez *HermezFilterer) FilterWithdrawEvent(opts *bind.FilterOpts, idx []*big.Int, numExitRoot []*big.Int, instantWithdraw []bool) (*HermezWithdrawEventIterator, error) {
 
 	var idxRule []interface{}
@@ -2377,9 +1958,9 @@ func (_Hermez *HermezFilterer) FilterWithdrawEvent(opts *bind.FilterOpts, idx []
 	return &HermezWithdrawEventIterator{contract: _Hermez.contract, event: "WithdrawEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchWithdrawEvent is a free log subscription operation binding the contract event 0x1b9bced8515592200c493bd85d3b9e8508df7ea146ee075c252f034d226fdac6.
+// WatchWithdrawEvent is a free log subscription operation binding the contract event 0x92dd99230eaf5e3f1238fbbd0d72b34e8c2ad759886075bfc9f426ebeeea34f0.
 //
-// Solidity: event WithdrawEvent(uint256 indexed idx, uint256 indexed numExitRoot, bool indexed instantWithdraw)
+// Solidity: event WithdrawEvent(uint48 indexed idx, uint48 indexed numExitRoot, bool indexed instantWithdraw)
 func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink chan<- *HermezWithdrawEvent, idx []*big.Int, numExitRoot []*big.Int, instantWithdraw []bool) (event.Subscription, error) {
 
 	var idxRule []interface{}
@@ -2427,9 +2008,9 @@ func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink cha
 	}), nil
 }
 
-// ParseWithdrawEvent is a log parse operation binding the contract event 0x1b9bced8515592200c493bd85d3b9e8508df7ea146ee075c252f034d226fdac6.
+// ParseWithdrawEvent is a log parse operation binding the contract event 0x92dd99230eaf5e3f1238fbbd0d72b34e8c2ad759886075bfc9f426ebeeea34f0.
 //
-// Solidity: event WithdrawEvent(uint256 indexed idx, uint256 indexed numExitRoot, bool indexed instantWithdraw)
+// Solidity: event WithdrawEvent(uint48 indexed idx, uint48 indexed numExitRoot, bool indexed instantWithdraw)
 func (_Hermez *HermezFilterer) ParseWithdrawEvent(log types.Log) (*HermezWithdrawEvent, error) {
 	event := new(HermezWithdrawEvent)
 	if err := _Hermez.contract.UnpackLog(event, "WithdrawEvent", log); err != nil {
