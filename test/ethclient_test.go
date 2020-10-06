@@ -62,6 +62,19 @@ func TestClientEth(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, int64(2), block.EthBlockNum)
 	assert.Equal(t, time.Unix(2, 0), block.Timestamp)
+
+	// Add a token
+	tokenAddr := ethCommon.HexToAddress("0x44021007485550008e0f9f1f7b506c7d970ad8ce")
+	constants := eth.ERC20Consts{
+		Name:     "FooBar",
+		Symbol:   "FOO",
+		Decimals: 4,
+	}
+	c.CtlAddERC20(tokenAddr, constants)
+	c.CtlMineBlock()
+	tokenConstants, err := c.EthERC20Consts(tokenAddr)
+	require.Nil(t, err)
+	assert.Equal(t, constants, *tokenConstants)
 }
 
 func TestClientAuction(t *testing.T) {
