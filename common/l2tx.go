@@ -118,3 +118,52 @@ func L2TxsToPoolL2Txs(txs []*L2Tx) []*PoolL2Tx {
 	}
 	return r
 }
+
+// Bytes encodes a L2Tx into []byte
+func (tx *L2Tx) Bytes(nLevels int) ([]byte, error) {
+	fromIdxNumBytes := nLevels / 8 //nolint:gomnd
+	toIdxNumBytes := nLevels / 8   //nolint:gomnd
+	var b []byte
+	fromIdxBytes, err := tx.FromIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	b = append(b, fromIdxBytes[6-fromIdxNumBytes:]...)
+	toIdxBytes, err := tx.ToIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	b = append(b, toIdxBytes[6-toIdxNumBytes:]...)
+	amountFloat16, err := NewFloat16(tx.Amount)
+	if err != nil {
+		return nil, err
+	}
+	b = append(b, amountFloat16.Bytes()...)
+	b = append(b, byte(tx.Fee))
+	return b[:], nil
+}
+
+// L2TxFromBytes decodes a L1Tx from []byte
+func L2TxFromBytes(b []byte, nLevels int) (*L2Tx, error) {
+	fromIdxNumByte := nLevels / 8              //nolint:gomnd
+	toIdxNumByte := fromIdxNumByte + nLevels/8 //nolint:gomnd
+	amountLenBytes := 2
+	amountNumByte := toIdxNumByte + amountLenBytes
+	tx := &L2Tx{}
+	var err error
+	var paddedFromIdxBytes [6]byte
+	copy(paddedFromIdxBytes[6-len(b[0:fromIdxNumByte]):], b[0:fromIdxNumByte])
+	tx.FromIdx, err = IdxFromBytes(paddedFromIdxBytes[:])
+	if err != nil {
+		return nil, err
+	}
+	var paddedToIdxBytes [6]byte
+	copy(paddedToIdxBytes[6-len(b[fromIdxNumByte:toIdxNumByte]):6], b[fromIdxNumByte:toIdxNumByte])
+	tx.ToIdx, err = IdxFromBytes(paddedToIdxBytes[:])
+	if err != nil {
+		return nil, err
+	}
+	tx.Amount = Float16FromBytes(b[toIdxNumByte:amountNumByte]).BigInt()
+	tx.Fee = FeeSelector(b[amountNumByte])
+	return tx, nil
+}

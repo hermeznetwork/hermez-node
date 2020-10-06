@@ -6,12 +6,15 @@ import (
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 const (
 	// L1TxBytesLen is the length of the byte array that represents the L1Tx
 	L1TxBytesLen = 72
+	// L1CoordinatorTxBytesLen is the length of the byte array that represents the L1CoordinatorTx
+	L1CoordinatorTxBytesLen = 101
 )
 
 // L1Tx is a struct that represents a L1 tx
@@ -136,7 +139,7 @@ func (tx *L1Tx) Tx() *Tx {
 }
 
 // Bytes encodes a L1Tx into []byte
-func (tx *L1Tx) Bytes(nLevels int) ([]byte, error) {
+func (tx *L1Tx) Bytes() ([]byte, error) {
 	var b [L1TxBytesLen]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
 	pkComp := tx.FromBJJ.Compress()
@@ -162,6 +165,21 @@ func (tx *L1Tx) Bytes(nLevels int) ([]byte, error) {
 		return nil, err
 	}
 	copy(b[66:72], toIdxBytes[:])
+	return b[:], nil
+}
+
+// BytesCoordinatorTx encodes a L1CoordinatorTx into []byte
+func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, error) {
+	var b [L1CoordinatorTxBytesLen]byte
+	v := compressedSignatureBytes[64]
+	s := compressedSignatureBytes[32:64]
+	r := compressedSignatureBytes[0:32]
+	b[0] = v
+	copy(b[1:33], s)
+	copy(b[33:65], r)
+	pkComp := tx.FromBJJ.Compress()
+	copy(b[65:97], pkComp[:])
+	copy(b[97:101], tx.TokenID.Bytes())
 	return b[:], nil
 }
 
@@ -200,5 +218,54 @@ func L1TxFromBytes(b []byte) (*L1Tx, error) {
 		return nil, err
 	}
 
+	return tx, nil
+}
+
+// L1TxFromCoordinatorBytes decodes a L1Tx from []byte
+func L1TxFromCoordinatorBytes(b []byte) (*L1Tx, error) {
+	if len(b) != L1CoordinatorTxBytesLen {
+		return nil, fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d", 101, len(b))
+	}
+
+	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n98")
+	bytesMessage2 := []byte("I authorize this babyjubjub key for hermez rollup account creation")
+
+	tx := &L1Tx{}
+	var err error
+	// Ethereum adds 27 to v
+	v := b[0] - byte(27) //nolint:gomnd
+	s := b[1:33]
+	r := b[33:65]
+
+	pkCompB := b[65:97]
+	var pkComp babyjub.PublicKeyComp
+	copy(pkComp[:], pkCompB)
+	tx.FromBJJ, err = pkComp.Decompress()
+	if err != nil {
+		return nil, err
+	}
+	tx.TokenID, err = TokenIDFromBytes(b[97:101])
+	if err != nil {
+		return nil, err
+	}
+
+	var data []byte
+	data = append(data, bytesMessage1...)
+	data = append(data, bytesMessage2...)
+	data = append(data, pkCompB...)
+	var signature []byte
+	signature = append(signature, r[:]...)
+	signature = append(signature, s[:]...)
+	signature = append(signature, v)
+	hash := crypto.Keccak256(data)
+	pubKeyBytes, err := crypto.Ecrecover(hash, signature)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := crypto.UnmarshalPubkey(pubKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+	tx.FromEthAddr = crypto.PubkeyToAddress(*pubKey)
 	return tx, nil
 }
