@@ -109,7 +109,7 @@ func TestBatches(t *testing.T) {
 	// Test GetLastL1TxsNum
 	fetchedLastL1TxsNum, err = historyDB.GetLastL1TxsNum()
 	assert.NoError(t, err)
-	assert.Equal(t, batches[nBatches-1].ForgeL1TxsNum, *fetchedLastL1TxsNum)
+	assert.Equal(t, *batches[nBatches-1].ForgeL1TxsNum, *fetchedLastL1TxsNum)
 }
 
 func TestBids(t *testing.T) {

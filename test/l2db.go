@@ -53,10 +53,14 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 			*usd = *token.USD * amountF
 			*absFee = fee.Percentage() * *usd
 		}
+		toIdx := new(common.Idx)
+		*toIdx = common.Idx(i + 1)
+		toEthAddr := new(ethCommon.Address)
+		*toEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
 		tx := &common.PoolL2Tx{
 			FromIdx:           common.Idx(i),
-			ToIdx:             common.Idx(i + 1),
-			ToEthAddr:         ethCommon.BigToAddress(big.NewInt(int64(i))),
+			ToIdx:             toIdx,
+			ToEthAddr:         toEthAddr,
 			ToBJJ:             privK.Public(),
 			TokenID:           token.TokenID,
 			Amount:            big.NewInt(int64(i)),
@@ -67,7 +71,6 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 			State:             state,
 			Signature:         privK.SignPoseidon(big.NewInt(int64(i))),
 			Timestamp:         time.Now().UTC(),
-			TokenSymbol:       token.Symbol,
 			AbsoluteFee:       absFee,
 			AbsoluteFeeUpdate: token.USDUpdate,
 		}
@@ -77,17 +80,31 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 			panic(err)
 		}
 		if i%2 == 0 { // Optional parameters: rq
-			tx.RqFromIdx = common.Idx(i)
-			tx.RqToIdx = common.Idx(i + 1)
-			tx.RqToEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
+			rqFromIdx := new(common.Idx)
+			*rqFromIdx = common.Idx(i)
+			tx.RqFromIdx = rqFromIdx
+			rqToIdx := new(common.Idx)
+			*rqToIdx = common.Idx(i + 1)
+			tx.RqToIdx = rqToIdx
+			rqToEthAddr := new(ethCommon.Address)
+			*rqToEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
+			tx.RqToEthAddr = rqToEthAddr
 			tx.RqToBJJ = privK.Public()
-			tx.RqTokenID = common.TokenID(i)
+			rqTokenID := new(common.TokenID)
+			*rqTokenID = common.TokenID(i)
+			tx.RqTokenID = rqTokenID
 			tx.RqAmount = big.NewInt(int64(i))
-			tx.RqFee = common.FeeSelector(i)
-			tx.RqNonce = uint64(i)
+			rqFee := new(common.FeeSelector)
+			*rqFee = common.FeeSelector(i)
+			tx.RqFee = rqFee
+			rqNonce := new(uint64)
+			*rqNonce = uint64(i)
+			tx.RqNonce = rqNonce
 		}
 		if i%3 == 0 { // Optional parameters: things that get updated "a posteriori"
-			tx.BatchNum = 489
+			batchNum := new(common.BatchNum)
+			*batchNum = 489
+			tx.BatchNum = batchNum
 		}
 		txs = append(txs, tx)
 	}

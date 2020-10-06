@@ -17,14 +17,15 @@ CREATE TABLE coordinator (
 
 CREATE TABLE batch (
     batch_num BIGINT PRIMARY KEY,
-    eth_block_num BIGINT REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     forger_addr BYTEA NOT NULL, -- fake foreign key for coordinator
     fees_collected BYTEA NOT NULL,
     state_root BYTEA NOT NULL,
     num_accounts BIGINT NOT NULL,
     exit_root BYTEA NOT NULL,
     forge_l1_txs_num BIGINT,
-    slot_num BIGINT NOT NULL
+    slot_num BIGINT NOT NULL,
+    total_fees_usd NUMERIC
 );
 
 CREATE TABLE exit_tree (
@@ -80,7 +81,7 @@ CREATE TABLE tx (
     id BYTEA PRIMARY KEY,
     type VARCHAR(40) NOT NULL,
     position INT NOT NULL,
-    from_idx BIGINT NOT NULL,
+    from_idx BIGINT,
     to_idx BIGINT NOT NULL,
     amount BYTEA NOT NULL,
     amount_f NUMERIC NOT NULL,
@@ -470,9 +471,9 @@ CREATE TABLE consensus_vars (
 CREATE TABLE tx_pool (
     tx_id BYTEA PRIMARY KEY,
     from_idx BIGINT NOT NULL,
-    to_idx BIGINT NOT NULL,
-    to_eth_addr BYTEA NOT NULL,
-    to_bjj BYTEA NOT NULL,
+    to_idx BIGINT,
+    to_eth_addr BYTEA,
+    to_bjj BYTEA,
     token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
     amount BYTEA NOT NULL,
     amount_f NUMERIC NOT NULL,

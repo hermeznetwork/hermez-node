@@ -2,6 +2,7 @@ package statedb
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -11,7 +12,7 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
-func concatEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) []byte {
+func concatEthAddrBJJ(addr *ethCommon.Address, pk *babyjub.PublicKey) []byte {
 	pkComp := pk.Compress()
 	var b []byte
 	b = append(b, addr.Bytes()...)
@@ -24,7 +25,7 @@ func concatEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) []byte {
 // - key: EthAddr & BabyJubJub PublicKey Compressed, value: idx
 // If Idx already exist for the given EthAddr & BJJ, the remaining Idx will be
 // always the smallest one.
-func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk *babyjub.PublicKey) error {
+func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr *ethCommon.Address, pk *babyjub.PublicKey) error {
 	oldIdx, err := s.GetIdxByEthAddrBJJ(addr, pk)
 	if err == nil {
 		// EthAddr & BJJ already have an Idx
@@ -70,7 +71,10 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 // GetIdxByEthAddr returns the smallest Idx in the StateDB for the given
 // Ethereum Address. Will return common.Idx(0) and error in case that Idx is
 // not found in the StateDB.
-func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
+func (s *StateDB) GetIdxByEthAddr(addr *ethCommon.Address) (common.Idx, error) {
+	if addr == nil {
+		return 0, errors.New("addr cannot be nil")
+	}
 	b, err := s.db.Get(addr.Bytes())
 	if err != nil {
 		return common.Idx(0), ErrToIdxNotFound
@@ -87,7 +91,10 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
 // address, it's ignored in the query.  If `pk` is nil, it's ignored in the
 // query.  Will return common.Idx(0) and error in case that Idx is not found in
 // the StateDB.
-func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) (common.Idx, error) {
+func (s *StateDB) GetIdxByEthAddrBJJ(addr *ethCommon.Address, pk *babyjub.PublicKey) (common.Idx, error) {
+	if addr == nil {
+		return 0, errors.New("addr cannot be nil")
+	}
 	if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk == nil {
 		// case ToEthAddr!=0 && ToBJJ=0
 		return s.GetIdxByEthAddr(addr)

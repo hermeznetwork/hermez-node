@@ -68,13 +68,17 @@ func (tx *L2Tx) Tx() *Tx {
 	*fee = tx.Fee
 	nonce := new(Nonce)
 	*nonce = tx.Nonce
+	fromIdx := new(Idx)
+	*fromIdx = tx.FromIdx
+	toIdx := new(Idx)
+	*toIdx = tx.ToIdx
 	return &Tx{
 		IsL1:        false,
 		TxID:        tx.TxID,
 		Type:        tx.Type,
 		Position:    tx.Position,
-		FromIdx:     tx.FromIdx,
-		ToIdx:       tx.ToIdx,
+		FromIdx:     fromIdx,
+		ToIdx:       toIdx,
 		Amount:      tx.Amount,
 		USD:         tx.USD,
 		AmountFloat: amountFloat,
@@ -89,11 +93,15 @@ func (tx *L2Tx) Tx() *Tx {
 // PoolL2Tx returns the data structure of PoolL2Tx with the parameters of a
 // L2Tx filled
 func (tx *L2Tx) PoolL2Tx() *PoolL2Tx {
+	batchNum := new(BatchNum)
+	*batchNum = tx.BatchNum
+	toIdx := new(Idx)
+	*toIdx = tx.ToIdx
 	return &PoolL2Tx{
 		TxID:     tx.TxID,
-		BatchNum: tx.BatchNum,
+		BatchNum: batchNum,
 		FromIdx:  tx.FromIdx,
-		ToIdx:    tx.ToIdx,
+		ToIdx:    toIdx,
 		Amount:   tx.Amount,
 		Fee:      tx.Fee,
 		Nonce:    tx.Nonce,

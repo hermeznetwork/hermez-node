@@ -247,13 +247,19 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 }
 
 // GetAccount returns the account for the given Idx
-func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
+func (s *StateDB) GetAccount(idx *common.Idx) (*common.Account, error) {
+	if idx == nil {
+		return nil, errors.New("idx cannot be nil")
+	}
 	return getAccountInTreeDB(s.db, idx)
 }
 
 // getAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  GetAccount returns the account for the given Idx
-func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
+func getAccountInTreeDB(sto db.Storage, idx *common.Idx) (*common.Account, error) {
+	if idx == nil {
+		return nil, errors.New("idx cannot be nil")
+	}
 	idxBytes, err := idx.Bytes()
 	if err != nil {
 		return nil, err
@@ -275,12 +281,12 @@ func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
-	cpp, err := createAccountInTreeDB(s.db, s.mt, idx, account)
+	cpp, err := createAccountInTreeDB(s.db, s.mt, &idx, account)
 	if err != nil {
 		return cpp, err
 	}
 	// store idx by EthAddr & BJJ
-	err = s.setIdxByEthAddrBJJ(idx, account.EthAddr, account.PublicKey)
+	err = s.setIdxByEthAddrBJJ(idx, &account.EthAddr, account.PublicKey)
 	return cpp, err
 }
 
@@ -288,7 +294,10 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 // from ExitTree.  Creates a new Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx *common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+	if idx == nil {
+		return nil, errors.New("idx cannot be nil")
+	}
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
@@ -337,7 +346,10 @@ func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 // UpdateAccount updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func (s *StateDB) UpdateAccount(idx *common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+	if idx == nil {
+		return nil, errors.New("idx cannot be nil")
+	}
 	return updateAccountInTreeDB(s.db, s.mt, idx, account)
 }
 
@@ -345,7 +357,10 @@ func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkl
 // from ExitTree.  Updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx *common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+	if idx == nil {
+		return nil, errors.New("idx cannot be nil")
+	}
 	// store at the DB the key: v, and value: account.Bytes()
 	v, err := account.HashValue()
 	if err != nil {

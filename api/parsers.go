@@ -149,9 +149,6 @@ func parseQueryTxType(c querier) (*common.TxType, error) {
 	case common.TxTypeExit:
 		ret := common.TxTypeExit
 		return &ret, nil
-	case common.TxTypeWithdrawn:
-		ret := common.TxTypeWithdrawn
-		return &ret, nil
 	case common.TxTypeTransfer:
 		ret := common.TxTypeTransfer
 		return &ret, nil

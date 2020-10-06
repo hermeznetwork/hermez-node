@@ -1,6 +1,7 @@
 package l2db
 
 import (
+	"errors"
 	"math/big"
 	"time"
 
@@ -49,7 +50,10 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 }
 
 // GetAccountCreationAuth returns an account creation authorization into the DB
-func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.AccountCreationAuth, error) {
+func (l2db *L2DB) GetAccountCreationAuth(addr *ethCommon.Address) (*common.AccountCreationAuth, error) {
+	if addr == nil {
+		return nil, errors.New("addr cannot be nil")
+	}
 	auth := new(common.AccountCreationAuth)
 	return auth, meddler.QueryRow(
 		l2db.db, auth,
@@ -64,8 +68,8 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	type withouUSD struct {
 		TxID        common.TxID          `meddler:"tx_id"`
 		FromIdx     common.Idx           `meddler:"from_idx"`
-		ToIdx       common.Idx           `meddler:"to_idx"`
-		ToEthAddr   ethCommon.Address    `meddler:"to_eth_addr"`
+		ToIdx       *common.Idx          `meddler:"to_idx"`
+		ToEthAddr   *ethCommon.Address   `meddler:"to_eth_addr"`
 		ToBJJ       *babyjub.PublicKey   `meddler:"to_bjj"`
 		TokenID     common.TokenID       `meddler:"token_id"`
 		Amount      *big.Int             `meddler:"amount,bigint"`
@@ -75,15 +79,15 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 		State       common.PoolL2TxState `meddler:"state"`
 		Signature   *babyjub.Signature   `meddler:"signature"`
 		Timestamp   time.Time            `meddler:"timestamp,utctime"`
-		BatchNum    common.BatchNum      `meddler:"batch_num,zeroisnull"`
-		RqFromIdx   common.Idx           `meddler:"rq_from_idx,zeroisnull"`
-		RqToIdx     common.Idx           `meddler:"rq_to_idx,zeroisnull"`
-		RqToEthAddr ethCommon.Address    `meddler:"rq_to_eth_addr"`
+		BatchNum    *common.BatchNum     `meddler:"batch_num"`
+		RqFromIdx   *common.Idx          `meddler:"rq_from_idx"`
+		RqToIdx     *common.Idx          `meddler:"rq_to_idx"`
+		RqToEthAddr *ethCommon.Address   `meddler:"rq_to_eth_addr"`
 		RqToBJJ     *babyjub.PublicKey   `meddler:"rq_to_bjj"`
-		RqTokenID   common.TokenID       `meddler:"rq_token_id,zeroisnull"`
+		RqTokenID   *common.TokenID      `meddler:"rq_token_id"`
 		RqAmount    *big.Int             `meddler:"rq_amount,bigintnull"`
-		RqFee       common.FeeSelector   `meddler:"rq_fee,zeroisnull"`
-		RqNonce     uint64               `meddler:"rq_nonce,zeroisnull"`
+		RqFee       *common.FeeSelector  `meddler:"rq_fee"`
+		RqNonce     *uint64              `meddler:"rq_nonce"`
 		Type        common.TxType        `meddler:"tx_type"`
 	}
 	return meddler.Insert(l2db.db, "tx_pool", &withouUSD{
@@ -115,8 +119,8 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 
 // selectPoolTx select part of queries to get common.PoolL2Tx
 const selectPoolTx = `SELECT tx_pool.*, token.usd * tx_pool.amount_f AS value_usd, 
-fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f AS fee_usd, token.usd_update, 
-token.symbol AS token_symbol FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
+fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f AS fee_usd, token.usd_update  
+FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
 // GetTx return the specified Tx
 func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {

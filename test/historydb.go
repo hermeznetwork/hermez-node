@@ -74,7 +74,9 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 			SlotNum:     common.SlotNum(i),
 		}
 		if i%2 == 0 {
-			batch.ForgeL1TxsNum = int64(i)
+			toForge := new(int64)
+			*toForge = int64(i)
+			batch.ForgeL1TxsNum = toForge
 		}
 		batches = append(batches, batch)
 	}
@@ -155,7 +157,7 @@ func GenL1Txs(
 			panic(err)
 		}
 		tx = *nTx
-		if batches[i%len(batches)].ForgeL1TxsNum != 0 {
+		if batches[i%len(batches)].ForgeL1TxsNum != nil {
 			// Add already forged txs
 			tx.BatchNum = &batches[i%len(batches)].BatchNum
 			setFromToAndAppend(fromIdx, tx, i, nUserTxs, userAddr, accounts, &userTxs, &othersTxs)
@@ -170,13 +172,13 @@ func GenL1Txs(
 }
 
 // GetNextToForgeNumAndBatch returns the next BatchNum and ForgeL1TxsNum to be added
-func GetNextToForgeNumAndBatch(batches []common.Batch) (common.BatchNum, int64) {
+func GetNextToForgeNumAndBatch(batches []common.Batch) (common.BatchNum, *int64) {
 	batchNum := batches[len(batches)-1].BatchNum + 1
-	var toForgeL1TxsNum int64
+	toForgeL1TxsNum := new(int64)
 	found := false
 	for i := len(batches) - 1; i >= 0; i-- {
-		if batches[i].ForgeL1TxsNum != 0 {
-			toForgeL1TxsNum = batches[i].ForgeL1TxsNum + 1
+		if batches[i].ForgeL1TxsNum != nil {
+			*toForgeL1TxsNum = *batches[i].ForgeL1TxsNum + 1
 			found = true
 			break
 		}
@@ -218,7 +220,9 @@ func setFromToAndAppend(
 				panic(err)
 			}
 		}
-		tx.FromIdx = from.Idx
+		fromIdx := new(common.Idx)
+		*fromIdx = from.Idx
+		tx.FromIdx = fromIdx
 		tx.FromEthAddr = from.EthAddr
 		tx.FromBJJ = from.PublicKey
 		tx.ToIdx = to.Idx
@@ -232,7 +236,9 @@ func setFromToAndAppend(
 		if err != nil {
 			panic(err)
 		}
-		tx.FromIdx = from.Idx
+		fromIdx := new(common.Idx)
+		*fromIdx = from.Idx
+		tx.FromIdx = fromIdx
 		tx.FromEthAddr = from.EthAddr
 		tx.FromBJJ = from.PublicKey
 		tx.ToIdx = to.Idx
@@ -434,9 +440,6 @@ func randomTxType(seed int) common.TxType {
 	switch seed % 11 {
 	case 0:
 		return common.TxTypeExit
-	//nolint:gomnd
-	case 1:
-		return common.TxTypeWithdrawn
 	//nolint:gomnd
 	case 2:
 		return common.TxTypeTransfer

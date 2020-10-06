@@ -96,11 +96,16 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 				batchCoordinatorL1Txs = append(batchCoordinatorL1Txs, &tx)
 				idx++
 			}
-
+			toIdx := new(common.Idx)
+			*toIdx = accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx
+			toEthAddr := new(ethCommon.Address)
+			*toEthAddr = accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr
+			rqToEthAddr := new(ethCommon.Address)
+			*rqToEthAddr = accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr
 			tx := common.PoolL2Tx{
 				FromIdx:     accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
-				ToIdx:       accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx,
-				ToEthAddr:   accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
+				ToIdx:       toIdx,
+				ToEthAddr:   toEthAddr,
 				ToBJJ:       accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
 				TokenID:     inst.TokenID,
 				Amount:      big.NewInt(int64(inst.Amount)),
@@ -108,8 +113,8 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 				Nonce:       accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce,
 				State:       common.PoolL2TxStatePending,
 				Timestamp:   time.Now(),
-				BatchNum:    common.BatchNum(0),
-				RqToEthAddr: accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
+				BatchNum:    nil,
+				RqToEthAddr: rqToEthAddr,
 				RqToBJJ:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
 				Type:        common.TxTypeTransfer,
 			}
@@ -130,8 +135,10 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]*common.L1Tx,
 			batchPoolL2Txs = append(batchPoolL2Txs, &tx)
 
 		case common.TxTypeExit, common.TxTypeForceExit:
+			fromIdx := new(common.Idx)
+			*fromIdx = accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx
 			tx := common.L1Tx{
-				FromIdx: accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
+				FromIdx: fromIdx,
 				ToIdx:   common.Idx(1), // as is an Exit
 				TokenID: inst.TokenID,
 				Amount:  big.NewInt(int64(inst.Amount)),
