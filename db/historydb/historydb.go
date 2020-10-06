@@ -195,7 +195,7 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	// TODO: check the coordinator info
 	return db.BulkInsert(
 		d,
-		"INSERT INTO bid (slot_num, forger_addr, bid_value, eth_block_num) VALUES %s;",
+		"INSERT INTO bid (slot_num, bid_value, eth_block_num, bidder_addr) VALUES %s;",
 		bids[:],
 	)
 }
@@ -217,7 +217,7 @@ func (hdb *HistoryDB) AddCoordinators(coordinators []common.Coordinator) error {
 func (hdb *HistoryDB) addCoordinators(d meddler.DB, coordinators []common.Coordinator) error {
 	return db.BulkInsert(
 		d,
-		"INSERT INTO coordinator (forger_addr, eth_block_num, withdraw_addr, url) VALUES %s;",
+		"INSERT INTO coordinator (bidder_addr, forger_addr, eth_block_num, url) VALUES %s;",
 		coordinators[:],
 	)
 }

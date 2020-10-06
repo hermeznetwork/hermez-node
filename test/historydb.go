@@ -363,10 +363,10 @@ func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 	coords := []common.Coordinator{}
 	for i := 0; i < nCoords; i++ {
 		coords = append(coords, common.Coordinator{
-			EthBlockNum:  blocks[i%len(blocks)].EthBlockNum,
-			Forger:       ethCommon.BigToAddress(big.NewInt(int64(i))),
-			WithdrawAddr: ethCommon.BigToAddress(big.NewInt(int64(i))),
-			URL:          "https://foo.bar",
+			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
+			Forger:      ethCommon.BigToAddress(big.NewInt(int64(i))),
+			Bidder:      ethCommon.BigToAddress(big.NewInt(int64(i))),
+			URL:         "https://foo.bar",
 		})
 	}
 	return coords
@@ -380,7 +380,7 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 			SlotNum:     common.SlotNum(i),
 			BidValue:    big.NewInt(int64(i)),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
-			ForgerAddr:  coords[i%len(blocks)].Forger,
+			Bidder:      coords[i%len(blocks)].Bidder,
 		})
 	}
 	return bids

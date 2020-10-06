@@ -8,11 +8,11 @@ CREATE TABLE block (
 );
 
 CREATE TABLE coordinator (
+    bidder_addr BYTEA NOT NULL,
     forger_addr BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    withdraw_addr BYTEA NOT NULL,
     url VARCHAR(200) NOT NULL,
-    PRIMARY KEY (forger_addr, eth_block_num)
+    PRIMARY KEY (bidder_addr, eth_block_num)
 );
 
 CREATE TABLE batch (
@@ -43,7 +43,7 @@ CREATE TABLE bid (
     slot_num BIGINT NOT NULL,
     bid_value BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    forger_addr BYTEA NOT NULL, -- fake foreign key for coordinator
+    bidder_addr BYTEA NOT NULL, -- fake foreign key for coordinator
     PRIMARY KEY (slot_num, bid_value)
 );
 

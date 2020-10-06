@@ -35,8 +35,9 @@ var (
 	bootCoordinatorAddressConst = ethCommon.HexToAddress(bootCoordinatorAddressStr)
 	tokenERC777AddressStr       = "0xf784709d2317D872237C4bC22f867d1BAe2913AB" //nolint:gosec
 	tokenERC777AddressConst     = ethCommon.HexToAddress(tokenERC777AddressStr)
-	tokenERC20AddressStr        = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5"
+	tokenERC20AddressStr        = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5" //nolint:gosec
 	tokenERC20AddressConst      = ethCommon.HexToAddress(tokenERC20AddressStr)
+	tokenHEZAddressConst        = tokenERC777AddressConst
 	hermezRollupAddressStr      = "0xEcc0a6dbC0bb4D51E4F84A315a9e5B0438cAD4f0"
 	hermezRollupAddressConst    = ethCommon.HexToAddress(hermezRollupAddressStr)
 	wdelayerAddressStr          = "0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe"
@@ -132,7 +133,7 @@ func TestMain(m *testing.M) {
 		// Controllable Governance Address
 
 		ethereumClientGov := NewEthereumClient(ethClient, accountGov, ks, nil)
-		auctionClientTest, err = NewAuctionClient(ethereumClientGov, auctionTestAddressConst, tokenERC777AddressConst)
+		auctionClientTest, err = NewAuctionClient(ethereumClientGov, auctionTestAddressConst, tokenHEZAddressConst)
 		if err != nil {
 			panic(err)
 		}

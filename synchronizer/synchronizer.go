@@ -429,7 +429,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		}
 
 		// Get L2Txs
-		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2Txs) // TODO: This is a big uggly, find a better way
+		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData) // TODO: This is a big uggly, find a better way
 
 		// Get exitTree
 		// TODO: Get createdAccounts from ProcessTxs()
@@ -502,18 +502,18 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 		bid := &common.Bid{
 			SlotNum:     common.SlotNum(eNewBid.Slot),
 			BidValue:    eNewBid.BidAmount,
-			ForgerAddr:  eNewBid.CoordinatorForger,
+			Bidder:      eNewBid.Bidder,
 			EthBlockNum: blockNum,
 		}
 		auctionData.bids = append(auctionData.bids, bid)
 	}
 
 	// Get Coordinators
-	for _, eNewCoordinator := range auctionEvents.NewCoordinator {
+	for _, eNewCoordinator := range auctionEvents.SetCoordinator {
 		coordinator := &common.Coordinator{
-			Forger:       eNewCoordinator.ForgerAddress,
-			WithdrawAddr: eNewCoordinator.WithdrawalAddress,
-			URL:          eNewCoordinator.CoordinatorURL,
+			Bidder: eNewCoordinator.BidderAddress,
+			Forger: eNewCoordinator.ForgerAddress,
+			URL:    eNewCoordinator.CoordinatorURL,
 		}
 		auctionData.coordinators = append(auctionData.coordinators, coordinator)
 	}
@@ -529,18 +529,6 @@ func (s *Synchronizer) auctionSync(blockNum int64) (*auctionData, error) {
 	// TODO: NewDefaultSlotSetBid
 	// TODO: NewForge
 	// TODO: HEZClaimed
-
-	// TODO: Think about separating new coordinaors from coordinator updated
-
-	// Get Coordinators from updates
-	for _, eCoordinatorUpdated := range auctionEvents.CoordinatorUpdated {
-		coordinator := &common.Coordinator{
-			Forger:       eCoordinatorUpdated.ForgerAddress,
-			WithdrawAddr: eCoordinatorUpdated.WithdrawalAddress,
-			URL:          eCoordinatorUpdated.CoordinatorURL,
-		}
-		auctionData.coordinators = append(auctionData.coordinators, coordinator)
-	}
 
 	// TODO: VARS
 	// TODO: CONSTANTS

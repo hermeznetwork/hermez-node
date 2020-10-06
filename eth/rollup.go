@@ -5,16 +5,14 @@ import (
 	"math/big"
 	"strings"
 
-	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
+	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -40,12 +38,10 @@ const (
 	// RollupConstL1UserTotalBytes [20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx +
 	// [2 bytes] loadAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx
 	RollupConstL1UserTotalBytes = 72
-	// RollupConstMaxL1UserTX Maximum L1-user transactions allowed to be queued in a batch
-	RollupConstMaxL1UserTX = 128
-	// RollupConstMaxL1TX Maximum L1 transactions allowed to be queued in a batch
-	RollupConstMaxL1TX = 256
-	// RollupConstRfield Modulus zkSNARK
-	RollupConstRfield = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+	// RollupConstMaxL1UserTx Maximum L1-user transactions allowed to be queued in a batch
+	RollupConstMaxL1UserTx = 128
+	// RollupConstMaxL1Tx Maximum L1 transactions allowed to be queued in a batch
+	RollupConstMaxL1Tx = 256
 	// RollupConstInputSHAConstantBytes [6 bytes] lastIdx + [6 bytes] newLastIdx  + [32 bytes] stateRoot  + [32 bytes] newStRoot  + [32 bytes] newExitRoot +
 	// [_MAX_L1_TX * _L1_USER_TOTALBYTES bytes] l1TxsData + totalL2TxsDataLength + feeIdxCoordinatorLength + [2 bytes] chainID =
 	// 18542 bytes +  totalL2TxsDataLength + feeIdxCoordinatorLength
@@ -65,6 +61,9 @@ var (
 	// This non-ethereum accounts can be created by the coordinator and allow users to have a rollup
 	// account without needing an ethereum address
 	RollupConstEthAddressInternalOnly = ethCommon.HexToAddress("0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF")
+	// RollupConstRfield Modulus zkSNARK
+	RollupConstRfield, _ = new(big.Int).SetString(
+		"21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
 
 	// RollupConstERC1820 ERC1820Registry address
 	RollupConstERC1820 = ethCommon.HexToAddress("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24")
@@ -73,8 +72,8 @@ var (
 
 	// RollupConstRecipientInterfaceHash ERC777 recipient interface hash
 	RollupConstRecipientInterfaceHash = crypto.Keccak256([]byte("ERC777TokensRecipient"))
-	// RollupConstPerformL1UserTXSignature the signature of the function that can be called thru an ERC777 `send`
-	RollupConstPerformL1UserTXSignature = crypto.Keccak256([]byte("addL1Transaction(uint256,uint48,uint16,uint16,uint32,uint48)"))
+	// RollupConstPerformL1UserTxSignature the signature of the function that can be called thru an ERC777 `send`
+	RollupConstPerformL1UserTxSignature = crypto.Keccak256([]byte("addL1Transaction(uint256,uint48,uint16,uint16,uint32,uint48)"))
 	// RollupConstAddTokenSignature the signature of the function that can be called thru an ERC777 `send`
 	RollupConstAddTokenSignature = crypto.Keccak256([]byte("addToken(address)"))
 	// RollupConstSendSignature ERC777 Signature
@@ -130,7 +129,7 @@ var (
 
 // RollupPublicConstants are the constants of the Rollup Smart Contract
 type RollupPublicConstants struct {
-	AbsoluteMaxL1L2BatchTimeout uint8
+	AbsoluteMaxL1L2BatchTimeout int64
 	TokenHEZ                    ethCommon.Address
 	Verifiers                   []RollupVerifierStruct
 	HermezAuctionContract       ethCommon.Address
@@ -163,8 +162,8 @@ func NewQueueStruct() *QueueStruct {
 
 // RollupVerifierStruct is the information about verifiers of the Rollup Smart Contract
 type RollupVerifierStruct struct {
-	MaxTx   *big.Int
-	NLevels *big.Int
+	MaxTx   int64
+	NLevels int64
 }
 
 // RollupState represents the state of the Rollup in the Smart Contract
@@ -184,8 +183,8 @@ type RollupState struct {
 
 // RollupEventL1UserTx is an event of the Rollup Smart Contract
 type RollupEventL1UserTx struct {
-	ToForgeL1TxsNum uint64 // QueueIndex       *big.Int
-	Position        uint8  // TransactionIndex *big.Int
+	ToForgeL1TxsNum int64 // QueueIndex       *big.Int
+	Position        int   // TransactionIndex *big.Int
 	L1Tx            common.L1Tx
 }
 
@@ -250,7 +249,7 @@ func NewRollupEvents() RollupEvents {
 // RollupForgeBatchArgs are the arguments to the ForgeBatch function in the Rollup Smart Contract
 //nolint:structcheck,unused
 type RollupForgeBatchArgs struct {
-	NewLastIdx        uint64
+	NewLastIdx        int64
 	NewStRoot         *big.Int
 	NewExitRoot       *big.Int
 	L1CoordinatorTxs  []*common.L1Tx
@@ -453,23 +452,24 @@ func (c *RollupClient) RollupConstants() (*RollupPublicConstants, error) {
 		if err != nil {
 			return err
 		}
-		rollupConstants.AbsoluteMaxL1L2BatchTimeout, err = hermez.ABSOLUTEMAXL1L2BATCHTIMEOUT(nil)
+		absoluteMaxL1L2BatchTimeout, err := hermez.ABSOLUTEMAXL1L2BATCHTIMEOUT(nil)
 		if err != nil {
 			return err
 		}
+		rollupConstants.AbsoluteMaxL1L2BatchTimeout = int64(absoluteMaxL1L2BatchTimeout)
 		rollupConstants.TokenHEZ, err = hermez.TokenHEZ(nil)
 		if err != nil {
 			return err
 		}
 		for i := int64(0); i < int64(LenVerifiers); i++ {
-			newRollupVerifier := new(RollupVerifierStruct)
+			var newRollupVerifier RollupVerifierStruct
 			rollupVerifier, err := hermez.RollupVerifiers(nil, big.NewInt(i))
 			if err != nil {
 				return err
 			}
-			newRollupVerifier.MaxTx = rollupVerifier.MaxTx
-			newRollupVerifier.NLevels = rollupVerifier.NLevels
-			rollupConstants.Verifiers = append(rollupConstants.Verifiers, *newRollupVerifier)
+			newRollupVerifier.MaxTx = rollupVerifier.MaxTx.Int64()
+			newRollupVerifier.NLevels = rollupVerifier.NLevels.Int64()
+			rollupConstants.Verifiers = append(rollupConstants.Verifiers, newRollupVerifier)
 		}
 		rollupConstants.HermezAuctionContract, err = hermez.HermezAuctionContract(nil)
 		if err != nil {
@@ -492,7 +492,7 @@ func (c *RollupClient) RollupConstants() (*RollupPublicConstants, error) {
 }
 
 var (
-	logHermezL1UserTXEvent               = crypto.Keccak256Hash([]byte("L1UserTxEvent(uint64,uint8,bytes)"))
+	logHermezL1UserTxEvent               = crypto.Keccak256Hash([]byte("L1UserTxEvent(uint64,uint8,bytes)"))
 	logHermezAddToken                    = crypto.Keccak256Hash([]byte("AddToken(address,uint32)"))
 	logHermezForgeBatch                  = crypto.Keccak256Hash([]byte("ForgeBatch(uint64)"))
 	logHermezUpdateForgeL1L2BatchTimeout = crypto.Keccak256Hash([]byte("UpdateForgeL1L2BatchTimeout(uint8)"))
@@ -526,7 +526,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			return nil, nil, ErrBlockHashMismatchEvent
 		}
 		switch vLog.Topics[0] {
-		case logHermezL1UserTXEvent:
+		case logHermezL1UserTxEvent:
 			var L1UserTxAux RollupEventL1UserTxAux
 			var L1UserTx RollupEventL1UserTx
 			err := c.contractAbi.Unpack(&L1UserTxAux, "L1UserTxEvent", vLog.Data)
@@ -537,8 +537,8 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			if err != nil {
 				return nil, nil, err
 			}
-			L1UserTx.ToForgeL1TxsNum = new(big.Int).SetBytes(vLog.Topics[1][:]).Uint64()
-			L1UserTx.Position = uint8(new(big.Int).SetBytes(vLog.Topics[2][:]).Uint64())
+			L1UserTx.ToForgeL1TxsNum = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
+			L1UserTx.Position = int(new(big.Int).SetBytes(vLog.Topics[2][:]).Int64())
 			L1UserTx.L1Tx = *L1Tx
 			rollupEvents.L1UserTx = append(rollupEvents.L1UserTx, L1UserTx)
 		case logHermezAddToken:
@@ -552,6 +552,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 		case logHermezForgeBatch:
 			var forgeBatch RollupEventForgeBatch
 			forgeBatch.BatchNum = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
+			forgeBatch.EthTxHash = vLog.TxHash
 			rollupEvents.ForgeBatch = append(rollupEvents.ForgeBatch, forgeBatch)
 		case logHermezUpdateForgeL1L2BatchTimeout:
 			var updateForgeL1L2BatchTimeout RollupEventUpdateForgeL1L2BatchTimeout
@@ -592,12 +593,14 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 	if err != nil {
 		return nil, err
 	}
-	aux := new(RollupForgeBatchArgsAux)
-	method.Inputs.Unpack(aux, txData)
-	rollupForgeBatchArgs := new(RollupForgeBatchArgs)
+	var aux RollupForgeBatchArgsAux
+	if err := method.Inputs.Unpack(&aux, txData); err != nil {
+		return nil, err
+	}
+	var rollupForgeBatchArgs RollupForgeBatchArgs
 	rollupForgeBatchArgs.L1Batch = aux.L1Batch
 	rollupForgeBatchArgs.NewExitRoot = aux.NewExitRoot
-	rollupForgeBatchArgs.NewLastIdx = aux.NewLastIdx
+	rollupForgeBatchArgs.NewLastIdx = int64(aux.NewLastIdx)
 	rollupForgeBatchArgs.NewStRoot = aux.NewStRoot
 	rollupForgeBatchArgs.ProofA = aux.ProofA
 	rollupForgeBatchArgs.ProofB = aux.ProofB
@@ -606,30 +609,31 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 
 	numTxsL1 := len(aux.L1CoordinatorTxs) / common.L1TxBytesLen
 	for i := 0; i < numTxsL1; i++ {
-		L1Tx, err := common.L1TxFromCoordinatorBytes(aux.L1CoordinatorTxs[i*common.L1CoordinatorTxBytesLen : (i+1)*common.L1CoordinatorTxBytesLen])
+		l1Tx, err := common.L1TxFromCoordinatorBytes(aux.L1CoordinatorTxs[i*common.L1CoordinatorTxBytesLen : (i+1)*common.L1CoordinatorTxBytesLen])
 		if err != nil {
 			return nil, err
 		}
-		rollupForgeBatchArgs.L1CoordinatorTxs = append(rollupForgeBatchArgs.L1CoordinatorTxs, L1Tx)
+		rollupForgeBatchArgs.L1CoordinatorTxs = append(rollupForgeBatchArgs.L1CoordinatorTxs, l1Tx)
 	}
 	rollupConsts, err := c.RollupConstants()
 	if err != nil {
 		return nil, err
 	}
-	nLevels := rollupConsts.Verifiers[rollupForgeBatchArgs.VerifierIdx].NLevels.Int64()
+	nLevels := rollupConsts.Verifiers[rollupForgeBatchArgs.VerifierIdx].NLevels
 	lenL2TxsBytes := int((nLevels/8)*2 + 2 + 1)
 	numTxsL2 := len(aux.L2TxsData) / lenL2TxsBytes
 	for i := 0; i < numTxsL2; i++ {
-		L2Tx, err := common.L2TxFromBytes(aux.L2TxsData[i*lenL2TxsBytes:(i+1)*lenL2TxsBytes], int(nLevels))
+		l2Tx, err := common.L2TxFromBytes(aux.L2TxsData[i*lenL2TxsBytes:(i+1)*lenL2TxsBytes], int(nLevels))
 		if err != nil {
 			return nil, err
 		}
-		rollupForgeBatchArgs.L2TxsData = append(rollupForgeBatchArgs.L2TxsData, L2Tx)
+		rollupForgeBatchArgs.L2TxsData = append(rollupForgeBatchArgs.L2TxsData, l2Tx)
 	}
-	lenFeeIdxCoordinatorBytes := int(nLevels / 8)
+	lenFeeIdxCoordinatorBytes := int(nLevels / 8) //nolint:gomnd
 	numFeeIdxCoordinator := len(aux.FeeIdxCoordinator) / lenFeeIdxCoordinatorBytes
 	for i := 0; i < numFeeIdxCoordinator; i++ {
 		var paddedFeeIdx [6]byte
+		// TODO: This check is not necessary: the first case will always work.  Test it before removing the if.
 		if lenFeeIdxCoordinatorBytes < common.IdxBytesLen {
 			copy(paddedFeeIdx[6-lenFeeIdxCoordinatorBytes:], aux.FeeIdxCoordinator[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
 		} else {
@@ -641,7 +645,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		}
 		rollupForgeBatchArgs.FeeIdxCoordinator = append(rollupForgeBatchArgs.FeeIdxCoordinator, FeeIdxCoordinator)
 	}
-	return rollupForgeBatchArgs, nil
+	return &rollupForgeBatchArgs, nil
 	// tx := client.TransactionByHash(ethTxHash) -> types.Transaction
 	// txData := types.Transaction -> Data()
 	// m := abi.MethodById(txData) -> Method
