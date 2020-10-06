@@ -12,3 +12,19 @@ You must compile the contracts to get the `.bin` and `.abi` files. The contracts
 Specifically they have been processed in the commit with hash: `745e8d588496d7762d4084a54bafd4435061ae35`
 
 > abigen version 1.9.21
+
+---
+
+ERC20 go code was generated with the following command:
+```
+abigen --sol erc20.sol --pkg erc20 --out erc20/erc20.go
+```
+
+Versions:
+```
+ $ abigen --version
+abigen version 1.9.21-stable-0287d548
+ $ solc --version
+solc, the solidity compiler commandline interface
+Version: 0.7.1+commit.f4a555be.Linux.g++
+```

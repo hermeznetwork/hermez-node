@@ -176,6 +176,7 @@ type EthereumBlock struct {
 	Time       int64
 	Hash       ethCommon.Hash
 	ParentHash ethCommon.Hash
+	Tokens     map[ethCommon.Address]eth.ERC20Consts
 	// state      ethState
 }
 
@@ -200,14 +201,15 @@ func (b *Block) Next() *Block {
 	blockNext := b.copy()
 	blockNext.Rollup.Events = eth.NewRollupEvents()
 	blockNext.Auction.Events = eth.NewAuctionEvents()
-	blockNext.Eth = &EthereumBlock{
-		BlockNum:   b.Eth.BlockNum + 1,
-		ParentHash: b.Eth.Hash,
-	}
+
+	blockNext.Eth.BlockNum = b.Eth.BlockNum + 1
+	blockNext.Eth.ParentHash = b.Eth.Hash
+
 	blockNext.Rollup.Constants = b.Rollup.Constants
 	blockNext.Auction.Constants = b.Auction.Constants
 	blockNext.Rollup.Eth = blockNext.Eth
 	blockNext.Auction.Eth = blockNext.Eth
+
 	return blockNext
 }
 
@@ -360,6 +362,7 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 			Time:       timer.Time(),
 			Hash:       hasher.Next(),
 			ParentHash: ethCommon.Hash{},
+			Tokens:     make(map[ethCommon.Address]eth.ERC20Consts),
 		},
 	}
 	blockCurrent.Rollup.Eth = blockCurrent.Eth
@@ -506,6 +509,23 @@ func (c *Client) EthTransactionReceipt(ctx context.Context, txHash ethCommon.Has
 	}
 
 	return nil, nil
+}
+
+// CtlAddERC20 adds an ERC20 token to the blockchain.
+func (c *Client) CtlAddERC20(tokenAddr ethCommon.Address, constants eth.ERC20Consts) {
+	nextBlock := c.nextBlock()
+	e := nextBlock.Eth
+	e.Tokens[tokenAddr] = constants
+}
+
+// EthERC20Consts returns the constants defined for a particular ERC20 Token instance.
+func (c *Client) EthERC20Consts(tokenAddr ethCommon.Address) (*eth.ERC20Consts, error) {
+	currentBlock := c.currentBlock()
+	e := currentBlock.Eth
+	if constants, ok := e.Tokens[tokenAddr]; ok {
+		return &constants, nil
+	}
+	return nil, fmt.Errorf("tokenAddr not found")
 }
 
 // func newHeader(number *big.Int) *types.Header {

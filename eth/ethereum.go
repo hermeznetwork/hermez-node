@@ -13,8 +13,16 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/eth/contracts/erc20"
 	"github.com/hermeznetwork/hermez-node/log"
 )
+
+// ERC20Consts are the constants defined in a particular ERC20 Token instance
+type ERC20Consts struct {
+	Name     string
+	Symbol   string
+	Decimals uint64
+}
 
 // EthereumInterface is the interface to Ethereum
 type EthereumInterface interface {
@@ -23,6 +31,8 @@ type EthereumInterface interface {
 	EthBlockByNumber(context.Context, int64) (*common.Block, error)
 	EthAddress() (*ethCommon.Address, error)
 	EthTransactionReceipt(context.Context, ethCommon.Hash) (*types.Receipt, error)
+
+	EthERC20Consts(ethCommon.Address) (*ERC20Consts, error)
 }
 
 var (
@@ -263,4 +273,31 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 		Hash:        block.Hash(),
 	}
 	return b, nil
+}
+
+// EthERC20Consts returns the constants defined for a particular ERC20 Token instance.
+func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20Consts, error) {
+	instance, err := erc20.NewERC20(tokenAddress, c.client)
+	if err != nil {
+		return nil, err
+	}
+	name, err := instance.Name(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	symbol, err := instance.Symbol(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	decimals, err := instance.Decimals(nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20Consts{
+		Name:     name,
+		Symbol:   symbol,
+		Decimals: uint64(decimals),
+	}, nil
 }
