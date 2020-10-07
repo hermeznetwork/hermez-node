@@ -45,9 +45,9 @@ type Instruction struct {
 	Type       common.TxType // D: Deposit, T: Transfer, E: ForceExit
 }
 
-// Instructions contains the full Set of Instructions representing a full code
-type Instructions struct {
-	Instructions []*Instruction
+// ParsedSet contains the full Set of Instructions representing a full code
+type ParsedSet struct {
+	Instructions []Instruction
 	Accounts     []string
 	TokenIDs     []common.TokenID
 }
@@ -389,8 +389,8 @@ func idxTokenIDToString(idx string, tid common.TokenID) string {
 }
 
 // Parse parses through reader
-func (p *Parser) Parse() (Instructions, error) {
-	var instructions Instructions
+func (p *Parser) Parse() (*ParsedSet, error) {
+	instructions := &ParsedSet{}
 	i := 0
 	accounts := make(map[string]bool)
 	tokenids := make(map[common.TokenID]bool)
@@ -405,13 +405,13 @@ func (p *Parser) Parse() (Instructions, error) {
 		}
 		if err == newEvent {
 			i++
-			instructions.Instructions = append(instructions.Instructions, instruction)
+			instructions.Instructions = append(instructions.Instructions, *instruction)
 			continue
 		}
 		if err != nil {
 			return instructions, fmt.Errorf("error parsing line %d: %s, err: %s", i, instruction.Literal, err.Error())
 		}
-		instructions.Instructions = append(instructions.Instructions, instruction)
+		instructions.Instructions = append(instructions.Instructions, *instruction)
 		accounts[idxTokenIDToString(instruction.From, instruction.TokenID)] = true
 		if instruction.Type == common.TxTypeTransfer { // type: Transfer
 			accounts[idxTokenIDToString(instruction.To, instruction.TokenID)] = true

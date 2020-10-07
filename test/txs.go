@@ -6,13 +6,32 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/require"
 )
+
+type TestContext struct {
+	t                 *testing.T
+	Instructions      []Instruction
+	accountsNames     []string
+	accounts          map[string]*Account
+	TokenIDs          []common.TokenID
+	l1CreatedAccounts map[string]*Account
+}
+
+func NewTestContext(t *testing.T) *TestContext {
+	return &TestContext{
+		t:                 t,
+		accounts:          make(map[string]*Account),
+		l1CreatedAccounts: make(map[string]*Account),
+	}
+}
 
 // Account contains the data related to a testing account
 type Account struct {
@@ -22,12 +41,105 @@ type Account struct {
 	Nonce common.Nonce
 }
 
-// GenerateKeys generates BabyJubJub & Address keys for the given list of
+// func (tc *TestContext) GenerateBlocks() []BlockData {
+//
+//         return nil
+// }
+
+// GeneratePoolL2Txs returns an array of common.PoolL2Tx from a given set. It
+// uses the accounts (keys & nonces) of the TestContext.
+func (tc *TestContext) GeneratePoolL2Txs(set string) []common.PoolL2Tx {
+	parser := NewParser(strings.NewReader(set))
+	parsedSet, err := parser.Parse()
+	require.Nil(tc.t, err)
+
+	tc.Instructions = parsedSet.Instructions
+	tc.accountsNames = parsedSet.Accounts
+	tc.TokenIDs = parsedSet.TokenIDs
+
+	tc.generateKeys(tc.accountsNames)
+
+	txs := []common.PoolL2Tx{}
+	for _, inst := range tc.Instructions {
+		switch inst.Type {
+		case common.TxTypeTransfer:
+			tc.accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce++
+			// if account of receiver does not exist, don't use
+			// ToIdx, and use only ToEthAddr & ToBJJ
+			toIdx := new(common.Idx)
+			if _, ok := tc.l1CreatedAccounts[idxTokenIDToString(inst.To, inst.TokenID)]; !ok {
+				*toIdx = 0
+			} else {
+				*toIdx = tc.accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx
+			}
+			// TODO once common.L{x}Txs parameter pointers is undone, update this lines related to pointers usage
+			toEthAddr := new(ethCommon.Address)
+			*toEthAddr = tc.accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr
+			rqToEthAddr := new(ethCommon.Address)
+			*rqToEthAddr = tc.accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr
+			tx := common.PoolL2Tx{
+				FromIdx:     tc.accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
+				ToIdx:       toIdx,
+				ToEthAddr:   toEthAddr,
+				ToBJJ:       tc.accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
+				TokenID:     inst.TokenID,
+				Amount:      big.NewInt(int64(inst.Amount)),
+				Fee:         common.FeeSelector(inst.Fee),
+				Nonce:       tc.accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce,
+				State:       common.PoolL2TxStatePending,
+				Timestamp:   time.Now(),
+				BatchNum:    nil,
+				RqToEthAddr: rqToEthAddr,
+				RqToBJJ:     tc.accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
+				Type:        common.TxTypeTransfer,
+			}
+			nTx, err := common.NewPoolL2Tx(&tx)
+			if err != nil {
+				panic(err)
+			}
+			tx = *nTx
+			// perform signature and set it to tx.Signature
+			toSign, err := tx.HashToSign()
+			if err != nil {
+				panic(err)
+			}
+			sig := tc.accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.SignPoseidon(toSign)
+			tx.Signature = sig
+
+			txs = append(txs, tx)
+		case common.TxTypeExit:
+			tc.accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce++
+			// TODO once common.L{x}Txs parameter pointers is undone, update this lines related to pointers usage
+			toIdx := new(common.Idx)
+			*toIdx = common.Idx(1) // as is an Exit
+			tx := common.PoolL2Tx{
+				FromIdx: tc.accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
+				ToIdx:   toIdx, // as is an Exit
+				TokenID: inst.TokenID,
+				Amount:  big.NewInt(int64(inst.Amount)),
+				Nonce:   tc.accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce,
+				Type:    common.TxTypeExit,
+			}
+			txs = append(txs, tx)
+		default:
+			log.Warnf("instruction type unrecognized: %s", inst.Type)
+			continue
+		}
+	}
+
+	return txs
+}
+
+// generateKeys generates BabyJubJub & Address keys for the given list of
 // account names in a deterministic way. This means, that for the same given
-// 'accNames' the keys will be always the same.
-func GenerateKeys(t *testing.T, accNames []string) map[string]*Account {
+// 'accNames' in a certain order, the keys will be always the same.
+func (tc *TestContext) generateKeys(accNames []string) map[string]*Account {
 	acc := make(map[string]*Account)
 	for i := 1; i < len(accNames)+1; i++ {
+		if _, ok := tc.accounts[accNames[i-1]]; ok {
+			// account already created
+			continue
+		}
 		// babyjubjub key
 		var sk babyjub.PrivateKey
 		copy(sk[:], []byte(strconv.Itoa(i))) // only for testing
@@ -44,15 +156,16 @@ func GenerateKeys(t *testing.T, accNames []string) map[string]*Account {
 			Addr:  addr,
 			Nonce: 0,
 		}
-		acc[accNames[i-1]] = &a
+		tc.accounts[accNames[i-1]] = &a
 	}
 	return acc
 }
 
+/*
 // GenerateTestTxs generates L1Tx & PoolL2Tx in a deterministic way for the
-// given Instructions.
-func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]common.L1Tx, [][]common.L1Tx, [][]common.PoolL2Tx, []common.Token) {
-	accounts := GenerateKeys(t, instructions.Accounts)
+// given ParsedSet.
+func GenerateTestTxs(t *testing.T, parsedSet *ParsedSet) ([][]common.L1Tx, [][]common.L1Tx, [][]common.PoolL2Tx, []common.Token) {
+	accounts := generateKeys(t, parsedSet.Accounts)
 	l1CreatedAccounts := make(map[string]*Account)
 
 	var batchL1Txs []common.L1Tx
@@ -62,7 +175,7 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]common.L1Tx, 
 	var coordinatorL1Txs [][]common.L1Tx
 	var poolL2Txs [][]common.PoolL2Tx
 	idx := 256
-	for _, inst := range instructions.Instructions {
+	for _, inst := range parsedSet.Instructions {
 		switch inst.Type {
 		case common.TxTypeCreateAccountDeposit:
 			tx := common.L1Tx{
@@ -176,8 +289,9 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]common.L1Tx, 
 // Instructions code
 func GenerateTestTxsFromSet(t *testing.T, set string) ([][]common.L1Tx, [][]common.L1Tx, [][]common.PoolL2Tx, []common.Token) {
 	parser := NewParser(strings.NewReader(set))
-	instructions, err := parser.Parse()
+	parsedSet, err := parser.Parse()
 	require.Nil(t, err)
 
-	return GenerateTestTxs(t, instructions)
+	return GenerateTestTxs(t, parsedSet)
 }
+*/

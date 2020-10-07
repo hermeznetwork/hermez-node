@@ -1,59 +1,46 @@
 package test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateTestL2Txs(t *testing.T) {
-	s := `
-		A (1): 10
-		A (2): 20
-		B (1): 5
-		A-B (1): 6 1
-		B-C (1): 3 1
-		> advance batch
-		C-A (1): 3 1
-		A-B (1): 1 1
-		A-B (2): 15 1
-		User0   (1): 20
-		User1 (3) : 20
-		User0-User1 (1): 15 1
-		User1-User0 (3): 15 1
-		B-D (2): 3 1
+func TestGeneratePoolL2Txs(t *testing.T) {
+	set := `
+		Transfer(1) A-B: 6 (1)
+		Transfer(1) B-C: 3 (1)
+		Transfer(1) C-A: 3 (1)
+		Transfer(1) A-B: 1 (1)
+		Transfer(2) A-B: 15 (1)
+		Transfer(1) User0-User1: 15 (1)
+		Transfer(3) User1-User0: 15 (1)
+		Transfer(2) B-D: 3 (1)
+		Exit(1) A: 3
 	`
-	parser := NewParser(strings.NewReader(s))
-	instructions, err := parser.Parse()
-	assert.Nil(t, err)
+	tc := NewTestContext(t)
+	poolL2Txs := tc.GeneratePoolL2Txs(set)
+	assert.Equal(t, 9, len(poolL2Txs))
+	assert.Equal(t, common.TxTypeTransfer, poolL2Txs[0].Type)
+	assert.Equal(t, common.TxTypeExit, poolL2Txs[8].Type)
+	assert.Equal(t, tc.accounts["B1"].Addr.Hex(), poolL2Txs[0].ToEthAddr.Hex())
+	assert.Equal(t, tc.accounts["B1"].BJJ.Public().String(), poolL2Txs[0].ToBJJ.String())
+	assert.Equal(t, tc.accounts["User11"].Addr.Hex(), poolL2Txs[5].ToEthAddr.Hex())
+	assert.Equal(t, tc.accounts["User11"].BJJ.Public().String(), poolL2Txs[5].ToBJJ.String())
 
-	l1txs, coordinatorL1txs, l2txs, _ := GenerateTestTxs(t, instructions)
-	assert.Equal(t, 2, len(l1txs))
-	assert.Equal(t, 3, len(l1txs[0]))
-	assert.Equal(t, 1, len(coordinatorL1txs[0]))
-	assert.Equal(t, 2, len(l2txs[0]))
-	assert.Equal(t, 2, len(l1txs[1]))
-	assert.Equal(t, 4, len(coordinatorL1txs[1]))
-	assert.Equal(t, 6, len(l2txs[1]))
+	assert.Equal(t, common.Nonce(1), poolL2Txs[0].Nonce)
+	assert.Equal(t, common.Nonce(2), poolL2Txs[3].Nonce)
+	assert.Equal(t, common.Nonce(3), poolL2Txs[8].Nonce)
 
-	accounts := GenerateKeys(t, instructions.Accounts)
-
-	// l1txs
-	assert.Equal(t, common.TxTypeCreateAccountDeposit, l1txs[0][0].Type)
-	assert.Equal(t, accounts["A1"].BJJ.Public().String(), l1txs[0][0].FromBJJ.String())
-	assert.Equal(t, accounts["A2"].BJJ.Public().String(), l1txs[0][1].FromBJJ.String())
-	assert.Equal(t, accounts["B1"].BJJ.Public().String(), l1txs[0][2].FromBJJ.String())
-	assert.Equal(t, accounts["User13"].BJJ.Public().String(), l1txs[1][1].FromBJJ.String())
-
-	// l2txs
-	assert.Equal(t, common.TxTypeTransfer, l2txs[0][0].Type)
-	assert.Equal(t, common.Idx(256), l2txs[0][0].FromIdx)
-	assert.Equal(t, common.Idx(258), l2txs[0][0].ToIdx)
-	assert.Equal(t, accounts["B1"].BJJ.Public().String(), l2txs[0][0].ToBJJ.String())
-	assert.Equal(t, accounts["B1"].Addr.Hex(), l2txs[0][0].ToEthAddr.Hex())
-	assert.Equal(t, common.Nonce(0), l2txs[0][0].Nonce)
-	assert.Equal(t, common.Nonce(1), l2txs[1][1].Nonce)
-	assert.Equal(t, common.FeeSelector(1), l2txs[0][0].Fee)
+	// load another set in the same TestContext
+	set = `
+		Transfer(1) A-B: 6 (1)
+		Transfer(1) B-C: 3 (1)
+		Transfer(1) A-C: 3 (1)
+	`
+	poolL2Txs = tc.GeneratePoolL2Txs(set)
+	assert.Equal(t, common.Nonce(4), poolL2Txs[0].Nonce)
+	assert.Equal(t, common.Nonce(2), poolL2Txs[1].Nonce)
+	assert.Equal(t, common.Nonce(5), poolL2Txs[2].Nonce)
 }
