@@ -168,15 +168,16 @@ func TestCoordinator(t *testing.T) {
 
 	var timer timer
 	ethClientSetup := test.NewClientSetupExample()
-	addr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
-	ethClient := test.NewClient(true, &timer, &addr, ethClientSetup)
+	bidder := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
+	forger := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 
 	// Bid for slot 2 and 4
-	_, err := ethClient.AuctionRegisterCoordinator(addr, "https://foo.bar")
+	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.Nil(t, err)
-	_, err = ethClient.AuctionBid(2, big.NewInt(9999), addr)
+	_, err = ethClient.AuctionBid(2, big.NewInt(9999))
 	require.Nil(t, err)
-	_, err = ethClient.AuctionBid(4, big.NewInt(9999), addr)
+	_, err = ethClient.AuctionBid(4, big.NewInt(9999))
 	require.Nil(t, err)
 
 	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient)

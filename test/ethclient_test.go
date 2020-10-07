@@ -78,7 +78,8 @@ func TestClientEth(t *testing.T) {
 }
 
 func TestClientAuction(t *testing.T) {
-	addrWithdraw := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
+	addrBidder1 := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
+	addrBidder2 := ethCommon.HexToAddress("0xc27cadc437d067a6ec869502cc9f7F834cFc087a")
 	addrForge := ethCommon.HexToAddress("0xCfAA413eEb796f328620a3630Ae39124cabcEa92")
 	addrForge2 := ethCommon.HexToAddress("0x1fCb4ac309428feCc61B1C8cA5823C15A5e1a800")
 
@@ -89,37 +90,38 @@ func TestClientAuction(t *testing.T) {
 	clientSetup.AuctionVariables.DefaultSlotSetBid = [6]*big.Int{
 		big.NewInt(1000), big.NewInt(1100), big.NewInt(1200),
 		big.NewInt(1300), big.NewInt(1400), big.NewInt(1500)}
-	c := NewClient(true, &timer, &addrWithdraw, clientSetup)
+	c := NewClient(true, &timer, &addrBidder1, clientSetup)
 
 	// Check several cases in which bid doesn't succed, and also do 2 successful bids.
 
-	_, err := c.AuctionBid(0, big.NewInt(1), addrForge)
+	_, err := c.AuctionBid(0, big.NewInt(1))
 	assert.Equal(t, errBidClosed, err)
 
-	_, err = c.AuctionBid(4322, big.NewInt(1), addrForge)
+	_, err = c.AuctionBid(4322, big.NewInt(1))
 	assert.Equal(t, errBidNotOpen, err)
 
 	// 101 % 6 = 5;  defaultSlotSetBid[5] = 1500;  1500 + 10% = 1650
-	_, err = c.AuctionBid(101, big.NewInt(1650), addrForge)
+	_, err = c.AuctionBid(101, big.NewInt(1650))
 	assert.Equal(t, errCoordNotReg, err)
 
-	_, err = c.AuctionRegisterCoordinator(addrForge, "https://foo.bar")
+	_, err = c.AuctionSetCoordinator(addrForge, "https://foo.bar")
 	assert.Nil(t, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(1), addrForge)
+	_, err = c.AuctionBid(3, big.NewInt(1))
 	assert.Equal(t, errBidBelowMin, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(1650), addrForge)
+	_, err = c.AuctionBid(3, big.NewInt(1650))
 	assert.Nil(t, err)
 
-	_, err = c.AuctionRegisterCoordinator(addrForge2, "https://foo2.bar")
+	c.CtlSetAddr(addrBidder2)
+	_, err = c.AuctionSetCoordinator(addrForge2, "https://foo2.bar")
 	assert.Nil(t, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(16), addrForge2)
+	_, err = c.AuctionBid(3, big.NewInt(16))
 	assert.Equal(t, errBidBelowMin, err)
 
 	// 1650 + 10% = 1815
-	_, err = c.AuctionBid(3, big.NewInt(1815), addrForge2)
+	_, err = c.AuctionBid(3, big.NewInt(1815))
 	assert.Nil(t, err)
 
 	c.CtlMineBlock()
@@ -177,8 +179,8 @@ func TestClientRollup(t *testing.T) {
 		NewStRoot:         big.NewInt(1),
 		NewExitRoot:       big.NewInt(100),
 		L1CoordinatorTxs:  []*common.L1Tx{},
-		L2Txs:             []*common.L2Tx{},
-		FeeIdxCoordinator: make([]common.Idx, eth.FeeIdxCoordinatorLen),
+		L2TxsData:         []*common.L2Tx{},
+		FeeIdxCoordinator: make([]common.Idx, eth.RollupConstFeeIdxCoordinatorLen),
 		VerifierIdx:       0,
 		L1Batch:           true,
 	})
@@ -214,8 +216,8 @@ func TestClientRollup(t *testing.T) {
 		NewStRoot:         big.NewInt(1),
 		NewExitRoot:       big.NewInt(100),
 		L1CoordinatorTxs:  []*common.L1Tx{},
-		L2Txs:             []*common.L2Tx{},
-		FeeIdxCoordinator: make([]common.Idx, eth.FeeIdxCoordinatorLen),
+		L2TxsData:         []*common.L2Tx{},
+		FeeIdxCoordinator: make([]common.Idx, eth.RollupConstFeeIdxCoordinatorLen),
 		VerifierIdx:       0,
 		L1Batch:           true,
 	}

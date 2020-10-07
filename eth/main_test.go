@@ -25,20 +25,27 @@ var password = "pass"
 
 // Smart Contract Addresses
 var (
-	// auctionAddressStr           = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5"
-	// wdelayerAddressStr          = "0x1A1FEe7EeD918BD762173e4dc5EfDB8a78C924A8"
-	auctionAddressStr           = "0x8B5B7a6055E54a36fF574bbE40cf2eA68d5554b3"
+	auctionAddressStr           = "0x500D1d6A4c7D8Ae28240b47c8FCde034D827fD5e"
 	auctionAddressConst         = ethCommon.HexToAddress(auctionAddressStr)
+	auctionTestAddressStr       = "0x1d80315fac6aBd3EfeEbE97dEc44461ba7556160"
+	auctionTestAddressConst     = ethCommon.HexToAddress(auctionTestAddressStr)
 	donationAddressStr          = "0x6c365935CA8710200C7595F0a72EB6023A7706Cd"
 	donationAddressConst        = ethCommon.HexToAddress(donationAddressStr)
 	bootCoordinatorAddressStr   = "0xc783df8a850f42e7f7e57013759c285caa701eb6"
 	bootCoordinatorAddressConst = ethCommon.HexToAddress(bootCoordinatorAddressStr)
-	tokenHezAddressStr          = "0xf4e77E5Da47AC3125140c470c71cBca77B5c638c" //nolint:gosec
-	tokenHezAddressConst        = ethCommon.HexToAddress(tokenHezAddressStr)
-	hermezRollupAddressStr      = "0xc4905364b78a742ccce7B890A89514061E47068D"
+	tokenERC777AddressStr       = "0xf784709d2317D872237C4bC22f867d1BAe2913AB" //nolint:gosec
+	tokenERC777AddressConst     = ethCommon.HexToAddress(tokenERC777AddressStr)
+	tokenERC20AddressStr        = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5" //nolint:gosec
+	tokenERC20AddressConst      = ethCommon.HexToAddress(tokenERC20AddressStr)
+	tokenHEZAddressConst        = tokenERC777AddressConst
+	hermezRollupAddressStr      = "0xEcc0a6dbC0bb4D51E4F84A315a9e5B0438cAD4f0"
 	hermezRollupAddressConst    = ethCommon.HexToAddress(hermezRollupAddressStr)
-	wdelayerAddressStr          = "0x20Ce94F404343aD2752A2D01b43fa407db9E0D00"
+	wdelayerAddressStr          = "0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe"
 	wdelayerAddressConst        = ethCommon.HexToAddress(wdelayerAddressStr)
+	wdelayerTestAddressStr      = "0x52d3b94181f8654db2530b0fEe1B19173f519C52"
+	wdelayerTestAddressConst    = ethCommon.HexToAddress(wdelayerTestAddressStr)
+	safetyAddressStr            = "0xE5904695748fe4A84b40b3fc79De2277660BD1D3"
+	safetyAddressConst          = ethCommon.HexToAddress(safetyAddressStr)
 )
 
 // Ethereum Accounts
@@ -126,12 +133,19 @@ func TestMain(m *testing.M) {
 		// Controllable Governance Address
 
 		ethereumClientGov := NewEthereumClient(ethClient, accountGov, ks, nil)
-		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHezAddressConst)
+		auctionClientTest, err = NewAuctionClient(ethereumClientGov, auctionTestAddressConst, tokenHEZAddressConst)
 		if err != nil {
 			panic(err)
 		}
-		rollupClient = NewRollupClient(ethereumClientGov, hermezRollupAddressConst)
+		rollupClient, err = NewRollupClient(ethereumClientGov, hermezRollupAddressConst)
+		if err != nil {
+			panic(err)
+		}
 		wdelayerClient, err = NewWDelayerClient(ethereumClientGov, wdelayerAddressConst)
+		if err != nil {
+			panic(err)
+		}
+		wdelayerClientTest, err = NewWDelayerClient(ethereumClientGov, wdelayerTestAddressConst)
 		if err != nil {
 			panic(err)
 		}

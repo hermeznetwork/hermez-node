@@ -34,7 +34,7 @@ type RollupBlock struct {
 	Vars      eth.RollupVariables
 	Events    eth.RollupEvents
 	Txs       map[ethCommon.Hash]*types.Transaction
-	Constants *eth.RollupConstants
+	Constants *eth.RollupPublicConstants
 	Eth       *EthereumBlock
 }
 
@@ -128,7 +128,7 @@ func (a *AuctionBlock) forge(forger ethCommon.Address) error {
 
 	a.Events.NewForge = append(a.Events.NewForge, eth.AuctionEventNewForge{
 		Forger:      forger,
-		CurrentSlot: slotToForge,
+		SlotToForge: slotToForge,
 	})
 	return nil
 }
@@ -159,7 +159,9 @@ func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool,
 	if !slotState.Fulfilled && (relativeBlock >= int64(a.Vars.SlotDeadline)) {
 		// if the relative block has exceeded the slotDeadline and no batch has been forged, anyone can forge
 		return true, nil
-	} else if slotState.Forger == forger && slotState.BidAmount.Cmp(minBid) >= 0 {
+		// TODO, find the forger set by the Bidder
+	} else if coord, ok := a.State.Coordinators[slotState.Bidder]; ok &&
+		coord.Forger == forger && slotState.BidAmount.Cmp(minBid) >= 0 {
 		// if forger bidAmount has exceeded the minBid it can forge
 		return true, nil
 	} else if a.Vars.BootCoordinator == forger && slotState.BidAmount.Cmp(minBid) == -1 {
@@ -216,7 +218,7 @@ func (b *Block) Next() *Block {
 // ClientSetup is used to initialize the constants of the Smart Contracts and
 // other details of the test Client
 type ClientSetup struct {
-	RollupConstants  *eth.RollupConstants
+	RollupConstants  *eth.RollupPublicConstants
 	RollupVariables  *eth.RollupVariables
 	AuctionConstants *eth.AuctionConstants
 	AuctionVariables *eth.AuctionVariables
@@ -226,36 +228,33 @@ type ClientSetup struct {
 // NewClientSetupExample returns a ClientSetup example with hardcoded realistic values.
 //nolint:gomnd
 func NewClientSetupExample() *ClientSetup {
-	rfield, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
-	if !ok {
-		panic("bad rfield")
-	}
+	// rfield, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	// if !ok {
+	// 	panic("bad rfield")
+	// }
 	initialMinimalBidding, ok := new(big.Int).SetString("10000000000000000000", 10) // 10 * (1e18)
 	if !ok {
 		panic("bad initialMinimalBidding")
 	}
 	tokenHEZ := ethCommon.HexToAddress("0x51D243D62852Bba334DD5cc33f242BAc8c698074")
 	governanceAddress := ethCommon.HexToAddress("0x688EfD95BA4391f93717CF02A9aED9DBD2855cDd")
-	rollupConstants := &eth.RollupConstants{
-		MaxAmountDeposit:   new(big.Int).Lsh(big.NewInt(1), 128),
-		MaxAmountL2:        new(big.Int).Lsh(big.NewInt(1), 192),
-		MaxTokens:          0xffffffff,
-		MaxL1Tx:            256,
-		MaxL1UserTx:        128,
-		Rfield:             rfield,
-		L1CoordinatorBytes: 101,
-		L1UserBytes:        68,
-		L2Bytes:            11,
-		MaxTxVerifiers:     []int{512, 1024, 2048},
-		TokenHEZ:           tokenHEZ,
-		GovernanceAddress:  governanceAddress,
-		SafetyBot:          ethCommon.HexToAddress("0x84d8B79E84fe87B14ad61A554e740f6736bF4c20"),
-		ConsensusContract:  ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
-		WithdrawalContract: ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
+	rollupConstants := &eth.RollupPublicConstants{
+		Verifiers: []eth.RollupVerifierStruct{
+			{
+				MaxTx:   2048,
+				NLevels: 32,
+			},
+		},
+		TokenHEZ:                   tokenHEZ,
+		HermezGovernanceDAOAddress: governanceAddress,
+		SafetyAddress:              ethCommon.HexToAddress("0x84d8B79E84fe87B14ad61A554e740f6736bF4c20"),
+		HermezAuctionContract:      ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
+		WithdrawDelayerContract:    ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
 	}
 	rollupVariables := &eth.RollupVariables{
-		FeeAddToken:    big.NewInt(11),
-		ForgeL1Timeout: 9,
+		FeeAddToken:           big.NewInt(11),
+		ForgeL1L2BatchTimeout: 9,
+		WithdrawalDelay:       80,
 	}
 	auctionConstants := &eth.AuctionConstants{
 		BlocksPerSlot:         40,
@@ -303,7 +302,7 @@ type Client struct {
 	rw               *sync.RWMutex
 	log              bool
 	addr             *ethCommon.Address
-	rollupConstants  *eth.RollupConstants
+	rollupConstants  *eth.RollupPublicConstants
 	auctionConstants *eth.AuctionConstants
 	blocks           map[int64]*Block
 	// state            state
@@ -432,6 +431,11 @@ func (c *Client) nextBlock() *Block {
 
 func (c *Client) currentBlock() *Block {
 	return c.blocks[c.blockNum]
+}
+
+// CtlSetAddr sets the address of the client
+func (c *Client) CtlSetAddr(addr ethCommon.Address) {
+	c.addr = &addr
 }
 
 // CtlMineBlock moves one block forward
@@ -581,7 +585,7 @@ func (c *Client) CtlAddL1TxUser(l1Tx *common.L1Tx) {
 	nextBlock := c.nextBlock()
 	r := nextBlock.Rollup
 	queue := r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
-	if len(queue.L1TxQueue) >= c.rollupConstants.MaxL1UserTx {
+	if len(queue.L1TxQueue) >= eth.RollupConstMaxL1UserTx {
 		r.State.LastToForgeL1TxsNum++
 		r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum] = eth.NewQueueStruct()
 		queue = r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
@@ -901,7 +905,7 @@ func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Tra
 // }
 
 // RollupConstants returns the Constants of the Rollup Smart Contract
-func (c *Client) RollupConstants() (*eth.RollupConstants, error) {
+func (c *Client) RollupConstants() (*eth.RollupPublicConstants, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -1114,8 +1118,8 @@ func (c *Client) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid 
 	return nil, errTODO
 }
 
-// AuctionRegisterCoordinator is the interface to call the smart contract function
-func (c *Client) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL string) (tx *types.Transaction, err error) {
+// AuctionSetCoordinator is the interface to call the smart contract function
+func (c *Client) AuctionSetCoordinator(forger ethCommon.Address, URL string) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1127,26 +1131,24 @@ func (c *Client) AuctionRegisterCoordinator(forgerAddress ethCommon.Address, URL
 	nextBlock := c.nextBlock()
 	a := nextBlock.Auction
 
-	if _, ok := a.State.Coordinators[forgerAddress]; ok {
-		return nil, fmt.Errorf("Already registered")
-	}
-	a.State.Coordinators[forgerAddress] = &eth.Coordinator{
-		WithdrawalAddress: *c.addr,
-		URL:               URL,
+	a.State.Coordinators[*c.addr] = &eth.Coordinator{
+		Forger: forger,
+		URL:    URL,
 	}
 
-	a.Events.NewCoordinator = append(a.Events.NewCoordinator,
-		eth.AuctionEventNewCoordinator{
-			ForgerAddress:     forgerAddress,
-			WithdrawalAddress: *c.addr,
-			CoordinatorURL:    URL,
+	a.Events.SetCoordinator = append(a.Events.SetCoordinator,
+		eth.AuctionEventSetCoordinator{
+			BidderAddress:  *c.addr,
+			ForgerAddress:  forger,
+			CoordinatorURL: URL,
 		})
 
 	type data struct {
+		BidderAddress ethCommon.Address
 		ForgerAddress ethCommon.Address
 		URL           string
 	}
-	return a.addTransaction(newTransaction("registercoordinator", data{forgerAddress, URL})), nil
+	return a.addTransaction(newTransaction("registercoordinator", data{*c.addr, forger, URL})), nil
 }
 
 // AuctionIsRegisteredCoordinator is the interface to call the smart contract function
@@ -1224,7 +1226,7 @@ func (c *Client) AuctionGetSlotSet(slot int64) (*big.Int, error) {
 // }
 
 // AuctionBid is the interface to call the smart contract function
-func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) AuctionBid(slot int64, bidAmount *big.Int) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1252,7 +1254,7 @@ func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Add
 		return nil, errBidBelowMin
 	}
 
-	if _, ok := a.State.Coordinators[forger]; !ok {
+	if _, ok := a.State.Coordinators[*c.addr]; !ok {
 		return nil, errCoordNotReg
 	}
 
@@ -1261,22 +1263,22 @@ func (c *Client) AuctionBid(slot int64, bidAmount *big.Int, forger ethCommon.Add
 		slotState = eth.NewSlotState()
 		a.State.Slots[slot] = slotState
 	}
-	slotState.Forger = forger
+	slotState.Bidder = *c.addr
 	slotState.BidAmount = bidAmount
 
 	a.Events.NewBid = append(a.Events.NewBid,
-		eth.AuctionEventNewBid{Slot: slot, BidAmount: bidAmount, CoordinatorForger: forger})
+		eth.AuctionEventNewBid{Slot: slot, BidAmount: bidAmount, Bidder: *c.addr})
 
 	type data struct {
 		Slot      int64
 		BidAmount *big.Int
-		Forger    ethCommon.Address
+		Bidder    ethCommon.Address
 	}
-	return a.addTransaction(newTransaction("bid", data{slot, bidAmount, forger})), nil
+	return a.addTransaction(newTransaction("bid", data{slot, bidAmount, *c.addr})), nil
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
-func (c *Client) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int, forger ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) AuctionMultiBid(startingSlot int64, endingSlot int64, slotSet [6]bool, maxBid, closedMinBid, budget *big.Int) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1300,12 +1302,7 @@ func (c *Client) AuctionCanForge(forger ethCommon.Address, blockNum int64) (bool
 }
 
 // AuctionForge is the interface to call the smart contract function
-// func (c *Client) AuctionForge(forger ethCommon.Address) (bool, error) {
-// 	return false, errTODO
-// }
-
-// AuctionClaimHEZ is the interface to call the smart contract function
-func (c *Client) AuctionClaimHEZ(claimAddress ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) AuctionForge(forger ethCommon.Address) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1313,6 +1310,29 @@ func (c *Client) AuctionClaimHEZ(claimAddress ethCommon.Address) (tx *types.Tran
 	if c.addr == nil {
 		return nil, eth.ErrAccountNil
 	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// AuctionClaimHEZ is the interface to call the smart contract function
+func (c *Client) AuctionClaimHEZ() (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// AuctionGetClaimableHEZ is the interface to call the smart contract function
+func (c *Client) AuctionGetClaimableHEZ(bidder ethCommon.Address) (*big.Int, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
 
 	log.Error("TODO")
 	return nil, errTODO
