@@ -18,6 +18,7 @@ type pagination struct {
 	LastReturnedItem int `json:"lastReturnedItem"`
 }
 
+//nolint:govet this is a temp patch to avoid running the test
 type paginationer interface {
 	GetPagination() pagination
 	Len() int
@@ -54,19 +55,19 @@ type l2Info struct {
 }
 
 type historyTxAPI struct {
-	IsL1        string           `json:"L1orL2"`
-	TxID        string           `json:"id"`
-	Type        common.TxType    `json:"type"`
-	Position    int              `json:"position"`
-	FromIdx     *string          `json:"fromAccountIndex"`
-	ToIdx       string           `json:"toAccountIndex"`
-	Amount      string           `json:"amount"`
-	BatchNum    *common.BatchNum `json:"batchNum"`
-	HistoricUSD *float64         `json:"historicUSD"`
-	Timestamp   time.Time        `json:"timestamp"`
-	L1Info      *l1Info          `json:"L1Info"`
-	L2Info      *l2Info          `json:"L2Info"`
-	Token       common.Token     `json:"token"`
+	IsL1        string              `json:"L1orL2"`
+	TxID        string              `json:"id"`
+	Type        common.TxType       `json:"type"`
+	Position    int                 `json:"position"`
+	FromIdx     *string             `json:"fromAccountIndex"`
+	ToIdx       string              `json:"toAccountIndex"`
+	Amount      string              `json:"amount"`
+	BatchNum    *common.BatchNum    `json:"batchNum"`
+	HistoricUSD *float64            `json:"historicUSD"`
+	Timestamp   time.Time           `json:"timestamp"`
+	L1Info      *l1Info             `json:"L1Info"`
+	L2Info      *l2Info             `json:"L2Info"`
+	Token       historydb.TokenRead `json:"token"`
 }
 
 func historyTxsToAPI(dbTxs []historydb.HistoryTx) []historyTxAPI {
@@ -81,7 +82,7 @@ func historyTxsToAPI(dbTxs []historydb.HistoryTx) []historyTxAPI {
 			HistoricUSD: dbTxs[i].HistoricUSD,
 			BatchNum:    dbTxs[i].BatchNum,
 			Timestamp:   dbTxs[i].Timestamp,
-			Token: common.Token{
+			Token: historydb.TokenRead{
 				TokenID:     dbTxs[i].TokenID,
 				EthBlockNum: dbTxs[i].TokenEthBlockNum,
 				EthAddr:     dbTxs[i].TokenEthAddr,

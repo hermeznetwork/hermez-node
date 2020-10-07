@@ -230,11 +230,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	if s.zki != nil {
 		// Txs
 		// s.zki.TxCompressedData[s.i] = tx.TxCompressedData() // uncomment once L1Tx.TxCompressedData is ready
-		if tx.FromIdx != nil {
-			s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
-		} else {
-			s.zki.FromIdx[s.i] = big.NewInt(0)
-		}
+		s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
 		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
 		s.zki.OnChain[s.i] = big.NewInt(1)
 
@@ -299,7 +295,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		if err != nil {
 			return nil, nil, false, err
 		}
-		return tx.FromIdx, exitAccount, newExit, nil
+		return &tx.FromIdx, exitAccount, newExit, nil
 	default:
 	}
 
@@ -314,7 +310,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	var err error
 	var auxToIdx common.Idx
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
-	if tx.ToIdx == nil || *tx.ToIdx == common.Idx(0) {
+	if tx.ToIdx == common.Idx(0) {
 		auxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
 		if err != nil {
 			log.Error(err)
@@ -331,7 +327,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
 
 		// fill AuxToIdx if needed
-		if tx.ToIdx == nil {
+		if tx.ToIdx == 0 {
 			// use toIdx that can have been filled by tx.ToIdx or
 			// if tx.Idx==0 (this case), toIdx is filled by the Idx
 			// from db by ToEthAddr&ToBJJ
@@ -339,12 +335,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		}
 
 		s.zki.ToBJJAy[s.i] = tx.ToBJJ.Y
-		if tx.ToEthAddr != nil {
-			s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(*tx.ToEthAddr)
-		} else {
-			// Not sure if this should throw an error
-			s.zki.ToEthAddr[s.i] = big.NewInt(0)
-		}
+		s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(tx.ToEthAddr)
 
 		s.zki.OnChain[s.i] = big.NewInt(0)
 		s.zki.NewAccount[s.i] = big.NewInt(0)
@@ -448,7 +439,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	// in case that the tx is a L1Tx>DepositTransfer
 	var accReceiver *common.Account
 	if transfer {
-		accReceiver, err = s.GetAccount(&tx.ToIdx)
+		accReceiver, err = s.GetAccount(tx.ToIdx)
 		if err != nil {
 			return err
 		}
@@ -478,7 +469,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	// this is done after updating Sender Account (depositer)
 	if transfer {
 		// update receiver account in localStateDB
-		p, err := s.UpdateAccount(&tx.ToIdx, accReceiver)
+		p, err := s.UpdateAccount(tx.ToIdx, accReceiver)
 		if err != nil {
 			return err
 		}
@@ -507,17 +498,14 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
 func (s *StateDB) applyTransfer(tx *common.Tx, auxToIdx common.Idx) error {
 	if auxToIdx == 0 {
-		if tx.ToIdx == nil {
-			return errors.New("tx.ToIdx cannot be nil if auxToIdx is 0")
-		}
-		auxToIdx = *tx.ToIdx
+		auxToIdx = tx.ToIdx
 	}
 	// get sender and receiver accounts from localStateDB
 	accSender, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
 		return err
 	}
-	accReceiver, err := s.GetAccount(&auxToIdx)
+	accReceiver, err := s.GetAccount(auxToIdx)
 	if err != nil {
 		return err
 	}
@@ -548,7 +536,7 @@ func (s *StateDB) applyTransfer(tx *common.Tx, auxToIdx common.Idx) error {
 	}
 
 	// update receiver account in localStateDB
-	pReceiver, err := s.UpdateAccount(&auxToIdx, accReceiver)
+	pReceiver, err := s.UpdateAccount(auxToIdx, accReceiver)
 	if err != nil {
 		return err
 	}
@@ -578,7 +566,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		EthAddr:   tx.FromEthAddr,
 	}
 	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.LoadAmount)
-	accReceiver, err := s.GetAccount(&tx.ToIdx)
+	accReceiver, err := s.GetAccount(tx.ToIdx)
 	if err != nil {
 		return err
 	}
@@ -610,7 +598,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 	}
 
 	// update receiver account in localStateDB
-	p, err = s.UpdateAccount(&tx.ToIdx, accReceiver)
+	p, err = s.UpdateAccount(tx.ToIdx, accReceiver)
 	if err != nil {
 		return err
 	}

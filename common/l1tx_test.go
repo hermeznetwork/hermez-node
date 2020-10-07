@@ -17,7 +17,6 @@ import (
 
 func TestNewL1UserTx(t *testing.T) {
 	toForge := int64(123456)
-	fromIdx := Idx(300)
 	l1Tx := &L1Tx{
 		ToForgeL1TxsNum: &toForge,
 		Position:        71,
@@ -26,7 +25,7 @@ func TestNewL1UserTx(t *testing.T) {
 		TokenID:         5,
 		Amount:          big.NewInt(1),
 		LoadAmount:      big.NewInt(2),
-		FromIdx:         &fromIdx,
+		FromIdx:         Idx(300),
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.Nil(t, err)
@@ -34,7 +33,6 @@ func TestNewL1UserTx(t *testing.T) {
 }
 
 func TestNewL1CoordinatorTx(t *testing.T) {
-	fromIdx := Idx(300)
 	batchNum := BatchNum(51966)
 	l1Tx := &L1Tx{
 		Position:   88,
@@ -43,7 +41,7 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 		TokenID:    5,
 		Amount:     big.NewInt(1),
 		LoadAmount: big.NewInt(2),
-		FromIdx:    &fromIdx,
+		FromIdx:    Idx(300),
 		BatchNum:   &batchNum,
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
@@ -59,14 +57,12 @@ func TestL1TxByteParsers(t *testing.T) {
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
 
-	fromIdx := new(Idx)
-	*fromIdx = 2
 	l1Tx := &L1Tx{
 		ToIdx:       3,
 		TokenID:     5,
 		Amount:      big.NewInt(1),
 		LoadAmount:  big.NewInt(2),
-		FromIdx:     fromIdx,
+		FromIdx:     2,
 		FromBJJ:     pk,
 		FromEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}

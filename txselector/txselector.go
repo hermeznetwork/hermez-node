@@ -25,7 +25,7 @@ func (t txs) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
 }
 func (t txs) Less(i, j int) bool {
-	return *t[i].AbsoluteFee > *t[j].AbsoluteFee
+	return t[i].AbsoluteFee > t[j].AbsoluteFee
 }
 
 // TxSelector implements all the functionalities to select the txs for the next batch
@@ -78,7 +78,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]common.Po
 	// discard the txs that don't have an Account in the AccountDB
 	var validTxs txs
 	for _, tx := range l2TxsRaw {
-		_, err = txsel.localAccountsDB.GetAccount(&tx.FromIdx)
+		_, err = txsel.localAccountsDB.GetAccount(tx.FromIdx)
 		if err == nil {
 			// if FromIdx has an account into the AccountsDB
 			validTxs = append(validTxs, tx)
@@ -120,7 +120,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 	// in AccountCreationAuthDB, if so, tx is used and L1CoordinatorTx of
 	// CreateAccountAndDeposit is created.
 	for i := 0; i < len(l2TxsRaw); i++ {
-		if l2TxsRaw[i].ToIdx == nil {
+		if l2TxsRaw[i].ToIdx == 0 {
 			if checkAlreadyPendingToCreate(l1CoordinatorTxs, l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ) {
 				// if L2Tx needs a new L1CoordinatorTx of CreateAccount type,
 				// and a previous L2Tx in the current process already created
@@ -206,14 +206,10 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 				// coordinator can create a new account without
 				// L1Authorization, as ToEthAddr==0xff
 				// create L1CoordinatorTx for the accountCreation
-				if l2TxsRaw[i].ToEthAddr == nil {
-					log.Warn("l2TxsRaw[i].ToEthAddr should not be nil")
-					continue
-				}
 				l1CoordinatorTx := common.L1Tx{
 					Position:    positionL1,
 					UserOrigin:  false,
-					FromEthAddr: *l2TxsRaw[i].ToEthAddr,
+					FromEthAddr: l2TxsRaw[i].ToEthAddr,
 					FromBJJ:     l2TxsRaw[i].ToBJJ,
 					TokenID:     l2TxsRaw[i].TokenID,
 					LoadAmount:  big.NewInt(0),
@@ -222,7 +218,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 				positionL1++
 				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 			}
-		} else if *l2TxsRaw[i].ToIdx >= common.IdxUserThreshold {
+		} else if l2TxsRaw[i].ToIdx >= common.IdxUserThreshold {
 			_, err = txsel.localAccountsDB.GetAccount(l2TxsRaw[i].ToIdx)
 			if err != nil {
 				// tx not valid
@@ -231,7 +227,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 			}
 			// Account found in the DB, include the l2Tx in the selection
 			validTxs = append(validTxs, l2TxsRaw[i])
-		} else if *l2TxsRaw[i].ToIdx == common.Idx(1) { // nil already checked before
+		} else if l2TxsRaw[i].ToIdx == common.Idx(1) {
 			// valid txs (of Exit type)
 			validTxs = append(validTxs, l2TxsRaw[i])
 		}
@@ -254,11 +250,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 	return l1Txs, l1CoordinatorTxs, l2Txs, nil
 }
 
-func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, addr *ethCommon.Address, bjj *babyjub.PublicKey) bool {
-	if addr == nil {
-		log.Warn("The provided addr is nil")
-		return false
-	}
+func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, addr ethCommon.Address, bjj *babyjub.PublicKey) bool {
 	for i := 0; i < len(l1CoordinatorTxs); i++ {
 		if bytes.Equal(l1CoordinatorTxs[i].FromEthAddr.Bytes(), addr.Bytes()) {
 			if bjj == nil {

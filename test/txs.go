@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -97,25 +96,17 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]common.L1Tx, 
 				batchCoordinatorL1Txs = append(batchCoordinatorL1Txs, tx)
 				idx++
 			}
-			toIdx := new(common.Idx)
-			*toIdx = accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx
-			toEthAddr := new(ethCommon.Address)
-			*toEthAddr = accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr
-			rqToEthAddr := new(ethCommon.Address)
-			*rqToEthAddr = accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr
 			tx := common.PoolL2Tx{
 				FromIdx:     accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
-				ToIdx:       toIdx,
-				ToEthAddr:   toEthAddr,
+				ToIdx:       accounts[idxTokenIDToString(inst.To, inst.TokenID)].Idx,
+				ToEthAddr:   accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
 				ToBJJ:       accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
 				TokenID:     inst.TokenID,
 				Amount:      big.NewInt(int64(inst.Amount)),
 				Fee:         common.FeeSelector(inst.Fee),
 				Nonce:       accounts[idxTokenIDToString(inst.From, inst.TokenID)].Nonce,
 				State:       common.PoolL2TxStatePending,
-				Timestamp:   time.Now(),
-				BatchNum:    nil,
-				RqToEthAddr: rqToEthAddr,
+				RqToEthAddr: accounts[idxTokenIDToString(inst.To, inst.TokenID)].Addr,
 				RqToBJJ:     accounts[idxTokenIDToString(inst.To, inst.TokenID)].BJJ.Public(),
 				Type:        common.TxTypeTransfer,
 			}
@@ -136,10 +127,8 @@ func GenerateTestTxs(t *testing.T, instructions Instructions) ([][]common.L1Tx, 
 			batchPoolL2Txs = append(batchPoolL2Txs, tx)
 
 		case common.TxTypeExit, common.TxTypeForceExit:
-			fromIdx := new(common.Idx)
-			*fromIdx = accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx
 			tx := common.L1Tx{
-				FromIdx: fromIdx,
+				FromIdx: accounts[idxTokenIDToString(inst.From, inst.TokenID)].Idx,
 				ToIdx:   common.Idx(1), // as is an Exit
 				TokenID: inst.TokenID,
 				Amount:  big.NewInt(int64(inst.Amount)),

@@ -11,11 +11,9 @@ import (
 )
 
 func TestNewPoolL2Tx(t *testing.T) {
-	toIdx := new(Idx)
-	*toIdx = 300
 	poolL2Tx := &PoolL2Tx{
 		FromIdx: 87654,
-		ToIdx:   toIdx,
+		ToIdx:   300,
 		Amount:  big.NewInt(4),
 		TokenID: 5,
 		Nonce:   144,
@@ -29,11 +27,9 @@ func TestTxCompressedData(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.Nil(t, err)
-	toIdx := new(Idx)
-	*toIdx = 3
 	tx := PoolL2Tx{
 		FromIdx: 2,
-		ToIdx:   toIdx,
+		ToIdx:   3,
 		Amount:  big.NewInt(4),
 		TokenID: 5,
 		Nonce:   6,
@@ -48,10 +44,9 @@ func TestTxCompressedData(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, expected.Bytes(), txCompressedData.Bytes())
 	assert.Equal(t, "10000000000060000000500040000000000030000000000020001c60be60f", hex.EncodeToString(txCompressedData.Bytes())[1:])
-	*toIdx = 8
 	tx = PoolL2Tx{
 		FromIdx: 7,
-		ToIdx:   toIdx,
+		ToIdx:   8,
 		Amount:  big.NewInt(9),
 		TokenID: 10,
 		Nonce:   11,
@@ -73,17 +68,14 @@ func TestHashToSign(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.Nil(t, err)
-	ethAddr := ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370")
-	toIdx := new(Idx)
-	*toIdx = 3
 	tx := PoolL2Tx{
 		FromIdx:     2,
-		ToIdx:       toIdx,
+		ToIdx:       3,
 		Amount:      big.NewInt(4),
 		TokenID:     5,
 		Nonce:       6,
 		ToBJJ:       sk.Public(),
-		RqToEthAddr: &ethAddr,
+		RqToEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 		RqToBJJ:     sk.Public(),
 	}
 	toSign, err := tx.HashToSign()
@@ -95,17 +87,14 @@ func TestVerifyTxSignature(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.Nil(t, err)
-	ethAddr := ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370")
-	toIdx := new(Idx)
-	*toIdx = 3
 	tx := PoolL2Tx{
 		FromIdx:     2,
-		ToIdx:       toIdx,
+		ToIdx:       3,
 		Amount:      big.NewInt(4),
 		TokenID:     5,
 		Nonce:       6,
 		ToBJJ:       sk.Public(),
-		RqToEthAddr: &ethAddr,
+		RqToEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 		RqToBJJ:     sk.Public(),
 	}
 	toSign, err := tx.HashToSign()

@@ -1,7 +1,6 @@
 package l2db
 
 import (
-	"errors"
 	"math/big"
 	"time"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
 	//nolint:errcheck // driver for postgres DB
@@ -52,10 +50,7 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 }
 
 // GetAccountCreationAuth returns an account creation authorization into the DB
-func (l2db *L2DB) GetAccountCreationAuth(addr *ethCommon.Address) (*common.AccountCreationAuth, error) {
-	if addr == nil {
-		return nil, errors.New("addr cannot be nil")
-	}
+func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.AccountCreationAuth, error) {
 	auth := new(common.AccountCreationAuth)
 	return auth, meddler.QueryRow(
 		l2db.db, auth,
@@ -67,69 +62,71 @@ func (l2db *L2DB) GetAccountCreationAuth(addr *ethCommon.Address) (*common.Accou
 // AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
 // but in production txs will only be inserted through the API (method TBD)
 func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
-	type withouUSD struct {
-		TxID        common.TxID          `meddler:"tx_id"`
-		FromIdx     common.Idx           `meddler:"from_idx"`
-		ToIdx       *common.Idx          `meddler:"to_idx"`
-		ToEthAddr   *ethCommon.Address   `meddler:"to_eth_addr"`
-		ToBJJ       *babyjub.PublicKey   `meddler:"to_bjj"`
-		TokenID     common.TokenID       `meddler:"token_id"`
-		Amount      *big.Int             `meddler:"amount,bigint"`
-		AmountFloat float64              `meddler:"amount_f"`
-		Fee         common.FeeSelector   `meddler:"fee"`
-		Nonce       common.Nonce         `meddler:"nonce"`
-		State       common.PoolL2TxState `meddler:"state"`
-		Signature   *babyjub.Signature   `meddler:"signature"`
-		Timestamp   time.Time            `meddler:"timestamp,utctime"`
-		BatchNum    *common.BatchNum     `meddler:"batch_num"`
-		RqFromIdx   *common.Idx          `meddler:"rq_from_idx"`
-		RqToIdx     *common.Idx          `meddler:"rq_to_idx"`
-		RqToEthAddr *ethCommon.Address   `meddler:"rq_to_eth_addr"`
-		RqToBJJ     *babyjub.PublicKey   `meddler:"rq_to_bjj"`
-		RqTokenID   *common.TokenID      `meddler:"rq_token_id"`
-		RqAmount    *big.Int             `meddler:"rq_amount,bigintnull"`
-		RqFee       *common.FeeSelector  `meddler:"rq_fee"`
-		RqNonce     *uint64              `meddler:"rq_nonce"`
-		Type        common.TxType        `meddler:"tx_type"`
+	// transform tx from *common.PoolL2Tx to PoolL2TxWrite
+	insertTx := &PoolL2TxWrite{
+		TxID:      tx.TxID,
+		FromIdx:   tx.FromIdx,
+		ToBJJ:     tx.ToBJJ,
+		TokenID:   tx.TokenID,
+		Amount:    tx.Amount,
+		Fee:       tx.Fee,
+		Nonce:     tx.Nonce,
+		State:     tx.State,
+		Signature: tx.Signature,
+		RqToBJJ:   tx.RqToBJJ,
+		RqAmount:  tx.RqAmount,
+		Type:      tx.Type,
 	}
-	return meddler.Insert(l2db.db, "tx_pool", &withouUSD{
-		TxID:        tx.TxID,
-		FromIdx:     tx.FromIdx,
-		ToIdx:       tx.ToIdx,
-		ToEthAddr:   tx.ToEthAddr,
-		ToBJJ:       tx.ToBJJ,
-		TokenID:     tx.TokenID,
-		Amount:      tx.Amount,
-		AmountFloat: tx.AmountFloat,
-		Fee:         tx.Fee,
-		Nonce:       tx.Nonce,
-		State:       tx.State,
-		Signature:   tx.Signature,
-		Timestamp:   tx.Timestamp,
-		BatchNum:    tx.BatchNum,
-		RqFromIdx:   tx.RqFromIdx,
-		RqToIdx:     tx.RqToIdx,
-		RqToEthAddr: tx.RqToEthAddr,
-		RqToBJJ:     tx.RqToBJJ,
-		RqTokenID:   tx.RqTokenID,
-		RqAmount:    tx.RqAmount,
-		RqFee:       tx.RqFee,
-		RqNonce:     tx.RqNonce,
-		Type:        tx.Type,
-	})
+	if tx.ToIdx != 0 {
+		insertTx.ToIdx = &tx.ToIdx
+	}
+	nilAddr := ethCommon.BigToAddress(big.NewInt(0))
+	if tx.ToEthAddr != nilAddr {
+		insertTx.ToEthAddr = &tx.ToEthAddr
+	}
+	if tx.RqFromIdx != 0 {
+		insertTx.RqFromIdx = &tx.RqFromIdx
+	}
+	if tx.RqToIdx != 0 { // if true, all Rq... fields must be different to nil
+		insertTx.RqToIdx = &tx.RqToIdx
+		insertTx.RqTokenID = &tx.RqTokenID
+		insertTx.RqFee = &tx.RqFee
+		insertTx.RqNonce = &tx.RqNonce
+	}
+	if tx.RqToEthAddr != nilAddr {
+		insertTx.RqToEthAddr = &tx.RqToEthAddr
+	}
+	f := new(big.Float).SetInt(tx.Amount)
+	amountF, _ := f.Float64()
+	insertTx.AmountFloat = amountF
+	// insert tx
+	return meddler.Insert(l2db.db, "tx_pool", insertTx)
 }
 
-// selectPoolTx select part of queries to get common.PoolL2Tx
-const selectPoolTx = `SELECT tx_pool.*, token.usd * tx_pool.amount_f AS value_usd, 
+// selectPoolTxRead select part of queries to get PoolL2TxRead
+const selectPoolTxRead = `SELECT  tx_pool.tx_id, tx_pool.from_idx, tx_pool.to_idx, tx_pool.to_eth_addr, 
+tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
+tx_pool.state, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, tx_pool.rq_from_idx, 
+tx_pool.rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
+tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
+token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
+FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
+
+// selectPoolTxCommon select part of queries to get common.PoolL2Tx
+const selectPoolTxCommon = `SELECT  tx_pool.tx_id, tx_pool.from_idx, tx_pool.to_idx, tx_pool.to_eth_addr, 
+tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
+tx_pool.state, tx_pool.signature, tx_pool.timestamp, tx_pool.rq_from_idx, 
+tx_pool.rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
+tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f AS fee_usd, token.usd_update  
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
 // GetTx return the specified Tx
-func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
-	tx := new(common.PoolL2Tx)
+func (l2db *L2DB) GetTx(txID common.TxID) (*PoolL2TxRead, error) {
+	tx := new(PoolL2TxRead)
 	return tx, meddler.QueryRow(
 		l2db.db, tx,
-		selectPoolTx+"WHERE tx_id = $1;",
+		selectPoolTxRead+"WHERE tx_id = $1;",
 		txID,
 	)
 }
@@ -139,7 +136,7 @@ func (l2db *L2DB) GetPendingTxs() ([]common.PoolL2Tx, error) {
 	var txs []*common.PoolL2Tx
 	err := meddler.QueryAll(
 		l2db.db, &txs,
-		selectPoolTx+"WHERE state = $1 AND token.usd IS NOT NULL",
+		selectPoolTxCommon+"WHERE state = $1",
 		common.PoolL2TxStatePending,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.PoolL2Tx), err

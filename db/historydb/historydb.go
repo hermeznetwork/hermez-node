@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -136,6 +137,7 @@ func (hdb *HistoryDB) AddBatches(batches []common.Batch) error {
 	return hdb.addBatches(hdb.db, batches)
 }
 func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
+	// TODO: Calculate and insert total_fees_usd
 	return db.BulkInsert(
 		d,
 		`INSERT INTO batch (
@@ -147,8 +149,7 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 			num_accounts,
 			exit_root,
 			forge_l1_txs_num,
-			slot_num,
-			total_fees_usd
+			slot_num
 		) VALUES %s;`,
 		batches[:],
 	)
@@ -265,9 +266,7 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 			eth_addr,
 			name,
 			symbol,
-			decimals,
-			usd,
-			usd_update
+			decimals
 		) VALUES %s;`,
 		tokens[:],
 	)
@@ -283,13 +282,13 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error 
 }
 
 // GetTokens returns a list of tokens from the DB
-func (hdb *HistoryDB) GetTokens() ([]common.Token, error) {
-	var tokens []*common.Token
+func (hdb *HistoryDB) GetTokens() ([]TokenRead, error) {
+	var tokens []*TokenRead
 	err := meddler.QueryAll(
 		hdb.db, &tokens,
 		"SELECT * FROM token ORDER BY token_id;",
 	)
-	return db.SlicePtrsToSlice(tokens).([]common.Token), err
+	return db.SlicePtrsToSlice(tokens).([]TokenRead), err
 }
 
 // GetTokenSymbols returns all the token symbols from the DB
@@ -347,26 +346,67 @@ func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error { return hdb.addL1Txs(
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
 func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
-	txs := []common.Tx{}
-	for _, tx := range l1txs {
-		txs = append(txs, *(tx.Tx()))
+	txs := []txWrite{}
+	for i := 0; i < len(l1txs); i++ {
+		af := new(big.Float).SetInt(l1txs[i].Amount)
+		amountFloat, _ := af.Float64()
+		laf := new(big.Float).SetInt(l1txs[i].LoadAmount)
+		loadAmountFloat, _ := laf.Float64()
+		txs = append(txs, txWrite{
+			// Generic
+			IsL1:        true,
+			TxID:        l1txs[i].TxID,
+			Type:        l1txs[i].Type,
+			Position:    l1txs[i].Position,
+			FromIdx:     &l1txs[i].FromIdx,
+			ToIdx:       l1txs[i].ToIdx,
+			Amount:      l1txs[i].Amount,
+			AmountFloat: amountFloat,
+			TokenID:     l1txs[i].TokenID,
+			BatchNum:    l1txs[i].BatchNum,
+			EthBlockNum: l1txs[i].EthBlockNum,
+			// L1
+			ToForgeL1TxsNum: l1txs[i].ToForgeL1TxsNum,
+			UserOrigin:      &l1txs[i].UserOrigin,
+			FromEthAddr:     &l1txs[i].FromEthAddr,
+			FromBJJ:         l1txs[i].FromBJJ,
+			LoadAmount:      l1txs[i].LoadAmount,
+			LoadAmountFloat: &loadAmountFloat,
+		})
 	}
 	return hdb.addTxs(d, txs)
 }
 
-// AddL2Txs inserts L2 txs to the DB. USD and FeeUSD will be set automatically before storing the tx.
+// AddL2Txs inserts L2 txs to the DB. TokenID, USD and FeeUSD will be set automatically before storing the tx.
 func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error { return hdb.addL2Txs(hdb.db, l2txs) }
 
-// addL2Txs inserts L2 txs to the DB. USD and FeeUSD will be set automatically before storing the tx.
+// addL2Txs inserts L2 txs to the DB. TokenID, USD and FeeUSD will be set automatically before storing the tx.
 func (hdb *HistoryDB) addL2Txs(d meddler.DB, l2txs []common.L2Tx) error {
-	txs := []common.Tx{}
-	for _, tx := range l2txs {
-		txs = append(txs, *(tx.Tx()))
+	txs := []txWrite{}
+	for i := 0; i < len(l2txs); i++ {
+		f := new(big.Float).SetInt(l2txs[i].Amount)
+		amountFloat, _ := f.Float64()
+		txs = append(txs, txWrite{
+			// Generic
+			IsL1:        false,
+			TxID:        l2txs[i].TxID,
+			Type:        l2txs[i].Type,
+			Position:    l2txs[i].Position,
+			FromIdx:     &l2txs[i].FromIdx,
+			ToIdx:       l2txs[i].ToIdx,
+			Amount:      l2txs[i].Amount,
+			AmountFloat: amountFloat,
+			BatchNum:    &l2txs[i].BatchNum,
+			EthBlockNum: l2txs[i].EthBlockNum,
+			// L2
+			Fee:   &l2txs[i].Fee,
+			Nonce: &l2txs[i].Nonce,
+		})
 	}
 	return hdb.addTxs(d, txs)
 }
 
-func (hdb *HistoryDB) addTxs(d meddler.DB, txs []common.Tx) error {
+func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 	return db.BulkInsert(
 		d,
 		`INSERT INTO tx (
@@ -379,7 +419,6 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []common.Tx) error {
 			amount,
 			amount_f,
 			token_id,
-			amount_usd,
 			batch_num,
 			eth_block_num,
 			to_forge_l1_txs_num,
@@ -388,25 +427,23 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []common.Tx) error {
 			from_bjj,
 			load_amount,
 			load_amount_f,
-			load_amount_usd,
 			fee,
-			fee_usd,
 			nonce
 		) VALUES %s;`,
 		txs[:],
 	)
 }
 
-// GetTxs returns a list of txs from the DB
-func (hdb *HistoryDB) GetTxs() ([]common.Tx, error) {
-	var txs []*common.Tx
-	err := meddler.QueryAll(
-		hdb.db, &txs,
-		`SELECT * FROM tx 
-		ORDER BY (batch_num, position) ASC`,
-	)
-	return db.SlicePtrsToSlice(txs).([]common.Tx), err
-}
+// // GetTxs returns a list of txs from the DB
+// func (hdb *HistoryDB) GetTxs() ([]common.Tx, error) {
+// 	var txs []*common.Tx
+// 	err := meddler.QueryAll(
+// 		hdb.db, &txs,
+// 		`SELECT * FROM tx
+// 		ORDER BY (batch_num, position) ASC`,
+// 	)
+// 	return db.SlicePtrsToSlice(txs).([]common.Tx), err
+// }
 
 // GetHistoryTxs returns a list of txs from the DB using the HistoryTx struct
 func (hdb *HistoryDB) GetHistoryTxs(
@@ -419,7 +456,10 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	}
 	var query string
 	var args []interface{}
-	queryStr := `SELECT tx.*, token.token_id, token.eth_block_num AS token_block,
+	queryStr := `SELECT tx.is_l1, tx.id, tx.type, tx.position, tx.from_idx, tx.to_idx, 
+	tx.amount, tx.token_id, tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, 
+	tx.user_origin, tx.from_eth_addr, tx.from_bjj, tx.load_amount, tx.fee, tx.nonce,
+	token.token_id, token.eth_block_num AS token_block,
 	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
 	token.usd_update, block.timestamp, count(*) OVER() AS total_items 
 	FROM tx 
@@ -512,15 +552,15 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	return txs, txs[0].TotalItems, nil
 }
 
-// GetTx returns a tx from the DB
-func (hdb *HistoryDB) GetTx(txID common.TxID) (*common.Tx, error) {
-	tx := new(common.Tx)
-	return tx, meddler.QueryRow(
-		hdb.db, tx,
-		"SELECT * FROM tx WHERE id = $1;",
-		txID,
-	)
-}
+// // GetTx returns a tx from the DB
+// func (hdb *HistoryDB) GetTx(txID common.TxID) (*common.Tx, error) {
+// 	tx := new(common.Tx)
+// 	return tx, meddler.QueryRow(
+// 		hdb.db, tx,
+// 		"SELECT * FROM tx WHERE id = $1;",
+// 		txID,
+// 	)
+// }
 
 // // GetL1UserTxs gets L1 User Txs to be forged in a batch that will create an account
 // // TODO: This is currently not used.  Figure out if it should be used somewhere or removed.
