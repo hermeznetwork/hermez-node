@@ -61,11 +61,15 @@ func (i Instruction) String() string {
 		i.Type == common.TxTypeCreateAccountDepositTransfer {
 		fmt.Fprintf(buf, "To: %s, ", i.To)
 	}
-	if i.Type == common.TxTypeDepositTransfer ||
+
+	if i.Type == common.TxTypeDeposit ||
+		i.Type == common.TxTypeDepositTransfer ||
 		i.Type == common.TxTypeCreateAccountDepositTransfer {
 		fmt.Fprintf(buf, "LoadAmount: %d, ", i.LoadAmount)
 	}
-	fmt.Fprintf(buf, "Amount: %d, ", i.Amount)
+	if i.Type != common.TxTypeDeposit {
+		fmt.Fprintf(buf, "Amount: %d, ", i.Amount)
+	}
 	if i.Type == common.TxTypeTransfer ||
 		i.Type == common.TxTypeDepositTransfer ||
 		i.Type == common.TxTypeCreateAccountDepositTransfer {
@@ -87,11 +91,14 @@ func (i Instruction) Raw() string {
 		fmt.Fprintf(buf, "-%s", i.To)
 	}
 	fmt.Fprintf(buf, ":")
-	if i.Type == common.TxTypeDepositTransfer ||
+	if i.Type == common.TxTypeDeposit ||
+		i.Type == common.TxTypeDepositTransfer ||
 		i.Type == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "%d,", i.LoadAmount)
+		fmt.Fprintf(buf, "%d", i.LoadAmount)
 	}
-	fmt.Fprintf(buf, "%d", i.Amount)
+	if i.Type != common.TxTypeDeposit {
+		fmt.Fprintf(buf, "%d", i.Amount)
+	}
 	if i.Type == common.TxTypeTransfer {
 		fmt.Fprintf(buf, "(%d)", i.Fee)
 	}
@@ -237,7 +244,7 @@ func (p *Parser) scanIgnoreWhitespace() (tok token, lit string) {
 }
 
 // parseLine parses the current line
-func (p *Parser) parseLine() (*Instruction, error) {
+func (p *Parser) parseLine(pool bool) (*Instruction, error) {
 	c := &Instruction{}
 	tok, lit := p.scanIgnoreWhitespace()
 	if tok == EOF {
@@ -248,6 +255,9 @@ func (p *Parser) parseLine() (*Instruction, error) {
 		_, _ = p.s.r.ReadString('\n')
 		return nil, errComment
 	} else if lit == ">" {
+		if pool {
+			return c, fmt.Errorf("Unexpected '>' at PoolL2Txs set")
+		}
 		_, lit = p.scanIgnoreWhitespace()
 		if lit == "batch" {
 			_, _ = p.s.r.ReadString('\n')
@@ -262,23 +272,58 @@ func (p *Parser) parseLine() (*Instruction, error) {
 	transfering := false
 	switch lit {
 	case "Deposit":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
 		c.Type = common.TxTypeDeposit
-	case "Exit", "PoolExit":
+	case "Exit":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
 		c.Type = common.TxTypeExit
-	case "Transfer", "PoolTransfer":
+	case "PoolExit":
+		if !pool {
+			return c, fmt.Errorf("Unexpected '%s' at BlockchainTxs set", lit)
+		}
+		c.Type = common.TxTypeExit
+	case "Transfer":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
+		c.Type = common.TxTypeTransfer
+		transfering = true
+	case "PoolTransfer":
+		if !pool {
+			return c, fmt.Errorf("Unexpected '%s' at BlockchainTxs set", lit)
+		}
 		c.Type = common.TxTypeTransfer
 		transfering = true
 	case "CreateAccountDeposit":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
 		c.Type = common.TxTypeCreateAccountDeposit
 	case "CreateAccountDepositTransfer":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
 		c.Type = common.TxTypeCreateAccountDepositTransfer
 		transfering = true
 	case "DepositTransfer":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
 		c.Type = common.TxTypeDepositTransfer
 		transfering = true
 	case "ForceTransfer":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
 		c.Type = common.TxTypeForceTransfer
 	case "ForceExit":
+		if pool {
+			return c, fmt.Errorf("Unexpected '%s' at PoolL2Txs set", lit)
+		}
 		c.Type = common.TxTypeForceExit
 	default:
 		return c, fmt.Errorf("Unexpected tx type: %s", lit)
@@ -304,9 +349,9 @@ func (p *Parser) parseLine() (*Instruction, error) {
 	c.From = lit
 	_, lit = p.scanIgnoreWhitespace()
 	c.Literal += lit
-	if lit == "-" {
-		if !transfering {
-			return c, fmt.Errorf("To defined, but not type {Transfer, CreateAccountDepositTransfer, DepositTransfer}")
+	if transfering {
+		if lit != "-" {
+			return c, fmt.Errorf("Expected '-', found '%s'", lit)
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		c.Literal += lit
@@ -321,6 +366,7 @@ func (p *Parser) parseLine() (*Instruction, error) {
 	}
 	if c.Type == common.TxTypeDepositTransfer ||
 		c.Type == common.TxTypeCreateAccountDepositTransfer {
+		// deposit case
 		_, lit = p.scanIgnoreWhitespace()
 		c.Literal += lit
 		loadAmount, err := strconv.Atoi(lit)
@@ -342,7 +388,12 @@ func (p *Parser) parseLine() (*Instruction, error) {
 		c.Literal += line
 		return c, err
 	}
-	c.Amount = uint64(amount)
+	if c.Type == common.TxTypeDeposit ||
+		c.Type == common.TxTypeCreateAccountDeposit {
+		c.LoadAmount = uint64(amount)
+	} else {
+		c.Amount = uint64(amount)
+	}
 	if transfering {
 		if err := p.expectChar(c, "("); err != nil {
 			return c, err
@@ -389,13 +440,13 @@ func idxTokenIDToString(idx string, tid common.TokenID) string {
 }
 
 // Parse parses through reader
-func (p *Parser) Parse() (*ParsedSet, error) {
+func (p *Parser) Parse(pool bool) (*ParsedSet, error) {
 	instructions := &ParsedSet{}
 	i := 0
 	accounts := make(map[string]bool)
 	tokenids := make(map[common.TokenID]bool)
 	for {
-		instruction, err := p.parseLine()
+		instruction, err := p.parseLine(pool)
 		if err == errof {
 			break
 		}

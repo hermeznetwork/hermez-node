@@ -9,6 +9,6 @@ import (
 
 func TestCompileSets(t *testing.T) {
 	parser := NewParser(strings.NewReader(SetTest0))
-	_, err := parser.Parse()
+	_, err := parser.Parse(false)
 	assert.Nil(t, err)
 }

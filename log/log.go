@@ -80,9 +80,14 @@ func Warn(args ...interface{}) {
 	log.Warn(args...)
 }
 
-// Error calls log.Error and stores the error message into the ErrorFile
+// Error calls log.Error
 func Error(args ...interface{}) {
 	log.Error(args...)
+}
+
+// Fatal calls log.Fatal
+func Fatal(args ...interface{}) {
+	log.Fatal(args...)
 }
 
 // Debugf calls log.Debugf
@@ -98,6 +103,11 @@ func Infof(template string, args ...interface{}) {
 // Warnf calls log.Warnf
 func Warnf(template string, args ...interface{}) {
 	log.Warnf(template, args...)
+}
+
+// Fatalf calls log.Warnf
+func Fatalf(template string, args ...interface{}) {
+	log.Fatalf(template, args...)
 }
 
 // Errorf calls log.Errorf and stores the error message into the ErrorFile
@@ -120,7 +130,12 @@ func Warnw(template string, kv ...interface{}) {
 	log.Warnw(template, kv...)
 }
 
-// Errorw calls log.Errorw and stores the error message into the ErrorFile
+// Errorw calls log.Errorw
 func Errorw(template string, kv ...interface{}) {
-	log.Errorw(template, kv...)
+	log.Fatalw(template, kv...)
+}
+
+// Fatalw calls log.Fatalw
+func Fatalw(template string, kv ...interface{}) {
+	log.Fatalw(template, kv...)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var debug = false
@@ -47,8 +48,8 @@ func TestParseBlockchainTxs(t *testing.T) {
 	`
 
 	parser := NewParser(strings.NewReader(s))
-	instructions, err := parser.Parse()
-	assert.Nil(t, err)
+	instructions, err := parser.Parse(false)
+	require.Nil(t, err)
 	assert.Equal(t, 20, len(instructions.Instructions))
 	assert.Equal(t, 10, len(instructions.Accounts))
 	assert.Equal(t, 3, len(instructions.TokenIDs))
@@ -76,12 +77,12 @@ func TestParsePoolTxs(t *testing.T) {
 		PoolTransfer(2) A-B: 3 (3)
 		PoolTransfer(1) B-D: 3 (1)
 		PoolTransfer(1) C-D: 3 (1)
-		Exit(1) A: 5
+		PoolExit(1) A: 5
 	`
 
 	parser := NewParser(strings.NewReader(s))
-	instructions, err := parser.Parse()
-	assert.Nil(t, err)
+	instructions, err := parser.Parse(true)
+	require.Nil(t, err)
 	assert.Equal(t, 5, len(instructions.Instructions))
 	assert.Equal(t, 6, len(instructions.Accounts))
 	assert.Equal(t, 2, len(instructions.TokenIDs))
@@ -103,30 +104,46 @@ func TestParsePoolTxs(t *testing.T) {
 func TestParseErrors(t *testing.T) {
 	s := "Deposit(1) A:: 10"
 	parser := NewParser(strings.NewReader(s))
-	_, err := parser.Parse()
+	_, err := parser.Parse(false)
 	assert.Equal(t, "error parsing line 0: Deposit(1)A:: 10, err: strconv.Atoi: parsing \":\": invalid syntax", err.Error())
 
 	s = "Deposit(1) A: 10 20"
 	parser = NewParser(strings.NewReader(s))
-	_, err = parser.Parse()
+	_, err = parser.Parse(false)
 	assert.Equal(t, "error parsing line 1: 20, err: Unexpected tx type: 20", err.Error())
+
+	s = "Transfer(1) A: 10"
+	parser = NewParser(strings.NewReader(s))
+	_, err = parser.Parse(false)
+	assert.Equal(t, "error parsing line 0: Transfer(1)A:, err: Expected '-', found ':'", err.Error())
 
 	s = "Transfer(1) A B: 10"
 	parser = NewParser(strings.NewReader(s))
-	_, err = parser.Parse()
-	assert.Equal(t, "error parsing line 0: Transfer(1)AB: 10, err: Expected ':', found 'B'", err.Error())
+	_, err = parser.Parse(false)
+	assert.Equal(t, "error parsing line 0: Transfer(1)AB, err: Expected '-', found 'B'", err.Error())
 
 	s = "Transfer(1) A-B: 10 (255)"
 	parser = NewParser(strings.NewReader(s))
-	_, err = parser.Parse()
+	_, err = parser.Parse(false)
 	assert.Nil(t, err)
 	s = "Transfer(1) A-B: 10 (256)"
 	parser = NewParser(strings.NewReader(s))
-	_, err = parser.Parse()
+	_, err = parser.Parse(false)
 	assert.Equal(t, "error parsing line 0: Transfer(1)A-B:10(256), err: Fee 256 can not be bigger than 255", err.Error())
+
+	// check that the PoolTransfer & Transfer are only accepted in the
+	// correct case case (PoolTxs/BlockchainTxs)
+	s = "Transfer(1) A-B: 10 (1)"
+	parser = NewParser(strings.NewReader(s))
+	_, err = parser.Parse(true)
+	assert.Equal(t, "error parsing line 0: Transfer, err: Unexpected 'Transfer' at PoolL2Txs set", err.Error())
+	s = "PoolTransfer(1) A-B: 10 (1)"
+	parser = NewParser(strings.NewReader(s))
+	_, err = parser.Parse(false)
+	assert.Equal(t, "error parsing line 0: PoolTransfer, err: Unexpected 'PoolTransfer' at BlockchainTxs set", err.Error())
 
 	s = "> btch"
 	parser = NewParser(strings.NewReader(s))
-	_, err = parser.Parse()
+	_, err = parser.Parse(false)
 	assert.Equal(t, "error parsing line 0: >, err: Unexpected '> btch', expected '> batch' or '> block'", err.Error())
 }
