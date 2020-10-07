@@ -158,8 +158,9 @@ func (tx *L1Tx) Tx() *Tx {
 func (tx *L1Tx) Bytes() ([]byte, error) {
 	var b [L1TxBytesLen]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
-	pkComp := tx.FromBJJ.Compress()
-	copy(b[20:52], pkComp[:])
+	pkCompL := tx.FromBJJ.Compress()
+	pkCompB := SwapEndianness(pkCompL[:])
+	copy(b[20:52], pkCompB[:])
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
 		return nil, err
@@ -193,8 +194,9 @@ func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, err
 	b[0] = v
 	copy(b[1:33], s)
 	copy(b[33:65], r)
-	pkComp := tx.FromBJJ.Compress()
-	copy(b[65:97], pkComp[:])
+	pkCompL := tx.FromBJJ.Compress()
+	pkCompB := SwapEndianness(pkCompL[:])
+	copy(b[65:97], pkCompB[:])
 	copy(b[97:101], tx.TokenID.Bytes())
 	return b[:], nil
 }
@@ -208,10 +210,13 @@ func L1TxFromBytes(b []byte) (*L1Tx, error) {
 	tx := &L1Tx{}
 	var err error
 	tx.FromEthAddr = ethCommon.BytesToAddress(b[0:20])
+
 	pkCompB := b[20:52]
+	pkCompL := SwapEndianness(pkCompB)
 	var pkComp babyjub.PublicKeyComp
-	copy(pkComp[:], pkCompB)
+	copy(pkComp[:], pkCompL)
 	tx.FromBJJ, err = pkComp.Decompress()
+
 	if err != nil {
 		return nil, err
 	}
@@ -254,8 +259,9 @@ func L1TxFromCoordinatorBytes(b []byte) (*L1Tx, error) {
 	r := b[33:65]
 
 	pkCompB := b[65:97]
+	pkCompL := SwapEndianness(pkCompB)
 	var pkComp babyjub.PublicKeyComp
-	copy(pkComp[:], pkCompB)
+	copy(pkComp[:], pkCompL)
 	tx.FromBJJ, err = pkComp.Decompress()
 	if err != nil {
 		return nil, err
