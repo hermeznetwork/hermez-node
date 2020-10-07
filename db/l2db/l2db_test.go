@@ -111,8 +111,8 @@ func TestGetPending(t *testing.T) {
 	fetchedTxs, err := l2DB.GetPendingTxs()
 	assert.NoError(t, err)
 	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
-	for i, fetchedTx := range fetchedTxs {
-		assertTx(t, pendingTxs[i], fetchedTx)
+	for i := range fetchedTxs {
+		assertTx(t, pendingTxs[i], &fetchedTxs[i])
 	}
 }
 

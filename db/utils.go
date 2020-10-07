@@ -52,7 +52,10 @@ func initMeddler() {
 
 // BulkInsert performs a bulk insert with a single statement into the specified table.  Example:
 // `db.BulkInsert(myDB, "INSERT INTO block (eth_block_num, timestamp, hash) VALUES %s", blocks[:])`
-// Note that all the columns must be specified in the query, and they must be in the same order as in the table.
+// Note that all the columns must be specified in the query, and they must be
+// in the same order as in the table.
+// Note that the fields in the structs need to be defined in the same order as
+// in the table columns.
 func BulkInsert(db meddler.DB, q string, args interface{}) error {
 	arrayValue := reflect.ValueOf(args)
 	arrayLen := arrayValue.Len()
@@ -149,4 +152,28 @@ func (b BigIntNullMeddler) PreWrite(fieldPtr interface{}) (saveValue interface{}
 		return nil, nil
 	}
 	return base64.StdEncoding.EncodeToString(field.Bytes()), nil
+}
+
+// SliceToSlicePtrs converts any []Foo to []*Foo
+func SliceToSlicePtrs(slice interface{}) interface{} {
+	v := reflect.ValueOf(slice)
+	vLen := v.Len()
+	typ := v.Type().Elem()
+	res := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(typ)), vLen, vLen)
+	for i := 0; i < vLen; i++ {
+		res.Index(i).Set(v.Index(i).Addr())
+	}
+	return res.Interface()
+}
+
+// SlicePtrsToSlice converts any []*Foo to []Foo
+func SlicePtrsToSlice(slice interface{}) interface{} {
+	v := reflect.ValueOf(slice)
+	vLen := v.Len()
+	typ := v.Type().Elem().Elem()
+	res := reflect.MakeSlice(reflect.SliceOf(typ), vLen, vLen)
+	for i := 0; i < vLen; i++ {
+		res.Index(i).Set(v.Index(i).Elem())
+	}
+	return res.Interface()
 }

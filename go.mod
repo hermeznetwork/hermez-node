@@ -27,3 +27,5 @@ require (
 	golang.org/x/tools/gopls v0.5.0 // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.1
 )
+
+// replace github.com/russross/meddler => /home/dev/git/iden3/hermez/meddler

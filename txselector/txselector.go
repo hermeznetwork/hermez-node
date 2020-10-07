@@ -81,7 +81,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]common.Po
 		_, err = txsel.localAccountsDB.GetAccount(&tx.FromIdx)
 		if err == nil {
 			// if FromIdx has an account into the AccountsDB
-			validTxs = append(validTxs, *tx)
+			validTxs = append(validTxs, tx)
 		}
 	}
 
@@ -127,7 +127,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 				// a L1CoordinatorTx of this type, in the DB there still seem
 				// that needs to create a new L1CoordinatorTx, but as is already
 				// created, the tx is valid
-				validTxs = append(validTxs, *l2TxsRaw[i])
+				validTxs = append(validTxs, l2TxsRaw[i])
 				continue
 			}
 
@@ -143,7 +143,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 						// account for ToEthAddr&ToBJJ already exist,
 						// there is no need to create a new one.
 						// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
-						validTxs = append(validTxs, *l2TxsRaw[i])
+						validTxs = append(validTxs, l2TxsRaw[i])
 						continue
 					}
 					// if not, check if AccountCreationAuth exist for that ToEthAddr&BJJ
@@ -159,7 +159,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 						log.Debugw("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr & ToBJJ found in AccountCreationAuths L2DB", "ToIdx", l2TxsRaw[i].ToIdx, "ToEthAddr", l2TxsRaw[i].ToEthAddr, "ToBJJ", l2TxsRaw[i].ToBJJ)
 						continue
 					}
-					validTxs = append(validTxs, *l2TxsRaw[i])
+					validTxs = append(validTxs, l2TxsRaw[i])
 				} else {
 					// case: ToBJJ==0:
 					// if idx exist for EthAddr use it
@@ -168,7 +168,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 						// account for ToEthAddr already exist,
 						// there is no need to create a new one.
 						// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
-						validTxs = append(validTxs, *l2TxsRaw[i])
+						validTxs = append(validTxs, l2TxsRaw[i])
 						continue
 					}
 					// if not, check if AccountCreationAuth exist for that ToEthAddr
@@ -178,7 +178,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 						log.Debugw("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB", "ToIdx", l2TxsRaw[i].ToIdx, "ToEthAddr", l2TxsRaw[i].ToEthAddr)
 						continue
 					}
-					validTxs = append(validTxs, *l2TxsRaw[i])
+					validTxs = append(validTxs, l2TxsRaw[i])
 				}
 				// create L1CoordinatorTx for the accountCreation
 				l1CoordinatorTx := common.L1Tx{
@@ -199,7 +199,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 					// account for ToEthAddr&ToBJJ already exist, (where ToEthAddr==0xff)
 					// there is no need to create a new one.
 					// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
-					validTxs = append(validTxs, *l2TxsRaw[i])
+					validTxs = append(validTxs, l2TxsRaw[i])
 					continue
 				}
 				// if idx don't exist for EthAddr&BJJ,
@@ -230,10 +230,10 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 				continue
 			}
 			// Account found in the DB, include the l2Tx in the selection
-			validTxs = append(validTxs, *l2TxsRaw[i])
+			validTxs = append(validTxs, l2TxsRaw[i])
 		} else if *l2TxsRaw[i].ToIdx == common.Idx(1) { // nil already checked before
 			// valid txs (of Exit type)
-			validTxs = append(validTxs, *l2TxsRaw[i])
+			validTxs = append(validTxs, l2TxsRaw[i])
 		}
 	}
 

@@ -90,27 +90,28 @@ func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 	return l1Tx, nil
 }
 
-func (l1Tx *L1Tx) CalcTxID() (*TxID, error) {
+// CalcTxID calculates the TxId of the L1Tx
+func (tx *L1Tx) CalcTxID() (*TxID, error) {
 	var txID TxID
-	if l1Tx.UserOrigin {
-		if l1Tx.ToForgeL1TxsNum == nil {
+	if tx.UserOrigin {
+		if tx.ToForgeL1TxsNum == nil {
 			return nil, fmt.Errorf("L1Tx.UserOrigin == true && L1Tx.ToForgeL1TxsNum == nil")
 		}
 		txID[0] = TxIDPrefixL1UserTx
 		var toForgeL1TxsNumBytes [8]byte
-		binary.BigEndian.PutUint64(toForgeL1TxsNumBytes[:], uint64(*l1Tx.ToForgeL1TxsNum))
+		binary.BigEndian.PutUint64(toForgeL1TxsNumBytes[:], uint64(*tx.ToForgeL1TxsNum))
 		copy(txID[1:9], toForgeL1TxsNumBytes[:])
 	} else {
-		if l1Tx.BatchNum == nil {
+		if tx.BatchNum == nil {
 			return nil, fmt.Errorf("L1Tx.UserOrigin == false && L1Tx.BatchNum == nil")
 		}
 		txID[0] = TxIDPrefixL1CoordTx
 		var batchNumBytes [8]byte
-		binary.BigEndian.PutUint64(batchNumBytes[:], uint64(*l1Tx.BatchNum))
+		binary.BigEndian.PutUint64(batchNumBytes[:], uint64(*tx.BatchNum))
 		copy(txID[1:9], batchNumBytes[:])
 	}
 	var positionBytes [2]byte
-	binary.BigEndian.PutUint16(positionBytes[:], uint16(l1Tx.Position))
+	binary.BigEndian.PutUint16(positionBytes[:], uint16(tx.Position))
 	copy(txID[9:11], positionBytes[:])
 
 	return &txID, nil

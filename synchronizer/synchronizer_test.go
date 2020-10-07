@@ -78,8 +78,8 @@ D (3): 15
 		require.Nil(t, err)
 	}
 
-	for _, l1UserTx := range l1UserTxs[0] {
-		client.CtlAddL1TxUser(&l1UserTx)
+	for i := range l1UserTxs[0] {
+		client.CtlAddL1TxUser(&l1UserTxs[0][i])
 	}
 	client.CtlMineBlock()
 

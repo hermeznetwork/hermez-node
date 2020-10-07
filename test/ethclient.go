@@ -333,7 +333,7 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 				ExitRoots:        make([]*big.Int, 0),
 				ExitNullifierMap: make(map[[256 / 8]byte]bool),
 				// TokenID = 0 is ETH.  Set first entry in TokenList with 0x0 address for ETH.
-				TokenList:              []ethCommon.Address{ethCommon.Address{}},
+				TokenList:              []ethCommon.Address{{}},
 				TokenMap:               make(map[ethCommon.Address]bool),
 				MapL1TxQueue:           mapL1TxQueue,
 				LastL1L2Batch:          0,

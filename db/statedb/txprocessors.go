@@ -68,8 +68,9 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 	}
 
 	// assumption: l1usertx are sorted by L1Tx.Position
-	for _, tx := range l1usertxs {
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &tx)
+	for i := range l1usertxs {
+		tx := &l1usertxs[i]
+		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -85,8 +86,9 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 			s.i++
 		}
 	}
-	for _, tx := range l1coordinatortxs {
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &tx)
+	for i := range l1coordinatortxs {
+		tx := &l1coordinatortxs[i]
+		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -105,8 +107,9 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 			s.i++
 		}
 	}
-	for _, tx := range l2txs {
-		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, &tx)
+	for i := range l2txs {
+		tx := &l2txs[i]
+		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
 		}
