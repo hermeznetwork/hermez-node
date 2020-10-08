@@ -333,25 +333,25 @@ type RollupInterface interface {
 
 // RollupClient is the implementation of the interface to the Rollup Smart Contract in ethereum.
 type RollupClient struct {
-	client       *EthereumClient
-	address      ethCommon.Address
-	tokenAddress ethCommon.Address
-	gasLimit     uint64
-	contractAbi  abi.ABI
+	client          *EthereumClient
+	address         ethCommon.Address
+	tokenHEZAddress ethCommon.Address
+	gasLimit        uint64
+	contractAbi     abi.ABI
 }
 
 // NewRollupClient creates a new RollupClient
-func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenAddress ethCommon.Address) (*RollupClient, error) {
+func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZAddress ethCommon.Address) (*RollupClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(Hermez.HermezABI)))
 	if err != nil {
 		return nil, err
 	}
 	return &RollupClient{
-		client:       client,
-		address:      address,
-		tokenAddress: tokenAddress,
-		gasLimit:     1000000, //nolint:gomnd
-		contractAbi:  contractAbi,
+		client:          client,
+		address:         address,
+		tokenHEZAddress: tokenHEZAddress,
+		gasLimit:        1000000, //nolint:gomnd
+		contractAbi:     contractAbi,
 	}, nil
 }
 
@@ -371,7 +371,7 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (*types.Tran
 				return nil, err
 			}
 			nLevels := rollupConst.Verifiers[args.VerifierIdx].NLevels
-			lenBytes := nLevels / 8
+			lenBytes := nLevels / 8 //nolint:gomnd
 			newLastIdx := big.NewInt(int64(args.NewLastIdx))
 			var l1CoordinatorBytes []byte
 			for i := 0; i < len(args.L1CoordinatorTxs); i++ {
@@ -408,14 +408,16 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (*types.Tran
 	return tx, nil
 }
 
-// RollupAddToken is the interface to call the smart contract function
+// RollupAddToken is the interface to call the smart contract function.
+// `feeAddToken` is the amount of HEZ tokens that will be paid to add the
+// token.  `feeAddToken` must match the public value of the smart contract.
 func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big.Int) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
 		c.gasLimit,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokens, err := ERC777.NewERC777(c.tokenAddress, ec)
+			tokens, err := ERC777.NewERC777(c.tokenHEZAddress, ec)
 			if err != nil {
 				return nil, err
 			}

@@ -35,8 +35,7 @@ func TestRollupConstants(t *testing.T) {
 }
 
 func TestAddToken(t *testing.T) {
-	var feeAddToken = new(big.Int)
-	feeAddToken = big.NewInt(10)
+	feeAddToken := big.NewInt(10)
 	// Addtoken
 	_, err := rollupClient.RollupAddToken(tokenERC777AddressConst, feeAddToken)
 	require.Nil(t, err)

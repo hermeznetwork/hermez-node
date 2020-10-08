@@ -143,7 +143,7 @@ func TestClientRollup(t *testing.T) {
 
 	// Add a token
 
-	tx, err := c.RollupAddToken(token1Addr)
+	tx, err := c.RollupAddToken(token1Addr, clientSetup.RollupVariables.FeeAddToken)
 	require.Nil(t, err)
 	assert.NotNil(t, tx)
 
