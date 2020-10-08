@@ -591,7 +591,7 @@ func (c *Client) CtlAddL1TxUser(l1Tx *common.L1Tx) {
 		r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum] = eth.NewQueueStruct()
 		queue = r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
 	}
-	if l1Tx.FromIdx != nil && int64(*l1Tx.FromIdx) > r.State.CurrentIdx {
+	if int64(l1Tx.FromIdx) > r.State.CurrentIdx {
 		panic("l1Tx.FromIdx > r.State.CurrentIdx")
 	}
 	if int(l1Tx.TokenID)+1 > len(r.State.TokenList) {

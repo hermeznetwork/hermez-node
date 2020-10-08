@@ -55,7 +55,7 @@ CREATE TABLE token (
     symbol VARCHAR(10) NOT NULL,
     decimals INT NOT NULL,
     usd NUMERIC,
-    usd_update TIMESTAMP
+    usd_update TIMESTAMP WITHOUT TIME ZONE
 );
 
 -- +migrate StatementBegin
@@ -381,7 +381,10 @@ CREATE FUNCTION set_tx()
     RETURNS TRIGGER 
 AS 
 $BODY$
-DECLARE token_value NUMERIC;
+DECLARE
+	_value NUMERIC;
+	_usd_update TIMESTAMP;
+    _tx_timestamp TIMESTAMP;
 BEGIN
     -- Validate L1/L2 constrains
     IF NEW.is_l1 AND (( -- L1 mandatory fields
@@ -405,11 +408,14 @@ BEGIN
         NEW."token_id" = (SELECT token_id FROM account WHERE idx = NEW."from_idx");
     END IF;
     -- Set value_usd
-    token_value = (SELECT usd / POWER(10, decimals) FROM token WHERE token_id = NEW.token_id);
-    NEW."amount_usd" = (SELECT token_value * NEW.amount_f);
-    NEW."load_amount_usd" = (SELECT token_value * NEW.load_amount_f);
-    IF NOT NEW.is_l1 THEN
-        NEW."fee_usd" = (SELECT NEW."amount_usd" * fee_percentage(NEW.fee::NUMERIC));
+    SELECT INTO _value, _usd_update, _tx_timestamp 
+        usd / POWER(10, decimals), usd_update, timestamp FROM token INNER JOIN block on token.eth_block_num = block.eth_block_num WHERE token_id = NEW.token_id;
+    IF _tx_timestamp - interval '24 hours' < _usd_update AND _tx_timestamp + interval '24 hours' > _usd_update THEN
+        NEW."amount_usd" = (SELECT _value * NEW.amount_f);
+        NEW."load_amount_usd" = (SELECT _value * NEW.load_amount_f);
+        IF NOT NEW.is_l1 THEN
+            NEW."fee_usd" = (SELECT NEW."amount_usd" * fee_percentage(NEW.fee::NUMERIC));
+        END IF;
     END IF;
     RETURN NEW;
 END;
@@ -481,7 +487,7 @@ CREATE TABLE tx_pool (
     nonce BIGINT NOT NULL,
     state CHAR(4) NOT NULL,
     signature BYTEA NOT NULL,
-    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    timestamp TIMESTAMP WITHOUT TIME ZONE DEFAULT timezone('utc', now()),
     batch_num BIGINT,
     rq_from_idx BIGINT,
     rq_to_idx BIGINT,
@@ -498,7 +504,7 @@ CREATE TABLE account_creation_auth (
     eth_addr BYTEA PRIMARY KEY,
     bjj BYTEA NOT NULL,
     signature BYTEA NOT NULL,
-    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT timezone('utc', now())
 );
 
 -- +migrate Down

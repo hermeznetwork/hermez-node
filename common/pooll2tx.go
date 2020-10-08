@@ -1,7 +1,6 @@
 package common
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -18,32 +17,29 @@ type PoolL2Tx struct {
 	// TxID (12 bytes) for L2Tx is:
 	// bytes:  |  1   |    6    |   5   |
 	// values: | type | FromIdx | Nonce |
-	TxID        TxID               `meddler:"tx_id"`
-	FromIdx     Idx                `meddler:"from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	ToIdx       *Idx               `meddler:"to_idx"`   // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	ToEthAddr   *ethCommon.Address `meddler:"to_eth_addr"`
-	ToBJJ       *babyjub.PublicKey `meddler:"to_bjj"` // TODO: stop using json, use scanner/valuer
-	TokenID     TokenID            `meddler:"token_id"`
-	Amount      *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
-	AmountFloat float64            `meddler:"amount_f"`      // TODO: change to float16
-	USD         *float64           `meddler:"value_usd"`     // TODO: change to float16
-	Fee         FeeSelector        `meddler:"fee"`
-	Nonce       Nonce              `meddler:"nonce"` // effective 40 bits used
-	State       PoolL2TxState      `meddler:"state"`
-	Signature   *babyjub.Signature `meddler:"signature"`         // tx signature
-	Timestamp   time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
+	TxID      TxID               `meddler:"tx_id"`
+	FromIdx   Idx                `meddler:"from_idx"`
+	ToIdx     Idx                `meddler:"to_idx,zeroisnull"`
+	ToEthAddr ethCommon.Address  `meddler:"to_eth_addr"`
+	ToBJJ     *babyjub.PublicKey `meddler:"to_bjj"`
+	TokenID   TokenID            `meddler:"token_id"`
+	Amount    *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
+	Fee       FeeSelector        `meddler:"fee"`
+	Nonce     Nonce              `meddler:"nonce"` // effective 40 bits used
+	State     PoolL2TxState      `meddler:"state"`
+	Signature *babyjub.Signature `meddler:"signature"`         // tx signature
+	Timestamp time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
-	BatchNum          *BatchNum          `meddler:"batch_num"`   // batchNum in which this tx was forged. Presence indicates "forged" state.
-	RqFromIdx         *Idx               `meddler:"rq_from_idx"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	RqToIdx           *Idx               `meddler:"rq_to_idx"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	RqToEthAddr       *ethCommon.Address `meddler:"rq_to_eth_addr"`
+	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	RqToIdx           Idx                `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	RqToEthAddr       ethCommon.Address  `meddler:"rq_to_eth_addr"`
 	RqToBJJ           *babyjub.PublicKey `meddler:"rq_to_bjj"` // TODO: stop using json, use scanner/valuer
-	RqTokenID         *TokenID           `meddler:"rq_token_id"`
+	RqTokenID         TokenID            `meddler:"rq_token_id,zeroisnull"`
 	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16
-	RqFee             *FeeSelector       `meddler:"rq_fee"`
-	RqNonce           *uint64            `meddler:"rq_nonce"` // effective 48 bits used
-	AbsoluteFee       *float64           `meddler:"fee_usd"`
-	AbsoluteFeeUpdate *time.Time         `meddler:"usd_update,utctime"`
+	RqFee             FeeSelector        `meddler:"rq_fee,zeroisnull"`
+	RqNonce           uint64             `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
+	AbsoluteFee       float64            `meddler:"fee_usd,zeroisnull"`
+	AbsoluteFeeUpdate time.Time          `meddler:"usd_update,utctimez"`
 	Type              TxType             `meddler:"tx_type"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
@@ -54,11 +50,11 @@ type PoolL2Tx struct {
 func NewPoolL2Tx(poolL2Tx *PoolL2Tx) (*PoolL2Tx, error) {
 	// calculate TxType
 	var txType TxType
-	if poolL2Tx.ToIdx == nil || *poolL2Tx.ToIdx == Idx(0) {
+	if poolL2Tx.ToIdx == Idx(0) {
 		txType = TxTypeTransfer
-	} else if *poolL2Tx.ToIdx == Idx(1) {
+	} else if poolL2Tx.ToIdx == Idx(1) {
 		txType = TxTypeExit
-	} else if *poolL2Tx.ToIdx >= IdxUserThreshold {
+	} else if poolL2Tx.ToIdx >= IdxUserThreshold {
 		txType = TxTypeTransfer
 	} else {
 		return poolL2Tx, fmt.Errorf("Can not determine type of PoolL2Tx, invalid ToIdx value: %d", poolL2Tx.ToIdx)
@@ -189,14 +185,8 @@ func (tx *PoolL2Tx) HashToSign() (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	toEthAddr := big.NewInt(0)
-	if tx.ToEthAddr != nil {
-		toEthAddr = EthAddrToBigInt(*tx.ToEthAddr)
-	}
-	rqToEthAddr := big.NewInt(0)
-	if tx.RqToEthAddr != nil {
-		rqToEthAddr = EthAddrToBigInt(*tx.RqToEthAddr)
-	}
+	toEthAddr := EthAddrToBigInt(tx.ToEthAddr)
+	rqToEthAddr := EthAddrToBigInt(tx.RqToEthAddr)
 	toBJJAy := tx.ToBJJ.Y
 	rqTxCompressedDataV2, err := tx.TxCompressedDataV2()
 	if err != nil {
@@ -217,31 +207,22 @@ func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
 
 // L2Tx returns a *L2Tx from the PoolL2Tx
 func (tx *PoolL2Tx) L2Tx() (*L2Tx, error) {
-	if tx.ToIdx == nil || tx.BatchNum == nil {
-		return nil, errors.New("PoolL2Tx must have ToIdx != nil and BatchNum != nil in order to be able to transform to Tx")
-	}
 	return &L2Tx{
-		TxID:     tx.TxID,
-		BatchNum: *tx.BatchNum,
-		FromIdx:  tx.FromIdx,
-		ToIdx:    *tx.ToIdx,
-		Amount:   tx.Amount,
-		Fee:      tx.Fee,
-		Nonce:    tx.Nonce,
-		Type:     tx.Type,
+		TxID:    tx.TxID,
+		FromIdx: tx.FromIdx,
+		ToIdx:   tx.ToIdx,
+		Amount:  tx.Amount,
+		Fee:     tx.Fee,
+		Nonce:   tx.Nonce,
+		Type:    tx.Type,
 	}, nil
 }
 
 // Tx returns a *Tx from the PoolL2Tx
 func (tx *PoolL2Tx) Tx() (*Tx, error) {
-	if tx.ToIdx == nil {
-		return nil, errors.New("PoolL2Tx must have ToIdx != nil in order to be able to transform to Tx")
-	}
-	fromIdx := new(Idx)
-	*fromIdx = tx.FromIdx
 	return &Tx{
 		TxID:    tx.TxID,
-		FromIdx: fromIdx,
+		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
 		Amount:  tx.Amount,
 		Nonce:   &tx.Nonce,

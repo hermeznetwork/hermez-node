@@ -20,8 +20,6 @@ type Token struct {
 	Name        string            `json:"name" meddler:"name"`
 	Symbol      string            `json:"symbol" meddler:"symbol"`
 	Decimals    uint64            `json:"decimals" meddler:"decimals"`
-	USD         *float64          `json:"USD" meddler:"usd"`
-	USDUpdate   *time.Time        `json:"fiatUpdate" meddler:"usd_update,utctime"`
 }
 
 // TokenInfo provides the price of the token in USD

@@ -3,7 +3,6 @@ package historydb
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
@@ -157,12 +156,8 @@ func TestTokens(t *testing.T) {
 		assert.Equal(t, tokens[i].EthAddr, token.EthAddr)
 		assert.Equal(t, tokens[i].Name, token.Name)
 		assert.Equal(t, tokens[i].Symbol, token.Symbol)
-		assert.Equal(t, tokens[i].USD, token.USD)
-		if token.USDUpdate != nil {
-			assert.Greater(t, int64(1*time.Second), int64(time.Since(*token.USDUpdate)))
-		} else {
-			assert.Equal(t, tokens[i].USDUpdate, token.USDUpdate)
-		}
+		assert.Nil(t, token.USD)
+		assert.Nil(t, token.USDUpdate)
 	}
 }
 
@@ -218,6 +213,7 @@ func TestTxs(t *testing.T) {
 
 	/*
 		Uncomment once the transaction generation is fixed
+		!! Missing tests to check that historic USD is not set if USDUpdate is too old (24h) !!
 
 		// Generate fake L1 txs
 		const nL1s = 64

@@ -50,7 +50,7 @@ func TestGenerateTestL2Txs(t *testing.T) {
 	// l2txs
 	assert.Equal(t, common.TxTypeTransfer, l2txs[0][0].Type)
 	assert.Equal(t, common.Idx(256), l2txs[0][0].FromIdx)
-	assert.Equal(t, common.Idx(258), *l2txs[0][0].ToIdx)
+	assert.Equal(t, common.Idx(258), l2txs[0][0].ToIdx)
 	assert.Equal(t, accounts["B1"].BJJ.Public().String(), l2txs[0][0].ToBJJ.String())
 	assert.Equal(t, accounts["B1"].Addr.Hex(), l2txs[0][0].ToEthAddr.Hex())
 	assert.Equal(t, common.Nonce(0), l2txs[0][0].Nonce)

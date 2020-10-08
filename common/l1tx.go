@@ -31,7 +31,7 @@ type L1Tx struct {
 	ToForgeL1TxsNum *int64 // toForgeL1TxsNum in which the tx was forged / will be forged
 	Position        int
 	UserOrigin      bool // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx         *Idx // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	FromIdx         Idx  // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	FromEthAddr     ethCommon.Address
 	FromBJJ         *babyjub.PublicKey
 	ToIdx           Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
@@ -41,8 +41,6 @@ type L1Tx struct {
 	EthBlockNum     int64 // Ethereum Block Number in which this L1Tx was added to the queue
 	Type            TxType
 	BatchNum        *BatchNum
-	USD             *float64
-	LoadAmountUSD   *float64
 }
 
 // NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated
@@ -50,7 +48,7 @@ type L1Tx struct {
 func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 	// calculate TxType
 	var txType TxType
-	if l1Tx.FromIdx == nil {
+	if l1Tx.FromIdx == 0 {
 		if l1Tx.ToIdx == Idx(0) {
 			txType = TxTypeCreateAccountDeposit
 		} else if l1Tx.ToIdx >= IdxUserThreshold {
@@ -58,7 +56,7 @@ func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 		} else {
 			return l1Tx, fmt.Errorf("Can not determine type of L1Tx, invalid ToIdx value: %d", l1Tx.ToIdx)
 		}
-	} else if *l1Tx.FromIdx >= IdxUserThreshold {
+	} else if l1Tx.FromIdx >= IdxUserThreshold {
 		if l1Tx.ToIdx == Idx(0) {
 			txType = TxTypeDeposit
 		} else if l1Tx.ToIdx == Idx(1) {
@@ -123,28 +121,22 @@ func (tx *L1Tx) Tx() *Tx {
 	amountFloat, _ := f.Float64()
 	userOrigin := new(bool)
 	*userOrigin = tx.UserOrigin
-	fromEthAddr := new(ethCommon.Address)
-	*fromEthAddr = tx.FromEthAddr
-	toIdx := new(Idx)
-	*toIdx = tx.ToIdx
 	genericTx := &Tx{
 		IsL1:            true,
 		TxID:            tx.TxID,
 		Type:            tx.Type,
 		Position:        tx.Position,
 		FromIdx:         tx.FromIdx,
-		ToIdx:           toIdx,
+		ToIdx:           tx.ToIdx,
 		Amount:          tx.Amount,
 		AmountFloat:     amountFloat,
 		TokenID:         tx.TokenID,
 		ToForgeL1TxsNum: tx.ToForgeL1TxsNum,
 		UserOrigin:      userOrigin,
-		FromEthAddr:     fromEthAddr,
+		FromEthAddr:     tx.FromEthAddr,
 		FromBJJ:         tx.FromBJJ,
 		LoadAmount:      tx.LoadAmount,
 		EthBlockNum:     tx.EthBlockNum,
-		USD:             tx.USD,
-		LoadAmountUSD:   tx.LoadAmountUSD,
 	}
 	if tx.LoadAmount != nil {
 		lf := new(big.Float).SetInt(tx.LoadAmount)
@@ -219,10 +211,7 @@ func L1TxFromBytes(b []byte) (*L1Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	if fromIdx != 0 {
-		tx.FromIdx = new(Idx)
-		*tx.FromIdx = fromIdx
-	}
+	tx.FromIdx = fromIdx
 	tx.LoadAmount = Float16FromBytes(b[58:60]).BigInt()
 	tx.Amount = Float16FromBytes(b[60:62]).BigInt()
 	tx.TokenID, err = TokenIDFromBytes(b[62:66])

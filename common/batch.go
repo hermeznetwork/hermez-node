@@ -21,7 +21,6 @@ type Batch struct {
 	ExitRoot      Hash                 `meddler:"exit_root"`
 	ForgeL1TxsNum *int64               `meddler:"forge_l1_txs_num"` // optional, Only when the batch forges L1 txs. Identifier that corresponds to the group of L1 txs forged in the current batch.
 	SlotNum       SlotNum              `meddler:"slot_num"`         // Slot in which the batch is forged
-	TotalFeesUSD  *float64             `meddler:"total_fees_usd"`
 }
 
 // BatchNum identifies a batch

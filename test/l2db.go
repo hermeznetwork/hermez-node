@@ -42,37 +42,19 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 		} else if i%4 == 3 {
 			state = common.PoolL2TxStateForged
 		}
-		f := new(big.Float).SetInt(big.NewInt(int64(i)))
-		amountF, _ := f.Float64()
-		var usd, absFee *float64
 		fee := common.FeeSelector(i % 255) //nolint:gomnd
 		token := tokens[i%len(tokens)]
-		if token.USD != nil {
-			usd = new(float64)
-			absFee = new(float64)
-			*usd = *token.USD * amountF
-			*absFee = fee.Percentage() * *usd
-		}
-		toIdx := new(common.Idx)
-		*toIdx = common.Idx(i + 1)
-		toEthAddr := new(ethCommon.Address)
-		*toEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
 		tx := &common.PoolL2Tx{
-			FromIdx:           common.Idx(i),
-			ToIdx:             toIdx,
-			ToEthAddr:         toEthAddr,
-			ToBJJ:             privK.Public(),
-			TokenID:           token.TokenID,
-			Amount:            big.NewInt(int64(i)),
-			AmountFloat:       amountF,
-			USD:               usd,
-			Fee:               fee,
-			Nonce:             common.Nonce(i),
-			State:             state,
-			Signature:         privK.SignPoseidon(big.NewInt(int64(i))),
-			Timestamp:         time.Now().UTC(),
-			AbsoluteFee:       absFee,
-			AbsoluteFeeUpdate: token.USDUpdate,
+			FromIdx:   common.Idx(i),
+			ToIdx:     common.Idx(i + 1),
+			ToEthAddr: ethCommon.BigToAddress(big.NewInt(int64(i))),
+			ToBJJ:     privK.Public(),
+			TokenID:   token.TokenID,
+			Amount:    big.NewInt(int64(i)),
+			Fee:       fee,
+			Nonce:     common.Nonce(i),
+			State:     state,
+			Signature: privK.SignPoseidon(big.NewInt(int64(i))),
 		}
 		var err error
 		tx, err = common.NewPoolL2Tx(tx)
@@ -80,31 +62,14 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 			panic(err)
 		}
 		if i%2 == 0 { // Optional parameters: rq
-			rqFromIdx := new(common.Idx)
-			*rqFromIdx = common.Idx(i)
-			tx.RqFromIdx = rqFromIdx
-			rqToIdx := new(common.Idx)
-			*rqToIdx = common.Idx(i + 1)
-			tx.RqToIdx = rqToIdx
-			rqToEthAddr := new(ethCommon.Address)
-			*rqToEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
-			tx.RqToEthAddr = rqToEthAddr
+			tx.RqFromIdx = common.Idx(i)
+			tx.RqToIdx = common.Idx(i + 1)
+			tx.RqToEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
 			tx.RqToBJJ = privK.Public()
-			rqTokenID := new(common.TokenID)
-			*rqTokenID = common.TokenID(i)
-			tx.RqTokenID = rqTokenID
+			tx.RqTokenID = common.TokenID(i)
 			tx.RqAmount = big.NewInt(int64(i))
-			rqFee := new(common.FeeSelector)
-			*rqFee = common.FeeSelector(i)
-			tx.RqFee = rqFee
-			rqNonce := new(uint64)
-			*rqNonce = uint64(i)
-			tx.RqNonce = rqNonce
-		}
-		if i%3 == 0 { // Optional parameters: things that get updated "a posteriori"
-			batchNum := new(common.BatchNum)
-			*batchNum = 489
-			tx.BatchNum = batchNum
+			tx.RqFee = common.FeeSelector(i)
+			tx.RqNonce = uint64(i)
 		}
 		txs = append(txs, tx)
 	}

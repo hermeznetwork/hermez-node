@@ -3,7 +3,6 @@ package common
 import (
 	"database/sql/driver"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -84,14 +83,15 @@ const (
 )
 
 // Tx is a struct used by the TxSelector & BatchBuilder as a generic type generated from L1Tx & PoolL2Tx
+// TODO: this should be changed for "mini Tx"
 type Tx struct {
 	// Generic
 	IsL1        bool      `meddler:"is_l1"`
 	TxID        TxID      `meddler:"id"`
 	Type        TxType    `meddler:"type"`
 	Position    int       `meddler:"position"`
-	FromIdx     *Idx      `meddler:"from_idx"`
-	ToIdx       *Idx      `meddler:"to_idx"`
+	FromIdx     Idx       `meddler:"from_idx"`
+	ToIdx       Idx       `meddler:"to_idx"`
 	Amount      *big.Int  `meddler:"amount,bigint"`
 	AmountFloat float64   `meddler:"amount_f"`
 	TokenID     TokenID   `meddler:"token_id"`
@@ -101,7 +101,7 @@ type Tx struct {
 	// L1
 	ToForgeL1TxsNum *int64             `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
 	UserOrigin      *bool              `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromEthAddr     *ethCommon.Address `meddler:"from_eth_addr"`
+	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr"`
 	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj"`
 	LoadAmount      *big.Int           `meddler:"load_amount,bigintnull"`
 	LoadAmountFloat *float64           `meddler:"load_amount_f"`
@@ -114,18 +114,15 @@ type Tx struct {
 
 // L1Tx returns a *L1Tx from the Tx
 func (tx *Tx) L1Tx() (*L1Tx, error) {
-	if tx.UserOrigin == nil || tx.FromEthAddr == nil {
-		return nil, errors.New("Tx must have UserOrigin != nil and FromEthAddr != nil in order to be able to transform to L1Tx")
-	}
 	return &L1Tx{
 		TxID:            tx.TxID,
 		ToForgeL1TxsNum: tx.ToForgeL1TxsNum,
 		Position:        tx.Position,
 		UserOrigin:      *tx.UserOrigin,
 		FromIdx:         tx.FromIdx,
-		FromEthAddr:     *tx.FromEthAddr,
+		FromEthAddr:     tx.FromEthAddr,
 		FromBJJ:         tx.FromBJJ,
-		ToIdx:           *tx.ToIdx,
+		ToIdx:           tx.ToIdx,
 		TokenID:         tx.TokenID,
 		Amount:          tx.Amount,
 		LoadAmount:      tx.LoadAmount,

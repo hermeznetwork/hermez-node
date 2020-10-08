@@ -3,7 +3,6 @@ package test
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"time"
 
@@ -41,12 +40,6 @@ func GenTokens(nTokens int, blocks []common.Block) []common.Token {
 			Decimals:    uint64(i),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			EthAddr:     ethCommon.BigToAddress(big.NewInt(int64(i))),
-		}
-		if i%2 == 0 {
-			usd := 3.0
-			token.USD = &usd
-			now := time.Now()
-			token.USDUpdate = &now
 		}
 		tokens = append(tokens, token)
 	}
@@ -129,28 +122,14 @@ func GenL1Txs(
 	_, nextTxsNum := GetNextToForgeNumAndBatch(batches)
 	for i := fromIdx; i < fromIdx+totalTxs; i++ {
 		token := tokens[i%len(tokens)]
-		var usd *float64
-		var lUSD *float64
 		amount := big.NewInt(int64(i + 1))
-		if token.USD != nil {
-			//nolint:gomnd
-			noDecimalsUSD := *token.USD / math.Pow(10, float64(token.Decimals))
-			f := new(big.Float).SetInt(amount)
-			af, _ := f.Float64()
-			usd = new(float64)
-			*usd = noDecimalsUSD * af
-			lUSD = new(float64)
-			*lUSD = noDecimalsUSD * af
-		}
 		tx := common.L1Tx{
-			Position:      i - fromIdx,
-			UserOrigin:    i%2 == 0,
-			TokenID:       token.TokenID,
-			Amount:        amount,
-			USD:           usd,
-			LoadAmount:    amount,
-			LoadAmountUSD: lUSD,
-			EthBlockNum:   blocks[i%len(blocks)].EthBlockNum,
+			Position:    i - fromIdx,
+			UserOrigin:  i%2 == 0,
+			TokenID:     token.TokenID,
+			Amount:      amount,
+			LoadAmount:  amount,
+			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 		}
 		if tx.UserOrigin {
 			n := nextTxsNum
@@ -227,9 +206,7 @@ func setFromToAndAppend(
 				panic(err)
 			}
 		}
-		fromIdx := new(common.Idx)
-		*fromIdx = from.Idx
-		tx.FromIdx = fromIdx
+		tx.FromIdx = from.Idx
 		tx.FromEthAddr = from.EthAddr
 		tx.FromBJJ = from.PublicKey
 		tx.ToIdx = to.Idx
@@ -243,9 +220,7 @@ func setFromToAndAppend(
 		if err != nil {
 			panic(err)
 		}
-		fromIdx := new(common.Idx)
-		*fromIdx = from.Idx
-		tx.FromIdx = fromIdx
+		tx.FromIdx = from.Idx
 		tx.FromEthAddr = from.EthAddr
 		tx.FromBJJ = from.PublicKey
 		tx.ToIdx = to.Idx
@@ -318,21 +293,6 @@ func GenL2Txs(
 			tx.ToIdx = to.Idx
 		}
 
-		var usd *float64
-		var fUSD *float64
-		token := GetToken(tx.FromIdx, accounts, tokens)
-		if token.USD != nil {
-			//nolint:gomnd
-			noDecimalsUSD := *token.USD / math.Pow(10, float64(token.Decimals))
-			f := new(big.Float).SetInt(amount)
-			af, _ := f.Float64()
-			usd = new(float64)
-			fUSD = new(float64)
-			*usd = noDecimalsUSD * af
-			*fUSD = *usd * fee.Percentage()
-		}
-		tx.USD = usd
-		tx.FeeUSD = fUSD
 		if i < nUserTxs {
 			userTxs = append(userTxs, tx)
 		} else {
@@ -340,29 +300,6 @@ func GenL2Txs(
 		}
 	}
 	return userTxs, othersTxs
-}
-
-// GetToken returns the Token associated to an Idx given a list of tokens and accounts.
-// It panics when not found, intended for testing only.
-func GetToken(idx common.Idx, accs []common.Account, tokens []common.Token) common.Token {
-	var id common.TokenID
-	found := false
-	for _, acc := range accs {
-		if acc.Idx == idx {
-			found = true
-			id = acc.TokenID
-			break
-		}
-	}
-	if !found {
-		panic("tokenID not found")
-	}
-	for i := 0; i < len(tokens); i++ {
-		if tokens[i].TokenID == id {
-			return tokens[i]
-		}
-	}
-	panic("token not found")
 }
 
 // GenCoordinators generates coordinators. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
