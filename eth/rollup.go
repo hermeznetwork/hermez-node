@@ -150,7 +150,6 @@ type RollupVariables struct {
 }
 
 // QueueStruct is the queue of L1Txs for a batch
-//nolint:structcheck
 type QueueStruct struct {
 	L1TxQueue    []common.L1Tx
 	TotalL1TxFee *big.Int
@@ -171,7 +170,6 @@ type RollupVerifierStruct struct {
 }
 
 // RollupState represents the state of the Rollup in the Smart Contract
-//nolint:structcheck,unused
 type RollupState struct {
 	StateRoot              *big.Int
 	ExitRoots              []*big.Int
@@ -229,7 +227,7 @@ type RollupEventWithdrawEvent struct {
 }
 
 // RollupEvents is the list of events in a block of the Rollup Smart Contract
-type RollupEvents struct { //nolint:structcheck
+type RollupEvents struct {
 	L1UserTx                    []RollupEventL1UserTx
 	AddToken                    []RollupEventAddToken
 	ForgeBatch                  []RollupEventForgeBatch
@@ -251,7 +249,6 @@ func NewRollupEvents() RollupEvents {
 }
 
 // RollupForgeBatchArgs are the arguments to the ForgeBatch function in the Rollup Smart Contract
-//nolint:structcheck,unused
 type RollupForgeBatchArgs struct {
 	NewLastIdx            int64
 	NewStRoot             *big.Int
@@ -269,7 +266,6 @@ type RollupForgeBatchArgs struct {
 }
 
 // RollupForgeBatchArgsAux are the arguments to the ForgeBatch function in the Rollup Smart Contract
-//nolint:structcheck,unused
 type RollupForgeBatchArgsAux struct {
 	NewLastIdx             *big.Int
 	NewStRoot              *big.Int
