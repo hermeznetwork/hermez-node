@@ -69,7 +69,7 @@ type historyTxAPI struct {
 	Token       common.Token     `json:"token"`
 }
 
-func historyTxsToAPI(dbTxs []*historydb.HistoryTx) []historyTxAPI {
+func historyTxsToAPI(dbTxs []historydb.HistoryTx) []historyTxAPI {
 	apiTxs := []historyTxAPI{}
 	for i := 0; i < len(dbTxs); i++ {
 		apiTx := historyTxAPI{

@@ -16,7 +16,7 @@ import (
 )
 
 // txs implements the interface Sort for an array of Tx
-type txs []*common.PoolL2Tx
+type txs []common.PoolL2Tx
 
 func (t txs) Len() int {
 	return len(t)
@@ -68,7 +68,7 @@ func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 }
 
 // GetL2TxSelection returns a selection of the L2Txs for the next batch, from the L2DB pool
-func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]*common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]common.PoolL2Tx, error) {
 	// get pending l2-tx from tx-pool
 	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // once l2db ready, maybe use parameter 'batchNum'
 	if err != nil {
@@ -98,7 +98,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]*common.P
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
-func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*common.L1Tx) ([]*common.L1Tx, []*common.L1Tx, []*common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.L1Tx, []common.L1Tx, []common.PoolL2Tx, error) {
 	// apply l1-user-tx to localAccountDB
 	//     create new leaves
 	//     update balances
@@ -111,7 +111,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 	}
 
 	var validTxs txs
-	var l1CoordinatorTxs []*common.L1Tx
+	var l1CoordinatorTxs []common.L1Tx
 	positionL1 := len(l1Txs)
 
 	// if tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB, if so,
@@ -181,7 +181,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 					validTxs = append(validTxs, l2TxsRaw[i])
 				}
 				// create L1CoordinatorTx for the accountCreation
-				l1CoordinatorTx := &common.L1Tx{
+				l1CoordinatorTx := common.L1Tx{
 					Position:    positionL1,
 					UserOrigin:  false,
 					FromEthAddr: accAuth.EthAddr,
@@ -210,7 +210,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 					log.Warn("l2TxsRaw[i].ToEthAddr should not be nil")
 					continue
 				}
-				l1CoordinatorTx := &common.L1Tx{
+				l1CoordinatorTx := common.L1Tx{
 					Position:    positionL1,
 					UserOrigin:  false,
 					FromEthAddr: *l2TxsRaw[i].ToEthAddr,
@@ -254,7 +254,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []*c
 	return l1Txs, l1CoordinatorTxs, l2Txs, nil
 }
 
-func checkAlreadyPendingToCreate(l1CoordinatorTxs []*common.L1Tx, addr *ethCommon.Address, bjj *babyjub.PublicKey) bool {
+func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, addr *ethCommon.Address, bjj *babyjub.PublicKey) bool {
 	if addr == nil {
 		log.Warn("The provided addr is nil")
 		return false

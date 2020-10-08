@@ -60,8 +60,8 @@ func TestBlocks(t *testing.T) {
 	assert.Equal(t, len(blocks), len(fetchedBlocks))
 	// Compare generated vs getted blocks
 	assert.NoError(t, err)
-	for i, fetchedBlock := range fetchedBlocks {
-		assertEqualBlock(t, &blocks[i], fetchedBlock)
+	for i := range fetchedBlocks {
+		assertEqualBlock(t, &blocks[i], &fetchedBlocks[i])
 	}
 	// Get blocks from the DB one by one
 	for i := fromBlock; i < toBlock; i++ {
@@ -100,7 +100,7 @@ func TestBatches(t *testing.T) {
 	fetchedBatches, err := historyDB.GetBatches(0, common.BatchNum(nBatches))
 	assert.NoError(t, err)
 	for i, fetchedBatch := range fetchedBatches {
-		assert.Equal(t, batches[i], *fetchedBatch)
+		assert.Equal(t, batches[i], fetchedBatch)
 	}
 	// Test GetLastBatchNum
 	fetchedLastBatchNum, err := historyDB.GetLastBatchNum()
@@ -132,7 +132,7 @@ func TestBids(t *testing.T) {
 	assert.NoError(t, err)
 	// Compare fetched bids vs generated bids
 	for i, bid := range fetchedBids {
-		assert.Equal(t, bids[i], *bid)
+		assert.Equal(t, bids[i], bid)
 	}
 }
 
@@ -191,7 +191,7 @@ func TestAccounts(t *testing.T) {
 	assert.NoError(t, err)
 	// Compare fetched accounts vs generated accounts
 	for i, acc := range fetchedAccs {
-		assert.Equal(t, accs[i], *acc)
+		assert.Equal(t, accs[i], acc)
 	}
 }
 

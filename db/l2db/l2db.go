@@ -7,6 +7,8 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
@@ -133,14 +135,14 @@ func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
 }
 
 // GetPendingTxs return all the pending txs of the L2DB, that have a non NULL AbsoluteFee
-func (l2db *L2DB) GetPendingTxs() ([]*common.PoolL2Tx, error) {
+func (l2db *L2DB) GetPendingTxs() ([]common.PoolL2Tx, error) {
 	var txs []*common.PoolL2Tx
 	err := meddler.QueryAll(
 		l2db.db, &txs,
 		selectPoolTx+"WHERE state = $1 AND token.usd IS NOT NULL",
 		common.PoolL2TxStatePending,
 	)
-	return txs, err
+	return db.SlicePtrsToSlice(txs).([]common.PoolL2Tx), err
 }
 
 // StartForging updates the state of the transactions that will begin the forging process.
@@ -212,7 +214,10 @@ func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.
 	defer func() {
 		// Rollback the transaction if there was an error.
 		if err != nil {
-			err = txn.Rollback()
+			errRollback := txn.Rollback()
+			if errRollback != nil {
+				log.Errorw("Rollback", "err", errRollback)
+			}
 		}
 	}()
 	for i := 0; i < len(updatedAccounts); i++ {
@@ -257,7 +262,10 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 	defer func() {
 		// Rollback the transaction if there was an error.
 		if err != nil {
-			err = txn.Rollback()
+			errRollback := txn.Rollback()
+			if errRollback != nil {
+				log.Errorw("Rollback", "err", errRollback)
+			}
 		}
 	}()
 	// Delete pending txs that have been in the pool after the TTL if maxTxs is reached

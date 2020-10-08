@@ -197,7 +197,7 @@ func TestMain(m *testing.M) {
 			genericTxs = append(genericTxs, l2tx.Tx())
 		}
 		// Transform generic Txs to HistoryTx
-		historyTxs := []*historydb.HistoryTx{}
+		historyTxs := []historydb.HistoryTx{}
 		for _, genericTx := range genericTxs {
 			// find timestamp
 			var timestamp time.Time
@@ -238,7 +238,7 @@ func TestMain(m *testing.M) {
 					*feeUSD = *usd * genericTx.Fee.Percentage()
 				}
 			}
-			historyTxs = append(historyTxs, &historydb.HistoryTx{
+			historyTxs = append(historyTxs, historydb.HistoryTx{
 				IsL1:                  genericTx.IsL1,
 				TxID:                  genericTx.TxID,
 				Type:                  genericTx.Type,

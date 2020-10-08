@@ -31,8 +31,8 @@ type AuctionVars struct {
 	AllocationRatio   AllocationRatio
 }
 
-// WithdrawalDelayerVars contains the Withdrawal Delayer smart contract variables
-type WithdrawalDelayerVars struct {
+// WithdrawDelayerVars contains the Withdrawal Delayer smart contract variables
+type WithdrawDelayerVars struct {
 	HermezRollupAddress        eth.Address
 	HermezGovernanceDAOAddress eth.Address
 	WhiteHackGroupAddress      eth.Address

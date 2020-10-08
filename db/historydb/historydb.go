@@ -8,6 +8,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
@@ -25,7 +26,7 @@ type HistoryDB struct {
 
 // BlockData contains the information of a Block
 type BlockData struct {
-	block *common.Block
+	Block *common.Block
 	// Rollup
 	// L1UserTxs that were submitted in the block
 	L1UserTxs        []common.L1Tx
@@ -33,10 +34,10 @@ type BlockData struct {
 	RegisteredTokens []common.Token
 	RollupVars       *common.RollupVars
 	// Auction
-	Bids         []common.Bid
-	Coordinators []common.Coordinator
-	AuctionVars  *common.AuctionVars
-	// WithdrawalDelayer
+	Bids                []common.Bid
+	Coordinators        []common.Coordinator
+	AuctionVars         *common.AuctionVars
+	WithdrawDelayerVars *common.WithdrawDelayerVars
 	// TODO: enable when common.WithdrawalDelayerVars is Merged from Synchronizer PR
 	// WithdrawalDelayerVars *common.WithdrawalDelayerVars
 }
@@ -51,6 +52,19 @@ type BatchData struct {
 	CreatedAccounts  []common.Account
 	ExitTree         []common.ExitInfo
 	Batch            *common.Batch
+}
+
+// NewBatchData creates an empty BatchData with the slices initialized.
+func NewBatchData() *BatchData {
+	return &BatchData{
+		L1Batch:          false,
+		L1UserTxs:        make([]common.L1Tx, 0),
+		L1CoordinatorTxs: make([]common.L1Tx, 0),
+		L2Txs:            make([]common.L2Tx, 0),
+		CreatedAccounts:  make([]common.Account, 0),
+		ExitTree:         make([]common.ExitInfo, 0),
+		Batch:            &common.Batch{},
+	}
 }
 
 // NewHistoryDB initialize the DB
@@ -92,14 +106,14 @@ func (hdb *HistoryDB) GetBlock(blockNum int64) (*common.Block, error) {
 }
 
 // GetBlocks retrieve blocks from the DB, given a range of block numbers defined by from and to
-func (hdb *HistoryDB) GetBlocks(from, to int64) ([]*common.Block, error) {
+func (hdb *HistoryDB) GetBlocks(from, to int64) ([]common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
 		hdb.db, &blocks,
 		"SELECT * FROM block WHERE $1 <= eth_block_num AND eth_block_num < $2;",
 		from, to,
 	)
-	return blocks, err
+	return db.SlicePtrsToSlice(blocks).([]common.Block), err
 }
 
 // GetLastBlock retrieve the block with the highest block number from the DB
@@ -141,14 +155,14 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 }
 
 // GetBatches retrieve batches from the DB, given a range of batch numbers defined by from and to
-func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]*common.Batch, error) {
+func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, error) {
 	var batches []*common.Batch
 	err := meddler.QueryAll(
 		hdb.db, &batches,
 		"SELECT * FROM batch WHERE $1 <= batch_num AND batch_num < $2;",
 		from, to,
 	)
-	return batches, err
+	return db.SlicePtrsToSlice(batches).([]common.Batch), err
 }
 
 // GetLastBatchNum returns the BatchNum of the latest forged batch
@@ -201,13 +215,13 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 }
 
 // GetBids return the bids
-func (hdb *HistoryDB) GetBids() ([]*common.Bid, error) {
+func (hdb *HistoryDB) GetBids() ([]common.Bid, error) {
 	var bids []*common.Bid
 	err := meddler.QueryAll(
 		hdb.db, &bids,
 		"SELECT * FROM bid;",
 	)
-	return bids, err
+	return db.SlicePtrsToSlice(bids).([]common.Bid), err
 }
 
 // AddCoordinators insert Coordinators into the DB
@@ -269,13 +283,13 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error 
 }
 
 // GetTokens returns a list of tokens from the DB
-func (hdb *HistoryDB) GetTokens() ([]*common.Token, error) {
+func (hdb *HistoryDB) GetTokens() ([]common.Token, error) {
 	var tokens []*common.Token
 	err := meddler.QueryAll(
 		hdb.db, &tokens,
 		"SELECT * FROM token ORDER BY token_id;",
 	)
-	return tokens, err
+	return db.SlicePtrsToSlice(tokens).([]common.Token), err
 }
 
 // GetTokenSymbols returns all the token symbols from the DB
@@ -315,13 +329,13 @@ func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error
 }
 
 // GetAccounts returns a list of accounts from the DB
-func (hdb *HistoryDB) GetAccounts() ([]*common.Account, error) {
+func (hdb *HistoryDB) GetAccounts() ([]common.Account, error) {
 	var accs []*common.Account
 	err := meddler.QueryAll(
 		hdb.db, &accs,
 		"SELECT * FROM account ORDER BY idx;",
 	)
-	return accs, err
+	return db.SlicePtrsToSlice(accs).([]common.Account), err
 }
 
 // AddL1Txs inserts L1 txs to the DB. USD and LoadAmountUSD will be set automatically before storing the tx.
@@ -384,14 +398,14 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []common.Tx) error {
 }
 
 // GetTxs returns a list of txs from the DB
-func (hdb *HistoryDB) GetTxs() ([]*common.Tx, error) {
+func (hdb *HistoryDB) GetTxs() ([]common.Tx, error) {
 	var txs []*common.Tx
 	err := meddler.QueryAll(
 		hdb.db, &txs,
 		`SELECT * FROM tx 
 		ORDER BY (batch_num, position) ASC`,
 	)
-	return txs, err
+	return db.SlicePtrsToSlice(txs).([]common.Tx), err
 }
 
 // GetHistoryTxs returns a list of txs from the DB using the HistoryTx struct
@@ -399,7 +413,7 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
 	tokenID, idx, batchNum *uint, txType *common.TxType,
 	offset, limit *uint, last bool,
-) ([]*HistoryTx, int, error) {
+) ([]HistoryTx, int, error) {
 	if ethAddr != nil && bjj != nil {
 		return nil, 0, errors.New("ethAddr and bjj are incompatible")
 	}
@@ -481,14 +495,15 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query = hdb.db.Rebind(queryStr)
 	// log.Debug(query)
-	txs := []*HistoryTx{}
-	if err := meddler.QueryAll(hdb.db, &txs, query, args...); err != nil {
+	txsPtrs := []*HistoryTx{}
+	if err := meddler.QueryAll(hdb.db, &txsPtrs, query, args...); err != nil {
 		return nil, 0, err
 	}
+	txs := db.SlicePtrsToSlice(txsPtrs).([]HistoryTx)
 	if len(txs) == 0 {
 		return nil, 0, sql.ErrNoRows
 	} else if last {
-		tmp := []*HistoryTx{}
+		tmp := []HistoryTx{}
 		for i := len(txs) - 1; i >= 0; i-- {
 			tmp = append(tmp, txs[i])
 		}
@@ -536,27 +551,22 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 	}
 	defer func() {
 		if err != nil {
-			err = txn.Rollback()
+			errRollback := txn.Rollback()
+			if errRollback != nil {
+				log.Errorw("Rollback", "err", errRollback)
+			}
 		}
 	}()
 
 	// Add block
-	err = hdb.addBlock(txn, blockData.block)
+	err = hdb.addBlock(txn, blockData.Block)
 	if err != nil {
 		return err
 	}
 
-	// Add l1 Txs
-	if len(blockData.L1UserTxs) > 0 {
-		err = hdb.addL1Txs(txn, blockData.L1UserTxs)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Add Tokens
-	if len(blockData.RegisteredTokens) > 0 {
-		err = hdb.addTokens(txn, blockData.RegisteredTokens)
+	// Add Coordinators
+	if len(blockData.Coordinators) > 0 {
+		err = hdb.addCoordinators(txn, blockData.Coordinators)
 		if err != nil {
 			return err
 		}
@@ -570,9 +580,17 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 		}
 	}
 
-	// Add Coordinators
-	if len(blockData.Coordinators) > 0 {
-		err = hdb.addCoordinators(txn, blockData.Coordinators)
+	// Add Tokens
+	if len(blockData.RegisteredTokens) > 0 {
+		err = hdb.addTokens(txn, blockData.RegisteredTokens)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add l1 Txs
+	if len(blockData.L1UserTxs) > 0 {
+		err = hdb.addL1Txs(txn, blockData.L1UserTxs)
 		if err != nil {
 			return err
 		}

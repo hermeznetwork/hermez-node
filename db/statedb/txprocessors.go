@@ -36,7 +36,7 @@ type processedExit struct {
 // type==TypeSynchronizer, assumes that the call is done from the Synchronizer,
 // returns common.ExitTreeLeaf that is later used by the Synchronizer to update
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
-func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
+func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 
@@ -68,7 +68,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 	}
 
 	// assumption: l1usertx are sorted by L1Tx.Position
-	for _, tx := range l1usertxs {
+	for i := range l1usertxs {
+		tx := &l1usertxs[i]
 		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
@@ -85,7 +86,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 			s.i++
 		}
 	}
-	for _, tx := range l1coordinatortxs {
+	for i := range l1coordinatortxs {
+		tx := &l1coordinatortxs[i]
 		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
@@ -105,7 +107,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 			s.i++
 		}
 	}
-	for _, tx := range l2txs {
+	for i := range l2txs {
+		tx := &l2txs[i]
 		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, tx)
 		if err != nil {
 			return nil, nil, err
@@ -194,7 +197,7 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs [
 }
 
 // getTokenIDsBigInt returns the list of TokenIDs in *big.Int format
-func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []*common.L1Tx, l2txs []*common.PoolL2Tx) ([]*big.Int, error) {
+func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) ([]*big.Int, error) {
 	tokenIDs := make(map[common.TokenID]bool)
 	for i := 0; i < len(l1usertxs); i++ {
 		tokenIDs[l1usertxs[i].TokenID] = true

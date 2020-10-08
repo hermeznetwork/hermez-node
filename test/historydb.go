@@ -152,6 +152,12 @@ func GenL1Txs(
 			LoadAmountUSD: lUSD,
 			EthBlockNum:   blocks[i%len(blocks)].EthBlockNum,
 		}
+		if tx.UserOrigin {
+			n := nextTxsNum
+			tx.ToForgeL1TxsNum = &n
+		} else {
+			tx.BatchNum = &batches[i%len(batches)].BatchNum
+		}
 		nTx, err := common.NewL1Tx(&tx)
 		if err != nil {
 			panic(err)
@@ -163,7 +169,8 @@ func GenL1Txs(
 			setFromToAndAppend(fromIdx, tx, i, nUserTxs, userAddr, accounts, &userTxs, &othersTxs)
 		} else {
 			// Add unforged txs
-			tx.ToForgeL1TxsNum = nextTxsNum
+			n := nextTxsNum
+			tx.ToForgeL1TxsNum = &n
 			tx.UserOrigin = true
 			setFromToAndAppend(fromIdx, tx, i, nUserTxs, userAddr, accounts, &userTxs, &othersTxs)
 		}
@@ -172,13 +179,13 @@ func GenL1Txs(
 }
 
 // GetNextToForgeNumAndBatch returns the next BatchNum and ForgeL1TxsNum to be added
-func GetNextToForgeNumAndBatch(batches []common.Batch) (common.BatchNum, *int64) {
+func GetNextToForgeNumAndBatch(batches []common.Batch) (common.BatchNum, int64) {
 	batchNum := batches[len(batches)-1].BatchNum + 1
-	toForgeL1TxsNum := new(int64)
+	var toForgeL1TxsNum int64
 	found := false
 	for i := len(batches) - 1; i >= 0; i-- {
 		if batches[i].ForgeL1TxsNum != nil {
-			*toForgeL1TxsNum = *batches[i].ForgeL1TxsNum + 1
+			toForgeL1TxsNum = *batches[i].ForgeL1TxsNum + 1
 			found = true
 			break
 		}
