@@ -2,23 +2,19 @@ package eth
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
-	ERC777 "github.com/hermeznetwork/hermez-node/eth/contracts/erc777"
 	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -150,6 +146,7 @@ type RollupVariables struct {
 }
 
 // QueueStruct is the queue of L1Txs for a batch
+//nolint:structcheck
 type QueueStruct struct {
 	L1TxQueue    []common.L1Tx
 	TotalL1TxFee *big.Int
@@ -170,6 +167,7 @@ type RollupVerifierStruct struct {
 }
 
 // RollupState represents the state of the Rollup in the Smart Contract
+//nolint:structcheck,unused
 type RollupState struct {
 	StateRoot              *big.Int
 	ExitRoots              []*big.Int
@@ -227,7 +225,7 @@ type RollupEventWithdrawEvent struct {
 }
 
 // RollupEvents is the list of events in a block of the Rollup Smart Contract
-type RollupEvents struct {
+type RollupEvents struct { //nolint:structcheck
 	L1UserTx                    []RollupEventL1UserTx
 	AddToken                    []RollupEventAddToken
 	ForgeBatch                  []RollupEventForgeBatch
@@ -249,14 +247,14 @@ func NewRollupEvents() RollupEvents {
 }
 
 // RollupForgeBatchArgs are the arguments to the ForgeBatch function in the Rollup Smart Contract
+//nolint:structcheck,unused
 type RollupForgeBatchArgs struct {
-	NewLastIdx            int64
-	NewStRoot             *big.Int
-	NewExitRoot           *big.Int
-	L1CoordinatorTxs      []*common.L1Tx
-	L1CoordinatorTxsAuths [][]byte // Authorization for accountCreations for each L1CoordinatorTx
-	L2TxsData             []*common.L2Tx
-	FeeIdxCoordinator     []common.Idx
+	NewLastIdx        int64
+	NewStRoot         *big.Int
+	NewExitRoot       *big.Int
+	L1CoordinatorTxs  []*common.L1Tx
+	L2TxsData         []*common.L2Tx
+	FeeIdxCoordinator []common.Idx
 	// Circuit selector
 	VerifierIdx uint8
 	L1Batch     bool
@@ -266,13 +264,14 @@ type RollupForgeBatchArgs struct {
 }
 
 // RollupForgeBatchArgsAux are the arguments to the ForgeBatch function in the Rollup Smart Contract
+//nolint:structcheck,unused
 type RollupForgeBatchArgsAux struct {
-	NewLastIdx             *big.Int
-	NewStRoot              *big.Int
-	NewExitRoot            *big.Int
-	EncodedL1CoordinatorTx []byte
-	L2TxsData              []byte
-	FeeIdxCoordinator      []byte
+	NewLastIdx        uint64
+	NewStRoot         *big.Int
+	NewExitRoot       *big.Int
+	L1CoordinatorTxs  []byte
+	L2TxsData         []byte
+	FeeIdxCoordinator []byte
 	// Circuit selector
 	VerifierIdx uint8
 	L1Batch     bool
@@ -290,7 +289,7 @@ type RollupInterface interface {
 	// Public Functions
 
 	RollupForgeBatch(*RollupForgeBatchArgs) (*types.Transaction, error)
-	RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big.Int) (*types.Transaction, error)
+	RollupAddToken(tokenAddress ethCommon.Address) (*types.Transaction, error)
 	RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey,
 		numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error)
 	RollupForceExit(fromIdx int64, amountF common.Float16, tokenID int64) (*types.Transaction, error)
@@ -329,111 +328,34 @@ type RollupInterface interface {
 
 // RollupClient is the implementation of the interface to the Rollup Smart Contract in ethereum.
 type RollupClient struct {
-	client          *EthereumClient
-	address         ethCommon.Address
-	tokenHEZAddress ethCommon.Address
-	gasLimit        uint64
-	contractAbi     abi.ABI
+	client      *EthereumClient
+	address     ethCommon.Address
+	contractAbi abi.ABI
 }
 
 // NewRollupClient creates a new RollupClient
-func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZAddress ethCommon.Address) (*RollupClient, error) {
+func NewRollupClient(client *EthereumClient, address ethCommon.Address) (*RollupClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(Hermez.HermezABI)))
 	if err != nil {
 		return nil, err
 	}
 	return &RollupClient{
-		client:          client,
-		address:         address,
-		tokenHEZAddress: tokenHEZAddress,
-		gasLimit:        1000000, //nolint:gomnd
-		contractAbi:     contractAbi,
+		client:      client,
+		address:     address,
+		contractAbi: contractAbi,
 	}, nil
 }
 
 // RollupForgeBatch is the interface to call the smart contract function
 func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (*types.Transaction, error) {
-	var tx *types.Transaction
-	var err error
-	if tx, err = c.client.CallAuth(
-		c.gasLimit,
-		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			hermez, err := Hermez.NewHermez(c.address, ec)
-			if err != nil {
-				return nil, err
-			}
-			rollupConst, err := c.RollupConstants()
-			if err != nil {
-				return nil, err
-			}
-			nLevels := rollupConst.Verifiers[args.VerifierIdx].NLevels
-			lenBytes := nLevels / 8 //nolint:gomnd
-			newLastIdx := big.NewInt(int64(args.NewLastIdx))
-			var l1CoordinatorBytes []byte
-			for i := 0; i < len(args.L1CoordinatorTxs); i++ {
-				l1 := args.L1CoordinatorTxs[i]
-				bytesl1, err := l1.BytesCoordinatorTx(args.L1CoordinatorTxsAuths[i])
-				if err != nil {
-					return nil, err
-				}
-				l1CoordinatorBytes = append(l1CoordinatorBytes, bytesl1[:]...)
-			}
-			var l2DataBytes []byte
-			for i := 0; i < len(args.L2TxsData); i++ {
-				l2 := args.L2TxsData[i]
-				bytesl2, err := l2.Bytes(int(nLevels))
-				if err != nil {
-					return nil, err
-				}
-				l2DataBytes = append(l2DataBytes, bytesl2[:]...)
-			}
-			var feeIdxCoordinator []byte
-			for i := 0; i < len(args.FeeIdxCoordinator); i++ {
-				feeIdx := args.FeeIdxCoordinator[i]
-				bytesFeeIdx, err := feeIdx.Bytes()
-				if err != nil {
-					return nil, err
-				}
-				feeIdxCoordinator = append(feeIdxCoordinator, bytesFeeIdx[len(bytesFeeIdx)-int(lenBytes):]...)
-			}
-			return hermez.ForgeBatch(auth, newLastIdx, args.NewStRoot, args.NewExitRoot, l1CoordinatorBytes, l2DataBytes, feeIdxCoordinator, args.VerifierIdx, args.L1Batch, args.ProofA, args.ProofB, args.ProofC)
-		},
-	); err != nil {
-		return nil, fmt.Errorf("Failed forge batch: %w", err)
-	}
-	return tx, nil
+	log.Error("TODO")
+	return nil, errTODO
 }
 
-// RollupAddToken is the interface to call the smart contract function.
-// `feeAddToken` is the amount of HEZ tokens that will be paid to add the
-// token.  `feeAddToken` must match the public value of the smart contract.
-func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big.Int) (*types.Transaction, error) {
-	var tx *types.Transaction
-	var err error
-	if tx, err = c.client.CallAuth(
-		c.gasLimit,
-		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokens, err := ERC777.NewERC777(c.tokenHEZAddress, ec)
-			if err != nil {
-				return nil, err
-			}
-			addTokenFnSignature := []byte("addToken(address)")
-			hash := sha3.NewLegacyKeccak256()
-			_, err = hash.Write(addTokenFnSignature)
-			if err != nil {
-				return nil, err
-			}
-			methodID := hash.Sum(nil)[:4]
-			var data []byte
-			data = append(data, methodID...)
-			paddedAddress := ethCommon.LeftPadBytes(tokenAddress.Bytes(), 32)
-			data = append(data, paddedAddress[:]...)
-			return tokens.Send(auth, c.address, feeAddToken, data)
-		},
-	); err != nil {
-		return nil, fmt.Errorf("Failed add Token %w", err)
-	}
-	return tx, nil
+// RollupAddToken is the interface to call the smart contract function
+func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address) (*types.Transaction, error) {
+	log.Error("TODO")
+	return nil, errTODO
 }
 
 // RollupWithdrawSNARK is the interface to call the smart contract function
@@ -667,39 +589,31 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		return nil, err
 	}
 	txData := tx.Data()
-	method, err := c.contractAbi.MethodById(txData[:4])
+	method, err := c.contractAbi.MethodById(txData)
 	if err != nil {
 		return nil, err
 	}
 	var aux RollupForgeBatchArgsAux
-	if err := method.Inputs.Unpack(&aux, txData[4:]); err != nil {
+	if err := method.Inputs.Unpack(&aux, txData); err != nil {
 		return nil, err
 	}
 	var rollupForgeBatchArgs RollupForgeBatchArgs
 	rollupForgeBatchArgs.L1Batch = aux.L1Batch
 	rollupForgeBatchArgs.NewExitRoot = aux.NewExitRoot
-	rollupForgeBatchArgs.NewLastIdx = aux.NewLastIdx.Int64()
+	rollupForgeBatchArgs.NewLastIdx = int64(aux.NewLastIdx)
 	rollupForgeBatchArgs.NewStRoot = aux.NewStRoot
 	rollupForgeBatchArgs.ProofA = aux.ProofA
 	rollupForgeBatchArgs.ProofB = aux.ProofB
 	rollupForgeBatchArgs.ProofC = aux.ProofC
 	rollupForgeBatchArgs.VerifierIdx = aux.VerifierIdx
-	numTxsL1 := len(aux.EncodedL1CoordinatorTx) / common.L1CoordinatorTxBytesLen
+
+	numTxsL1 := len(aux.L1CoordinatorTxs) / common.L1TxBytesLen
 	for i := 0; i < numTxsL1; i++ {
-		bytesL1Coordinator := aux.EncodedL1CoordinatorTx[i*common.L1CoordinatorTxBytesLen : (i+1)*common.L1CoordinatorTxBytesLen]
-		var signature []byte
-		v := bytesL1Coordinator[0]
-		s := bytesL1Coordinator[1:33]
-		r := bytesL1Coordinator[33:65]
-		signature = append(signature, r[:]...)
-		signature = append(signature, s[:]...)
-		signature = append(signature, v)
-		l1Tx, err := common.L1TxFromCoordinatorBytes(bytesL1Coordinator)
+		l1Tx, err := common.L1TxFromCoordinatorBytes(aux.L1CoordinatorTxs[i*common.L1CoordinatorTxBytesLen : (i+1)*common.L1CoordinatorTxBytesLen])
 		if err != nil {
 			return nil, err
 		}
 		rollupForgeBatchArgs.L1CoordinatorTxs = append(rollupForgeBatchArgs.L1CoordinatorTxs, l1Tx)
-		rollupForgeBatchArgs.L1CoordinatorTxsAuths = append(rollupForgeBatchArgs.L1CoordinatorTxsAuths, signature)
 	}
 	rollupConsts, err := c.RollupConstants()
 	if err != nil {
@@ -732,4 +646,9 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		rollupForgeBatchArgs.FeeIdxCoordinator = append(rollupForgeBatchArgs.FeeIdxCoordinator, FeeIdxCoordinator)
 	}
 	return &rollupForgeBatchArgs, nil
+	// tx := client.TransactionByHash(ethTxHash) -> types.Transaction
+	// txData := types.Transaction -> Data()
+	// m := abi.MethodById(txData) -> Method
+	// m.Inputs.Unpack(txData) -> Args
+	// client.TransactionReceipt()?
 }

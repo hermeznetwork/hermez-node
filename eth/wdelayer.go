@@ -80,7 +80,7 @@ type WDelayerEventNewHermezGovernanceDAOAddress struct {
 }
 
 // WDelayerEvents is the lis of events in a block of the WithdrawalDelayer Smart Contract
-type WDelayerEvents struct {
+type WDelayerEvents struct { //nolint:structcheck
 	Deposit                       []WDelayerEventDeposit
 	Withdraw                      []WDelayerEventWithdraw
 	EmergencyModeEnabled          []WDelayerEventEmergencyModeEnabled
