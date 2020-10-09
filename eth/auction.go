@@ -168,7 +168,7 @@ type AuctionEventHEZClaimed struct {
 }
 
 // AuctionEvents is the list of events in a block of the Auction Smart Contract
-type AuctionEvents struct { //nolint:structcheck
+type AuctionEvents struct {
 	NewBid                []AuctionEventNewBid
 	NewSlotDeadline       []AuctionEventNewSlotDeadline
 	NewClosedAuctionSlots []AuctionEventNewClosedAuctionSlots

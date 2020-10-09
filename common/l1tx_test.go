@@ -51,7 +51,8 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 
 func TestL1TxByteParsers(t *testing.T) {
 	var pkComp babyjub.PublicKeyComp
-	err := pkComp.UnmarshalText([]byte("0x56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c"))
+	pkCompL := []byte("0x56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c")
+	err := pkComp.UnmarshalText(pkCompL)
 	require.Nil(t, err)
 
 	pk, err := pkComp.Decompress()
@@ -67,17 +68,11 @@ func TestL1TxByteParsers(t *testing.T) {
 		FromEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 
-	expected, err := utils.HexDecode("c58d29fa6e86e4fae04ddced660d45bcf3cb237056ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c0000000000020002000100000005000000000003")
-	require.Nil(t, err)
-
 	encodedData, err := l1Tx.Bytes()
 	require.Nil(t, err)
-	assert.Equal(t, expected, encodedData)
-
 	decodedData, err := L1TxFromBytes(encodedData)
 	require.Nil(t, err)
 	assert.Equal(t, l1Tx, decodedData)
-
 	encodedData2, err := decodedData.Bytes()
 	require.Nil(t, err)
 	assert.Equal(t, encodedData, encodedData2)
@@ -89,6 +84,40 @@ func TestL1TxByteParsers(t *testing.T) {
 	require.NotNil(t, err)
 	_, err = L1TxFromBytes(nil)
 	require.NotNil(t, err)
+}
+
+func TestL1TxByteParsersCompatibility(t *testing.T) {
+	// Data from compatibility test
+	var pkComp babyjub.PublicKeyComp
+	pkCompB, err := hex.DecodeString("0dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a")
+	require.Nil(t, err)
+	pkCompL := SwapEndianness(pkCompB)
+	err = pkComp.UnmarshalText([]byte(hex.EncodeToString(pkCompL)))
+	require.Nil(t, err)
+
+	pk, err := pkComp.Decompress()
+	require.Nil(t, err)
+
+	fromIdx := new(Idx)
+	*fromIdx = 29767899
+	loadAmount := new(big.Int)
+	loadAmount.SetString("100000000000000000000", 10)
+	l1Tx := &L1Tx{
+		ToIdx:       87865485,
+		TokenID:     2098076,
+		Amount:      big.NewInt(2400000000000000000),
+		LoadAmount:  loadAmount,
+		FromIdx:     fromIdx,
+		FromBJJ:     pk,
+		FromEthAddr: ethCommon.HexToAddress("0x85dab5b9e2e361d0c208d77be90efcc0439b0a53"),
+	}
+
+	expected, err := utils.HexDecode("85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a000001c638db8be880f00020039c0000053cb88d")
+	require.Nil(t, err)
+
+	encodedData, err := l1Tx.Bytes()
+	require.Nil(t, err)
+	assert.Equal(t, expected, encodedData)
 }
 
 func TestL1CoordinatorTxByteParsers(t *testing.T) {
@@ -105,7 +134,8 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	require.Nil(t, err)
 	fromEthAddr := crypto.PubkeyToAddress(*pubKey)
 	var pkComp babyjub.PublicKeyComp
-	err = pkComp.UnmarshalText([]byte("0x56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c"))
+	pkCompL := []byte("56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c")
+	err = pkComp.UnmarshalText(pkCompL)
 	require.Nil(t, err)
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
@@ -113,10 +143,11 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	bytesMessage2 := []byte("I authorize this babyjubjub key for hermez rollup account creation")
 
 	babyjub := pk.Compress()
+	babyjubB := SwapEndianness(babyjub[:])
 	var data []byte
 	data = append(data, bytesMessage1...)
 	data = append(data, bytesMessage2...)
-	data = append(data, babyjub[:]...)
+	data = append(data, babyjubB[:]...)
 	hash := crypto.Keccak256Hash(data)
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	require.Nil(t, err)
@@ -135,9 +166,21 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	l1txDecoded, err := L1TxFromCoordinatorBytes(bytesCoordinatorL1)
 	require.Nil(t, err)
 	assert.Equal(t, l1Tx, l1txDecoded)
+	bytesCoordinatorL12, err := l1txDecoded.BytesCoordinatorTx(signature)
+	require.Nil(t, err)
+	assert.Equal(t, bytesCoordinatorL1, bytesCoordinatorL12)
+
+	// expect error if length!=68
+	_, err = L1TxFromCoordinatorBytes(bytesCoordinatorL1[:66])
+	require.NotNil(t, err)
+	_, err = L1TxFromCoordinatorBytes([]byte{})
+	require.NotNil(t, err)
+	_, err = L1TxFromCoordinatorBytes(nil)
+	require.NotNil(t, err)
 }
 
 func TestL1CoordinatorTxByteParsersCompatibility(t *testing.T) {
+	// Data from compatibility test
 	var signature []byte
 	r, err := hex.DecodeString("da71e5eb097e115405d84d1e7b464009b434b32c014a2df502d1f065ced8bc3b")
 	require.Nil(t, err)
@@ -151,13 +194,15 @@ func TestL1CoordinatorTxByteParsersCompatibility(t *testing.T) {
 	signature = append(signature, v[:]...)
 
 	var pkComp babyjub.PublicKeyComp
-	err = pkComp.UnmarshalText([]byte("0xa2c2807ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c"))
+	pkCompB, err := hex.DecodeString("a2c2807ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c")
+	require.Nil(t, err)
+	pkCompL := SwapEndianness(pkCompB)
+	err = pkComp.UnmarshalText([]byte(hex.EncodeToString(pkCompL)))
 	require.Nil(t, err)
 	// Data from the compatibility test
-	expected := "1b186d7122ff7f654cfed3156719774898d573900c86599a885a706dbdffe5ea8cda71e5eb097e115405d84d1e7b464009b434b32c014a2df502d1f065ced8bc3ba2c2807ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c000000e7"
+	require.Nil(t, err)
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
-
 	l1Tx := &L1Tx{
 		TokenID: 231,
 		FromBJJ: pk,
@@ -165,5 +210,9 @@ func TestL1CoordinatorTxByteParsersCompatibility(t *testing.T) {
 
 	encodeData, err := l1Tx.BytesCoordinatorTx(signature)
 	require.Nil(t, err)
-	assert.Equal(t, expected, hex.EncodeToString(encodeData))
+
+	expected, err := utils.HexDecode("1b186d7122ff7f654cfed3156719774898d573900c86599a885a706dbdffe5ea8cda71e5eb097e115405d84d1e7b464009b434b32c014a2df502d1f065ced8bc3ba2c2807ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c000000e7")
+	require.Nil(t, err)
+
+	assert.Equal(t, expected, encodeData)
 }

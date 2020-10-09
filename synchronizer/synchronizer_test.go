@@ -74,7 +74,8 @@ D (3): 15
 	// require.Greater(t, len(tokens), 0)
 
 	for i := 1; i <= 3; i++ {
-		_, err := client.RollupAddToken(ethCommon.BigToAddress(big.NewInt(int64(i * 10000))))
+		_, err := client.RollupAddToken(ethCommon.BigToAddress(big.NewInt(int64(i*10000))),
+			clientSetup.RollupVariables.FeeAddToken)
 		require.Nil(t, err)
 	}
 

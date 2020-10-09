@@ -690,7 +690,7 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 }
 
 // RollupAddToken is the interface to call the smart contract function
-func (c *Client) RollupAddToken(tokenAddress ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big.Int) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -703,6 +703,9 @@ func (c *Client) RollupAddToken(tokenAddress ethCommon.Address) (tx *types.Trans
 	r := nextBlock.Rollup
 	if _, ok := r.State.TokenMap[tokenAddress]; ok {
 		return nil, fmt.Errorf("Token %v already registered", tokenAddress)
+	}
+	if feeAddToken.Cmp(r.Vars.FeeAddToken) != 0 {
+		return nil, fmt.Errorf("Expected fee: %v but got: %v", r.Vars.FeeAddToken, feeAddToken)
 	}
 
 	r.State.TokenMap[tokenAddress] = true
