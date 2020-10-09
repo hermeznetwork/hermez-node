@@ -407,7 +407,8 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 			position = len(l1UserTxs)
 
 			// Get L1 Coordinator Txs
-			for _, l1CoordinatorTx := range forgeBatchArgs.L1CoordinatorTxs {
+			for i := 0; i < len(forgeBatchArgs.L1CoordinatorTxs); i++ {
+				l1CoordinatorTx := forgeBatchArgs.L1CoordinatorTxs[i]
 				l1CoordinatorTx.Position = position
 				l1CoordinatorTx.ToForgeL1TxsNum = &forgeL1TxsNum
 				l1CoordinatorTx.UserOrigin = false
@@ -415,7 +416,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 				bn := new(common.BatchNum)
 				*bn = common.BatchNum(evtForgeBatch.BatchNum)
 				l1CoordinatorTx.BatchNum = bn
-				l1Tx, err := common.NewL1Tx(l1CoordinatorTx)
+				l1Tx, err := common.NewL1Tx(&l1CoordinatorTx)
 				if err != nil {
 					return nil, err
 				}

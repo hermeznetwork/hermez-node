@@ -192,8 +192,12 @@ func (tx *PoolL2Tx) HashToSign() (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
+	rqToBJJY := big.NewInt(0)
+	if tx.RqToBJJ != nil {
+		rqToBJJY = tx.RqToBJJ.Y
+	}
 
-	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBJJAy, rqTxCompressedDataV2, rqToEthAddr, tx.RqToBJJ.Y})
+	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBJJAy, rqTxCompressedDataV2, rqToEthAddr, rqToBJJY})
 }
 
 // VerifySignature returns true if the signature verification is correct for the given PublicKey

@@ -132,7 +132,7 @@ func Warnw(template string, kv ...interface{}) {
 
 // Errorw calls log.Errorw
 func Errorw(template string, kv ...interface{}) {
-	log.Fatalw(template, kv...)
+	log.Errorw(template, kv...)
 }
 
 // Fatalw calls log.Fatalw

@@ -253,9 +253,9 @@ type RollupForgeBatchArgs struct {
 	NewLastIdx            int64
 	NewStRoot             *big.Int
 	NewExitRoot           *big.Int
-	L1CoordinatorTxs      []*common.L1Tx
+	L1CoordinatorTxs      []common.L1Tx
 	L1CoordinatorTxsAuths [][]byte // Authorization for accountCreations for each L1CoordinatorTx
-	L2TxsData             []*common.L2Tx
+	L2TxsData             []common.L2Tx
 	FeeIdxCoordinator     []common.Idx
 	// Circuit selector
 	VerifierIdx uint8
@@ -698,7 +698,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		if err != nil {
 			return nil, err
 		}
-		rollupForgeBatchArgs.L1CoordinatorTxs = append(rollupForgeBatchArgs.L1CoordinatorTxs, l1Tx)
+		rollupForgeBatchArgs.L1CoordinatorTxs = append(rollupForgeBatchArgs.L1CoordinatorTxs, *l1Tx)
 		rollupForgeBatchArgs.L1CoordinatorTxsAuths = append(rollupForgeBatchArgs.L1CoordinatorTxsAuths, signature)
 	}
 	rollupConsts, err := c.RollupConstants()
@@ -713,7 +713,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		if err != nil {
 			return nil, err
 		}
-		rollupForgeBatchArgs.L2TxsData = append(rollupForgeBatchArgs.L2TxsData, l2Tx)
+		rollupForgeBatchArgs.L2TxsData = append(rollupForgeBatchArgs.L2TxsData, *l2Tx)
 	}
 	lenFeeIdxCoordinatorBytes := int(nLevels / 8) //nolint:gomnd
 	numFeeIdxCoordinator := len(aux.FeeIdxCoordinator) / lenFeeIdxCoordinatorBytes
