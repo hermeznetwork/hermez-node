@@ -6,11 +6,14 @@ import (
 	"os"
 	"testing"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
+	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var historyDB *HistoryDB
@@ -376,6 +379,91 @@ func TestExitTree(t *testing.T) {
 	exitTree := test.GenExitTree(nBatches, batches, accs)
 	err = historyDB.AddExitTree(exitTree)
 	assert.NoError(t, err)
+}
+
+func TestGetL1UserTxs(t *testing.T) {
+	require.NoError(t, cleanHistoryDB())
+
+	set := `
+		Type: Blockchain
+		AddToken(1)
+		AddToken(2)
+		AddToken(3)
+
+		CreateAccountDeposit(1) A: 10
+		CreateAccountDeposit(2) A: 20
+		CreateAccountDeposit(1) B: 5
+		CreateAccountDeposit(1) C: 5
+		CreateAccountDepositTransfer(1) D-A: 15, 10 (3)
+
+		> batchL1 // freeze open l1UserTxs queue
+		> batchL1 // forge current l1UserTxs queue
+		> block
+	`
+	tc := til.NewContext(128)
+	blocks, err := tc.GenerateBlocks(set)
+	require.Nil(t, err)
+	// Sanity check
+	require.Equal(t, 1, len(blocks))
+	require.Equal(t, 5, len(blocks[0].L1UserTxs))
+	require.Equal(t, 2, len(blocks[0].Batches))
+	// fmt.Printf("DBG Blocks: %+v\n", blocks)
+
+	// TODO: Move this logic to `func (tc *TestContext) GenerateBlocks(set string) ([]common.BlockData, error)`
+	toForgeL1TxsNum := int64(1)
+	for i := range blocks {
+		block := &blocks[i]
+		block.Block.EthBlockNum = int64(i)
+		for j := range block.AddedTokens {
+			token := &block.AddedTokens[j]
+			token.EthAddr = ethCommon.BigToAddress(big.NewInt(int64(i*len(blocks) + j)))
+		}
+		for j := range block.L1UserTxs {
+			l1Tx := &block.L1UserTxs[j]
+			l1Tx.UserOrigin = true
+			l1Tx.Position = j
+			l1Tx.ToForgeL1TxsNum = &toForgeL1TxsNum
+		}
+	}
+
+	for i := range blocks {
+		// fmt.Printf("DBG %+v\n", blocks[i])
+		// fmt.Printf("DBG Batches %+v\n", blocks[i].Batches)
+		// for _, l1Tx := range blocks[i].L1UserTxs {
+		// 	fmt.Printf("DBG l1UserTx %+v\n", l1Tx)
+		// }
+		err = historyDB.AddBlockSCData(&blocks[i])
+		require.Nil(t, err)
+	}
+
+	// // TODO: Use til to generate a set with some L1UserTxs
+	// l1Txs := []common.L1Tx{}
+	// l1Tx, err := common.NewL1Tx(&common.L1Tx{
+	// 	ToForgeL1TxsNum: &toForgeL1TxsNum,
+	// 	Position:        0,
+	// 	UserOrigin:      true,
+	// 	FromIdx:         0,
+	// 	FromEthAddr:     ethCommon.Address{}, // ethCommon.HexToAddress("0xff"),
+	// 	FromBJJ:         nil,
+	// 	ToIdx:           0,
+	// 	TokenID:         1,
+	// 	Amount:          big.NewInt(0),
+	// 	LoadAmount:      big.NewInt(0),
+	// })
+	// require.Nil(t, err)
+	// l1Txs = append(l1Txs, *l1Tx)
+
+	// require.Nil(t, historyDB.AddL1Txs(l1Txs))
+
+	l1UserTxs, err := historyDB.GetL1UserTxs(toForgeL1TxsNum)
+	require.Nil(t, err)
+	assert.Equal(t, 5, len(l1UserTxs))
+	assert.Equal(t, blocks[0].L1UserTxs, l1UserTxs)
+
+	// No l1UserTxs for this toForgeL1TxsNum
+	l1UserTxs, err = historyDB.GetL1UserTxs(2)
+	require.Nil(t, err)
+	assert.Equal(t, 0, len(l1UserTxs))
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them

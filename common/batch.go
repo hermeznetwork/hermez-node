@@ -16,11 +16,11 @@ type Batch struct {
 	EthBlockNum   int64                `meddler:"eth_block_num"` // Ethereum block in which the batch is forged
 	ForgerAddr    ethCommon.Address    `meddler:"forger_addr"`   // TODO: Should this be retrieved via slot reference?
 	CollectedFees map[TokenID]*big.Int `meddler:"fees_collected,json"`
-	StateRoot     Hash                 `meddler:"state_root"`
+	StateRoot     *big.Int             `meddler:"state_root,bigint"`
 	NumAccounts   int                  `meddler:"num_accounts"`
-	ExitRoot      Hash                 `meddler:"exit_root"`
+	ExitRoot      *big.Int             `meddler:"exit_root,bigint"`
 	ForgeL1TxsNum *int64               `meddler:"forge_l1_txs_num"` // optional, Only when the batch forges L1 txs. Identifier that corresponds to the group of L1 txs forged in the current batch.
-	SlotNum       SlotNum              `meddler:"slot_num"`         // Slot in which the batch is forged
+	SlotNum       int64                `meddler:"slot_num"`         // Slot in which the batch is forged
 	TotalFeesUSD  *float64             `meddler:"total_fees_usd"`
 }
 

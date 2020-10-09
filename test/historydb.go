@@ -60,11 +60,11 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 			//nolint:gomnd
 			ForgerAddr:    ethCommon.BigToAddress(big.NewInt(6886723)),
 			CollectedFees: collectedFees,
-			StateRoot:     common.Hash([]byte("duhdqlwiucgwqeiu")),
+			StateRoot:     big.NewInt(int64(i) * 5), //nolint:gomnd
 			//nolint:gomnd
 			NumAccounts: 30,
-			ExitRoot:    common.Hash([]byte("tykertheuhtgenuer3iuw3b")),
-			SlotNum:     common.SlotNum(i),
+			ExitRoot:    big.NewInt(int64(i) * 16), //nolint:gomnd
+			SlotNum:     int64(i),
 		}
 		if i%2 == 0 {
 			toForge := new(int64)
@@ -324,7 +324,7 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 	bids := []common.Bid{}
 	for i := 0; i < nBids; i++ {
 		bids = append(bids, common.Bid{
-			SlotNum:     common.SlotNum(i),
+			SlotNum:     int64(i),
 			BidValue:    big.NewInt(int64(i)),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			Bidder:      coords[i%len(blocks)].Bidder,

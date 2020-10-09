@@ -26,17 +26,22 @@ type Context struct {
 	// rollupConstMaxL1UserTx Maximum L1-user transactions allowed to be queued in a batch
 	rollupConstMaxL1UserTx int
 
-	idx          int
-	currBlock    BlockData
-	currBatch    BatchData
-	currBatchNum int
-	queues       [][]L1Tx
-	toForgeNum   int
-	openToForge  int
+	idx           int
+	currBlock     common.BlockData
+	currBatch     common.BatchData
+	currBatchNum  int
+	queues        [][]L1Tx
+	toForgeNum    int
+	openToForge   int
+	currBatchTest struct {
+		l1CoordinatorTxs []L1Tx
+		l2Txs            []L2Tx
+	}
 }
 
 // NewContext returns a new Context
 func NewContext(rollupConstMaxL1UserTx int) *Context {
+	currBatchNum := 1 // The protocol defines the first batchNum to be 1
 	return &Context{
 		Users:                 make(map[string]*User),
 		l1CreatedAccounts:     make(map[string]*Account),
@@ -44,7 +49,12 @@ func NewContext(rollupConstMaxL1UserTx int) *Context {
 
 		rollupConstMaxL1UserTx: rollupConstMaxL1UserTx,
 		idx:                    common.UserThreshold,
-		currBatchNum:           0,
+		// We use some placeholder values for StateRoot and ExitTree
+		// because these values will never be nil
+		currBatch: common.BatchData{Batch: common.Batch{
+			BatchNum:  common.BatchNum(currBatchNum),
+			StateRoot: big.NewInt(0), ExitRoot: big.NewInt(0)}},
+		currBatchNum: currBatchNum,
 		// start with 2 queues, one for toForge, and the other for openToForge
 		queues:      make([][]L1Tx, 2),
 		toForgeNum:  0,
@@ -63,26 +73,6 @@ type User struct {
 	BJJ      *babyjub.PrivateKey
 	Addr     ethCommon.Address
 	Accounts map[common.TokenID]*Account
-}
-
-// BlockData contains the information of a Block
-type BlockData struct {
-	// block *common.Block // ethereum block
-	// L1UserTxs that were accepted in the block
-	L1UserTxs        []common.L1Tx
-	Batches          []BatchData
-	RegisteredTokens []common.Token
-}
-
-// BatchData contains the information of a Batch
-type BatchData struct {
-	L1Batch              bool // TODO: Remove once Batch.ForgeL1TxsNum is a pointer
-	L1CoordinatorTxs     []common.L1Tx
-	testL1CoordinatorTxs []L1Tx
-	L2Txs                []common.L2Tx
-	// testL2Tx are L2Txs without the Idx&EthAddr&BJJ setted, but with the
-	// string that represents the account
-	testL2Txs []L2Tx
 }
 
 // L1Tx is the data structure used internally for transaction test generation,
@@ -109,7 +99,7 @@ type L2Tx struct {
 
 // GenerateBlocks returns an array of BlockData for a given set. It uses the
 // accounts (keys & nonces) of the Context.
-func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
+func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
 	if err != nil {
@@ -121,7 +111,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 
 	tc.generateKeys(tc.accountsNames)
 
-	var blocks []BlockData
+	var blocks []common.BlockData
 	for _, inst := range parsedSet.instructions {
 		switch inst.typ {
 		case txTypeCreateAccountDepositCoordinator:
@@ -133,6 +123,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 				FromEthAddr: tc.Users[inst.from].Addr,
 				FromBJJ:     tc.Users[inst.from].BJJ.Public(),
 				TokenID:     inst.tokenID,
+				Amount:      big.NewInt(0),
 				LoadAmount:  big.NewInt(int64(inst.loadAmount)),
 				Type:        common.TxTypeCreateAccountDeposit, // as txTypeCreateAccountDepositCoordinator is not valid oustide Til package
 			}
@@ -141,7 +132,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 				fromIdxName: inst.from,
 				L1Tx:        tx,
 			}
-			tc.currBatch.testL1CoordinatorTxs = append(tc.currBatch.testL1CoordinatorTxs, testTx)
+			tc.currBatchTest.l1CoordinatorTxs = append(tc.currBatchTest.l1CoordinatorTxs, testTx)
 		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer:
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
@@ -151,6 +142,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 				FromEthAddr: tc.Users[inst.from].Addr,
 				FromBJJ:     tc.Users[inst.from].BJJ.Public(),
 				TokenID:     inst.tokenID,
+				Amount:      big.NewInt(0),
 				LoadAmount:  big.NewInt(int64(inst.loadAmount)),
 				Type:        inst.typ,
 			}
@@ -175,6 +167,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 			}
 			tx := common.L1Tx{
 				TokenID:    inst.tokenID,
+				Amount:     big.NewInt(0),
 				LoadAmount: big.NewInt(int64(inst.loadAmount)),
 				Type:       inst.typ,
 			}
@@ -206,7 +199,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 				tokenID:     inst.tokenID,
 				L2Tx:        tx,
 			}
-			tc.currBatch.testL2Txs = append(tc.currBatch.testL2Txs, testTx)
+			tc.currBatchTest.l2Txs = append(tc.currBatchTest.l2Txs, testTx)
 		case common.TxTypeExit:
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
@@ -225,17 +218,18 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 				tokenID:     inst.tokenID,
 				L2Tx:        tx,
 			}
-			tc.currBatch.testL2Txs = append(tc.currBatch.testL2Txs, testTx)
+			tc.currBatchTest.l2Txs = append(tc.currBatchTest.l2Txs, testTx)
 		case common.TxTypeForceExit:
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
 			}
 			tx := common.L1Tx{
-				ToIdx:   common.Idx(1), // as is an Exit
-				TokenID: inst.tokenID,
-				Amount:  big.NewInt(int64(inst.amount)),
-				Type:    common.TxTypeExit,
+				ToIdx:      common.Idx(1), // as is an Exit
+				TokenID:    inst.tokenID,
+				Amount:     big.NewInt(int64(inst.amount)),
+				LoadAmount: big.NewInt(0),
+				Type:       common.TxTypeExit,
 			}
 			testTx := L1Tx{
 				lineNum:     inst.lineNum,
@@ -245,7 +239,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 			}
 			tc.addToL1Queue(testTx)
 		case typeNewBatch:
-			if err = tc.calculateIdxForL1Txs(true, tc.currBatch.testL1CoordinatorTxs); err != nil {
+			if err = tc.calculateIdxForL1Txs(true, tc.currBatchTest.l1CoordinatorTxs); err != nil {
 				return nil, err
 			}
 			if err = tc.setIdxs(); err != nil {
@@ -257,7 +251,7 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 			if err = tc.calculateIdxForL1Txs(false, tc.queues[tc.toForgeNum]); err != nil {
 				return nil, err
 			}
-			if err = tc.calculateIdxForL1Txs(true, tc.currBatch.testL1CoordinatorTxs); err != nil {
+			if err = tc.calculateIdxForL1Txs(true, tc.currBatchTest.l1CoordinatorTxs); err != nil {
 				return nil, err
 			}
 
@@ -277,8 +271,8 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 				if testTx.L1Tx.Type == common.TxTypeExit {
 					testTx.L1Tx.ToIdx = common.Idx(1)
 				}
-				bn := common.BatchNum(tc.currBatchNum)
-				testTx.L1Tx.BatchNum = &bn
+				// bn := common.BatchNum(tc.currBatchNum)
+				// testTx.L1Tx.BatchNum = &bn
 				nTx, err := common.NewL1Tx(&testTx.L1Tx)
 				if err != nil {
 					fmt.Println(testTx)
@@ -301,17 +295,17 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 			}
 		case typeNewBlock:
 			blocks = append(blocks, tc.currBlock)
-			tc.currBlock = BlockData{}
-		case typeRegisterToken:
+			tc.currBlock = common.BlockData{}
+		case typeAddToken:
 			newToken := common.Token{
 				TokenID:     inst.tokenID,
 				EthBlockNum: int64(len(blocks)),
 			}
 			if inst.tokenID != tc.lastRegisteredTokenID+1 {
-				return nil, fmt.Errorf("Line %d: RegisterToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", inst.lineNum, tc.lastRegisteredTokenID+1, inst.tokenID)
+				return nil, fmt.Errorf("Line %d: AddToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", inst.lineNum, tc.lastRegisteredTokenID+1, inst.tokenID)
 			}
 			tc.lastRegisteredTokenID++
-			tc.currBlock.RegisteredTokens = append(tc.currBlock.RegisteredTokens, newToken)
+			tc.currBlock.AddedTokens = append(tc.currBlock.AddedTokens, newToken)
 		default:
 			return nil, fmt.Errorf("Line %d: Unexpected type: %s", inst.lineNum, inst.typ)
 		}
@@ -347,8 +341,8 @@ func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error
 // setIdxs sets the Idxs to the transactions of the tc.currBatch
 func (tc *Context) setIdxs() error {
 	// once Idxs are calculated, update transactions to use the new Idxs
-	for i := 0; i < len(tc.currBatch.testL2Txs); i++ {
-		testTx := &tc.currBatch.testL2Txs[i]
+	for i := 0; i < len(tc.currBatchTest.l2Txs); i++ {
+		testTx := &tc.currBatchTest.l2Txs[i]
 
 		if tc.Users[testTx.fromIdxName].Accounts[testTx.tokenID] == nil {
 			return fmt.Errorf("Line %d: %s from User %s for TokenID %d while account not created yet", testTx.lineNum, testTx.L2Tx.Type, testTx.fromIdxName, testTx.tokenID)
@@ -380,8 +374,10 @@ func (tc *Context) setIdxs() error {
 
 	tc.currBlock.Batches = append(tc.currBlock.Batches, tc.currBatch)
 	tc.currBatchNum++
-	tc.currBatch = BatchData{}
-
+	tc.currBatch = common.BatchData{Batch: tc.currBatch.Batch}
+	tc.currBatch.Batch.BatchNum = common.BatchNum(tc.currBatchNum)
+	tc.currBatchTest.l1CoordinatorTxs = nil
+	tc.currBatchTest.l2Txs = nil
 	return nil
 }
 
@@ -394,6 +390,9 @@ func (tc *Context) addToL1Queue(tx L1Tx) {
 		newQueue := []L1Tx{}
 		tc.queues = append(tc.queues, newQueue)
 	}
+	tx.L1Tx.UserOrigin = true
+	toForgeL1TxsNum := int64(tc.openToForge)
+	tx.L1Tx.ToForgeL1TxsNum = &toForgeL1TxsNum
 	tc.queues[tc.openToForge] = append(tc.queues[tc.openToForge], tx)
 }
 

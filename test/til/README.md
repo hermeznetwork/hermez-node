@@ -18,8 +18,8 @@ Available instructions:
 ```go
 Type: Blockchain
 
-// register the TokenID:
-RegisterToken(1)
+// add the TokenID:
+AddToken(1)
 
 // deposit of TokenID=1, on the account of tokenID=1 for the user A, of an
 // amount of 50 units

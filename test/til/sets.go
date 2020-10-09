@@ -6,9 +6,9 @@ package til
 var SetBlockchain0 = `
 // Set containing Blockchain transactions
 Type: Blockchain
-RegisterToken(1)
-RegisterToken(2)
-RegisterToken(3)
+AddToken(1)
+AddToken(2)
+AddToken(3)
 
 // deposits TokenID: 1
 CreateAccountDeposit(1) A: 50

@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
 	"github.com/hermeznetwork/hermez-node/coordinator"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
@@ -48,13 +49,14 @@ type Node struct {
 
 	// Synchronizer
 	sync        *synchronizer.Synchronizer
-	stopSync    chan bool
 	stoppedSync chan bool
 
 	// General
 	cfg     *config.Node
 	mode    Mode
 	sqlConn *sqlx.DB
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 // NewNode creates a Node
@@ -82,7 +84,22 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	if err != nil {
 		return nil, err
 	}
-	client, err := eth.NewClient(ethClient, nil, nil, nil)
+	client, err := eth.NewClient(ethClient, nil, nil, &eth.ClientConfig{
+		Ethereum: eth.EthereumConfig{
+			CallGasLimit:        cfg.EthClient.CallGasLimit,
+			DeployGasLimit:      cfg.EthClient.DeployGasLimit,
+			GasPriceDiv:         cfg.EthClient.GasPriceDiv,
+			ReceiptTimeout:      cfg.EthClient.ReceiptTimeout.Duration,
+			IntervalReceiptLoop: cfg.EthClient.IntervalReceiptLoop.Duration,
+		},
+		Rollup: eth.RollupConfig{
+			Address: cfg.SmartContracts.Rollup,
+		},
+		Auction: eth.AuctionConfig{
+			Address:         cfg.SmartContracts.Auction,
+			TokenHEZAddress: cfg.SmartContracts.TokenHEZ,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +146,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			client,
 		)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{
 		coord:    coord,
 		coordCfg: coordCfg,
@@ -136,6 +154,8 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		cfg:      cfg,
 		mode:     mode,
 		sqlConn:  db,
+		ctx:      ctx,
+		cancel:   cancel,
 	}, nil
 }
 
@@ -220,28 +240,40 @@ func (n *Node) StopCoordinator() {
 // StartSynchronizer starts the synchronizer
 func (n *Node) StartSynchronizer() {
 	log.Info("Starting Synchronizer...")
-	n.stopSync = make(chan bool)
 	n.stoppedSync = make(chan bool)
 	go func() {
 		defer func() { n.stoppedSync <- true }()
+		var lastBlock *common.Block
+		d := time.Duration(0)
 		for {
 			select {
-			case <-n.stopSync:
+			case <-n.ctx.Done():
 				log.Info("Coordinator stopped")
 				return
-			case <-time.After(n.cfg.Synchronizer.SyncLoopInterval.Duration):
-				if err := n.sync.Sync(context.TODO()); err != nil {
+			case <-time.After(d):
+				if blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock); err != nil {
 					log.Errorw("Synchronizer.Sync", "error", err)
+					lastBlock = nil
+					d = n.cfg.Synchronizer.SyncLoopInterval.Duration
+				} else if discarded != nil {
+					log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
+					lastBlock = nil
+					d = time.Duration(0)
+				} else if blockData != nil {
+					lastBlock = &blockData.Block
+					d = time.Duration(0)
+				} else {
+					d = n.cfg.Synchronizer.SyncLoopInterval.Duration
 				}
 			}
 		}
 	}()
+	// TODO: Run price updater.  This is required by the API and the TxSelector
 }
 
-// StopSynchronizer stops the synchronizer
-func (n *Node) StopSynchronizer() {
-	log.Info("Stopping Synchronizer...")
-	n.stopSync <- true
+// WaitStopSynchronizer waits for the synchronizer to stop
+func (n *Node) WaitStopSynchronizer() {
+	log.Info("Waiting for Synchronizer to stop...")
 	<-n.stoppedSync
 }
 
@@ -257,8 +289,9 @@ func (n *Node) Start() {
 // Stop the node
 func (n *Node) Stop() {
 	log.Infow("Stopping node...")
+	n.cancel()
 	if n.mode == ModeCoordinator {
 		n.StopCoordinator()
 	}
-	n.StopSynchronizer()
+	n.WaitStopSynchronizer()
 }

@@ -39,10 +39,10 @@ var typeNewBatchL1 common.TxType = "InstrTypeNewBatchL1"
 // common.TxType of a new ethereum block
 var typeNewBlock common.TxType = "InstrTypeNewBlock"
 
-// typeRegisterToken is used for testing purposes only, and represents the
+// typeAddToken is used for testing purposes only, and represents the
 // common.TxType of a new Token regsitration
 // It has 'nolint:gosec' as the string 'Token' triggers gosec as a potential leaked Token (which is not the case)
-var typeRegisterToken common.TxType = "InstrTypeRegisterToken" //nolint:gosec
+var typeAddToken common.TxType = "InstrTypeAddToken" //nolint:gosec
 
 var txTypeCreateAccountDepositCoordinator common.TxType = "TypeCreateAccountDepositCoordinator"
 
@@ -306,7 +306,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		} else {
 			return c, fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", lit)
 		}
-	} else if lit == "RegisterToken" {
+	} else if lit == "AddToken" {
 		if err := p.expectChar(c, "("); err != nil {
 			return c, err
 		}
@@ -322,7 +322,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		if err := p.expectChar(c, ")"); err != nil {
 			return c, err
 		}
-		c.typ = typeRegisterToken
+		c.typ = typeAddToken
 		line, _ := p.s.r.ReadString('\n')
 		c.literal += line
 		return c, newEventLine
@@ -519,8 +519,8 @@ func (p *parser) parse() (*parsedSet, error) {
 		}
 		instruction.lineNum = i
 		if err == newEventLine {
-			if instruction.typ == typeRegisterToken && instruction.tokenID == common.TokenID(0) {
-				return ps, fmt.Errorf("Line %d: RegisterToken can not register TokenID 0", i)
+			if instruction.typ == typeAddToken && instruction.tokenID == common.TokenID(0) {
+				return ps, fmt.Errorf("Line %d: AddToken can not register TokenID 0", i)
 			}
 			ps.instructions = append(ps.instructions, *instruction)
 			continue

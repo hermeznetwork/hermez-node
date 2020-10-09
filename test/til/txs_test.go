@@ -13,9 +13,9 @@ import (
 func TestGenerateBlocks(t *testing.T) {
 	set := `
 		Type: Blockchain
-		RegisterToken(1)
-		RegisterToken(2)
-		RegisterToken(3)
+		AddToken(1)
+		AddToken(2)
+		AddToken(3)
 	
 		CreateAccountDeposit(1) A: 10
 		CreateAccountDeposit(2) A: 20
@@ -23,15 +23,15 @@ func TestGenerateBlocks(t *testing.T) {
 		CreateAccountDeposit(1) C: 5
 		CreateAccountDepositTransfer(1) D-A: 15, 10 (3)
 
-		> batchL1
-		> batchL1
+		> batchL1 // batchNum = 1
+		> batchL1 // batchNum = 2
 
 		Transfer(1) A-B: 6 (1)
 		Transfer(1) B-D: 3 (1)
 		Transfer(1) A-D: 1 (1)
 
 		// set new batch
-		> batch
+		> batch // batchNum = 3
 		CreateAccountDepositCoordinator(1) E
 		CreateAccountDepositCoordinator(2) B
 
@@ -44,12 +44,12 @@ func TestGenerateBlocks(t *testing.T) {
 		CreateAccountDeposit(3) User1: 20
 		CreateAccountDepositCoordinator(1) User1
 		CreateAccountDepositCoordinator(3) User0
-		> batchL1
+		> batchL1 // batchNum = 4
 		Transfer(1) User0-User1: 15 (1)
 		Transfer(3) User1-User0: 15 (1)
 		Transfer(1) A-C: 1 (1)
 
-		> batchL1
+		> batchL1 // batchNum = 5
 
 		Transfer(1) User1-User0: 1 (1)
 
@@ -59,7 +59,7 @@ func TestGenerateBlocks(t *testing.T) {
 		Transfer(1) A-B: 1 (1)
 		Exit(1) A: 5
 		
-		> batch
+		> batch // batchNum = 6
 		> block
 
 		// this transaction should not be generated, as it's after last
@@ -88,34 +88,34 @@ func TestGenerateBlocks(t *testing.T) {
 	// // #4: CreateAccountDepositTransfer(1) D-A: 15, 10 (3)
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[4], common.TxTypeCreateAccountDepositTransfer, 1, "D", "A", big.NewInt(15), big.NewInt(10))
 	// #5: Transfer(1) A-B: 6 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[0], common.TxTypeTransfer, 1, "A", "B", big.NewInt(6), common.BatchNum(2), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[0], common.TxTypeTransfer, 1, "A", "B", big.NewInt(6), common.BatchNum(3), common.Nonce(1))
 	// #6: Transfer(1) B-D: 3 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[1], common.TxTypeTransfer, 1, "B", "D", big.NewInt(3), common.BatchNum(2), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[1], common.TxTypeTransfer, 1, "B", "D", big.NewInt(3), common.BatchNum(3), common.Nonce(1))
 	// #7: Transfer(1) A-D: 1 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[2], common.TxTypeTransfer, 1, "A", "D", big.NewInt(1), common.BatchNum(2), common.Nonce(2))
+	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[2], common.TxTypeTransfer, 1, "A", "D", big.NewInt(1), common.BatchNum(3), common.Nonce(2))
 	// change of Batch
 	// #8: DepositTransfer(1) A-B: 15, 10 (1)
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[5], common.TxTypeDepositTransfer, 1, "A", "B", big.NewInt(15), big.NewInt(10))
 	// #10: Transfer(1) C-A : 3 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[0], common.TxTypeTransfer, 1, "C", "A", big.NewInt(3), common.BatchNum(3), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[0], common.TxTypeTransfer, 1, "C", "A", big.NewInt(3), common.BatchNum(4), common.Nonce(1))
 	// #11: Transfer(2) A-B: 15 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[1], common.TxTypeTransfer, 2, "A", "B", big.NewInt(15), common.BatchNum(3), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[1], common.TxTypeTransfer, 2, "A", "B", big.NewInt(15), common.BatchNum(4), common.Nonce(1))
 	// #12: Deposit(1) User0: 20
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[6], common.TxTypeCreateAccountDeposit, 1, "User0", "", big.NewInt(20), nil)
 	// // #13: Deposit(3) User1: 20
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[7], common.TxTypeCreateAccountDeposit, 3, "User1", "", big.NewInt(20), nil)
 	// #14: Transfer(1) User0-User1: 15 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[0], common.TxTypeTransfer, 1, "User0", "User1", big.NewInt(15), common.BatchNum(4), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[0], common.TxTypeTransfer, 1, "User0", "User1", big.NewInt(15), common.BatchNum(5), common.Nonce(1))
 	// #15: Transfer(3) User1-User0: 15 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[1], common.TxTypeTransfer, 3, "User1", "User0", big.NewInt(15), common.BatchNum(4), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[1], common.TxTypeTransfer, 3, "User1", "User0", big.NewInt(15), common.BatchNum(5), common.Nonce(1))
 	// #16: Transfer(1) A-C: 1 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[2], common.TxTypeTransfer, 1, "A", "C", big.NewInt(1), common.BatchNum(4), common.Nonce(4))
+	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[2], common.TxTypeTransfer, 1, "A", "C", big.NewInt(1), common.BatchNum(5), common.Nonce(4))
 	// change of Batch
 	// #17: Transfer(1) User1-User0: 1 (1)
-	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[0], common.TxTypeTransfer, 1, "User1", "User0", big.NewInt(1), common.BatchNum(5), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[0], common.TxTypeTransfer, 1, "User1", "User0", big.NewInt(1), common.BatchNum(6), common.Nonce(1))
 	// change of Block (implies also a change of batch)
 	// #18: Transfer(1) A-B: 1 (1)
-	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[1], common.TxTypeTransfer, 1, "A", "B", big.NewInt(1), common.BatchNum(5), common.Nonce(5))
+	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[1], common.TxTypeTransfer, 1, "A", "B", big.NewInt(1), common.BatchNum(6), common.Nonce(5))
 }
 
 func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxType, tokenID common.TokenID, from, to string, loadAmount, amount *big.Int) {
@@ -151,9 +151,9 @@ func (tc *Context) checkL2TxParams(t *testing.T, tx common.L2Tx, typ common.TxTy
 func TestGeneratePoolL2Txs(t *testing.T) {
 	set := `
 		Type: Blockchain
-		RegisterToken(1)
-		RegisterToken(2)
-		RegisterToken(3)
+		AddToken(1)
+		AddToken(2)
+		AddToken(3)
 	
 		CreateAccountDeposit(1) A: 10
 		CreateAccountDeposit(2) A: 20
@@ -221,38 +221,38 @@ func TestGenerateErrors(t *testing.T) {
 	_, err := tc.GenerateBlocks(set)
 	assert.Equal(t, "Line 2: Can not process CreateAccountDeposit: TokenID 1 not registered, last registered TokenID: 0", err.Error())
 
-	// ensure RegisterToken sequentiality and not using 0
+	// ensure AddToken sequentiality and not using 0
 	set = `
 		Type: Blockchain
-		RegisterToken(0)
+		AddToken(0)
 	`
 	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
-	require.Equal(t, "Line 2: RegisterToken can not register TokenID 0", err.Error())
+	require.Equal(t, "Line 2: AddToken can not register TokenID 0", err.Error())
 
 	set = `
 		Type: Blockchain
-		RegisterToken(2)
+		AddToken(2)
 	`
 	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
-	require.Equal(t, "Line 2: RegisterToken TokenID should be sequential, expected TokenID: 1, defined TokenID: 2", err.Error())
+	require.Equal(t, "Line 2: AddToken TokenID should be sequential, expected TokenID: 1, defined TokenID: 2", err.Error())
 
 	set = `
 		Type: Blockchain
-		RegisterToken(1)
-		RegisterToken(2)
-		RegisterToken(3)
-		RegisterToken(5)
+		AddToken(1)
+		AddToken(2)
+		AddToken(3)
+		AddToken(5)
 	`
 	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
-	require.Equal(t, "Line 5: RegisterToken TokenID should be sequential, expected TokenID: 4, defined TokenID: 5", err.Error())
+	require.Equal(t, "Line 5: AddToken TokenID should be sequential, expected TokenID: 4, defined TokenID: 5", err.Error())
 
 	// check transactions when account is not created yet
 	set = `
 		Type: Blockchain
-		RegisterToken(1)
+		AddToken(1)
 		CreateAccountDeposit(1) A: 10
 		> batchL1
 		CreateAccountDeposit(1) B
@@ -264,7 +264,7 @@ func TestGenerateErrors(t *testing.T) {
 	require.Equal(t, "Line 5: CreateAccountDeposit(1)BTransfer(1) A-B: 6 (1)\n, err: Expected ':', found 'Transfer'", err.Error())
 	set = `
 		Type: Blockchain
-		RegisterToken(1)
+		AddToken(1)
 		CreateAccountDeposit(1) A: 10
 		> batchL1
 		CreateAccountDepositCoordinator(1) B
@@ -280,7 +280,7 @@ func TestGenerateErrors(t *testing.T) {
 	// check nonces
 	set = `
 		Type: Blockchain
-		RegisterToken(1)
+		AddToken(1)
 		CreateAccountDeposit(1) A: 10
 		> batchL1
 		CreateAccountDepositCoordinator(1) B
