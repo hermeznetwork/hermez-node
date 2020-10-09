@@ -98,8 +98,6 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
 
-	fromIdx := new(Idx)
-	*fromIdx = 29767899
 	loadAmount := new(big.Int)
 	loadAmount.SetString("100000000000000000000", 10)
 	l1Tx := &L1Tx{
@@ -107,7 +105,7 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 		TokenID:     2098076,
 		Amount:      big.NewInt(2400000000000000000),
 		LoadAmount:  loadAmount,
-		FromIdx:     fromIdx,
+		FromIdx:     Idx(29767899),
 		FromBJJ:     pk,
 		FromEthAddr: ethCommon.HexToAddress("0x85dab5b9e2e361d0c208d77be90efcc0439b0a53"),
 	}
