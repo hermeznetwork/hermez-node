@@ -97,7 +97,7 @@ func TestRollupForgeBatch(t *testing.T) {
 		signature = append(signature, v)
 		L1Tx, err := common.L1TxFromCoordinatorBytes(bytesL1Coordinator)
 		require.Nil(t, err)
-		args.L1CoordinatorTxs = append(args.L1CoordinatorTxs, L1Tx)
+		args.L1CoordinatorTxs = append(args.L1CoordinatorTxs, *L1Tx)
 		args.L1CoordinatorTxsAuths = append(args.L1CoordinatorTxsAuths, signature)
 	}
 	newStateRoot := new(big.Int)

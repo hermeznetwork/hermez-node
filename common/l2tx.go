@@ -95,7 +95,7 @@ func (tx *L2Tx) PoolL2Tx() *PoolL2Tx {
 
 // L2TxsToPoolL2Txs returns an array of []*PoolL2Tx from an array of []*L2Tx,
 // where the PoolL2Tx only have the parameters of a L2Tx filled.
-func L2TxsToPoolL2Txs(txs []*L2Tx) []PoolL2Tx {
+func L2TxsToPoolL2Txs(txs []L2Tx) []PoolL2Tx {
 	var r []PoolL2Tx
 	for _, tx := range txs {
 		r = append(r, *tx.PoolL2Tx())

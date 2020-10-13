@@ -1,22 +1,7 @@
 package txselector
 
-import (
-	"io/ioutil"
-	"os"
-	"testing"
-	"time"
-
-	"github.com/hermeznetwork/hermez-node/common"
-	dbUtils "github.com/hermeznetwork/hermez-node/db"
-	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/hermeznetwork/hermez-node/db/l2db"
-	"github.com/hermeznetwork/hermez-node/db/statedb"
-	"github.com/hermeznetwork/hermez-node/test"
-	"github.com/jmoiron/sqlx"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
-
+/*
+   TODO update transactions generation
 func initTest(t *testing.T, testSet string) *TxSelector {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
@@ -52,30 +37,31 @@ func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 }
 
 func TestGetL2TxSelection(t *testing.T) {
-	txsel := initTest(t, test.SetTest0)
+	txsel := initTest(t, transakcio.SetPool0)
 	test.CleanL2DB(txsel.l2db.DB())
 
-	// generate test transactions
-	l1Txs, _, poolL2Txs, tokens := test.GenerateTestTxsFromSet(t, test.SetTest0)
+	   	// generate test transactions
+	   	l1Txs, _, poolL2Txs, tokens := test.GenerateTestTxsFromSet(t, test.SetTest0)
 
-	// add tokens to HistoryDB to avoid breaking FK constrains
-	addTokens(t, tokens, txsel.l2db.DB())
-	// add the first batch of transactions to the TxSelector
-	addL2Txs(t, txsel, poolL2Txs[0])
+	   	// add tokens to HistoryDB to avoid breaking FK constrains
+	   	addTokens(t, tokens, txsel.l2db.DB())
+	   	// add the first batch of transactions to the TxSelector
+	   	addL2Txs(t, txsel, poolL2Txs[0])
 
-	_, err := txsel.GetL2TxSelection(0)
-	assert.Nil(t, err)
+	   	_, err := txsel.GetL2TxSelection(0)
+	   	assert.Nil(t, err)
 
-	_, _, _, err = txsel.GetL1L2TxSelection(0, l1Txs[0])
-	assert.Nil(t, err)
+	   	_, _, _, err = txsel.GetL1L2TxSelection(0, l1Txs[0])
+	   	assert.Nil(t, err)
 
-	// txs, err := txsel.GetL2TxSelection(0)
-	// assert.Nil(t, err)
-	// for _, tx := range txs {
-	//         fmt.Println(tx.FromIdx, tx.ToIdx, tx.AbsoluteFee)
-	// }
-	// assert.Equal(t, 3, len(txs))
-	// assert.Equal(t, uint64(6), txs[0].AbsoluteFee)
-	// assert.Equal(t, uint64(5), txs[1].AbsoluteFee)
-	// assert.Equal(t, uint64(4), txs[2].AbsoluteFee)
+	   	// txs, err := txsel.GetL2TxSelection(0)
+	   	// assert.Nil(t, err)
+	   	// for _, tx := range txs {
+	   	//         fmt.Println(tx.FromIdx, tx.ToIdx, tx.AbsoluteFee)
+	   	// }
+	   	// assert.Equal(t, 3, len(txs))
+	   	// assert.Equal(t, uint64(6), txs[0].AbsoluteFee)
+	   	// assert.Equal(t, uint64(5), txs[1].AbsoluteFee)
+	   	// assert.Equal(t, uint64(4), txs[2].AbsoluteFee)
 }
+*/

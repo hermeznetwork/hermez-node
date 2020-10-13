@@ -3,7 +3,6 @@ package synchronizer
 import (
 	"context"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"testing"
 
@@ -60,36 +59,39 @@ func TestSync(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, int64(0), blocks[0].EthBlockNum)
 
-	// Test Sync for a block with new Tokens and L1UserTxs
-	// accounts := test.GenerateKeys(t, []string{"A", "B", "C", "D"})
-	l1UserTxs, _, _, _ := test.GenerateTestTxsFromSet(t, `
-A (1): 10
-A (2): 20
-B (1): 5
-C (1): 8
-D (3): 15
-> advance batch
-	`)
-	require.Greater(t, len(l1UserTxs[0]), 0)
-	// require.Greater(t, len(tokens), 0)
+	// TODO once transakcio is completed
+	/*
+			// Test Sync for a block with new Tokens and L1UserTxs
+			// accounts := test.GenerateKeys(t, []string{"A", "B", "C", "D"})
+			l1UserTxs, _, _, _ := test.GenerateTestTxsFromSet(t, `
+		A (1): 10
+		A (2): 20
+		B (1): 5
+		C (1): 8
+		D (3): 15
+		> advance batch
+			`)
+			require.Greater(t, len(l1UserTxs[0]), 0)
+			// require.Greater(t, len(tokens), 0)
 
-	for i := 1; i <= 3; i++ {
-		_, err := client.RollupAddToken(ethCommon.BigToAddress(big.NewInt(int64(i*10000))),
-			clientSetup.RollupVariables.FeeAddToken)
-		require.Nil(t, err)
-	}
+			for i := 1; i <= 3; i++ {
+				_, err := client.RollupAddToken(ethCommon.BigToAddress(big.NewInt(int64(i*10000))),
+					clientSetup.RollupVariables.FeeAddToken)
+				require.Nil(t, err)
+			}
 
-	for i := range l1UserTxs[0] {
-		client.CtlAddL1TxUser(&l1UserTxs[0][i])
-	}
-	client.CtlMineBlock()
+			for i := range l1UserTxs[0] {
+				client.CtlAddL1TxUser(&l1UserTxs[0][i])
+			}
+			client.CtlMineBlock()
 
-	err = s.Sync(context.Background())
-	require.Nil(t, err)
+			err = s.Sync(context.Background())
+			require.Nil(t, err)
 
-	getTokens, err := s.historyDB.GetTokens()
-	require.Nil(t, err)
-	assert.Equal(t, 3, len(getTokens))
+			getTokens, err := s.historyDB.GetTokens()
+			require.Nil(t, err)
+			assert.Equal(t, 3, len(getTokens))
+	*/
 
 	// TODO: Reorg will be properly tested once we have the mock ethClient implemented
 	/*

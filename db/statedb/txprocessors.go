@@ -334,7 +334,9 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 			s.zki.AuxToIdx[s.i] = auxToIdx.BigInt()
 		}
 
-		s.zki.ToBJJAy[s.i] = tx.ToBJJ.Y
+		if tx.ToBJJ != nil {
+			s.zki.ToBJJAy[s.i] = tx.ToBJJ.Y
+		}
 		s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(tx.ToEthAddr)
 
 		s.zki.OnChain[s.i] = big.NewInt(0)
@@ -353,7 +355,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	// if StateDB type==TypeSynchronizer, will need to add Nonce and
 	// TokenID to the transaction
 	if s.typ == TypeSynchronizer {
-		acc, err := s.GetAccount(tx.ToIdx)
+		acc, err := s.GetAccount(tx.FromIdx)
 		if err != nil {
 			return nil, nil, false, err
 		}
