@@ -69,7 +69,7 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 			tx.RqTokenID = common.TokenID(i)
 			tx.RqAmount = big.NewInt(int64(i))
 			tx.RqFee = common.FeeSelector(i)
-			tx.RqNonce = uint64(i)
+			tx.RqNonce = common.Nonce(i)
 		}
 		txs = append(txs, tx)
 	}

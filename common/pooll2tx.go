@@ -38,7 +38,7 @@ type PoolL2Tx struct {
 	RqTokenID         TokenID            `meddler:"rq_token_id,zeroisnull"`
 	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16
 	RqFee             FeeSelector        `meddler:"rq_fee,zeroisnull"`
-	RqNonce           uint64             `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
+	RqNonce           Nonce              `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
 	AbsoluteFee       float64            `meddler:"fee_usd,zeroisnull"`
 	AbsoluteFeeUpdate time.Time          `meddler:"usd_update,utctimez"`
 	Type              TxType             `meddler:"tx_type"`
@@ -108,7 +108,7 @@ func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 	}
 	var b [31]byte
 	toBJJSign := byte(0)
-	if babyjub.PointCoordSign(tx.ToBJJ.X) {
+	if tx.ToBJJ != nil && babyjub.PointCoordSign(tx.ToBJJ.X) {
 		toBJJSign = byte(1)
 	}
 	b[0] = toBJJSign
@@ -137,40 +137,43 @@ func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 	return bi, nil
 }
 
-// TxCompressedDataV2 spec:
-// [ 1 bits  ] toBJJSign // 1 byte
-// [ 8 bits  ] userFee // 1 byte
-// [ 40 bits ] nonce // 5 bytes
-// [ 32 bits ] tokenID // 4 bytes
-// [ 16 bits ] amountFloat16 // 2 bytes
-// [ 48 bits ] toIdx // 6 bytes
-// [ 48 bits ] fromIdx // 6 bytes
+// RqTxCompressedDataV2 spec:
+// [ 1 bits  ] rqToBJJSign // 1 byte
+// [ 8 bits  ] rqUserFee // 1 byte
+// [ 40 bits ] rqNonce // 5 bytes
+// [ 32 bits ] rqTokenID // 4 bytes
+// [ 16 bits ] rqAmountFloat16 // 2 bytes
+// [ 48 bits ] rqToIdx // 6 bytes
+// [ 48 bits ] rqFromIdx // 6 bytes
 // Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
-func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
-	amountFloat16, err := NewFloat16(tx.Amount)
+func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
+	if tx.RqAmount == nil {
+		tx.RqAmount = big.NewInt(0)
+	}
+	amountFloat16, err := NewFloat16(tx.RqAmount)
 	if err != nil {
 		return nil, err
 	}
 	var b [25]byte
 	toBJJSign := byte(0)
-	if babyjub.PointCoordSign(tx.ToBJJ.X) {
+	if tx.RqToBJJ != nil && babyjub.PointCoordSign(tx.RqToBJJ.X) {
 		toBJJSign = byte(1)
 	}
 	b[0] = toBJJSign
-	b[1] = byte(tx.Fee)
-	nonceBytes, err := tx.Nonce.Bytes()
+	b[1] = byte(tx.RqFee)
+	nonceBytes, err := tx.RqNonce.Bytes()
 	if err != nil {
 		return nil, err
 	}
 	copy(b[2:7], nonceBytes[:])
-	copy(b[7:11], tx.TokenID.Bytes())
+	copy(b[7:11], tx.RqTokenID.Bytes())
 	copy(b[11:13], amountFloat16.Bytes())
-	toIdxBytes, err := tx.ToIdx.Bytes()
+	toIdxBytes, err := tx.RqToIdx.Bytes()
 	if err != nil {
 		return nil, err
 	}
 	copy(b[13:19], toIdxBytes[:])
-	fromIdxBytes, err := tx.FromIdx.Bytes()
+	fromIdxBytes, err := tx.RqFromIdx.Bytes()
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +191,11 @@ func (tx *PoolL2Tx) HashToSign() (*big.Int, error) {
 	}
 	toEthAddr := EthAddrToBigInt(tx.ToEthAddr)
 	rqToEthAddr := EthAddrToBigInt(tx.RqToEthAddr)
-	toBJJAy := tx.ToBJJ.Y
-	rqTxCompressedDataV2, err := tx.TxCompressedDataV2()
+	toBJJY := big.NewInt(0)
+	if tx.ToBJJ != nil {
+		toBJJY = tx.ToBJJ.Y
+	}
+	rqTxCompressedDataV2, err := tx.RqTxCompressedDataV2()
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +204,7 @@ func (tx *PoolL2Tx) HashToSign() (*big.Int, error) {
 		rqToBJJY = tx.RqToBJJ.Y
 	}
 
-	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBJJAy, rqTxCompressedDataV2, rqToEthAddr, rqToBJJY})
+	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBJJY, rqTxCompressedDataV2, rqToEthAddr, rqToBJJY})
 }
 
 // VerifySignature returns true if the signature verification is correct for the given PublicKey

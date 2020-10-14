@@ -45,15 +45,15 @@ func TestTxCompressedData(t *testing.T) {
 	assert.Equal(t, expected.Bytes(), txCompressedData.Bytes())
 	assert.Equal(t, "10000000000060000000500040000000000030000000000020001c60be60f", hex.EncodeToString(txCompressedData.Bytes())[1:])
 	tx = PoolL2Tx{
-		FromIdx: 7,
-		ToIdx:   8,
-		Amount:  big.NewInt(9),
-		TokenID: 10,
-		Nonce:   11,
-		Fee:     12,
-		ToBJJ:   sk.Public(),
+		RqFromIdx: 7,
+		RqToIdx:   8,
+		RqAmount:  big.NewInt(9),
+		RqTokenID: 10,
+		RqNonce:   11,
+		RqFee:     12,
+		RqToBJJ:   sk.Public(),
 	}
-	txCompressedData, err = tx.TxCompressedDataV2()
+	txCompressedData, err = tx.RqTxCompressedDataV2()
 	assert.Nil(t, err)
 	// test vector value generated from javascript implementation
 	expectedStr = "6571340879233176732837827812956721483162819083004853354503"
@@ -80,7 +80,7 @@ func TestHashToSign(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign()
 	assert.Nil(t, err)
-	assert.Equal(t, "14526446928649310956370997581245770629723313742905751117262272426489782809503", toSign.String())
+	assert.Equal(t, "13412877307445712067533842795279849753265998687662992184595695642580679868064", toSign.String())
 }
 
 func TestVerifyTxSignature(t *testing.T) {
@@ -99,7 +99,7 @@ func TestVerifyTxSignature(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign()
 	assert.Nil(t, err)
-	assert.Equal(t, "14526446928649310956370997581245770629723313742905751117262272426489782809503", toSign.String())
+	assert.Equal(t, "13412877307445712067533842795279849753265998687662992184595695642580679868064", toSign.String())
 
 	sig := sk.SignPoseidon(toSign)
 	tx.Signature = sig

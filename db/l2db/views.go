@@ -30,7 +30,7 @@ type PoolL2TxWrite struct {
 	RqTokenID   *common.TokenID      `meddler:"rq_token_id"`
 	RqAmount    *big.Int             `meddler:"rq_amount,bigintnull"`
 	RqFee       *common.FeeSelector  `meddler:"rq_fee"`
-	RqNonce     *uint64              `meddler:"rq_nonce"`
+	RqNonce     *common.Nonce        `meddler:"rq_nonce"`
 	Type        common.TxType        `meddler:"tx_type"`
 }
 
@@ -53,7 +53,7 @@ type PoolL2TxRead struct {
 	RqTokenID   *common.TokenID      `meddler:"rq_token_id"`
 	RqAmount    *big.Int             `meddler:"rq_amount,bigintnull"`
 	RqFee       *common.FeeSelector  `meddler:"rq_fee"`
-	RqNonce     *uint64              `meddler:"rq_nonce"`
+	RqNonce     *common.Nonce        `meddler:"rq_nonce"`
 	Type        common.TxType        `meddler:"tx_type"`
 	// Extra read fileds
 	BatchNum         *common.BatchNum  `meddler:"batch_num"`
