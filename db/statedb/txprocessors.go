@@ -248,12 +248,14 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		// & nonce
 		err := s.applyTransfer(tx.Tx(), 0) // 0 for the parameter toIdx, as at L1Tx ToIdx can only be 0 in the Deposit type case.
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 	case common.TxTypeCreateAccountDeposit:
 		// add new account to the MT, update balance of the MT account
 		err := s.applyCreateAccount(tx)
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 		// TODO applyCreateAccount will return the created account,
@@ -268,6 +270,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		// update balance of the MT account
 		err := s.applyDeposit(tx, false)
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 	case common.TxTypeDepositTransfer:
@@ -275,6 +278,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		// & receiver
 		err := s.applyDeposit(tx, true)
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 	case common.TxTypeCreateAccountDepositTransfer:
@@ -282,6 +286,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		// update balance & nonce of sender & receiver
 		err := s.applyCreateAccountDepositTransfer(tx)
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 
@@ -293,6 +298,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		// execute exit flow
 		exitAccount, newExit, err := s.applyExit(exitTree, tx.Tx())
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 		return &tx.FromIdx, exitAccount, newExit, nil
@@ -356,6 +362,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		// as type==TypeSynchronizer, always tx.ToIdx!=0
 		acc, err := s.GetAccount(tx.FromIdx)
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 		tx.Nonce = acc.Nonce
@@ -371,12 +378,14 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		// balance & nonce
 		err = s.applyTransfer(tx.Tx(), tx.AuxToIdx)
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 	case common.TxTypeExit:
 		// execute exit flow
 		exitAccount, newExit, err := s.applyExit(exitTree, tx.Tx())
 		if err != nil {
+			log.Error(err)
 			return nil, nil, false, err
 		}
 		return &tx.FromIdx, exitAccount, newExit, nil
@@ -493,16 +502,18 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 // the receiver. This parameter is used when the tx.ToIdx is not specified and
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
 func (s *StateDB) applyTransfer(tx common.Tx, auxToIdx common.Idx) error {
-	if auxToIdx == 0 {
+	if auxToIdx == common.Idx(0) {
 		auxToIdx = tx.ToIdx
 	}
 	// get sender and receiver accounts from localStateDB
 	accSender, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	accReceiver, err := s.GetAccount(auxToIdx)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 
@@ -517,6 +528,7 @@ func (s *StateDB) applyTransfer(tx common.Tx, auxToIdx common.Idx) error {
 	// update sender account in localStateDB
 	pSender, err := s.UpdateAccount(tx.FromIdx, accSender)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	if s.zki != nil {

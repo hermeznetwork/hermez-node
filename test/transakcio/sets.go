@@ -64,6 +64,8 @@ Transfer(1) H-K: 3 (1)
 
 > batch
 // A (3) still does not exist, coordinator should create new L1Tx to create the account
+CreateAccountDepositCoordinator(3) A
+
 Transfer(3) B-A: 5 (1)
 Transfer(2) A-B: 5 (1)
 Transfer(1) I-K: 3 (1)
@@ -144,6 +146,9 @@ Transfer(1) C-O: 5 (1)
 Transfer(1) H-O: 5 (1)
 Transfer(1) I-H: 5 (1)
 Exit(1) A: 5
+
+// create CoordinatorTx CreateAccount for D, TokenId 2, used at SetPool0 for 'PoolTransfer(2) B-D: 3 (1)'
+CreateAccountDepositCoordinator(2) D
 `
 
 // SetPool0 contains a set of transactions from the PoolL2

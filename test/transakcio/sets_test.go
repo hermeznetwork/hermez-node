@@ -15,7 +15,7 @@ func TestCompileSets(t *testing.T) {
 	_, err = parser.parse()
 	assert.Nil(t, err)
 
-	tc := NewTestContext(t)
+	tc := NewTestContext()
 	_ = tc.GenerateBlocks(SetBlockchain0)
 	_ = tc.GenerateBlocks(SetPool0)
 }

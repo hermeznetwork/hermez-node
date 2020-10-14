@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"testing"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -13,12 +12,10 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/stretchr/testify/require"
 )
 
 // TestContext contains the data of the test
 type TestContext struct {
-	t                 *testing.T
 	Instructions      []instruction
 	accountsNames     []string
 	Users             map[string]*User
@@ -27,9 +24,8 @@ type TestContext struct {
 }
 
 // NewTestContext returns a new TestContext
-func NewTestContext(t *testing.T) *TestContext {
+func NewTestContext() *TestContext {
 	return &TestContext{
-		t:                 t,
 		Users:             make(map[string]*User),
 		l1CreatedAccounts: make(map[string]*Account),
 	}
@@ -74,7 +70,9 @@ type BatchData struct {
 func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
-	require.Nil(tc.t, err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	tc.Instructions = parsedSet.instructions
 	tc.accountsNames = parsedSet.accounts
@@ -89,7 +87,7 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 	idx := 256
 	for _, inst := range parsedSet.instructions {
 		switch inst.typ {
-		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer:
+		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer, txTypeCreateAccountDepositCoordinator:
 			tx := common.L1Tx{
 				// TxID
 				FromEthAddr: tc.Users[inst.from].Addr,
@@ -110,7 +108,12 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			if inst.typ == common.TxTypeCreateAccountDepositTransfer {
 				tx.Amount = big.NewInt(int64(inst.amount))
 			}
-			currBatch.L1UserTxs = append(currBatch.L1UserTxs, tx)
+			if inst.typ == txTypeCreateAccountDepositCoordinator {
+				tx.Type = common.TxTypeCreateAccountDeposit // as txTypeCreateAccountDepositCoordinator is not valid oustide Transakcio package
+				currBatch.L1CoordinatorTxs = append(currBatch.L1CoordinatorTxs, tx)
+			} else {
+				currBatch.L1UserTxs = append(currBatch.L1UserTxs, tx)
+			}
 		case common.TxTypeDeposit, common.TxTypeDepositTransfer:
 			if tc.Users[inst.from].Accounts[inst.tokenID] == nil {
 				log.Fatalf("Deposit at User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
@@ -150,24 +153,11 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			if tc.Users[inst.from].Accounts[inst.tokenID] == nil {
 				log.Fatalf("Transfer from User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
 			}
-			tc.Users[inst.from].Accounts[inst.tokenID].Nonce++
 			// if account of receiver does not exist, create a new CoordinatorL1Tx creating the account
 			if _, ok := tc.l1CreatedAccounts[idxTokenIDToString(inst.to, inst.tokenID)]; !ok {
-				tx := common.L1Tx{
-					FromEthAddr: tc.Users[inst.to].Addr,
-					FromBJJ:     tc.Users[inst.to].BJJ.Public(),
-					TokenID:     inst.tokenID,
-					LoadAmount:  big.NewInt(int64(inst.amount)),
-					Type:        common.TxTypeCreateAccountDeposit,
-				}
-				tc.Users[inst.to].Accounts[inst.tokenID] = &Account{
-					Idx:   common.Idx(idx),
-					Nonce: common.Nonce(0),
-				}
-				tc.l1CreatedAccounts[idxTokenIDToString(inst.to, inst.tokenID)] = tc.Users[inst.to].Accounts[inst.tokenID]
-				currBatch.L1CoordinatorTxs = append(currBatch.L1CoordinatorTxs, tx)
-				idx++
+				log.Fatalf("Can not create Transfer for a non existing account. Batch %d, Instruction: %s", currBatchNum, inst)
 			}
+			tc.Users[inst.from].Accounts[inst.tokenID].Nonce++
 			tx := common.L2Tx{
 				FromIdx: tc.Users[inst.from].Accounts[inst.tokenID].Idx,
 				ToIdx:   tc.Users[inst.to].Accounts[inst.tokenID].Idx,
@@ -178,7 +168,7 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			}
 			nTx, err := common.NewPoolL2Tx(tx.PoolL2Tx())
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			tx = nTx.L2Tx()
 			tx.BatchNum = common.BatchNum(currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
@@ -195,7 +185,7 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			}
 			nTx, err := common.NewPoolL2Tx(tx.PoolL2Tx())
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			tx = nTx.L2Tx()
 			currBatch.L2Txs = append(currBatch.L2Txs, tx)
@@ -233,7 +223,9 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 func (tc *TestContext) GeneratePoolL2Txs(set string) []common.PoolL2Tx {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
-	require.Nil(tc.t, err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	tc.Instructions = parsedSet.instructions
 	tc.accountsNames = parsedSet.accounts
@@ -271,13 +263,13 @@ func (tc *TestContext) GeneratePoolL2Txs(set string) []common.PoolL2Tx {
 			}
 			nTx, err := common.NewPoolL2Tx(&tx)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			tx = *nTx
 			// perform signature and set it to tx.Signature
 			toSign, err := tx.HashToSign()
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			sig := tc.Users[inst.to].BJJ.SignPoseidon(toSign)
 			tx.Signature = sig
