@@ -22,11 +22,11 @@ import (
 )
 
 const (
-	// RollupConstFeeIdxCoordinatorLen is the number of tokens the coordinator can use
-	// to collect fees (determines the number of tokens that the
-	// coordinator can collect fees from).  This value is determined by the
-	// circuit.
-	RollupConstFeeIdxCoordinatorLen = 64
+	// RollupConstMaxFeeIdxCoordinator is the maximum number of tokens the
+	// coordinator can use to collect fees (determines the number of tokens
+	// that the coordinator can collect fees from).  This value is
+	// determined by the circuit.
+	RollupConstMaxFeeIdxCoordinator = 64
 	// RollupConstReservedIDx First 256 indexes reserved, first user index will be the 256
 	RollupConstReservedIDx = 255
 	// RollupConstExitIDx IDX 1 is reserved for exits
@@ -99,38 +99,6 @@ var (
 	RollupConstERC20Signature = crypto.Keccak256([]byte("decimals()"))
 )
 
-// RollupConstants are the constants of the Rollup Smart Contract
-/* type RollupConstants struct {
-	// Maxim Deposit allowed
-	MaxAmountDeposit *big.Int
-	MaxAmountL2      *big.Int
-	MaxTokens        int64
-	// maximum L1 transactions allowed to be queued for a batch
-	MaxL1Tx int
-	// maximum L1 user transactions allowed to be queued for a batch
-	MaxL1UserTx        int
-	Rfield             *big.Int
-	L1CoordinatorBytes int
-	L1UserBytes        int
-	L2Bytes            int
-	MaxTxVerifiers     []int
-	TokenHEZ           ethCommon.Address
-	// Only test
-	GovernanceAddress ethCommon.Address
-	// Only test
-	SafetyBot ethCommon.Address
-	// Only test
-	ConsensusContract ethCommon.Address
-	// Only test
-	WithdrawalContract ethCommon.Address
-	ReservedIDx        uint32
-	LastIDx            uint32
-	ExitIDx            uint32
-	NoLimitToken       int
-	NumBuckets         int
-	MaxWDelay          int64
-}*/
-
 // RollupPublicConstants are the constants of the Rollup Smart Contract
 type RollupPublicConstants struct {
 	AbsoluteMaxL1L2BatchTimeout int64
@@ -187,20 +155,20 @@ type RollupState struct {
 type RollupEventL1UserTx struct {
 	ToForgeL1TxsNum int64 // QueueIndex       *big.Int
 	Position        int   // TransactionIndex *big.Int
-	L1Tx            common.L1Tx
+	L1UserTx        common.L1Tx
 }
 
 // RollupEventL1UserTxAux is an event of the Rollup Smart Contract
 type RollupEventL1UserTxAux struct {
 	ToForgeL1TxsNum uint64 // QueueIndex       *big.Int
 	Position        uint8  // TransactionIndex *big.Int
-	L1Tx            []byte
+	L1UserTx        []byte
 }
 
 // RollupEventAddToken is an event of the Rollup Smart Contract
 type RollupEventAddToken struct {
-	Address ethCommon.Address
-	TokenID uint32
+	TokenAddress ethCommon.Address
+	TokenID      uint32
 }
 
 // RollupEventForgeBatch is an event of the Rollup Smart Contract
@@ -211,12 +179,12 @@ type RollupEventForgeBatch struct {
 
 // RollupEventUpdateForgeL1L2BatchTimeout is an event of the Rollup Smart Contract
 type RollupEventUpdateForgeL1L2BatchTimeout struct {
-	ForgeL1L2BatchTimeout uint8
+	NewForgeL1L2BatchTimeout int64
 }
 
 // RollupEventUpdateFeeAddToken is an event of the Rollup Smart Contract
 type RollupEventUpdateFeeAddToken struct {
-	FeeAddToken *big.Int
+	NewFeeAddToken *big.Int
 }
 
 // RollupEventWithdrawEvent is an event of the Rollup Smart Contract
@@ -291,28 +259,19 @@ type RollupInterface interface {
 
 	RollupForgeBatch(*RollupForgeBatchArgs) (*types.Transaction, error)
 	RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big.Int) (*types.Transaction, error)
-	RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey,
-		numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error)
-	RollupForceExit(fromIdx int64, amountF common.Float16, tokenID int64) (*types.Transaction, error)
-	RollupForceTransfer(fromIdx int64, amountF common.Float16, tokenID, toIdx int64) (*types.Transaction, error)
-	RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey,
-		loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (*types.Transaction, error)
-	RollupDepositTransfer(fromIdx int64, loadAmountF, amountF common.Float16,
-		tokenID int64, toIdx int64) (*types.Transaction, error)
-	RollupDeposit(fromIdx int64, loadAmountF common.Float16, tokenID int64) (*types.Transaction, error)
-	RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte,
-		babyPubKey babyjub.PublicKey, loadAmountF common.Float16) (*types.Transaction, error)
-	RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF common.Float16,
-		tokenID int64) (*types.Transaction, error)
 
-	RollupGetCurrentTokens() (*big.Int, error)
-	// RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error)
-	// RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error)
-	// RollupGetQueue(queue int64) ([]byte, error)
+	RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (*types.Transaction, error)
+	RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error)
+
+	RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error)
+	RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error)
 
 	// Governance Public Functions
-	RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (*types.Transaction, error)
+	RollupUpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout int64) (*types.Transaction, error)
 	RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (*types.Transaction, error)
+
+	// Viewers
+	RollupRegisterTokensCount() (*big.Int, error)
 
 	//
 	// Smart Contract Status
@@ -388,8 +347,15 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (*types.Tran
 				l2DataBytes = append(l2DataBytes, bytesl2[:]...)
 			}
 			var feeIdxCoordinator []byte
-			for i := 0; i < len(args.FeeIdxCoordinator); i++ {
-				feeIdx := args.FeeIdxCoordinator[i]
+			if len(args.FeeIdxCoordinator) > RollupConstMaxFeeIdxCoordinator {
+				return nil, fmt.Errorf("len(args.FeeIdxCoordinator) > %v",
+					RollupConstMaxFeeIdxCoordinator)
+			}
+			for i := 0; i < RollupConstMaxFeeIdxCoordinator; i++ {
+				feeIdx := common.Idx(0)
+				if i < len(args.FeeIdxCoordinator) {
+					feeIdx = args.FeeIdxCoordinator[i]
+				}
 				bytesFeeIdx, err := feeIdx.Bytes()
 				if err != nil {
 					return nil, err
@@ -436,90 +402,183 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToke
 	return tx, nil
 }
 
-// RollupWithdrawSNARK is the interface to call the smart contract function
-// func (c *RollupClient) RollupWithdrawSNARK() (*types.Transaction, error) { // TODO (Not defined in Hermez.sol)
-// 	return nil, errTODO
-// }
+// RollupWithdrawMerkleProof is the interface to call the smart contract function
+func (c *RollupClient) RollupWithdrawMerkleProof(fromBJJ *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			hermez, err := Hermez.NewHermez(c.address, ec)
+			if err != nil {
+				return nil, err
+			}
+			pkCompL := fromBJJ.Compress()
+			pkCompB := common.SwapEndianness(pkCompL[:])
+			babyPubKey := new(big.Int).SetBytes(pkCompB)
+			numExitRootB := big.NewInt(numExitRoot)
+			idxBig := big.NewInt(idx)
+			return hermez.WithdrawMerkleProof(auth, tokenID, amount, babyPubKey, numExitRootB, siblings, idxBig, instantWithdraw)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed update WithdrawMerkleProof: %w", err)
+	}
+	return tx, nil
+}
 
-// RollupWithdraw is the interface to call the smart contract function
-func (c *RollupClient) RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey, numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (*types.Transaction, error) {
+// RollupWithdrawCircuit is the interface to call the smart contract function
+func (c *RollupClient) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
 
-// RollupForceExit is the interface to call the smart contract function
-func (c *RollupClient) RollupForceExit(fromIdx int64, amountF common.Float16, tokenID int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+// RollupL1UserTxERC20ETH is the interface to call the smart contract function
+func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			hermez, err := Hermez.NewHermez(c.address, ec)
+			if err != nil {
+				return nil, err
+			}
+			pkCompL := fromBJJ.Compress()
+			pkCompB := common.SwapEndianness(pkCompL[:])
+			babyPubKey := new(big.Int).SetBytes(pkCompB)
+			fromIdxBig := big.NewInt(fromIdx)
+			toIdxBig := big.NewInt(toIdx)
+			tokenIDBig := uint32(tokenID)
+			loadAmountF, err := common.NewFloat16(loadAmount)
+			if err != nil {
+				return nil, err
+			}
+			amountF, err := common.NewFloat16(amount)
+			if err != nil {
+				return nil, err
+			}
+			if tokenID == 0 {
+				auth.Value = loadAmount
+			}
+			return hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF), uint16(amountF), tokenIDBig, toIdxBig)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed add L1 Tx ERC20/ETH: %w", err)
+	}
+	return tx, nil
 }
 
-// RollupForceTransfer is the interface to call the smart contract function
-func (c *RollupClient) RollupForceTransfer(fromIdx int64, amountF common.Float16, tokenID, toIdx int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+// RollupL1UserTxERC777 is the interface to call the smart contract function
+func (c *RollupClient) RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			tokens, err := ERC777.NewERC777(c.tokenHEZAddress, ec)
+			if err != nil {
+				return nil, err
+			}
+			addL1TxFnSignature := []byte("addL1Transaction(uint256,uint48,uint16,uint16,uint32,uint48)")
+			hash := sha3.NewLegacyKeccak256()
+			_, err = hash.Write(addL1TxFnSignature)
+			if err != nil {
+				return nil, err
+			}
+			methodID := hash.Sum(nil)[:4]
+			pkCompL := fromBJJ.Compress()
+			pkCompB := common.SwapEndianness(pkCompL[:])
+			paddedAddress := ethCommon.LeftPadBytes(pkCompB, 32)
+			fromIdxB, err := common.Idx(fromIdx).Bytes()
+			if err != nil {
+				return nil, err
+			}
+			paddedFromIdx := ethCommon.LeftPadBytes(fromIdxB[:], 32)
+			loadAmountF, err := common.NewFloat16(loadAmount)
+			if err != nil {
+				return nil, err
+			}
+			paddedLoadAmount := ethCommon.LeftPadBytes(loadAmountF.Bytes(), 32)
+			amountF, err := common.NewFloat16(amount)
+			if err != nil {
+				return nil, err
+			}
+			paddedAmount := ethCommon.LeftPadBytes(amountF.Bytes(), 32)
+			tokenIDB := common.TokenID(tokenID).Bytes()
+			paddedTokenID := ethCommon.LeftPadBytes(tokenIDB, 32)
+			toIdxB, err := common.Idx(toIdx).Bytes()
+			if err != nil {
+				return nil, err
+			}
+			paddedToIdx := ethCommon.LeftPadBytes(toIdxB[:], 32)
+			var data []byte
+			data = append(data, methodID...)
+			data = append(data, paddedAddress[:]...)
+			data = append(data, paddedFromIdx[:]...)
+			data = append(data, paddedLoadAmount[:]...)
+			data = append(data, paddedAmount[:]...)
+			data = append(data, paddedTokenID[:]...)
+			data = append(data, paddedToIdx[:]...)
+			return tokens.Send(auth, c.address, loadAmount, data)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed add L1 Tx ERC777: %w", err)
+	}
+	return tx, nil
 }
 
-// RollupCreateAccountDepositTransfer is the interface to call the smart contract function
-func (c *RollupClient) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+// RollupRegisterTokensCount is the interface to call the smart contract function
+func (c *RollupClient) RollupRegisterTokensCount() (*big.Int, error) {
+	var registerTokensCount *big.Int
+	if err := c.client.Call(func(ec *ethclient.Client) error {
+		hermez, err := Hermez.NewHermez(c.address, ec)
+		if err != nil {
+			return err
+		}
+		registerTokensCount, err = hermez.RegisterTokensCount(nil)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return registerTokensCount, nil
 }
-
-// RollupDepositTransfer is the interface to call the smart contract function
-func (c *RollupClient) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupDeposit is the interface to call the smart contract function
-func (c *RollupClient) RollupDeposit(fromIdx int64, loadAmountF common.Float16, tokenID int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupCreateAccountDepositFromRelayer is the interface to call the smart contract function
-func (c *RollupClient) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey babyjub.PublicKey, loadAmountF common.Float16) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupCreateAccountDeposit is the interface to call the smart contract function
-func (c *RollupClient) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF common.Float16, tokenID int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupGetTokenAddress is the interface to call the smart contract function
-/* func (c *RollupClient) RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error) {
-	return nil, errTODO
-} */
-
-// RollupGetCurrentTokens is the interface to call the smart contract function
-func (c *RollupClient) RollupGetCurrentTokens() (*big.Int, error) {
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupGetL1TxFromQueue is the interface to call the smart contract function
-/* func (c *RollupClient) RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error) {
-	return nil, errTODO
-} */
-
-// RollupGetQueue is the interface to call the smart contract function
-/* func (c *RollupClient) RollupGetQueue(queue int64) ([]byte, error) {
-	return nil, errTODO
-}*/
 
 // RollupUpdateForgeL1L2BatchTimeout is the interface to call the smart contract function
-func (c *RollupClient) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+func (c *RollupClient) RollupUpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout int64) (*types.Transaction, error) {
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			hermez, err := Hermez.NewHermez(c.address, ec)
+			if err != nil {
+				return nil, err
+			}
+			return hermez.UpdateForgeL1L2BatchTimeout(auth, uint8(newForgeL1L2BatchTimeout))
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed update ForgeL1L2BatchTimeout: %w", err)
+	}
+	return tx, nil
 }
 
 // RollupUpdateFeeAddToken is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+	var tx *types.Transaction
+	var err error
+	if tx, err = c.client.CallAuth(
+		c.gasLimit,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			hermez, err := Hermez.NewHermez(c.address, ec)
+			if err != nil {
+				return nil, err
+			}
+			return hermez.UpdateFeeAddToken(auth, newFeeAddToken)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed update FeeAddToken: %w", err)
+	}
+	return tx, nil
 }
 
 // RollupConstants returns the Constants of the Rollup Smart Contract
@@ -611,13 +670,13 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			if err != nil {
 				return nil, nil, err
 			}
-			L1Tx, err := common.L1TxFromBytes(L1UserTxAux.L1Tx)
+			L1Tx, err := common.L1TxFromBytes(L1UserTxAux.L1UserTx)
 			if err != nil {
 				return nil, nil, err
 			}
 			L1UserTx.ToForgeL1TxsNum = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
 			L1UserTx.Position = int(new(big.Int).SetBytes(vLog.Topics[2][:]).Int64())
-			L1UserTx.L1Tx = *L1Tx
+			L1UserTx.L1UserTx = *L1Tx
 			rollupEvents.L1UserTx = append(rollupEvents.L1UserTx, L1UserTx)
 		case logHermezAddToken:
 			var addToken RollupEventAddToken
@@ -625,7 +684,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			if err != nil {
 				return nil, nil, err
 			}
-			addToken.Address = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+			addToken.TokenAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			rollupEvents.AddToken = append(rollupEvents.AddToken, addToken)
 		case logHermezForgeBatch:
 			var forgeBatch RollupEventForgeBatch
@@ -633,12 +692,17 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			forgeBatch.EthTxHash = vLog.TxHash
 			rollupEvents.ForgeBatch = append(rollupEvents.ForgeBatch, forgeBatch)
 		case logHermezUpdateForgeL1L2BatchTimeout:
-			var updateForgeL1L2BatchTimeout RollupEventUpdateForgeL1L2BatchTimeout
+			var updateForgeL1L2BatchTimeout struct {
+				NewForgeL1L2BatchTimeout uint8
+			}
 			err := c.contractAbi.Unpack(&updateForgeL1L2BatchTimeout, "UpdateForgeL1L2BatchTimeout", vLog.Data)
 			if err != nil {
 				return nil, nil, err
 			}
-			rollupEvents.UpdateForgeL1L2BatchTimeout = append(rollupEvents.UpdateForgeL1L2BatchTimeout, updateForgeL1L2BatchTimeout)
+			rollupEvents.UpdateForgeL1L2BatchTimeout = append(rollupEvents.UpdateForgeL1L2BatchTimeout,
+				RollupEventUpdateForgeL1L2BatchTimeout{
+					NewForgeL1L2BatchTimeout: int64(updateForgeL1L2BatchTimeout.NewForgeL1L2BatchTimeout),
+				})
 		case logHermezUpdateFeeAddToken:
 			var updateFeeAddToken RollupEventUpdateFeeAddToken
 			err := c.contractAbi.Unpack(&updateFeeAddToken, "UpdateFeeAddToken", vLog.Data)
@@ -648,12 +712,12 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			rollupEvents.UpdateFeeAddToken = append(rollupEvents.UpdateFeeAddToken, updateFeeAddToken)
 		case logHermezWithdrawEvent:
 			var withdraw RollupEventWithdrawEvent
-			err := c.contractAbi.Unpack(&withdraw, "WithdrawEvent", vLog.Data)
-			if err != nil {
-				return nil, nil, err
-			}
 			withdraw.Idx = new(big.Int).SetBytes(vLog.Topics[1][:]).Uint64()
 			withdraw.NumExitRoot = new(big.Int).SetBytes(vLog.Topics[2][:]).Uint64()
+			instantWithdraw := new(big.Int).SetBytes(vLog.Topics[3][:]).Uint64()
+			if instantWithdraw == 1 {
+				withdraw.InstantWithdraw = true
+			}
 			rollupEvents.WithdrawEvent = append(rollupEvents.WithdrawEvent, withdraw)
 		}
 	}
@@ -675,15 +739,20 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 	if err := method.Inputs.Unpack(&aux, txData[4:]); err != nil {
 		return nil, err
 	}
-	var rollupForgeBatchArgs RollupForgeBatchArgs
-	rollupForgeBatchArgs.L1Batch = aux.L1Batch
-	rollupForgeBatchArgs.NewExitRoot = aux.NewExitRoot
-	rollupForgeBatchArgs.NewLastIdx = aux.NewLastIdx.Int64()
-	rollupForgeBatchArgs.NewStRoot = aux.NewStRoot
-	rollupForgeBatchArgs.ProofA = aux.ProofA
-	rollupForgeBatchArgs.ProofB = aux.ProofB
-	rollupForgeBatchArgs.ProofC = aux.ProofC
-	rollupForgeBatchArgs.VerifierIdx = aux.VerifierIdx
+	rollupForgeBatchArgs := RollupForgeBatchArgs{
+		L1Batch:               aux.L1Batch,
+		NewExitRoot:           aux.NewExitRoot,
+		NewLastIdx:            aux.NewLastIdx.Int64(),
+		NewStRoot:             aux.NewStRoot,
+		ProofA:                aux.ProofA,
+		ProofB:                aux.ProofB,
+		ProofC:                aux.ProofC,
+		VerifierIdx:           aux.VerifierIdx,
+		L1CoordinatorTxs:      []common.L1Tx{},
+		L1CoordinatorTxsAuths: [][]byte{},
+		L2TxsData:             []common.L2Tx{},
+		FeeIdxCoordinator:     []common.Idx{},
+	}
 	numTxsL1 := len(aux.EncodedL1CoordinatorTx) / common.L1CoordinatorTxBytesLen
 	for i := 0; i < numTxsL1; i++ {
 		bytesL1Coordinator := aux.EncodedL1CoordinatorTx[i*common.L1CoordinatorTxBytesLen : (i+1)*common.L1CoordinatorTxBytesLen]
@@ -725,11 +794,13 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		} else {
 			copy(paddedFeeIdx[:], aux.FeeIdxCoordinator[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
 		}
-		FeeIdxCoordinator, err := common.IdxFromBytes(paddedFeeIdx[:])
+		feeIdxCoordinator, err := common.IdxFromBytes(paddedFeeIdx[:])
 		if err != nil {
 			return nil, err
 		}
-		rollupForgeBatchArgs.FeeIdxCoordinator = append(rollupForgeBatchArgs.FeeIdxCoordinator, FeeIdxCoordinator)
+		if feeIdxCoordinator != common.Idx(0) {
+			rollupForgeBatchArgs.FeeIdxCoordinator = append(rollupForgeBatchArgs.FeeIdxCoordinator, feeIdxCoordinator)
+		}
 	}
 	return &rollupForgeBatchArgs, nil
 }

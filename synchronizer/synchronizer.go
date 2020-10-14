@@ -484,7 +484,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		var token common.Token
 
 		token.TokenID = common.TokenID(evtAddToken.TokenID)
-		token.EthAddr = evtAddToken.Address
+		token.EthAddr = evtAddToken.TokenAddress
 		token.EthBlockNum = blockNum
 
 		// TODO: Add external information consulting SC about it using Address
@@ -584,17 +584,17 @@ func getL1UserTx(eventsL1UserTx []eth.RollupEventL1UserTx, blockNum int64) ([]co
 	for _, evtL1UserTx := range eventsL1UserTx {
 		// Fill aditional Tx fields
 		toForge := evtL1UserTx.ToForgeL1TxsNum
-		evtL1UserTx.L1Tx.ToForgeL1TxsNum = &toForge
-		evtL1UserTx.L1Tx.Position = evtL1UserTx.Position
-		evtL1UserTx.L1Tx.UserOrigin = true
-		evtL1UserTx.L1Tx.EthBlockNum = blockNum
-		nL1Tx, err := common.NewL1Tx(&evtL1UserTx.L1Tx)
+		evtL1UserTx.L1UserTx.ToForgeL1TxsNum = &toForge
+		evtL1UserTx.L1UserTx.Position = evtL1UserTx.Position
+		evtL1UserTx.L1UserTx.UserOrigin = true
+		evtL1UserTx.L1UserTx.EthBlockNum = blockNum
+		nL1Tx, err := common.NewL1Tx(&evtL1UserTx.L1UserTx)
 		if err != nil {
 			return nil, err
 		}
-		evtL1UserTx.L1Tx = *nL1Tx
+		evtL1UserTx.L1UserTx = *nL1Tx
 
-		l1Txs = append(l1Txs, evtL1UserTx.L1Tx)
+		l1Txs = append(l1Txs, evtL1UserTx.L1UserTx)
 	}
 	return l1Txs, nil
 }
