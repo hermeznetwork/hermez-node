@@ -177,3 +177,18 @@ func SlicePtrsToSlice(slice interface{}) interface{} {
 	}
 	return res.Interface()
 }
+
+// Pagination give information on the items of a query
+type Pagination struct {
+	TotalItems        int `json:"totalItems"`
+	FirstItem         int `json:"firstItem"`
+	LastItem          int `json:"lastItem"`
+	FirstReturnedItem int `json:"-"`
+	LastReturnedItem  int `json:"-"`
+}
+
+// Paginationer is an interface that allows getting pagination info on any struct
+type Paginationer interface {
+	GetPagination() *Pagination
+	Len() int
+}

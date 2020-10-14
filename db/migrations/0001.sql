@@ -28,17 +28,6 @@ CREATE TABLE batch (
     total_fees_usd NUMERIC
 );
 
-CREATE TABLE exit_tree (
-    batch_num BIGINT REFERENCES batch (batch_num) ON DELETE CASCADE,
-    account_idx BIGINT,
-    merkle_proof BYTEA NOT NULL,
-    balance BYTEA NOT NULL,
-    instant_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
-    delayed_withdraw_request BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
-    delayed_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
-    PRIMARY KEY (batch_num, account_idx)
-);
-
 CREATE TABLE bid (
     slot_num BIGINT NOT NULL,
     bid_value BYTEA NOT NULL,
@@ -58,6 +47,25 @@ CREATE TABLE token (
     usd_update TIMESTAMP WITHOUT TIME ZONE
 );
 
+CREATE TABLE account (
+    idx BIGINT PRIMARY KEY,
+    token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
+    batch_num BIGINT NOT NULL REFERENCES batch (batch_num) ON DELETE CASCADE,
+    bjj BYTEA NOT NULL,
+    eth_addr BYTEA NOT NULL
+);
+
+CREATE TABLE exit_tree (
+    item_id SERIAL PRIMARY KEY,
+    batch_num BIGINT REFERENCES batch (batch_num) ON DELETE CASCADE,
+    account_idx BIGINT REFERENCES account (idx) ON DELETE CASCADE,
+    merkle_proof BYTEA NOT NULL,
+    balance BYTEA NOT NULL,
+    instant_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
+    delayed_withdraw_request BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
+    delayed_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL
+);
+
 -- +migrate StatementBegin
 CREATE FUNCTION set_token_usd_update() 
     RETURNS TRIGGER 
@@ -75,10 +83,13 @@ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_token_usd_update BEFORE UPDATE OR INSERT ON token
 FOR EACH ROW EXECUTE PROCEDURE set_token_usd_update();
 
+CREATE SEQUENCE tx_item_id;
+
 CREATE TABLE tx (
     -- Generic TX
+    item_id INTEGER PRIMARY KEY DEFAULT nextval('tx_item_id'),
     is_l1 BOOLEAN NOT NULL,
-    id BYTEA PRIMARY KEY,
+    id BYTEA,
     type VARCHAR(40) NOT NULL,
     position INT NOT NULL,
     from_idx BIGINT,
@@ -102,8 +113,6 @@ CREATE TABLE tx (
     fee_usd NUMERIC,
     nonce BIGINT
 );
-
-CREATE INDEX tx_order ON tx (batch_num, position);
 
 -- +migrate StatementBegin
 CREATE FUNCTION fee_percentage(NUMERIC)
@@ -412,9 +421,10 @@ BEGIN
         usd / POWER(10, decimals), usd_update, timestamp FROM token INNER JOIN block on token.eth_block_num = block.eth_block_num WHERE token_id = NEW.token_id;
     IF _tx_timestamp - interval '24 hours' < _usd_update AND _tx_timestamp + interval '24 hours' > _usd_update THEN
         NEW."amount_usd" = (SELECT _value * NEW.amount_f);
-        NEW."load_amount_usd" = (SELECT _value * NEW.load_amount_f);
         IF NOT NEW.is_l1 THEN
             NEW."fee_usd" = (SELECT NEW."amount_usd" * fee_percentage(NEW.fee::NUMERIC));
+        ELSE 
+            NEW."load_amount_usd" = (SELECT _value * NEW.load_amount_f);
         END IF;
     END IF;
     RETURN NEW;
@@ -433,8 +443,13 @@ $BODY$
 BEGIN
     IF NEW.forge_l1_txs_num IS NOT NULL THEN
         UPDATE tx 
-        SET batch_num = NEW.batch_num
-        WHERE user_origin AND NEW.forge_l1_txs_num = to_forge_l1_txs_num;
+        SET item_id = nextval('tx_item_id'), batch_num = NEW.batch_num 
+        WHERE id IN (
+            SELECT id FROM tx 
+            WHERE user_origin AND NEW.forge_l1_txs_num = to_forge_l1_txs_num 
+            ORDER BY position
+            FOR UPDATE
+        ); 
     END IF;
     RETURN NEW;
 END;
@@ -443,14 +458,6 @@ LANGUAGE plpgsql;
 -- +migrate StatementEnd
 CREATE TRIGGER trigger_forge_l1_txs AFTER INSERT ON batch
 FOR EACH ROW EXECUTE PROCEDURE forge_l1_user_txs();
-
-CREATE TABLE account (
-    idx BIGINT PRIMARY KEY,
-    token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
-    batch_num BIGINT NOT NULL REFERENCES batch (batch_num) ON DELETE CASCADE,
-    bjj BYTEA NOT NULL,
-    eth_addr BYTEA NOT NULL
-);
 
 CREATE TABLE rollup_vars (
     eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,

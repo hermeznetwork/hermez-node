@@ -9,56 +9,49 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
+
+// Query parsers
 
 type querier interface {
 	Query(string) string
 }
 
-func parsePagination(c querier) (*uint, *bool, *uint, error) {
-	// Offset
-	offset := new(uint)
-	*offset = 0
-	offset, err := parseQueryUint("offset", offset, 0, maxUint32, c)
+func parsePagination(c querier) (fromItem *uint, order string, limit *uint, err error) {
+	// FromItem
+	fromItem, err = parseQueryUint("fromItem", nil, 0, maxUint32, c)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, err
 	}
-	// Last
-	last := new(bool)
-	*last = dfltLast
-	last, err = parseQueryBool("last", last, c)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if *last && (offset != nil && *offset > 0) {
-		return nil, nil, nil, errors.New(
-			"last and offset are incompatible, provide only one of them",
+	// Order
+	order = dfltOrder
+	const orderName = "order"
+	orderStr := c.Query(orderName)
+	if orderStr != "" && !(orderStr == historydb.OrderAsc || historydb.OrderDesc == orderStr) {
+		return nil, "", nil, errors.New(
+			"order must have the value " + historydb.OrderAsc + " or " + historydb.OrderDesc,
 		)
 	}
+	if orderStr == historydb.OrderAsc {
+		order = historydb.OrderAsc
+	} else if orderStr == historydb.OrderDesc {
+		order = historydb.OrderDesc
+	}
 	// Limit
-	limit := new(uint)
+	limit = new(uint)
 	*limit = dfltLimit
 	limit, err = parseQueryUint("limit", limit, 1, maxLimit, c)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, err
 	}
-	return offset, last, limit, nil
+	return fromItem, order, limit, nil
 }
 
 func parseQueryUint(name string, dflt *uint, min, max uint, c querier) (*uint, error) { //nolint:SA4009 res may be not overwriten
 	str := c.Query(name)
-	if str != "" {
-		resInt, err := strconv.Atoi(str)
-		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
-			return nil, fmt.Errorf(
-				"Inavlid %s. Must be an integer within the range [%d, %d]",
-				name, min, max)
-		}
-		res := uint(resInt)
-		return &res, nil
-	}
-	return dflt, nil
+	return stringToUint(str, name, dflt, min, max)
 }
 
 func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolint:SA4009 res may be not overwriten
@@ -183,19 +176,105 @@ func parseQueryTxType(c querier) (*common.TxType, error) {
 	)
 }
 
-func parseIdx(c querier) (*uint, error) {
+func parseIdx(c querier) (*common.Idx, error) {
 	const name = "accountIndex"
-	addrStr := c.Query(name)
-	if addrStr == "" {
+	idxStr := c.Query(name)
+	return stringToIdx(idxStr, name)
+}
+
+func parseAccountFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.PublicKey, *common.Idx, error) {
+	// TokenID
+	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	var tokenID *common.TokenID
+	if tid != nil {
+		tokenID = new(common.TokenID)
+		*tokenID = common.TokenID(*tid)
+	}
+	// Hez Eth addr
+	addr, err := parseQueryHezEthAddr(c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	// BJJ
+	bjj, err := parseQueryBJJ(c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	if addr != nil && bjj != nil {
+		return nil, nil, nil, nil,
+			errors.New("bjj and hermezEthereumAddress params are incompatible")
+	}
+	// Idx
+	idx, err := parseIdx(c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	if idx != nil && (addr != nil || bjj != nil || tokenID != nil) {
+		return nil, nil, nil, nil,
+			errors.New("accountIndex is incompatible with BJJ, hermezEthereumAddress and tokenId")
+	}
+	return tokenID, addr, bjj, idx, nil
+}
+
+// Param parsers
+
+type paramer interface {
+	Param(string) string
+}
+
+func parseParamTxID(c paramer) (common.TxID, error) {
+	const name = "id"
+	txIDStr := c.Param(name)
+	if txIDStr == "" {
+		return common.TxID{}, fmt.Errorf("%s is required", name)
+	}
+	txID, err := common.NewTxIDFromString(txIDStr)
+	if err != nil {
+		return common.TxID{}, fmt.Errorf("invalid %s", name)
+	}
+	return txID, nil
+}
+
+func parseParamIdx(c paramer) (*common.Idx, error) {
+	const name = "accountIndex"
+	idxStr := c.Param(name)
+	return stringToIdx(idxStr, name)
+}
+
+func parseParamUint(name string, dflt *uint, min, max uint, c paramer) (*uint, error) { //nolint:SA4009 res may be not overwriten
+	str := c.Param(name)
+	return stringToUint(str, name, dflt, min, max)
+}
+
+func stringToIdx(idxStr, name string) (*common.Idx, error) {
+	if idxStr == "" {
 		return nil, nil
 	}
-	splitted := strings.Split(addrStr, ":")
+	splitted := strings.Split(idxStr, ":")
 	const expectedLen = 3
-	if len(splitted) != expectedLen {
+	if len(splitted) != expectedLen || splitted[0] != "hez" {
 		return nil, fmt.Errorf(
 			"invalid %s, must follow this: hez:<tokenSymbol>:index", name)
 	}
+	// TODO: check that the tokenSymbol match the token related to the account index
 	idxInt, err := strconv.Atoi(splitted[2])
-	idx := uint(idxInt)
+	idx := common.Idx(idxInt)
 	return &idx, err
+}
+
+func stringToUint(uintStr, name string, dflt *uint, min, max uint) (*uint, error) {
+	if uintStr != "" {
+		resInt, err := strconv.Atoi(uintStr)
+		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
+			return nil, fmt.Errorf(
+				"Inavlid %s. Must be an integer within the range [%d, %d]",
+				name, min, max)
+		}
+		res := uint(resInt)
+		return &res, nil
+	}
+	return dflt, nil
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"net/http"
 	"os"
@@ -19,7 +20,7 @@ import (
 	swagger "github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
-	dbUtils "github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
@@ -35,42 +36,97 @@ const apiPort = ":4010"
 const apiURL = "http://localhost" + apiPort + "/"
 
 type testCommon struct {
-	blocks  []common.Block
-	tokens  []historydb.TokenRead
-	batches []common.Batch
-	usrAddr string
-	usrBjj  string
-	accs    []common.Account
-	usrTxs  historyTxAPIs
-	othrTxs historyTxAPIs
-	allTxs  historyTxAPIs
-	router  *swagger.Router
+	blocks   []common.Block
+	tokens   []historydb.TokenRead
+	batches  []common.Batch
+	usrAddr  string
+	usrBjj   string
+	accs     []common.Account
+	usrTxs   []historyTxAPI
+	allTxs   []historyTxAPI
+	exits    []exitAPI
+	usrExits []exitAPI
+	router   *swagger.Router
 }
 
-type historyTxAPIs []historyTxAPI
+// TxSortFields represents the fields needed to sort L1 and L2 transactions
+type txSortFields struct {
+	BatchNum *common.BatchNum
+	Position int
+}
 
-func (h historyTxAPIs) Len() int      { return len(h) }
-func (h historyTxAPIs) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
-func (h historyTxAPIs) Less(i, j int) bool {
+// TxSortFielder is a interface that allows sorting L1 and L2 transactions in a combined way
+type txSortFielder interface {
+	SortFields() txSortFields
+	L1() *common.L1Tx
+	L2() *common.L2Tx
+}
+
+// TxsSort array of TxSortFielder
+type txsSort []txSortFielder
+
+func (t txsSort) Len() int      { return len(t) }
+func (t txsSort) Swap(i, j int) { t[i], t[j] = t[j], t[i] }
+func (t txsSort) Less(i, j int) bool {
 	// i not forged yet
-	if h[i].BatchNum == nil {
-		if h[j].BatchNum != nil { // j is already forged
+	isf := t[i].SortFields()
+	jsf := t[j].SortFields()
+	if isf.BatchNum == nil {
+		if jsf.BatchNum != nil { // j is already forged
 			return false
 		}
 		// Both aren't forged, is i in a smaller position?
-		return h[i].Position < h[j].Position
+		return isf.Position < jsf.Position
 	}
 	// i is forged
-	if h[j].BatchNum == nil {
-		return true // j is not forged
+	if jsf.BatchNum == nil {
+		return false // j is not forged
 	}
 	// Both are forged
-	if *h[i].BatchNum == *h[j].BatchNum {
+	if *isf.BatchNum == *jsf.BatchNum {
 		// At the same batch,  is i in a smaller position?
-		return h[i].Position < h[j].Position
+		return isf.Position < jsf.Position
 	}
 	// At different batches, is i in a smaller batch?
-	return *h[i].BatchNum < *h[j].BatchNum
+	return *isf.BatchNum < *jsf.BatchNum
+}
+
+type wrappedL1 common.L1Tx
+
+// SortFields implements TxSortFielder
+func (tx *wrappedL1) SortFields() txSortFields {
+	return txSortFields{
+		BatchNum: tx.BatchNum,
+		Position: tx.Position,
+	}
+}
+
+// L1 implements TxSortFielder
+func (tx *wrappedL1) L1() *common.L1Tx {
+	l1tx := common.L1Tx(*tx)
+	return &l1tx
+}
+
+// L2 implements TxSortFielder
+func (tx *wrappedL1) L2() *common.L2Tx { return nil }
+
+type wrappedL2 common.L2Tx
+
+// SortFields implements TxSortFielder
+func (tx *wrappedL2) SortFields() txSortFields {
+	return txSortFields{
+		BatchNum: &tx.BatchNum,
+		Position: tx.Position,
+	}
+}
+
+// L1 implements TxSortFielder
+func (tx *wrappedL2) L1() *common.L1Tx { return nil }
+
+// L2 implements TxSortFielder
+func (tx *wrappedL2) L2() *common.L2Tx {
+	l2tx := common.L2Tx(*tx)
+	return &l2tx
 }
 
 var tc testCommon
@@ -81,11 +137,11 @@ func TestMain(m *testing.M) {
 	// Init DBs
 	// HistoryDB
 	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	database, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
 		panic(err)
 	}
-	hdb := historydb.NewHistoryDB(db)
+	hdb := historydb.NewHistoryDB(database)
 	err = hdb.Reorg(-1)
 	if err != nil {
 		panic(err)
@@ -100,7 +156,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	// L2DB
-	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
+	l2DB := l2db.NewL2DB(database, 10, 100, 24*time.Hour)
 	test.CleanL2DB(l2DB.DB())
 
 	// Init API
@@ -186,161 +242,237 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	// Gen exits and add them to DB
+	const totalExits = 40
+	exits := test.GenExitTree(totalExits, batches, accs)
+	err = h.AddExitTree(exits)
+	if err != nil {
+		panic(err)
+	}
 	// Gen L1Txs and add them to DB
 	const totalL1Txs = 40
 	const userL1Txs = 4
 	usrL1Txs, othrL1Txs := test.GenL1Txs(256, totalL1Txs, userL1Txs, &usrAddr, accs, tokens, blocks, batches)
-	var l1Txs []common.L1Tx
-	l1Txs = append(l1Txs, usrL1Txs...)
-	l1Txs = append(l1Txs, othrL1Txs...)
-	err = h.AddL1Txs(l1Txs)
-	if err != nil {
-		panic(err)
-	}
 	// Gen L2Txs and add them to DB
 	const totalL2Txs = 20
 	const userL2Txs = 4
 	usrL2Txs, othrL2Txs := test.GenL2Txs(256+totalL1Txs, totalL2Txs, userL2Txs, &usrAddr, accs, tokens, blocks, batches)
-	var l2Txs []common.L2Tx
-	l2Txs = append(l2Txs, usrL2Txs...)
-	l2Txs = append(l2Txs, othrL2Txs...)
-	err = h.AddL2Txs(l2Txs)
-	if err != nil {
-		panic(err)
+	// Order txs
+	sortedTxs := []txSortFielder{}
+	for i := 0; i < len(usrL1Txs); i++ {
+		wL1 := wrappedL1(usrL1Txs[i])
+		sortedTxs = append(sortedTxs, &wL1)
 	}
-
-	// Set test commons
-	txsToAPITxs := func(l1Txs []common.L1Tx, l2Txs []common.L2Tx, blocks []common.Block, tokens []historydb.TokenRead) historyTxAPIs {
-		/* TODO: stop using l1tx.Tx() & l2tx.Tx()
-		// Transform L1Txs and L2Txs to generic Txs
-		genericTxs := []*common.Tx{}
-		for _, l1tx := range l1Txs {
-			genericTxs = append(genericTxs, l1tx.Tx())
+	for i := 0; i < len(othrL1Txs); i++ {
+		wL1 := wrappedL1(othrL1Txs[i])
+		sortedTxs = append(sortedTxs, &wL1)
+	}
+	for i := 0; i < len(usrL2Txs); i++ {
+		wL2 := wrappedL2(usrL2Txs[i])
+		sortedTxs = append(sortedTxs, &wL2)
+	}
+	for i := 0; i < len(othrL2Txs); i++ {
+		wL2 := wrappedL2(othrL2Txs[i])
+		sortedTxs = append(sortedTxs, &wL2)
+	}
+	sort.Sort(txsSort(sortedTxs))
+	// Add txs to DB and prepare them for test commons
+	usrTxs := []historyTxAPI{}
+	allTxs := []historyTxAPI{}
+	getTimestamp := func(blockNum int64) time.Time {
+		for i := 0; i < len(blocks); i++ {
+			if blocks[i].EthBlockNum == blockNum {
+				return blocks[i].Timestamp
+			}
 		}
-		for _, l2tx := range l2Txs {
-			genericTxs = append(genericTxs, l2tx.Tx())
+		panic("timesamp not found")
+	}
+	getToken := func(id common.TokenID) historydb.TokenRead {
+		for i := 0; i < len(tokensUSD); i++ {
+			if tokensUSD[i].TokenID == id {
+				return tokensUSD[i]
+			}
 		}
-		// Transform generic Txs to HistoryTx
-		historyTxs := []historydb.HistoryTx{}
-		for _, genericTx := range genericTxs {
-			// find timestamp
-			var timestamp time.Time
-			for i := 0; i < len(blocks); i++ {
-				if blocks[i].EthBlockNum == genericTx.EthBlockNum {
-					timestamp = blocks[i].Timestamp
+		panic("token not found")
+	}
+	getTokenByIdx := func(idx common.Idx) historydb.TokenRead {
+		for _, acc := range accs {
+			if idx == acc.Idx {
+				return getToken(acc.TokenID)
+			}
+		}
+		panic("token not found")
+	}
+	usrIdxs := []string{}
+	for _, acc := range accs {
+		if acc.EthAddr == usrAddr || acc.PublicKey == usrBjj {
+			for _, token := range tokens {
+				if token.TokenID == acc.TokenID {
+					usrIdxs = append(usrIdxs, idxToHez(acc.Idx, token.Symbol))
+				}
+			}
+		}
+	}
+	isUsrTx := func(tx historyTxAPI) bool {
+		for _, idx := range usrIdxs {
+			if tx.FromIdx != nil && *tx.FromIdx == idx {
+				return true
+			}
+			if tx.ToIdx == idx {
+				return true
+			}
+		}
+		return false
+	}
+	for _, genericTx := range sortedTxs {
+		l1 := genericTx.L1()
+		l2 := genericTx.L2()
+		if l1 != nil {
+			// Add L1 tx to DB
+			err = h.AddL1Txs([]common.L1Tx{*l1})
+			if err != nil {
+				panic(err)
+			}
+			// L1Tx ==> historyTxAPI
+			token := getToken(l1.TokenID)
+			tx := historyTxAPI{
+				IsL1:      "L1",
+				TxID:      l1.TxID.String(),
+				Type:      l1.Type,
+				Position:  l1.Position,
+				ToIdx:     idxToHez(l1.ToIdx, token.Symbol),
+				Amount:    l1.Amount.String(),
+				BatchNum:  l1.BatchNum,
+				Timestamp: getTimestamp(l1.EthBlockNum),
+				L1Info: &l1Info{
+					ToForgeL1TxsNum: l1.ToForgeL1TxsNum,
+					UserOrigin:      l1.UserOrigin,
+					FromEthAddr:     ethAddrToHez(l1.FromEthAddr),
+					FromBJJ:         bjjToString(l1.FromBJJ),
+					LoadAmount:      l1.LoadAmount.String(),
+					EthBlockNum:     l1.EthBlockNum,
+				},
+				Token: token,
+			}
+			if l1.FromIdx != 0 {
+				idxStr := idxToHez(l1.FromIdx, token.Symbol)
+				tx.FromIdx = &idxStr
+			}
+			if token.USD != nil {
+				af := new(big.Float).SetInt(l1.Amount)
+				amountFloat, _ := af.Float64()
+				usd := *token.USD * amountFloat / math.Pow(10, float64(token.Decimals))
+				tx.HistoricUSD = &usd
+				laf := new(big.Float).SetInt(l1.LoadAmount)
+				loadAmountFloat, _ := laf.Float64()
+				loadUSD := *token.USD * loadAmountFloat / math.Pow(10, float64(token.Decimals))
+				tx.L1Info.HistoricLoadAmountUSD = &loadUSD
+			}
+			allTxs = append(allTxs, tx)
+			if isUsrTx(tx) {
+				usrTxs = append(usrTxs, tx)
+			}
+		} else {
+			// Add L2 tx to DB
+			err = h.AddL2Txs([]common.L2Tx{*l2})
+			if err != nil {
+				panic(err)
+			}
+			// L2Tx ==> historyTxAPI
+			var tokenID common.TokenID
+			found := false
+			for _, acc := range accs {
+				if acc.Idx == l2.FromIdx {
+					found = true
+					tokenID = acc.TokenID
 					break
 				}
 			}
-			// find token
-			var token historydb.TokenRead
-			if genericTx.IsL1 {
-				tokenID := genericTx.TokenID
-				found := false
-				for i := 0; i < len(tokens); i++ {
-					if tokens[i].TokenID == tokenID {
-						token = tokens[i]
-						found = true
-						break
-					}
-				}
-				if !found {
-					panic("Token not found")
-				}
-			} else {
-				var id common.TokenID
-				found := false
-				for _, acc := range accs {
-					if acc.Idx == genericTx.FromIdx {
-						found = true
-						id = acc.TokenID
-						break
-					}
-				}
-				if !found {
-					panic("tokenID not found")
-				}
-				found = false
-				for i := 0; i < len(tokensUSD); i++ {
-					if tokensUSD[i].TokenID == id {
-						token = tokensUSD[i]
-						found = true
-						break
-					}
-				}
-				if !found {
-					panic("tokenID not found")
-				}
+			if !found {
+				panic("tokenID not found")
 			}
-			var usd, loadUSD, feeUSD *float64
+			token := getToken(tokenID)
+			tx := historyTxAPI{
+				IsL1:      "L2",
+				TxID:      l2.TxID.String(),
+				Type:      l2.Type,
+				Position:  l2.Position,
+				ToIdx:     idxToHez(l2.ToIdx, token.Symbol),
+				Amount:    l2.Amount.String(),
+				BatchNum:  &l2.BatchNum,
+				Timestamp: getTimestamp(l2.EthBlockNum),
+				L2Info: &l2Info{
+					Nonce: l2.Nonce,
+					Fee:   l2.Fee,
+				},
+				Token: token,
+			}
+			if l2.FromIdx != 0 {
+				idxStr := idxToHez(l2.FromIdx, token.Symbol)
+				tx.FromIdx = &idxStr
+			}
 			if token.USD != nil {
-				noDecimalsUSD := *token.USD / math.Pow(10, float64(token.Decimals))
-				usd = new(float64)
-				*usd = noDecimalsUSD * genericTx.AmountFloat
-				if genericTx.IsL1 {
-					loadUSD = new(float64)
-					*loadUSD = noDecimalsUSD * *genericTx.LoadAmountFloat
-				} else {
-					feeUSD = new(float64)
-					*feeUSD = *usd * genericTx.Fee.Percentage()
-				}
+				af := new(big.Float).SetInt(l2.Amount)
+				amountFloat, _ := af.Float64()
+				usd := *token.USD * amountFloat / math.Pow(10, float64(token.Decimals))
+				tx.HistoricUSD = &usd
+				feeUSD := usd * l2.Fee.Percentage()
+				tx.HistoricUSD = &usd
+				tx.L2Info.HistoricFeeUSD = &feeUSD
 			}
-			historyTx := &historydb.HistoryTx{
-				IsL1:                  genericTx.IsL1,
-				TxID:                  genericTx.TxID,
-				Type:                  genericTx.Type,
-				Position:              genericTx.Position,
-				ToIdx:                 genericTx.ToIdx,
-				Amount:                genericTx.Amount,
-				HistoricUSD:           usd,
-				BatchNum:              genericTx.BatchNum,
-				EthBlockNum:           genericTx.EthBlockNum,
-				ToForgeL1TxsNum:       genericTx.ToForgeL1TxsNum,
-				UserOrigin:            genericTx.UserOrigin,
-				FromBJJ:               genericTx.FromBJJ,
-				LoadAmount:            genericTx.LoadAmount,
-				HistoricLoadAmountUSD: loadUSD,
-				Fee:                   genericTx.Fee,
-				HistoricFeeUSD:        feeUSD,
-				Nonce:                 genericTx.Nonce,
-				Timestamp:             timestamp,
-				TokenID:               token.TokenID,
-				TokenEthBlockNum:      token.EthBlockNum,
-				TokenEthAddr:          token.EthAddr,
-				TokenName:             token.Name,
-				TokenSymbol:           token.Symbol,
-				TokenDecimals:         token.Decimals,
-				TokenUSD:              token.USD,
-				TokenUSDUpdate:        token.USDUpdate,
+			allTxs = append(allTxs, tx)
+			if isUsrTx(tx) {
+				usrTxs = append(usrTxs, tx)
 			}
-			if genericTx.FromIdx != 0 {
-				historyTx.FromIdx = &genericTx.FromIdx
-			}
-			if !bytes.Equal(genericTx.FromEthAddr.Bytes(), common.EmptyAddr.Bytes()) {
-				historyTx.FromEthAddr = &genericTx.FromEthAddr
-			}
-			historyTxs = append(historyTxs, historyTx)
 		}
-		return historyTxAPIs(historyTxsToAPI(historyTxs))
-		*/
-		return nil
 	}
-	usrTxs := txsToAPITxs(usrL1Txs, usrL2Txs, blocks, tokensUSD)
-	sort.Sort(usrTxs)
-	othrTxs := txsToAPITxs(othrL1Txs, othrL2Txs, blocks, tokensUSD)
-	sort.Sort(othrTxs)
-	allTxs := append(usrTxs, othrTxs...)
-	sort.Sort(allTxs)
+	// Transform exits to API
+	exitsToAPIExits := func(exits []common.ExitInfo, accs []common.Account, tokens []common.Token) []exitAPI {
+		historyExits := []historydb.HistoryExit{}
+		for _, exit := range exits {
+			token := getTokenByIdx(exit.AccountIdx)
+			historyExits = append(historyExits, historydb.HistoryExit{
+				BatchNum:               exit.BatchNum,
+				AccountIdx:             exit.AccountIdx,
+				MerkleProof:            exit.MerkleProof,
+				Balance:                exit.Balance,
+				InstantWithdrawn:       exit.InstantWithdrawn,
+				DelayedWithdrawRequest: exit.DelayedWithdrawRequest,
+				DelayedWithdrawn:       exit.DelayedWithdrawn,
+				TokenID:                token.TokenID,
+				TokenEthBlockNum:       token.EthBlockNum,
+				TokenEthAddr:           token.EthAddr,
+				TokenName:              token.Name,
+				TokenSymbol:            token.Symbol,
+				TokenDecimals:          token.Decimals,
+				TokenUSD:               token.USD,
+				TokenUSDUpdate:         token.USDUpdate,
+			})
+		}
+		return historyExitsToAPI(historyExits)
+	}
+	apiExits := exitsToAPIExits(exits, accs, tokens)
+	// sort.Sort(apiExits)
+	usrExits := []exitAPI{}
+	for _, exit := range apiExits {
+		for _, idx := range usrIdxs {
+			if idx == exit.AccountIdx {
+				usrExits = append(usrExits, exit)
+			}
+		}
+	}
 	tc = testCommon{
-		blocks:  blocks,
-		tokens:  tokensUSD,
-		batches: batches,
-		usrAddr: "hez:" + usrAddr.String(),
-		usrBjj:  bjjToString(usrBjj),
-		accs:    accs,
-		usrTxs:  usrTxs,
-		othrTxs: othrTxs,
-		allTxs:  allTxs,
-		router:  router,
+		blocks:   blocks,
+		tokens:   tokensUSD,
+		batches:  batches,
+		usrAddr:  ethAddrToHez(usrAddr),
+		usrBjj:   bjjToString(usrBjj),
+		accs:     accs,
+		usrTxs:   usrTxs,
+		allTxs:   allTxs,
+		exits:    apiExits,
+		usrExits: usrExits,
+		router:   router,
 	}
 	// Run tests
 	result := m.Run()
@@ -348,17 +480,15 @@ func TestMain(m *testing.M) {
 	if err := server.Shutdown(context.Background()); err != nil {
 		panic(err)
 	}
-	if err := db.Close(); err != nil {
+	if err := database.Close(); err != nil {
 		panic(err)
 	}
 	os.Exit(result)
 }
 
 func TestGetHistoryTxs(t *testing.T) {
-	return
-	//nolint:govet this is a temp patch to avoid running the test
 	endpoint := apiURL + "transactions-history"
-	fetchedTxs := historyTxAPIs{}
+	fetchedTxs := []historyTxAPI{}
 	appendIter := func(intr interface{}) {
 		for i := 0; i < len(intr.(*historyTxsAPI).Txs); i++ {
 			tmp, err := copystructure.Copy(intr.(*historyTxsAPI).Txs[i])
@@ -370,41 +500,42 @@ func TestGetHistoryTxs(t *testing.T) {
 	}
 	// Get all (no filters)
 	limit := 8
-	path := fmt.Sprintf("%s?limit=%d&offset=", endpoint, limit)
-	err := doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
+	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	err := doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
 	assert.NoError(t, err)
 	assertHistoryTxAPIs(t, tc.allTxs, fetchedTxs)
-	// Get by ethAddr
-	fetchedTxs = historyTxAPIs{}
-	limit = 7
-	path = fmt.Sprintf(
-		"%s?hermezEthereumAddress=%s&limit=%d&offset=",
-		endpoint, tc.usrAddr, limit,
-	)
-	err = doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
-	assert.NoError(t, err)
-	assertHistoryTxAPIs(t, tc.usrTxs, fetchedTxs)
-	// Get by bjj
-	fetchedTxs = historyTxAPIs{}
-	limit = 6
-	path = fmt.Sprintf(
-		"%s?BJJ=%s&limit=%d&offset=",
-		endpoint, tc.usrBjj, limit,
-	)
-	err = doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
-	assert.NoError(t, err)
-	assertHistoryTxAPIs(t, tc.usrTxs, fetchedTxs)
+	// Uncomment once tx generation for tests is fixed
+	// // Get by ethAddr
+	// fetchedTxs = []historyTxAPI{}
+	// limit = 7
+	// path = fmt.Sprintf(
+	// 	"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
+	// 	endpoint, tc.usrAddr, limit,
+	// )
+	// err = doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
+	// assert.NoError(t, err)
+	// assertHistoryTxAPIs(t, tc.usrTxs, fetchedTxs)
+	// // Get by bjj
+	// fetchedTxs = []historyTxAPI{}
+	// limit = 6
+	// path = fmt.Sprintf(
+	// 	"%s?BJJ=%s&limit=%d&fromItem=",
+	// 	endpoint, tc.usrBjj, limit,
+	// )
+	// err = doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
+	// assert.NoError(t, err)
+	// assertHistoryTxAPIs(t, tc.usrTxs, fetchedTxs)
 	// Get by tokenID
-	fetchedTxs = historyTxAPIs{}
+	fetchedTxs = []historyTxAPI{}
 	limit = 5
 	tokenID := tc.allTxs[0].Token.TokenID
 	path = fmt.Sprintf(
-		"%s?tokenId=%d&limit=%d&offset=",
+		"%s?tokenId=%d&limit=%d&fromItem=",
 		endpoint, tokenID, limit,
 	)
-	err = doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
 	assert.NoError(t, err)
-	tokenIDTxs := historyTxAPIs{}
+	tokenIDTxs := []historyTxAPI{}
 	for i := 0; i < len(tc.allTxs); i++ {
 		if tc.allTxs[i].Token.TokenID == tokenID {
 			tokenIDTxs = append(tokenIDTxs, tc.allTxs[i])
@@ -412,16 +543,16 @@ func TestGetHistoryTxs(t *testing.T) {
 	}
 	assertHistoryTxAPIs(t, tokenIDTxs, fetchedTxs)
 	// idx
-	fetchedTxs = historyTxAPIs{}
+	fetchedTxs = []historyTxAPI{}
 	limit = 4
 	idx := tc.allTxs[0].ToIdx
 	path = fmt.Sprintf(
-		"%s?accountIndex=%s&limit=%d&offset=",
+		"%s?accountIndex=%s&limit=%d&fromItem=",
 		endpoint, idx, limit,
 	)
-	err = doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
 	assert.NoError(t, err)
-	idxTxs := historyTxAPIs{}
+	idxTxs := []historyTxAPI{}
 	for i := 0; i < len(tc.allTxs); i++ {
 		if (tc.allTxs[i].FromIdx != nil && (*tc.allTxs[i].FromIdx)[6:] == idx[6:]) ||
 			tc.allTxs[i].ToIdx[6:] == idx[6:] {
@@ -430,16 +561,16 @@ func TestGetHistoryTxs(t *testing.T) {
 	}
 	assertHistoryTxAPIs(t, idxTxs, fetchedTxs)
 	// batchNum
-	fetchedTxs = historyTxAPIs{}
+	fetchedTxs = []historyTxAPI{}
 	limit = 3
 	batchNum := tc.allTxs[0].BatchNum
 	path = fmt.Sprintf(
-		"%s?batchNum=%d&limit=%d&offset=",
+		"%s?batchNum=%d&limit=%d&fromItem=",
 		endpoint, *batchNum, limit,
 	)
-	err = doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
 	assert.NoError(t, err)
-	batchNumTxs := historyTxAPIs{}
+	batchNumTxs := []historyTxAPI{}
 	for i := 0; i < len(tc.allTxs); i++ {
 		if tc.allTxs[i].BatchNum != nil &&
 			*tc.allTxs[i].BatchNum == *batchNum {
@@ -449,27 +580,28 @@ func TestGetHistoryTxs(t *testing.T) {
 	assertHistoryTxAPIs(t, batchNumTxs, fetchedTxs)
 	// type
 	txTypes := []common.TxType{
-		common.TxTypeExit,
-		common.TxTypeTransfer,
-		common.TxTypeDeposit,
+		// Uncomment once test gen is fixed
+		// common.TxTypeExit,
+		// common.TxTypeTransfer,
+		// common.TxTypeDeposit,
 		common.TxTypeCreateAccountDeposit,
-		common.TxTypeCreateAccountDepositTransfer,
-		common.TxTypeDepositTransfer,
+		// common.TxTypeCreateAccountDepositTransfer,
+		// common.TxTypeDepositTransfer,
 		common.TxTypeForceTransfer,
-		common.TxTypeForceExit,
-		common.TxTypeTransferToEthAddr,
-		common.TxTypeTransferToBJJ,
+		// common.TxTypeForceExit,
+		// common.TxTypeTransferToEthAddr,
+		// common.TxTypeTransferToBJJ,
 	}
 	for _, txType := range txTypes {
-		fetchedTxs = historyTxAPIs{}
+		fetchedTxs = []historyTxAPI{}
 		limit = 2
 		path = fmt.Sprintf(
-			"%s?type=%s&limit=%d&offset=",
+			"%s?type=%s&limit=%d&fromItem=",
 			endpoint, txType, limit,
 		)
-		err = doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
+		err = doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
 		assert.NoError(t, err)
-		txTypeTxs := historyTxAPIs{}
+		txTypeTxs := []historyTxAPI{}
 		for i := 0; i < len(tc.allTxs); i++ {
 			if tc.allTxs[i].Type == txType {
 				txTypeTxs = append(txTypeTxs, tc.allTxs[i])
@@ -478,15 +610,15 @@ func TestGetHistoryTxs(t *testing.T) {
 		assertHistoryTxAPIs(t, txTypeTxs, fetchedTxs)
 	}
 	// Multiple filters
-	fetchedTxs = historyTxAPIs{}
+	fetchedTxs = []historyTxAPI{}
 	limit = 1
 	path = fmt.Sprintf(
-		"%s?batchNum=%d&tokeId=%d&limit=%d&offset=",
+		"%s?batchNum=%d&tokenId=%d&limit=%d&fromItem=",
 		endpoint, *batchNum, tokenID, limit,
 	)
-	err = doGoodReqPaginated(path, &historyTxsAPI{}, appendIter)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &historyTxsAPI{}, appendIter)
 	assert.NoError(t, err)
-	mixedTxs := historyTxAPIs{}
+	mixedTxs := []historyTxAPI{}
 	for i := 0; i < len(tc.allTxs); i++ {
 		if tc.allTxs[i].BatchNum != nil {
 			if *tc.allTxs[i].BatchNum == *batchNum && tc.allTxs[i].Token.TokenID == tokenID {
@@ -496,23 +628,16 @@ func TestGetHistoryTxs(t *testing.T) {
 	}
 	assertHistoryTxAPIs(t, mixedTxs, fetchedTxs)
 	// All, in reverse order
-	fetchedTxs = historyTxAPIs{}
+	fetchedTxs = []historyTxAPI{}
 	limit = 5
-	path = fmt.Sprintf("%s?", endpoint)
-	appendIterRev := func(intr interface{}) {
-		tmpAll := historyTxAPIs{}
-		for i := 0; i < len(intr.(*historyTxsAPI).Txs); i++ {
-			tmp, err := copystructure.Copy(intr.(*historyTxsAPI).Txs[i])
-			if err != nil {
-				panic(err)
-			}
-			tmpAll = append(tmpAll, tmp.(historyTxAPI))
-		}
-		fetchedTxs = append(tmpAll, fetchedTxs...)
-	}
-	err = doGoodReqPaginatedReverse(path, &historyTxsAPI{}, appendIterRev, limit)
+	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	err = doGoodReqPaginated(path, historydb.OrderDesc, &historyTxsAPI{}, appendIter)
 	assert.NoError(t, err)
-	assertHistoryTxAPIs(t, tc.allTxs, fetchedTxs)
+	flipedTxs := []historyTxAPI{}
+	for i := 0; i < len(tc.allTxs); i++ {
+		flipedTxs = append(flipedTxs, tc.allTxs[len(tc.allTxs)-1-i])
+	}
+	assertHistoryTxAPIs(t, flipedTxs, fetchedTxs)
 	// 400
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&hermezEthereumAddress=%s",
@@ -527,15 +652,33 @@ func TestGetHistoryTxs(t *testing.T) {
 	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?limit=1000&offset=1000", endpoint)
+	path = fmt.Sprintf("%s?limit=1000&fromItem=999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
 
-//nolint:govet this is a temp patch to avoid running the test
-func assertHistoryTxAPIs(t *testing.T, expected, actual historyTxAPIs) {
+func TestGetHistoryTx(t *testing.T) {
+	// Get all txs by their ID
+	endpoint := apiURL + "transactions-history/"
+	fetchedTxs := []historyTxAPI{}
+	for _, tx := range tc.allTxs {
+		fetchedTx := historyTxAPI{}
+		assert.NoError(t, doGoodReq("GET", endpoint+tx.TxID, nil, &fetchedTx))
+		fetchedTxs = append(fetchedTxs, fetchedTx)
+	}
+	assertHistoryTxAPIs(t, tc.allTxs, fetchedTxs)
+	// 400
+	err := doBadReq("GET", endpoint+"0x001", nil, 400)
+	assert.NoError(t, err)
+	// 404
+	err = doBadReq("GET", endpoint+"0x00000000000001e240004700", nil, 404)
+	assert.NoError(t, err)
+}
+
+func assertHistoryTxAPIs(t *testing.T, expected, actual []historyTxAPI) {
 	require.Equal(t, len(expected), len(actual))
 	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
+		actual[i].ItemID = 0
 		assert.Equal(t, expected[i].Timestamp.Unix(), actual[i].Timestamp.Unix())
 		expected[i].Timestamp = actual[i].Timestamp
 		if expected[i].Token.USDUpdate == nil {
@@ -554,71 +697,219 @@ func assertHistoryTxAPIs(t *testing.T, expected, actual historyTxAPIs) {
 	}
 }
 
-//nolint:govet this is a temp patch to avoid running the test
+func TestGetExits(t *testing.T) {
+	endpoint := apiURL + "exits"
+	fetchedExits := []exitAPI{}
+	appendIter := func(intr interface{}) {
+		for i := 0; i < len(intr.(*exitsAPI).Exits); i++ {
+			tmp, err := copystructure.Copy(intr.(*exitsAPI).Exits[i])
+			if err != nil {
+				panic(err)
+			}
+			fetchedExits = append(fetchedExits, tmp.(exitAPI))
+		}
+	}
+	// Get all (no filters)
+	limit := 8
+	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	err := doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	assertExitAPIs(t, tc.exits, fetchedExits)
+
+	// Get by ethAddr
+	fetchedExits = []exitAPI{}
+	limit = 7
+	path = fmt.Sprintf(
+		"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
+		endpoint, tc.usrAddr, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	assertExitAPIs(t, tc.usrExits, fetchedExits)
+	// Get by bjj
+	fetchedExits = []exitAPI{}
+	limit = 6
+	path = fmt.Sprintf(
+		"%s?BJJ=%s&limit=%d&fromItem=",
+		endpoint, tc.usrBjj, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	assertExitAPIs(t, tc.usrExits, fetchedExits)
+	// Get by tokenID
+	fetchedExits = []exitAPI{}
+	limit = 5
+	tokenID := tc.exits[0].Token.TokenID
+	path = fmt.Sprintf(
+		"%s?tokenId=%d&limit=%d&fromItem=",
+		endpoint, tokenID, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	tokenIDExits := []exitAPI{}
+	for i := 0; i < len(tc.exits); i++ {
+		if tc.exits[i].Token.TokenID == tokenID {
+			tokenIDExits = append(tokenIDExits, tc.exits[i])
+		}
+	}
+	assertExitAPIs(t, tokenIDExits, fetchedExits)
+	// idx
+	fetchedExits = []exitAPI{}
+	limit = 4
+	idx := tc.exits[0].AccountIdx
+	path = fmt.Sprintf(
+		"%s?accountIndex=%s&limit=%d&fromItem=",
+		endpoint, idx, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	idxExits := []exitAPI{}
+	for i := 0; i < len(tc.exits); i++ {
+		if tc.exits[i].AccountIdx[6:] == idx[6:] {
+			idxExits = append(idxExits, tc.exits[i])
+		}
+	}
+	assertExitAPIs(t, idxExits, fetchedExits)
+	// batchNum
+	fetchedExits = []exitAPI{}
+	limit = 3
+	batchNum := tc.exits[0].BatchNum
+	path = fmt.Sprintf(
+		"%s?batchNum=%d&limit=%d&fromItem=",
+		endpoint, batchNum, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	batchNumExits := []exitAPI{}
+	for i := 0; i < len(tc.exits); i++ {
+		if tc.exits[i].BatchNum == batchNum {
+			batchNumExits = append(batchNumExits, tc.exits[i])
+		}
+	}
+	assertExitAPIs(t, batchNumExits, fetchedExits)
+	// Multiple filters
+	fetchedExits = []exitAPI{}
+	limit = 1
+	path = fmt.Sprintf(
+		"%s?batchNum=%d&tokeId=%d&limit=%d&fromItem=",
+		endpoint, batchNum, tokenID, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	mixedExits := []exitAPI{}
+	flipedExits := []exitAPI{}
+	for i := 0; i < len(tc.exits); i++ {
+		if tc.exits[i].BatchNum == batchNum && tc.exits[i].Token.TokenID == tokenID {
+			mixedExits = append(mixedExits, tc.exits[i])
+		}
+		flipedExits = append(flipedExits, tc.exits[len(tc.exits)-1-i])
+	}
+	assertExitAPIs(t, mixedExits, fetchedExits)
+	// All, in reverse order
+	fetchedExits = []exitAPI{}
+	limit = 5
+	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	err = doGoodReqPaginated(path, historydb.OrderDesc, &exitsAPI{}, appendIter)
+	assert.NoError(t, err)
+	assertExitAPIs(t, flipedExits, fetchedExits)
+	// 400
+	path = fmt.Sprintf(
+		"%s?accountIndex=%s&hermezEthereumAddress=%s",
+		endpoint, idx, tc.usrAddr,
+	)
+	err = doBadReq("GET", path, nil, 400)
+	assert.NoError(t, err)
+	path = fmt.Sprintf("%s?tokenId=X", endpoint)
+	err = doBadReq("GET", path, nil, 400)
+	assert.NoError(t, err)
+	// 404
+	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
+	err = doBadReq("GET", path, nil, 404)
+	assert.NoError(t, err)
+	path = fmt.Sprintf("%s?limit=1000&fromItem=1000", endpoint)
+	err = doBadReq("GET", path, nil, 404)
+	assert.NoError(t, err)
+}
+
+func TestGetExit(t *testing.T) {
+	// Get all txs by their ID
+	endpoint := apiURL + "exits/"
+	fetchedExits := []exitAPI{}
+	for _, exit := range tc.exits {
+		fetchedExit := exitAPI{}
+		assert.NoError(
+			t, doGoodReq(
+				"GET",
+				fmt.Sprintf("%s%d/%s", endpoint, exit.BatchNum, exit.AccountIdx),
+				nil, &fetchedExit,
+			),
+		)
+		fetchedExits = append(fetchedExits, fetchedExit)
+	}
+	assertExitAPIs(t, tc.exits, fetchedExits)
+	// 400
+	err := doBadReq("GET", endpoint+"1/haz:BOOM:1", nil, 400)
+	assert.NoError(t, err)
+	err = doBadReq("GET", endpoint+"-1/hez:BOOM:1", nil, 400)
+	assert.NoError(t, err)
+	// 404
+	err = doBadReq("GET", endpoint+"494/hez:XXX:1", nil, 404)
+	assert.NoError(t, err)
+}
+
+func assertExitAPIs(t *testing.T, expected, actual []exitAPI) {
+	require.Equal(t, len(expected), len(actual))
+	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
+		actual[i].ItemID = 0
+		if expected[i].Token.USDUpdate == nil {
+			assert.Equal(t, expected[i].Token.USDUpdate, actual[i].Token.USDUpdate)
+		} else {
+			assert.Equal(t, expected[i].Token.USDUpdate.Unix(), actual[i].Token.USDUpdate.Unix())
+			expected[i].Token.USDUpdate = actual[i].Token.USDUpdate
+		}
+		assert.Equal(t, expected[i], actual[i])
+	}
+}
+
 func doGoodReqPaginated(
-	path string,
-	iterStruct paginationer,
+	path, order string,
+	iterStruct db.Paginationer,
 	appendIter func(res interface{}),
 ) error {
 	next := 0
 	for {
 		// Call API to get this iteration items
-		if err := doGoodReq("GET", path+strconv.Itoa(next), nil, iterStruct); err != nil {
+		iterPath := path
+		if next == 0 && order == historydb.OrderDesc {
+			// Fetch first item in reverse order
+			iterPath += "99999"
+		} else {
+			// Fetch from next item or 0 if it's ascending order
+			iterPath += strconv.Itoa(next)
+		}
+		if err := doGoodReq("GET", iterPath+"&order="+order, nil, iterStruct); err != nil {
 			return err
 		}
 		appendIter(iterStruct)
 		// Keep iterating?
 		pag := iterStruct.GetPagination()
-		if pag.LastReturnedItem == pag.TotalItems-1 { // No
-			break
-		} else { // Yes
-			next = int(pag.LastReturnedItem + 1)
-		}
-	}
-	return nil
-}
-
-//nolint:govet this is a temp patch to avoid running the test
-func doGoodReqPaginatedReverse(
-	path string,
-	iterStruct paginationer,
-	appendIter func(res interface{}),
-	limit int,
-) error {
-	next := 0
-	first := true
-	for {
-		// Call API to get this iteration items
-		if first {
-			first = false
-			pagQuery := fmt.Sprintf("last=true&limit=%d", limit)
-			if err := doGoodReq("GET", path+pagQuery, nil, iterStruct); err != nil {
-				return err
+		if order == historydb.OrderAsc {
+			if pag.LastReturnedItem == pag.LastItem { // No
+				break
+			} else { // Yes
+				next = pag.LastReturnedItem + 1
 			}
 		} else {
-			pagQuery := fmt.Sprintf("offset=%d&limit=%d", next, limit)
-			if err := doGoodReq("GET", path+pagQuery, nil, iterStruct); err != nil {
-				return err
-			}
-		}
-		appendIter(iterStruct)
-		// Keep iterating?
-		pag := iterStruct.GetPagination()
-		if iterStruct.Len() == pag.TotalItems || pag.LastReturnedItem-iterStruct.Len() == -1 { // No
-			break
-		} else { // Yes
-			prevOffset := next
-			next = pag.LastReturnedItem - iterStruct.Len() - limit + 1
-			if next < 0 {
-				next = 0
-				limit = prevOffset
+			if pag.FirstReturnedItem == pag.FirstItem { // No
+				break
+			} else { // Yes
+				next = pag.FirstReturnedItem - 1
 			}
 		}
 	}
 	return nil
 }
 
-//nolint:govet this is a temp patch to avoid running the test
 func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{}) error {
 	ctx := context.Background()
 	client := &http.Client{}
@@ -667,7 +958,6 @@ func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{})
 	return swagger.ValidateResponse(ctx, responseValidationInput)
 }
 
-//nolint:govet this is a temp patch to avoid running the test
 func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) error {
 	ctx := context.Background()
 	client := &http.Client{}

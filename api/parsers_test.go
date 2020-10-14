@@ -111,52 +111,46 @@ func TestParseQueryBool(t *testing.T) {
 func TestParsePagination(t *testing.T) {
 	c := &queryParser{}
 	c.m = make(map[string]string)
-	// Offset out of range
-	c.m["offset"] = "-1"
+	// fromItem out of range
+	c.m["fromItem"] = "-1"
 	_, _, _, err := parsePagination(c)
 	assert.Error(t, err)
-	c.m["offset"] = strconv.Itoa(maxUint32 + 1)
+	c.m["fromItem"] = strconv.Itoa(maxUint32 + 1)
 	_, _, _, err = parsePagination(c)
 	assert.Error(t, err)
-	c.m["offset"] = ""
-	// Limit out of range
-	c.m["limit"] = "0"
+	c.m["fromItem"] = ""
+	// Bad order
+	c.m["order"] = "0"
 	_, _, _, err = parsePagination(c)
 	assert.Error(t, err)
-	c.m["limit"] = strconv.Itoa(int(maxLimit) + 1)
-	_, _, _, err = parsePagination(c)
-	assert.Error(t, err)
-	c.m["limit"] = ""
-	// Last and offset
-	c.m["offset"] = "1"
-	c.m["last"] = "true"
+	c.m["order"] = strconv.Itoa(int(maxLimit) + 1)
 	_, _, _, err = parsePagination(c)
 	assert.Error(t, err)
 	// Default
-	c.m["offset"] = ""
-	c.m["last"] = ""
+	c.m["fromItem"] = ""
+	c.m["order"] = ""
 	c.m["limit"] = ""
-	offset, last, limit, err := parsePagination(c)
+	fromItem, order, limit, err := parsePagination(c)
 	assert.NoError(t, err)
-	assert.Equal(t, 0, int(*offset))
-	assert.Equal(t, dfltLast, *last)
+	assert.Nil(t, fromItem)
+	assert.Equal(t, dfltOrder, order)
 	assert.Equal(t, dfltLimit, *limit)
 	// Correct
-	c.m["offset"] = ""
-	c.m["last"] = "true"
+	c.m["fromItem"] = ""
+	c.m["order"] = "ASC"
 	c.m["limit"] = "25"
-	offset, last, limit, err = parsePagination(c)
+	fromItem, order, limit, err = parsePagination(c)
 	assert.NoError(t, err)
-	assert.Equal(t, 0, int(*offset))
-	assert.True(t, *last)
+	assert.Nil(t, fromItem)
+	assert.Equal(t, "ASC", order)
 	assert.Equal(t, 25, int(*limit))
-	c.m["offset"] = "25"
-	c.m["last"] = "false"
+	c.m["fromItem"] = "25"
+	c.m["order"] = "DESC"
 	c.m["limit"] = "50"
-	offset, last, limit, err = parsePagination(c)
+	fromItem, order, limit, err = parsePagination(c)
 	assert.NoError(t, err)
-	assert.Equal(t, 25, int(*offset))
-	assert.False(t, *last)
+	assert.Equal(t, 25, int(*fromItem))
+	assert.Equal(t, "DESC", order)
 	assert.Equal(t, 50, int(*limit))
 }
 

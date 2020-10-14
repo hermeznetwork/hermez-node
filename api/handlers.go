@@ -2,23 +2,25 @@ package api
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-// maxLimit is the max permited items to be returned in paginated responses
-const maxLimit uint = 2049
+const (
+	// maxLimit is the max permited items to be returned in paginated responses
+	maxLimit uint = 2049
 
-// dfltLast indicates how paginated endpoints use the query param last if not provided
-const dfltLast = false
+	// dfltOrder indicates how paginated endpoints are ordered if not specified
+	dfltOrder = historydb.OrderAsc
 
-// dfltLimit indicates the limit of returned items in paginated responses if the query param limit is not provided
-const dfltLimit uint = 20
+	// dfltLimit indicates the limit of returned items in paginated responses if the query param limit is not provided
+	dfltLimit uint = 20
 
-// 2^32 -1
-const maxUint32 = 4294967295
+	// 2^32 -1
+	maxUint32 = 4294967295
+)
 
 func postAccountCreationAuth(c *gin.Context) {
 
@@ -45,45 +47,71 @@ func getAccount(c *gin.Context) {
 }
 
 func getExits(c *gin.Context) {
+	// Get query parameters
+	// Account filters
+	tokenID, addr, bjj, idx, err := parseAccountFilters(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// BatchNum
+	batchNum, err := parseQueryUint("batchNum", nil, 0, maxUint32, c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Pagination
+	fromItem, order, limit, err := parsePagination(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
 
+	// Fetch exits from historyDB
+	exits, pagination, err := h.GetExits(
+		addr, bjj, tokenID, idx, batchNum, fromItem, limit, order,
+	)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+
+	// Build succesfull response
+	apiExits := historyExitsToAPI(exits)
+	c.JSON(http.StatusOK, &exitsAPI{
+		Exits:      apiExits,
+		Pagination: pagination,
+	})
 }
 
 func getExit(c *gin.Context) {
-
+	// Get batchNum and accountIndex
+	batchNum, err := parseParamUint("batchNum", nil, 0, maxUint32, c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	idx, err := parseParamIdx(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch tx from historyDB
+	exit, err := h.GetExit(batchNum, idx)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	apiExits := historyExitsToAPI([]historydb.HistoryExit{*exit})
+	// Build succesfull response
+	c.JSON(http.StatusOK, apiExits[0])
 }
 
 func getHistoryTxs(c *gin.Context) {
 	// Get query parameters
-	// TokenID
-	tokenID, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
+	tokenID, addr, bjj, idx, err := parseAccountFilters(c)
 	if err != nil {
 		retBadReq(err, c)
-		return
-	}
-	// Hez Eth addr
-	addr, err := parseQueryHezEthAddr(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// BJJ
-	bjj, err := parseQueryBJJ(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	if addr != nil && bjj != nil {
-		retBadReq(errors.New("bjj and hermezEthereumAddress params are incompatible"), c)
-		return
-	}
-	// Idx
-	idx, err := parseIdx(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	if idx != nil && (addr != nil || bjj != nil || tokenID != nil) {
-		retBadReq(errors.New("accountIndex is incompatible with BJJ, hermezEthereumAddress and tokenId"), c)
 		return
 	}
 	// BatchNum
@@ -99,15 +127,15 @@ func getHistoryTxs(c *gin.Context) {
 		return
 	}
 	// Pagination
-	offset, last, limit, err := parsePagination(c)
+	fromItem, order, limit, err := parsePagination(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
 
 	// Fetch txs from historyDB
-	txs, totalItems, err := h.GetHistoryTxs(
-		addr, bjj, tokenID, idx, batchNum, txType, offset, limit, *last,
+	txs, pagination, err := h.GetHistoryTxs(
+		addr, bjj, tokenID, idx, batchNum, txType, fromItem, limit, order,
 	)
 	if err != nil {
 		retSQLErr(err, c)
@@ -116,21 +144,28 @@ func getHistoryTxs(c *gin.Context) {
 
 	// Build succesfull response
 	apiTxs := historyTxsToAPI(txs)
-	lastRet := int(*offset) + len(apiTxs) - 1
-	if *last {
-		lastRet = totalItems - 1
-	}
 	c.JSON(http.StatusOK, &historyTxsAPI{
-		Txs: apiTxs,
-		Pagination: pagination{
-			TotalItems:       totalItems,
-			LastReturnedItem: lastRet,
-		},
+		Txs:        apiTxs,
+		Pagination: pagination,
 	})
 }
 
 func getHistoryTx(c *gin.Context) {
-
+	// Get TxID
+	txID, err := parseParamTxID(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch tx from historyDB
+	tx, err := h.GetHistoryTx(txID)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	apiTxs := historyTxsToAPI([]historydb.HistoryTx{*tx})
+	// Build succesfull response
+	c.JSON(http.StatusOK, apiTxs[0])
 }
 
 func getBatches(c *gin.Context) {

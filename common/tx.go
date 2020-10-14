@@ -3,8 +3,10 @@ package common
 import (
 	"database/sql/driver"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -54,6 +56,21 @@ func (txid TxID) Value() (driver.Value, error) {
 // String returns a string hexadecimal representation of the TxID
 func (txid TxID) String() string {
 	return "0x" + hex.EncodeToString(txid[:])
+}
+
+// NewTxIDFromString returns a string hexadecimal representation of the TxID
+func NewTxIDFromString(idStr string) (TxID, error) {
+	txid := TxID{}
+	idStr = strings.TrimPrefix(idStr, "0x")
+	decoded, err := hex.DecodeString(idStr)
+	if err != nil {
+		return TxID{}, err
+	}
+	if len(decoded) != TxIDLen {
+		return txid, errors.New("Invalid idStr")
+	}
+	copy(txid[:], decoded)
+	return txid, nil
 }
 
 // TxType is a string that represents the type of a Hermez network transaction

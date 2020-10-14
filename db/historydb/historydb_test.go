@@ -213,6 +213,7 @@ func TestTxs(t *testing.T) {
 
 	/*
 		Uncomment once the transaction generation is fixed
+		!! test that batches that forge user L1s !!
 		!! Missing tests to check that historic USD is not set if USDUpdate is too old (24h) !!
 
 		// Generate fake L1 txs
@@ -333,9 +334,14 @@ func TestExitTree(t *testing.T) {
 	blocks := setTestBlocks(0, 10)
 	batches := test.GenBatches(nBatches, blocks)
 	err := historyDB.AddBatches(batches)
+	const nTokens = 50
+	tokens := test.GenTokens(nTokens, blocks)
+	assert.NoError(t, historyDB.AddTokens(tokens))
 	assert.NoError(t, err)
-
-	exitTree := test.GenExitTree(nBatches)
+	const nAccounts = 3
+	accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
+	assert.NoError(t, historyDB.AddAccounts(accs))
+	exitTree := test.GenExitTree(nBatches, batches, accs)
 	err = historyDB.AddExitTree(exitTree)
 	assert.NoError(t, err)
 }
