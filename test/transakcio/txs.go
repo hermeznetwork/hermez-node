@@ -180,11 +180,7 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			if err != nil {
 				panic(err)
 			}
-			nL2Tx, err := nTx.L2Tx()
-			if err != nil {
-				panic(err)
-			}
-			tx = *nL2Tx
+			tx = nTx.L2Tx()
 			tx.BatchNum = common.BatchNum(currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
 
 			currBatch.L2Txs = append(currBatch.L2Txs, tx)
@@ -201,11 +197,7 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			if err != nil {
 				panic(err)
 			}
-			nL2Tx, err := nTx.L2Tx()
-			if err != nil {
-				panic(err)
-			}
-			tx = *nL2Tx
+			tx = nTx.L2Tx()
 			currBatch.L2Txs = append(currBatch.L2Txs, tx)
 		case common.TxTypeForceExit:
 			tx := common.L1Tx{

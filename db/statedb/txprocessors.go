@@ -68,9 +68,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 	}
 
 	// assumption: l1usertx are sorted by L1Tx.Position
-	for i := range l1usertxs {
-		tx := &l1usertxs[i]
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
+	for i := 0; i < len(l1usertxs); i++ {
+		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &l1usertxs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -86,9 +85,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 			s.i++
 		}
 	}
-	for i := range l1coordinatortxs {
-		tx := &l1coordinatortxs[i]
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, tx)
+	for i := 0; i < len(l1coordinatortxs); i++ {
+		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -107,9 +105,8 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 			s.i++
 		}
 	}
-	for i := range l2txs {
-		tx := &l2txs[i]
-		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, tx)
+	for i := 0; i < len(l2txs); i++ {
+		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, &l2txs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -259,6 +256,9 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		if err != nil {
 			return nil, nil, false, err
 		}
+		// TODO applyCreateAccount will return the created account,
+		// which in the case type==TypeSynchronizer will be added to an
+		// array of created accounts that will be returned
 
 		if s.zki != nil {
 			s.zki.AuxFromIdx[s.i] = s.idx.BigInt() // last s.idx is the one used for creating the new account
@@ -308,10 +308,9 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 // the Exit created a new Leaf in the ExitTree.
 func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
 	var err error
-	var auxToIdx common.Idx
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
-	if tx.ToIdx == common.Idx(0) {
-		auxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
+	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
+		tx.AuxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
@@ -331,7 +330,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 			// use toIdx that can have been filled by tx.ToIdx or
 			// if tx.Idx==0 (this case), toIdx is filled by the Idx
 			// from db by ToEthAddr&ToBJJ
-			s.zki.AuxToIdx[s.i] = auxToIdx.BigInt()
+			s.zki.AuxToIdx[s.i] = tx.AuxToIdx.BigInt()
 		}
 
 		if tx.ToBJJ != nil {
@@ -352,36 +351,31 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		s.zki.R8y[s.i] = tx.Signature.R8.Y
 	}
 
-	// if StateDB type==TypeSynchronizer, will need to add Nonce and
-	// TokenID to the transaction
+	// if StateDB type==TypeSynchronizer, will need to add Nonce
 	if s.typ == TypeSynchronizer {
+		// as type==TypeSynchronizer, always tx.ToIdx!=0
 		acc, err := s.GetAccount(tx.FromIdx)
 		if err != nil {
 			return nil, nil, false, err
 		}
 		tx.Nonce = acc.Nonce
-		tx.TokenID = acc.TokenID
+		// TokenID is also not set in the L2Txs from the blockchain
+		// that the Synchronizer works with, but does not need to be
+		// defined because is not used later for the L2Txs processing
+		// (Transfer & Exit)
 	}
 
 	switch tx.Type {
 	case common.TxTypeTransfer:
 		// go to the MT account of sender and receiver, and update
 		// balance & nonce
-		tmpTx, err := tx.Tx()
-		if err != nil {
-			return nil, nil, false, err
-		}
-		err = s.applyTransfer(tmpTx, auxToIdx)
+		err = s.applyTransfer(tx.Tx(), tx.AuxToIdx)
 		if err != nil {
 			return nil, nil, false, err
 		}
 	case common.TxTypeExit:
 		// execute exit flow
-		tmpTx, err := tx.Tx()
-		if err != nil {
-			return nil, nil, false, err
-		}
-		exitAccount, newExit, err := s.applyExit(exitTree, tmpTx)
+		exitAccount, newExit, err := s.applyExit(exitTree, tx.Tx())
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -498,7 +492,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 // tx.ToIdx==0, then toIdx!=0, and will be used the toIdx parameter as Idx of
 // the receiver. This parameter is used when the tx.ToIdx is not specified and
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
-func (s *StateDB) applyTransfer(tx *common.Tx, auxToIdx common.Idx) error {
+func (s *StateDB) applyTransfer(tx common.Tx, auxToIdx common.Idx) error {
 	if auxToIdx == 0 {
 		auxToIdx = tx.ToIdx
 	}
@@ -622,7 +616,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 
 // It returns the ExitAccount and a boolean determining if the Exit created a
 // new Leaf in the ExitTree.
-func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx *common.Tx) (*common.Account, bool, error) {
+func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx common.Tx) (*common.Account, bool, error) {
 	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := s.GetAccount(tx.FromIdx)

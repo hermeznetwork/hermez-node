@@ -2,7 +2,7 @@ package txselector
 
 /*
    TODO update transactions generation
-func initTest(t *testing.T, testSet string) *TxSelector {
+func initTest(t *testing.T, testSet string, maxL1UserTxs, maxL1OperatorTxs, maxTxs uint64) *TxSelector {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.Nil(t, err)
@@ -15,7 +15,7 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.Nil(t, err)
-	txsel, err := NewTxSelector(txselDir, sdb, l2DB, 100, 100, 1000)
+	txsel, err := NewTxSelector(txselDir, sdb, l2DB, maxL1UserTxs, maxL1OperatorTxs, maxTxs)
 	require.Nil(t, err)
 
 	return txsel
@@ -29,15 +29,15 @@ func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []common.PoolL2Tx) {
 
 func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 	hdb := historydb.NewHistoryDB(db)
-	assert.NoError(t, hdb.Reorg(-1))
-	assert.NoError(t, hdb.AddBlock(&common.Block{
+	assert.Nil(t, hdb.Reorg(-1))
+	assert.Nil(t, hdb.AddBlock(&common.Block{
 		EthBlockNum: 1,
 	}))
-	assert.NoError(t, hdb.AddTokens(tokens))
+	assert.Nil(t, hdb.AddTokens(tokens))
 }
 
 func TestGetL2TxSelection(t *testing.T) {
-	txsel := initTest(t, transakcio.SetPool0)
+	txsel := initTest(t, transakcio.SetPool0, 5, 5, 10)
 	test.CleanL2DB(txsel.l2db.DB())
 
 	   	// generate test transactions
@@ -53,6 +53,12 @@ func TestGetL2TxSelection(t *testing.T) {
 
 	   	_, _, _, err = txsel.GetL1L2TxSelection(0, l1Txs[0])
 	   	assert.Nil(t, err)
+
+		// TODO once L2DB is updated to return error in case that AddTxTest
+		// fails, and the Transakcio is updated, update this test, checking that the
+		// selected PoolL2Tx are correctly sorted by Nonce
+
+
 
 	   	// txs, err := txsel.GetL2TxSelection(0)
 	   	// assert.Nil(t, err)

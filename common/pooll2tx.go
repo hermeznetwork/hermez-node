@@ -20,6 +20,7 @@ type PoolL2Tx struct {
 	TxID      TxID               `meddler:"tx_id"`
 	FromIdx   Idx                `meddler:"from_idx"`
 	ToIdx     Idx                `meddler:"to_idx,zeroisnull"`
+	AuxToIdx  Idx                `meddler:"-"` // AuxToIdx is only used internally at the StateDB to avoid repeated computation when processing transactions (from Synchronizer, TxSelector, BatchBuilder)
 	ToEthAddr ethCommon.Address  `meddler:"to_eth_addr"`
 	ToBJJ     *babyjub.PublicKey `meddler:"to_bjj"`
 	TokenID   TokenID            `meddler:"token_id"`
@@ -210,8 +211,8 @@ func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
 }
 
 // L2Tx returns a *L2Tx from the PoolL2Tx
-func (tx *PoolL2Tx) L2Tx() (*L2Tx, error) {
-	return &L2Tx{
+func (tx PoolL2Tx) L2Tx() L2Tx {
+	return L2Tx{
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
@@ -219,12 +220,12 @@ func (tx *PoolL2Tx) L2Tx() (*L2Tx, error) {
 		Fee:     tx.Fee,
 		Nonce:   tx.Nonce,
 		Type:    tx.Type,
-	}, nil
+	}
 }
 
 // Tx returns a *Tx from the PoolL2Tx
-func (tx *PoolL2Tx) Tx() (*Tx, error) {
-	return &Tx{
+func (tx PoolL2Tx) Tx() Tx {
+	return Tx{
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
@@ -232,18 +233,14 @@ func (tx *PoolL2Tx) Tx() (*Tx, error) {
 		Nonce:   &tx.Nonce,
 		Fee:     &tx.Fee,
 		Type:    tx.Type,
-	}, nil
+	}
 }
 
 // PoolL2TxsToL2Txs returns an array of []L2Tx from an array of []PoolL2Tx
 func PoolL2TxsToL2Txs(txs []PoolL2Tx) ([]L2Tx, error) {
 	var r []L2Tx
 	for _, poolTx := range txs {
-		tx, err := poolTx.L2Tx()
-		if err != nil {
-			return nil, err
-		}
-		r = append(r, *tx)
+		r = append(r, poolTx.L2Tx())
 	}
 	return r, nil
 }
