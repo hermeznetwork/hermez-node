@@ -116,12 +116,12 @@ func (tx *L1Tx) CalcTxID() (*TxID, error) {
 }
 
 // Tx returns a *Tx from the L1Tx
-func (tx *L1Tx) Tx() *Tx {
+func (tx L1Tx) Tx() Tx {
 	f := new(big.Float).SetInt(tx.Amount)
 	amountFloat, _ := f.Float64()
 	userOrigin := new(bool)
 	*userOrigin = tx.UserOrigin
-	genericTx := &Tx{
+	genericTx := Tx{
 		IsL1:            true,
 		TxID:            tx.TxID,
 		Type:            tx.Type,

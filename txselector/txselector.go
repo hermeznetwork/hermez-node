@@ -264,10 +264,22 @@ func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, addr ethCommon.
 	return false
 }
 
+// getL2Profitable returns the profitable selection of L2Txssorted by Nonce
 func (txsel *TxSelector) getL2Profitable(txs txs, max uint64) txs {
 	sort.Sort(txs)
 	if len(txs) < int(max) {
 		return txs
 	}
-	return txs[:max]
+	txs = txs[:max]
+
+	// sort l2Txs by Nonce. This can be done in many different ways, what
+	// is needed is to output the txs where the Nonce of txs for each
+	// Account is sorted, but the txs can not be grouped by sender Account
+	// neither by Fee. This is because later on the Nonces will need to be
+	// sequential for the zkproof generation.
+	sort.SliceStable(txs, func(i, j int) bool {
+		return txs[i].Nonce < txs[j].Nonce
+	})
+
+	return txs
 }

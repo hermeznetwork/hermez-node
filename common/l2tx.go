@@ -81,7 +81,7 @@ func (tx *L2Tx) Tx() *Tx {
 
 // PoolL2Tx returns the data structure of PoolL2Tx with the parameters of a
 // L2Tx filled
-func (tx *L2Tx) PoolL2Tx() *PoolL2Tx {
+func (tx L2Tx) PoolL2Tx() *PoolL2Tx {
 	return &PoolL2Tx{
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
