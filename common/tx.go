@@ -73,6 +73,22 @@ func NewTxIDFromString(idStr string) (TxID, error) {
 	return txid, nil
 }
 
+// MarshalText marshals a TxID
+func (txid TxID) MarshalText() ([]byte, error) {
+	return []byte(txid.String()), nil
+}
+
+// UnmarshalText unmarshals a TxID
+func (txid *TxID) UnmarshalText(data []byte) error {
+	idStr := string(data)
+	id, err := NewTxIDFromString(idStr)
+	if err != nil {
+		return err
+	}
+	*txid = id
+	return nil
+}
+
 // TxType is a string that represents the type of a Hermez network transaction
 type TxType string
 

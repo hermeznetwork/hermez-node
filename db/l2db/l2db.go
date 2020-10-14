@@ -59,8 +59,13 @@ func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.Accoun
 	)
 }
 
+// AddTx inserts a tx to the pool
+func (l2db *L2DB) AddTx(tx *PoolL2TxWrite) error {
+	return meddler.Insert(l2db.db, "tx_pool", tx)
+}
+
 // AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
-// but in production txs will only be inserted through the API (method TBD)
+// but in production txs will only be inserted through the API
 func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	// transform tx from *common.PoolL2Tx to PoolL2TxWrite
 	insertTx := &PoolL2TxWrite{

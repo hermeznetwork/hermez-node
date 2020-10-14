@@ -467,7 +467,7 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
 			}
 			sig := tc.Users[inst.to].BJJ.SignPoseidon(toSign)
-			tx.Signature = sig
+			tx.Signature = sig.Compress()
 
 			txs = append(txs, tx)
 		case common.TxTypeExit:

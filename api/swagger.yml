@@ -340,7 +340,7 @@ paths:
       tags:
         - Account
       summary: Get specific exit information.
-      description: Get exit information form a specific exit tree and account. This information is required to perform a withdraw.
+      description: Get exit information form a specific exit tree and account. This information is required to perform a withdraw. Exits are identified with accounIndex and batchNum since every batch that has exits has a different exit tree.
       operationId: getExit
       parameters:
         - name: batchNum
@@ -614,6 +614,12 @@ paths:
           description: Include only `batchNum > maxBatchNum` batches.
           schema:
             type: number
+        - name: slotNum
+          in: query
+          required: false
+          description: Include only batches that were forged within the specified slot.
+          schema:
+            $ref: '#/components/schemas/SlotNum'
         - name: forgerAddr
           in: query
           required: false
@@ -941,40 +947,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/next-forgers':
-    get:
-      tags:
-        - Hermez status
-      summary: Get next coordinators to forge.
-      description: >-
-        Return a list of the coordinators that will forge in the next slots.
-        The response includes the coordinator that is currently forging, and the ones that have won the upcomming slots whose auctions are closed.
-      operationId: getNextForgers
-      responses:
-        '200':
-          description: Successful operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NextForgers'
-        '400':
-          description: Bad request.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error400'
-        '500':
-          description: Internal server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error500'
   '/state':
     get:
       tags:
         - Hermez status
-      summary: Return global statistics and metrics of the network.
-      description: Return global statistics and metrics of the network.
+      summary: Return information that represents the current state of the network.
+      description: Return information that represents the current state of the network. It also includes metrics and statistics.
       operationId: getState
       responses:
         '200':
@@ -1133,27 +1111,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/recommended-fee':
-    get:
-      tags:
-        - Hermez status
-      summary: Get recommended fee in USD.
-      description: >-
-        Get recommended fee in USD. Recommended price to pay according to the status of the destination account.
-      operationId: getFee
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecommendedFee'
-        '500':
-          description: Internal server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error500'
   '/coordinators':
     get:
       tags:
@@ -1251,6 +1208,7 @@ components:
       description: Position of the item in the DB. This is useful for pagination, but has  nothing to do with the protocol.
     PostPoolL2Transaction:
       type: object
+      description: L2 transaction to be posted.
       properties:
         id:
           $ref: '#/components/schemas/TransactionId'
@@ -1264,18 +1222,21 @@ components:
           type: string
           description: >-
             Identifier of the destination account. It references the position where the account is inside the state Merkle tree.
-            The identifier is built using: `hez:` + `token symbol:` + `index`
+            The identifier is built using: `hez:` + `token symbol:` + `index`. If this is provided, toHezEthereumAddress and toBjj
+            must be null. To perform an exit the value hez:EXIT:1 must be used.
           example: null
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez network."
+          description: "Address of an Etherum account linked to the Hermez network. If this is provided, toAccountIndex and toBjj must be null."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
         toBjj:
           type: string
-          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          description: >-
+            BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes.
+            If this is prvided, toAccountIndex must be null and toHezEthereumAddress must be hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: null
           nullable: true
@@ -1309,9 +1270,9 @@ components:
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: null
           nullable: true
-        requestToBJJ:
+        requestToBjj:
           type: string
-          description: References the `toBJJ` of the requested transaction.
+          description: References the `toBjj` of the requested transaction.
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: null
           nullable: true
@@ -1340,22 +1301,10 @@ components:
       - type
       - tokenId
       - fromAccountIndex
-      - toAccountIndex
-      - toHezAccountIndex
-      - toHezEthereumAddress
-      - toBjj
       - amount
       - fee
       - nonce
       - signature
-      - requestFromAccountIndex
-      - requestToAccountIndex
-      - requestToHezEthereumAddress
-      - requestToBJJ
-      - requestTokenId
-      - requestAmount
-      - requestFee
-      - requestNonce  
     PoolL2Transaction:
       type: object
       properties:
@@ -1405,63 +1354,87 @@ components:
           description: Moment in which the transaction was added to the pool.
           format: date-time
         batchNum:
-          allOf:
-            - $ref: '#/components/schemas/BatchNum'
-            - nullable: true
-            - example: 5432
+          type: integer
+          description: Identifier of a batch. Every new forged batch increments by one the batchNum, starting at 0.
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+          example: null
         requestFromAccountIndex:
-          allOf:
-            - $ref: '#/components/schemas/AccountIndex'
-            - nullable: true
-            - example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
+          type: string
+          description: >-
+            Identifier of an account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`
+          nullable: true
+          example: null
         requestToAccountIndex:
-          allOf:
-            - $ref: '#/components/schemas/AccountIndex'
-            - nullable: true
-            - example: "hez:DAI:33"
+          type: string
+          description: >-
+            Identifier of an account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`
+          nullable: true
+          example: null
         requestToHezEthereumAddress:
-          allOf:
-            - $ref: '#/components/schemas/HezEthereumAddress'
-            - nullable: true
-            - example: "hez:0xbb942cfcd25ad4d90a62358b0dd84f33b3982699" 
+          type: string
+          description: "Address of an Etherum account linked to the Hermez network."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          nullable: true
+          example: null
         requestToBJJ:
-          allOf:
-            - $ref: '#/components/schemas/BJJ'
-            - nullable: true
-            - example: "hez:HVrB8xQHAYt9QTpPUsj3RGOzDmrCI4IgrYslTeTqo6Ix"
+          type: string
+          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          nullable: true
+          example: null
         requestTokenId:
-          allOf:
-            - $ref: '#/components/schemas/TokenId'
-            - nullable: true
-            - example: 4444
+          type: integer
+          description: References the `tokenId` of the requested transaction.
+          example: null
+          nullable: true
         requestAmount:
-          allOf:
-            - $ref: '#/components/schemas/BigInt'
-            - description: Amount of tokens to be sent.
-            - example: "700000000000000000"
-            - nullable: true
+          type: string
+          description: BigInt is an integer encoded as a string for numbers that are very large.
+          nullable: true
+          example: null
         requestFee:
-          allOf:
-            - $ref: '#/components/schemas/FeeSelector'
-            - nullable: true
-            - example: 8
+          type: integer
+          description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
+          minimum: 0
+          maximum: 256
+          nullable: true
+          example: null
         requestNonce:
-          allOf:
-            - $ref: '#/components/schemas/Nonce'
-            - nullable: true
-            - example: 6
+          type: integer
+          description: Number that can only be used once per account. Increments by one with each transaction.
+          minimum: 0
+          maximum: 1.84467440737096e+19
+          nullable: true
+          example: null
         token:
           $ref: '#/components/schemas/Token'
       required:
-      - fromAccountIndex
-      - toHezAccountIndex
-      - toHezEthereumAddress
-      - toBjj
-      - tokenId
-      - amount
-      - fee
-      - nonce
-      - signature
+        - id
+        - type
+        - fromAccountIndex
+        - toAccountIndex
+        - toHezEthereumAddress
+        - toBjj
+        - amount
+        - fee
+        - nonce
+        - state
+        - signature
+        - timestamp
+        - batchNum
+        - requestFromAccountIndex
+        - requestToAccountIndex
+        - requestToHezEthereumAddress
+        - requestToBJJ
+        - requestTokenId
+        - requestAmount
+        - requestFee
+        - requestNonce
+        - token
     TransactionId:
       type: string
       description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
@@ -1514,7 +1487,7 @@ components:
       description: Identifier of a token registered in the network.
       minimum: 0
       maximum: 4294967295
-      example: 4444
+      example: 98765
     BigInt:
       type: string
       description: BigInt is an integer encoded as a string for numbers that are very large.
@@ -1776,9 +1749,6 @@ components:
           $ref: '#/components/schemas/EthereumAddress'
         collectedFees:
           $ref: '#/components/schemas/CollectedFees'
-        totalCollectedFeesUSD:
-          type: number
-          description: Value in USD of the collected tokens by the forger in concept of fees. This is calculated at the moment the batch is forged, with the conversion rates at that time.
         historicTotalCollectedFeesUSD:
           type: number
           description: Sum of the all the fees collected, in USD, at the moment the batch was forged.
@@ -2124,11 +2094,6 @@ components:
             - description: Coordinator who won the auction. Only applicable if the auction is closed.
             - nullable: true
             - example: null
-        batchNums:
-          type: array
-          description: List of batch numbers that were forged during the slot
-          items:
-            $ref: '#/components/schemas/BatchNum'
     Slots:
       type: object
       properties:
@@ -2212,6 +2177,10 @@ components:
           type: number
           description: Average fee percentage paid for L2 transactions in the last 24 hours.
           example: 1.54
+        nextForgers:
+          $ref: '#/components/schemas/NextForgers'
+        recommendedFee:
+          $ref: '#/components/schemas/RecommendedFee'
         governance:
           type: object
           description: Network setings that are updatable by the governance.

@@ -187,6 +187,7 @@ func TestAccounts(t *testing.T) {
 	assert.NoError(t, err)
 	// Compare fetched accounts vs generated accounts
 	for i, acc := range fetchedAccs {
+		accs[i].Balance = nil
 		assert.Equal(t, accs[i], acc)
 	}
 }

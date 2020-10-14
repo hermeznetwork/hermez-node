@@ -12,8 +12,8 @@ import (
 var h *historydb.HistoryDB
 var cg *configAPI
 
-// var s *statedb.StateDB // Not 100% sure if this is needed
-// var l2 *l2db.L2DB
+var s *statedb.StateDB
+var l2 *l2db.L2DB
 
 // SetAPIEndpoints sets the endpoints and the appropriate handlers, but doesn't start the server
 func SetAPIEndpoints(
@@ -35,8 +35,8 @@ func SetAPIEndpoints(
 
 	h = hdb
 	cg = config
-	// s = sdb
-	// l2 = l2db
+	s = sdb
+	l2 = l2db
 
 	// Add coordinator endpoints
 	if coordinatorEndpoints {
@@ -45,7 +45,7 @@ func SetAPIEndpoints(
 		server.GET("/account-creation-authorization/:hermezEthereumAddress", getAccountCreationAuth)
 		// Transaction
 		server.POST("/transactions-pool", postPoolTx)
-		server.POST("/transactions-pool/:id", getPoolTx)
+		server.GET("/transactions-pool/:id", getPoolTx)
 	}
 
 	// Add explorer endpoints

@@ -75,61 +75,16 @@ func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolin
 func parseQueryHezEthAddr(c querier) (*ethCommon.Address, error) {
 	const name = "hermezEthereumAddress"
 	addrStr := c.Query(name)
-	if addrStr == "" {
-		return nil, nil
-	}
-	splitted := strings.Split(addrStr, "hez:")
-	if len(splitted) != 2 || len(splitted[1]) != 42 {
-		return nil, fmt.Errorf(
-			"Invalid %s, must follow this regex: ^hez:0x[a-fA-F0-9]{40}$", name)
-	}
-	var addr ethCommon.Address
-	err := addr.UnmarshalText([]byte(splitted[1]))
-	return &addr, err
+	return hezStringToEthAddr(addrStr, name)
 }
 
 func parseQueryBJJ(c querier) (*babyjub.PublicKey, error) {
 	const name = "BJJ"
-	const decodedLen = 33
 	bjjStr := c.Query(name)
 	if bjjStr == "" {
 		return nil, nil
 	}
-	splitted := strings.Split(bjjStr, "hez:")
-	if len(splitted) != 2 || len(splitted[1]) != 44 {
-		return nil, fmt.Errorf(
-			"Invalid %s, must follow this regex: ^hez:[A-Za-z0-9+/=]{44}$",
-			name)
-	}
-	decoded, err := base64.RawURLEncoding.DecodeString(splitted[1])
-	if err != nil {
-		return nil, fmt.Errorf(
-			"Invalid %s, error decoding base64 string: %s",
-			name, err.Error())
-	}
-	if len(decoded) != decodedLen {
-		return nil, fmt.Errorf(
-			"invalid %s, error decoding base64 string: unexpected byte array length",
-			name)
-	}
-	bjjBytes := [decodedLen - 1]byte{}
-	copy(bjjBytes[:decodedLen-1], decoded[:decodedLen-1])
-	sum := bjjBytes[0]
-	for i := 1; i < len(bjjBytes); i++ {
-		sum += bjjBytes[i]
-	}
-	if decoded[decodedLen-1] != sum {
-		return nil, fmt.Errorf("invalid %s, checksum failed",
-			name)
-	}
-	bjjComp := babyjub.PublicKeyComp(bjjBytes)
-	bjj, err := bjjComp.Decompress()
-	if err != nil {
-		return nil, fmt.Errorf(
-			"invalid %s, error decompressing public key: %s",
-			name, err.Error())
-	}
-	return bjj, nil
+	return hezStringToBJJ(bjjStr, name)
 }
 
 func parseQueryTxType(c querier) (*common.TxType, error) {
@@ -301,4 +256,57 @@ func stringToUint(uintStr, name string, dflt *uint, min, max uint) (*uint, error
 		return &res, nil
 	}
 	return dflt, nil
+}
+
+func hezStringToEthAddr(addrStr, name string) (*ethCommon.Address, error) {
+	if addrStr == "" {
+		return nil, nil
+	}
+	splitted := strings.Split(addrStr, "hez:")
+	if len(splitted) != 2 || len(splitted[1]) != 42 {
+		return nil, fmt.Errorf(
+			"Invalid %s, must follow this regex: ^hez:0x[a-fA-F0-9]{40}$", name)
+	}
+	var addr ethCommon.Address
+	err := addr.UnmarshalText([]byte(splitted[1]))
+	return &addr, err
+}
+
+func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKey, error) {
+	const decodedLen = 33
+	splitted := strings.Split(bjjStr, "hez:")
+	if len(splitted) != 2 || len(splitted[1]) != 44 {
+		return nil, fmt.Errorf(
+			"Invalid %s, must follow this regex: ^hez:[A-Za-z0-9+/=]{44}$",
+			name)
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(splitted[1])
+	if err != nil {
+		return nil, fmt.Errorf(
+			"Invalid %s, error decoding base64 string: %s",
+			name, err.Error())
+	}
+	if len(decoded) != decodedLen {
+		return nil, fmt.Errorf(
+			"invalid %s, error decoding base64 string: unexpected byte array length",
+			name)
+	}
+	bjjBytes := [decodedLen - 1]byte{}
+	copy(bjjBytes[:decodedLen-1], decoded[:decodedLen-1])
+	sum := bjjBytes[0]
+	for i := 1; i < len(bjjBytes); i++ {
+		sum += bjjBytes[i]
+	}
+	if decoded[decodedLen-1] != sum {
+		return nil, fmt.Errorf("invalid %s, checksum failed",
+			name)
+	}
+	bjjComp := babyjub.PublicKeyComp(bjjBytes)
+	bjj, err := bjjComp.Decompress()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"invalid %s, error decompressing public key: %s",
+			name, err.Error())
+	}
+	return bjj, nil
 }
