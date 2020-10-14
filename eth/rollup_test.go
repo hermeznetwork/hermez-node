@@ -71,8 +71,7 @@ func TestRollupRegisterTokensCount(t *testing.T) {
 }
 
 func TestAddToken(t *testing.T) {
-	var feeAddToken = new(big.Int)
-	feeAddToken = big.NewInt(10)
+	feeAddToken := big.NewInt(10)
 	// Addtoken ERC20
 	registerTokensCount, err := rollupClient.RollupRegisterTokensCount()
 	require.Nil(t, err)
@@ -125,21 +124,22 @@ func TestRollupForgeBatch(t *testing.T) {
 
 	// Forge
 	args := new(RollupForgeBatchArgs)
-	feeIdxCoordinatorBytes, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
-	require.Nil(t, err)
-	lenFeeIdxCoordinatorBytes := int(4)
-	numFeeIdxCoordinator := len(feeIdxCoordinatorBytes) / lenFeeIdxCoordinatorBytes
-	for i := 0; i < numFeeIdxCoordinator; i++ {
-		var paddedFeeIdx [6]byte
-		if lenFeeIdxCoordinatorBytes < common.IdxBytesLen {
-			copy(paddedFeeIdx[6-lenFeeIdxCoordinatorBytes:], feeIdxCoordinatorBytes[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
-		} else {
-			copy(paddedFeeIdx[:], feeIdxCoordinatorBytes[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
-		}
-		FeeIdxCoordinator, err := common.IdxFromBytes(paddedFeeIdx[:])
-		require.Nil(t, err)
-		args.FeeIdxCoordinator = append(args.FeeIdxCoordinator, FeeIdxCoordinator)
-	}
+	// feeIdxCoordinatorBytes, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+	// require.Nil(t, err)
+	// lenFeeIdxCoordinatorBytes := int(4)
+	// numFeeIdxCoordinator := len(feeIdxCoordinatorBytes) / lenFeeIdxCoordinatorBytes
+	// for i := 0; i < numFeeIdxCoordinator; i++ {
+	// 	var paddedFeeIdx [6]byte
+	// 	if lenFeeIdxCoordinatorBytes < common.IdxBytesLen {
+	// 		copy(paddedFeeIdx[6-lenFeeIdxCoordinatorBytes:], feeIdxCoordinatorBytes[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
+	// 	} else {
+	// 		copy(paddedFeeIdx[:], feeIdxCoordinatorBytes[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
+	// 	}
+	// 	FeeIdxCoordinator, err := common.IdxFromBytes(paddedFeeIdx[:])
+	// 	require.Nil(t, err)
+	// 	args.FeeIdxCoordinator = append(args.FeeIdxCoordinator, FeeIdxCoordinator)
+	// }
+	args.FeeIdxCoordinator = []common.Idx{} // When encoded, 64 times the 0 idx means that no idx to collect fees is specified.
 	l1CoordinatorBytes, err := hex.DecodeString("1c660323607bb113e586183609964a333d07ebe4bef3be82ec13af453bae9590bd7711cdb6abf42f176eadfbe5506fbef5e092e5543733f91b0061d9a7747fa10694a915a6470fa230de387b51e6f4db0b09787867778687b55197ad6d6a86eac000000001")
 	require.Nil(t, err)
 	numTxsL1 := len(l1CoordinatorBytes) / common.L1CoordinatorTxBytesLen
@@ -152,11 +152,12 @@ func TestRollupForgeBatch(t *testing.T) {
 		signature = append(signature, r[:]...)
 		signature = append(signature, s[:]...)
 		signature = append(signature, v)
-		L1Tx, err := common.L1TxFromCoordinatorBytes(bytesL1Coordinator)
+		l1Tx, err := common.L1TxFromCoordinatorBytes(bytesL1Coordinator)
 		require.Nil(t, err)
-		args.L1CoordinatorTxs = append(args.L1CoordinatorTxs, L1Tx)
+		args.L1CoordinatorTxs = append(args.L1CoordinatorTxs, *l1Tx)
 		args.L1CoordinatorTxsAuths = append(args.L1CoordinatorTxsAuths, signature)
 	}
+	args.L2TxsData = []common.L2Tx{}
 	newStateRoot := new(big.Int)
 	newStateRoot.SetString("18317824016047294649053625209337295956588174734569560016974612130063629505228", 10)
 	newExitRoot := new(big.Int)
@@ -202,7 +203,7 @@ func TestRollupForgeBatchArgs(t *testing.T) {
 }
 
 func TestRollupUpdateForgeL1L2BatchTimeout(t *testing.T) {
-	newForgeL1L2BatchTimeout := uint8(222)
+	newForgeL1L2BatchTimeout := int64(222)
 	_, err := rollupClient.RollupUpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout)
 	require.Nil(t, err)
 

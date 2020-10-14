@@ -180,7 +180,7 @@ func TestClientRollup(t *testing.T) {
 		NewExitRoot:       big.NewInt(100),
 		L1CoordinatorTxs:  []common.L1Tx{},
 		L2TxsData:         []common.L2Tx{},
-		FeeIdxCoordinator: make([]common.Idx, eth.RollupConstFeeIdxCoordinatorLen),
+		FeeIdxCoordinator: []common.Idx{},
 		VerifierIdx:       0,
 		L1Batch:           true,
 	})
@@ -217,7 +217,7 @@ func TestClientRollup(t *testing.T) {
 		NewExitRoot:       big.NewInt(100),
 		L1CoordinatorTxs:  []common.L1Tx{},
 		L2TxsData:         []common.L2Tx{},
-		FeeIdxCoordinator: make([]common.Idx, eth.RollupConstFeeIdxCoordinatorLen),
+		FeeIdxCoordinator: []common.Idx{},
 		VerifierIdx:       0,
 		L1Batch:           true,
 	}

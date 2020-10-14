@@ -599,10 +599,40 @@ func (c *Client) CtlAddL1TxUser(l1Tx *common.L1Tx) {
 	}
 	queue.L1TxQueue = append(queue.L1TxQueue, *l1Tx)
 	r.Events.L1UserTx = append(r.Events.L1UserTx, eth.RollupEventL1UserTx{
-		L1Tx:            *l1Tx,
+		L1UserTx:        *l1Tx,
 		ToForgeL1TxsNum: r.State.LastToForgeL1TxsNum,
 		Position:        len(queue.L1TxQueue) - 1,
 	})
+}
+
+// RollupL1UserTxERC20ETH is the interface to call the smart contract function
+func (c *Client) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// RollupL1UserTxERC777 is the interface to call the smart contract function
+func (c *Client) RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// RollupRegisterTokensCount is the interface to call the smart contract function
+func (c *Client) RollupRegisterTokensCount() (*big.Int, error) {
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// RollupWithdrawCircuit is the interface to call the smart contract function
+func (c *Client) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// RollupWithdrawMerkleProof is the interface to call the smart contract function
+func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (*types.Transaction, error) {
+	log.Error("TODO")
+	return nil, errTODO
 }
 
 type transactionData struct {
@@ -710,70 +740,9 @@ func (c *Client) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big
 
 	r.State.TokenMap[tokenAddress] = true
 	r.State.TokenList = append(r.State.TokenList, tokenAddress)
-	r.Events.AddToken = append(r.Events.AddToken, eth.RollupEventAddToken{Address: tokenAddress,
+	r.Events.AddToken = append(r.Events.AddToken, eth.RollupEventAddToken{TokenAddress: tokenAddress,
 		TokenID: uint32(len(r.State.TokenList) - 1)})
 	return r.addTransaction(newTransaction("addtoken", tokenAddress)), nil
-}
-
-// RollupWithdrawSNARK is the interface to call the smart contract function
-// func (c *Client) RollupWithdrawSNARK() (*types.Transaction, error) { // TODO (Not defined in Hermez.sol)
-// 	return nil, errTODO
-// }
-
-// RollupWithdraw is the interface to call the smart contract function
-func (c *Client) RollupWithdraw(tokenID int64, balance *big.Int, babyPubKey *babyjub.PublicKey, numExitRoot int64, siblings []*big.Int, idx int64, instantWithdraw bool) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupForceExit is the interface to call the smart contract function
-func (c *Client) RollupForceExit(fromIdx int64, amountF common.Float16, tokenID int64) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupForceTransfer is the interface to call the smart contract function
-func (c *Client) RollupForceTransfer(fromIdx int64, amountF common.Float16, tokenID, toIdx int64) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupCreateAccountDepositTransfer is the interface to call the smart contract function
-func (c *Client) RollupCreateAccountDepositTransfer(babyPubKey babyjub.PublicKey, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
 }
 
 // RollupGetCurrentTokens is the interface to call the smart contract function
@@ -784,89 +753,6 @@ func (c *Client) RollupGetCurrentTokens() (*big.Int, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
-
-// RollupDepositTransfer is the interface to call the smart contract function
-func (c *Client) RollupDepositTransfer(fromIdx int64, loadAmountF, amountF common.Float16, tokenID int64, toIdx int64) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupDeposit is the interface to call the smart contract function
-func (c *Client) RollupDeposit(fromIdx int64, loadAmountF common.Float16, tokenID int64) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupCreateAccountDepositFromRelayer is the interface to call the smart contract function
-func (c *Client) RollupCreateAccountDepositFromRelayer(accountCreationAuthSig []byte, babyPubKey babyjub.PublicKey, loadAmountF common.Float16) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupCreateAccountDeposit is the interface to call the smart contract function
-func (c *Client) RollupCreateAccountDeposit(babyPubKey babyjub.PublicKey, loadAmountF common.Float16, tokenID int64) (tx *types.Transaction, err error) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
-	cpy := c.nextBlock().copy()
-	defer func() { c.revertIfErr(err, cpy) }()
-	if c.addr == nil {
-		return nil, eth.ErrAccountNil
-	}
-
-	log.Error("TODO")
-	return nil, errTODO
-}
-
-// RollupGetTokenAddress is the interface to call the smart contract function
-// func (c *Client) RollupGetTokenAddress(tokenID int64) (*ethCommon.Address, error) {
-// 	c.rw.RLock()
-// 	defer c.rw.RUnlock()
-//
-// 	log.Error("TODO")
-// 	return nil, errTODO
-// }
-
-// RollupGetL1TxFromQueue is the interface to call the smart contract function
-// func (c *Client) RollupGetL1TxFromQueue(queue int64, position int64) ([]byte, error) {
-// 	c.rw.RLock()
-// 	defer c.rw.RUnlock()
-//
-// 	log.Error("TODO")
-// 	return nil, errTODO
-// }
-
-// RollupGetQueue is the interface to call the smart contract function
-// func (c *Client) RollupGetQueue(queue int64) ([]byte, error) {
-// 	c.rw.RLock()
-// 	defer c.rw.RUnlock()
-//
-// 	log.Error("TODO")
-// 	return nil, errTODO
-// }
 
 // RollupUpdateForgeL1L2BatchTimeout is the interface to call the smart contract function
 func (c *Client) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (tx *types.Transaction, err error) {
