@@ -20,10 +20,12 @@ func TestParseBlockchainTxs(t *testing.T) {
 		Deposit(1) B: 5
 		CreateAccountDeposit(1) C: 5
 		CreateAccountDepositTransfer(1) D-A: 15, 10 (3)
+		CreateAccountDepositCoordinator(1) E
 
 		// L2 transactions
 		Transfer(1) A-B: 6 (1)
 		Transfer(1) B-D: 3 (1)
+		Transfer(1) A-E: 1 (1)
 
 		// set new batch
 		> batch
@@ -51,8 +53,8 @@ func TestParseBlockchainTxs(t *testing.T) {
 	parser := newParser(strings.NewReader(s))
 	instructions, err := parser.parse()
 	require.Nil(t, err)
-	assert.Equal(t, 20, len(instructions.instructions))
-	assert.Equal(t, 6, len(instructions.accounts))
+	assert.Equal(t, 22, len(instructions.instructions))
+	assert.Equal(t, 7, len(instructions.accounts))
 	assert.Equal(t, 3, len(instructions.tokenIDs))
 
 	if debug {
@@ -62,14 +64,15 @@ func TestParseBlockchainTxs(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, typeNewBatch, instructions.instructions[7].typ)
-	assert.Equal(t, "Deposit(1)User0:20", instructions.instructions[11].raw())
-	assert.Equal(t, "Type: DepositTransfer, From: A, To: B, LoadAmount: 15, Amount: 10, Fee: 1, TokenID: 1\n", instructions.instructions[8].String())
-	assert.Equal(t, "Type: Transfer, From: User1, To: User0, Amount: 15, Fee: 1, TokenID: 3\n", instructions.instructions[14].String())
-	assert.Equal(t, "Transfer(2)A-B:15(1)", instructions.instructions[10].raw())
-	assert.Equal(t, "Type: Transfer, From: A, To: B, Amount: 15, Fee: 1, TokenID: 2\n", instructions.instructions[10].String())
-	assert.Equal(t, "Exit(1)A:5", instructions.instructions[19].raw())
-	assert.Equal(t, "Type: Exit, From: A, Amount: 5, TokenID: 1\n", instructions.instructions[19].String())
+	assert.Equal(t, txTypeCreateAccountDepositCoordinator, instructions.instructions[5].typ)
+	assert.Equal(t, typeNewBatch, instructions.instructions[9].typ)
+	assert.Equal(t, "Deposit(1)User0:20", instructions.instructions[13].raw())
+	assert.Equal(t, "Type: DepositTransfer, From: A, To: B, LoadAmount: 15, Amount: 10, Fee: 1, TokenID: 1\n", instructions.instructions[10].String())
+	assert.Equal(t, "Type: Transfer, From: User1, To: User0, Amount: 15, Fee: 1, TokenID: 3\n", instructions.instructions[16].String())
+	assert.Equal(t, "Transfer(2)A-B:15(1)", instructions.instructions[12].raw())
+	assert.Equal(t, "Type: Transfer, From: A, To: B, Amount: 15, Fee: 1, TokenID: 2\n", instructions.instructions[12].String())
+	assert.Equal(t, "Exit(1)A:5", instructions.instructions[21].raw())
+	assert.Equal(t, "Type: Exit, From: A, Amount: 5, TokenID: 1\n", instructions.instructions[21].String())
 }
 
 func TestParsePoolTxs(t *testing.T) {
@@ -118,7 +121,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 2: 20, err: Unexpected tx type: 20", err.Error())
+	assert.Equal(t, "error parsing line 2: 20, err: Unexpected Blockchain tx type: 20", err.Error())
 
 	s = `
 		Type: Blockchain
@@ -159,14 +162,14 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: Transfer, err: Unexpected 'Transfer' in a non Blockchain set", err.Error())
+	assert.Equal(t, "error parsing line 1: Transfer, err: Unexpected PoolL2 tx type: Transfer", err.Error())
 	s = `
 		Type: Blockchain
 		PoolTransfer(1) A-B: 10 (1)
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: PoolTransfer, err: Unexpected 'PoolTransfer' in a non PoolL2 set", err.Error())
+	assert.Equal(t, "error parsing line 1: PoolTransfer, err: Unexpected Blockchain tx type: PoolTransfer", err.Error())
 
 	s = `
 		Type: Blockchain

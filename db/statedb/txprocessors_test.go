@@ -21,7 +21,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Nil(t, err)
 
 	// generate test transactions from test.SetTest0 code
-	tc := transakcio.NewTestContext(t)
+	tc := transakcio.NewTestContext()
 	blocks := tc.GenerateBlocks(transakcio.SetBlockchain0)
 
 	assert.Equal(t, 29, len(blocks[0].Batches[0].L1UserTxs))
@@ -31,7 +31,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, 1, len(blocks[0].Batches[1].L1CoordinatorTxs))
 	assert.Equal(t, 59, len(blocks[0].Batches[1].L2Txs))
 	assert.Equal(t, 9, len(blocks[0].Batches[2].L1UserTxs))
-	assert.Equal(t, 0, len(blocks[0].Batches[2].L1CoordinatorTxs))
+	assert.Equal(t, 1, len(blocks[0].Batches[2].L1CoordinatorTxs))
 	assert.Equal(t, 8, len(blocks[0].Batches[2].L2Txs))
 
 	// use first batch
@@ -76,7 +76,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Nil(t, err)
 
 	// generate test transactions from test.SetTest0 code
-	tc := transakcio.NewTestContext(t)
+	tc := transakcio.NewTestContext()
 	blocks := tc.GenerateBlocks(transakcio.SetBlockchain0)
 
 	assert.Equal(t, 29, len(blocks[0].Batches[0].L1UserTxs))
@@ -125,7 +125,7 @@ func TestZKInputsGeneration(t *testing.T) {
 	assert.Nil(t, err)
 
 	// generate test transactions from test.SetTest0 code
-	tc := transakcio.NewTestContext(t)
+	tc := transakcio.NewTestContext()
 	blocks := tc.GenerateBlocks(transakcio.SetBlockchain0)
 	assert.Equal(t, 29, len(blocks[0].Batches[0].L1UserTxs))
 	assert.Equal(t, 0, len(blocks[0].Batches[0].L1CoordinatorTxs))

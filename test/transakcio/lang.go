@@ -35,6 +35,8 @@ var typeNewBatch common.TxType = "TxTypeNewBatch"
 // common.TxType of a new ethereum block
 var typeNewBlock common.TxType = "TxTypeNewBlock"
 
+var txTypeCreateAccountDepositCoordinator common.TxType = "TypeCreateAccountDepositCoordinator"
+
 //nolint
 const (
 	ILLEGAL token = iota
@@ -297,63 +299,46 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		return c, fmt.Errorf("Set type not defined")
 	}
 	transferring := false
-	switch lit {
-	case "Deposit":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
+
+	if setType == setTypeBlockchain {
+		switch lit {
+		case "Deposit":
+			c.typ = common.TxTypeDeposit
+		case "Exit":
+			c.typ = common.TxTypeExit
+		case "Transfer":
+			c.typ = common.TxTypeTransfer
+			transferring = true
+		case "CreateAccountDeposit":
+			c.typ = common.TxTypeCreateAccountDeposit
+		case "CreateAccountDepositTransfer":
+			c.typ = common.TxTypeCreateAccountDepositTransfer
+			transferring = true
+		case "CreateAccountDepositCoordinator":
+			c.typ = txTypeCreateAccountDepositCoordinator
+			// transferring is false, as the Coordinator tx transfer will be 0
+		case "DepositTransfer":
+			c.typ = common.TxTypeDepositTransfer
+			transferring = true
+		case "ForceTransfer":
+			c.typ = common.TxTypeForceTransfer
+		case "ForceExit":
+			c.typ = common.TxTypeForceExit
+		default:
+			return c, fmt.Errorf("Unexpected Blockchain tx type: %s", lit)
 		}
-		c.typ = common.TxTypeDeposit
-	case "Exit":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
+	} else if setType == setTypePoolL2 {
+		switch lit {
+		case "PoolTransfer":
+			c.typ = common.TxTypeTransfer
+			transferring = true
+		case "PoolExit":
+			c.typ = common.TxTypeExit
+		default:
+			return c, fmt.Errorf("Unexpected PoolL2 tx type: %s", lit)
 		}
-		c.typ = common.TxTypeExit
-	case "PoolExit":
-		if setType != setTypePoolL2 {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypePoolL2)
-		}
-		c.typ = common.TxTypeExit
-	case "Transfer":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
-		}
-		c.typ = common.TxTypeTransfer
-		transferring = true
-	case "PoolTransfer":
-		if setType != setTypePoolL2 {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypePoolL2)
-		}
-		c.typ = common.TxTypeTransfer
-		transferring = true
-	case "CreateAccountDeposit":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
-		}
-		c.typ = common.TxTypeCreateAccountDeposit
-	case "CreateAccountDepositTransfer":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
-		}
-		c.typ = common.TxTypeCreateAccountDepositTransfer
-		transferring = true
-	case "DepositTransfer":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
-		}
-		c.typ = common.TxTypeDepositTransfer
-		transferring = true
-	case "ForceTransfer":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
-		}
-		c.typ = common.TxTypeForceTransfer
-	case "ForceExit":
-		if setType != setTypeBlockchain {
-			return c, fmt.Errorf("Unexpected '%s' in a non %s set", lit, setTypeBlockchain)
-		}
-		c.typ = common.TxTypeForceExit
-	default:
-		return c, fmt.Errorf("Unexpected tx type: %s", lit)
+	} else {
+		return c, fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", setType)
 	}
 
 	if err := p.expectChar(c, "("); err != nil {
@@ -374,6 +359,11 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	_, lit = p.scanIgnoreWhitespace()
 	c.literal += lit
 	c.from = lit
+	if c.typ == txTypeCreateAccountDepositCoordinator {
+		line, _ := p.s.r.ReadString('\n')
+		c.literal += line
+		return c, nil
+	}
 	_, lit = p.scanIgnoreWhitespace()
 	c.literal += lit
 	if transferring {
