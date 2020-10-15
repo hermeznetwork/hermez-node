@@ -35,7 +35,7 @@ func GenTokens(nTokens int, blocks []common.Block) []common.Token {
 	for i := 0; i < nTokens; i++ {
 		token := common.Token{
 			TokenID:     common.TokenID(i),
-			Name:        fmt.Sprint(i),
+			Name:        "NAME" + fmt.Sprint(i),
 			Symbol:      fmt.Sprint(i),
 			Decimals:    uint64(i),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,

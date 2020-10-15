@@ -219,6 +219,30 @@ func parseAccountFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyj
 	return tokenID, addr, bjj, idx, nil
 }
 
+func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
+	idsStr := c.Query("ids")
+	symbolsStr := c.Query("symbols")
+	nameStr := c.Query("name")
+	var tokensIDs []common.TokenID
+	if idsStr != "" {
+		ids := strings.Split(idsStr, ",")
+
+		for _, id := range ids {
+			idUint, err := strconv.Atoi(id)
+			if err != nil {
+				return nil, nil, "", err
+			}
+			tokenID := common.TokenID(idUint)
+			tokensIDs = append(tokensIDs, tokenID)
+		}
+	}
+	var symbols []string
+	if symbolsStr != "" {
+		symbols = strings.Split(symbolsStr, ",")
+	}
+	return tokensIDs, symbols, nameStr, nil
+}
+
 // Param parsers
 
 type paramer interface {

@@ -270,3 +270,28 @@ func TestParseQueryTxType(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, common.TxTypeTransferToBJJ, *res)
 }
+
+func TestParseTokenFilters(t *testing.T) {
+	ids := "ids"
+	symbols := "symbols"
+	name := "name"
+	nameValue := "1"
+	symbolsValue := "1,2,3"
+	idsValue := "2,3,4"
+	c := &queryParser{}
+	c.m = make(map[string]string)
+	// Incorrect values
+	c.m[name] = nameValue
+	c.m[ids] = idsValue
+	c.m[symbols] = symbolsValue
+
+	idsParse, symbolsParse, nameParse, err := parseTokenFilters(c)
+	assert.NoError(t, err)
+
+	// Correct values
+	var tokenIds []common.TokenID = []common.TokenID{2, 3, 4}
+	assert.Equal(t, tokenIds, idsParse)
+	var symbolsArray []string = []string{"1", "2", "3"}
+	assert.Equal(t, symbolsArray, symbolsParse)
+	assert.Equal(t, nameValue, nameParse)
+}

@@ -37,7 +37,8 @@ CREATE TABLE bid (
 );
 
 CREATE TABLE token (
-    token_id INT PRIMARY KEY,
+    item_id SERIAL PRIMARY KEY,
+    token_id INT UNIQUE NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     eth_addr BYTEA UNIQUE NOT NULL,
     name VARCHAR(20) NOT NULL,

@@ -202,7 +202,33 @@ func getConfig(c *gin.Context) {
 }
 
 func getTokens(c *gin.Context) {
+	// Account filters
+	tokenIDs, symbols, name, err := parseTokenFilters(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Pagination
+	fromItem, order, limit, err := parsePagination(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch exits from historyDB
+	tokens, pagination, err := h.GetTokens(
+		tokenIDs, symbols, name, fromItem, limit, order,
+	)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
 
+	// Build succesfull response
+	apiTokens := tokensToAPI(tokens)
+	c.JSON(http.StatusOK, &tokensAPI{
+		Tokens:     apiTokens,
+		Pagination: pagination,
+	})
 }
 
 func getToken(c *gin.Context) {
@@ -219,7 +245,8 @@ func getToken(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, token)
+	apiToken := tokensToAPI([]historydb.TokenRead{*token})
+	c.JSON(http.StatusOK, apiToken[0])
 }
 
 func getRecommendedFee(c *gin.Context) {

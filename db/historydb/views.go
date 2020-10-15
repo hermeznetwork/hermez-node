@@ -81,14 +81,18 @@ type txWrite struct {
 
 // TokenRead add USD info to common.Token
 type TokenRead struct {
-	TokenID     common.TokenID    `json:"id" meddler:"token_id"`
-	EthBlockNum int64             `json:"ethereumBlockNum" meddler:"eth_block_num"` // Ethereum block number in which this token was registered
-	EthAddr     ethCommon.Address `json:"ethereumAddress" meddler:"eth_addr"`
-	Name        string            `json:"name" meddler:"name"`
-	Symbol      string            `json:"symbol" meddler:"symbol"`
-	Decimals    uint64            `json:"decimals" meddler:"decimals"`
-	USD         *float64          `json:"USD" meddler:"usd"`
-	USDUpdate   *time.Time        `json:"fiatUpdate" meddler:"usd_update,utctime"`
+	ItemID      int               `meddler:"item_id"`
+	TokenID     common.TokenID    `meddler:"token_id"`
+	EthBlockNum int64             `meddler:"eth_block_num"` // Ethereum block number in which this token was registered
+	EthAddr     ethCommon.Address `meddler:"eth_addr"`
+	Name        string            `meddler:"name"`
+	Symbol      string            `meddler:"symbol"`
+	Decimals    uint64            `meddler:"decimals"`
+	USD         *float64          `meddler:"usd"`
+	USDUpdate   *time.Time        `meddler:"usd_update,utctime"`
+	TotalItems  int               `meddler:"total_items"`
+	FirstItem   int               `meddler:"first_item"`
+	LastItem    int               `meddler:"last_item"`
 }
 
 // HistoryExit is a representation of a exit with additional information
