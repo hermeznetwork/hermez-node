@@ -288,6 +288,15 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error 
 	return err
 }
 
+// GetToken returns a token from the DB given a TokenID
+func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenRead, error) {
+	token := &TokenRead{}
+	err := meddler.QueryRow(
+		hdb.db, token, `SELECT * FROM token WHERE token_id = $1;`, tokenID,
+	)
+	return token, err
+}
+
 // GetTokens returns a list of tokens from the DB
 func (hdb *HistoryDB) GetTokens() ([]TokenRead, error) {
 	var tokens []*TokenRead

@@ -871,6 +871,31 @@ func assertExitAPIs(t *testing.T, expected, actual []exitAPI) {
 	}
 }
 
+func TestGetToken(t *testing.T) {
+	// Get all txs by their ID
+	endpoint := apiURL + "tokens/"
+	fetchedTokens := []historydb.TokenRead{}
+	for _, token := range tc.tokens {
+		fetchedToken := historydb.TokenRead{}
+		assert.NoError(t, doGoodReq("GET", endpoint+strconv.Itoa(int(token.TokenID)), nil, &fetchedToken))
+		fetchedTokens = append(fetchedTokens, fetchedToken)
+	}
+	assertTokensAPIs(t, tc.tokens, fetchedTokens)
+}
+
+func assertTokensAPIs(t *testing.T, expected, actual []historydb.TokenRead) {
+	require.Equal(t, len(expected), len(actual))
+	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
+		if expected[i].USDUpdate == nil {
+			assert.Equal(t, expected[i].USDUpdate, actual[i].USDUpdate)
+		} else {
+			assert.Equal(t, expected[i].USDUpdate.Unix(), actual[i].USDUpdate.Unix())
+			expected[i].USDUpdate = actual[i].USDUpdate
+		}
+		assert.Equal(t, expected[i], actual[i])
+	}
+}
+
 func doGoodReqPaginated(
 	path, order string,
 	iterStruct db.Paginationer,
