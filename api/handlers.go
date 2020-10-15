@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -205,7 +206,20 @@ func getTokens(c *gin.Context) {
 }
 
 func getToken(c *gin.Context) {
-
+	// Get TokenID
+	tokenIDUint, err := parseParamUint("id", nil, 0, maxUint32, c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	tokenID := common.TokenID(*tokenIDUint)
+	// Fetch token from historyDB
+	token, err := h.GetToken(tokenID)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, token)
 }
 
 func getRecommendedFee(c *gin.Context) {
