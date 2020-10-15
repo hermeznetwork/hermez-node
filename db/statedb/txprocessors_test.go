@@ -22,7 +22,8 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 
 	// generate test transactions from test.SetTest0 code
 	tc := transakcio.NewTestContext()
-	blocks := tc.GenerateBlocks(transakcio.SetBlockchain0)
+	blocks, err := tc.GenerateBlocks(transakcio.SetBlockchain0)
+	require.Nil(t, err)
 
 	assert.Equal(t, 29, len(blocks[0].Batches[0].L1UserTxs))
 	assert.Equal(t, 0, len(blocks[0].Batches[0].L1CoordinatorTxs))

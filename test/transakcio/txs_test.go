@@ -6,11 +6,15 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerateBlocks(t *testing.T) {
 	set := `
 		Type: Blockchain
+		RegisterToken(1)
+		RegisterToken(2)
+		RegisterToken(3)
 	
 		CreateAccountDeposit(1) A: 10
 		CreateAccountDeposit(2) A: 20
@@ -51,7 +55,8 @@ func TestGenerateBlocks(t *testing.T) {
 		Exit(1) A: 5
 	`
 	tc := NewTestContext()
-	blocks := tc.GenerateBlocks(set)
+	blocks, err := tc.GenerateBlocks(set)
+	require.Nil(t, err)
 	assert.Equal(t, 2, len(blocks))
 	assert.Equal(t, 3, len(blocks[0].Batches))
 	assert.Equal(t, 1, len(blocks[1].Batches))
@@ -136,6 +141,9 @@ func (tc *TestContext) checkL2TxParams(t *testing.T, tx common.L2Tx, typ common.
 func TestGeneratePoolL2Txs(t *testing.T) {
 	set := `
 		Type: Blockchain
+		RegisterToken(1)
+		RegisterToken(2)
+		RegisterToken(3)
 	
 		CreateAccountDeposit(1) A: 10
 		CreateAccountDeposit(2) A: 20
@@ -149,7 +157,8 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		CreateAccountDeposit(2) D: 0
 	`
 	tc := NewTestContext()
-	_ = tc.GenerateBlocks(set)
+	_, err := tc.GenerateBlocks(set)
+	require.Nil(t, err)
 	set = `
 		Type: PoolL2
 		PoolTransfer(1) A-B: 6 (1)
@@ -162,7 +171,8 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		PoolTransfer(2) B-D: 3 (1)
 		PoolExit(1) A: 3
 	`
-	poolL2Txs := tc.GeneratePoolL2Txs(set)
+	poolL2Txs, err := tc.GeneratePoolL2Txs(set)
+	require.Nil(t, err)
 	assert.Equal(t, 9, len(poolL2Txs))
 	assert.Equal(t, common.TxTypeTransfer, poolL2Txs[0].Type)
 	assert.Equal(t, common.TxTypeExit, poolL2Txs[8].Type)
@@ -182,8 +192,47 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		PoolTransfer(1) B-C: 3 (1)
 		PoolTransfer(1) A-C: 3 (1)
 	`
-	poolL2Txs = tc.GeneratePoolL2Txs(set)
+	poolL2Txs, err = tc.GeneratePoolL2Txs(set)
+	require.Nil(t, err)
 	assert.Equal(t, common.Nonce(4), poolL2Txs[0].Nonce)
 	assert.Equal(t, common.Nonce(2), poolL2Txs[1].Nonce)
 	assert.Equal(t, common.Nonce(5), poolL2Txs[2].Nonce)
+}
+
+func TestGenerateErrors(t *testing.T) {
+	// unregistered token
+	set := `Type: Blockchain
+		CreateAccountDeposit(1) A: 5
+		`
+	tc := NewTestContext()
+	_, err := tc.GenerateBlocks(set)
+	assert.Equal(t, "Can not process CreateAccountDeposit: TokenID 1 not registered, last registered TokenID: 0", err.Error())
+
+	// ensure RegisterToken sequentiality and not using 0
+	set = `
+		Type: Blockchain
+		RegisterToken(0)
+	`
+	tc = NewTestContext()
+	_, err = tc.GenerateBlocks(set)
+	require.Equal(t, "RegisterToken can not register TokenID 0", err.Error())
+
+	set = `
+		Type: Blockchain
+		RegisterToken(2)
+	`
+	tc = NewTestContext()
+	_, err = tc.GenerateBlocks(set)
+	require.Equal(t, "RegisterToken TokenID should be sequential, expected TokenID: 1, defined TokenID: 2", err.Error())
+
+	set = `
+		Type: Blockchain
+		RegisterToken(1)
+		RegisterToken(2)
+		RegisterToken(3)
+		RegisterToken(5)
+	`
+	tc = NewTestContext()
+	_, err = tc.GenerateBlocks(set)
+	require.Equal(t, "RegisterToken TokenID should be sequential, expected TokenID: 4, defined TokenID: 5", err.Error())
 }

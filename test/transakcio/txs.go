@@ -2,6 +2,7 @@ package transakcio
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -10,17 +11,16 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 // TestContext contains the data of the test
 type TestContext struct {
-	Instructions      []instruction
-	accountsNames     []string
-	Users             map[string]*User
-	TokenIDs          []common.TokenID
-	l1CreatedAccounts map[string]*Account
+	Instructions          []instruction
+	accountsNames         []string
+	Users                 map[string]*User
+	lastRegisteredTokenID common.TokenID
+	l1CreatedAccounts     map[string]*Account
 }
 
 // NewTestContext returns a new TestContext
@@ -67,16 +67,15 @@ type BatchData struct {
 
 // GenerateBlocks returns an array of BlockData for a given set. It uses the
 // accounts (keys & nonces) of the TestContext.
-func (tc *TestContext) GenerateBlocks(set string) []BlockData {
+func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	tc.Instructions = parsedSet.instructions
 	tc.accountsNames = parsedSet.accounts
-	tc.TokenIDs = parsedSet.tokenIDs
 
 	tc.generateKeys(tc.accountsNames)
 
@@ -88,6 +87,9 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 	for _, inst := range parsedSet.instructions {
 		switch inst.typ {
 		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer, txTypeCreateAccountDepositCoordinator:
+			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
+				return nil, err
+			}
 			tx := common.L1Tx{
 				// TxID
 				FromEthAddr: tc.Users[inst.from].Addr,
@@ -115,8 +117,11 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 				currBatch.L1UserTxs = append(currBatch.L1UserTxs, tx)
 			}
 		case common.TxTypeDeposit, common.TxTypeDepositTransfer:
+			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
+				return nil, err
+			}
 			if tc.Users[inst.from].Accounts[inst.tokenID] == nil {
-				log.Fatalf("Deposit at User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
+				return nil, fmt.Errorf("Deposit at User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
 			}
 			tx := common.L1Tx{
 				// TxID
@@ -150,12 +155,15 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			}
 			currBatch.L1UserTxs = append(currBatch.L1UserTxs, tx)
 		case common.TxTypeTransfer:
+			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
+				return nil, err
+			}
 			if tc.Users[inst.from].Accounts[inst.tokenID] == nil {
-				log.Fatalf("Transfer from User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
+				return nil, fmt.Errorf("Transfer from User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
 			}
 			// if account of receiver does not exist, create a new CoordinatorL1Tx creating the account
 			if _, ok := tc.l1CreatedAccounts[idxTokenIDToString(inst.to, inst.tokenID)]; !ok {
-				log.Fatalf("Can not create Transfer for a non existing account. Batch %d, Instruction: %s", currBatchNum, inst)
+				return nil, fmt.Errorf("Can not create Transfer for a non existing account. Batch %d, Instruction: %s", currBatchNum, inst)
 			}
 			tc.Users[inst.from].Accounts[inst.tokenID].Nonce++
 			tx := common.L2Tx{
@@ -168,13 +176,16 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			}
 			nTx, err := common.NewPoolL2Tx(tx.PoolL2Tx())
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			tx = nTx.L2Tx()
 			tx.BatchNum = common.BatchNum(currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
 
 			currBatch.L2Txs = append(currBatch.L2Txs, tx)
 		case common.TxTypeExit:
+			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
+				return nil, err
+			}
 			tc.Users[inst.from].Accounts[inst.tokenID].Nonce++
 			tx := common.L2Tx{
 				FromIdx: tc.Users[inst.from].Accounts[inst.tokenID].Idx,
@@ -185,11 +196,14 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			}
 			nTx, err := common.NewPoolL2Tx(tx.PoolL2Tx())
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			tx = nTx.L2Tx()
 			currBatch.L2Txs = append(currBatch.L2Txs, tx)
 		case common.TxTypeForceExit:
+			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
+				return nil, err
+			}
 			tx := common.L1Tx{
 				FromIdx: tc.Users[inst.from].Accounts[inst.tokenID].Idx,
 				ToIdx:   common.Idx(1), // as is an Exit
@@ -208,28 +222,43 @@ func (tc *TestContext) GenerateBlocks(set string) []BlockData {
 			currBatch = BatchData{}
 			blocks = append(blocks, currBlock)
 			currBlock = BlockData{}
+		case typeRegisterToken:
+			newToken := common.Token{
+				TokenID:     inst.tokenID,
+				EthBlockNum: int64(len(blocks)),
+			}
+			if inst.tokenID != tc.lastRegisteredTokenID+1 {
+				return nil, fmt.Errorf("RegisterToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", tc.lastRegisteredTokenID+1, inst.tokenID)
+			}
+			tc.lastRegisteredTokenID++
+			currBlock.RegisteredTokens = append(currBlock.RegisteredTokens, newToken)
 		default:
-			log.Fatalf("Unexpected type: %s", inst.typ)
+			return nil, fmt.Errorf("Unexpected type: %s", inst.typ)
 		}
 	}
 	currBlock.Batches = append(currBlock.Batches, currBatch)
 	blocks = append(blocks, currBlock)
 
-	return blocks
+	return blocks, nil
+}
+func (tc *TestContext) checkIfTokenIsRegistered(inst instruction) error {
+	if inst.tokenID > tc.lastRegisteredTokenID {
+		return fmt.Errorf("Can not process %s: TokenID %d not registered, last registered TokenID: %d", inst.typ, inst.tokenID, tc.lastRegisteredTokenID)
+	}
+	return nil
 }
 
 // GeneratePoolL2Txs returns an array of common.PoolL2Tx from a given set. It
 // uses the accounts (keys & nonces) of the TestContext.
-func (tc *TestContext) GeneratePoolL2Txs(set string) []common.PoolL2Tx {
+func (tc *TestContext) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	tc.Instructions = parsedSet.instructions
 	tc.accountsNames = parsedSet.accounts
-	tc.TokenIDs = parsedSet.tokenIDs
 
 	tc.generateKeys(tc.accountsNames)
 
@@ -238,10 +267,10 @@ func (tc *TestContext) GeneratePoolL2Txs(set string) []common.PoolL2Tx {
 		switch inst.typ {
 		case common.TxTypeTransfer:
 			if tc.Users[inst.from].Accounts[inst.tokenID] == nil {
-				log.Fatalf("Transfer from User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
+				return nil, fmt.Errorf("Transfer from User %s for TokenID %d while account not created yet", inst.from, inst.tokenID)
 			}
 			if tc.Users[inst.to].Accounts[inst.tokenID] == nil {
-				log.Fatalf("Transfer to User %s for TokenID %d while account not created yet", inst.to, inst.tokenID)
+				return nil, fmt.Errorf("Transfer to User %s for TokenID %d while account not created yet", inst.to, inst.tokenID)
 			}
 			tc.Users[inst.from].Accounts[inst.tokenID].Nonce++
 			// if account of receiver does not exist, don't use
@@ -263,13 +292,13 @@ func (tc *TestContext) GeneratePoolL2Txs(set string) []common.PoolL2Tx {
 			}
 			nTx, err := common.NewPoolL2Tx(&tx)
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			tx = *nTx
 			// perform signature and set it to tx.Signature
 			toSign, err := tx.HashToSign()
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			sig := tc.Users[inst.to].BJJ.SignPoseidon(toSign)
 			tx.Signature = sig
@@ -287,11 +316,11 @@ func (tc *TestContext) GeneratePoolL2Txs(set string) []common.PoolL2Tx {
 			}
 			txs = append(txs, tx)
 		default:
-			log.Fatalf("instruction type unrecognized: %s", inst.typ)
+			return nil, fmt.Errorf("instruction type unrecognized: %s", inst.typ)
 		}
 	}
 
-	return txs
+	return txs, nil
 }
 
 // generateKeys generates BabyJubJub & Address keys for the given list of
