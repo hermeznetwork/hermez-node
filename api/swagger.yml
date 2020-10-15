@@ -1388,7 +1388,7 @@ components:
           allOf:
             - $ref: '#/components/schemas/BigInt'
             - description: Amount of tokens to be sent.
-              example: "63"
+              example: "6303020000000000000"
         fee:
           $ref: '#/components/schemas/FeeSelector'
         nonce:
@@ -1606,7 +1606,7 @@ components:
           allOf:
             - $ref: '#/components/schemas/BigInt'
             - description: Amount of tokens to be sent.
-            -  example: "49"
+            -  example: "4903020000000000000"
         batchNum:
           type: integer
           description: Batch in which the transaction was forged. Null indicates not forged yet.
