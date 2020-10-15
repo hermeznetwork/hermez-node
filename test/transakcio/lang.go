@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"sort"
 	"strconv"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
 )
 
 var eof = rune(0)
@@ -29,11 +29,16 @@ var setTypePoolL2 = setType("PoolL2")
 
 // typeNewBatch is used for testing purposes only, and represents the
 // common.TxType of a new batch
-var typeNewBatch common.TxType = "TxTypeNewBatch"
+var typeNewBatch common.TxType = "InstrTypeNewBatch"
 
 // typeNewBlock is used for testing purposes only, and represents the
 // common.TxType of a new ethereum block
-var typeNewBlock common.TxType = "TxTypeNewBlock"
+var typeNewBlock common.TxType = "InstrTypeNewBlock"
+
+// typeRegisterToken is used for testing purposes only, and represents the
+// common.TxType of a new Token regsitration
+// It has 'nolint:gosec' as the string 'Token' triggers gosec as a potential leaked Token (which is not the case)
+var typeRegisterToken common.TxType = "InstrTypeRegisterToken" //nolint:gosec
 
 var txTypeCreateAccountDepositCoordinator common.TxType = "TypeCreateAccountDepositCoordinator"
 
@@ -63,7 +68,6 @@ type parsedSet struct {
 	// type         string
 	instructions []instruction
 	accounts     []string
-	tokenIDs     []common.TokenID
 }
 
 func (i instruction) String() string {
@@ -294,7 +298,28 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		} else {
 			return c, fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", lit)
 		}
+	} else if lit == "RegisterToken" {
+		if err := p.expectChar(c, "("); err != nil {
+			return c, err
+		}
+		_, lit = p.scanIgnoreWhitespace()
+		c.literal += lit
+		tidI, err := strconv.Atoi(lit)
+		if err != nil {
+			line, _ := p.s.r.ReadString('\n')
+			c.literal += line
+			return c, err
+		}
+		c.tokenID = common.TokenID(tidI)
+		if err := p.expectChar(c, ")"); err != nil {
+			return c, err
+		}
+		c.typ = typeRegisterToken
+		line, _ := p.s.r.ReadString('\n')
+		c.literal += line
+		return c, newEventLine
 	}
+
 	if setType == "" {
 		return c, fmt.Errorf("Set type not defined")
 	}
@@ -458,10 +483,9 @@ func idxTokenIDToString(idx string, tid common.TokenID) string {
 
 // parse parses through reader
 func (p *parser) parse() (*parsedSet, error) {
-	instructions := &parsedSet{}
+	ps := &parsedSet{}
 	i := 0
 	accounts := make(map[string]bool)
-	tokenids := make(map[common.TokenID]bool)
 	var setTypeOfSet setType
 	for {
 		instruction, err := p.parseLine(setTypeOfSet)
@@ -469,6 +493,9 @@ func (p *parser) parse() (*parsedSet, error) {
 			break
 		}
 		if err == setTypeLine {
+			if setTypeOfSet != "" {
+				return ps, fmt.Errorf("Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", instruction.typ, setTypeOfSet)
+			}
 			if instruction.typ == "PoolL2" {
 				setTypeOfSet = setTypePoolL2
 			} else if instruction.typ == "Blockchain" {
@@ -484,30 +511,29 @@ func (p *parser) parse() (*parsedSet, error) {
 			continue
 		}
 		if err == newEventLine {
+			if instruction.typ == typeRegisterToken && instruction.tokenID == common.TokenID(0) {
+				return ps, fmt.Errorf("RegisterToken can not register TokenID 0")
+			}
 			i++
-			instructions.instructions = append(instructions.instructions, *instruction)
+			ps.instructions = append(ps.instructions, *instruction)
 			continue
 		}
 		if err != nil {
-			return instructions, fmt.Errorf("error parsing line %d: %s, err: %s", i, instruction.literal, err.Error())
+			return ps, fmt.Errorf("error parsing line %d: %s, err: %s", i, instruction.literal, err.Error())
 		}
 		if setTypeOfSet == "" {
-			return instructions, fmt.Errorf("Set type not defined")
+			return ps, fmt.Errorf("Set type not defined")
 		}
-		instructions.instructions = append(instructions.instructions, *instruction)
+		ps.instructions = append(ps.instructions, *instruction)
 		accounts[instruction.from] = true
 		if instruction.typ == common.TxTypeTransfer { // type: Transfer
 			accounts[instruction.to] = true
 		}
-		tokenids[instruction.tokenID] = true
 		i++
 	}
 	for a := range accounts {
-		instructions.accounts = append(instructions.accounts, a)
+		ps.accounts = append(ps.accounts, a)
 	}
-	sort.Strings(instructions.accounts)
-	for tid := range tokenids {
-		instructions.tokenIDs = append(instructions.tokenIDs, tid)
-	}
-	return instructions, nil
+	sort.Strings(ps.accounts)
+	return ps, nil
 }

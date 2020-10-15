@@ -6,6 +6,9 @@ package transakcio
 var SetBlockchain0 = `
 // Set containing Blockchain transactions
 Type: Blockchain
+RegisterToken(1)
+RegisterToken(2)
+RegisterToken(3)
 
 // deposits TokenID: 1
 CreateAccountDeposit(1) A: 50

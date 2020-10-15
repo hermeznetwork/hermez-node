@@ -366,10 +366,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 			return nil, nil, false, err
 		}
 		tx.Nonce = acc.Nonce
-		// TokenID is also not set in the L2Txs from the blockchain
-		// that the Synchronizer works with, but does not need to be
-		// defined because is not used later for the L2Txs processing
-		// (Transfer & Exit)
+		tx.TokenID = acc.TokenID
 	}
 
 	switch tx.Type {

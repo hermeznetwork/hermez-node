@@ -14,6 +14,11 @@ var debug = false
 func TestParseBlockchainTxs(t *testing.T) {
 	s := `
 		Type: Blockchain
+
+		// token registrations
+		RegisterToken(1)
+		RegisterToken(2)
+
 		// deposits
 		Deposit(1) A: 10
 		Deposit(2) A: 20
@@ -29,6 +34,7 @@ func TestParseBlockchainTxs(t *testing.T) {
 
 		// set new batch
 		> batch
+		RegisterToken(3)
 
 		DepositTransfer(1) A-B: 15, 10 (1)
 		Transfer(1) C-A : 3 (1)
@@ -53,9 +59,8 @@ func TestParseBlockchainTxs(t *testing.T) {
 	parser := newParser(strings.NewReader(s))
 	instructions, err := parser.parse()
 	require.Nil(t, err)
-	assert.Equal(t, 22, len(instructions.instructions))
+	assert.Equal(t, 25, len(instructions.instructions))
 	assert.Equal(t, 7, len(instructions.accounts))
-	assert.Equal(t, 3, len(instructions.tokenIDs))
 
 	if debug {
 		fmt.Println(instructions)
@@ -64,15 +69,15 @@ func TestParseBlockchainTxs(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, txTypeCreateAccountDepositCoordinator, instructions.instructions[5].typ)
-	assert.Equal(t, typeNewBatch, instructions.instructions[9].typ)
-	assert.Equal(t, "Deposit(1)User0:20", instructions.instructions[13].raw())
-	assert.Equal(t, "Type: DepositTransfer, From: A, To: B, LoadAmount: 15, Amount: 10, Fee: 1, TokenID: 1\n", instructions.instructions[10].String())
-	assert.Equal(t, "Type: Transfer, From: User1, To: User0, Amount: 15, Fee: 1, TokenID: 3\n", instructions.instructions[16].String())
-	assert.Equal(t, "Transfer(2)A-B:15(1)", instructions.instructions[12].raw())
-	assert.Equal(t, "Type: Transfer, From: A, To: B, Amount: 15, Fee: 1, TokenID: 2\n", instructions.instructions[12].String())
-	assert.Equal(t, "Exit(1)A:5", instructions.instructions[21].raw())
-	assert.Equal(t, "Type: Exit, From: A, Amount: 5, TokenID: 1\n", instructions.instructions[21].String())
+	assert.Equal(t, txTypeCreateAccountDepositCoordinator, instructions.instructions[7].typ)
+	assert.Equal(t, typeNewBatch, instructions.instructions[11].typ)
+	assert.Equal(t, "Deposit(1)User0:20", instructions.instructions[16].raw())
+	assert.Equal(t, "Type: DepositTransfer, From: A, To: B, LoadAmount: 15, Amount: 10, Fee: 1, TokenID: 1\n", instructions.instructions[13].String())
+	assert.Equal(t, "Type: Transfer, From: User1, To: User0, Amount: 15, Fee: 1, TokenID: 3\n", instructions.instructions[19].String())
+	assert.Equal(t, "Transfer(2)A-B:15(1)", instructions.instructions[15].raw())
+	assert.Equal(t, "Type: Transfer, From: A, To: B, Amount: 15, Fee: 1, TokenID: 2\n", instructions.instructions[15].String())
+	assert.Equal(t, "Exit(1)A:5", instructions.instructions[24].raw())
+	assert.Equal(t, "Type: Exit, From: A, Amount: 5, TokenID: 1\n", instructions.instructions[24].String())
 }
 
 func TestParsePoolTxs(t *testing.T) {
@@ -90,7 +95,6 @@ func TestParsePoolTxs(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, 5, len(instructions.instructions))
 	assert.Equal(t, 4, len(instructions.accounts))
-	assert.Equal(t, 2, len(instructions.tokenIDs))
 
 	if debug {
 		fmt.Println(instructions)
@@ -117,11 +121,12 @@ func TestParseErrors(t *testing.T) {
 
 	s = `
 		Type: Blockchain
+		RegisterToken(1)
 		Deposit(1) A: 10 20
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 2: 20, err: Unexpected Blockchain tx type: 20", err.Error())
+	assert.Equal(t, "error parsing line 3: 20, err: Unexpected Blockchain tx type: 20", err.Error())
 
 	s = `
 		Type: Blockchain
@@ -141,6 +146,7 @@ func TestParseErrors(t *testing.T) {
 
 	s = `
 		Type: Blockchain
+		RegisterToken(1)
 		Transfer(1) A-B: 10 (255)
 	`
 	parser = newParser(strings.NewReader(s))
@@ -193,4 +199,17 @@ func TestParseErrors(t *testing.T) {
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
 	assert.Equal(t, "error parsing line 0: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'", err.Error())
+	s = `Type: PoolL2
+		Type: Blockchain`
+	parser = newParser(strings.NewReader(s))
+	_, err = parser.parse()
+	assert.Equal(t, "Instruction of 'Type: Blockchain' when there is already a previous instruction 'Type: PoolL2' defined", err.Error())
+
+	s = `Type: Blockchain
+		RegisterToken(1)
+		RegisterToken(0)
+		`
+	parser = newParser(strings.NewReader(s))
+	_, err = parser.parse()
+	assert.Equal(t, "RegisterToken can not register TokenID 0", err.Error())
 }
