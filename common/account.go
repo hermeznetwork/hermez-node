@@ -26,11 +26,11 @@ const (
 	// maxIdxValue is the maximum value that Idx can have (48 bits: maxIdxValue=2**48-1)
 	maxIdxValue = 0xffffffffffff
 
-	// userThreshold determines the threshold from the User Idxs can be
-	userThreshold = 256
+	// UserThreshold determines the threshold from the User Idxs can be
+	UserThreshold = 256
 	// IdxUserThreshold is a Idx type value that determines the threshold
 	// from the User Idxs can be
-	IdxUserThreshold = Idx(userThreshold)
+	IdxUserThreshold = Idx(UserThreshold)
 )
 
 var (
