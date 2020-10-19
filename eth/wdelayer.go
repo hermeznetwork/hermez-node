@@ -19,11 +19,11 @@ import (
 // WDelayerConstants are the constants of the Rollup Smart Contract
 type WDelayerConstants struct {
 	// Max Withdrawal Delay
-	MaxWithdrawalDelay uint64
+	MaxWithdrawalDelay uint64 `json:"maxWithdrawalDelay"`
 	// Max Emergency mode time
-	MaxEmergencyModeTime uint64
+	MaxEmergencyModeTime uint64 `json:"maxEmergencyModeTime"`
 	// HermezRollup smartcontract address
-	HermezRollup ethCommon.Address
+	HermezRollup ethCommon.Address `json:"hermezRollup"`
 }
 
 // DepositState is the state of Deposit

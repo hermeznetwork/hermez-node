@@ -198,7 +198,7 @@ func getState(c *gin.Context) {
 }
 
 func getConfig(c *gin.Context) {
-
+	c.JSON(http.StatusOK, cg)
 }
 
 func getTokens(c *gin.Context) {

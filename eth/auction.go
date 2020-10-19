@@ -22,18 +22,18 @@ import (
 // AuctionConstants are the constants of the Rollup Smart Contract
 type AuctionConstants struct {
 	// Blocks per slot
-	BlocksPerSlot uint8
+	BlocksPerSlot uint8 `json:"blocksPerSlot"`
 	// Minimum bid when no one has bid yet
-	InitialMinimalBidding *big.Int
+	InitialMinimalBidding *big.Int `json:"initialMinimalBidding"`
 	// First block where the first slot begins
-	GenesisBlockNum int64
+	GenesisBlockNum int64 `json:"genesisBlockNum"`
 	// ERC777 token with which the bids will be made
-	TokenHEZ ethCommon.Address
+	TokenHEZ ethCommon.Address `json:"tokenHEZ"`
 	// HermezRollup smartcontract address
-	HermezRollup ethCommon.Address
+	HermezRollup ethCommon.Address `json:"hermezRollup"`
 	// Hermez Governanze Token smartcontract address who controls some parameters and collects HEZ fee
 	// Only for test
-	GovernanceAddress ethCommon.Address
+	GovernanceAddress ethCommon.Address `json:"governanceAddress"`
 }
 
 // SlotState is the state of a slot

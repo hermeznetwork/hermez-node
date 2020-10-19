@@ -10,6 +10,7 @@ import (
 )
 
 var h *historydb.HistoryDB
+var cg *configAPI
 
 // var s *statedb.StateDB // Not 100% sure if this is needed
 // var l2 *l2db.L2DB
@@ -21,6 +22,7 @@ func SetAPIEndpoints(
 	hdb *historydb.HistoryDB,
 	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
+	config *configAPI,
 ) error {
 	// Check input
 	// TODO: is stateDB only needed for explorer endpoints or for both?
@@ -32,6 +34,7 @@ func SetAPIEndpoints(
 	}
 
 	h = hdb
+	cg = config
 	// s = sdb
 	// l2 = l2db
 
