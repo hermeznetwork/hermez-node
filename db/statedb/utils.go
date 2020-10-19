@@ -51,12 +51,12 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 	if err != nil {
 		return err
 	}
-	err = tx.Put(k, idxBytes[:])
+	err = tx.Put(append(PrefixKeyAddrBJJ, k...), idxBytes[:])
 	if err != nil {
 		return err
 	}
 	// store Addr-idx
-	err = tx.Put(addr.Bytes(), idxBytes[:])
+	err = tx.Put(append(PrefixKeyAddr, addr.Bytes()...), idxBytes[:])
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 // Ethereum Address. Will return common.Idx(0) and error in case that Idx is
 // not found in the StateDB.
 func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
-	b, err := s.db.Get(addr.Bytes())
+	b, err := s.db.Get(append(PrefixKeyAddr, addr.Bytes()...))
 	if err != nil {
 		return common.Idx(0), ErrToIdxNotFound
 	}
@@ -94,7 +94,7 @@ func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicK
 	} else if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk != nil {
 		// case ToEthAddr!=0 && ToBJJ!=0
 		k := concatEthAddrBJJ(addr, pk)
-		b, err := s.db.Get(k)
+		b, err := s.db.Get(append(PrefixKeyAddrBJJ, k...))
 		if err != nil {
 			return common.Idx(0), ErrToIdxNotFound
 		}

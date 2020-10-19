@@ -7,7 +7,8 @@ require (
 	github.com/dghubble/sling v1.3.0
 	github.com/ethereum/go-ethereum v1.9.17
 	github.com/getkin/kin-openapi v0.22.0
-	github.com/gin-gonic/gin v1.4.0
+	github.com/gin-contrib/cors v1.3.1
+	github.com/gin-gonic/gin v1.5.0
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20200823174058-e04ca5764a15
@@ -24,6 +25,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	golang.org/x/tools/gopls v0.5.0 // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.1
 )

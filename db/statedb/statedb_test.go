@@ -26,6 +26,7 @@ func newAccount(t *testing.T, i int) *common.Account {
 	address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
 	return &common.Account{
+		Idx:       common.Idx(256 + i),
 		TokenID:   common.TokenID(i),
 		Nonce:     common.Nonce(i),
 		Balance:   big.NewInt(1000),
@@ -124,7 +125,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 
 	// create test accounts
 	var accounts []*common.Account
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 4; i++ {
 		accounts = append(accounts, newAccount(t, i))
 	}
 
@@ -136,22 +137,22 @@ func TestStateDBWithoutMT(t *testing.T) {
 
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
-		_, err = sdb.CreateAccount(common.Idx(i), accounts[i])
+		_, err = sdb.CreateAccount(accounts[i].Idx, accounts[i])
 		assert.Nil(t, err)
 	}
 
 	for i := 0; i < len(accounts); i++ {
-		existingAccount := common.Idx(i)
+		existingAccount := accounts[i].Idx
 		accGetted, err := sdb.GetAccount(existingAccount)
 		assert.Nil(t, err)
 		assert.Equal(t, accounts[i], accGetted)
 	}
 
 	// try already existing idx and get error
-	existingAccount := common.Idx(1)
+	existingAccount := common.Idx(256)
 	_, err = sdb.GetAccount(existingAccount) // check that exist
 	assert.Nil(t, err)
-	_, err = sdb.CreateAccount(common.Idx(1), accounts[1]) // check that can not be created twice
+	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrAccountAlreadyExists, err)
 
@@ -188,35 +189,35 @@ func TestStateDBWithMT(t *testing.T) {
 
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
-		_, err = sdb.CreateAccount(common.Idx(i), accounts[i])
+		_, err = sdb.CreateAccount(accounts[i].Idx, accounts[i])
 		assert.Nil(t, err)
 	}
 
 	for i := 0; i < len(accounts); i++ {
-		accGetted, err := sdb.GetAccount(common.Idx(i))
+		accGetted, err := sdb.GetAccount(accounts[i].Idx)
 		assert.Nil(t, err)
 		assert.Equal(t, accounts[i], accGetted)
 	}
 
 	// try already existing idx and get error
-	_, err = sdb.GetAccount(common.Idx(1)) // check that exist
+	_, err = sdb.GetAccount(common.Idx(256)) // check that exist
 	assert.Nil(t, err)
-	_, err = sdb.CreateAccount(common.Idx(1), accounts[1]) // check that can not be created twice
+	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrAccountAlreadyExists, err)
 
-	_, err = sdb.MTGetProof(common.Idx(1))
+	_, err = sdb.MTGetProof(common.Idx(256))
 	assert.Nil(t, err)
 
 	// update accounts
 	for i := 0; i < len(accounts); i++ {
 		accounts[i].Nonce = accounts[i].Nonce + 1
-		_, err = sdb.UpdateAccount(common.Idx(i), accounts[i])
+		_, err = sdb.UpdateAccount(accounts[i].Idx, accounts[i])
 		assert.Nil(t, err)
 	}
-	a, err := sdb.GetAccount(common.Idx(1)) // check that account value has been updated
+	a, err := sdb.GetAccount(common.Idx(256)) // check that account value has been updated
 	assert.Nil(t, err)
-	assert.Equal(t, accounts[1].Nonce, a.Nonce)
+	assert.Equal(t, accounts[0].Nonce, a.Nonce)
 }
 
 func TestCheckpoints(t *testing.T) {
@@ -234,7 +235,7 @@ func TestCheckpoints(t *testing.T) {
 
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
-		_, err = sdb.CreateAccount(common.Idx(i), accounts[i])
+		_, err = sdb.CreateAccount(accounts[i].Idx, accounts[i])
 		assert.Nil(t, err)
 	}
 
@@ -332,6 +333,31 @@ func TestCheckpoints(t *testing.T) {
 		printCheckpoints(t, ldb.path)
 		printCheckpoints(t, ldb2.path)
 	}
+}
+
+func TestStateDBGetAccounts(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.Nil(t, err)
+
+	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
+	assert.Nil(t, err)
+
+	// create test accounts
+	var accounts []common.Account
+	for i := 0; i < 16; i++ {
+		account := newAccount(t, i)
+		accounts = append(accounts, *account)
+	}
+
+	// add test accounts
+	for i := range accounts {
+		_, err = sdb.CreateAccount(accounts[i].Idx, &accounts[i])
+		require.Nil(t, err)
+	}
+
+	dbAccounts, err := sdb.GetAccounts()
+	require.Nil(t, err)
+	assert.Equal(t, accounts, dbAccounts)
 }
 
 func printCheckpoints(t *testing.T, path string) {
