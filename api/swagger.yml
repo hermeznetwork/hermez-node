@@ -1917,6 +1917,8 @@ components:
             - $ref: '#/components/schemas/EthereumAddress'
             - description: Ethereum address in which the token is deployed.
             - example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         name:
           type: string
           description: full name of the token
@@ -1947,6 +1949,7 @@ components:
       required:
         - id
         - ethereumAddress
+        - itemId
         - name
         - symbol
         - decimals

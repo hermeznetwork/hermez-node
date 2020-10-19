@@ -71,20 +71,20 @@ type l2Info struct {
 }
 
 type historyTxAPI struct {
-	IsL1        string              `json:"L1orL2"`
-	TxID        string              `json:"id"`
-	ItemID      int                 `json:"itemId"`
-	Type        common.TxType       `json:"type"`
-	Position    int                 `json:"position"`
-	FromIdx     *string             `json:"fromAccountIndex"`
-	ToIdx       string              `json:"toAccountIndex"`
-	Amount      string              `json:"amount"`
-	BatchNum    *common.BatchNum    `json:"batchNum"`
-	HistoricUSD *float64            `json:"historicUSD"`
-	Timestamp   time.Time           `json:"timestamp"`
-	L1Info      *l1Info             `json:"L1Info"`
-	L2Info      *l2Info             `json:"L2Info"`
-	Token       historydb.TokenRead `json:"token"`
+	IsL1        string           `json:"L1orL2"`
+	TxID        string           `json:"id"`
+	ItemID      int              `json:"itemId"`
+	Type        common.TxType    `json:"type"`
+	Position    int              `json:"position"`
+	FromIdx     *string          `json:"fromAccountIndex"`
+	ToIdx       string           `json:"toAccountIndex"`
+	Amount      string           `json:"amount"`
+	BatchNum    *common.BatchNum `json:"batchNum"`
+	HistoricUSD *float64         `json:"historicUSD"`
+	Timestamp   time.Time        `json:"timestamp"`
+	L1Info      *l1Info          `json:"L1Info"`
+	L2Info      *l2Info          `json:"L2Info"`
+	Token       tokenAPI         `json:"token"`
 }
 
 func historyTxsToAPI(dbTxs []historydb.HistoryTx) []historyTxAPI {
@@ -100,7 +100,7 @@ func historyTxsToAPI(dbTxs []historydb.HistoryTx) []historyTxAPI {
 			HistoricUSD: dbTxs[i].HistoricUSD,
 			BatchNum:    dbTxs[i].BatchNum,
 			Timestamp:   dbTxs[i].Timestamp,
-			Token: historydb.TokenRead{
+			Token: tokenAPI{
 				TokenID:     dbTxs[i].TokenID,
 				EthBlockNum: dbTxs[i].TokenEthBlockNum,
 				EthAddr:     dbTxs[i].TokenEthAddr,
@@ -170,7 +170,7 @@ type exitAPI struct {
 	InstantWithdrawn       *int64                          `json:"instantWithdrawn"`
 	DelayedWithdrawRequest *int64                          `json:"delayedWithdrawRequest"`
 	DelayedWithdrawn       *int64                          `json:"delayedWithdrawn"`
-	Token                  historydb.TokenRead             `json:"token"`
+	Token                  tokenAPI                        `json:"token"`
 }
 
 func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
@@ -185,7 +185,7 @@ func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
 			InstantWithdrawn:       dbExits[i].InstantWithdrawn,
 			DelayedWithdrawRequest: dbExits[i].DelayedWithdrawRequest,
 			DelayedWithdrawn:       dbExits[i].DelayedWithdrawn,
-			Token: historydb.TokenRead{
+			Token: tokenAPI{
 				TokenID:     dbExits[i].TokenID,
 				EthBlockNum: dbExits[i].TokenEthBlockNum,
 				EthAddr:     dbExits[i].TokenEthAddr,
@@ -198,4 +198,53 @@ func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
 		})
 	}
 	return apiExits
+}
+
+// Tokens
+
+type tokensAPI struct {
+	Tokens     []tokenAPI     `json:"tokens"`
+	Pagination *db.Pagination `json:"pagination"`
+}
+
+func (t *tokensAPI) GetPagination() *db.Pagination {
+	if t.Tokens[0].ItemID < t.Tokens[len(t.Tokens)-1].ItemID {
+		t.Pagination.FirstReturnedItem = t.Tokens[0].ItemID
+		t.Pagination.LastReturnedItem = t.Tokens[len(t.Tokens)-1].ItemID
+	} else {
+		t.Pagination.LastReturnedItem = t.Tokens[0].ItemID
+		t.Pagination.FirstReturnedItem = t.Tokens[len(t.Tokens)-1].ItemID
+	}
+	return t.Pagination
+}
+func (t *tokensAPI) Len() int { return len(t.Tokens) }
+
+type tokenAPI struct {
+	ItemID      int               `json:"itemId"`
+	TokenID     common.TokenID    `json:"id"`
+	EthBlockNum int64             `json:"ethereumBlockNum"` // Ethereum block number in which this token was registered
+	EthAddr     ethCommon.Address `json:"ethereumAddress"`
+	Name        string            `json:"name"`
+	Symbol      string            `json:"symbol"`
+	Decimals    uint64            `json:"decimals"`
+	USD         *float64          `json:"USD"`
+	USDUpdate   *time.Time        `json:"fiatUpdate"`
+}
+
+func tokensToAPI(dbTokens []historydb.TokenRead) []tokenAPI {
+	apiTokens := []tokenAPI{}
+	for i := 0; i < len(dbTokens); i++ {
+		apiTokens = append(apiTokens, tokenAPI{
+			ItemID:      dbTokens[i].ItemID,
+			TokenID:     dbTokens[i].TokenID,
+			EthBlockNum: dbTokens[i].EthBlockNum,
+			EthAddr:     dbTokens[i].EthAddr,
+			Name:        dbTokens[i].Name,
+			Symbol:      dbTokens[i].Symbol,
+			Decimals:    dbTokens[i].Decimals,
+			USD:         dbTokens[i].USD,
+			USDUpdate:   dbTokens[i].USDUpdate,
+		})
+	}
+	return apiTokens
 }

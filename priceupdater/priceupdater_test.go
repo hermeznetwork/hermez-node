@@ -51,7 +51,8 @@ func TestPriceUpdater(t *testing.T) {
 	// Update prices
 	pu.UpdatePrices()
 	// Check that prices have been updated
-	fetchedTokens, err := historyDB.GetTokens()
+	limit := uint(10)
+	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, historydb.OrderAsc)
 	assert.NoError(t, err)
 	for _, token := range fetchedTokens {
 		assert.NotNil(t, token.USD)

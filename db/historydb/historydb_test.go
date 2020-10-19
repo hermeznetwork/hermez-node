@@ -145,8 +145,9 @@ func TestTokens(t *testing.T) {
 	tokens := test.GenTokens(nTokens, blocks)
 	err := historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
-	// Fetch tokens
-	fetchedTokens, err := historyDB.GetTokens()
+	limit := uint(10)
+	// Fetch tokens6
+	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
 	assert.NoError(t, err)
 	// Compare fetched tokens vs generated tokens
 	// All the tokens should have USDUpdate setted by the DB trigger

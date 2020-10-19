@@ -298,13 +298,75 @@ func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenRead, error) {
 }
 
 // GetTokens returns a list of tokens from the DB
-func (hdb *HistoryDB) GetTokens() ([]TokenRead, error) {
-	var tokens []*TokenRead
-	err := meddler.QueryAll(
-		hdb.db, &tokens,
-		"SELECT * FROM token ORDER BY token_id;",
-	)
-	return db.SlicePtrsToSlice(tokens).([]TokenRead), err
+func (hdb *HistoryDB) GetTokens(ids []common.TokenID, symbols []string, name string, fromItem, limit *uint, order string) ([]TokenRead, *db.Pagination, error) {
+	var query string
+	var args []interface{}
+	queryStr := `SELECT * , COUNT(*) OVER() AS total_items, MIN(token.item_id) OVER() AS first_item, MAX(token.item_id) OVER() AS last_item FROM token `
+	// Apply filters
+	nextIsAnd := false
+	if len(ids) > 0 {
+		queryStr += "WHERE token_id IN (?) "
+		nextIsAnd = true
+		args = append(args, ids)
+	}
+	if len(symbols) > 0 {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "symbol IN (?) "
+		args = append(args, symbols)
+		nextIsAnd = true
+	}
+	if name != "" {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "name ~ ? "
+		args = append(args, name)
+		nextIsAnd = true
+	}
+	if fromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if order == OrderAsc {
+			queryStr += "item_id >= ? "
+		} else {
+			queryStr += "item_id <= ? "
+		}
+		args = append(args, fromItem)
+	}
+	// pagination
+	queryStr += "ORDER BY item_id "
+	if order == OrderAsc {
+		queryStr += "ASC "
+	} else {
+		queryStr += "DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	query, argsQ, err := sqlx.In(queryStr, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	query = hdb.db.Rebind(query)
+	tokens := []*TokenRead{}
+	if err := meddler.QueryAll(hdb.db, &tokens, query, argsQ...); err != nil {
+		return nil, nil, err
+	}
+	if len(tokens) == 0 {
+		return nil, nil, sql.ErrNoRows
+	}
+	return db.SlicePtrsToSlice(tokens).([]TokenRead), &db.Pagination{
+		TotalItems: tokens[0].TotalItems,
+		FirstItem:  tokens[0].FirstItem,
+		LastItem:   tokens[0].LastItem,
+	}, nil
 }
 
 // GetTokenSymbols returns all the token symbols from the DB
