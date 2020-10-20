@@ -69,7 +69,7 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 		}
 		defer func() {
 			if err := os.RemoveAll(tmpDir); err != nil {
-				log.Errorw("Dleting statedb temp exit tree", "err", err)
+				log.Errorw("Deleting statedb temp exit tree", "err", err)
 			}
 		}()
 		sto, err := pebble.NewPebbleStorage(tmpDir, false)
