@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
 	"github.com/iden3/go-merkletree/db/pebble"
@@ -103,7 +103,7 @@ func NewStateDB(path string, typ TypeStateDB, nLevels int) (*StateDB, error) {
 	}
 
 	// make reset (get checkpoint) at currentBatch
-	err = sdb.Reset(sdb.currentBatch)
+	err = sdb.reset(sdb.currentBatch, false)
 	if err != nil {
 		return nil, err
 	}
@@ -162,6 +162,8 @@ func (s *StateDB) MakeCheckpoint() error {
 		if err != nil {
 			return err
 		}
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	// execute Checkpoint
@@ -184,14 +186,59 @@ func (s *StateDB) DeleteCheckpoint(batchNum common.BatchNum) error {
 	return os.RemoveAll(checkpointPath)
 }
 
+func pebbleMakeCheckpoint(source, dest string) error {
+	// Remove dest folder (if it exists) before doing the checkpoint
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		err := os.RemoveAll(dest)
+		if err != nil {
+			return err
+		}
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	sto, err := pebble.NewPebbleStorage(source, false)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		errClose := sto.Pebble().Close()
+		if errClose != nil {
+			log.Errorw("Pebble.Close", "err", errClose)
+		}
+	}()
+
+	// execute Checkpoint
+	err = sto.Pebble().Checkpoint(dest)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Reset resets the StateDB to the checkpoint at the given batchNum. Reset
 // does not delete the checkpoints between old current and the new current,
 // those checkpoints will remain in the storage, and eventually will be
 // deleted when MakeCheckpoint overwrites them.
 func (s *StateDB) Reset(batchNum common.BatchNum) error {
+	return s.reset(batchNum, true)
+}
+
+// reset resets the StateDB to the checkpoint at the given batchNum. Reset
+// does not delete the checkpoints between old current and the new current,
+// those checkpoints will remain in the storage, and eventually will be
+// deleted when MakeCheckpoint overwrites them.  `closeCurrent` will close the
+// currently opened db before doing the reset.
+func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
 	currentPath := s.path + PathCurrent
 
+	if closeCurrent {
+		if err := s.db.Pebble().Close(); err != nil {
+			return err
+		}
+	}
 	// remove 'current'
 	err := os.RemoveAll(currentPath)
 	if err != nil {
@@ -210,8 +257,7 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 	}
 
 	// copy 'BatchNumX' to 'current'
-	cmd := exec.Command("cp", "-r", checkpointPath, currentPath) //nolint:gosec
-	err = cmd.Run()
+	err = pebbleMakeCheckpoint(checkpointPath, currentPath)
 	if err != nil {
 		return err
 	}
@@ -431,20 +477,21 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 			return fmt.Errorf("Checkpoint not exist in Synchronizer")
 		}
 
+		if err := l.db.Pebble().Close(); err != nil {
+			return err
+		}
 		// remove 'current'
 		err := os.RemoveAll(currentPath)
 		if err != nil {
 			return err
 		}
 		// copy synchronizer'BatchNumX' to 'current'
-		cmd := exec.Command("cp", "-r", synchronizerCheckpointPath, currentPath) //nolint:gosec
-		err = cmd.Run()
+		err = pebbleMakeCheckpoint(synchronizerCheckpointPath, currentPath)
 		if err != nil {
 			return err
 		}
-		// copy synchronizer-'BatchNumX' to 'BatchNumX'
-		cmd = exec.Command("cp", "-r", synchronizerCheckpointPath, checkpointPath) //nolint:gosec
-		err = cmd.Run()
+		// copy synchronizer'BatchNumX' to 'BatchNumX'
+		err = pebbleMakeCheckpoint(synchronizerCheckpointPath, checkpointPath)
 		if err != nil {
 			return err
 		}
@@ -471,5 +518,5 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 		return nil
 	}
 	// use checkpoint from LocalStateDB
-	return l.StateDB.Reset(batchNum)
+	return l.StateDB.reset(batchNum, true)
 }
