@@ -2,6 +2,7 @@ package statedb
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -16,6 +17,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
 	assert.Nil(t, err)
@@ -72,6 +74,7 @@ WIP
 func TestProcessTxsBatchBuilder(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32)
 	assert.Nil(t, err)
@@ -121,6 +124,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 func TestZKInputsGeneration(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32)
 	assert.Nil(t, err)

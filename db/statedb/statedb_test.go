@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"testing"
 
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -37,6 +38,7 @@ func newAccount(t *testing.T, i int) *common.Account {
 func TestNewStateDBIntermediateState(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)
@@ -118,6 +120,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 func TestStateDBWithoutMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)
@@ -171,6 +174,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 func TestStateDBWithMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
 	assert.Nil(t, err)
@@ -222,6 +226,7 @@ func TestStateDBWithMT(t *testing.T) {
 func TestCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "sdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
 	assert.Nil(t, err)
@@ -289,6 +294,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a LocalStateDB from the initial StateDB
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dirLocal))
 	ldb, err := NewLocalStateDB(dirLocal, sdb, TypeBatchBuilder, 32)
 	assert.Nil(t, err)
 
@@ -309,6 +315,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a 2nd LocalStateDB from the initial StateDB
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dirLocal2))
 	ldb2, err := NewLocalStateDB(dirLocal2, sdb, TypeBatchBuilder, 32)
 	assert.Nil(t, err)
 

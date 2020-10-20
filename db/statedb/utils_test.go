@@ -3,6 +3,7 @@ package statedb
 import (
 	"io/ioutil"
 	"math/big"
+	"os"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -15,6 +16,7 @@ import (
 func TestGetIdx(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
 	assert.Nil(t, err)

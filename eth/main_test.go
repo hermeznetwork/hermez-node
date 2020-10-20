@@ -115,6 +115,11 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			panic(err)
 		}
+		defer func() {
+			if err := os.RemoveAll(dir); err != nil {
+				panic(err)
+			}
+		}()
 		ks = keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
 		// Load ethereum accounts from private keys
