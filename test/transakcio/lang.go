@@ -31,6 +31,10 @@ var setTypePoolL2 = setType("PoolL2")
 // common.TxType of a new batch
 var typeNewBatch common.TxType = "InstrTypeNewBatch"
 
+// typeNewBatchL1 is used for testing purposes only, and represents the
+// common.TxType of a new batch
+var typeNewBatchL1 common.TxType = "InstrTypeNewBatchL1"
+
 // typeNewBlock is used for testing purposes only, and represents the
 // common.TxType of a new ethereum block
 var typeNewBlock common.TxType = "InstrTypeNewBlock"
@@ -53,6 +57,7 @@ const (
 
 // instruction is the data structure that represents one line of code
 type instruction struct {
+	lineNum    int
 	literal    string
 	from       string
 	to         string
@@ -280,6 +285,9 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		if lit == "batch" {
 			_, _ = p.s.r.ReadString('\n')
 			return &instruction{typ: typeNewBatch}, newEventLine
+		} else if lit == "batchL1" {
+			_, _ = p.s.r.ReadString('\n')
+			return &instruction{typ: typeNewBatchL1}, newEventLine
 		} else if lit == "block" {
 			_, _ = p.s.r.ReadString('\n')
 			return &instruction{typ: typeNewBlock}, newEventLine
@@ -484,52 +492,50 @@ func idxTokenIDToString(idx string, tid common.TokenID) string {
 // parse parses through reader
 func (p *parser) parse() (*parsedSet, error) {
 	ps := &parsedSet{}
-	i := 0
+	i := 0 // lines will start counting at line 1
 	accounts := make(map[string]bool)
 	var setTypeOfSet setType
 	for {
+		i++
 		instruction, err := p.parseLine(setTypeOfSet)
 		if err == errof {
 			break
 		}
 		if err == setTypeLine {
 			if setTypeOfSet != "" {
-				return ps, fmt.Errorf("Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", instruction.typ, setTypeOfSet)
+				return ps, fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.typ, setTypeOfSet)
 			}
 			if instruction.typ == "PoolL2" {
 				setTypeOfSet = setTypePoolL2
 			} else if instruction.typ == "Blockchain" {
 				setTypeOfSet = setTypeBlockchain
 			} else {
-				log.Fatalf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", instruction.typ)
+				log.Fatalf("Line %d: Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", i, instruction.typ)
 			}
-			i++
 			continue
 		}
 		if err == commentLine {
-			i++
 			continue
 		}
+		instruction.lineNum = i
 		if err == newEventLine {
 			if instruction.typ == typeRegisterToken && instruction.tokenID == common.TokenID(0) {
-				return ps, fmt.Errorf("RegisterToken can not register TokenID 0")
+				return ps, fmt.Errorf("Line %d: RegisterToken can not register TokenID 0", i)
 			}
-			i++
 			ps.instructions = append(ps.instructions, *instruction)
 			continue
 		}
 		if err != nil {
-			return ps, fmt.Errorf("error parsing line %d: %s, err: %s", i, instruction.literal, err.Error())
+			return ps, fmt.Errorf("Line %d: %s, err: %s", i, instruction.literal, err.Error())
 		}
 		if setTypeOfSet == "" {
-			return ps, fmt.Errorf("Set type not defined")
+			return ps, fmt.Errorf("Line %d: Set type not defined", i)
 		}
 		ps.instructions = append(ps.instructions, *instruction)
 		accounts[instruction.from] = true
 		if instruction.typ == common.TxTypeTransfer { // type: Transfer
 			accounts[instruction.to] = true
 		}
-		i++
 	}
 	for a := range accounts {
 		ps.accounts = append(ps.accounts, a)

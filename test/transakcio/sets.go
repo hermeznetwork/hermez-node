@@ -42,6 +42,9 @@ CreateAccountDeposit(2) B: 5
 CreateAccountDeposit(2) A: 20
 // deposits TokenID: 3
 CreateAccountDeposit(3) B: 100
+
+> batchL1
+
 // transactions TokenID: 1
 Transfer(1) A-B: 5 (1)
 Transfer(1) A-L: 10 (1)
@@ -65,7 +68,8 @@ Transfer(1) H-K: 3 (2)
 Transfer(1) H-K: 3 (1)
 Transfer(1) H-K: 3 (1)
 
-> batch
+> batchL1
+> block
 // A (3) still does not exist, coordinator should create new L1Tx to create the account
 CreateAccountDepositCoordinator(3) A
 
@@ -132,6 +136,7 @@ Exit(1) Y: 5
 Exit(1) Z: 5
 
 > batch
+
 Deposit(1) A: 50
 Deposit(1) B: 5
 Deposit(1) C: 20
@@ -152,6 +157,10 @@ Exit(1) A: 5
 
 // create CoordinatorTx CreateAccount for D, TokenId 2, used at SetPool0 for 'PoolTransfer(2) B-D: 3 (1)'
 CreateAccountDepositCoordinator(2) D
+
+> batchL1
+> batchL1
+> block
 `
 
 // SetPool0 contains a set of transactions from the PoolL2

@@ -117,7 +117,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser := newParser(strings.NewReader(s))
 	_, err := parser.parse()
-	assert.Equal(t, "error parsing line 1: Deposit(1)A:: 10\n, err: strconv.Atoi: parsing \":\": invalid syntax", err.Error())
+	assert.Equal(t, "Line 2: Deposit(1)A:: 10\n, err: strconv.Atoi: parsing \":\": invalid syntax", err.Error())
 
 	s = `
 		Type: Blockchain
@@ -126,7 +126,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 3: 20, err: Unexpected Blockchain tx type: 20", err.Error())
+	assert.Equal(t, "Line 4: 20, err: Unexpected Blockchain tx type: 20", err.Error())
 
 	s = `
 		Type: Blockchain
@@ -134,7 +134,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: Transfer(1)A:, err: Expected '-', found ':'", err.Error())
+	assert.Equal(t, "Line 2: Transfer(1)A:, err: Expected '-', found ':'", err.Error())
 
 	s = `
 		Type: Blockchain
@@ -142,7 +142,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: Transfer(1)AB, err: Expected '-', found 'B'", err.Error())
+	assert.Equal(t, "Line 2: Transfer(1)AB, err: Expected '-', found 'B'", err.Error())
 
 	s = `
 		Type: Blockchain
@@ -158,7 +158,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: Transfer(1)A-B:10(256)\n, err: Fee 256 can not be bigger than 255", err.Error())
+	assert.Equal(t, "Line 2: Transfer(1)A-B:10(256)\n, err: Fee 256 can not be bigger than 255", err.Error())
 
 	// check that the PoolTransfer & Transfer are only accepted in the
 	// correct case case (PoolTxs/BlockchainTxs)
@@ -168,14 +168,14 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: Transfer, err: Unexpected PoolL2 tx type: Transfer", err.Error())
+	assert.Equal(t, "Line 2: Transfer, err: Unexpected PoolL2 tx type: Transfer", err.Error())
 	s = `
 		Type: Blockchain
 		PoolTransfer(1) A-B: 10 (1)
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: PoolTransfer, err: Unexpected Blockchain tx type: PoolTransfer", err.Error())
+	assert.Equal(t, "Line 2: PoolTransfer, err: Unexpected Blockchain tx type: PoolTransfer", err.Error())
 
 	s = `
 		Type: Blockchain
@@ -183,27 +183,27 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 1: >, err: Unexpected '> btch', expected '> batch' or '> block'", err.Error())
+	assert.Equal(t, "Line 2: >, err: Unexpected '> btch', expected '> batch' or '> block'", err.Error())
 
 	// check definition of set Type
 	s = `PoolTransfer(1) A-B: 10 (1)`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 0: PoolTransfer, err: Set type not defined", err.Error())
+	assert.Equal(t, "Line 1: PoolTransfer, err: Set type not defined", err.Error())
 	s = `Type: PoolL1`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 0: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'", err.Error())
+	assert.Equal(t, "Line 1: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'", err.Error())
 	s = `Type: PoolL1
 		Type: Blockchain`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "error parsing line 0: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'", err.Error())
+	assert.Equal(t, "Line 1: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'", err.Error())
 	s = `Type: PoolL2
 		Type: Blockchain`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Instruction of 'Type: Blockchain' when there is already a previous instruction 'Type: PoolL2' defined", err.Error())
+	assert.Equal(t, "Line 2: Instruction of 'Type: Blockchain' when there is already a previous instruction 'Type: PoolL2' defined", err.Error())
 
 	s = `Type: Blockchain
 		RegisterToken(1)
@@ -211,5 +211,5 @@ func TestParseErrors(t *testing.T) {
 		`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "RegisterToken can not register TokenID 0", err.Error())
+	assert.Equal(t, "Line 3: RegisterToken can not register TokenID 0", err.Error())
 }
