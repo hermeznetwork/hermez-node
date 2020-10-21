@@ -60,7 +60,7 @@ func TestSync(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, int64(1), blocks[0].EthBlockNum)
 
-	// TODO once transakcio is completed
+	// TODO once Til is completed
 	/*
 			// Test Sync for a block with new Tokens and L1UserTxs
 			// accounts := test.GenerateKeys(t, []string{"A", "B", "C", "D"})

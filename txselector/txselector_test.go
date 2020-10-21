@@ -39,7 +39,7 @@ func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 }
 
 func TestGetL2TxSelection(t *testing.T) {
-	txsel := initTest(t, transakcio.SetPool0, 5, 5, 10)
+	txsel := initTest(t, til.SetPool0, 5, 5, 10)
 	test.CleanL2DB(txsel.l2db.DB())
 
 	   	// generate test transactions
@@ -57,7 +57,7 @@ func TestGetL2TxSelection(t *testing.T) {
 	   	assert.Nil(t, err)
 
 		// TODO once L2DB is updated to return error in case that AddTxTest
-		// fails, and the Transakcio is updated, update this test, checking that the
+		// fails, and the Til is updated, update this test, checking that the
 		// selected PoolL2Tx are correctly sorted by Nonce
 
 

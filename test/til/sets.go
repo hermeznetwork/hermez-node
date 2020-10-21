@@ -1,4 +1,4 @@
-package transakcio
+package til
 
 // sets of instructions to be used in tests of other packages
 
