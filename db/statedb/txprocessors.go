@@ -2,14 +2,16 @@ package statedb
 
 import (
 	"errors"
+	"io/ioutil"
 	"math/big"
+	"os"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
-	"github.com/iden3/go-merkletree/db/memory"
+	"github.com/iden3/go-merkletree/db/pebble"
 )
 
 var (
@@ -61,7 +63,20 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
 	// only needed in memory
 	if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
-		exitTree, err = merkletree.NewMerkleTree(memory.NewMemoryStorage(), s.mt.MaxLevels())
+		tmpDir, err := ioutil.TempDir("", "hermez-statedb-exittree")
+		if err != nil {
+			return nil, nil, err
+		}
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				log.Errorw("Deleting statedb temp exit tree", "err", err)
+			}
+		}()
+		sto, err := pebble.NewPebbleStorage(tmpDir, false)
+		if err != nil {
+			return nil, nil, err
+		}
+		exitTree, err = merkletree.NewMerkleTree(sto, s.mt.MaxLevels())
 		if err != nil {
 			return nil, nil, err
 		}

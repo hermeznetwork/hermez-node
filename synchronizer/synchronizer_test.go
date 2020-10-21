@@ -29,6 +29,7 @@ func TestSync(t *testing.T) {
 	// Int State DB
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 
 	stateDB, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32)
 	assert.Nil(t, err)

@@ -10,11 +10,13 @@ func initTest(t *testing.T, testSet string, maxL1UserTxs, maxL1OperatorTxs, maxT
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
 	require.Nil(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
 	txsel, err := NewTxSelector(txselDir, sdb, l2DB, maxL1UserTxs, maxL1OperatorTxs, maxTxs)
 	require.Nil(t, err)
 

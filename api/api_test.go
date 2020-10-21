@@ -151,6 +151,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	}()
 	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
 	if err != nil {
 		panic(err)

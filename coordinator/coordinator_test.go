@@ -25,6 +25,7 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 
 	synchDBPath, err := ioutil.TempDir("", "tmpSynchDB")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(synchDBPath))
 	synchSdb, err := statedb.NewStateDB(synchDBPath, statedb.TypeSynchronizer, nLevels)
 	assert.Nil(t, err)
 
@@ -44,11 +45,13 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(txselDir))
 	txsel, err := txselector.NewTxSelector(txselDir, synchSdb, l2DB, 10, 10, 10)
 	assert.Nil(t, err)
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(bbDir))
 	bb, err := batchbuilder.NewBatchBuilder(bbDir, synchSdb, nil, 0, uint64(nLevels))
 	assert.Nil(t, err)
 
