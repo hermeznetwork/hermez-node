@@ -1,4 +1,4 @@
-package transakcio
+package til
 
 import (
 	"crypto/ecdsa"
@@ -15,8 +15,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// TestContext contains the data of the test
-type TestContext struct {
+// Context contains the data of the test
+type Context struct {
 	Instructions          []instruction
 	accountsNames         []string
 	Users                 map[string]*User
@@ -35,9 +35,9 @@ type TestContext struct {
 	openToForge  int
 }
 
-// NewTestContext returns a new TestContext
-func NewTestContext(rollupConstMaxL1UserTx int) *TestContext {
-	return &TestContext{
+// NewContext returns a new Context
+func NewContext(rollupConstMaxL1UserTx int) *Context {
+	return &Context{
 		Users:                 make(map[string]*User),
 		l1CreatedAccounts:     make(map[string]*Account),
 		lastRegisteredTokenID: 0,
@@ -82,8 +82,7 @@ type BatchData struct {
 	L2Txs                []common.L2Tx
 	// testL2Tx are L2Txs without the Idx&EthAddr&BJJ setted, but with the
 	// string that represents the account
-	testL2Txs       []L2Tx
-	CreatedAccounts []common.Account
+	testL2Txs []L2Tx
 }
 
 // L1Tx is the data structure used internally for transaction test generation,
@@ -109,8 +108,8 @@ type L2Tx struct {
 }
 
 // GenerateBlocks returns an array of BlockData for a given set. It uses the
-// accounts (keys & nonces) of the TestContext.
-func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
+// accounts (keys & nonces) of the Context.
+func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
 	if err != nil {
@@ -135,7 +134,7 @@ func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
 				FromBJJ:     tc.Users[inst.from].BJJ.Public(),
 				TokenID:     inst.tokenID,
 				LoadAmount:  big.NewInt(int64(inst.loadAmount)),
-				Type:        common.TxTypeCreateAccountDeposit, // as txTypeCreateAccountDepositCoordinator is not valid oustide Transakcio package
+				Type:        common.TxTypeCreateAccountDeposit, // as txTypeCreateAccountDepositCoordinator is not valid oustide Til package
 			}
 			testTx := L1Tx{
 				lineNum:     inst.lineNum,
@@ -267,7 +266,7 @@ func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
 				return nil, err
 			}
 
-			// once Idxs are calculated, update transactions to use the new Idxs
+			// once Idxs are calculated, update transactions to use the real Idxs
 			for i := 0; i < len(tc.queues[tc.toForgeNum]); i++ {
 				testTx := &tc.queues[tc.toForgeNum][i]
 				if testTx.L1Tx.Type != common.TxTypeCreateAccountDeposit && testTx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {
@@ -287,6 +286,7 @@ func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
 				testTx.L1Tx.BatchNum = &bn
 				nTx, err := common.NewL1Tx(&testTx.L1Tx)
 				if err != nil {
+					fmt.Println(testTx)
 					return nil, fmt.Errorf("Line %d: %s", testTx.lineNum, err.Error())
 				}
 				testTx.L1Tx = *nTx
@@ -327,13 +327,13 @@ func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
 
 // calculateIdxsForL1Txs calculates new Idx for new created accounts. If
 // 'isCoordinatorTxs==true', adds the tx to tc.currBatch.L1CoordinatorTxs.
-func (tc *TestContext) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error {
+func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error {
 	// for each batch.L1CoordinatorTxs of the queues[ToForgeNum], calculate the Idx
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
 		if tx.L1Tx.Type == common.TxTypeCreateAccountDeposit || tx.L1Tx.Type == common.TxTypeCreateAccountDepositTransfer {
 			if tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] != nil { // if account already exists, return error
-				return fmt.Errorf("Can not create same account twice (same User & same TokenID) (this is a design property of Transakcio)")
+				return fmt.Errorf("Can not create same account twice (same User & same TokenID) (this is a design property of Til)")
 			}
 			tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] = &Account{
 				Idx:   common.Idx(tc.idx),
@@ -350,7 +350,7 @@ func (tc *TestContext) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) e
 }
 
 // setIdxs sets the Idxs to the transactions of the tc.currBatch
-func (tc *TestContext) setIdxs() error {
+func (tc *Context) setIdxs() error {
 	// once Idxs are calculated, update transactions to use the new Idxs
 	for i := 0; i < len(tc.currBatch.testL2Txs); i++ {
 		testTx := &tc.currBatch.testL2Txs[i]
@@ -373,7 +373,7 @@ func (tc *TestContext) setIdxs() error {
 		}
 		nTx, err := common.NewL2Tx(&testTx.L2Tx)
 		if err != nil {
-			return err
+			return fmt.Errorf("Line %d: %s", testTx.lineNum, err.Error())
 		}
 		testTx.L2Tx = *nTx
 
@@ -388,7 +388,7 @@ func (tc *TestContext) setIdxs() error {
 }
 
 // addToL1Queue adds the L1Tx into the queue that is open and has space
-func (tc *TestContext) addToL1Queue(tx L1Tx) {
+func (tc *Context) addToL1Queue(tx L1Tx) {
 	if len(tc.queues[tc.openToForge]) >= tc.rollupConstMaxL1UserTx {
 		// if current OpenToForge queue reached its Max, move into a
 		// new queue
@@ -399,13 +399,13 @@ func (tc *TestContext) addToL1Queue(tx L1Tx) {
 	tc.queues[tc.openToForge] = append(tc.queues[tc.openToForge], tx)
 }
 
-func (tc *TestContext) checkIfAccountExists(tf string, inst instruction) error {
+func (tc *Context) checkIfAccountExists(tf string, inst instruction) error {
 	if tc.Users[tf].Accounts[inst.tokenID] == nil {
 		return fmt.Errorf("%s at User: %s, for TokenID: %d, while account not created yet", inst.typ, tf, inst.tokenID)
 	}
 	return nil
 }
-func (tc *TestContext) checkIfTokenIsRegistered(inst instruction) error {
+func (tc *Context) checkIfTokenIsRegistered(inst instruction) error {
 	if inst.tokenID > tc.lastRegisteredTokenID {
 		return fmt.Errorf("Can not process %s: TokenID %d not registered, last registered TokenID: %d", inst.typ, inst.tokenID, tc.lastRegisteredTokenID)
 	}
@@ -413,8 +413,8 @@ func (tc *TestContext) checkIfTokenIsRegistered(inst instruction) error {
 }
 
 // GeneratePoolL2Txs returns an array of common.PoolL2Tx from a given set. It
-// uses the accounts (keys & nonces) of the TestContext.
-func (tc *TestContext) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
+// uses the accounts (keys & nonces) of the Context.
+func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
 	if err != nil {
@@ -492,7 +492,7 @@ func (tc *TestContext) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) 
 // generateKeys generates BabyJubJub & Address keys for the given list of
 // account names in a deterministic way. This means, that for the same given
 // 'accNames' in a certain order, the keys will be always the same.
-func (tc *TestContext) generateKeys(accNames []string) {
+func (tc *Context) generateKeys(accNames []string) {
 	for i := 1; i < len(accNames)+1; i++ {
 		if _, ok := tc.Users[accNames[i-1]]; ok {
 			// account already created

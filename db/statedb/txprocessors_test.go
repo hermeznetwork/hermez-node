@@ -7,7 +7,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth"
-	"github.com/hermeznetwork/hermez-node/test/transakcio"
+	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,8 +24,8 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Nil(t, err)
 
 	// generate test transactions from test.SetTest0 code
-	tc := transakcio.NewTestContext(eth.RollupConstMaxL1UserTx)
-	blocks, err := tc.GenerateBlocks(transakcio.SetBlockchain0)
+	tc := til.NewContext(eth.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
 	require.Nil(t, err)
 
 	assert.Equal(t, 29, len(blocks[0].L1UserTxs))
@@ -89,8 +89,8 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Nil(t, err)
 
 	// generate test transactions from test.SetTest0 code
-	tc := transakcio.NewTestContext()
-	blocks := tc.GenerateBlocks(transakcio.SetBlockchain0)
+	tc := til.NewContext()
+	blocks := tc.GenerateBlocks(til.SetBlockchain0)
 
 	assert.Equal(t, 29, len(blocks[0].Batches[0].L1UserTxs))
 	assert.Equal(t, 0, len(blocks[0].Batches[0].L1CoordinatorTxs))
@@ -139,8 +139,8 @@ func TestZKInputsGeneration(t *testing.T) {
 	assert.Nil(t, err)
 
 	// generate test transactions from test.SetTest0 code
-	tc := transakcio.NewTestContext()
-	blocks := tc.GenerateBlocks(transakcio.SetBlockchain0)
+	tc := til.NewContext()
+	blocks := tc.GenerateBlocks(til.SetBlockchain0)
 	assert.Equal(t, 29, len(blocks[0].Batches[0].L1UserTxs))
 	assert.Equal(t, 0, len(blocks[0].Batches[0].L1CoordinatorTxs))
 	assert.Equal(t, 21, len(blocks[0].Batches[0].L2Txs))

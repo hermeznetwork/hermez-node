@@ -1,4 +1,4 @@
-package transakcio
+package til
 
 import (
 	"math/big"
@@ -66,7 +66,7 @@ func TestGenerateBlocks(t *testing.T) {
 		// batch and last block
 		Transfer(1) User1-User0: 1 (1)
 	`
-	tc := NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc := NewContext(eth.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set)
 	require.Nil(t, err)
 	assert.Equal(t, 2, len(blocks))
@@ -118,7 +118,7 @@ func TestGenerateBlocks(t *testing.T) {
 	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[1], common.TxTypeTransfer, 1, "A", "B", big.NewInt(1), common.BatchNum(5), common.Nonce(5))
 }
 
-func (tc *TestContext) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxType, tokenID common.TokenID, from, to string, loadAmount, amount *big.Int) {
+func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxType, tokenID common.TokenID, from, to string, loadAmount, amount *big.Int) {
 	assert.Equal(t, typ, tx.Type)
 	if tx.FromIdx != common.Idx(0) {
 		assert.Equal(t, tc.Users[from].Accounts[tokenID].Idx, tx.FromIdx)
@@ -135,7 +135,7 @@ func (tc *TestContext) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.
 		assert.Equal(t, amount, tx.Amount)
 	}
 }
-func (tc *TestContext) checkL2TxParams(t *testing.T, tx common.L2Tx, typ common.TxType, tokenID common.TokenID, from, to string, amount *big.Int, batchNum common.BatchNum, nonce common.Nonce) {
+func (tc *Context) checkL2TxParams(t *testing.T, tx common.L2Tx, typ common.TxType, tokenID common.TokenID, from, to string, amount *big.Int, batchNum common.BatchNum, nonce common.Nonce) {
 	assert.Equal(t, typ, tx.Type)
 	assert.Equal(t, tc.Users[from].Accounts[tokenID].Idx, tx.FromIdx)
 	if tx.Type != common.TxTypeExit {
@@ -168,7 +168,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		> batchL1
 		> batchL1
 	`
-	tc := NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc := NewContext(eth.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(set)
 	require.Nil(t, err)
 	set = `
@@ -197,7 +197,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	assert.Equal(t, common.Nonce(2), poolL2Txs[3].Nonce)
 	assert.Equal(t, common.Nonce(3), poolL2Txs[8].Nonce)
 
-	// load another set in the same TestContext
+	// load another set in the same Context
 	set = `
 		Type: PoolL2
 		PoolTransfer(1) A-B: 6 (1)
@@ -217,7 +217,7 @@ func TestGenerateErrors(t *testing.T) {
 		CreateAccountDeposit(1) A: 5
 		> batchL1
 		`
-	tc := NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc := NewContext(eth.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(set)
 	assert.Equal(t, "Line 2: Can not process CreateAccountDeposit: TokenID 1 not registered, last registered TokenID: 0", err.Error())
 
@@ -226,7 +226,7 @@ func TestGenerateErrors(t *testing.T) {
 		Type: Blockchain
 		RegisterToken(0)
 	`
-	tc = NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 2: RegisterToken can not register TokenID 0", err.Error())
 
@@ -234,7 +234,7 @@ func TestGenerateErrors(t *testing.T) {
 		Type: Blockchain
 		RegisterToken(2)
 	`
-	tc = NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 2: RegisterToken TokenID should be sequential, expected TokenID: 1, defined TokenID: 2", err.Error())
 
@@ -245,7 +245,7 @@ func TestGenerateErrors(t *testing.T) {
 		RegisterToken(3)
 		RegisterToken(5)
 	`
-	tc = NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 5: RegisterToken TokenID should be sequential, expected TokenID: 4, defined TokenID: 5", err.Error())
 
@@ -259,7 +259,7 @@ func TestGenerateErrors(t *testing.T) {
 		Transfer(1) A-B: 6 (1)
 		> batch
 	`
-	tc = NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 5: CreateAccountDeposit(1)BTransfer(1) A-B: 6 (1)\n, err: Expected ':', found 'Transfer'", err.Error())
 	set = `
@@ -273,7 +273,7 @@ func TestGenerateErrors(t *testing.T) {
 		Transfer(1) A-B: 6 (1)
 		> batch
 	`
-	tc = NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Nil(t, err)
 
@@ -286,12 +286,12 @@ func TestGenerateErrors(t *testing.T) {
 		CreateAccountDepositCoordinator(1) B
 		> batchL1
 		Transfer(1) A-B: 6 (1)
-		Transfer(1) A-B: 6 (1) // on purpose this is moving more money that what it has in the account, Transakcio should not fail
+		Transfer(1) A-B: 6 (1) // on purpose this is moving more money that what it has in the account, Til should not fail
 		Transfer(1) B-A: 6 (1)
 		Exit(1) A: 3
 		> batch
 	`
-	tc = NewTestContext(eth.RollupConstMaxL1UserTx)
+	tc = NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Nil(t, err)
 	assert.Equal(t, common.Nonce(3), tc.Users["A"].Accounts[common.TokenID(1)].Nonce)
