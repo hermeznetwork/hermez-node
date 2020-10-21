@@ -383,7 +383,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		position := 0
 
 		// Get the input for each Tx
-		forgeBatchArgs, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash)
+		forgeBatchArgs, sender, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash)
 		if err != nil {
 			return nil, err
 		}
@@ -467,7 +467,7 @@ func (s *Synchronizer) rollupSync(blockNum int64) (*rollupData, error) {
 		batch := &common.Batch{
 			BatchNum:    common.BatchNum(evtForgeBatch.BatchNum),
 			EthBlockNum: blockNum,
-			// ForgerAddr: , TODO: Get it from ethClient -> Add ForgerAddr to RollupEventForgeBatch
+			ForgerAddr:  *sender,
 			// CollectedFees: , TODO: Clarify where to get them if they are still needed
 			StateRoot:     common.Hash(forgeBatchArgs.NewStRoot.Bytes()),
 			NumAccounts:   numAccounts,
@@ -582,11 +582,6 @@ func getL1UserTx(eventsL1UserTx []eth.RollupEventL1UserTx, blockNum int64) ([]co
 	l1Txs := make([]common.L1Tx, 0)
 
 	for _, evtL1UserTx := range eventsL1UserTx {
-		// Fill aditional Tx fields
-		toForge := evtL1UserTx.ToForgeL1TxsNum
-		evtL1UserTx.L1UserTx.ToForgeL1TxsNum = &toForge
-		evtL1UserTx.L1UserTx.Position = evtL1UserTx.Position
-		evtL1UserTx.L1UserTx.UserOrigin = true
 		evtL1UserTx.L1UserTx.EthBlockNum = blockNum
 		nL1Tx, err := common.NewL1Tx(&evtL1UserTx.L1UserTx)
 		if err != nil {

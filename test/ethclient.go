@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -225,7 +226,9 @@ type ClientSetup struct {
 	VerifyProof      bool
 }
 
-// NewClientSetupExample returns a ClientSetup example with hardcoded realistic values.
+// NewClientSetupExample returns a ClientSetup example with hardcoded realistic
+// values.  With this setup, the rollup genesis will be block 1, and block 0
+// and 1 will be premined.
 //nolint:gomnd
 func NewClientSetupExample() *ClientSetup {
 	// rfield, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
@@ -259,7 +262,7 @@ func NewClientSetupExample() *ClientSetup {
 	auctionConstants := &eth.AuctionConstants{
 		BlocksPerSlot:         40,
 		InitialMinimalBidding: initialMinimalBidding,
-		GenesisBlockNum:       0,
+		GenesisBlockNum:       1,
 		GovernanceAddress:     governanceAddress,
 		TokenHEZ:              tokenHEZ,
 		HermezRollup:          ethCommon.HexToAddress("0x474B6e29852257491cf283EfB1A9C61eBFe48369"),
@@ -296,6 +299,11 @@ type Timer interface {
 // 	blockHash ethCommon.Hash
 // }
 
+type batch struct {
+	ForgeBatchArgs eth.RollupForgeBatchArgs
+	Sender         ethCommon.Address
+}
+
 // Client implements the eth.ClientInterface interface, allowing to manipulate the
 // values for testing, working with deterministic results.
 type Client struct {
@@ -311,8 +319,8 @@ type Client struct {
 	timer       Timer
 	hasher      hasher
 
-	forgeBatchArgsPending map[ethCommon.Hash]*eth.RollupForgeBatchArgs
-	forgeBatchArgs        map[ethCommon.Hash]*eth.RollupForgeBatchArgs
+	forgeBatchArgsPending map[ethCommon.Hash]*batch
+	forgeBatchArgs        map[ethCommon.Hash]*batch
 }
 
 // NewClient returns a new test Client that implements the eth.IClient
@@ -326,7 +334,7 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 	mapL1TxQueue := make(map[int64]*eth.QueueStruct)
 	mapL1TxQueue[0] = eth.NewQueueStruct()
 	mapL1TxQueue[1] = eth.NewQueueStruct()
-	blockCurrent := Block{
+	blockCurrent := &Block{
 		Rollup: &RollupBlock{
 			State: eth.RollupState{
 				StateRoot:        big.NewInt(0),
@@ -367,11 +375,11 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 	}
 	blockCurrent.Rollup.Eth = blockCurrent.Eth
 	blockCurrent.Auction.Eth = blockCurrent.Eth
-	blocks[blockNum] = &blockCurrent
+	blocks[blockNum] = blockCurrent
 	blockNext := blockCurrent.Next()
 	blocks[blockNum+1] = blockNext
 
-	return &Client{
+	c := Client{
 		rw:                    &sync.RWMutex{},
 		log:                   l,
 		addr:                  addr,
@@ -380,9 +388,17 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 		blocks:                blocks,
 		timer:                 timer,
 		hasher:                hasher,
-		forgeBatchArgsPending: make(map[ethCommon.Hash]*eth.RollupForgeBatchArgs),
-		forgeBatchArgs:        make(map[ethCommon.Hash]*eth.RollupForgeBatchArgs),
+		forgeBatchArgsPending: make(map[ethCommon.Hash]*batch),
+		forgeBatchArgs:        make(map[ethCommon.Hash]*batch),
+		blockNum:              blockNum,
+		maxBlockNum:           blockNum,
 	}
+
+	for i := int64(1); i < setup.AuctionConstants.GenesisBlockNum+1; i++ {
+		c.CtlMineBlock()
+	}
+
+	return &c
 }
 
 //
@@ -452,7 +468,7 @@ func (c *Client) CtlMineBlock() {
 	for ethTxHash, forgeBatchArgs := range c.forgeBatchArgsPending {
 		c.forgeBatchArgs[ethTxHash] = forgeBatchArgs
 	}
-	c.forgeBatchArgsPending = make(map[ethCommon.Hash]*eth.RollupForgeBatchArgs)
+	c.forgeBatchArgsPending = make(map[ethCommon.Hash]*batch)
 
 	blockNext := blockCurrent.Next()
 	c.blocks[c.blockNum+1] = blockNext
@@ -552,10 +568,10 @@ func (c *Client) EthBlockByNumber(ctx context.Context, blockNum int64) (*common.
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
-	block, ok := c.blocks[blockNum]
-	if !ok {
-		return nil, fmt.Errorf("block not found")
+	if blockNum > c.blockNum {
+		return nil, ethereum.NotFound
 	}
+	block := c.blocks[blockNum]
 	return &common.Block{
 		EthBlockNum: blockNum,
 		Timestamp:   time.Unix(block.Eth.Time, 0),
@@ -579,9 +595,54 @@ var errTODO = fmt.Errorf("TODO: Not implemented yet")
 //
 
 // CtlAddL1TxUser adds an L1TxUser to the L1UserTxs queue of the Rollup
-func (c *Client) CtlAddL1TxUser(l1Tx *common.L1Tx) {
+// func (c *Client) CtlAddL1TxUser(l1Tx *common.L1Tx) {
+// 	c.rw.Lock()
+// 	defer c.rw.Unlock()
+//
+// 	nextBlock := c.nextBlock()
+// 	r := nextBlock.Rollup
+// 	queue := r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
+// 	if len(queue.L1TxQueue) >= eth.RollupConstMaxL1UserTx {
+// 		r.State.LastToForgeL1TxsNum++
+// 		r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum] = eth.NewQueueStruct()
+// 		queue = r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
+// 	}
+// 	if int64(l1Tx.FromIdx) > r.State.CurrentIdx {
+// 		panic("l1Tx.FromIdx > r.State.CurrentIdx")
+// 	}
+// 	if int(l1Tx.TokenID)+1 > len(r.State.TokenList) {
+// 		panic("l1Tx.TokenID + 1 > len(r.State.TokenList)")
+// 	}
+// 	queue.L1TxQueue = append(queue.L1TxQueue, *l1Tx)
+// 	r.Events.L1UserTx = append(r.Events.L1UserTx, eth.RollupEventL1UserTx{
+// 		L1Tx:            *l1Tx,
+// 		ToForgeL1TxsNum: r.State.LastToForgeL1TxsNum,
+// 		Position:        len(queue.L1TxQueue) - 1,
+// 	})
+// }
+
+// RollupL1UserTxERC20ETH sends an L1UserTx to the Rollup.
+func (c *Client) RollupL1UserTxERC20ETH(
+	fromBJJ *babyjub.PublicKey,
+	fromIdx int64,
+	loadAmount *big.Int,
+	amount *big.Int,
+	tokenID uint32,
+	toIdx int64,
+) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+
+	_, err = common.NewFloat16(amount)
+	if err != nil {
+		return nil, err
+	}
+	_, err = common.NewFloat16(loadAmount)
+	if err != nil {
+		return nil, err
+	}
 
 	nextBlock := c.nextBlock()
 	r := nextBlock.Rollup
@@ -591,24 +652,34 @@ func (c *Client) CtlAddL1TxUser(l1Tx *common.L1Tx) {
 		r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum] = eth.NewQueueStruct()
 		queue = r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
 	}
-	if int64(l1Tx.FromIdx) > r.State.CurrentIdx {
+	if fromIdx > r.State.CurrentIdx {
 		panic("l1Tx.FromIdx > r.State.CurrentIdx")
 	}
-	if int(l1Tx.TokenID)+1 > len(r.State.TokenList) {
+	if int(tokenID)+1 > len(r.State.TokenList) {
 		panic("l1Tx.TokenID + 1 > len(r.State.TokenList)")
 	}
+	toForgeL1TxsNum := r.State.LastToForgeL1TxsNum
+	l1Tx, err := common.NewL1Tx(&common.L1Tx{
+		FromIdx:         common.Idx(fromIdx),
+		FromEthAddr:     *c.addr,
+		FromBJJ:         fromBJJ,
+		Amount:          amount,
+		LoadAmount:      loadAmount,
+		TokenID:         common.TokenID(tokenID),
+		ToIdx:           common.Idx(toIdx),
+		ToForgeL1TxsNum: &toForgeL1TxsNum,
+		Position:        len(queue.L1TxQueue) - 1,
+		UserOrigin:      true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	queue.L1TxQueue = append(queue.L1TxQueue, *l1Tx)
 	r.Events.L1UserTx = append(r.Events.L1UserTx, eth.RollupEventL1UserTx{
-		L1UserTx:        *l1Tx,
-		ToForgeL1TxsNum: r.State.LastToForgeL1TxsNum,
-		Position:        len(queue.L1TxQueue) - 1,
+		L1UserTx: *l1Tx,
 	})
-}
-
-// RollupL1UserTxERC20ETH is the interface to call the smart contract function
-func (c *Client) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+	return r.addTransaction(newTransaction("l1UserTxERC20ETH", l1Tx)), nil
 }
 
 // RollupL1UserTxERC777 is the interface to call the smart contract function
@@ -710,7 +781,7 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 		}
 	}
 	ethTx := r.addTransaction(newTransaction("forgebatch", args))
-	c.forgeBatchArgsPending[ethTx.Hash()] = args
+	c.forgeBatchArgsPending[ethTx.Hash()] = &batch{*args, *c.addr}
 	r.Events.ForgeBatch = append(r.Events.ForgeBatch, eth.RollupEventForgeBatch{
 		BatchNum:  int64(len(r.State.ExitRoots)),
 		EthTxHash: ethTx.Hash(),
@@ -820,15 +891,15 @@ func (c *Client) RollupEventsByBlock(blockNum int64) (*eth.RollupEvents, *ethCom
 }
 
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the Rollup Smart Contract in the given transaction
-func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*eth.RollupForgeBatchArgs, error) {
+func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
-	forgeBatchArgs, ok := c.forgeBatchArgs[ethTxHash]
+	batch, ok := c.forgeBatchArgs[ethTxHash]
 	if !ok {
-		return nil, fmt.Errorf("transaction not found")
+		return nil, nil, fmt.Errorf("transaction not found")
 	}
-	return forgeBatchArgs, nil
+	return &batch.ForgeBatchArgs, &batch.Sender, nil
 }
 
 //

@@ -82,7 +82,10 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	if err != nil {
 		return nil, err
 	}
-	client := eth.NewClient(ethClient, nil, nil, nil)
+	client, err := eth.NewClient(ethClient, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB)
 	if err != nil {

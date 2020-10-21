@@ -152,7 +152,7 @@ func TestRollupForgeBatch(t *testing.T) {
 		signature = append(signature, r[:]...)
 		signature = append(signature, s[:]...)
 		signature = append(signature, v)
-		l1Tx, err := common.L1TxFromCoordinatorBytes(bytesL1Coordinator)
+		l1Tx, err := common.L1CoordinatorTxFromBytes(bytesL1Coordinator)
 		require.Nil(t, err)
 		args.L1CoordinatorTxs = append(args.L1CoordinatorTxs, *l1Tx)
 		args.L1CoordinatorTxsAuths = append(args.L1CoordinatorTxsAuths, signature)
@@ -190,8 +190,9 @@ func TestRollupForgeBatch(t *testing.T) {
 }
 
 func TestRollupForgeBatchArgs(t *testing.T) {
-	args, err := rollupClient.RollupForgeBatchArgs(ethHashForge)
+	args, sender, err := rollupClient.RollupForgeBatchArgs(ethHashForge)
 	require.Nil(t, err)
+	assert.Equal(t, *sender, rollupClient.client.account.Address)
 	assert.Equal(t, argsForge.FeeIdxCoordinator, args.FeeIdxCoordinator)
 	assert.Equal(t, argsForge.L1Batch, args.L1Batch)
 	assert.Equal(t, argsForge.L1CoordinatorTxs, args.L1CoordinatorTxs)

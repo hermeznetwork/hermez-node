@@ -301,3 +301,8 @@ func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20C
 		Decimals: uint64(decimals),
 	}, nil
 }
+
+// Client returns the internal ethclient.Client
+func (c *EthereumClient) Client() *ethclient.Client {
+	return c.client
+}

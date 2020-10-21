@@ -49,7 +49,7 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 	assert.Equal(t, "0x01000000000000cafe005800", l1Tx.TxID.String())
 }
 
-func TestL1TxByteParsers(t *testing.T) {
+func TestL1userTxByteParsers(t *testing.T) {
 	var pkComp babyjub.PublicKeyComp
 	pkCompL := []byte("0x56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c")
 	err := pkComp.UnmarshalText(pkCompL)
@@ -59,6 +59,7 @@ func TestL1TxByteParsers(t *testing.T) {
 	require.Nil(t, err)
 
 	l1Tx := &L1Tx{
+		UserOrigin:  true,
 		ToIdx:       3,
 		TokenID:     5,
 		Amount:      big.NewInt(1),
@@ -68,21 +69,21 @@ func TestL1TxByteParsers(t *testing.T) {
 		FromEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 
-	encodedData, err := l1Tx.Bytes()
+	encodedData, err := l1Tx.BytesUser()
 	require.Nil(t, err)
-	decodedData, err := L1TxFromBytes(encodedData)
+	decodedData, err := L1UserTxFromBytes(encodedData)
 	require.Nil(t, err)
 	assert.Equal(t, l1Tx, decodedData)
-	encodedData2, err := decodedData.Bytes()
+	encodedData2, err := decodedData.BytesUser()
 	require.Nil(t, err)
 	assert.Equal(t, encodedData, encodedData2)
 
 	// expect error if length!=68
-	_, err = L1TxFromBytes(encodedData[:66])
+	_, err = L1UserTxFromBytes(encodedData[:66])
 	require.NotNil(t, err)
-	_, err = L1TxFromBytes([]byte{})
+	_, err = L1UserTxFromBytes([]byte{})
 	require.NotNil(t, err)
-	_, err = L1TxFromBytes(nil)
+	_, err = L1UserTxFromBytes(nil)
 	require.NotNil(t, err)
 }
 
@@ -113,7 +114,7 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 	expected, err := utils.HexDecode("85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a000001c638db8be880f00020039c0000053cb88d")
 	require.Nil(t, err)
 
-	encodedData, err := l1Tx.Bytes()
+	encodedData, err := l1Tx.BytesUser()
 	require.Nil(t, err)
 	assert.Equal(t, expected, encodedData)
 }
@@ -161,7 +162,7 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 
 	bytesCoordinatorL1, err := l1Tx.BytesCoordinatorTx(signature)
 	require.Nil(t, err)
-	l1txDecoded, err := L1TxFromCoordinatorBytes(bytesCoordinatorL1)
+	l1txDecoded, err := L1CoordinatorTxFromBytes(bytesCoordinatorL1)
 	require.Nil(t, err)
 	assert.Equal(t, l1Tx, l1txDecoded)
 	bytesCoordinatorL12, err := l1txDecoded.BytesCoordinatorTx(signature)
@@ -169,11 +170,11 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	assert.Equal(t, bytesCoordinatorL1, bytesCoordinatorL12)
 
 	// expect error if length!=68
-	_, err = L1TxFromCoordinatorBytes(bytesCoordinatorL1[:66])
+	_, err = L1CoordinatorTxFromBytes(bytesCoordinatorL1[:66])
 	require.NotNil(t, err)
-	_, err = L1TxFromCoordinatorBytes([]byte{})
+	_, err = L1CoordinatorTxFromBytes([]byte{})
 	require.NotNil(t, err)
-	_, err = L1TxFromCoordinatorBytes(nil)
+	_, err = L1CoordinatorTxFromBytes(nil)
 	require.NotNil(t, err)
 }
 

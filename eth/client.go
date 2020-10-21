@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -29,14 +30,38 @@ type Client struct {
 	RollupClient
 }
 
+// RollupConfig is the configuration for the Rollup smart contract interface
+type RollupConfig struct {
+	Address ethCommon.Address
+}
+
+// AuctionConfig is the configuration for the Auction smart contract interface
+type AuctionConfig struct {
+	Address         ethCommon.Address
+	TokenHEZAddress ethCommon.Address
+}
+
+// ClientConfig is the configuration of the Client
+type ClientConfig struct {
+	Ethereum EthereumConfig
+	Rollup   RollupConfig
+	Auction  AuctionConfig
+}
+
 // NewClient creates a new Client to interact with Ethereum and the Hermez smart contracts.
-func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, config *EthereumConfig) *Client {
-	ethereumClient := NewEthereumClient(client, account, ks, config)
-	auctionClient := &AuctionClient{}
-	rollupCient := &RollupClient{}
+func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, cfg *ClientConfig) (*Client, error) {
+	ethereumClient := NewEthereumClient(client, account, ks, &cfg.Ethereum)
+	auctionClient, err := NewAuctionClient(ethereumClient, cfg.Auction.Address, cfg.Auction.TokenHEZAddress)
+	if err != nil {
+		return nil, err
+	}
+	rollupCient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address, cfg.Auction.TokenHEZAddress)
+	if err != nil {
+		return nil, err
+	}
 	return &Client{
 		EthereumClient: *ethereumClient,
 		AuctionClient:  *auctionClient,
 		RollupClient:   *rollupCient,
-	}
+	}, nil
 }

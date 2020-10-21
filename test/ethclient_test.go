@@ -42,21 +42,21 @@ func TestClientEth(t *testing.T) {
 	c := NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 	blockNum, err := c.EthCurrentBlock()
 	require.Nil(t, err)
-	assert.Equal(t, int64(0), blockNum)
+	assert.Equal(t, int64(1), blockNum)
 
 	block, err := c.EthBlockByNumber(context.TODO(), 0)
 	require.Nil(t, err)
 	assert.Equal(t, int64(0), block.EthBlockNum)
 	assert.Equal(t, time.Unix(0, 0), block.Timestamp)
 	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", block.Hash.Hex())
-	assert.Equal(t, int64(0), c.blockNum)
 
 	// Mine some empty blocks
 
-	c.CtlMineBlock()
 	assert.Equal(t, int64(1), c.blockNum)
 	c.CtlMineBlock()
 	assert.Equal(t, int64(2), c.blockNum)
+	c.CtlMineBlock()
+	assert.Equal(t, int64(3), c.blockNum)
 
 	block, err = c.EthBlockByNumber(context.TODO(), 2)
 	require.Nil(t, err)
@@ -154,14 +154,17 @@ func TestClientRollup(t *testing.T) {
 	var keys [N]*keys
 	for i := 0; i < N; i++ {
 		keys[i] = genKeys(int64(i))
-		l1UserTx := common.L1Tx{
+		tx := common.L1Tx{
 			FromIdx:     0,
 			FromEthAddr: keys[i].Addr,
 			FromBJJ:     keys[i].BJJPublicKey,
 			TokenID:     common.TokenID(0),
+			Amount:      big.NewInt(0),
 			LoadAmount:  big.NewInt(10 + int64(i)),
 		}
-		c.CtlAddL1TxUser(&l1UserTx)
+		_, err := c.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.LoadAmount,
+			tx.Amount, uint32(tx.TokenID), int64(tx.ToIdx))
+		require.Nil(t, err)
 	}
 	c.CtlMineBlock()
 
@@ -231,8 +234,9 @@ func TestClientRollup(t *testing.T) {
 	rollupEvents, _, err = c.RollupEventsByBlock(blockNum)
 	require.Nil(t, err)
 
-	rollupForgeBatchArgs1, err := c.RollupForgeBatchArgs(rollupEvents.ForgeBatch[0].EthTxHash)
+	rollupForgeBatchArgs1, sender, err := c.RollupForgeBatchArgs(rollupEvents.ForgeBatch[0].EthTxHash)
 	require.Nil(t, err)
+	assert.Equal(t, *c.addr, *sender)
 	assert.Equal(t, rollupForgeBatchArgs0, rollupForgeBatchArgs1)
 }
 
