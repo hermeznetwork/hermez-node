@@ -101,13 +101,13 @@ var (
 
 // RollupPublicConstants are the constants of the Rollup Smart Contract
 type RollupPublicConstants struct {
-	AbsoluteMaxL1L2BatchTimeout int64
-	TokenHEZ                    ethCommon.Address
-	Verifiers                   []RollupVerifierStruct
-	HermezAuctionContract       ethCommon.Address
-	HermezGovernanceDAOAddress  ethCommon.Address
-	SafetyAddress               ethCommon.Address
-	WithdrawDelayerContract     ethCommon.Address
+	AbsoluteMaxL1L2BatchTimeout int64                  `json:"absoluteMaxL1L2BatchTimeout"`
+	TokenHEZ                    ethCommon.Address      `json:"tokenHEZ"`
+	Verifiers                   []RollupVerifierStruct `json:"verifiers"`
+	HermezAuctionContract       ethCommon.Address      `json:"hermezAuctionContract"`
+	HermezGovernanceDAOAddress  ethCommon.Address      `json:"hermezGovernanceDAOAddress"`
+	SafetyAddress               ethCommon.Address      `json:"safetyAddress"`
+	WithdrawDelayerContract     ethCommon.Address      `json:"withdrawDelayerContract"`
 }
 
 // RollupVariables are the variables of the Rollup Smart Contract
@@ -133,8 +133,8 @@ func NewQueueStruct() *QueueStruct {
 
 // RollupVerifierStruct is the information about verifiers of the Rollup Smart Contract
 type RollupVerifierStruct struct {
-	MaxTx   int64
-	NLevels int64
+	MaxTx   int64 `json:"maxTx"`
+	NLevels int64 `json:"nlevels"`
 }
 
 // RollupState represents the state of the Rollup in the Smart Contract

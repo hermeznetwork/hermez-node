@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/base64"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
 )
@@ -247,4 +249,30 @@ func tokensToAPI(dbTokens []historydb.TokenRead) []tokenAPI {
 		})
 	}
 	return apiTokens
+}
+
+// Config
+
+type rollupConstants struct {
+	PublicConstants         eth.RollupPublicConstants `json:"publicConstants"`
+	MaxFeeIdxCoordinator    int                       `json:"maxFeeIdxCoordinator"`
+	ReservedIdx             int                       `json:"reservedIdx"`
+	ExitIdx                 int                       `json:"exitIdx"`
+	LimitLoadAmount         *big.Int                  `json:"limitLoadAmount"`
+	LimitL2TransferAmount   *big.Int                  `json:"limitL2TransferAmount"`
+	LimitTokens             int                       `json:"limitTokens"`
+	L1CoordinatorTotalBytes int                       `json:"l1CoordinatorTotalBytes"`
+	L1UserTotalBytes        int                       `json:"l1UserTotalBytes"`
+	MaxL1UserTx             int                       `json:"maxL1UserTx"`
+	MaxL1Tx                 int                       `json:"maxL1Tx"`
+	InputSHAConstantBytes   int                       `json:"inputSHAConstantBytes"`
+	NumBuckets              int                       `json:"numBuckets"`
+	MaxWithdrawalDelay      int                       `json:"maxWithdrawalDelay"`
+	ExchangeMultiplier      int                       `json:"exchangeMultiplier"`
+}
+
+type configAPI struct {
+	RollupConstants   rollupConstants       `json:"hermez"`
+	AuctionConstants  eth.AuctionConstants  `json:"auction"`
+	WDelayerConstants eth.WDelayerConstants `json:"withdrawalDelayer"`
 }

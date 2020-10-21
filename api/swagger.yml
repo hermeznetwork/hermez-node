@@ -2330,104 +2330,175 @@ components:
           type: object
           description: Constant configuration of the Hermez smart contract.
           properties:
-            HEZTokenAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum address of the HEZ token.
-                - example: "0x444dc4262BCDbf85190C01c996b4C06a461d2430"
-            maxTxVerifiers:
+            publicConstants:
+              type: object
+              description: Public Hermez smart contract constants
+              properties: 
+                tokenHEZ:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the HEZ token.
+                    - example: "0x444dc4262BCDbf85190C01c996b4C06a461d2430"
+                absoluteMaxL1L2BatchTimeout:
+                  type: integer
+                  description:  L1L2 Batch Timeout
+                  example: 240
+                verifiers:
+                  type: array
+                  description: List of verifiers struct
+                  items:
+                    type: object
+                    properties:
+                      maxTx:
+                        type: integer
+                        description: Maximum rollup transactions in a batch
+                        example: 512
+                      nlevels:
+                        type: integer
+                        description: Number of levels of the circuit
+                        example: 32
+                    required:
+                      - maxTx
+                      - nlevels
+                    additionalProperties: false
+                hermezAuctionContract:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the auction smart contract.
+                    - example: "0x111dc4262BCDbf85190C01c996b4C06a461d2430"
+                hermezGovernanceDAOAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the governanceDAO.
+                    - example: "0x222dc4262BCDbf85190C01c996b4C06a461d2430"
+                safetyAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the safety.
+                    - example: "0x333dc4262BCDbf85190C01c996b4C06a461d2430"
+                withdrawDelayerContract:
+                  allOf:
+                    - $ref: '#/components/schemas/EthereumAddress'
+                    - description: Ethereum address of the withdraw delayer contracts.
+                    - example: "0x444dc4262BCDbf85190C01c996b4C06a461d2430"
+              required:
+                - tokenHEZ
+                - absoluteMaxL1L2BatchTimeout
+                - verifiers
+                - hermezAuctionContract
+                - hermezGovernanceDAOAddress
+                - safetyAddress
+                - withdrawDelayerContract
+              additionalProperties: false
+            maxFeeIdxCoordinator:
               type: integer
-              description: Maximum transactions of the verifiers.
-              example: 100
-            maxLoadAmount:
+              description: is the maximum number of tokens the coordinator can use to collect fees.
+              example: 64
+            reservedIdx:
               type: integer
-              description: Maximum load amount (L1 to L2) allowed.
-              example: 321
-            maxAmount:
-              type: integer
-              description: Maximum amount (L2 to L2) allowed.
-              example: 837
-            maxTokens:
-              type: integer
-              description: Maximum number of different tokens that can be registered in the network.
-              example: 4294967295
-            reservedAccountIndex:
-              type: integer
-              description: First user index. Bellow this number the indexes are reserved for the protocol.
-              example: 256
-            lastAccountIndex:
-              type: integer
-              description: Biggest account index that can be registered.
-              example: 4294967295
-            exitAccountIndex:
+              description: First 256 indexes reserved, first user index will be the 256.
+              example: 255
+            exitIdx:
               type: integer
               description: Account index used to indicate that a transaction is an `exit` or `force exit`.
               example: 1
-            L1CoordinatorBytes:
+            limitLoadAmount:
+              type: integer
+              description: Maximum load amount (L1 to L2) allowed.
+              example: 321
+            limitL2TransferAmount:
+              type: integer
+              description: Maximum amount (L2 to L2) allowed.
+              example: 837
+            limitTokens:
+              type: integer
+              description: Maximum number of different tokens that can be registered in the network.
+              example: 4294967295
+            l1CoordinatorTotalBytes:
               type: integer
               description: Number of bytes that a L1 coordinator transaction has ([4 bytes] token + [32 bytes] babyjub + [65 bytes] compressedSignature).
-              example: 23
-            L1UserBytes:
+              example: 101
+            l1UserTotalBytes:
               type: integer
-              description: Number of bytes that a L2 transaction has ([4 bytes] fromIdx + [4 bytes] toIdx + [2 bytes] amountFloat16 + [1 bytes] fee).
-              example: 32
-            L2Bytes:
+              description: Number of bytes that a L1 user transaction has ([20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx + [2 bytes] loadAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx).
+              example: 72
+            maxL1UserTx:
               type: integer
-              description: Number of bytes that a L2 transaction has ([4 bytes] fromIdx + [4 bytes] toIdx + [2 bytes] amountFloat16 + [1 bytes] fee).
-              example: 33
-            maxL1Transactions:
+              description: Maximum L1-user transactions allowed to be queued in a batch.
+              example: 128
+            maxL1Tx:
               type: integer
               description: Maximum L1 transactions allowed to be queued in a batch.
-              example: 128
-            maxL1UserTransactions:
+              example: 256
+            inputSHAConstantBytes:
               type: integer
-              description: Maximum L1 transactions allowed to be queued in a batch by users (anyone who is not a coordinator).
-              example: 32
-            RField:
-              allOf:
-                - $ref: '#/components/schemas/BigInt'
-                - description: Modulus zkSNARK.
-        withdrawManager:
-          type: object
-          description: Constant configuration of the withdraw manager smart contract.
-          properties:
-            noLimit:
-              type: integer
-              description: Reserved bucket index when the token value is 0 USD.
-              example: 0
-            amountOfBuckets:
+              description: Input SHA constant bytes 
+              example: 18542
+            numBuckets:
               type: integer
               description: Number of buckets
+              example: 5
             maxWithdrawalDelay:
               type: integer
-              description: Maximum delay to withdraw tokens. Time is measured in Ethereum blocks.
+              description: Maximum delay to withdraw tokens. Time is measured in seconds.
+              example: 2 * 7 * 24 * 60 * 60
+            exchangeMultiplier:
+              type: integer
+              description: exchange multiplier
+              example: 1e14
+          required:
+            - publicConstants
+            - reservedIdx
+            - exitIdx
+            - limitLoadAmount
+            - limitL2TransferAmount
+            - limitTokens
+            - l1CoordinatorTotalBytes
+            - l1UserTotalBytes
+            - maxL1UserTx
+            - maxL1Tx
+            - inputSHAConstantBytes
+            - numBuckets
+            - maxWithdrawalDelay
+            - exchangeMultiplier
+          additionalProperties: false
         auction:
           type: object
           description: Constant configuration of the auction smart contract.
           properties:
-            HEZTokenAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum address of the HEZ token.
-                - example: "0x333dc4262BCDbf85190C01c996b4C06a461d2430"
-            rollupAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum address of the rollup smart contract.
-                - example: "0x222dc4262BCDbf85190C01c996b4C06a461d2430"
-            genesisBlockNum:
-              allOf:
-                - $ref: '#/components/schemas/EthBlockNum'
-                - description: Ethereum block number in which the smart contract starts operating.
-            delayGenesis:
-              type: integer
-              description: Time delay between `genesisBlockNum` and the beginning of the first block. Time is measured in Ethereum blocks.
             blocksPerSlot:
               type: integer
               description: Blocks per slot.
             initialMinimalBidding:
               type: integer
               description: Minimum bid when no one has bid yet.
+            genesisBlockNum:
+              allOf:
+                - $ref: '#/components/schemas/EthBlockNum'
+                - description: Ethereum block number in which the smart contract starts operating.
+            tokenHEZ:
+              allOf:
+                - $ref: '#/components/schemas/EthereumAddress'
+                - description: Ethereum address of the HEZ token.
+                - example: "0x333dc4262BCDbf85190C01c996b4C06a461d2430"
+            hermezRollup:
+              allOf:
+                - $ref: '#/components/schemas/EthereumAddress'
+                - description: Ethereum address of the rollup smart contract.
+                - example: "0x222dc4262BCDbf85190C01c996b4C06a461d2430"
+            governanceAddress:
+              allOf:
+                - $ref: '#/components/schemas/EthereumAddress'
+                - description: Ethereum address of the governance.
+                - example: "0x444dc4262BCDbf85190C01c996b4C06a461d2430"
+          required:
+            - blocksPerSlot
+            - initialMinimalBidding
+            - genesisBlockNum
+            - tokenHEZ
+            - hermezRollup
+            - governanceAddress
+          additionalProperties: false
         withdrawalDelayer:
           type: object
           description: Constant configuration of the withdrawal delayer smart contract.
@@ -2440,6 +2511,21 @@ components:
               type: integer
               description: Maximum amount of time in which the contract can be in emergency mode. Time is measured in Ethereum blocks.
               example: 2000
+            hermezRollup:
+              allOf:
+                - $ref: '#/components/schemas/EthereumAddress'
+                - description: Ethereum address of the rollup smart contract.
+                - example: "0x222dc4262BCDbf85190C01c996b4C06a461d2430"
+          required:
+            - maxWithdrawalDelay
+            - maxEmergencyModeTime
+            - hermezRollup
+          additionalProperties: false
+      required:
+        - hermez
+        - auction
+        - withdrawalDelayer
+      additionalProperties: false
     Error:
       type: object
       description: Error response. 
