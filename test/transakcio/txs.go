@@ -270,8 +270,9 @@ func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
 			// once Idxs are calculated, update transactions to use the new Idxs
 			for i := 0; i < len(tc.queues[tc.toForgeNum]); i++ {
 				testTx := &tc.queues[tc.toForgeNum][i]
-				// set real Idx
-				testTx.L1Tx.FromIdx = tc.Users[testTx.fromIdxName].Accounts[testTx.L1Tx.TokenID].Idx
+				if testTx.L1Tx.Type != common.TxTypeCreateAccountDeposit && testTx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {
+					testTx.L1Tx.FromIdx = tc.Users[testTx.fromIdxName].Accounts[testTx.L1Tx.TokenID].Idx
+				}
 				testTx.L1Tx.FromEthAddr = tc.Users[testTx.fromIdxName].Addr
 				testTx.L1Tx.FromBJJ = tc.Users[testTx.fromIdxName].BJJ.Public()
 				if testTx.toIdxName == "" {
@@ -279,6 +280,17 @@ func (tc *TestContext) GenerateBlocks(set string) ([]BlockData, error) {
 				} else {
 					testTx.L1Tx.ToIdx = tc.Users[testTx.toIdxName].Accounts[testTx.L1Tx.TokenID].Idx
 				}
+				if testTx.L1Tx.Type == common.TxTypeExit {
+					testTx.L1Tx.ToIdx = common.Idx(1)
+				}
+				bn := common.BatchNum(tc.currBatchNum)
+				testTx.L1Tx.BatchNum = &bn
+				nTx, err := common.NewL1Tx(&testTx.L1Tx)
+				if err != nil {
+					return nil, fmt.Errorf("Line %d: %s", testTx.lineNum, err.Error())
+				}
+				testTx.L1Tx = *nTx
+
 				tc.currBlock.L1UserTxs = append(tc.currBlock.L1UserTxs, testTx.L1Tx)
 			}
 			if err = tc.setIdxs(); err != nil {
