@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -136,6 +137,44 @@ func (hdb *HistoryDB) GetLastBlock() (*common.Block, error) {
 // AddBatch insert a Batch into the DB
 func (hdb *HistoryDB) AddBatch(batch *common.Batch) error { return hdb.addBatch(hdb.db, batch) }
 func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
+	// Calculate total collected fees in USD
+	// Get IDs of collected tokens for fees
+	tokenIDs := []common.TokenID{}
+	for id := range batch.CollectedFees {
+		tokenIDs = append(tokenIDs, id)
+	}
+	// Get USD value of the tokens
+	type tokenPrice struct {
+		ID       common.TokenID `meddler:"token_id"`
+		USD      *float64       `meddler:"usd"`
+		Decimals int            `meddler:"decimals"`
+	}
+	query, args, err := sqlx.In(
+		"SELECT token_id, usd, decimals FROM token WHERE token_id IN (?)",
+		tokenIDs,
+	)
+	if err != nil {
+		return err
+	}
+	query = hdb.db.Rebind(query)
+	var tokenPrices []*tokenPrice
+	if err := meddler.QueryAll(
+		hdb.db, &tokenPrices, query, args...,
+	); err != nil {
+		return err
+	}
+	// Calculate total collected
+	var total float64
+	for _, tokenPrice := range tokenPrices {
+		if tokenPrice.USD == nil {
+			continue
+		}
+		f := new(big.Float).SetInt(batch.CollectedFees[tokenPrice.ID])
+		amount, _ := f.Float64()
+		total += *tokenPrice.USD * (amount / math.Pow(10, float64(tokenPrice.Decimals))) //nolint decimals have to be ^10
+	}
+	batch.TotalFeesUSD = &total
+	// Insert to DB
 	return meddler.Insert(d, "batch", batch)
 }
 
@@ -144,22 +183,12 @@ func (hdb *HistoryDB) AddBatches(batches []common.Batch) error {
 	return hdb.addBatches(hdb.db, batches)
 }
 func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
-	// TODO: Calculate and insert total_fees_usd
-	return db.BulkInsert(
-		d,
-		`INSERT INTO batch (
-			batch_num,
-			eth_block_num,
-			forger_addr,
-			fees_collected,
-			state_root,
-			num_accounts,
-			exit_root,
-			forge_l1_txs_num,
-			slot_num
-		) VALUES %s;`,
-		batches[:],
-	)
+	for i := 0; i < len(batches); i++ {
+		if err := hdb.addBatch(d, &batches[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // GetBatches retrieve batches from the DB, given a range of batch numbers defined by from and to

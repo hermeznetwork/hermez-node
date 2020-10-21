@@ -10,7 +10,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree"
 )
 
 type errorMsg struct {
@@ -161,26 +160,45 @@ func (e *exitsAPI) GetPagination() *db.Pagination {
 }
 func (e *exitsAPI) Len() int { return len(e.Exits) }
 
+type merkleProofAPI struct {
+	Root     string
+	Siblings []string
+	OldKey   string
+	OldValue string
+	IsOld0   bool
+	Key      string
+	Value    string
+	Fnc      int
+}
+
 type exitAPI struct {
-	ItemID                 int                             `json:"itemId"`
-	BatchNum               common.BatchNum                 `json:"batchNum"`
-	AccountIdx             string                          `json:"accountIndex"`
-	MerkleProof            *merkletree.CircomVerifierProof `json:"merkleProof"`
-	Balance                string                          `json:"balance"`
-	InstantWithdrawn       *int64                          `json:"instantWithdrawn"`
-	DelayedWithdrawRequest *int64                          `json:"delayedWithdrawRequest"`
-	DelayedWithdrawn       *int64                          `json:"delayedWithdrawn"`
-	Token                  tokenAPI                        `json:"token"`
+	ItemID                 int             `json:"itemId"`
+	BatchNum               common.BatchNum `json:"batchNum"`
+	AccountIdx             string          `json:"accountIndex"`
+	MerkleProof            merkleProofAPI  `json:"merkleProof"`
+	Balance                string          `json:"balance"`
+	InstantWithdrawn       *int64          `json:"instantWithdrawn"`
+	DelayedWithdrawRequest *int64          `json:"delayedWithdrawRequest"`
+	DelayedWithdrawn       *int64          `json:"delayedWithdrawn"`
+	Token                  tokenAPI        `json:"token"`
 }
 
 func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
 	apiExits := []exitAPI{}
 	for i := 0; i < len(dbExits); i++ {
-		apiExits = append(apiExits, exitAPI{
-			ItemID:                 dbExits[i].ItemID,
-			BatchNum:               dbExits[i].BatchNum,
-			AccountIdx:             idxToHez(dbExits[i].AccountIdx, dbExits[i].TokenSymbol),
-			MerkleProof:            dbExits[i].MerkleProof,
+		exit := exitAPI{
+			ItemID:     dbExits[i].ItemID,
+			BatchNum:   dbExits[i].BatchNum,
+			AccountIdx: idxToHez(dbExits[i].AccountIdx, dbExits[i].TokenSymbol),
+			MerkleProof: merkleProofAPI{
+				Root:     dbExits[i].MerkleProof.Root.String(),
+				OldKey:   dbExits[i].MerkleProof.OldKey.String(),
+				OldValue: dbExits[i].MerkleProof.OldValue.String(),
+				IsOld0:   dbExits[i].MerkleProof.IsOld0,
+				Key:      dbExits[i].MerkleProof.Key.String(),
+				Value:    dbExits[i].MerkleProof.Value.String(),
+				Fnc:      dbExits[i].MerkleProof.Fnc,
+			},
 			Balance:                dbExits[i].Balance.String(),
 			InstantWithdrawn:       dbExits[i].InstantWithdrawn,
 			DelayedWithdrawRequest: dbExits[i].DelayedWithdrawRequest,
@@ -195,7 +213,13 @@ func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
 				USD:         dbExits[i].TokenUSD,
 				USDUpdate:   dbExits[i].TokenUSDUpdate,
 			},
-		})
+		}
+		siblings := []string{}
+		for j := 0; j < len(dbExits[i].MerkleProof.Siblings); j++ {
+			siblings = append(siblings, dbExits[i].MerkleProof.Siblings[j].String())
+		}
+		exit.MerkleProof.Siblings = siblings
+		apiExits = append(apiExits, exit)
 	}
 	return apiExits
 }
