@@ -76,7 +76,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccountCreationAuthorization'
+              $ref: '#/components/schemas/AccountCreationAuthorizationPost'
       responses:
         '200':
           description: Successful operation.
@@ -1251,7 +1251,7 @@ components:
           $ref: '#/components/schemas/Nonce'
         signature:
           allOf:
-            - $ref: '#/components/schemas/Signature'
+            - $ref: '#/components/schemas/BJJSignature'
             - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
         requestFromAccountIndex:
@@ -1346,7 +1346,7 @@ components:
           $ref: '#/components/schemas/PoolL2TransactionState'
         signature:
           allOf:
-            - $ref: '#/components/schemas/Signature'
+            - $ref: '#/components/schemas/BJJSignature'
             - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
         timestamp:
@@ -1517,7 +1517,12 @@ components:
       - fing
       - fged
       - invl    
-    Signature:
+    ETHSignature:
+      type: string
+      description: Ethereum signature.
+      pattern: "^0x[a-fA-F0-9]{130}$"
+      example: "0xf9161cd688394772d93aa3e7b3f8f9553ca4f94f65b7cece93ed4a239d5c0b4677dca6d1d459e3a5c271a34de735d4664a43e5a8960a9a6e027d12c562dd448e1c"
+    BJJSignature:
       type: string
       description: BabyJubJub compressed signature.
       pattern: "^[a-fA-F0-9]{128}$"
@@ -1528,6 +1533,19 @@ components:
       minimum: 0
       maximum: 4294967295
       example: 5432
+    AccountCreationAuthorizationPost:
+      type: object
+      properties:
+        hezEthereumAddress:
+          $ref: '#/components/schemas/HezEthereumAddress'
+        bjj:
+          $ref: '#/components/schemas/BJJ'
+        signature:
+          $ref: '#/components/schemas/ETHSignature'
+      required:
+      - hezEthereumAddress
+      - bjj
+      - signature
     AccountCreationAuthorization:
       type: object
       properties:
@@ -1539,12 +1557,10 @@ components:
         bjj:
           $ref: '#/components/schemas/BJJ'
         signature:
-          allOf:
-            - $ref: '#/components/schemas/Signature'
-            - description: Signature of the auth message. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=regular-rollup-account).
-            - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+          $ref: '#/components/schemas/ETHSignature'
       required:
-      - ethereumAddress
+      - timestamp
+      - hezEthereumAddress
       - bjj
       - signature
     HistoryTransaction:

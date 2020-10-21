@@ -11,7 +11,6 @@ import (
 
 var h *historydb.HistoryDB
 var cg *configAPI
-
 var s *statedb.StateDB
 var l2 *l2db.L2DB
 

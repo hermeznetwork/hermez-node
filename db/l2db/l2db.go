@@ -46,7 +46,13 @@ func (l2db *L2DB) DB() *sqlx.DB {
 
 // AddAccountCreationAuth inserts an account creation authorization into the DB
 func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error {
-	return meddler.Insert(l2db.db, "account_creation_auth", auth)
+	// return meddler.Insert(l2db.db, "account_creation_auth", auth)
+	_, err := l2db.db.Exec(
+		`INSERT INTO account_creation_auth (eth_addr, bjj, signature)
+		VALUES ($1, $2, $3);`,
+		auth.EthAddr, auth.BJJ, auth.Signature,
+	)
+	return err
 }
 
 // GetAccountCreationAuth returns an account creation authorization into the DB
