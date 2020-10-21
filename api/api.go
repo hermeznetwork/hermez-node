@@ -71,7 +71,7 @@ func SetAPIEndpoints(
 		server.GET("/tokens/:id", getToken)
 		server.GET("/recommendedFee", getRecommendedFee)
 		server.GET("/coordinators", getCoordinators)
-		server.GET("/coordinators/:forgerAddr", getCoordinator)
+		server.GET("/coordinators/:bidderAddr", getCoordinator)
 	}
 
 	return nil

@@ -118,3 +118,16 @@ type HistoryExit struct {
 	TokenUSD               *float64                        `meddler:"usd"`
 	TokenUSDUpdate         *time.Time                      `meddler:"usd_update"`
 }
+
+// HistoryCoordinator is a representation of a coordinator with additional information
+// required by the API
+type HistoryCoordinator struct {
+	ItemID      int               `meddler:"item_id"`
+	Bidder      ethCommon.Address `meddler:"bidder_addr"`
+	Forger      ethCommon.Address `meddler:"forger_addr"`
+	EthBlockNum int64             `meddler:"eth_block_num"`
+	URL         string            `meddler:"url"`
+	TotalItems  int               `meddler:"total_items"`
+	FirstItem   int               `meddler:"first_item"`
+	LastItem    int               `meddler:"last_item"`
+}

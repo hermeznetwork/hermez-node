@@ -310,3 +310,12 @@ func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKey, error) {
 	}
 	return bjj, nil
 }
+func parseEthAddr(c paramer, name string) (*ethCommon.Address, error) {
+	addrStr := c.Param(name)
+	if addrStr == "" {
+		return nil, nil
+	}
+	var addr ethCommon.Address
+	err := addr.UnmarshalText([]byte(addrStr))
+	return &addr, err
+}

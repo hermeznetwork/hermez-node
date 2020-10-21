@@ -915,3 +915,53 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 
 	return txn.Commit()
 }
+
+// GetCoordinator returns a coordinator by its bidderAddr
+func (hdb *HistoryDB) GetCoordinator(bidderAddr ethCommon.Address) (*HistoryCoordinator, error) {
+	coordinator := &HistoryCoordinator{}
+	err := meddler.QueryRow(
+		hdb.db, coordinator, `SELECT * FROM coordinator WHERE bidder_addr = $1;`, bidderAddr,
+	)
+	return coordinator, err
+}
+
+// GetCoordinators returns a list of coordinators from the DB and pagination info
+func (hdb *HistoryDB) GetCoordinators(fromItem, limit *uint, order string) ([]HistoryCoordinator, *db.Pagination, error) {
+	var query string
+	var args []interface{}
+	queryStr := `SELECT coordinator.*, 
+	COUNT(*) OVER() AS total_items, MIN(coordinator.item_id) OVER() AS first_item, MAX(coordinator.item_id) OVER() AS last_item
+	FROM coordinator `
+	// Apply filters
+	if fromItem != nil {
+		queryStr += "WHERE "
+		if order == OrderAsc {
+			queryStr += "coordinator.item_id >= ? "
+		} else {
+			queryStr += "coordinator.item_id <= ? "
+		}
+		args = append(args, fromItem)
+	}
+	// pagination
+	queryStr += "ORDER BY coordinator.item_id "
+	if order == OrderAsc {
+		queryStr += " ASC "
+	} else {
+		queryStr += " DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	query = hdb.db.Rebind(queryStr)
+
+	coordinators := []*HistoryCoordinator{}
+	if err := meddler.QueryAll(hdb.db, &coordinators, query, args...); err != nil {
+		return nil, nil, err
+	}
+	if len(coordinators) == 0 {
+		return nil, nil, sql.ErrNoRows
+	}
+	return db.SlicePtrsToSlice(coordinators).([]HistoryCoordinator), &db.Pagination{
+		TotalItems: coordinators[0].TotalItems,
+		FirstItem:  coordinators[0].FirstItem,
+		LastItem:   coordinators[0].LastItem,
+	}, nil
+}

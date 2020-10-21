@@ -1162,7 +1162,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/coordinators/{forgerAddr}':
+  '/coordinators/{bidderAddr}':
     get:
       tags:
         - Hermez status
@@ -1170,7 +1170,7 @@ paths:
       description: Get the information of a coordinator.
       operationId: getCoordinator
       parameters:
-        - name: forgerAddr
+        - name: bidderAddr
           in: path
           description: Coordinator identifier
           required: true
@@ -1807,9 +1807,11 @@ components:
     Coordinator:
       type: object
       properties:
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         forgerAddr:
           $ref: '#/components/schemas/EthereumAddress'
-        withdrawAddr:
+        bidderAddr:
           $ref: '#/components/schemas/EthereumAddress'
         URL:
           $ref: '#/components/schemas/URL'
@@ -1818,6 +1820,13 @@ components:
             - $ref: '#/components/schemas/EthBlockNum'
             - description: Ethereum block in which the coordinator registered into the network.
             - example: 5735943738
+      additionalProperties: false
+      required:
+        - itemId
+        - forgerAddr
+        - bidderAddr
+        - URL
+        - ethereumBlock
     Coordinators:
       type: object
       properties:
@@ -1828,6 +1837,10 @@ components:
             $ref: '#/components/schemas/Coordinator'
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
+      additionalProperties: false
+      required:
+        - coordinators
+        - pagination
     Bid:
       type: object
       description: Tokens placed in an auction by a coordinator to gain the right to forge batches during a specific slot.
