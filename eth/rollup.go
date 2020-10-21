@@ -14,11 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
-	ERC777 "github.com/hermeznetwork/hermez-node/eth/contracts/erc777"
 	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
+	HEZ "github.com/hermeznetwork/hermez-node/eth/contracts/tokenHEZ"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -259,13 +258,13 @@ type RollupInterface interface {
 	// Public Functions
 
 	RollupForgeBatch(*RollupForgeBatchArgs) (*types.Transaction, error)
-	RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big.Int) (*types.Transaction, error)
+	RollupAddToken(tokenAddress ethCommon.Address, feeAddToken, deadline *big.Int) (*types.Transaction, error)
 
 	RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (*types.Transaction, error)
 	RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error)
 
 	RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error)
-	RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error)
+	RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error)
 
 	// Governance Public Functions
 	RollupUpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout int64) (*types.Transaction, error)
@@ -289,15 +288,15 @@ type RollupInterface interface {
 
 // RollupClient is the implementation of the interface to the Rollup Smart Contract in ethereum.
 type RollupClient struct {
-	client          *EthereumClient
-	address         ethCommon.Address
-	tokenHEZAddress ethCommon.Address
-	hermez          *Hermez.Hermez
-	contractAbi     abi.ABI
+	client      *EthereumClient
+	address     ethCommon.Address
+	tokenHEZ    TokenConfig
+	hermez      *Hermez.Hermez
+	contractAbi abi.ABI
 }
 
 // NewRollupClient creates a new RollupClient
-func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZAddress ethCommon.Address) (*RollupClient, error) {
+func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ TokenConfig) (*RollupClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(Hermez.HermezABI)))
 	if err != nil {
 		return nil, err
@@ -307,11 +306,11 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 		return nil, err
 	}
 	return &RollupClient{
-		client:          client,
-		address:         address,
-		tokenHEZAddress: tokenHEZAddress,
-		hermez:          hermez,
-		contractAbi:     contractAbi,
+		client:      client,
+		address:     address,
+		tokenHEZ:    tokenHEZ,
+		hermez:      hermez,
+		contractAbi: contractAbi,
 	}, nil
 }
 
@@ -372,26 +371,25 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (tx *types.T
 // RollupAddToken is the interface to call the smart contract function.
 // `feeAddToken` is the amount of HEZ tokens that will be paid to add the
 // token.  `feeAddToken` must match the public value of the smart contract.
-func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big.Int) (tx *types.Transaction, err error) {
+func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken, deadline *big.Int) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokens, err := ERC777.NewERC777(c.tokenHEZAddress, ec)
+			tokenHEZcontract, err := HEZ.NewHEZ(c.tokenHEZ.Address, ec)
 			if err != nil {
 				return nil, err
 			}
-			addTokenFnSignature := []byte("addToken(address)")
-			hash := sha3.NewLegacyKeccak256()
-			_, err = hash.Write(addTokenFnSignature)
-			if err != nil {
-				return nil, err
-			}
-			methodID := hash.Sum(nil)[:4]
-			var data []byte
-			data = append(data, methodID...)
-			paddedAddress := ethCommon.LeftPadBytes(tokenAddress.Bytes(), 32)
-			data = append(data, paddedAddress[:]...)
-			return tokens.Send(auth, c.address, feeAddToken, data)
+			owner := c.client.account.Address
+			spender := c.address
+			nonce, err := tokenHEZcontract.Nonces(nil, owner)
+			tokenname := c.tokenHEZ.Name
+			tokenAddr := c.tokenHEZ.Address
+			chainid, _ := c.client.client.ChainID(context.Background())
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, feeAddToken, nonce, deadline, tokenname)
+			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
+			permit := createPermit(owner, spender, feeAddToken, deadline, digest, signature)
+
+			return c.hermez.AddToken(auth, tokenAddress, permit)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed add Token %w", err)
@@ -404,16 +402,12 @@ func (c *RollupClient) RollupWithdrawMerkleProof(fromBJJ *babyjub.PublicKey, tok
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			hermez, err := Hermez.NewHermez(c.address, ec)
-			if err != nil {
-				return nil, err
-			}
 			pkCompL := fromBJJ.Compress()
 			pkCompB := common.SwapEndianness(pkCompL[:])
 			babyPubKey := new(big.Int).SetBytes(pkCompB)
 			numExitRootB := big.NewInt(numExitRoot)
 			idxBig := big.NewInt(idx)
-			return hermez.WithdrawMerkleProof(auth, tokenID, amount, babyPubKey, numExitRootB, siblings, idxBig, instantWithdraw)
+			return c.hermez.WithdrawMerkleProof(auth, tokenID, amount, babyPubKey, numExitRootB, siblings, idxBig, instantWithdraw)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed update WithdrawMerkleProof: %w", err)
@@ -432,10 +426,6 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			hermez, err := Hermez.NewHermez(c.address, ec)
-			if err != nil {
-				return nil, err
-			}
 			pkCompL := fromBJJ.Compress()
 			pkCompB := common.SwapEndianness(pkCompL[:])
 			babyPubKey := new(big.Int).SetBytes(pkCompB)
@@ -453,7 +443,8 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 			if tokenID == 0 {
 				auth.Value = loadAmount
 			}
-			return hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF), uint16(amountF), tokenIDBig, toIdxBig)
+			var permit []byte
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF), uint16(amountF), tokenIDBig, toIdxBig, permit)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed add L1 Tx ERC20/ETH: %w", err)
@@ -461,59 +452,45 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 	return tx, nil
 }
 
-// RollupL1UserTxERC777 is the interface to call the smart contract function
-func (c *RollupClient) RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (tx *types.Transaction, err error) {
+// RollupL1UserTxERC20Permit is the interface to call the smart contract function
+func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokens, err := ERC777.NewERC777(c.tokenHEZAddress, ec)
-			if err != nil {
-				return nil, err
-			}
-			addL1TxFnSignature := []byte("addL1Transaction(uint256,uint48,uint16,uint16,uint32,uint48)")
-			hash := sha3.NewLegacyKeccak256()
-			_, err = hash.Write(addL1TxFnSignature)
-			if err != nil {
-				return nil, err
-			}
-			methodID := hash.Sum(nil)[:4]
 			pkCompL := fromBJJ.Compress()
 			pkCompB := common.SwapEndianness(pkCompL[:])
-			paddedAddress := ethCommon.LeftPadBytes(pkCompB, 32)
-			fromIdxB, err := common.Idx(fromIdx).Bytes()
-			if err != nil {
-				return nil, err
-			}
-			paddedFromIdx := ethCommon.LeftPadBytes(fromIdxB[:], 32)
+			babyPubKey := new(big.Int).SetBytes(pkCompB)
+			fromIdxBig := big.NewInt(fromIdx)
+			toIdxBig := big.NewInt(toIdx)
+			tokenIDBig := uint32(tokenID)
 			loadAmountF, err := common.NewFloat16(loadAmount)
 			if err != nil {
 				return nil, err
 			}
-			paddedLoadAmount := ethCommon.LeftPadBytes(loadAmountF.Bytes(), 32)
 			amountF, err := common.NewFloat16(amount)
 			if err != nil {
 				return nil, err
 			}
-			paddedAmount := ethCommon.LeftPadBytes(amountF.Bytes(), 32)
-			tokenIDB := common.TokenID(tokenID).Bytes()
-			paddedTokenID := ethCommon.LeftPadBytes(tokenIDB, 32)
-			toIdxB, err := common.Idx(toIdx).Bytes()
+			if tokenID == 0 {
+				auth.Value = loadAmount
+			}
+			tokenHEZcontract, err := HEZ.NewHEZ(c.tokenHEZ.Address, ec)
 			if err != nil {
 				return nil, err
 			}
-			paddedToIdx := ethCommon.LeftPadBytes(toIdxB[:], 32)
-			var data []byte
-			data = append(data, methodID...)
-			data = append(data, paddedAddress[:]...)
-			data = append(data, paddedFromIdx[:]...)
-			data = append(data, paddedLoadAmount[:]...)
-			data = append(data, paddedAmount[:]...)
-			data = append(data, paddedTokenID[:]...)
-			data = append(data, paddedToIdx[:]...)
-			return tokens.Send(auth, c.address, loadAmount, data)
+			owner := c.client.account.Address
+			spender := c.address
+			nonce, err := tokenHEZcontract.Nonces(nil, owner)
+			tokenname := c.tokenHEZ.Name
+			tokenAddr := c.tokenHEZ.Address
+			chainid, _ := c.client.client.ChainID(context.Background())
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenname)
+			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
+			permit := createPermit(owner, spender, amount, deadline, digest, signature)
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF), uint16(amountF), tokenIDBig, toIdxBig, permit)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed add L1 Tx ERC777: %w", err)
+		return nil, fmt.Errorf("Failed add L1 Tx ERC20Permit: %w", err)
 	}
 	return tx, nil
 }
@@ -539,11 +516,7 @@ func (c *RollupClient) RollupUpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeou
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			hermez, err := Hermez.NewHermez(c.address, ec)
-			if err != nil {
-				return nil, err
-			}
-			return hermez.UpdateForgeL1L2BatchTimeout(auth, uint8(newForgeL1L2BatchTimeout))
+			return c.hermez.UpdateForgeL1L2BatchTimeout(auth, uint8(newForgeL1L2BatchTimeout))
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed update ForgeL1L2BatchTimeout: %w", err)
@@ -556,11 +529,7 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *typ
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			hermez, err := Hermez.NewHermez(c.address, ec)
-			if err != nil {
-				return nil, err
-			}
-			return hermez.UpdateFeeAddToken(auth, newFeeAddToken)
+			return c.hermez.UpdateFeeAddToken(auth, newFeeAddToken)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed update FeeAddToken: %w", err)

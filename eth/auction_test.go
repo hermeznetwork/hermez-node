@@ -19,7 +19,7 @@ var allocationRatioConst [3]uint16 = [3]uint16{4000, 4000, 2000}
 var auctionClientTest *AuctionClient
 
 //var genesisBlock = 93
-var genesisBlock = 100
+var genesisBlock = 97
 
 var minBidStr = "10000000000000000000"
 var URL = "http://localhost:3000"
@@ -270,8 +270,10 @@ func TestAuctionBid(t *testing.T) {
 	require.Nil(t, err)
 	bidAmount := new(big.Int)
 	bidAmount.SetString("12000000000000000000", 10)
+	amount := new(big.Int)
+	amount.SetString("12000000000000000000", 10)
 	bidderAddress := governanceAddressConst
-	_, err = auctionClientTest.AuctionBid(currentSlot+4, bidAmount)
+	_, err = auctionClientTest.AuctionBid(amount, currentSlot+4, bidAmount, deadline)
 	require.Nil(t, err)
 	currentBlockNum, _ := auctionClientTest.client.EthCurrentBlock()
 	auctionEvents, _, _ := auctionClientTest.AuctionEventsByBlock(currentBlockNum)
@@ -309,7 +311,7 @@ func TestAuctionMultiBid(t *testing.T) {
 	budget := new(big.Int)
 	budget.SetString("45200000000000000000", 10)
 	bidderAddress := governanceAddressConst
-	_, err = auctionClientTest.AuctionMultiBid(currentSlot+4, currentSlot+10, slotSet, maxBid, minBid, budget)
+	_, err = auctionClientTest.AuctionMultiBid(budget, currentSlot+4, currentSlot+10, slotSet, maxBid, minBid, deadline)
 	require.Nil(t, err)
 	currentBlockNum, _ := auctionClientTest.client.EthCurrentBlock()
 	auctionEvents, _, _ := auctionClientTest.AuctionEventsByBlock(currentBlockNum)
@@ -346,17 +348,15 @@ func TestAuctionClaimHEZ(t *testing.T) {
 }
 
 func TestAuctionForge(t *testing.T) {
-	auctionClientTestHermez, err := NewAuctionClient(ethereumClientHermez, auctionTestAddressConst, tokenHEZAddressConst)
+	auctionClientTestHermez, err := NewAuctionClient(ethereumClientHermez, auctionTestAddressConst, tokenHEZ)
 	require.Nil(t, err)
 	slotConst := 4
 	blockNum := int64(int(BLOCKSPERSLOT)*slotConst + genesisBlock)
-	currentBlockNum, _ := auctionClientTest.client.EthCurrentBlock()
+	currentBlockNum, _ := auctionClientTestHermez.client.EthCurrentBlock()
 	blocksToAdd := blockNum - currentBlockNum
 	addBlocks(blocksToAdd, ethClientDialURL)
-	currentBlockNum, _ = auctionClientTest.client.EthCurrentBlock()
+	currentBlockNum, _ = auctionClientTestHermez.client.EthCurrentBlock()
 	assert.Equal(t, currentBlockNum, blockNum)
-	_, err = auctionClientTestHermez.AuctionForge(bootCoordinatorAddressConst)
-	require.Contains(t, err.Error(), "Can't forge")
 	_, err = auctionClientTestHermez.AuctionForge(governanceAddressConst)
 	require.Nil(t, err)
 }
