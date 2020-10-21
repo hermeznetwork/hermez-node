@@ -14,7 +14,7 @@ import (
 
 var (
 	// keyidx is used as key in the db to store the current Idx
-	keyidx = []byte("idx")
+	keyidx = []byte("k:idx")
 )
 
 func (s *StateDB) resetZKInputs() {

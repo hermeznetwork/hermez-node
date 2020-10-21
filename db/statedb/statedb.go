@@ -3,6 +3,7 @@ package statedb
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"os/exec"
 	"strconv"
@@ -29,7 +30,18 @@ var (
 	ErrToIdxNotFound = errors.New("ToIdx can not be found")
 
 	// KeyCurrentBatch is used as key in the db to store the current BatchNum
-	KeyCurrentBatch = []byte("currentbatch")
+	KeyCurrentBatch = []byte("k:currentbatch")
+
+	// PrefixKeyIdx is the key prefix for idx in the db
+	PrefixKeyIdx = []byte("i:")
+	// PrefixKeyAccHash is the key prefix for account hash in the db
+	PrefixKeyAccHash = []byte("h:")
+	// PrefixKeyMT is the key prefix for merkle tree in the db
+	PrefixKeyMT = []byte("m:")
+	// PrefixKeyAddr is the key prefix for address in the db
+	PrefixKeyAddr = []byte("a:")
+	// PrefixKeyAddrBJJ is the key prefix for address-babyjubjub in the db
+	PrefixKeyAddrBJJ = []byte("ab:")
 )
 
 const (
@@ -80,7 +92,7 @@ func NewStateDB(path string, typ TypeStateDB, nLevels int) (*StateDB, error) {
 
 	var mt *merkletree.MerkleTree = nil
 	if typ == TypeSynchronizer || typ == TypeBatchBuilder {
-		mt, err = merkletree.NewMerkleTree(sto, nLevels)
+		mt, err = merkletree.NewMerkleTree(sto.WithPrefix(PrefixKeyMT), nLevels)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +248,7 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 
 	if s.mt != nil {
 		// open the MT for the current s.db
-		mt, err := merkletree.NewMerkleTree(s.db, s.mt.MaxLevels())
+		mt, err := merkletree.NewMerkleTree(s.db.WithPrefix(PrefixKeyMT), s.mt.MaxLevels())
 		if err != nil {
 			return err
 		}
@@ -251,6 +263,35 @@ func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
 	return getAccountInTreeDB(s.db, idx)
 }
 
+// GetAccounts returns all the accounts in the db.  Use for debugging pruposes
+// only.
+func (s *StateDB) GetAccounts() ([]common.Account, error) {
+	idxDB := s.db.WithPrefix(PrefixKeyIdx)
+	idxs := []common.Idx{}
+	// NOTE: Current implementation of Iterate in the pebble interface is
+	// not efficient, as it iterates over all keys.  Improve it following
+	// this example: https://github.com/cockroachdb/pebble/pull/923/files
+	if err := idxDB.Iterate(func(k []byte, v []byte) (bool, error) {
+		idx, err := common.IdxFromBytes(k)
+		if err != nil {
+			return false, err
+		}
+		idxs = append(idxs, idx)
+		return true, nil
+	}); err != nil {
+		return nil, err
+	}
+	accs := []common.Account{}
+	for i := range idxs {
+		acc, err := s.GetAccount(idxs[i])
+		if err != nil {
+			return nil, err
+		}
+		accs = append(accs, *acc)
+	}
+	return accs, nil
+}
+
 // getAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  GetAccount returns the account for the given Idx
 func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
@@ -258,17 +299,22 @@ func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 	if err != nil {
 		return nil, err
 	}
-	vBytes, err := sto.Get(idxBytes[:])
+	vBytes, err := sto.Get(append(PrefixKeyIdx, idxBytes[:]...))
 	if err != nil {
 		return nil, err
 	}
-	accBytes, err := sto.Get(vBytes)
+	accBytes, err := sto.Get(append(PrefixKeyAccHash, vBytes...))
 	if err != nil {
 		return nil, err
 	}
 	var b [32 * common.NLeafElems]byte
 	copy(b[:], accBytes)
-	return common.AccountFromBytes(b)
+	account, err := common.AccountFromBytes(b)
+	if err != nil {
+		return nil, err
+	}
+	account.Idx = idx
+	return account, nil
 }
 
 // CreateAccount creates a new Account in the StateDB for the given Idx.  If
@@ -309,16 +355,16 @@ func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 	if err != nil {
 		return nil, err
 	}
-	_, err = tx.Get(idxBytes[:])
+	_, err = tx.Get(append(PrefixKeyIdx, idxBytes[:]...))
 	if err != db.ErrNotFound {
 		return nil, ErrAccountAlreadyExists
 	}
 
-	err = tx.Put(v.Bytes(), accountBytes[:])
+	err = tx.Put(append(PrefixKeyAccHash, v.Bytes()...), accountBytes[:])
 	if err != nil {
 		return nil, err
 	}
-	err = tx.Put(idxBytes[:], v.Bytes())
+	err = tx.Put(append(PrefixKeyIdx, idxBytes[:]...), v.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +406,7 @@ func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 	if err != nil {
 		return nil, err
 	}
-	err = tx.Put(v.Bytes(), accountBytes[:])
+	err = tx.Put(append(PrefixKeyAccHash, v.Bytes()...), accountBytes[:])
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +414,7 @@ func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 	if err != nil {
 		return nil, err
 	}
-	err = tx.Put(idxBytes[:], v.Bytes())
+	err = tx.Put(append(PrefixKeyIdx, idxBytes[:]...), v.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -389,6 +435,11 @@ func (s *StateDB) MTGetProof(idx common.Idx) (*merkletree.CircomVerifierProof, e
 		return nil, ErrStateDBWithoutMT
 	}
 	return s.mt.GenerateCircomVerifierProof(idx.BigInt(), s.mt.Root())
+}
+
+// MTGetRoot returns the current root of the underlying Merkle Tree
+func (s *StateDB) MTGetRoot() *big.Int {
+	return s.mt.Root().BigInt()
 }
 
 // LocalStateDB represents the local StateDB which allows to make copies from
@@ -462,7 +513,7 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 			return err
 		}
 		// open the MT for the current s.db
-		mt, err := merkletree.NewMerkleTree(l.db, l.mt.MaxLevels())
+		mt, err := merkletree.NewMerkleTree(l.db.WithPrefix(PrefixKeyMT), l.mt.MaxLevels())
 		if err != nil {
 			return err
 		}
