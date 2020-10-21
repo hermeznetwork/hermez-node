@@ -57,7 +57,7 @@ func TestSync(t *testing.T) {
 
 	blocks, err := s.historyDB.GetBlocks(0, 9999)
 	require.Nil(t, err)
-	assert.Equal(t, int64(0), blocks[0].EthBlockNum)
+	assert.Equal(t, int64(1), blocks[0].EthBlockNum)
 
 	// TODO once transakcio is completed
 	/*

@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	// L1TxBytesLen is the length of the byte array that represents the L1Tx
-	L1TxBytesLen = 72
+	// L1UserTxBytesLen is the length of the byte array that represents the L1Tx
+	L1UserTxBytesLen = 72
 	// L1CoordinatorTxBytesLen is the length of the byte array that represents the L1CoordinatorTx
 	L1CoordinatorTxBytesLen = 101
 )
@@ -27,20 +27,20 @@ type L1Tx struct {
 	// where type:
 	// 	- L1UserTx: 0
 	// 	- L1CoordinatorTx: 1
-	TxID            TxID
-	ToForgeL1TxsNum *int64 // toForgeL1TxsNum in which the tx was forged / will be forged
-	Position        int
-	UserOrigin      bool // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx         Idx  // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	FromEthAddr     ethCommon.Address
-	FromBJJ         *babyjub.PublicKey
-	ToIdx           Idx // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	TokenID         TokenID
-	Amount          *big.Int
-	LoadAmount      *big.Int
-	EthBlockNum     int64 // Ethereum Block Number in which this L1Tx was added to the queue
-	Type            TxType
-	BatchNum        *BatchNum
+	TxID            TxID               `meddler:"id"`
+	ToForgeL1TxsNum *int64             `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
+	Position        int                `meddler:"position"`
+	UserOrigin      bool               `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
+	FromIdx         Idx                `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr,zeroisnull"`
+	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj,zeroisnull"`
+	ToIdx           Idx                `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	TokenID         TokenID            `meddler:"token_id"`
+	Amount          *big.Int           `meddler:"amount,bigint"`
+	LoadAmount      *big.Int           `meddler:"load_amount,bigint"`
+	EthBlockNum     int64              `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
+	Type            TxType             `meddler:"type"`
+	BatchNum        *BatchNum          `meddler:"batch_num"`
 }
 
 // NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated
@@ -146,9 +146,9 @@ func (tx L1Tx) Tx() Tx {
 	return genericTx
 }
 
-// Bytes encodes a L1Tx into []byte
-func (tx *L1Tx) Bytes() ([]byte, error) {
-	var b [L1TxBytesLen]byte
+// BytesUser encodes a L1Tx into []byte
+func (tx *L1Tx) BytesUser() ([]byte, error) {
+	var b [L1UserTxBytesLen]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
 	pkCompL := tx.FromBJJ.Compress()
 	pkCompB := SwapEndianness(pkCompL[:])
@@ -193,13 +193,15 @@ func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, err
 	return b[:], nil
 }
 
-// L1TxFromBytes decodes a L1Tx from []byte
-func L1TxFromBytes(b []byte) (*L1Tx, error) {
-	if len(b) != L1TxBytesLen {
+// L1UserTxFromBytes decodes a L1Tx from []byte
+func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
+	if len(b) != L1UserTxBytesLen {
 		return nil, fmt.Errorf("Can not parse L1Tx bytes, expected length %d, current: %d", 68, len(b))
 	}
 
-	tx := &L1Tx{}
+	tx := &L1Tx{
+		UserOrigin: true,
+	}
 	var err error
 	tx.FromEthAddr = ethCommon.BytesToAddress(b[0:20])
 
@@ -231,8 +233,8 @@ func L1TxFromBytes(b []byte) (*L1Tx, error) {
 	return tx, nil
 }
 
-// L1TxFromCoordinatorBytes decodes a L1Tx from []byte
-func L1TxFromCoordinatorBytes(b []byte) (*L1Tx, error) {
+// L1CoordinatorTxFromBytes decodes a L1Tx from []byte
+func L1CoordinatorTxFromBytes(b []byte) (*L1Tx, error) {
 	if len(b) != L1CoordinatorTxBytesLen {
 		return nil, fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d", 101, len(b))
 	}
@@ -240,7 +242,9 @@ func L1TxFromCoordinatorBytes(b []byte) (*L1Tx, error) {
 	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n98")
 	bytesMessage2 := []byte("I authorize this babyjubjub key for hermez rollup account creation")
 
-	tx := &L1Tx{}
+	tx := &L1Tx{
+		UserOrigin: false,
+	}
 	var err error
 	// Ethereum adds 27 to v
 	v := b[0] - byte(27) //nolint:gomnd

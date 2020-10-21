@@ -8,7 +8,7 @@ import (
 
 func TestClientInterface(t *testing.T) {
 	var c ClientInterface
-	client := NewClient(nil, nil, nil, nil)
+	client, _ := NewClient(nil, nil, nil, &ClientConfig{})
 	c = client
 	require.NotNil(t, c)
 }
