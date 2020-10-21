@@ -198,11 +198,6 @@ func (tc *Context) GenerateBlocks(set string) ([]BlockData, error) {
 				Fee:    common.FeeSelector(inst.fee),
 				Type:   common.TxTypeTransfer,
 			}
-			nTx, err := common.NewPoolL2Tx(tx.PoolL2Tx())
-			if err != nil {
-				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
-			}
-			tx = nTx.L2Tx()
 			tx.BatchNum = common.BatchNum(tc.currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
 			testTx := L2Tx{
 				lineNum:     inst.lineNum,
@@ -371,6 +366,9 @@ func (tc *Context) setIdxs() error {
 		if testTx.L2Tx.Type == common.TxTypeTransfer {
 			testTx.L2Tx.ToIdx = tc.Users[testTx.toIdxName].Accounts[testTx.tokenID].Idx
 		}
+		// in case Type==Exit, ToIdx=1, already set at the
+		// GenerateBlocks main switch inside TxTypeExit case
+
 		nTx, err := common.NewL2Tx(&testTx.L2Tx)
 		if err != nil {
 			return fmt.Errorf("Line %d: %s", testTx.lineNum, err.Error())
@@ -466,7 +464,7 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 			if err != nil {
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
 			}
-			sig := tc.Users[inst.to].BJJ.SignPoseidon(toSign)
+			sig := tc.Users[inst.from].BJJ.SignPoseidon(toSign)
 			tx.Signature = sig.Compress()
 
 			txs = append(txs, tx)
@@ -480,6 +478,18 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 				Nonce:   tc.Users[inst.from].Accounts[inst.tokenID].Nonce,
 				Type:    common.TxTypeExit,
 			}
+			nTx, err := common.NewPoolL2Tx(&tx)
+			if err != nil {
+				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
+			}
+			tx = *nTx
+			// perform signature and set it to tx.Signature
+			toSign, err := tx.HashToSign()
+			if err != nil {
+				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
+			}
+			sig := tc.Users[inst.from].BJJ.SignPoseidon(toSign)
+			tx.Signature = sig.Compress()
 			txs = append(txs, tx)
 		default:
 			return nil, fmt.Errorf("Line %d: instruction type unrecognized: %s", inst.lineNum, inst.typ)
