@@ -25,3 +25,21 @@ func TestTxIDScannerValue(t *testing.T) {
 	assert.NoError(t, scan.Scan(fromDB))
 	assert.Equal(t, value, scan)
 }
+
+func TestTxIDMarshalers(t *testing.T) {
+	h := []byte("0x00000000000001e240004700")
+	var txid TxID
+	err := txid.UnmarshalText(h)
+	assert.Nil(t, err)
+	assert.Equal(t, h, []byte(txid.String()))
+
+	h2, err := txid.MarshalText()
+	assert.Nil(t, err)
+	assert.Equal(t, h, h2)
+
+	var txid2 TxID
+	err = txid2.UnmarshalText(h2)
+	assert.Nil(t, err)
+	assert.Equal(t, h2, []byte(txid2.String()))
+	assert.Equal(t, h, h2)
+}

@@ -367,9 +367,14 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 		// s.zki.RqTxCompressedDataV2[s.i] = // TODO
 		// s.zki.RqToEthAddr[s.i] = common.EthAddrToBigInt(tx.RqToEthAddr) // TODO
 		// s.zki.RqToBJJAy[s.i] = tx.ToBJJ.Y // TODO
-		s.zki.S[s.i] = tx.Signature.S
-		s.zki.R8x[s.i] = tx.Signature.R8.X
-		s.zki.R8y[s.i] = tx.Signature.R8.Y
+		signature, err := tx.Signature.Decompress()
+		if err != nil {
+			log.Error(err)
+			return nil, nil, false, err
+		}
+		s.zki.S[s.i] = signature.S
+		s.zki.R8x[s.i] = signature.R8.X
+		s.zki.R8y[s.i] = signature.R8.Y
 	}
 
 	// if StateDB type==TypeSynchronizer, will need to add Nonce

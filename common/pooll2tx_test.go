@@ -102,6 +102,6 @@ func TestVerifyTxSignature(t *testing.T) {
 	assert.Equal(t, "13412877307445712067533842795279849753265998687662992184595695642580679868064", toSign.String())
 
 	sig := sk.SignPoseidon(toSign)
-	tx.Signature = sig
+	tx.Signature = sig.Compress()
 	assert.True(t, tx.VerifySignature(sk.Public()))
 }

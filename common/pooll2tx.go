@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -17,19 +18,19 @@ type PoolL2Tx struct {
 	// TxID (12 bytes) for L2Tx is:
 	// bytes:  |  1   |    6    |   5   |
 	// values: | type | FromIdx | Nonce |
-	TxID      TxID               `meddler:"tx_id"`
-	FromIdx   Idx                `meddler:"from_idx"`
-	ToIdx     Idx                `meddler:"to_idx,zeroisnull"`
-	AuxToIdx  Idx                `meddler:"-"` // AuxToIdx is only used internally at the StateDB to avoid repeated computation when processing transactions (from Synchronizer, TxSelector, BatchBuilder)
-	ToEthAddr ethCommon.Address  `meddler:"to_eth_addr"`
-	ToBJJ     *babyjub.PublicKey `meddler:"to_bjj"`
-	TokenID   TokenID            `meddler:"token_id"`
-	Amount    *big.Int           `meddler:"amount,bigint"` // TODO: change to float16
-	Fee       FeeSelector        `meddler:"fee"`
-	Nonce     Nonce              `meddler:"nonce"` // effective 40 bits used
-	State     PoolL2TxState      `meddler:"state"`
-	Signature *babyjub.Signature `meddler:"signature"`         // tx signature
-	Timestamp time.Time          `meddler:"timestamp,utctime"` // time when added to the tx pool
+	TxID      TxID                  `meddler:"tx_id"`
+	FromIdx   Idx                   `meddler:"from_idx"`
+	ToIdx     Idx                   `meddler:"to_idx,zeroisnull"`
+	AuxToIdx  Idx                   `meddler:"-"` // AuxToIdx is only used internally at the StateDB to avoid repeated computation when processing transactions (from Synchronizer, TxSelector, BatchBuilder)
+	ToEthAddr ethCommon.Address     `meddler:"to_eth_addr"`
+	ToBJJ     *babyjub.PublicKey    `meddler:"to_bjj"`
+	TokenID   TokenID               `meddler:"token_id"`
+	Amount    *big.Int              `meddler:"amount,bigint"` // TODO: change to float16
+	Fee       FeeSelector           `meddler:"fee"`
+	Nonce     Nonce                 `meddler:"nonce"` // effective 40 bits used
+	State     PoolL2TxState         `meddler:"state"`
+	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
+	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
 	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	RqToIdx           Idx                `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
@@ -51,19 +52,23 @@ type PoolL2Tx struct {
 func NewPoolL2Tx(poolL2Tx *PoolL2Tx) (*PoolL2Tx, error) {
 	// calculate TxType
 	var txType TxType
-	if poolL2Tx.ToIdx == Idx(0) {
+	if poolL2Tx.ToIdx >= IdxUserThreshold {
 		txType = TxTypeTransfer
-	} else if poolL2Tx.ToIdx == Idx(1) {
+	} else if poolL2Tx.ToIdx == 1 {
 		txType = TxTypeExit
-	} else if poolL2Tx.ToIdx >= IdxUserThreshold {
-		txType = TxTypeTransfer
+	} else if poolL2Tx.ToIdx == 0 {
+		if poolL2Tx.ToBJJ != nil && poolL2Tx.ToEthAddr == FFAddr {
+			txType = TxTypeTransferToBJJ
+		} else if poolL2Tx.ToEthAddr != FFAddr && poolL2Tx.ToEthAddr != EmptyAddr {
+			txType = TxTypeTransferToEthAddr
+		}
 	} else {
-		return poolL2Tx, fmt.Errorf("Can not determine type of PoolL2Tx, invalid ToIdx value: %d", poolL2Tx.ToIdx)
+		return nil, errors.New("malformed transaction")
 	}
 
 	// if TxType!=poolL2Tx.TxType return error
 	if poolL2Tx.Type != "" && poolL2Tx.Type != txType {
-		return poolL2Tx, fmt.Errorf("PoolL2Tx.Type: %s, should be: %s", poolL2Tx.Type, txType)
+		return poolL2Tx, fmt.Errorf("type: %s, should be: %s", poolL2Tx.Type, txType)
 	}
 	poolL2Tx.Type = txType
 
@@ -79,8 +84,13 @@ func NewPoolL2Tx(poolL2Tx *PoolL2Tx) (*PoolL2Tx, error) {
 		return poolL2Tx, err
 	}
 	copy(txid[7:12], nonceBytes[:])
-	poolL2Tx.TxID = TxID(txid)
+	txID := TxID(txid)
 
+	// if TxID!=poolL2Tx.TxID return error
+	if poolL2Tx.TxID != (TxID{}) && poolL2Tx.TxID != txID {
+		return poolL2Tx, fmt.Errorf("id: %s, should be: %s", poolL2Tx.TxID.String(), txID.String())
+	}
+	poolL2Tx.TxID = txID
 	return poolL2Tx, nil
 }
 
@@ -213,7 +223,11 @@ func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
 	if err != nil {
 		return false
 	}
-	return pk.VerifyPoseidon(h, tx.Signature)
+	s, err := tx.Signature.Decompress()
+	if err != nil {
+		return false
+	}
+	return pk.VerifyPoseidon(h, s)
 }
 
 // L2Tx returns a *L2Tx from the PoolL2Tx

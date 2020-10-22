@@ -25,55 +25,59 @@ func CleanL2DB(db *sqlx.DB) {
 // WARNING: This tx doesn't follow the protocol (signature, txID, ...)
 // it's just to test getting/setting from/to the DB.
 func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
-	txs := make([]*common.PoolL2Tx, 0, n)
-	privK := babyjub.NewRandPrivKey()
-	for i := 256; i < 256+n; i++ {
-		var state common.PoolL2TxState
-		//nolint:gomnd
-		if i%4 == 0 {
-			state = common.PoolL2TxStatePending
+	/*
+		WARNING: this should be replaced by transaktio
+		txs := make([]*common.PoolL2Tx, 0, n)
+		privK := babyjub.NewRandPrivKey()
+		for i := 256; i < 256+n; i++ {
+			var state common.PoolL2TxState
 			//nolint:gomnd
-		} else if i%4 == 1 {
-			state = common.PoolL2TxStateInvalid
-			//nolint:gomnd
-		} else if i%4 == 2 {
-			state = common.PoolL2TxStateForging
-			//nolint:gomnd
-		} else if i%4 == 3 {
-			state = common.PoolL2TxStateForged
+			if i%4 == 0 {
+				state = common.PoolL2TxStatePending
+				//nolint:gomnd
+			} else if i%4 == 1 {
+				state = common.PoolL2TxStateInvalid
+				//nolint:gomnd
+			} else if i%4 == 2 {
+				state = common.PoolL2TxStateForging
+				//nolint:gomnd
+			} else if i%4 == 3 {
+				state = common.PoolL2TxStateForged
+			}
+			fee := common.FeeSelector(i % 255) //nolint:gomnd
+			token := tokens[i%len(tokens)]
+			tx := &common.PoolL2Tx{
+				FromIdx:   common.Idx(i),
+				ToIdx:     common.Idx(i + 1),
+				ToEthAddr: ethCommon.BigToAddress(big.NewInt(int64(i))),
+				ToBJJ:     privK.Public(),
+				TokenID:   token.TokenID,
+				Amount:    big.NewInt(int64(i)),
+				Fee:       fee,
+				Nonce:     common.Nonce(i),
+				State:     state,
+				Signature: privK.SignPoseidon(big.NewInt(int64(i))).Compress(),
+			}
+			var err error
+			tx, err = common.NewPoolL2Tx(tx)
+			if err != nil {
+				panic(err)
+			}
+			if i%2 == 0 { // Optional parameters: rq
+				tx.RqFromIdx = common.Idx(i)
+				tx.RqToIdx = common.Idx(i + 1)
+				tx.RqToEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
+				tx.RqToBJJ = privK.Public()
+				tx.RqTokenID = common.TokenID(i)
+				tx.RqAmount = big.NewInt(int64(i))
+				tx.RqFee = common.FeeSelector(i)
+				tx.RqNonce = common.Nonce(i)
+			}
+			txs = append(txs, tx)
 		}
-		fee := common.FeeSelector(i % 255) //nolint:gomnd
-		token := tokens[i%len(tokens)]
-		tx := &common.PoolL2Tx{
-			FromIdx:   common.Idx(i),
-			ToIdx:     common.Idx(i + 1),
-			ToEthAddr: ethCommon.BigToAddress(big.NewInt(int64(i))),
-			ToBJJ:     privK.Public(),
-			TokenID:   token.TokenID,
-			Amount:    big.NewInt(int64(i)),
-			Fee:       fee,
-			Nonce:     common.Nonce(i),
-			State:     state,
-			Signature: privK.SignPoseidon(big.NewInt(int64(i))),
-		}
-		var err error
-		tx, err = common.NewPoolL2Tx(tx)
-		if err != nil {
-			panic(err)
-		}
-		if i%2 == 0 { // Optional parameters: rq
-			tx.RqFromIdx = common.Idx(i)
-			tx.RqToIdx = common.Idx(i + 1)
-			tx.RqToEthAddr = ethCommon.BigToAddress(big.NewInt(int64(i)))
-			tx.RqToBJJ = privK.Public()
-			tx.RqTokenID = common.TokenID(i)
-			tx.RqAmount = big.NewInt(int64(i))
-			tx.RqFee = common.FeeSelector(i)
-			tx.RqNonce = common.Nonce(i)
-		}
-		txs = append(txs, tx)
-	}
-	return txs
+		return txs
+	*/
+	return nil
 }
 
 // GenAuths generates account creation authorizations

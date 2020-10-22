@@ -99,6 +99,7 @@ func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAdd
 			EthAddr:   addr,
 			BatchNum:  batches[i%len(batches)].BatchNum,
 			PublicKey: pubK,
+			Balance:   big.NewInt(int64(i * 10000000)), //nolint:gomnd
 		})
 	}
 	return accs

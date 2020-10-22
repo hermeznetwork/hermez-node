@@ -28,15 +28,46 @@ func postAccountCreationAuth(c *gin.Context) {
 }
 
 func getAccountCreationAuth(c *gin.Context) {
-
 }
 
 func postPoolTx(c *gin.Context) {
-
+	// Parse body
+	var receivedTx receivedPoolTx
+	if err := c.ShouldBindJSON(&receivedTx); err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Transform from received to insert format and validate
+	writeTx, err := receivedTx.toDBWritePoolL2Tx()
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Insert to DB
+	if err := l2.AddTx(writeTx); err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	// Return TxID
+	c.JSON(http.StatusOK, writeTx.TxID.String())
 }
 
 func getPoolTx(c *gin.Context) {
-
+	// Get TxID
+	txID, err := parseParamTxID(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch tx from l2DB
+	dbTx, err := l2.GetTx(txID)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	apiTx := poolL2TxReadToSend(dbTx)
+	// Build succesfull response
+	c.JSON(http.StatusOK, apiTx)
 }
 
 func getAccounts(c *gin.Context) {

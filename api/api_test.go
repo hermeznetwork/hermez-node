@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -37,17 +38,19 @@ const apiPort = ":4010"
 const apiURL = "http://localhost" + apiPort + "/"
 
 type testCommon struct {
-	blocks   []common.Block
-	tokens   []tokenAPI
-	batches  []common.Batch
-	usrAddr  string
-	usrBjj   string
-	accs     []common.Account
-	usrTxs   []historyTxAPI
-	allTxs   []historyTxAPI
-	exits    []exitAPI
-	usrExits []exitAPI
-	router   *swagger.Router
+	blocks           []common.Block
+	tokens           []tokenAPI
+	batches          []common.Batch
+	usrAddr          string
+	usrBjj           string
+	accs             []common.Account
+	usrTxs           []historyTxAPI
+	allTxs           []historyTxAPI
+	exits            []exitAPI
+	usrExits         []exitAPI
+	poolTxsToSend    []receivedPoolTx
+	poolTxsToReceive []sendPoolTx
+	router           *swagger.Router
 }
 
 // TxSortFields represents the fields needed to sort L1 and L2 transactions
@@ -281,7 +284,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	// Gen accounts and add them to DB
+	// Gen accounts and add them to HistoryDB and StateDB
 	const totalAccounts = 40
 	const userAccounts = 4
 	usrAddr := ethCommon.BigToAddress(big.NewInt(4896847))
@@ -291,6 +294,11 @@ func TestMain(m *testing.M) {
 	err = h.AddAccounts(accs)
 	if err != nil {
 		panic(err)
+	}
+	for i := 0; i < len(accs); i++ {
+		if _, err := s.CreateAccount(accs[i].Idx, &accs[i]); err != nil {
+			panic(err)
+		}
 	}
 	// Gen exits and add them to DB
 	const totalExits = 40
@@ -387,7 +395,7 @@ func TestMain(m *testing.M) {
 			token := getToken(l1.TokenID)
 			tx := historyTxAPI{
 				IsL1:      "L1",
-				TxID:      l1.TxID.String(),
+				TxID:      l1.TxID,
 				Type:      l1.Type,
 				Position:  l1.Position,
 				ToIdx:     idxToHez(l1.ToIdx, token.Symbol),
@@ -444,7 +452,7 @@ func TestMain(m *testing.M) {
 			token := getToken(tokenID)
 			tx := historyTxAPI{
 				IsL1:      "L2",
-				TxID:      l2.TxID.String(),
+				TxID:      l2.TxID,
 				Type:      l2.Type,
 				Position:  l2.Position,
 				ToIdx:     idxToHez(l2.ToIdx, token.Symbol),
@@ -511,18 +519,124 @@ func TestMain(m *testing.M) {
 			}
 		}
 	}
+	// Prepare pool Txs
+	// Generate common.PoolL2Tx
+	// WARNING: this should be replaced once transakcio is ready
+	poolTxs := []common.PoolL2Tx{}
+	amount := new(big.Int)
+	amount, ok := amount.SetString("100000000000000", 10)
+	if !ok {
+		panic("bad amount")
+	}
+	poolTx := common.PoolL2Tx{
+		FromIdx: accs[0].Idx,
+		ToIdx:   accs[1].Idx,
+		Amount:  amount,
+		TokenID: accs[0].TokenID,
+		Nonce:   6,
+	}
+	if _, err := common.NewPoolL2Tx(&poolTx); err != nil {
+		panic(err)
+	}
+	h, err := poolTx.HashToSign()
+	if err != nil {
+		panic(err)
+	}
+	poolTx.Signature = privK.SignPoseidon(h).Compress()
+	poolTxs = append(poolTxs, poolTx)
+	// Transform to API formats
+	poolTxsToSend := []receivedPoolTx{}
+	poolTxsToReceive := []sendPoolTx{}
+	for _, poolTx := range poolTxs {
+		// common.PoolL2Tx ==> receivedPoolTx
+		token := getToken(poolTx.TokenID)
+		genSendTx := receivedPoolTx{
+			TxID:      poolTx.TxID,
+			Type:      poolTx.Type,
+			TokenID:   poolTx.TokenID,
+			FromIdx:   idxToHez(poolTx.FromIdx, token.Symbol),
+			Amount:    poolTx.Amount.String(),
+			Fee:       poolTx.Fee,
+			Nonce:     poolTx.Nonce,
+			Signature: poolTx.Signature,
+			RqFee:     &poolTx.RqFee,
+			RqNonce:   &poolTx.RqNonce,
+		}
+		// common.PoolL2Tx ==> receivedPoolTx
+		genReceiveTx := sendPoolTx{
+			TxID:      poolTx.TxID,
+			Type:      poolTx.Type,
+			FromIdx:   idxToHez(poolTx.FromIdx, token.Symbol),
+			Amount:    poolTx.Amount.String(),
+			Fee:       poolTx.Fee,
+			Nonce:     poolTx.Nonce,
+			State:     poolTx.State,
+			Signature: poolTx.Signature,
+			Timestamp: poolTx.Timestamp,
+			// BatchNum:    poolTx.BatchNum,
+			RqFee:   &poolTx.RqFee,
+			RqNonce: &poolTx.RqNonce,
+			Token:   token,
+		}
+		if poolTx.ToIdx != 0 {
+			toIdx := idxToHez(poolTx.ToIdx, token.Symbol)
+			genSendTx.ToIdx = &toIdx
+			genReceiveTx.ToIdx = &toIdx
+		}
+		if poolTx.ToEthAddr != common.EmptyAddr {
+			toEth := ethAddrToHez(poolTx.ToEthAddr)
+			genSendTx.ToEthAddr = &toEth
+			genReceiveTx.ToEthAddr = &toEth
+		}
+		if poolTx.ToBJJ != nil {
+			toBJJ := bjjToString(poolTx.ToBJJ)
+			genSendTx.ToBJJ = &toBJJ
+			genReceiveTx.ToBJJ = &toBJJ
+		}
+		if poolTx.RqFromIdx != 0 {
+			rqFromIdx := idxToHez(poolTx.RqFromIdx, token.Symbol)
+			genSendTx.RqFromIdx = &rqFromIdx
+			genReceiveTx.RqFromIdx = &rqFromIdx
+			genSendTx.RqTokenID = &token.TokenID
+			genReceiveTx.RqTokenID = &token.TokenID
+			rqAmount := poolTx.RqAmount.String()
+			genSendTx.RqAmount = &rqAmount
+			genReceiveTx.RqAmount = &rqAmount
+
+			if poolTx.RqToIdx != 0 {
+				rqToIdx := idxToHez(poolTx.RqToIdx, token.Symbol)
+				genSendTx.RqToIdx = &rqToIdx
+				genReceiveTx.RqToIdx = &rqToIdx
+			}
+			if poolTx.RqToEthAddr != common.EmptyAddr {
+				rqToEth := ethAddrToHez(poolTx.RqToEthAddr)
+				genSendTx.RqToEthAddr = &rqToEth
+				genReceiveTx.RqToEthAddr = &rqToEth
+			}
+			if poolTx.RqToBJJ != nil {
+				rqToBJJ := bjjToString(poolTx.RqToBJJ)
+				genSendTx.RqToBJJ = &rqToBJJ
+				genReceiveTx.RqToBJJ = &rqToBJJ
+			}
+		}
+		poolTxsToSend = append(poolTxsToSend, genSendTx)
+		poolTxsToReceive = append(poolTxsToReceive, genReceiveTx)
+	}
+	// Set testCommon
 	tc = testCommon{
-		blocks:   blocks,
-		tokens:   tokensUSD,
-		batches:  batches,
-		usrAddr:  ethAddrToHez(usrAddr),
-		usrBjj:   bjjToString(usrBjj),
-		accs:     accs,
-		usrTxs:   usrTxs,
-		allTxs:   allTxs,
-		exits:    apiExits,
-		usrExits: usrExits,
-		router:   router,
+		blocks:           blocks,
+		tokens:           tokensUSD,
+		batches:          batches,
+		usrAddr:          ethAddrToHez(usrAddr),
+		usrBjj:           bjjToString(usrBjj),
+		accs:             accs,
+		usrTxs:           usrTxs,
+		allTxs:           allTxs,
+		exits:            apiExits,
+		usrExits:         usrExits,
+		poolTxsToSend:    poolTxsToSend,
+		poolTxsToReceive: poolTxsToReceive,
+		router:           router,
 	}
 	// Run tests
 	result := m.Run()
@@ -531,6 +645,9 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	if err := database.Close(); err != nil {
+		panic(err)
+	}
+	if err := os.RemoveAll(dir); err != nil {
 		panic(err)
 	}
 	os.Exit(result)
@@ -713,7 +830,7 @@ func TestGetHistoryTx(t *testing.T) {
 	fetchedTxs := []historyTxAPI{}
 	for _, tx := range tc.allTxs {
 		fetchedTx := historyTxAPI{}
-		assert.NoError(t, doGoodReq("GET", endpoint+tx.TxID, nil, &fetchedTx))
+		assert.NoError(t, doGoodReq("GET", endpoint+tx.TxID.String(), nil, &fetchedTx))
 		fetchedTxs = append(fetchedTxs, fetchedTx)
 	}
 	assertHistoryTxAPIs(t, tc.allTxs, fetchedTxs)
@@ -876,7 +993,7 @@ func TestGetExits(t *testing.T) {
 	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?limit=1000&fromItem=1000", endpoint)
+	path = fmt.Sprintf("%s?limit=1000&fromItem=999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
@@ -1049,6 +1166,90 @@ func TestGetConfig(t *testing.T) {
 	assert.Equal(t, cg, &configTest)
 }
 
+func TestPoolTxs(t *testing.T) {
+	// POST
+	endpoint := apiURL + "transactions-pool"
+	fetchedTxID := common.TxID{}
+	for _, tx := range tc.poolTxsToSend {
+		jsonTxBytes, err := json.Marshal(tx)
+		assert.NoError(t, err)
+		jsonTxReader := bytes.NewReader(jsonTxBytes)
+		fmt.Println(string(jsonTxBytes))
+		assert.NoError(
+			t, doGoodReq(
+				"POST",
+				endpoint,
+				jsonTxReader, &fetchedTxID,
+			),
+		)
+		assert.Equal(t, tx.TxID, fetchedTxID)
+	}
+	// 400
+	// Wrong signature
+	badTx := tc.poolTxsToSend[0]
+	badTx.FromIdx = "hez:foo:1000"
+	jsonTxBytes, err := json.Marshal(badTx)
+	assert.NoError(t, err)
+	jsonTxReader := bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", endpoint, jsonTxReader, 400)
+	assert.NoError(t, err)
+	// Wrong to
+	badTx = tc.poolTxsToSend[0]
+	ethAddr := "hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+	badTx.ToEthAddr = &ethAddr
+	badTx.ToIdx = nil
+	jsonTxBytes, err = json.Marshal(badTx)
+	assert.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", endpoint, jsonTxReader, 400)
+	assert.NoError(t, err)
+	// Wrong rq
+	badTx = tc.poolTxsToSend[0]
+	rqFromIdx := "hez:foo:30"
+	badTx.RqFromIdx = &rqFromIdx
+	jsonTxBytes, err = json.Marshal(badTx)
+	assert.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", endpoint, jsonTxReader, 400)
+	assert.NoError(t, err)
+	// GET
+	endpoint += "/"
+	for _, tx := range tc.poolTxsToReceive {
+		fetchedTx := sendPoolTx{}
+		assert.NoError(
+			t, doGoodReq(
+				"GET",
+				endpoint+tx.TxID.String(),
+				nil, &fetchedTx,
+			),
+		)
+		assertPoolTx(t, tx, fetchedTx)
+	}
+	// 400
+	err = doBadReq("GET", endpoint+"0xG20000000156660000000090", nil, 400)
+	assert.NoError(t, err)
+	// 404
+	err = doBadReq("GET", endpoint+"0x020000000156660000000090", nil, 404)
+	assert.NoError(t, err)
+}
+
+func assertPoolTx(t *testing.T, expected, actual sendPoolTx) {
+	// state should be pending
+	assert.Equal(t, common.PoolL2TxStatePending, actual.State)
+	expected.State = actual.State
+	// timestamp should be very close to now
+	assert.Less(t, time.Now().UTC().Unix()-3, actual.Timestamp.Unix())
+	expected.Timestamp = actual.Timestamp
+	// token timestamp
+	if expected.Token.USDUpdate == nil {
+		assert.Equal(t, expected.Token.USDUpdate, actual.Token.USDUpdate)
+	} else {
+		assert.Equal(t, expected.Token.USDUpdate.Unix(), actual.Token.USDUpdate.Unix())
+		expected.Token.USDUpdate = actual.Token.USDUpdate
+	}
+	assert.Equal(t, expected, actual)
+}
+
 func doGoodReqPaginated(
 	path, order string,
 	iterStruct db.Paginationer,
@@ -1091,7 +1292,13 @@ func doGoodReqPaginated(
 func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{}) error {
 	ctx := context.Background()
 	client := &http.Client{}
-	httpReq, _ := http.NewRequest(method, path, reqBody)
+	httpReq, err := http.NewRequest(method, path, reqBody)
+	if err != nil {
+		return err
+	}
+	if reqBody != nil {
+		httpReq.Header.Add("Content-Type", "application/json")
+	}
 	route, pathParams, err := tc.router.FindRoute(httpReq.Method, httpReq.URL)
 	if err != nil {
 		return err
@@ -1171,7 +1378,7 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 		return err
 	}
 	if resp.StatusCode != expectedResponseCode {
-		return fmt.Errorf("Unexpected response code: %d", resp.StatusCode)
+		return fmt.Errorf("Unexpected response code: %d. Body: %s", resp.StatusCode, string(body))
 	}
 	// Validate response against swagger spec
 	responseValidationInput := &swagger.ResponseValidationInput{
