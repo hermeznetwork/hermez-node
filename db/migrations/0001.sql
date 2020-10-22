@@ -8,11 +8,11 @@ CREATE TABLE block (
 );
 
 CREATE TABLE coordinator (
+    item_id SERIAL PRIMARY KEY,
     bidder_addr BYTEA NOT NULL,
     forger_addr BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    url VARCHAR(200) NOT NULL,
-    PRIMARY KEY (bidder_addr, eth_block_num)
+    url VARCHAR(200) NOT NULL
 );
 
 CREATE TABLE batch (

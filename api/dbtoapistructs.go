@@ -211,7 +211,6 @@ func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
 }
 
 // Tokens
-
 type tokensAPI struct {
 	Tokens     []tokenAPI     `json:"tokens"`
 	Pagination *db.Pagination `json:"pagination"`
@@ -599,4 +598,46 @@ func poolL2TxReadToSend(dbTx *l2db.PoolL2TxRead) *sendPoolTx {
 		tx.RqAmount = &rqAmount
 	}
 	return tx
+}
+
+// Coordinators
+
+type coordinatorAPI struct {
+	ItemID      int               `json:"itemId"`
+	Bidder      ethCommon.Address `json:"bidderAddr"`
+	Forger      ethCommon.Address `json:"forgerAddr"`
+	EthBlockNum int64             `json:"ethereumBlock"`
+	URL         string            `json:"URL"`
+}
+
+type coordinatorsAPI struct {
+	Coordinators []coordinatorAPI `json:"coordinators"`
+	Pagination   *db.Pagination   `json:"pagination"`
+}
+
+func (t *coordinatorsAPI) GetPagination() *db.Pagination {
+	if t.Coordinators[0].ItemID < t.Coordinators[len(t.Coordinators)-1].ItemID {
+		t.Pagination.FirstReturnedItem = t.Coordinators[0].ItemID
+		t.Pagination.LastReturnedItem = t.Coordinators[len(t.Coordinators)-1].ItemID
+	} else {
+		t.Pagination.LastReturnedItem = t.Coordinators[0].ItemID
+		t.Pagination.FirstReturnedItem = t.Coordinators[len(t.Coordinators)-1].ItemID
+	}
+	return t.Pagination
+}
+
+func (t *coordinatorsAPI) Len() int { return len(t.Coordinators) }
+
+func coordinatorsToAPI(dbCoordinators []historydb.HistoryCoordinator) []coordinatorAPI {
+	apiCoordinators := []coordinatorAPI{}
+	for i := 0; i < len(dbCoordinators); i++ {
+		apiCoordinators = append(apiCoordinators, coordinatorAPI{
+			ItemID:      dbCoordinators[i].ItemID,
+			Bidder:      dbCoordinators[i].Bidder,
+			Forger:      dbCoordinators[i].Forger,
+			EthBlockNum: dbCoordinators[i].EthBlockNum,
+			URL:         dbCoordinators[i].URL,
+		})
+	}
+	return apiCoordinators
 }

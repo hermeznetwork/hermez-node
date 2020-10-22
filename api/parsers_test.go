@@ -23,6 +23,13 @@ func (qp *queryParser) Query(query string) string {
 	return ""
 }
 
+func (qp *queryParser) Param(param string) string {
+	if val, ok := qp.m[param]; ok {
+		return val
+	}
+	return ""
+}
+
 func TestParseQueryUint(t *testing.T) {
 	name := "foo"
 	c := &queryParser{}
@@ -294,4 +301,24 @@ func TestParseTokenFilters(t *testing.T) {
 	var symbolsArray []string = []string{"1", "2", "3"}
 	assert.Equal(t, symbolsArray, symbolsParse)
 	assert.Equal(t, nameValue, nameParse)
+}
+func TestParseEthAddr(t *testing.T) {
+	name := "forgerAddr"
+	c := &queryParser{}
+	c.m = make(map[string]string)
+	ethAddr := ethCommon.BigToAddress(big.NewInt(int64(123456)))
+	// Default
+	c.m[name] = ""
+	res, err := parseEthAddr(c, name)
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+	// Incorrect
+	c.m[name] = "0x12345678"
+	_, err = parseEthAddr(c, name)
+	assert.Error(t, err)
+	// Correct
+	c.m[name] = ethAddr.String()
+	res, err = parseEthAddr(c, name)
+	assert.NoError(t, err)
+	assert.Equal(t, ethAddr, *res)
 }
