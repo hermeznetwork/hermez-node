@@ -33,49 +33,6 @@ type HistoryDB struct {
 	db *sqlx.DB
 }
 
-// BlockData contains the information of a Block
-type BlockData struct {
-	Block *common.Block
-	// Rollup
-	// L1UserTxs that were submitted in the block
-	L1UserTxs        []common.L1Tx
-	Batches          []BatchData
-	RegisteredTokens []common.Token
-	RollupVars       *common.RollupVars
-	// Auction
-	Bids                []common.Bid
-	Coordinators        []common.Coordinator
-	AuctionVars         *common.AuctionVars
-	WithdrawDelayerVars *common.WithdrawDelayerVars
-	// TODO: enable when common.WithdrawalDelayerVars is Merged from Synchronizer PR
-	// WithdrawalDelayerVars *common.WithdrawalDelayerVars
-}
-
-// BatchData contains the information of a Batch
-type BatchData struct {
-	// L1UserTxs that were forged in the batch
-	L1Batch          bool // TODO: Remove once Batch.ForgeL1TxsNum is a pointer
-	L1UserTxs        []common.L1Tx
-	L1CoordinatorTxs []common.L1Tx
-	L2Txs            []common.L2Tx
-	CreatedAccounts  []common.Account
-	ExitTree         []common.ExitInfo
-	Batch            *common.Batch
-}
-
-// NewBatchData creates an empty BatchData with the slices initialized.
-func NewBatchData() *BatchData {
-	return &BatchData{
-		L1Batch:          false,
-		L1UserTxs:        make([]common.L1Tx, 0),
-		L1CoordinatorTxs: make([]common.L1Tx, 0),
-		L2Txs:            make([]common.L2Tx, 0),
-		CreatedAccounts:  make([]common.Account, 0),
-		ExitTree:         make([]common.ExitInfo, 0),
-		Batch:            &common.Batch{},
-	}
-}
-
 // NewHistoryDB initialize the DB
 func NewHistoryDB(db *sqlx.DB) *HistoryDB {
 	return &HistoryDB{db: db}
@@ -149,19 +106,21 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 		USD      *float64       `meddler:"usd"`
 		Decimals int            `meddler:"decimals"`
 	}
-	query, args, err := sqlx.In(
-		"SELECT token_id, usd, decimals FROM token WHERE token_id IN (?)",
-		tokenIDs,
-	)
-	if err != nil {
-		return err
-	}
-	query = hdb.db.Rebind(query)
 	var tokenPrices []*tokenPrice
-	if err := meddler.QueryAll(
-		hdb.db, &tokenPrices, query, args...,
-	); err != nil {
-		return err
+	if len(tokenIDs) > 0 {
+		query, args, err := sqlx.In(
+			"SELECT token_id, usd, decimals FROM token WHERE token_id IN (?)",
+			tokenIDs,
+		)
+		if err != nil {
+			return err
+		}
+		query = hdb.db.Rebind(query)
+		if err := meddler.QueryAll(
+			hdb.db, &tokenPrices, query, args...,
+		); err != nil {
+			return err
+		}
 	}
 	// Calculate total collected
 	var total float64
@@ -209,8 +168,8 @@ func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 	return batchNum, row.Scan(&batchNum)
 }
 
-// GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB.  If there's no
-// batch in the DB (nil, nil) is returned.
+// GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB from forged
+// batches.  If there's no batch in the DB (nil, nil) is returned.
 func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
 	row := hdb.db.QueryRow("SELECT MAX(forge_l1_txs_num) FROM batch;")
 	lastL1TxsNum := new(int64)
@@ -324,6 +283,16 @@ func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenRead, error) {
 		hdb.db, token, `SELECT * FROM token WHERE token_id = $1;`, tokenID,
 	)
 	return token, err
+}
+
+// GetAllTokens returns all tokens from the DB
+func (hdb *HistoryDB) GetAllTokens() ([]TokenRead, error) {
+	var tokens []*TokenRead
+	err := meddler.QueryAll(
+		hdb.db, &tokens,
+		"SELECT * FROM token ORDER BY token_id;",
+	)
+	return db.SlicePtrsToSlice(tokens).([]TokenRead), err
 }
 
 // GetTokens returns a list of tokens from the DB
@@ -822,17 +791,19 @@ func (hdb *HistoryDB) GetExits(
 // 	)
 // }
 
-// // GetL1UserTxs gets L1 User Txs to be forged in a batch that will create an account
-// // TODO: This is currently not used.  Figure out if it should be used somewhere or removed.
-// func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]*common.Tx, error) {
-// 	var txs []*common.Tx
-// 	err := meddler.QueryAll(
-// 		hdb.db, &txs,
-// 		"SELECT * FROM tx WHERE to_forge_l1_txs_num = $1 AND is_l1 = TRUE AND user_origin = TRUE;",
-// 		toForgeL1TxsNum,
-// 	)
-// 	return txs, err
-// }
+// GetL1UserTxs gets L1 User Txs to be forged in the L1Batch with toForgeL1TxsNum.
+func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error) {
+	var txs []*common.L1Tx
+	err := meddler.QueryAll(
+		hdb.db, &txs,
+		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
+		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id, tx.amount,
+		tx.load_amount, tx.eth_block_num, tx.type, tx.batch_num
+		FROM tx WHERE to_forge_l1_txs_num = $1 AND is_l1 = TRUE AND user_origin = TRUE;`,
+		toForgeL1TxsNum,
+	)
+	return db.SlicePtrsToSlice(txs).([]common.L1Tx), err
+}
 
 // TODO: Think about chaning all the queries that return a last value, to queries that return the next valid value.
 
@@ -843,8 +814,11 @@ func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {
 	return lastL1TxsPosition, row.Scan(&lastL1TxsPosition)
 }
 
-// AddBlockSCData stores all the information of a block retrieved by the Synchronizer
-func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
+// AddBlockSCData stores all the information of a block retrieved by the
+// Synchronizer.  Blocks should be inserted in order, leaving no gaps because
+// the pagination system of the API/DB depends on this.  Within blocks, all
+// items should also be in the correct order (Accounts, Tokens, Txs, etc.)
+func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	txn, err := hdb.db.Begin()
 	if err != nil {
 		return err
@@ -859,7 +833,7 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 	}()
 
 	// Add block
-	err = hdb.addBlock(txn, blockData.Block)
+	err = hdb.addBlock(txn, &blockData.Block)
 	if err != nil {
 		return err
 	}
@@ -881,8 +855,8 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 	}
 
 	// Add Tokens
-	if len(blockData.RegisteredTokens) > 0 {
-		err = hdb.addTokens(txn, blockData.RegisteredTokens)
+	if len(blockData.AddedTokens) > 0 {
+		err = hdb.addTokens(txn, blockData.AddedTokens)
 		if err != nil {
 			return err
 		}
@@ -897,10 +871,11 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *BlockData) (err error) {
 	}
 
 	// Add Batches
-	for _, batch := range blockData.Batches {
+	for i := range blockData.Batches {
+		batch := &blockData.Batches[i]
 		// Add Batch: this will trigger an update on the DB
 		// that will set the batch num of forged L1 txs in this batch
-		err = hdb.addBatch(txn, batch.Batch)
+		err = hdb.addBatch(txn, &batch.Batch)
 		if err != nil {
 			return err
 		}

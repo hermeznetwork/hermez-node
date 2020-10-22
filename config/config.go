@@ -67,6 +67,18 @@ type Node struct {
 	Synchronizer struct {
 		SyncLoopInterval Duration `validate:"required"`
 	} `validate:"required"`
+	SmartContracts struct {
+		Rollup   ethCommon.Address `validate:"required"`
+		Auction  ethCommon.Address `validate:"required"`
+		TokenHEZ ethCommon.Address `validate:"required"`
+	} `validate:"required"`
+	EthClient struct {
+		CallGasLimit        uint64   `validate:"required"`
+		DeployGasLimit      uint64   `validate:"required"`
+		GasPriceDiv         uint64   `validate:"required"`
+		ReceiptTimeout      Duration `validate:"required"`
+		IntervalReceiptLoop Duration `validate:"required"`
+	} `validate:"required"`
 }
 
 // Load loads a generic config.

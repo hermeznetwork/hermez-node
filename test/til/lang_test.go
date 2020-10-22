@@ -16,8 +16,8 @@ func TestParseBlockchainTxs(t *testing.T) {
 		Type: Blockchain
 
 		// token registrations
-		RegisterToken(1)
-		RegisterToken(2)
+		AddToken(1)
+		AddToken(2)
 
 		// deposits
 		Deposit(1) A: 10
@@ -34,7 +34,7 @@ func TestParseBlockchainTxs(t *testing.T) {
 
 		// set new batch
 		> batch
-		RegisterToken(3)
+		AddToken(3)
 
 		DepositTransfer(1) A-B: 15, 10 (1)
 		Transfer(1) C-A : 3 (1)
@@ -121,7 +121,7 @@ func TestParseErrors(t *testing.T) {
 
 	s = `
 		Type: Blockchain
-		RegisterToken(1)
+		AddToken(1)
 		Deposit(1) A: 10 20
 	`
 	parser = newParser(strings.NewReader(s))
@@ -146,7 +146,7 @@ func TestParseErrors(t *testing.T) {
 
 	s = `
 		Type: Blockchain
-		RegisterToken(1)
+		AddToken(1)
 		Transfer(1) A-B: 10 (255)
 	`
 	parser = newParser(strings.NewReader(s))
@@ -206,10 +206,10 @@ func TestParseErrors(t *testing.T) {
 	assert.Equal(t, "Line 2: Instruction of 'Type: Blockchain' when there is already a previous instruction 'Type: PoolL2' defined", err.Error())
 
 	s = `Type: Blockchain
-		RegisterToken(1)
-		RegisterToken(0)
+		AddToken(1)
+		AddToken(0)
 		`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Line 3: RegisterToken can not register TokenID 0", err.Error())
+	assert.Equal(t, "Line 3: AddToken can not register TokenID 0", err.Error())
 }

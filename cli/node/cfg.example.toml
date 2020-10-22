@@ -16,11 +16,17 @@ TTL          = "24h"
 [Web3]
 URL = "XXX"
 
-[TxSelector]
-Path = "/tmp/iden3-test/hermez/txselector"
-
-[BatchBuilder]
-Path = "/tmp/iden3-test/hermez/batchbuilder"
-
 [Synchronizer]
 SyncLoopInterval = "1s"
+
+[SmartContracts]
+Rollup   = "0xEcc0a6dbC0bb4D51E4F84A315a9e5B0438cAD4f0"
+Auction  = "0x500D1d6A4c7D8Ae28240b47c8FCde034D827fD5e"
+TokenHEZ = "0xf784709d2317D872237C4bC22f867d1BAe2913AB"
+
+[EthClient]
+CallGasLimit        = 300000
+DeployGasLimit      = 1000000
+GasPriceDiv         = 100
+ReceiptTimeout      = "60s"
+IntervalReceiptLoop = "200ms"
