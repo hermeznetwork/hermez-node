@@ -654,6 +654,13 @@ func TestMain(m *testing.M) {
 		poolTxsToReceive: poolTxsToReceive,
 		router:           router,
 	}
+	// Fake server
+	if os.Getenv("FAKE_SERVER") == "yes" {
+		for {
+			log.Info("Running fake server until ^C is received")
+			time.Sleep(10 * time.Second)
+		}
+	}
 	// Run tests
 	result := m.Run()
 	// Stop server
