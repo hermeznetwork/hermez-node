@@ -15,6 +15,16 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+func newBatchData(batchNum int) common.BatchData {
+	return common.BatchData{
+		L1CoordinatorTxs: []common.L1Tx{},
+		L2Txs:            []common.L2Tx{},
+		Batch: common.Batch{
+			BatchNum:  common.BatchNum(batchNum),
+			StateRoot: big.NewInt(0), ExitRoot: big.NewInt(0)},
+	}
+}
+
 // Context contains the data of the test
 type Context struct {
 	Instructions          []instruction
@@ -37,6 +47,7 @@ type Context struct {
 		l1CoordinatorTxs []L1Tx
 		l2Txs            []L2Tx
 	}
+	blockNum int64
 }
 
 // NewContext returns a new Context
@@ -51,14 +62,14 @@ func NewContext(rollupConstMaxL1UserTx int) *Context {
 		idx:                    common.UserThreshold,
 		// We use some placeholder values for StateRoot and ExitTree
 		// because these values will never be nil
-		currBatch: common.BatchData{Batch: common.Batch{
-			BatchNum:  common.BatchNum(currBatchNum),
-			StateRoot: big.NewInt(0), ExitRoot: big.NewInt(0)}},
+		currBatch:    newBatchData(currBatchNum),
 		currBatchNum: currBatchNum,
 		// start with 2 queues, one for toForge, and the other for openToForge
 		queues:      make([][]L1Tx, 2),
 		toForgeNum:  0,
 		openToForge: 1,
+		//nolint:gomnd
+		blockNum: 2, // rollup genesis blockNum
 	}
 }
 
@@ -135,6 +146,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				fromIdxName: inst.from,
 				L1Tx:        tx,
 			}
+
 			tc.currBatchTest.l1CoordinatorTxs = append(tc.currBatchTest.l1CoordinatorTxs, testTx)
 		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer: // tx source: L1UserTx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
@@ -263,6 +275,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 			if err = tc.calculateIdxForL1Txs(true, tc.currBatchTest.l1CoordinatorTxs); err != nil {
 				return nil, err
 			}
+			tc.currBatch.L1Batch = true
 			if err = tc.setIdxs(); err != nil {
 				log.Error(err)
 				return nil, err
@@ -275,12 +288,20 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				tc.queues = append(tc.queues, newQueue)
 			}
 		case typeNewBlock:
+			tc.currBlock.Block = common.Block{
+				EthBlockNum: tc.blockNum,
+			}
 			blocks = append(blocks, tc.currBlock)
+			tc.blockNum++
 			tc.currBlock = common.BlockData{}
 		case typeAddToken:
 			newToken := common.Token{
+				EthAddr: ethCommon.BigToAddress(big.NewInt(int64(inst.tokenID * 100))), //nolint:gomnd
+				// Name:        fmt.Sprintf("Token %d", inst.tokenID),
+				// Symbol:      fmt.Sprintf("TK%d", inst.tokenID),
+				// Decimals:    18,
 				TokenID:     inst.tokenID,
-				EthBlockNum: int64(len(blocks)),
+				EthBlockNum: tc.blockNum,
 			}
 			if inst.tokenID != tc.lastRegisteredTokenID+1 {
 				return nil, fmt.Errorf("Line %d: AddToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", inst.lineNum, tc.lastRegisteredTokenID+1, inst.tokenID)
@@ -353,10 +374,10 @@ func (tc *Context) setIdxs() error {
 		tc.currBatch.L2Txs = append(tc.currBatch.L2Txs, testTx.L2Tx)
 	}
 
+	tc.currBatch.Batch.LastIdx = int64(tc.idx - 1) // `-1` because tc.idx is the next available idx
 	tc.currBlock.Batches = append(tc.currBlock.Batches, tc.currBatch)
 	tc.currBatchNum++
-	tc.currBatch = common.BatchData{Batch: tc.currBatch.Batch}
-	tc.currBatch.Batch.BatchNum = common.BatchNum(tc.currBatchNum)
+	tc.currBatch = newBatchData(tc.currBatchNum)
 	tc.currBatchTest.l1CoordinatorTxs = nil
 	tc.currBatchTest.l2Txs = nil
 	return nil
@@ -375,6 +396,8 @@ func (tc *Context) addToL1Queue(tx L1Tx) error {
 	tx.L1Tx.UserOrigin = true
 	toForgeL1TxsNum := int64(tc.openToForge)
 	tx.L1Tx.ToForgeL1TxsNum = &toForgeL1TxsNum
+	tx.L1Tx.EthBlockNum = tc.blockNum
+	tx.L1Tx.Position = len(tc.queues[tc.openToForge])
 
 	// When an L1UserTx is generated, all idxs must be available (except when idx == 0 or idx == 1)
 	if tx.L1Tx.Type != common.TxTypeCreateAccountDeposit && tx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {

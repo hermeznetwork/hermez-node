@@ -71,6 +71,16 @@ func (hdb *HistoryDB) GetBlock(blockNum int64) (*common.Block, error) {
 	return block, err
 }
 
+// GetAllBlocks retrieve all blocks from the DB
+func (hdb *HistoryDB) GetAllBlocks() ([]common.Block, error) {
+	var blocks []*common.Block
+	err := meddler.QueryAll(
+		hdb.db, &blocks,
+		"SELECT * FROM block;",
+	)
+	return db.SlicePtrsToSlice(blocks).([]common.Block), err
+}
+
 // GetBlocks retrieve blocks from the DB, given a range of block numbers defined by from and to
 func (hdb *HistoryDB) GetBlocks(from, to int64) ([]common.Block, error) {
 	var blocks []*common.Block
@@ -255,6 +265,16 @@ func (hdb *HistoryDB) GetBatchesAPI(
 		FirstItem:  batches[0].FirstItem,
 		LastItem:   batches[0].LastItem,
 	}, nil
+}
+
+// GetAllBatches retrieve all batches from the DB
+func (hdb *HistoryDB) GetAllBatches() ([]common.Batch, error) {
+	var batches []*common.Batch
+	err := meddler.QueryAll(
+		hdb.db, &batches,
+		"SELECT * FROM batch;",
+	)
+	return db.SlicePtrsToSlice(batches).([]common.Batch), err
 }
 
 // GetBatches retrieve batches from the DB, given a range of batch numbers defined by from and to
@@ -897,6 +917,19 @@ func (hdb *HistoryDB) GetExits(
 // 		txID,
 // 	)
 // }
+
+// GetAllL1UserTxs returns all L1UserTxs from the DB
+func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
+	var txs []*common.L1Tx
+	err := meddler.QueryAll(
+		hdb.db, &txs,
+		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
+		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id, tx.amount,
+		tx.load_amount, tx.eth_block_num, tx.type, tx.batch_num
+		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE;`,
+	)
+	return db.SlicePtrsToSlice(txs).([]common.L1Tx), err
+}
 
 // GetL1UserTxs gets L1 User Txs to be forged in the L1Batch with toForgeL1TxsNum.
 func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error) {

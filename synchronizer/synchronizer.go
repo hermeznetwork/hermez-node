@@ -3,6 +3,7 @@ package synchronizer
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -343,7 +344,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 		}
 
 		batchNum := common.BatchNum(evtForgeBatch.BatchNum)
-		forgeL1TxsNum := nextForgeL1TxsNum
+		nextForgeL1TxsNumCpy := nextForgeL1TxsNum
 		var l1UserTxs []common.L1Tx
 		// Check if this is a L1Batch to get L1 Tx from it
 		if forgeBatchArgs.L1Batch {
@@ -352,7 +353,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 			// that stateDB can process them.
 
 			// First try to find them in HistoryDB.
-			l1UserTxs, err := s.historyDB.GetL1UserTxs(forgeL1TxsNum)
+			l1UserTxs, err := s.historyDB.GetL1UserTxs(nextForgeL1TxsNumCpy)
 			if len(l1UserTxs) == 0 {
 				// If not found in the DB, try to find them in
 				// this block.  This could happen because in a
@@ -365,7 +366,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 				// closed empty, so we leave `l1UserTxs` as an
 				// empty slice.
 				for _, l1UserTx := range rollupData.l1UserTxs {
-					if *l1UserTx.ToForgeL1TxsNum == forgeL1TxsNum {
+					if *l1UserTx.ToForgeL1TxsNum == nextForgeL1TxsNumCpy {
 						l1UserTxs = append(l1UserTxs, l1UserTx)
 					}
 				}
@@ -373,26 +374,26 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 			if err != nil {
 				return nil, err
 			}
+			nextForgeL1TxsNum++
 
 			position = len(l1UserTxs)
-
-			// Get L1 Coordinator Txs
-			for i := range forgeBatchArgs.L1CoordinatorTxs {
-				l1CoordinatorTx := forgeBatchArgs.L1CoordinatorTxs[i]
-				l1CoordinatorTx.Position = position
-				l1CoordinatorTx.ToForgeL1TxsNum = &forgeL1TxsNum
-				l1CoordinatorTx.UserOrigin = false
-				l1CoordinatorTx.EthBlockNum = blockNum
-				l1CoordinatorTx.BatchNum = &batchNum
-				l1Tx, err := common.NewL1Tx(&l1CoordinatorTx)
-				if err != nil {
-					return nil, err
-				}
-
-				batchData.L1CoordinatorTxs = append(batchData.L1CoordinatorTxs, *l1Tx)
-				position++
+		}
+		// Get L1 Coordinator Txs
+		for i := range forgeBatchArgs.L1CoordinatorTxs {
+			l1CoordinatorTx := forgeBatchArgs.L1CoordinatorTxs[i]
+			l1CoordinatorTx.Position = position
+			// l1CoordinatorTx.ToForgeL1TxsNum = &forgeL1TxsNum
+			l1CoordinatorTx.UserOrigin = false
+			l1CoordinatorTx.EthBlockNum = blockNum
+			l1CoordinatorTx.BatchNum = &batchNum
+			l1Tx, err := common.NewL1Tx(&l1CoordinatorTx)
+			if err != nil {
+				return nil, err
 			}
-			nextForgeL1TxsNum++
+
+			batchData.L1CoordinatorTxs = append(batchData.L1CoordinatorTxs, *l1Tx)
+			position++
+			fmt.Println("DGB l1coordtx")
 		}
 
 		// Insert all the txs forged in this batch (l1UserTxs,
@@ -443,12 +444,14 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 			ForgerAddr:  *sender,
 			// CollectedFees: , TODO: Clarify where to get them if they are still needed
 			StateRoot:   forgeBatchArgs.NewStRoot,
-			NumAccounts: numAccounts,
+			NumAccounts: numAccounts, // TODO: Calculate this value
+			LastIdx:     forgeBatchArgs.NewLastIdx,
 			ExitRoot:    forgeBatchArgs.NewExitRoot,
 			SlotNum:     slotNum,
 		}
 		if forgeBatchArgs.L1Batch {
-			batch.ForgeL1TxsNum = &forgeL1TxsNum
+			batch.ForgeL1TxsNum = &nextForgeL1TxsNumCpy
+			batchData.L1Batch = true
 		}
 		batchData.Batch = batch
 		rollupData.batches = append(rollupData.batches, *batchData)

@@ -674,7 +674,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 		TokenID:         common.TokenID(tokenID),
 		ToIdx:           common.Idx(toIdx),
 		ToForgeL1TxsNum: &toForgeL1TxsNum,
-		Position:        len(queue.L1TxQueue) - 1,
+		Position:        len(queue.L1TxQueue),
 		UserOrigin:      true,
 	})
 	if err != nil {
