@@ -19,6 +19,6 @@ func TestCompileSets(t *testing.T) {
 	tc := NewContext(eth.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(SetBlockchain0)
 	assert.Nil(t, err)
-	_, err = tc.GenerateBlocks(SetPool0)
+	_, err = tc.GeneratePoolL2Txs(SetPool0)
 	assert.Nil(t, err)
 }

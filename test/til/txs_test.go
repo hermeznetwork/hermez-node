@@ -207,10 +207,12 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		PoolTransfer(3) User1-User0: 15 (1)
 		PoolTransfer(2) B-D: 3 (1)
 		PoolExit(1) A: 3
+		PoolTransferToEthAddr(1) A-B: 1 (1)
+		PoolTransferToBJJ(1) A-B: 1 (1)
 	`
 	poolL2Txs, err := tc.GeneratePoolL2Txs(set)
 	require.Nil(t, err)
-	assert.Equal(t, 9, len(poolL2Txs))
+	assert.Equal(t, 11, len(poolL2Txs))
 	assert.Equal(t, common.TxTypeTransfer, poolL2Txs[0].Type)
 	assert.Equal(t, common.TxTypeExit, poolL2Txs[8].Type)
 	assert.Equal(t, tc.Users["B"].Addr.Hex(), poolL2Txs[0].ToEthAddr.Hex())
@@ -222,6 +224,13 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	assert.Equal(t, common.Nonce(2), poolL2Txs[3].Nonce)
 	assert.Equal(t, common.Nonce(3), poolL2Txs[8].Nonce)
 
+	assert.Equal(t, tc.Users["B"].Addr.Hex(), poolL2Txs[9].ToEthAddr.Hex())
+	assert.Nil(t, poolL2Txs[9].ToBJJ)
+	assert.Equal(t, common.TxTypeTransferToEthAddr, poolL2Txs[9].Type)
+	assert.Equal(t, common.FFAddr, poolL2Txs[10].ToEthAddr)
+	assert.Equal(t, tc.Users["B"].BJJ.Public().String(), poolL2Txs[10].ToBJJ.String())
+	assert.Equal(t, common.TxTypeTransferToBJJ, poolL2Txs[10].Type)
+
 	// load another set in the same Context
 	set = `
 		Type: PoolL2
@@ -231,9 +240,37 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	`
 	poolL2Txs, err = tc.GeneratePoolL2Txs(set)
 	require.Nil(t, err)
-	assert.Equal(t, common.Nonce(4), poolL2Txs[0].Nonce)
+	assert.Equal(t, common.Nonce(6), poolL2Txs[0].Nonce)
 	assert.Equal(t, common.Nonce(2), poolL2Txs[1].Nonce)
-	assert.Equal(t, common.Nonce(5), poolL2Txs[2].Nonce)
+	assert.Equal(t, common.Nonce(7), poolL2Txs[2].Nonce)
+
+	// check that a PoolL2Tx can be done to a non existing ToIdx
+	set = `
+		Type: Blockchain
+		AddToken(1)
+		CreateAccountDeposit(1) A: 10
+		> batchL1
+		> batchL1
+		> block
+	`
+	tc = NewContext(eth.RollupConstMaxL1UserTx)
+	_, err = tc.GenerateBlocks(set)
+	require.Nil(t, err)
+	set = `
+		Type: PoolL2
+		PoolTransferToEthAddr(1) A-B: 3 (1)
+		PoolTransferToBJJ(1) A-C: 3 (1)
+	`
+	_, err = tc.GeneratePoolL2Txs(set)
+	require.Nil(t, err)
+	// expect error, as FromIdx=B is still not created for TokenID=1
+	set = `
+		Type: PoolL2
+		PoolTransferToEthAddr(1) B-A: 3 (1)
+		PoolTransferToBJJ(1) B-A: 3 (1)
+	`
+	_, err = tc.GeneratePoolL2Txs(set)
+	require.NotNil(t, err)
 }
 
 func TestGenerateErrors(t *testing.T) {

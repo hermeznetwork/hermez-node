@@ -70,9 +70,9 @@ type instruction struct {
 
 // parsedSet contains the full Set of Instructions representing a full code
 type parsedSet struct {
-	// type         string
+	typ          setType
 	instructions []instruction
-	accounts     []string
+	users        []string
 }
 
 func (i instruction) String() string {
@@ -365,6 +365,12 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		case "PoolTransfer":
 			c.typ = common.TxTypeTransfer
 			transferring = true
+		case "PoolTransferToEthAddr":
+			c.typ = common.TxTypeTransferToEthAddr
+			transferring = true
+		case "PoolTransferToBJJ":
+			c.typ = common.TxTypeTransferToBJJ
+			transferring = true
 		case "PoolExit":
 			c.typ = common.TxTypeExit
 		default:
@@ -493,22 +499,21 @@ func idxTokenIDToString(idx string, tid common.TokenID) string {
 func (p *parser) parse() (*parsedSet, error) {
 	ps := &parsedSet{}
 	i := 0 // lines will start counting at line 1
-	accounts := make(map[string]bool)
-	var setTypeOfSet setType
+	users := make(map[string]bool)
 	for {
 		i++
-		instruction, err := p.parseLine(setTypeOfSet)
+		instruction, err := p.parseLine(ps.typ)
 		if err == errof {
 			break
 		}
 		if err == setTypeLine {
-			if setTypeOfSet != "" {
-				return ps, fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.typ, setTypeOfSet)
+			if ps.typ != "" {
+				return ps, fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.typ, ps.typ)
 			}
 			if instruction.typ == "PoolL2" {
-				setTypeOfSet = setTypePoolL2
+				ps.typ = setTypePoolL2
 			} else if instruction.typ == "Blockchain" {
-				setTypeOfSet = setTypeBlockchain
+				ps.typ = setTypeBlockchain
 			} else {
 				log.Fatalf("Line %d: Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", i, instruction.typ)
 			}
@@ -528,18 +533,18 @@ func (p *parser) parse() (*parsedSet, error) {
 		if err != nil {
 			return ps, fmt.Errorf("Line %d: %s, err: %s", i, instruction.literal, err.Error())
 		}
-		if setTypeOfSet == "" {
+		if ps.typ == "" {
 			return ps, fmt.Errorf("Line %d: Set type not defined", i)
 		}
 		ps.instructions = append(ps.instructions, *instruction)
-		accounts[instruction.from] = true
-		if instruction.typ == common.TxTypeTransfer { // type: Transfer
-			accounts[instruction.to] = true
+		users[instruction.from] = true
+		if instruction.typ == common.TxTypeTransfer || instruction.typ == common.TxTypeTransferToEthAddr || instruction.typ == common.TxTypeTransferToBJJ { // type: Transfer
+			users[instruction.to] = true
 		}
 	}
-	for a := range accounts {
-		ps.accounts = append(ps.accounts, a)
+	for u := range users {
+		ps.users = append(ps.users, u)
 	}
-	sort.Strings(ps.accounts)
+	sort.Strings(ps.users)
 	return ps, nil
 }
