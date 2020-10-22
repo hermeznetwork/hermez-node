@@ -390,14 +390,12 @@ func TestGetL1UserTxs(t *testing.T) {
 		AddToken(2)
 		AddToken(3)
 
-		CreateAccountDeposit(1) A: 10
+		CreateAccountDeposit(1) A: 20
 		CreateAccountDeposit(2) A: 20
 		CreateAccountDeposit(1) B: 5
 		CreateAccountDeposit(1) C: 5
-		CreateAccountDepositTransfer(1) D-A: 15, 10 (3)
+		CreateAccountDeposit(1) D: 5
 
-		> batchL1 // freeze open l1UserTxs queue
-		> batchL1 // forge current l1UserTxs queue
 		> block
 	`
 	tc := til.NewContext(128)
@@ -406,7 +404,6 @@ func TestGetL1UserTxs(t *testing.T) {
 	// Sanity check
 	require.Equal(t, 1, len(blocks))
 	require.Equal(t, 5, len(blocks[0].L1UserTxs))
-	require.Equal(t, 2, len(blocks[0].Batches))
 	// fmt.Printf("DBG Blocks: %+v\n", blocks)
 
 	// TODO: Move this logic to `func (tc *TestContext) GenerateBlocks(set string) ([]common.BlockData, error)`

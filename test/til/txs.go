@@ -114,7 +114,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 	var blocks []common.BlockData
 	for _, inst := range parsedSet.instructions {
 		switch inst.typ {
-		case txTypeCreateAccountDepositCoordinator:
+		case txTypeCreateAccountDepositCoordinator: // tx source: L1CoordinatorTx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
@@ -133,7 +133,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				L1Tx:        tx,
 			}
 			tc.currBatchTest.l1CoordinatorTxs = append(tc.currBatchTest.l1CoordinatorTxs, testTx)
-		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer:
+		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer: // tx source: L1UserTx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
@@ -155,8 +155,10 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				toIdxName:   inst.to,
 				L1Tx:        tx,
 			}
-			tc.addToL1Queue(testTx)
-		case common.TxTypeDeposit, common.TxTypeDepositTransfer:
+			if err := tc.addToL1Queue(testTx); err != nil {
+				return nil, err
+			}
+		case common.TxTypeDeposit, common.TxTypeDepositTransfer: // tx source: L1UserTx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
@@ -180,8 +182,10 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				toIdxName:   inst.to,
 				L1Tx:        tx,
 			}
-			tc.addToL1Queue(testTx)
-		case common.TxTypeTransfer:
+			if err := tc.addToL1Queue(testTx); err != nil {
+				return nil, err
+			}
+		case common.TxTypeTransfer: // L2Tx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
@@ -200,7 +204,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				L2Tx:        tx,
 			}
 			tc.currBatchTest.l2Txs = append(tc.currBatchTest.l2Txs, testTx)
-		case common.TxTypeExit:
+		case common.TxTypeExit: // tx source: L2Tx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
@@ -219,7 +223,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				L2Tx:        tx,
 			}
 			tc.currBatchTest.l2Txs = append(tc.currBatchTest.l2Txs, testTx)
-		case common.TxTypeForceExit:
+		case common.TxTypeForceExit: // tx source: L1UserTx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
@@ -237,7 +241,9 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				toIdxName:   inst.to,
 				L1Tx:        tx,
 			}
-			tc.addToL1Queue(testTx)
+			if err := tc.addToL1Queue(testTx); err != nil {
+				return nil, err
+			}
 		case typeNewBatch:
 			if err = tc.calculateIdxForL1Txs(true, tc.currBatchTest.l1CoordinatorTxs); err != nil {
 				return nil, err
@@ -253,34 +259,6 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 			}
 			if err = tc.calculateIdxForL1Txs(true, tc.currBatchTest.l1CoordinatorTxs); err != nil {
 				return nil, err
-			}
-
-			// once Idxs are calculated, update transactions to use the real Idxs
-			for i := 0; i < len(tc.queues[tc.toForgeNum]); i++ {
-				testTx := &tc.queues[tc.toForgeNum][i]
-				if testTx.L1Tx.Type != common.TxTypeCreateAccountDeposit && testTx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {
-					testTx.L1Tx.FromIdx = tc.Users[testTx.fromIdxName].Accounts[testTx.L1Tx.TokenID].Idx
-				}
-				testTx.L1Tx.FromEthAddr = tc.Users[testTx.fromIdxName].Addr
-				testTx.L1Tx.FromBJJ = tc.Users[testTx.fromIdxName].BJJ.Public()
-				if testTx.toIdxName == "" {
-					testTx.L1Tx.ToIdx = common.Idx(0)
-				} else {
-					testTx.L1Tx.ToIdx = tc.Users[testTx.toIdxName].Accounts[testTx.L1Tx.TokenID].Idx
-				}
-				if testTx.L1Tx.Type == common.TxTypeExit {
-					testTx.L1Tx.ToIdx = common.Idx(1)
-				}
-				// bn := common.BatchNum(tc.currBatchNum)
-				// testTx.L1Tx.BatchNum = &bn
-				nTx, err := common.NewL1Tx(&testTx.L1Tx)
-				if err != nil {
-					fmt.Println(testTx)
-					return nil, fmt.Errorf("Line %d: %s", testTx.lineNum, err.Error())
-				}
-				testTx.L1Tx = *nTx
-
-				tc.currBlock.L1UserTxs = append(tc.currBlock.L1UserTxs, testTx.L1Tx)
 			}
 			if err = tc.setIdxs(); err != nil {
 				log.Error(err)
@@ -382,7 +360,7 @@ func (tc *Context) setIdxs() error {
 }
 
 // addToL1Queue adds the L1Tx into the queue that is open and has space
-func (tc *Context) addToL1Queue(tx L1Tx) {
+func (tc *Context) addToL1Queue(tx L1Tx) error {
 	if len(tc.queues[tc.openToForge]) >= tc.rollupConstMaxL1UserTx {
 		// if current OpenToForge queue reached its Max, move into a
 		// new queue
@@ -390,10 +368,40 @@ func (tc *Context) addToL1Queue(tx L1Tx) {
 		newQueue := []L1Tx{}
 		tc.queues = append(tc.queues, newQueue)
 	}
+	// Fill L1UserTx specific parameters
 	tx.L1Tx.UserOrigin = true
 	toForgeL1TxsNum := int64(tc.openToForge)
 	tx.L1Tx.ToForgeL1TxsNum = &toForgeL1TxsNum
+
+	// When an L1UserTx is generated, all idxs must be available (except when idx == 0 or idx == 1)
+	if tx.L1Tx.Type != common.TxTypeCreateAccountDeposit && tx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {
+		tx.L1Tx.FromIdx = tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID].Idx
+	}
+	tx.L1Tx.FromEthAddr = tc.Users[tx.fromIdxName].Addr
+	tx.L1Tx.FromBJJ = tc.Users[tx.fromIdxName].BJJ.Public()
+	if tx.toIdxName == "" {
+		tx.L1Tx.ToIdx = common.Idx(0)
+	} else {
+		account, ok := tc.Users[tx.toIdxName].Accounts[tx.L1Tx.TokenID]
+		if !ok {
+			return fmt.Errorf("Line %d: Transfer to User: %s, for TokenID: %d, "+
+				"while account not created yet", tx.lineNum, tx.toIdxName, tx.L1Tx.TokenID)
+		}
+		tx.L1Tx.ToIdx = account.Idx
+	}
+	if tx.L1Tx.Type == common.TxTypeExit {
+		tx.L1Tx.ToIdx = common.Idx(1)
+	}
+	nTx, err := common.NewL1Tx(&tx.L1Tx)
+	if err != nil {
+		return fmt.Errorf("Line %d: %s", tx.lineNum, err.Error())
+	}
+	tx.L1Tx = *nTx
+
 	tc.queues[tc.openToForge] = append(tc.queues[tc.openToForge], tx)
+	tc.currBlock.L1UserTxs = append(tc.currBlock.L1UserTxs, tx.L1Tx)
+
+	return nil
 }
 
 func (tc *Context) checkIfAccountExists(tf string, inst instruction) error {
