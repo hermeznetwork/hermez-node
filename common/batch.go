@@ -14,7 +14,7 @@ const batchNumBytesLen = 8
 type Batch struct {
 	BatchNum      BatchNum             `meddler:"batch_num"`
 	EthBlockNum   int64                `meddler:"eth_block_num"` // Ethereum block in which the batch is forged
-	ForgerAddr    ethCommon.Address    `meddler:"forger_addr"`   // TODO: Should this be retrieved via slot reference?
+	ForgerAddr    ethCommon.Address    `meddler:"forger_addr"`
 	CollectedFees map[TokenID]*big.Int `meddler:"fees_collected,json"`
 	StateRoot     *big.Int             `meddler:"state_root,bigint"`
 	NumAccounts   int                  `meddler:"num_accounts"`

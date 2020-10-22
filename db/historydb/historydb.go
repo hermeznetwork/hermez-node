@@ -150,6 +150,15 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 	return nil
 }
 
+// GetBatch return the batch with the given batchNum
+func (hdb *HistoryDB) GetBatch(batchNum common.BatchNum) (HistoryBatch, error) {
+	var batch *common.Batch
+	return batch, meddler.QueryRow(
+		hdb.db, &batch,
+		"SELECT * FROM batch WHERE batch_num == $1;", batchNum,
+	)
+}
+
 // GetBatches retrieve batches from the DB, given a range of batch numbers defined by from and to
 func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, error) {
 	var batches []*common.Batch

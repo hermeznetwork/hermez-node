@@ -1,0 +1,286 @@
+package apitypes
+
+import (
+	"database/sql"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"testing"
+
+	"github.com/iden3/go-iden3-crypto/babyjub"
+
+	ethCommon "github.com/ethereum/go-ethereum/common"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
+	_ "github.com/mattn/go-sqlite3" // sqlite driver
+	"github.com/russross/meddler"
+	"github.com/stretchr/testify/assert"
+)
+
+var db *sql.DB
+
+func TestMain(m *testing.M) {
+	// Register meddler
+	meddler.Default = meddler.SQLite
+	meddler.Register("bigint", dbUtils.BigIntMeddler{})
+	meddler.Register("bigintnull", dbUtils.BigIntNullMeddler{})
+	// Create temporary sqlite DB
+	dir, err := ioutil.TempDir("", "db")
+	if err != nil {
+		panic(err)
+	}
+	db, err = sql.Open("sqlite3", dir+"sqlite.db")
+	defer os.RemoveAll(dir)
+	if err != nil {
+		panic(err)
+	}
+	schema := `CREATE TABLE test (i BLOB);`
+	if _, err := db.Exec(schema); err != nil {
+		panic(err)
+	}
+	// Run tests
+	result := m.Run()
+	os.Exit(result)
+}
+
+func TestBigIntStrScannerValuer(t *testing.T) {
+	// Clean DB
+	_, err := db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Example structs
+	type bigInMeddlerStruct struct {
+		I *big.Int `meddler:"i,bigint"` // note the bigint that instructs meddler to use BigIntMeddler
+	}
+	type bigIntStrStruct struct {
+		I BigIntStr `meddler:"i"` // note that no meddler is specified, and Scan/Value will be used
+	}
+	type bigInMeddlerStructNil struct {
+		I *big.Int `meddler:"i,bigintnull"` // note the bigint that instructs meddler to use BigIntNullMeddler
+	}
+	type bigIntStrStructNil struct {
+		I *BigIntStr `meddler:"i"` // note that no meddler is specified, and Scan/Value will be used
+	}
+
+	// Not nil case
+	// Insert into DB using meddler
+	const x = int64(12345)
+	fromMeddler := bigInMeddlerStruct{
+		I: big.NewInt(x),
+	}
+	err = meddler.Insert(db, "test", &fromMeddler)
+	assert.NoError(t, err)
+	// Read from DB using BigIntStr
+	toBigIntStr := bigIntStrStruct{}
+	err = meddler.QueryRow(db, &toBigIntStr, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, fromMeddler.I.String(), string(toBigIntStr.I))
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using BigIntStr
+	fromBigIntStr := bigIntStrStruct{
+		I: "54321",
+	}
+	err = meddler.Insert(db, "test", &fromBigIntStr)
+	assert.NoError(t, err)
+	// Read from DB using meddler
+	toMeddler := bigInMeddlerStruct{}
+	err = meddler.QueryRow(db, &toMeddler, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, string(fromBigIntStr.I), toMeddler.I.String())
+
+	// Nil case
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using meddler
+	fromMeddlerNil := bigInMeddlerStructNil{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromMeddlerNil)
+	assert.NoError(t, err)
+	// Read from DB using BigIntStr
+	foo := BigIntStr("foo")
+	toBigIntStrNil := bigIntStrStructNil{
+		I: &foo, // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toBigIntStrNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toBigIntStrNil.I)
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using BigIntStr
+	fromBigIntStrNil := bigIntStrStructNil{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromBigIntStrNil)
+	assert.NoError(t, err)
+	// Read from DB using meddler
+	toMeddlerNil := bigInMeddlerStructNil{
+		I: big.NewInt(x), // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toMeddlerNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toMeddlerNil.I)
+}
+
+func TestHezEthAddr(t *testing.T) {
+	// Clean DB
+	_, err := db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Example structs
+	type ethAddrStruct struct {
+		I ethCommon.Address `meddler:"i"`
+	}
+	type hezEthAddrStruct struct {
+		I HezEthAddr `meddler:"i"`
+	}
+	type ethAddrStructNil struct {
+		I *ethCommon.Address `meddler:"i"`
+	}
+	type hezEthAddrStructNil struct {
+		I *HezEthAddr `meddler:"i"`
+	}
+
+	// Not nil case
+	// Insert into DB using ethCommon.Address Scan/Value
+	fromEth := ethAddrStruct{
+		I: ethCommon.BigToAddress(big.NewInt(73737373)),
+	}
+	err = meddler.Insert(db, "test", &fromEth)
+	assert.NoError(t, err)
+	// Read from DB using HezEthAddr Scan/Value
+	toHezEth := hezEthAddrStruct{}
+	err = meddler.QueryRow(db, &toHezEth, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, NewHezEthAddr(fromEth.I), toHezEth.I)
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using HezEthAddr Scan/Value
+	fromHezEth := hezEthAddrStruct{
+		I: NewHezEthAddr(ethCommon.BigToAddress(big.NewInt(3786872586))),
+	}
+	err = meddler.Insert(db, "test", &fromHezEth)
+	assert.NoError(t, err)
+	// Read from DB using ethCommon.Address Scan/Value
+	toEth := ethAddrStruct{}
+	err = meddler.QueryRow(db, &toEth, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, fromHezEth.I, NewHezEthAddr(toEth.I))
+
+	// Nil case
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using ethCommon.Address Scan/Value
+	fromEthNil := ethAddrStructNil{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromEthNil)
+	assert.NoError(t, err)
+	// Read from DB using HezEthAddr Scan/Value
+	foo := HezEthAddr("foo")
+	toHezEthNil := hezEthAddrStructNil{
+		I: &foo, // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toHezEthNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toHezEthNil.I)
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using HezEthAddr Scan/Value
+	fromHezEthNil := hezEthAddrStructNil{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromHezEthNil)
+	assert.NoError(t, err)
+	// Read from DB using ethCommon.Address Scan/Value
+	fooAddr := ethCommon.BigToAddress(big.NewInt(1))
+	toEthNil := ethAddrStructNil{
+		I: &fooAddr, // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toEthNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toEthNil.I)
+}
+
+func TestHezBJJ(t *testing.T) {
+	// Clean DB
+	_, err := db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Example structs
+	type bjjStruct struct {
+		I *babyjub.PublicKey `meddler:"i"`
+	}
+	type hezBJJStruct struct {
+		I HezBJJ `meddler:"i"`
+	}
+	type hezBJJStructNil struct {
+		I *HezBJJ `meddler:"i"`
+	}
+
+	// Not nil case
+	// Insert into DB using *babyjub.PublicKey Scan/Value
+	priv := babyjub.NewRandPrivKey()
+	fromBJJ := bjjStruct{
+		I: priv.Public(),
+	}
+	err = meddler.Insert(db, "test", &fromBJJ)
+	assert.NoError(t, err)
+	// Read from DB using HezBJJ Scan/Value
+	toHezBJJ := hezBJJStruct{}
+	err = meddler.QueryRow(db, &toHezBJJ, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, NewHezBJJ(fromBJJ.I), toHezBJJ.I)
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using HezBJJ Scan/Value
+	fromHezBJJ := hezBJJStruct{
+		I: NewHezBJJ(priv.Public()),
+	}
+	err = meddler.Insert(db, "test", &fromHezBJJ)
+	assert.NoError(t, err)
+	// Read from DB using *babyjub.PublicKey Scan/Value
+	toBJJ := bjjStruct{}
+	err = meddler.QueryRow(db, &toBJJ, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, fromHezBJJ.I, NewHezBJJ(toBJJ.I))
+
+	// Nil case
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using *babyjub.PublicKey Scan/Value
+	fromBJJNil := bjjStruct{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromBJJNil)
+	assert.NoError(t, err)
+	// Read from DB using HezBJJ Scan/Value
+	foo := HezBJJ("foo")
+	toHezBJJNil := hezBJJStructNil{
+		I: &foo, // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toHezBJJNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toHezBJJNil.I)
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using HezBJJ Scan/Value
+	fromHezBJJNil := hezBJJStructNil{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromHezBJJNil)
+	assert.NoError(t, err)
+	// Read from DB using *babyjub.PublicKey Scan/Value
+	toBJJNil := bjjStruct{
+		I: priv.Public(), // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toBJJNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toBJJNil.I)
+}

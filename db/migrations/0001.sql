@@ -16,7 +16,8 @@ CREATE TABLE coordinator (
 );
 
 CREATE TABLE batch (
-    batch_num BIGINT PRIMARY KEY,
+    item_id SERIAL PRIMARY KEY,
+    batch_num BIGINT NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     forger_addr BYTEA NOT NULL, -- fake foreign key for coordinator
     fees_collected BYTEA NOT NULL,
