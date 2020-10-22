@@ -1968,33 +1968,25 @@ components:
           description: Existence proof of a leaf in a given Merkle Root. Encoded as hexadecimal string.
           properties:
               Root:
-                type: array
-                items: 
-                  type: integer
+                $ref: '#/components/schemas/BigInt'
               Siblings:
                 type: array
                 items:
-                  type: integer
+                  $ref: '#/components/schemas/BigInt'
               OldKey:
-                type: array
-                items:
-                  type: integer
+                $ref: '#/components/schemas/BigInt'
               OldValue:
-                type: array
-                items:
-                  type: integer
+                $ref: '#/components/schemas/BigInt'
               IsOld0:
                 type: boolean
               Key:
-                type: array
-                items:
-                  type: integer
+                $ref: '#/components/schemas/BigInt'
               Value:
-                type: array
-                items:
-                  type: integer
+                $ref: '#/components/schemas/BigInt'
               Fnc:
                 type: integer
+                maximum: 3
+                minimum: 0
           required:
             - Root
             - Siblings

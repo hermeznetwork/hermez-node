@@ -1,6 +1,8 @@
 package historydb
 
 import (
+	"math"
+	"math/big"
 	"os"
 	"testing"
 
@@ -109,6 +111,34 @@ func TestBatches(t *testing.T) {
 	fetchedLastL1TxsNum, err = historyDB.GetLastL1TxsNum()
 	assert.NoError(t, err)
 	assert.Equal(t, *batches[nBatches-1].ForgeL1TxsNum, *fetchedLastL1TxsNum)
+	// Test total fee
+	// Generate fake tokens
+	const nTokens = 5
+	tokens := test.GenTokens(nTokens, blocks)
+	err = historyDB.AddTokens(tokens)
+	assert.NoError(t, err)
+	feeBatch := batches[0]
+	feeBatch.BatchNum = 9999
+	feeBatch.CollectedFees = make(map[common.TokenID]*big.Int)
+	var total float64
+	for i, token := range tokens {
+		value := 3.019237 * float64(i)
+		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
+		bigAmount := big.NewInt(345000000)
+		feeBatch.CollectedFees[token.TokenID] = bigAmount
+		f := new(big.Float).SetInt(bigAmount)
+		amount, _ := f.Float64()
+		total += value * (amount / math.Pow(10, float64(token.Decimals)))
+	}
+	err = historyDB.AddBatch(&feeBatch)
+	assert.NoError(t, err)
+	fetchedBatches, err = historyDB.GetBatches(feeBatch.BatchNum-1, feeBatch.BatchNum+1)
+	assert.NoError(t, err)
+	for _, fetchedBatch := range fetchedBatches {
+		if fetchedBatch.BatchNum == feeBatch.BatchNum {
+			assert.Equal(t, total, *fetchedBatch.TotalFeesUSD)
+		}
+	}
 }
 
 func TestBids(t *testing.T) {

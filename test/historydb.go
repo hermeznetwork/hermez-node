@@ -37,7 +37,7 @@ func GenTokens(nTokens int, blocks []common.Block) []common.Token {
 			TokenID:     common.TokenID(i),
 			Name:        "NAME" + fmt.Sprint(i),
 			Symbol:      fmt.Sprint(i),
-			Decimals:    uint64(i),
+			Decimals:    uint64(i + 1),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			EthAddr:     ethCommon.BigToAddress(big.NewInt(int64(i))),
 		}
