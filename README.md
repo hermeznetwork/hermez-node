@@ -20,6 +20,8 @@ NOTE: `-p 1` forces execution of package test in serial.  Otherwise they may be
 executed in paralel and the test may find unexpected entries in the SQL
 databse because it's shared among all tests.
 
+- There is an extra temporal option that allows to run the API server through the Go tests. This should be removed once the API can be properly initialized, with data from the synchronizer and so on. To use this, run `FAKE_SERVER=yes POSTGRES_PASS=yourpasswordhere ETHCLIENT_DIAL_URL=yourethereumurlhere go test -timeout 0  ./api -p 1 -count 1 -v`
+
 ## Lint
 
 - Install [golangci-lint](https://golangci-lint.run)
