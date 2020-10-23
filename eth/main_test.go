@@ -1,9 +1,11 @@
 package eth
 
 import (
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -11,38 +13,32 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 )
 
-/*var donationAddressStr = os.Getenv("DONATION_ADDRESS")
-var bootCoordinatorStr = os.Getenv("BOOT_COORDINATOR_ADDRESS")
-var auctionAddressStr = os.Getenv("AUCTION_ADDRESS")
-var tokenHezStr = os.Getenv("TOKEN_ADDRESS")
-var hermezStr = os.Getenv("HERMEZ_ADDRESS")
-var governanceAddressStr = os.Getenv("GOV_ADDRESS")
-var governancePrivateKey = os.Getenv("GOV_PK")
-var ethClientDialURL = os.Getenv("ETHCLIENT_DIAL_URL")*/
-var ethClientDialURL = "http://localhost:8545"
-var password = "pass"
-var deadline, _ = new(big.Int).SetString("ffffffffffffffffffffffffffffffff", 16)
+var ethClientDialURLConst = "http://localhost:8545"
+var passwordConst = "pass"
+var deadlineConst, _ = new(big.Int).SetString("ffffffffffffffffffffffffffffffff", 16)
+
+var errEnvVar = fmt.Errorf("Some environment variable is missing")
 
 // Smart Contract Addresses
 var (
-	auctionAddressStr           = "0x038B86d9d8FAFdd0a02ebd1A476432877b0107C8"
-	auctionAddressConst         = ethCommon.HexToAddress(auctionAddressStr)
-	auctionTestAddressStr       = "0xEcc0a6dbC0bb4D51E4F84A315a9e5B0438cAD4f0"
-	auctionTestAddressConst     = ethCommon.HexToAddress(auctionTestAddressStr)
+	password                    string
+	ethClientDialURL            string
+	deadline                    *big.Int
+	genesisBlock                int64
+	auctionAddressConst         ethCommon.Address
+	auctionTestAddressConst     ethCommon.Address
+	tokenHEZAddressConst        ethCommon.Address
+	hermezRollupAddressConst    ethCommon.Address
+	wdelayerAddressConst        ethCommon.Address
+	wdelayerTestAddressConst    ethCommon.Address
+	tokenHEZ                    TokenConfig
 	donationAddressStr          = "0x6c365935CA8710200C7595F0a72EB6023A7706Cd"
 	donationAddressConst        = ethCommon.HexToAddress(donationAddressStr)
 	bootCoordinatorAddressStr   = "0xc783df8a850f42e7f7e57013759c285caa701eb6"
 	bootCoordinatorAddressConst = ethCommon.HexToAddress(bootCoordinatorAddressStr)
-	tokenHEZAddressStr          = "0xf4e77E5Da47AC3125140c470c71cBca77B5c638c" //nolint:gosec
-	tokenHEZAddressConst        = ethCommon.HexToAddress(tokenHEZAddressStr)
-	hermezRollupAddressStr      = "0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe"
-	hermezRollupAddressConst    = ethCommon.HexToAddress(hermezRollupAddressStr)
-	wdelayerAddressStr          = "0x500D1d6A4c7D8Ae28240b47c8FCde034D827fD5e"
-	wdelayerAddressConst        = ethCommon.HexToAddress(wdelayerAddressStr)
-	wdelayerTestAddressStr      = "0x1d80315fac6aBd3EfeEbE97dEc44461ba7556160"
-	wdelayerTestAddressConst    = ethCommon.HexToAddress(wdelayerTestAddressStr)
 	safetyAddressStr            = "0xE5904695748fe4A84b40b3fc79De2277660BD1D3"
 	safetyAddressConst          = ethCommon.HexToAddress(safetyAddressStr)
 )
@@ -78,11 +74,6 @@ var (
 	hermezRollupAddressTestConst = ethCommon.HexToAddress(hermezRollupTestAddressStr)
 )
 
-var tokenHEZ = TokenConfig{
-	Address: tokenHEZAddressConst,
-	Name:    "Hermez Network Token",
-}
-
 var (
 	accountGov           *accounts.Account
 	accountKep           *accounts.Account
@@ -117,10 +108,48 @@ func addKey(ks *keystore.KeyStore, skHex string) *accounts.Account {
 	return &account
 }
 
+func getEnvVariables() {
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Variables loaded from command")
+	} else {
+		fmt.Println("Variables loaded from .env file")
+	}
+	var auctionAddressStr = os.Getenv("AUCTION")
+	var auctionTestAddressStr = os.Getenv("AUCTION_TEST")
+	var tokenHEZAddressStr = os.Getenv("TOKENHEZ")
+	var hermezRollupAddressStr = os.Getenv("HERMEZ")
+	var wdelayerAddressStr = os.Getenv("WDELAYER")
+	var wdelayerTestAddressStr = os.Getenv("WDELAYER_TEST")
+	genesisBlockEnv := os.Getenv("GENESIS_BLOCK")
+	genesisBlock, err = strconv.ParseInt(genesisBlockEnv, 10, 64)
+	if err != nil {
+		panic(errEnvVar)
+	}
+	if auctionAddressStr == "" || auctionTestAddressStr == "" || tokenHEZAddressStr == "" || hermezRollupAddressStr == "" || wdelayerAddressStr == "" || wdelayerTestAddressStr == "" || genesisBlockEnv == "" {
+		panic(errEnvVar)
+	}
+
+	ethClientDialURL = ethClientDialURLConst
+	password = passwordConst
+	deadline = deadlineConst
+	auctionAddressConst = ethCommon.HexToAddress(auctionAddressStr)
+	auctionTestAddressConst = ethCommon.HexToAddress(auctionTestAddressStr)
+	tokenHEZAddressConst = ethCommon.HexToAddress(tokenHEZAddressStr)
+	hermezRollupAddressConst = ethCommon.HexToAddress(hermezRollupAddressStr)
+	wdelayerAddressConst = ethCommon.HexToAddress(wdelayerAddressStr)
+	wdelayerTestAddressConst = ethCommon.HexToAddress(wdelayerTestAddressStr)
+	tokenHEZ = TokenConfig{
+		Address: tokenHEZAddressConst,
+		Name:    "Hermez Network Token",
+	}
+}
+
 func TestMain(m *testing.M) {
 	exitVal := 0
 
 	if os.Getenv("INTEGRATION") != "" {
+		getEnvVariables()
 		dir, err := ioutil.TempDir("", "tmpks")
 		if err != nil {
 			panic(err)
@@ -147,7 +176,6 @@ func TestMain(m *testing.M) {
 		}
 
 		// Controllable Governance Address
-
 		ethereumClientGov := NewEthereumClient(ethClient, accountGov, ks, nil)
 		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHEZ)
 		if err != nil {

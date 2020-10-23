@@ -105,7 +105,7 @@ func TestRollupForgeBatch(t *testing.T) {
 	require.Nil(t, err)
 
 	// Add Blocks
-	blockNum := int64(int(BLOCKSPERSLOT)*int(currentSlot+4) + genesisBlock)
+	blockNum := int64(int(BLOCKSPERSLOT)*int(currentSlot+4) + int(genesisBlock))
 	currentBlockNum, _ := auctionClient.client.EthCurrentBlock()
 	blocksToAdd := blockNum - currentBlockNum
 	addBlocks(blocksToAdd, ethClientDialURL)
