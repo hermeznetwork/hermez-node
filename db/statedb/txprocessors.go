@@ -331,6 +331,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	var err error
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
 	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
+		// case when tx.Type== common.TxTypeTransferToEthAddr or common.TxTypeTransferToBJJ
 		tx.AuxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ)
 		if err != nil {
 			log.Error(err)
@@ -390,7 +391,7 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	}
 
 	switch tx.Type {
-	case common.TxTypeTransfer:
+	case common.TxTypeTransfer, common.TxTypeTransferToEthAddr, common.TxTypeTransferToBJJ:
 		// go to the MT account of sender and receiver, and update
 		// balance & nonce
 		err = s.applyTransfer(tx.Tx(), tx.AuxToIdx)

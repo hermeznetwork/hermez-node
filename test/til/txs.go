@@ -18,7 +18,7 @@ import (
 // Context contains the data of the test
 type Context struct {
 	Instructions          []instruction
-	accountsNames         []string
+	userNames             []string
 	Users                 map[string]*User
 	lastRegisteredTokenID common.TokenID
 	l1CreatedAccounts     map[string]*Account
@@ -98,18 +98,21 @@ type L2Tx struct {
 }
 
 // GenerateBlocks returns an array of BlockData for a given set. It uses the
-// accounts (keys & nonces) of the Context.
+// users (keys & nonces) of the Context.
 func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
 	if err != nil {
 		return nil, err
 	}
+	if parsedSet.typ != setTypeBlockchain {
+		return nil, fmt.Errorf("Expected set type: %s, found: %s", setTypeBlockchain, parsedSet.typ)
+	}
 
 	tc.Instructions = parsedSet.instructions
-	tc.accountsNames = parsedSet.accounts
+	tc.userNames = parsedSet.users
 
-	tc.generateKeys(tc.accountsNames)
+	tc.generateKeys(tc.userNames)
 
 	var blocks []common.BlockData
 	for _, inst := range parsedSet.instructions {
@@ -418,39 +421,42 @@ func (tc *Context) checkIfTokenIsRegistered(inst instruction) error {
 }
 
 // GeneratePoolL2Txs returns an array of common.PoolL2Tx from a given set. It
-// uses the accounts (keys & nonces) of the Context.
+// uses the users (keys) of the Context.
 func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 	parser := newParser(strings.NewReader(set))
 	parsedSet, err := parser.parse()
 	if err != nil {
 		return nil, err
 	}
+	if parsedSet.typ != setTypePoolL2 {
+		return nil, fmt.Errorf("Expected set type: %s, found: %s", setTypePoolL2, parsedSet.typ)
+	}
 
 	tc.Instructions = parsedSet.instructions
-	tc.accountsNames = parsedSet.accounts
+	tc.userNames = parsedSet.users
 
-	tc.generateKeys(tc.accountsNames)
+	tc.generateKeys(tc.userNames)
 
 	txs := []common.PoolL2Tx{}
 	for _, inst := range tc.Instructions {
 		switch inst.typ {
-		case common.TxTypeTransfer:
+		case common.TxTypeTransfer, common.TxTypeTransferToEthAddr, common.TxTypeTransferToBJJ:
 			if err := tc.checkIfAccountExists(inst.from, inst); err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
 			}
-			if err := tc.checkIfAccountExists(inst.to, inst); err != nil {
-				log.Error(err)
-				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
+			if inst.typ == common.TxTypeTransfer {
+				// if TxTypeTransfer, need to exist the ToIdx account
+				if err := tc.checkIfAccountExists(inst.to, inst); err != nil {
+					log.Error(err)
+					return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
+				}
 			}
 			tc.Users[inst.from].Accounts[inst.tokenID].Nonce++
 			// if account of receiver does not exist, don't use
 			// ToIdx, and use only ToEthAddr & ToBJJ
 			tx := common.PoolL2Tx{
 				FromIdx:     tc.Users[inst.from].Accounts[inst.tokenID].Idx,
-				ToIdx:       tc.Users[inst.to].Accounts[inst.tokenID].Idx,
-				ToEthAddr:   tc.Users[inst.to].Addr,
-				ToBJJ:       tc.Users[inst.to].BJJ.Public(),
 				TokenID:     inst.tokenID,
 				Amount:      big.NewInt(int64(inst.amount)),
 				Fee:         common.FeeSelector(inst.fee),
@@ -459,7 +465,19 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 				Timestamp:   time.Now(),
 				RqToEthAddr: common.EmptyAddr,
 				RqToBJJ:     nil,
-				Type:        common.TxTypeTransfer,
+				Type:        inst.typ,
+			}
+			if tx.Type == common.TxTypeTransfer {
+				tx.ToIdx = tc.Users[inst.to].Accounts[inst.tokenID].Idx
+				tx.ToEthAddr = tc.Users[inst.to].Addr
+				tx.ToBJJ = tc.Users[inst.to].BJJ.Public()
+			} else if tx.Type == common.TxTypeTransferToEthAddr {
+				tx.ToIdx = common.Idx(0)
+				tx.ToEthAddr = tc.Users[inst.to].Addr
+			} else if tx.Type == common.TxTypeTransferToBJJ {
+				tx.ToIdx = common.Idx(0)
+				tx.ToEthAddr = common.FFAddr
+				tx.ToBJJ = tc.Users[inst.to].BJJ.Public()
 			}
 			nTx, err := common.NewPoolL2Tx(&tx)
 			if err != nil {
@@ -506,12 +524,12 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 	return txs, nil
 }
 
-// generateKeys generates BabyJubJub & Address keys for the given list of
-// account names in a deterministic way. This means, that for the same given
-// 'accNames' in a certain order, the keys will be always the same.
-func (tc *Context) generateKeys(accNames []string) {
-	for i := 1; i < len(accNames)+1; i++ {
-		if _, ok := tc.Users[accNames[i-1]]; ok {
+// generateKeys generates BabyJubJub & Address keys for the given list of user
+// names in a deterministic way. This means, that for the same given
+// 'userNames' in a certain order, the keys will be always the same.
+func (tc *Context) generateKeys(userNames []string) {
+	for i := 1; i < len(userNames)+1; i++ {
+		if _, ok := tc.Users[userNames[i-1]]; ok {
 			// account already created
 			continue
 		}
@@ -531,6 +549,6 @@ func (tc *Context) generateKeys(accNames []string) {
 			Addr:     addr,
 			Accounts: make(map[common.TokenID]*Account),
 		}
-		tc.Users[accNames[i-1]] = &u
+		tc.Users[userNames[i-1]] = &u
 	}
 }

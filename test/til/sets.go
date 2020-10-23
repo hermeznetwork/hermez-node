@@ -176,4 +176,6 @@ PoolExit(1) A: 3
 PoolTransfer(1) A-B: 6 (1)
 PoolTransfer(1) B-C: 3 (1)
 PoolTransfer(1) A-C: 3 (1)
+PoolTransferToEthAddr(1) A-C: 3 (1)
+PoolTransferToBJJ(1) A-C: 3 (1)
 `

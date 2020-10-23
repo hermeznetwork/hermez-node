@@ -60,7 +60,7 @@ func TestParseBlockchainTxs(t *testing.T) {
 	instructions, err := parser.parse()
 	require.Nil(t, err)
 	assert.Equal(t, 25, len(instructions.instructions))
-	assert.Equal(t, 7, len(instructions.accounts))
+	assert.Equal(t, 7, len(instructions.users))
 
 	if debug {
 		fmt.Println(instructions)
@@ -94,7 +94,7 @@ func TestParsePoolTxs(t *testing.T) {
 	instructions, err := parser.parse()
 	require.Nil(t, err)
 	assert.Equal(t, 5, len(instructions.instructions))
-	assert.Equal(t, 4, len(instructions.accounts))
+	assert.Equal(t, 4, len(instructions.users))
 
 	if debug {
 		fmt.Println(instructions)
