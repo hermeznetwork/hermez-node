@@ -46,7 +46,7 @@ func TestGenerateBlocks(t *testing.T) {
 		> batchL1 // batchNum = 1
 		> batchL1 // batchNum = 2
 
-		CreateAccountDepositTransfer(1) F-A: 15, 10 (3)
+		CreateAccountDepositTransfer(1) F-A: 15, 10
 
 		Transfer(1) A-B: 6 (1)
 		Transfer(1) B-D: 3 (1)
@@ -57,7 +57,7 @@ func TestGenerateBlocks(t *testing.T) {
 		CreateAccountDepositCoordinator(1) E
 		CreateAccountDepositCoordinator(2) B
 
-		DepositTransfer(1) A-B: 15, 10 (1)
+		DepositTransfer(1) A-B: 15, 10
 		Transfer(1) C-A : 3 (1)
 		Transfer(2) A-B: 15 (1)
 		Transfer(1) A-E: 1 (1)
@@ -79,7 +79,7 @@ func TestGenerateBlocks(t *testing.T) {
 
 		// Exits
 		Transfer(1) A-B: 1 (1)
-		Exit(1) A: 5
+		Exit(1) A: 5 (1)
 		
 		> batch // batchNum = 6
 		> block
@@ -206,7 +206,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		PoolTransfer(1) User0-User1: 15 (1)
 		PoolTransfer(3) User1-User0: 15 (1)
 		PoolTransfer(2) B-D: 3 (1)
-		PoolExit(1) A: 3
+		PoolExit(1) A: 3 (1)
 		PoolTransferToEthAddr(1) A-B: 1 (1)
 		PoolTransferToBJJ(1) A-B: 1 (1)
 	`
@@ -350,7 +350,7 @@ func TestGenerateErrors(t *testing.T) {
 		Transfer(1) A-B: 6 (1)
 		Transfer(1) A-B: 6 (1) // on purpose this is moving more money that what it has in the account, Til should not fail
 		Transfer(1) B-A: 6 (1)
-		Exit(1) A: 3
+		Exit(1) A: 3 (1)
 		> batch
 	`
 	tc = NewContext(eth.RollupConstMaxL1UserTx)
