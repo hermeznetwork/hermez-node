@@ -96,8 +96,11 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			Address: cfg.SmartContracts.Rollup,
 		},
 		Auction: eth.AuctionConfig{
-			Address:         cfg.SmartContracts.Auction,
-			TokenHEZAddress: cfg.SmartContracts.TokenHEZ,
+			Address: cfg.SmartContracts.Auction,
+			TokenHEZ: eth.TokenConfig{
+				Address: cfg.SmartContracts.TokenHEZ,
+				Name:    cfg.SmartContracts.TokenHEZName,
+			},
 		},
 	})
 	if err != nil {

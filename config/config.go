@@ -68,9 +68,10 @@ type Node struct {
 		SyncLoopInterval Duration `validate:"required"`
 	} `validate:"required"`
 	SmartContracts struct {
-		Rollup   ethCommon.Address `validate:"required"`
-		Auction  ethCommon.Address `validate:"required"`
-		TokenHEZ ethCommon.Address `validate:"required"`
+		Rollup       ethCommon.Address `validate:"required"`
+		Auction      ethCommon.Address `validate:"required"`
+		TokenHEZ     ethCommon.Address `validate:"required"`
+		TokenHEZName string            `validate:"required"`
 	} `validate:"required"`
 	EthClient struct {
 		CallGasLimit        uint64   `validate:"required"`

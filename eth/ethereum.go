@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/eth/contracts/erc20"
+	HEZ "github.com/hermeznetwork/hermez-node/eth/contracts/tokenHEZ"
 	"github.com/hermeznetwork/hermez-node/log"
 )
 
@@ -277,7 +277,9 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 
 // EthERC20Consts returns the constants defined for a particular ERC20 Token instance.
 func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20Consts, error) {
-	instance, err := erc20.NewERC20(tokenAddress, c.client)
+	// We use the HEZ token smart contract interfacehere because it's an
+	// ERC20, which allows us to access the standard ERC20 constants.
+	instance, err := HEZ.NewHEZ(tokenAddress, c.client)
 	if err != nil {
 		return nil, err
 	}

@@ -30,6 +30,12 @@ type Client struct {
 	RollupClient
 }
 
+// TokenConfig is used to define the information about token
+type TokenConfig struct {
+	Address ethCommon.Address
+	Name    string
+}
+
 // RollupConfig is the configuration for the Rollup smart contract interface
 type RollupConfig struct {
 	Address ethCommon.Address
@@ -37,8 +43,8 @@ type RollupConfig struct {
 
 // AuctionConfig is the configuration for the Auction smart contract interface
 type AuctionConfig struct {
-	Address         ethCommon.Address
-	TokenHEZAddress ethCommon.Address
+	Address  ethCommon.Address
+	TokenHEZ TokenConfig
 }
 
 // ClientConfig is the configuration of the Client
@@ -51,11 +57,11 @@ type ClientConfig struct {
 // NewClient creates a new Client to interact with Ethereum and the Hermez smart contracts.
 func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, cfg *ClientConfig) (*Client, error) {
 	ethereumClient := NewEthereumClient(client, account, ks, &cfg.Ethereum)
-	auctionClient, err := NewAuctionClient(ethereumClient, cfg.Auction.Address, cfg.Auction.TokenHEZAddress)
+	auctionClient, err := NewAuctionClient(ethereumClient, cfg.Auction.Address, cfg.Auction.TokenHEZ)
 	if err != nil {
 		return nil, err
 	}
-	rollupCient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address, cfg.Auction.TokenHEZAddress)
+	rollupCient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address, cfg.Auction.TokenHEZ)
 	if err != nil {
 		return nil, err
 	}

@@ -178,9 +178,9 @@ func TestCoordinator(t *testing.T) {
 	// Bid for slot 2 and 4
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.Nil(t, err)
-	_, err = ethClient.AuctionBid(2, big.NewInt(9999))
+	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
 	require.Nil(t, err)
-	_, err = ethClient.AuctionBid(4, big.NewInt(9999))
+	_, err = ethClient.AuctionBidSimple(4, big.NewInt(9999))
 	require.Nil(t, err)
 
 	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient)

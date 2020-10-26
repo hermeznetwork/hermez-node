@@ -1,8 +1,11 @@
 package eth
 
 import (
+	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -10,40 +13,32 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 )
 
-/*var donationAddressStr = os.Getenv("DONATION_ADDRESS")
-var bootCoordinatorStr = os.Getenv("BOOT_COORDINATOR_ADDRESS")
-var auctionAddressStr = os.Getenv("AUCTION_ADDRESS")
-var tokenHezStr = os.Getenv("TOKEN_ADDRESS")
-var hermezStr = os.Getenv("HERMEZ_ADDRESS")
-var governanceAddressStr = os.Getenv("GOV_ADDRESS")
-var governancePrivateKey = os.Getenv("GOV_PK")
-var ethClientDialURL = os.Getenv("ETHCLIENT_DIAL_URL")*/
-var ethClientDialURL = "http://localhost:8545"
-var password = "pass"
+var errEnvVar = fmt.Errorf("Some environment variable is missing")
+
+var (
+	ethClientDialURL = "http://localhost:8545"
+	password         = "pass"
+	deadline, _      = new(big.Int).SetString("ffffffffffffffffffffffffffffffff", 16)
+)
 
 // Smart Contract Addresses
 var (
-	auctionAddressStr           = "0x500D1d6A4c7D8Ae28240b47c8FCde034D827fD5e"
-	auctionAddressConst         = ethCommon.HexToAddress(auctionAddressStr)
-	auctionTestAddressStr       = "0x1d80315fac6aBd3EfeEbE97dEc44461ba7556160"
-	auctionTestAddressConst     = ethCommon.HexToAddress(auctionTestAddressStr)
+	genesisBlock             int64
+	auctionAddressConst      ethCommon.Address
+	auctionTestAddressConst  ethCommon.Address
+	tokenHEZAddressConst     ethCommon.Address
+	hermezRollupAddressConst ethCommon.Address
+	wdelayerAddressConst     ethCommon.Address
+	wdelayerTestAddressConst ethCommon.Address
+	tokenHEZ                 TokenConfig
+
 	donationAddressStr          = "0x6c365935CA8710200C7595F0a72EB6023A7706Cd"
 	donationAddressConst        = ethCommon.HexToAddress(donationAddressStr)
 	bootCoordinatorAddressStr   = "0xc783df8a850f42e7f7e57013759c285caa701eb6"
 	bootCoordinatorAddressConst = ethCommon.HexToAddress(bootCoordinatorAddressStr)
-	tokenERC777AddressStr       = "0xf784709d2317D872237C4bC22f867d1BAe2913AB" //nolint:gosec
-	tokenERC777AddressConst     = ethCommon.HexToAddress(tokenERC777AddressStr)
-	tokenERC20AddressStr        = "0x3619DbE27d7c1e7E91aA738697Ae7Bc5FC3eACA5" //nolint:gosec
-	tokenERC20AddressConst      = ethCommon.HexToAddress(tokenERC20AddressStr)
-	tokenHEZAddressConst        = tokenERC777AddressConst
-	hermezRollupAddressStr      = "0xEcc0a6dbC0bb4D51E4F84A315a9e5B0438cAD4f0"
-	hermezRollupAddressConst    = ethCommon.HexToAddress(hermezRollupAddressStr)
-	wdelayerAddressStr          = "0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe"
-	wdelayerAddressConst        = ethCommon.HexToAddress(wdelayerAddressStr)
-	wdelayerTestAddressStr      = "0x52d3b94181f8654db2530b0fEe1B19173f519C52"
-	wdelayerTestAddressConst    = ethCommon.HexToAddress(wdelayerTestAddressStr)
 	safetyAddressStr            = "0xE5904695748fe4A84b40b3fc79De2277660BD1D3"
 	safetyAddressConst          = ethCommon.HexToAddress(safetyAddressStr)
 )
@@ -70,6 +65,10 @@ var (
 	auxAddressStr   = "0x3d91185a02774C70287F6c74Dd26d13DFB58ff16"
 	auxAddressConst = ethCommon.HexToAddress(auxAddressStr)
 
+	aux2AddressSK = "28d1bfbbafe9d1d4f5a11c3c16ab6bf9084de48d99fbac4058bdfa3c80b29087"
+	// aux2AddressStr = "0x532792b73c0c6e7565912e7039c59986f7e1dd1f"
+	// aux2AddressConst = ethCommon.HexToAddress(aux2AddressStr)
+
 	hermezRollupTestSK           = "28d1bfbbafe9d1d4f5a11c3c16ab6bf9084de48d99fbac4058bdfa3c80b29088"
 	hermezRollupTestAddressStr   = "0xEa960515F8b4C237730F028cBAcF0a28E7F45dE0"
 	hermezRollupAddressTestConst = ethCommon.HexToAddress(hermezRollupTestAddressStr)
@@ -81,6 +80,7 @@ var (
 	accountWhite         *accounts.Account
 	accountGovDAO        *accounts.Account
 	accountAux           *accounts.Account
+	accountAux2          *accounts.Account
 	accountHermez        *accounts.Account
 	ks                   *keystore.KeyStore
 	ethClient            *ethclient.Client
@@ -88,6 +88,7 @@ var (
 	ethereumClientKep    *EthereumClient
 	ethereumClientGovDAO *EthereumClient
 	ethereumClientAux    *EthereumClient
+	ethereumClientAux2   *EthereumClient
 	ethereumClientHermez *EthereumClient
 )
 
@@ -107,10 +108,45 @@ func addKey(ks *keystore.KeyStore, skHex string) *accounts.Account {
 	return &account
 }
 
+func getEnvVariables() {
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Variables loaded from environment")
+	} else {
+		fmt.Println("Variables loaded from .env file")
+	}
+	var auctionAddressStr = os.Getenv("AUCTION")
+	var auctionTestAddressStr = os.Getenv("AUCTION_TEST")
+	var tokenHEZAddressStr = os.Getenv("TOKENHEZ")
+	var hermezRollupAddressStr = os.Getenv("HERMEZ")
+	var wdelayerAddressStr = os.Getenv("WDELAYER")
+	var wdelayerTestAddressStr = os.Getenv("WDELAYER_TEST")
+	genesisBlockEnv := os.Getenv("GENESIS_BLOCK")
+	genesisBlock, err = strconv.ParseInt(genesisBlockEnv, 10, 64)
+	if err != nil {
+		panic(errEnvVar)
+	}
+	if auctionAddressStr == "" || auctionTestAddressStr == "" || tokenHEZAddressStr == "" || hermezRollupAddressStr == "" || wdelayerAddressStr == "" || wdelayerTestAddressStr == "" || genesisBlockEnv == "" {
+		panic(errEnvVar)
+	}
+
+	auctionAddressConst = ethCommon.HexToAddress(auctionAddressStr)
+	auctionTestAddressConst = ethCommon.HexToAddress(auctionTestAddressStr)
+	tokenHEZAddressConst = ethCommon.HexToAddress(tokenHEZAddressStr)
+	hermezRollupAddressConst = ethCommon.HexToAddress(hermezRollupAddressStr)
+	wdelayerAddressConst = ethCommon.HexToAddress(wdelayerAddressStr)
+	wdelayerTestAddressConst = ethCommon.HexToAddress(wdelayerTestAddressStr)
+	tokenHEZ = TokenConfig{
+		Address: tokenHEZAddressConst,
+		Name:    "Hermez Network Token",
+	}
+}
+
 func TestMain(m *testing.M) {
 	exitVal := 0
 
 	if os.Getenv("INTEGRATION") != "" {
+		getEnvVariables()
 		dir, err := ioutil.TempDir("", "tmpks")
 		if err != nil {
 			panic(err)
@@ -128,6 +164,7 @@ func TestMain(m *testing.M) {
 		accountWhite = addKey(ks, whiteHackGroupAddressSK)
 		accountGovDAO = addKey(ks, hermezGovernanceDAOAddressSK)
 		accountAux = addKey(ks, auxAddressSK)
+		accountAux2 = addKey(ks, aux2AddressSK)
 		accountHermez = addKey(ks, hermezRollupTestSK)
 
 		ethClient, err = ethclient.Dial(ethClientDialURL)
@@ -136,17 +173,16 @@ func TestMain(m *testing.M) {
 		}
 
 		// Controllable Governance Address
-
 		ethereumClientGov := NewEthereumClient(ethClient, accountGov, ks, nil)
-		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHEZAddressConst)
+		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHEZ)
 		if err != nil {
 			panic(err)
 		}
-		auctionClientTest, err = NewAuctionClient(ethereumClientGov, auctionTestAddressConst, tokenHEZAddressConst)
+		auctionClientTest, err = NewAuctionClient(ethereumClientGov, auctionTestAddressConst, tokenHEZ)
 		if err != nil {
 			panic(err)
 		}
-		rollupClient, err = NewRollupClient(ethereumClientGov, hermezRollupAddressConst, tokenHEZAddressConst)
+		rollupClient, err = NewRollupClient(ethereumClientGov, hermezRollupAddressConst, tokenHEZ)
 		if err != nil {
 			panic(err)
 		}
@@ -163,6 +199,7 @@ func TestMain(m *testing.M) {
 		ethereumClientWhite = NewEthereumClient(ethClient, accountWhite, ks, nil)
 		ethereumClientGovDAO = NewEthereumClient(ethClient, accountGovDAO, ks, nil)
 		ethereumClientAux = NewEthereumClient(ethClient, accountAux, ks, nil)
+		ethereumClientAux2 = NewEthereumClient(ethClient, accountAux2, ks, nil)
 		ethereumClientHermez = NewEthereumClient(ethClient, accountHermez, ks, nil)
 
 		exitVal = m.Run()
