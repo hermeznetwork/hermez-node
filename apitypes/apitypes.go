@@ -71,10 +71,11 @@ func (b BigIntStr) Value() (driver.Value, error) {
 	return base64.StdEncoding.EncodeToString(bigInt.Bytes()), nil
 }
 
+// CollectedFees is used to retrieve common.batch.CollectedFee from the DB
 type CollectedFees map[common.TokenID]BigIntStr
 
+// UnmarshalJSON unmarshals a json representation of map[common.TokenID]*big.Int
 func (c *CollectedFees) UnmarshalJSON(text []byte) error {
-	fmt.Println(string(text))
 	bigIntMap := make(map[common.TokenID]*big.Int)
 	if err := json.Unmarshal(text, &bigIntMap); err != nil {
 		return err
@@ -86,19 +87,6 @@ func (c *CollectedFees) UnmarshalJSON(text []byte) error {
 	}
 	*c = CollectedFees(bStrMap)
 	return nil
-	// fmt.Println(string(text))
-	// *b = BigIntStr(string(text))
-	// return nil
-	// bigInt := &big.Int{}
-	// if err := bigInt.UnmarshalText(text); err != nil {
-	// 	return err
-	// }
-	// bigIntStr := NewBigIntStr(bigInt)
-	// if bigIntStr == nil {
-	// 	return nil
-	// }
-	// *b = *bigIntStr
-	// return nil
 }
 
 // HezEthAddr is used to scan/value Ethereum Address directly into strings that follow the Ethereum address hez fotmat (^hez:0x[a-fA-F0-9]{40}$) from/to sql DBs.

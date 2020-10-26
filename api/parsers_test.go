@@ -309,16 +309,16 @@ func TestParseEthAddr(t *testing.T) {
 	ethAddr := ethCommon.BigToAddress(big.NewInt(int64(123456)))
 	// Default
 	c.m[name] = ""
-	res, err := parseEthAddr(c, name)
+	res, err := parseQueryEthAddr(name, c)
 	assert.NoError(t, err)
 	assert.Nil(t, res)
 	// Incorrect
 	c.m[name] = "0x12345678"
-	_, err = parseEthAddr(c, name)
+	_, err = parseQueryEthAddr(name, c)
 	assert.Error(t, err)
 	// Correct
 	c.m[name] = ethAddr.String()
-	res, err = parseEthAddr(c, name)
+	res, err = parseQueryEthAddr(name, c)
 	assert.NoError(t, err)
 	assert.Equal(t, ethAddr, *res)
 }

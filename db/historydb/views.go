@@ -5,8 +5,8 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
 )
@@ -133,23 +133,24 @@ type HistoryCoordinator struct {
 	LastItem    int               `meddler:"last_item"`
 }
 
-// HistoryBatch is a representation of a batch with additional information
+// BatchAPI is a representation of a batch with additional information
 // required by the API, and extracted by joining block table
-type HistoryBatch struct {
-	ItemID        int                             `json:"itemId" meddler:"item_id"`
-	BatchNum      common.BatchNum                 `json:"batchNum" meddler:"batch_num"`
-	EthBlockNum   int64                           `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	EthBlockHash  ethCommon.Hash                  `json:"ethereumBlockHash" meddler:"hash"`
-	Timestamp     time.Time                       `json:"timestamp" meddler:"timestamp,utctime"`
-	ForgerAddr    ethCommon.Address               `json:"forgerAddr" meddler:"forger_addr"`
-	CollectedFees map[common.TokenID]db.BigIntStr `json:"collectedFees" meddler:"fees_collected,json"`
-	TotalFeesUSD  float64                         `json:"historicTotalCollectedFeesUSD" meddler:"total_fees_usd"`
-	StateRoot     db.BigIntStr                    `json:"stateRoot" meddler:"state_root"`
-	NumAccounts   int                             `json:"numAccounts" meddler:"num_accounts"`
-	ExitRoot      db.BigIntStr                    `json:"exitRoot" meddler:"exit_root"`
-	ForgeL1TxsNum *int64                          `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
-	SlotNum       int64                           `json:"slotNum" meddler:"slot_num"`
-	TotalItems    int                             `json:"-" meddler:"total_items"`
-	FirstItem     int                             `json:"-" meddler:"first_item"`
-	LastItem      int                             `json:"-" meddler:"last_item"`
+type BatchAPI struct {
+	ItemID        int                    `json:"itemId" meddler:"item_id"`
+	BatchNum      common.BatchNum        `json:"batchNum" meddler:"batch_num"`
+	EthBlockNum   int64                  `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	EthBlockHash  ethCommon.Hash         `json:"ethereumBlockHash" meddler:"hash"`
+	Timestamp     time.Time              `json:"timestamp" meddler:"timestamp,utctime"`
+	ForgerAddr    ethCommon.Address      `json:"forgerAddr" meddler:"forger_addr"`
+	CollectedFees apitypes.CollectedFees `json:"collectedFees" meddler:"fees_collected,json"`
+	// CollectedFees map[common.TokenID]*big.Int `json:"collectedFees" meddler:"fees_collected,json"`
+	TotalFeesUSD  *float64           `json:"historicTotalCollectedFeesUSD" meddler:"total_fees_usd"`
+	StateRoot     apitypes.BigIntStr `json:"stateRoot" meddler:"state_root"`
+	NumAccounts   int                `json:"numAccounts" meddler:"num_accounts"`
+	ExitRoot      apitypes.BigIntStr `json:"exitRoot" meddler:"exit_root"`
+	ForgeL1TxsNum *int64             `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
+	SlotNum       int64              `json:"slotNum" meddler:"slot_num"`
+	TotalItems    int                `json:"-" meddler:"total_items"`
+	FirstItem     int                `json:"-" meddler:"first_item"`
+	LastItem      int                `json:"-" meddler:"last_item"`
 }

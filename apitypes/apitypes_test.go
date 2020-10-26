@@ -7,11 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/iden3/go-iden3-crypto/babyjub"
-
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
-	_ "github.com/mattn/go-sqlite3" // sqlite driver
+	"github.com/iden3/go-iden3-crypto/babyjub"
+	_ "github.com/mattn/go-sqlite3" //nolint sqlite driver
 	"github.com/russross/meddler"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,10 +28,10 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	db, err = sql.Open("sqlite3", dir+"sqlite.db")
-	defer os.RemoveAll(dir)
 	if err != nil {
 		panic(err)
 	}
+	defer os.RemoveAll(dir) //nolint
 	schema := `CREATE TABLE test (i BLOB);`
 	if _, err := db.Exec(schema); err != nil {
 		panic(err)

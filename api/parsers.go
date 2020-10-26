@@ -311,13 +311,25 @@ func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKey, error) {
 	return bjj, nil
 }
 
-func parseEthAddr(c paramer, name string) (*ethCommon.Address, error) {
+func parseQueryEthAddr(name string, c querier) (*ethCommon.Address, error) {
+	addrStr := c.Query(name)
+	if addrStr == "" {
+		return nil, nil
+	}
+	return parseEthAddr(addrStr)
+}
+
+func parseParamEthAddr(name string, c paramer) (*ethCommon.Address, error) {
 	addrStr := c.Param(name)
 	if addrStr == "" {
 		return nil, nil
 	}
+	return parseEthAddr(addrStr)
+}
+
+func parseEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 	var addr ethCommon.Address
-	err := addr.UnmarshalText([]byte(addrStr))
+	err := addr.UnmarshalText([]byte(ethAddrStr))
 	return &addr, err
 }
 

@@ -192,11 +192,3 @@ type Paginationer interface {
 	GetPagination() *Pagination
 	Len() int
 }
-
-// BigIntStr is used to Marshal *big.Int directly into strings
-type BigIntStr big.Int
-
-func (b BigIntStr) MarshalText() ([]byte, error) {
-	bigInt := big.Int(b)
-	return []byte((&bigInt).String()), nil
-}

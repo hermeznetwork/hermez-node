@@ -40,7 +40,7 @@ const apiURL = "http://localhost" + apiPort + "/"
 type testCommon struct {
 	blocks           []common.Block
 	tokens           []tokenAPI
-	batches          []common.Batch
+	batches          []testBatch
 	coordinators     []coordinatorAPI
 	usrAddr          string
 	usrBjj           string
@@ -651,7 +651,7 @@ func TestMain(m *testing.M) {
 	tc = testCommon{
 		blocks:           blocks,
 		tokens:           tokensUSD,
-		batches:          batches,
+		batches:          genTestBatches(blocks, batches),
 		coordinators:     apiCoordinators,
 		usrAddr:          ethAddrToHez(usrAddr),
 		usrBjj:           bjjToString(usrBjj),
@@ -1208,7 +1208,6 @@ func TestPoolTxs(t *testing.T) {
 		jsonTxBytes, err := json.Marshal(tx)
 		assert.NoError(t, err)
 		jsonTxReader := bytes.NewReader(jsonTxBytes)
-		fmt.Println(string(jsonTxBytes))
 		assert.NoError(
 			t, doGoodReq(
 				"POST",
