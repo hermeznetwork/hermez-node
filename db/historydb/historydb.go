@@ -150,6 +150,113 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 	return nil
 }
 
+// GetBatchAPI return the batch with the given batchNum
+func (hdb *HistoryDB) GetBatchAPI(batchNum common.BatchNum) (*BatchAPI, error) {
+	batch := &BatchAPI{}
+	return batch, meddler.QueryRow(
+		hdb.db, batch,
+		`SELECT batch.*, block.timestamp, block.hash
+	 	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
+	 	WHERE batch_num = $1;`, batchNum,
+	)
+}
+
+// GetBatchesAPI return the batches applying the given filters
+func (hdb *HistoryDB) GetBatchesAPI(
+	minBatchNum, maxBatchNum, slotNum *uint,
+	forgerAddr *ethCommon.Address,
+	fromItem, limit *uint, order string,
+) ([]BatchAPI, *db.Pagination, error) {
+	var query string
+	var args []interface{}
+	queryStr := `SELECT batch.*, block.timestamp, block.hash,
+	count(*) OVER() AS total_items, MIN(batch.item_id) OVER() AS first_item,
+	MAX(batch.item_id) OVER() AS last_item 
+	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num `
+	// Apply filters
+	nextIsAnd := false
+	// minBatchNum filter
+	if minBatchNum != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "batch.batch_num > ? "
+		args = append(args, minBatchNum)
+		nextIsAnd = true
+	}
+	// maxBatchNum filter
+	if maxBatchNum != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "batch.batch_num < ? "
+		args = append(args, maxBatchNum)
+		nextIsAnd = true
+	}
+	// slotNum filter
+	if slotNum != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "batch.slot_num = ? "
+		args = append(args, slotNum)
+		nextIsAnd = true
+	}
+	// forgerAddr filter
+	if forgerAddr != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "batch.forger_addr = ? "
+		args = append(args, forgerAddr)
+		nextIsAnd = true
+	}
+	// pagination
+	if fromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if order == OrderAsc {
+			queryStr += "batch.item_id >= ? "
+		} else {
+			queryStr += "batch.item_id <= ? "
+		}
+		args = append(args, fromItem)
+	}
+	queryStr += "ORDER BY batch.item_id "
+	if order == OrderAsc {
+		queryStr += " ASC "
+	} else {
+		queryStr += " DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	query = hdb.db.Rebind(queryStr)
+	log.Debug(query)
+	batchPtrs := []*BatchAPI{}
+	if err := meddler.QueryAll(hdb.db, &batchPtrs, query, args...); err != nil {
+		return nil, nil, err
+	}
+	batches := db.SlicePtrsToSlice(batchPtrs).([]BatchAPI)
+	if len(batches) == 0 {
+		return nil, nil, sql.ErrNoRows
+	}
+	return batches, &db.Pagination{
+		TotalItems: batches[0].TotalItems,
+		FirstItem:  batches[0].FirstItem,
+		LastItem:   batches[0].LastItem,
+	}, nil
+}
+
 // GetBatches retrieve batches from the DB, given a range of batch numbers defined by from and to
 func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, error) {
 	var batches []*common.Batch

@@ -605,13 +605,13 @@ paths:
         - name: minBatchNum
           in: query
           required: false
-          description: Include only `batchNum < minBatchNum` batches.
+          description: Include only `batchNum > minBatchNum` batches.
           schema:
             $ref: '#/components/schemas/BatchNum'
         - name: maxBatchNum
           in: query
           required: false
-          description: Include only `batchNum > maxBatchNum` batches.
+          description: Include only `batchNum < maxBatchNum` batches.
           schema:
             type: number
         - name: slotNum
@@ -1492,6 +1492,7 @@ components:
       type: string
       description: BigInt is an integer encoded as a string for numbers that are very large.
       example: "8708856933496328593"
+      pattern: "^\\d+$"
     FeeSelector:
       type: integer
       description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
@@ -1733,22 +1734,19 @@ components:
       description: Token name.
       example: "Dai"
     CollectedFees:
-      type: array
-      description: Collected fees by the forger of the batch. A maximum of 64 different tokens can be used.
-      items:
-        type: object 
-        properties:
-          tokenId:
-            $ref: '#/components/schemas/TokenId'
-          amount:
-            allOf:
-              - $ref: '#/components/schemas/BigInt'
-              - description: Ammount of collected tokens
-              - example: "53"
+      type: object
+      description: Collected fees by the forger of the batch, represented by a map of tokenId => amount. A maximum of 64 different tokens can be used.
+      additionalProperties:
+        type: string
+      example:
+        1234: "425632785672345647"
+        4321: "86538967235465432654352"
     Batch:
       type: object
       description: Group of transactions forged in a coordinator and sent and validated in Ethereum.
       properties:
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         batchNum:
           $ref: '#/components/schemas/BatchNum'
         ethereumBlockNum:
@@ -1783,12 +1781,27 @@ components:
             - description: Root of the exit Merkle Tree associated to this batch.
             - example: "2734657026572a8708d883"
         forgeL1TransactionsNum:
-          allOf:
-            - $ref: '#/components/schemas/ToForgeL1TransactionsNum'
-            - description: Identifier that corresponds to the group of L1 transactions forged in the current batch.
-            - example: 5
+          type: integer
+          description: Identifier that corresponds to the group of L1 transactions forged in the current batch.
+          example: 5
+          nullable: true
         slotNum:
           $ref: '#/components/schemas/SlotNum'
+      additionalProperties: false
+      required:
+          - itemId
+          - batchNum
+          - ethereumBlockNum
+          - ethereumBlockHash
+          - timestamp
+          - forgerAddr
+          - collectedFees
+          - historicTotalCollectedFeesUSD
+          - stateRoot
+          - numAccounts
+          - exitRoot
+          - forgeL1TransactionsNum
+          - slotNum
     FullBatch:
       type: object
       description: Group of transactions forged in a coordinator and sent and validated in Ethereum.
@@ -1800,6 +1813,10 @@ components:
           description: List of forged transactions in the batch
           items:
             $ref: '#/components/schemas/HistoryTransaction'
+      additionalProperties: false
+      required:
+        - batch
+        - transactions
     Hash:
       type: string
       description: hashed data
@@ -1820,6 +1837,10 @@ components:
             $ref: '#/components/schemas/Batch'
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
+      additionalProperties: false
+      required:
+        - batches
+        - pagination
     Coordinator:
       type: object
       properties:
