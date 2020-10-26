@@ -51,6 +51,7 @@ type testCommon struct {
 	usrExits         []exitAPI
 	poolTxsToSend    []receivedPoolTx
 	poolTxsToReceive []sendPoolTx
+	auths            []accountCreationAuthAPI
 	router           *swagger.Router
 }
 
@@ -637,6 +638,15 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	// Account creation auth
+	const nAuths = 5
+	auths := test.GenAuths(nAuths)
+	// Transform auths to API format
+	apiAuths := []accountCreationAuthAPI{}
+	for _, auth := range auths {
+		apiAuth := accountCreationAuthToAPI(auth)
+		apiAuths = append(apiAuths, *apiAuth)
+	}
 	// Set testCommon
 	tc = testCommon{
 		blocks:           blocks,
@@ -652,6 +662,7 @@ func TestMain(m *testing.M) {
 		usrExits:         usrExits,
 		poolTxsToSend:    poolTxsToSend,
 		poolTxsToReceive: poolTxsToReceive,
+		auths:            apiAuths,
 		router:           router,
 	}
 	// Fake server
@@ -1325,6 +1336,69 @@ func TestGetCoordinators(t *testing.T) {
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
+func TestAccountCreationAuth(t *testing.T) {
+	// POST
+	endpoint := apiURL + "account-creation-authorization"
+	for _, auth := range tc.auths {
+		jsonAuthBytes, err := json.Marshal(auth)
+		assert.NoError(t, err)
+		jsonAuthReader := bytes.NewReader(jsonAuthBytes)
+		fmt.Println(string(jsonAuthBytes))
+		assert.NoError(
+			t, doGoodReq(
+				"POST",
+				endpoint,
+				jsonAuthReader, nil,
+			),
+		)
+	}
+	// GET
+	endpoint += "/"
+	for _, auth := range tc.auths {
+		fetchedAuth := accountCreationAuthAPI{}
+		assert.NoError(
+			t, doGoodReq(
+				"GET",
+				endpoint+auth.EthAddr,
+				nil, &fetchedAuth,
+			),
+		)
+		assertAuth(t, auth, fetchedAuth)
+	}
+	// POST
+	// 400
+	// Wrong addr
+	badAuth := tc.auths[0]
+	badAuth.EthAddr = ethAddrToHez(ethCommon.BigToAddress(big.NewInt(1)))
+	jsonAuthBytes, err := json.Marshal(badAuth)
+	assert.NoError(t, err)
+	jsonAuthReader := bytes.NewReader(jsonAuthBytes)
+	err = doBadReq("POST", endpoint, jsonAuthReader, 400)
+	assert.NoError(t, err)
+	// Wrong signature
+	badAuth = tc.auths[0]
+	badAuth.Signature = badAuth.Signature[:len(badAuth.Signature)-1]
+	badAuth.Signature += "F"
+	jsonAuthBytes, err = json.Marshal(badAuth)
+	assert.NoError(t, err)
+	jsonAuthReader = bytes.NewReader(jsonAuthBytes)
+	err = doBadReq("POST", endpoint, jsonAuthReader, 400)
+	assert.NoError(t, err)
+	// GET
+	// 400
+	err = doBadReq("GET", endpoint+"hez:0xFooBar", nil, 400)
+	assert.NoError(t, err)
+	// 404
+	err = doBadReq("GET", endpoint+"hez:0x0000000000000000000000000000000000000001", nil, 404)
+	assert.NoError(t, err)
+}
+
+func assertAuth(t *testing.T, expected, actual accountCreationAuthAPI) {
+	// timestamp should be very close to now
+	assert.Less(t, time.Now().UTC().Unix()-3, actual.Timestamp.Unix())
+	expected.Timestamp = actual.Timestamp
+	assert.Equal(t, expected, actual)
+}
 
 func doGoodReqPaginated(
 	path, order string,
@@ -1393,7 +1467,7 @@ func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{})
 	if err != nil {
 		return err
 	}
-	if resp.Body == nil {
+	if resp.Body == nil && returnStruct != nil {
 		return errors.New("Nil body")
 	}
 	//nolint
@@ -1403,10 +1477,14 @@ func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{})
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("%d response: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("%d response. Body: %s", resp.StatusCode, string(body))
+	}
+	if returnStruct == nil {
+		return nil
 	}
 	// Unmarshal body into return struct
 	if err := json.Unmarshal(body, returnStruct); err != nil {
+		log.Error("invalid json: " + string(body))
 		return err
 	}
 	// Validate response against swagger spec

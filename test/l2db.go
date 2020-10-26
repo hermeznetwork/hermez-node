@@ -1,11 +1,7 @@
 package test
 
 import (
-	"math/big"
-	"strconv"
-	"time"
-
-	ethCommon "github.com/ethereum/go-ethereum/common"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
@@ -84,13 +80,28 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 func GenAuths(nAuths int) []*common.AccountCreationAuth {
 	auths := []*common.AccountCreationAuth{}
 	for i := 0; i < nAuths; i++ {
-		privK := babyjub.NewRandPrivKey()
-		auths = append(auths, &common.AccountCreationAuth{
-			EthAddr:   ethCommon.BigToAddress(big.NewInt(int64(i))),
-			BJJ:       privK.Public(),
-			Signature: []byte(strconv.Itoa(i)),
-			Timestamp: time.Now(),
-		})
+		// Generate keys
+		ethPrivK, err := ethCrypto.GenerateKey()
+		if err != nil {
+			panic(err)
+		}
+		bjjPrivK := babyjub.NewRandPrivKey()
+		// Generate auth
+		auth := &common.AccountCreationAuth{
+			EthAddr: ethCrypto.PubkeyToAddress(ethPrivK.PublicKey),
+			BJJ:     bjjPrivK.Public(),
+		}
+		// Sign
+		h, err := auth.HashToSign()
+		if err != nil {
+			panic(err)
+		}
+		signature, err := ethCrypto.Sign(h, ethPrivK)
+		if err != nil {
+			panic(err)
+		}
+		auth.Signature = signature
+		auths = append(auths, auth)
 	}
 	return auths
 }

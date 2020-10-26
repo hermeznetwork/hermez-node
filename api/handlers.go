@@ -30,10 +30,43 @@ var (
 )
 
 func postAccountCreationAuth(c *gin.Context) {
-
+	// Parse body
+	var apiAuth accountCreationAuthAPI
+	if err := c.ShouldBindJSON(&apiAuth); err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// API to common + verify signature
+	dbAuth, err := accountCreationAuthAPIToCommon(&apiAuth)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Insert to DB
+	if err := l2.AddAccountCreationAuth(dbAuth); err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	// Return OK
+	c.Status(http.StatusOK)
 }
 
 func getAccountCreationAuth(c *gin.Context) {
+	// Get hezEthereumAddress
+	addr, err := parseParamHezEthAddr(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch auth from l2DB
+	dbAuth, err := l2.GetAccountCreationAuth(*addr)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	apiAuth := accountCreationAuthToAPI(dbAuth)
+	// Build succesfull response
+	c.JSON(http.StatusOK, apiAuth)
 }
 
 func postPoolTx(c *gin.Context) {
