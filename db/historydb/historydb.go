@@ -651,15 +651,16 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 // }
 
 // GetHistoryTx returns a tx from the DB given a TxID
-func (hdb *HistoryDB) GetHistoryTx(txID common.TxID) (*HistoryTx, error) {
-	tx := &HistoryTx{}
+func (hdb *HistoryDB) GetHistoryTx(txID common.TxID) (*TxAPI, error) {
+	tx := &TxAPI{}
 	err := meddler.QueryRow(
 		hdb.db, tx, `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
-		tx.from_idx, tx.to_idx, tx.amount, tx.token_id, tx.amount_usd, 
+		hez_idx(tx.from_idx, token.symbol) AS from_idx, tx.from_eth_addr, tx.from_bjj,
+		hez_idx(tx.to_idx, token.symbol) AS to_idx, tx.to_eth_addr, tx.to_bjj,
+		tx.amount, tx.token_id, tx.amount_usd, 
 		tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
-		tx.from_eth_addr, tx.from_bjj, tx.load_amount, 
-		tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
-		token.token_id, token.eth_block_num AS token_block,
+		tx.load_amount, tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
+		token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 		token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
 		token.usd_update, block.timestamp
 		FROM tx INNER JOIN token ON tx.token_id = token.token_id 
@@ -675,18 +676,19 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
 	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
 	fromItem, limit *uint, order string,
-) ([]HistoryTx, *db.Pagination, error) {
+) ([]TxAPI, *db.Pagination, error) {
 	if ethAddr != nil && bjj != nil {
 		return nil, nil, errors.New("ethAddr and bjj are incompatible")
 	}
 	var query string
 	var args []interface{}
 	queryStr := `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
-	tx.from_idx, tx.to_idx, tx.amount, tx.token_id, tx.amount_usd, 
+	hez_idx(tx.from_idx, token.symbol) AS from_idx, tx.from_eth_addr, tx.from_bjj,
+	hez_idx(tx.to_idx, token.symbol) AS to_idx, tx.to_eth_addr, tx.to_bjj,
+	tx.amount, tx.token_id, tx.amount_usd, 
 	tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
-	tx.from_eth_addr, tx.from_bjj, tx.load_amount, 
-	tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
-	token.token_id, token.eth_block_num AS token_block,
+	tx.load_amount, tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
+	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
 	token.usd_update, block.timestamp, count(*) OVER() AS total_items, 
 	MIN(tx.item_id)  OVER() AS first_item, MAX(tx.item_id) OVER() AS last_item 
@@ -783,11 +785,11 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query = hdb.db.Rebind(queryStr)
 	log.Debug(query)
-	txsPtrs := []*HistoryTx{}
+	txsPtrs := []*TxAPI{}
 	if err := meddler.QueryAll(hdb.db, &txsPtrs, query, args...); err != nil {
 		return nil, nil, err
 	}
-	txs := db.SlicePtrsToSlice(txsPtrs).([]HistoryTx)
+	txs := db.SlicePtrsToSlice(txsPtrs).([]TxAPI)
 	if len(txs) == 0 {
 		return nil, nil, sql.ErrNoRows
 	}

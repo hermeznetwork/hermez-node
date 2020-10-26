@@ -2,12 +2,14 @@ package apitypes
 
 import (
 	"database/sql"
+	"encoding/json"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	_ "github.com/mattn/go-sqlite3" //nolint sqlite driver
@@ -121,6 +123,53 @@ func TestBigIntStrScannerValuer(t *testing.T) {
 	err = meddler.QueryRow(db, &toMeddlerNil, "select * from test")
 	assert.NoError(t, err)
 	assert.Nil(t, toMeddlerNil.I)
+}
+
+func TestStrBigInt(t *testing.T) {
+	type testStrBigInt struct {
+		I StrBigInt
+	}
+	from := []byte(`{"I":"4"}`)
+	to := &testStrBigInt{}
+	assert.NoError(t, json.Unmarshal(from, to))
+	assert.Equal(t, big.NewInt(4), (*big.Int)(&to.I))
+}
+
+func TestStrHezEthAddr(t *testing.T) {
+	type testStrHezEthAddr struct {
+		I StrHezEthAddr
+	}
+	withoutHez := "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+	from := []byte(`{"I":"hez:` + withoutHez + `"}`)
+	var addr ethCommon.Address
+	if err := addr.UnmarshalText([]byte(withoutHez)); err != nil {
+		panic(err)
+	}
+	to := &testStrHezEthAddr{}
+	assert.NoError(t, json.Unmarshal(from, to))
+	assert.Equal(t, addr, ethCommon.Address(to.I))
+}
+
+func TestStrHezBJJ(t *testing.T) {
+	type testStrHezBJJ struct {
+		I StrHezBJJ
+	}
+	priv := babyjub.NewRandPrivKey()
+	hezBjj := NewHezBJJ(priv.Public())
+	from := []byte(`{"I":"` + hezBjj + `"}`)
+	to := &testStrHezBJJ{}
+	assert.NoError(t, json.Unmarshal(from, to))
+	assert.Equal(t, priv.Public(), (*babyjub.PublicKey)(&to.I))
+}
+
+func TestStrHezIdx(t *testing.T) {
+	type testStrHezIdx struct {
+		I StrHezIdx
+	}
+	from := []byte(`{"I":"hez:foo:4"}`)
+	to := &testStrHezIdx{}
+	assert.NoError(t, json.Unmarshal(from, to))
+	assert.Equal(t, common.Idx(4), common.Idx(to.I))
 }
 
 func TestHezEthAddr(t *testing.T) {

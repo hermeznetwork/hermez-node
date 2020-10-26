@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -94,79 +93,9 @@ func TestAddTxTest(t *testing.T) {
 		assert.NoError(t, err)
 		fetchedTx, err := l2DB.GetTx(tx.TxID)
 		assert.NoError(t, err)
-		assertReadTx(t, commonToRead(tx, tokens), fetchedTx)
+		// assertReadTx(t, commonToRead(tx, tokens), fetchedTx)
+		assertTx(t, tx, fetchedTx)
 	}
-}
-
-func commonToRead(commonTx *common.PoolL2Tx, tokens []common.Token) *PoolL2TxRead {
-	readTx := &PoolL2TxRead{
-		TxID:      commonTx.TxID,
-		FromIdx:   commonTx.FromIdx,
-		ToBJJ:     commonTx.ToBJJ,
-		Amount:    commonTx.Amount,
-		Fee:       commonTx.Fee,
-		Nonce:     commonTx.Nonce,
-		State:     commonTx.State,
-		Signature: commonTx.Signature,
-		RqToBJJ:   commonTx.RqToBJJ,
-		RqAmount:  commonTx.RqAmount,
-		Type:      commonTx.Type,
-		Timestamp: commonTx.Timestamp,
-		TokenID:   commonTx.TokenID,
-	}
-	// token related fields
-	// find token
-	token := historydb.TokenWithUSD{}
-	for _, tkn := range tokensUSD {
-		if tkn.TokenID == readTx.TokenID {
-			token = tkn
-			break
-		}
-	}
-	// set token related fields
-	readTx.TokenEthBlockNum = token.EthBlockNum
-	readTx.TokenEthAddr = token.EthAddr
-	readTx.TokenName = token.Name
-	readTx.TokenSymbol = token.Symbol
-	readTx.TokenDecimals = token.Decimals
-	readTx.TokenUSD = token.USD
-	readTx.TokenUSDUpdate = token.USDUpdate
-	// nullable fields
-	if commonTx.ToIdx != 0 {
-		readTx.ToIdx = &commonTx.ToIdx
-	}
-	nilAddr := ethCommon.BigToAddress(big.NewInt(0))
-	if commonTx.ToEthAddr != nilAddr {
-		readTx.ToEthAddr = &commonTx.ToEthAddr
-	}
-	if commonTx.RqFromIdx != 0 {
-		readTx.RqFromIdx = &commonTx.RqFromIdx
-	}
-	if commonTx.RqToIdx != 0 { // if true, all Rq... fields must be different to nil
-		readTx.RqToIdx = &commonTx.RqToIdx
-		readTx.RqTokenID = &commonTx.RqTokenID
-		readTx.RqFee = &commonTx.RqFee
-		readTx.RqNonce = &commonTx.RqNonce
-	}
-	if commonTx.RqToEthAddr != nilAddr {
-		readTx.RqToEthAddr = &commonTx.RqToEthAddr
-	}
-	return readTx
-}
-
-func assertReadTx(t *testing.T, expected, actual *PoolL2TxRead) {
-	// Check that timestamp has been set within the last 3 seconds
-	assert.Less(t, time.Now().UTC().Unix()-3, actual.Timestamp.Unix())
-	assert.GreaterOrEqual(t, time.Now().UTC().Unix(), actual.Timestamp.Unix())
-	expected.Timestamp = actual.Timestamp
-	// Check token related stuff
-	if expected.TokenUSDUpdate != nil {
-		// Check that TokenUSDUpdate has been set within the last 3 seconds
-		assert.Less(t, time.Now().UTC().Unix()-3, actual.TokenUSDUpdate.Unix())
-		assert.GreaterOrEqual(t, time.Now().UTC().Unix(), actual.TokenUSDUpdate.Unix())
-		expected.TokenUSDUpdate = actual.TokenUSDUpdate
-	}
-	assert.Equal(t, expected, actual)
 }
 
 func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
@@ -400,13 +329,13 @@ func TestReorg(t *testing.T) {
 	err := l2DB.Reorg(lastValidBatch)
 	assert.NoError(t, err)
 	for _, id := range reorgedTxIDs {
-		tx, err := l2DB.GetTx(id)
+		tx, err := l2DB.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Nil(t, tx.BatchNum)
 		assert.Equal(t, common.PoolL2TxStatePending, tx.State)
 	}
 	for _, id := range nonReorgedTxIDs {
-		fetchedTx, err := l2DB.GetTx(id)
+		fetchedTx, err := l2DB.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, lastValidBatch, *fetchedTx.BatchNum)
 	}
