@@ -350,7 +350,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		case "CreateAccountDepositTransfer":
 			c.typ = common.TxTypeCreateAccountDepositTransfer
 			transferring = true
-		case "CreateAccountDepositCoordinator":
+		case "CreateAccountCoordinator":
 			c.typ = txTypeCreateAccountDepositCoordinator
 			// transferring is false, as the Coordinator tx transfer will be 0
 		case "DepositTransfer":

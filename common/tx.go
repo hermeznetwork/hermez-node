@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
 	"errors"
@@ -143,6 +144,33 @@ type Tx struct {
 	Fee    *FeeSelector `meddler:"fee"`
 	FeeUSD *float64     `meddler:"fee_usd"`
 	Nonce  *Nonce       `meddler:"nonce"`
+}
+
+func (tx *Tx) String() string {
+	buf := bytes.NewBufferString("")
+	fmt.Fprintf(buf, "Type: %s, ", tx.Type)
+	fmt.Fprintf(buf, "FromIdx: %s, ", tx.FromIdx)
+	if tx.Type == TxTypeTransfer ||
+		tx.Type == TxTypeDepositTransfer ||
+		tx.Type == TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "ToIdx: %s, ", tx.ToIdx)
+	}
+	if tx.Type == TxTypeDeposit ||
+		tx.Type == TxTypeDepositTransfer ||
+		tx.Type == TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "LoadAmount: %d, ", tx.LoadAmount)
+	}
+	if tx.Type != TxTypeDeposit {
+		fmt.Fprintf(buf, "Amount: %s, ", tx.Amount)
+	}
+	if tx.Type == TxTypeTransfer ||
+		tx.Type == TxTypeDepositTransfer ||
+		tx.Type == TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "Fee: %d, ", tx.Fee)
+	}
+	fmt.Fprintf(buf, "TokenID: %d\n", tx.TokenID)
+
+	return buf.String()
 }
 
 // L1Tx returns a *L1Tx from the Tx

@@ -68,7 +68,7 @@ func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 }
 
 // GetL2TxSelection returns a selection of the L2Txs for the next batch, from the L2DB pool
-func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL2TxSelection(coordIdxs []common.Idx, batchNum common.BatchNum) ([]common.PoolL2Tx, error) {
 	// get pending l2-tx from tx-pool
 	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // once l2db ready, maybe use parameter 'batchNum'
 	if err != nil {
@@ -89,7 +89,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]common.Po
 	txs := txsel.getL2Profitable(validTxs, txsel.MaxTxs)
 
 	// process the txs in the local AccountsDB
-	_, _, err = txsel.localAccountsDB.ProcessTxs(nil, nil, txs)
+	_, _, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, nil, nil, txs)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (txsel *TxSelector) GetL2TxSelection(batchNum common.BatchNum) ([]common.Po
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
-func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.L1Tx, []common.L1Tx, []common.PoolL2Tx, error) {
+func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.L1Tx, []common.L1Tx, []common.PoolL2Tx, error) {
 	// apply l1-user-tx to localAccountDB
 	//     create new leaves
 	//     update balances
@@ -238,7 +238,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(batchNum common.BatchNum, l1Txs []co
 	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
 
 	// process the txs in the local AccountsDB
-	_, _, err = txsel.localAccountsDB.ProcessTxs(l1Txs, l1CoordinatorTxs, l2Txs)
+	_, _, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, l1Txs, l1CoordinatorTxs, l2Txs)
 	if err != nil {
 		return nil, nil, nil, err
 	}
