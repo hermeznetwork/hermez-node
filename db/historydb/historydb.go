@@ -404,8 +404,8 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error 
 }
 
 // GetToken returns a token from the DB given a TokenID
-func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenRead, error) {
-	token := &TokenRead{}
+func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenWithUSD, error) {
+	token := &TokenWithUSD{}
 	err := meddler.QueryRow(
 		hdb.db, token, `SELECT * FROM token WHERE token_id = $1;`, tokenID,
 	)
@@ -413,17 +413,17 @@ func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenRead, error) {
 }
 
 // GetAllTokens returns all tokens from the DB
-func (hdb *HistoryDB) GetAllTokens() ([]TokenRead, error) {
-	var tokens []*TokenRead
+func (hdb *HistoryDB) GetAllTokens() ([]TokenWithUSD, error) {
+	var tokens []*TokenWithUSD
 	err := meddler.QueryAll(
 		hdb.db, &tokens,
 		"SELECT * FROM token ORDER BY token_id;",
 	)
-	return db.SlicePtrsToSlice(tokens).([]TokenRead), err
+	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), err
 }
 
 // GetTokens returns a list of tokens from the DB
-func (hdb *HistoryDB) GetTokens(ids []common.TokenID, symbols []string, name string, fromItem, limit *uint, order string) ([]TokenRead, *db.Pagination, error) {
+func (hdb *HistoryDB) GetTokens(ids []common.TokenID, symbols []string, name string, fromItem, limit *uint, order string) ([]TokenWithUSD, *db.Pagination, error) {
 	var query string
 	var args []interface{}
 	queryStr := `SELECT * , COUNT(*) OVER() AS total_items, MIN(token.item_id) OVER() AS first_item, MAX(token.item_id) OVER() AS last_item FROM token `
@@ -480,14 +480,14 @@ func (hdb *HistoryDB) GetTokens(ids []common.TokenID, symbols []string, name str
 		return nil, nil, err
 	}
 	query = hdb.db.Rebind(query)
-	tokens := []*TokenRead{}
+	tokens := []*TokenWithUSD{}
 	if err := meddler.QueryAll(hdb.db, &tokens, query, argsQ...); err != nil {
 		return nil, nil, err
 	}
 	if len(tokens) == 0 {
 		return nil, nil, sql.ErrNoRows
 	}
-	return db.SlicePtrsToSlice(tokens).([]TokenRead), &db.Pagination{
+	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), &db.Pagination{
 		TotalItems: tokens[0].TotalItems,
 		FirstItem:  tokens[0].FirstItem,
 		LastItem:   tokens[0].LastItem,

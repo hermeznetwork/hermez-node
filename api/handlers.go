@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -214,54 +213,6 @@ func getState(c *gin.Context) {
 
 func getConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, cg)
-}
-
-func getTokens(c *gin.Context) {
-	// Account filters
-	tokenIDs, symbols, name, err := parseTokenFilters(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Fetch exits from historyDB
-	tokens, pagination, err := h.GetTokens(
-		tokenIDs, symbols, name, fromItem, limit, order,
-	)
-	if err != nil {
-		retSQLErr(err, c)
-		return
-	}
-
-	// Build succesfull response
-	apiTokens := tokensToAPI(tokens)
-	c.JSON(http.StatusOK, &tokensAPI{
-		Tokens:     apiTokens,
-		Pagination: pagination,
-	})
-}
-
-func getToken(c *gin.Context) {
-	// Get TokenID
-	tokenIDUint, err := parseParamUint("id", nil, 0, maxUint32, c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	tokenID := common.TokenID(*tokenIDUint)
-	// Fetch token from historyDB
-	token, err := h.GetToken(tokenID)
-	if err != nil {
-		retSQLErr(err, c)
-		return
-	}
-	apiToken := tokensToAPI([]historydb.TokenRead{*token})
-	c.JSON(http.StatusOK, apiToken[0])
 }
 
 func getRecommendedFee(c *gin.Context) {

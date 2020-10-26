@@ -18,7 +18,7 @@ import (
 
 var l2DB *L2DB
 var tokens []common.Token
-var tokensUSD []historydb.TokenRead
+var tokensUSD []historydb.TokenWithUSD
 
 func TestMain(m *testing.M) {
 	// init DB
@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 	os.Exit(result)
 }
 
-func prepareHistoryDB(db *sqlx.DB) ([]common.Token, []historydb.TokenRead) {
+func prepareHistoryDB(db *sqlx.DB) ([]common.Token, []historydb.TokenWithUSD) {
 	historyDB := historydb.NewHistoryDB(db)
 	const fromBlock int64 = 1
 	const toBlock int64 = 5
@@ -60,9 +60,9 @@ func prepareHistoryDB(db *sqlx.DB) ([]common.Token, []historydb.TokenRead) {
 	if err := historyDB.AddTokens(tokens); err != nil {
 		panic(err)
 	}
-	readTokens := []historydb.TokenRead{}
+	readTokens := []historydb.TokenWithUSD{}
 	for i, token := range tokens {
-		readToken := historydb.TokenRead{
+		readToken := historydb.TokenWithUSD{
 			TokenID:     token.TokenID,
 			EthBlockNum: token.EthBlockNum,
 			EthAddr:     token.EthAddr,
@@ -116,7 +116,7 @@ func commonToRead(commonTx *common.PoolL2Tx, tokens []common.Token) *PoolL2TxRea
 	}
 	// token related fields
 	// find token
-	token := historydb.TokenRead{}
+	token := historydb.TokenWithUSD{}
 	for _, tkn := range tokensUSD {
 		if tkn.TokenID == readTx.TokenID {
 			token = tkn
@@ -176,7 +176,7 @@ func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
 	expected.Timestamp = actual.Timestamp
 	// Check absolute fee
 	// find token
-	token := historydb.TokenRead{}
+	token := historydb.TokenWithUSD{}
 	for _, tkn := range tokensUSD {
 		if expected.TokenID == tkn.TokenID {
 			token = tkn
