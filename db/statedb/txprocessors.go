@@ -538,9 +538,16 @@ func (s *StateDB) applyTransfer(tx common.Tx, auxToIdx common.Idx) error {
 	// increment nonce
 	accSender.Nonce++
 
-	// subtract amount to the sender
-	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
-	// add amount to the receiver
+	if !tx.IsL1 {
+		// compute fee and subtract it from the accSender
+		fee := common.CalcFeeAmount(tx.Amount, *tx.Fee)
+		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
+		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
+		// TODO send the fee to the Fee Idx of the Coordinator for the
+		// TokenID
+	}
+
+	// add amount-feeAmount to the receiver
 	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
 
 	// update sender account in localStateDB
@@ -653,7 +660,16 @@ func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx common.Tx) (*com
 	if err != nil {
 		return nil, false, err
 	}
-	acc.Balance = new(big.Int).Sub(acc.Balance, tx.Amount)
+
+	if !tx.IsL1 {
+		// compute fee and subtract it from the accSender
+		fee := common.CalcFeeAmount(tx.Amount, *tx.Fee)
+		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
+		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
+		// TODO send the fee to the Fee Idx of the Coordinator for the
+		// TokenID
+	}
+
 	p, err := s.UpdateAccount(tx.FromIdx, acc)
 	if err != nil {
 		return nil, false, err

@@ -74,7 +74,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, 2, len(exitInfos)) // 2, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5'
 	acc, err = sdb.GetAccount(common.Idx(256))
 	assert.Nil(t, err)
-	assert.Equal(t, "73", acc.Balance.String())
+	assert.Equal(t, "78", acc.Balance.String())
 }
 
 /*

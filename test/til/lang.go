@@ -332,6 +332,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		return c, fmt.Errorf("Set type not defined")
 	}
 	transferring := false
+	fee := false
 
 	if setType == setTypeBlockchain {
 		switch lit {
@@ -339,9 +340,11 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 			c.typ = common.TxTypeDeposit
 		case "Exit":
 			c.typ = common.TxTypeExit
+			fee = true
 		case "Transfer":
 			c.typ = common.TxTypeTransfer
 			transferring = true
+			fee = true
 		case "CreateAccountDeposit":
 			c.typ = common.TxTypeCreateAccountDeposit
 		case "CreateAccountDepositTransfer":
@@ -355,6 +358,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 			transferring = true
 		case "ForceTransfer":
 			c.typ = common.TxTypeForceTransfer
+			transferring = true
 		case "ForceExit":
 			c.typ = common.TxTypeForceExit
 		default:
@@ -365,14 +369,18 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		case "PoolTransfer":
 			c.typ = common.TxTypeTransfer
 			transferring = true
+			fee = true
 		case "PoolTransferToEthAddr":
 			c.typ = common.TxTypeTransferToEthAddr
 			transferring = true
+			fee = true
 		case "PoolTransferToBJJ":
 			c.typ = common.TxTypeTransferToBJJ
 			transferring = true
+			fee = true
 		case "PoolExit":
 			c.typ = common.TxTypeExit
+			fee = true
 		default:
 			return c, fmt.Errorf("Unexpected PoolL2 tx type: %s", lit)
 		}
@@ -450,7 +458,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	} else {
 		c.amount = uint64(amount)
 	}
-	if transferring {
+	if fee {
 		if err := p.expectChar(c, "("); err != nil {
 			return c, err
 		}

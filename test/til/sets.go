@@ -130,10 +130,10 @@ Transfer(1) Y-E: 5 (1)
 Transfer(1) Z-A: 5 (1)
 // exits
 ForceExit(1) A: 5
-Exit(1) K: 5
-Exit(1) X: 5
-Exit(1) Y: 5
-Exit(1) Z: 5
+Exit(1) K: 5 (1)
+Exit(1) X: 5 (1)
+Exit(1) Y: 5 (1)
+Exit(1) Z: 5 (1)
 
 > batch
 
@@ -153,7 +153,7 @@ Transfer(1) B-N: 5 (1)
 Transfer(1) C-O: 5 (1)
 Transfer(1) H-O: 5 (1)
 Transfer(1) I-H: 5 (1)
-Exit(1) A: 5
+Exit(1) A: 5 (1)
 
 // create CoordinatorTx CreateAccount for D, TokenId 2, used at SetPool0 for 'PoolTransfer(2) B-D: 3 (1)'
 CreateAccountDepositCoordinator(2) D
@@ -172,7 +172,7 @@ PoolTransfer(1) C-A: 3 (1)
 PoolTransfer(1) A-B: 1 (1)
 PoolTransfer(2) A-B: 15 (1)
 PoolTransfer(2) B-D: 3 (1)
-PoolExit(1) A: 3
+PoolExit(1) A: 3 (1)
 PoolTransfer(1) A-B: 6 (1)
 PoolTransfer(1) B-C: 3 (1)
 PoolTransfer(1) A-C: 3 (1)
