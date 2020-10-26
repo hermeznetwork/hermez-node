@@ -263,13 +263,14 @@ type AuctionInterface interface {
 type AuctionClient struct {
 	client      *EthereumClient
 	address     ethCommon.Address
-	tokenHEZ    TokenConfig
+	tokenHEZCfg TokenConfig
 	auction     *HermezAuctionProtocol.HermezAuctionProtocol
+	tokenHEZ    *HEZ.HEZ
 	contractAbi abi.ABI
 }
 
 // NewAuctionClient creates a new AuctionClient.  `tokenAddress` is the address of the HEZ tokens.
-func NewAuctionClient(client *EthereumClient, address ethCommon.Address, tokenHEZ TokenConfig) (*AuctionClient, error) {
+func NewAuctionClient(client *EthereumClient, address ethCommon.Address, tokenHEZCfg TokenConfig) (*AuctionClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(HermezAuctionProtocol.HermezAuctionProtocolABI)))
 	if err != nil {
 		return nil, err
@@ -278,11 +279,16 @@ func NewAuctionClient(client *EthereumClient, address ethCommon.Address, tokenHE
 	if err != nil {
 		return nil, err
 	}
+	tokenHEZ, err := HEZ.NewHEZ(tokenHEZCfg.Address, client.Client())
+	if err != nil {
+		return nil, err
+	}
 	return &AuctionClient{
 		client:      client,
 		address:     address,
-		tokenHEZ:    tokenHEZ,
+		tokenHEZCfg: tokenHEZCfg,
 		auction:     auction,
+		tokenHEZ:    tokenHEZ,
 		contractAbi: contractAbi,
 	}, nil
 }
@@ -561,17 +567,16 @@ func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.I
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokenHEZcontract, err := HEZ.NewHEZ(c.tokenHEZ.Address, ec)
+			owner := c.client.account.Address
+			spender := c.address
+			nonce, err := c.tokenHEZ.Nonces(nil, owner)
 			if err != nil {
 				return nil, err
 			}
-			owner := c.client.account.Address
-			spender := c.address
-			nonce, err := tokenHEZcontract.Nonces(nil, owner)
-			tokenname := c.tokenHEZ.Name
-			tokenAddr := c.tokenHEZ.Address
-			chainid, _ := c.client.client.ChainID(context.Background())
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenname)
+			tokenName := c.tokenHEZCfg.Name
+			tokenAddr := c.tokenHEZCfg.Address
+			chainid, _ := c.client.Client().ChainID(context.Background())
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			_slot := big.NewInt(slot)
@@ -581,7 +586,6 @@ func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.I
 		return nil, fmt.Errorf("Failed bid: %w", err)
 	}
 	return tx, nil
-
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
@@ -590,18 +594,17 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 	if tx, err = c.client.CallAuth(
 		1000000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokenHEZcontract, err := HEZ.NewHEZ(c.tokenHEZ.Address, ec)
+			owner := c.client.account.Address
+			spender := c.address
+			nonce, err := c.tokenHEZ.Nonces(nil, owner)
 			if err != nil {
 				return nil, err
 			}
-			owner := c.client.account.Address
-			spender := c.address
-			nonce, err := tokenHEZcontract.Nonces(nil, owner)
-			tokenname := c.tokenHEZ.Name
-			tokenAddr := c.tokenHEZ.Address
-			chainid, _ := c.client.client.ChainID(context.Background())
+			tokenName := c.tokenHEZCfg.Name
+			tokenAddr := c.tokenHEZCfg.Address
+			chainid, _ := c.client.Client().ChainID(context.Background())
 
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenname)
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			_startingSlot := big.NewInt(startingSlot)

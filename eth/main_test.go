@@ -16,25 +16,25 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var ethClientDialURLConst = "http://localhost:8545"
-var passwordConst = "pass"
-var deadlineConst, _ = new(big.Int).SetString("ffffffffffffffffffffffffffffffff", 16)
-
 var errEnvVar = fmt.Errorf("Some environment variable is missing")
+
+var (
+	ethClientDialURL = "http://localhost:8545"
+	password         = "pass"
+	deadline, _      = new(big.Int).SetString("ffffffffffffffffffffffffffffffff", 16)
+)
 
 // Smart Contract Addresses
 var (
-	password                    string
-	ethClientDialURL            string
-	deadline                    *big.Int
-	genesisBlock                int64
-	auctionAddressConst         ethCommon.Address
-	auctionTestAddressConst     ethCommon.Address
-	tokenHEZAddressConst        ethCommon.Address
-	hermezRollupAddressConst    ethCommon.Address
-	wdelayerAddressConst        ethCommon.Address
-	wdelayerTestAddressConst    ethCommon.Address
-	tokenHEZ                    TokenConfig
+	genesisBlock             int64
+	auctionAddressConst      ethCommon.Address
+	auctionTestAddressConst  ethCommon.Address
+	tokenHEZAddressConst     ethCommon.Address
+	hermezRollupAddressConst ethCommon.Address
+	wdelayerAddressConst     ethCommon.Address
+	wdelayerTestAddressConst ethCommon.Address
+	tokenHEZ                 TokenConfig
+
 	donationAddressStr          = "0x6c365935CA8710200C7595F0a72EB6023A7706Cd"
 	donationAddressConst        = ethCommon.HexToAddress(donationAddressStr)
 	bootCoordinatorAddressStr   = "0xc783df8a850f42e7f7e57013759c285caa701eb6"
@@ -65,9 +65,9 @@ var (
 	auxAddressStr   = "0x3d91185a02774C70287F6c74Dd26d13DFB58ff16"
 	auxAddressConst = ethCommon.HexToAddress(auxAddressStr)
 
-	aux2AddressSK    = "28d1bfbbafe9d1d4f5a11c3c16ab6bf9084de48d99fbac4058bdfa3c80b29087"
-	aux2AddressStr   = "0x532792b73c0c6e7565912e7039c59986f7e1dd1f"
-	aux2AddressConst = ethCommon.HexToAddress(aux2AddressStr)
+	aux2AddressSK = "28d1bfbbafe9d1d4f5a11c3c16ab6bf9084de48d99fbac4058bdfa3c80b29087"
+	// aux2AddressStr = "0x532792b73c0c6e7565912e7039c59986f7e1dd1f"
+	// aux2AddressConst = ethCommon.HexToAddress(aux2AddressStr)
 
 	hermezRollupTestSK           = "28d1bfbbafe9d1d4f5a11c3c16ab6bf9084de48d99fbac4058bdfa3c80b29088"
 	hermezRollupTestAddressStr   = "0xEa960515F8b4C237730F028cBAcF0a28E7F45dE0"
@@ -111,7 +111,7 @@ func addKey(ks *keystore.KeyStore, skHex string) *accounts.Account {
 func getEnvVariables() {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Variables loaded from command")
+		fmt.Println("Variables loaded from environment")
 	} else {
 		fmt.Println("Variables loaded from .env file")
 	}
@@ -130,9 +130,6 @@ func getEnvVariables() {
 		panic(errEnvVar)
 	}
 
-	ethClientDialURL = ethClientDialURLConst
-	password = passwordConst
-	deadline = deadlineConst
 	auctionAddressConst = ethCommon.HexToAddress(auctionAddressStr)
 	auctionTestAddressConst = ethCommon.HexToAddress(auctionTestAddressStr)
 	tokenHEZAddressConst = ethCommon.HexToAddress(tokenHEZAddressStr)

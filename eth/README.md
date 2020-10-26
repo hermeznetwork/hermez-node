@@ -12,23 +12,28 @@ While the prepared deployment is not found to master, branch in repository must 
 
 Now, install the dependencies:
 
-`npm i`
+```
+cd contracts/
+yarn install
+```
 
 Go to where the deployment scripts for the test are found:
 
-`cd scripts/ethclient-test-deployment`
+`cd scripts/ethclient-deployment/`
 
-Now, a bash script has to be run to do the deployment:
-`./test-deployment`
+Now, a bash script (which uses gnome-terminal) has to be run to do the deployment:
+`./test-deploy.sh`
 
 This bash file follows these steps:
 - `npx builder node`: a local blockchain to do our tests
 - `npx buidler run --network localhost test-deployment.js`: run the deployment on the local blockchain
 
+Alternatively you can run the two previous commands manually in different terminals.
 
 An output file necessary for the next step is obtained: `deploy-output`.
 
-> The files that find in `/eth/contracts` must be obtained from the same contract that we deploy in this step
+> The files that appear in `hermez-node/eth/contracts` must be generated from the same contract that we deploy in this step
+
 ## Ethclient Test
 
 Different environment variables are necessary to run this test.
@@ -46,9 +51,9 @@ WDELAYER="0x500D1d6A4c7D8Ae28240b47c8FCde034D827fD5e"
 WDELAYER_TEST="0x1d80315fac6aBd3EfeEbE97dEc44461ba7556160"
 ```
 
-> An example is found in `/etc/.env.example`
+> An example is found in `hermez-node/eth/.env.example`
 
-And then run test:
+And then run test from `hermez-node/eth/`:
 
 `INTEGRATION=1 go test`
 

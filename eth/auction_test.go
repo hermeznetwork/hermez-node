@@ -13,7 +13,7 @@ const openAuctionSlotsConst = uint16(4320)
 const closedAuctionSlotsConst = uint16(2)
 const outbiddingConst = uint16(1000)
 const currentSlotConst = 0
-const BLOCKSPERSLOT = uint8(40)
+const blocksPerSlot = uint8(40)
 const minBidStr = "10000000000000000000"
 const URL = "http://localhost:3000"
 
@@ -33,7 +33,7 @@ func TestAuctionConstants(t *testing.T) {
 
 	auctionConstants, err := auctionClientTest.AuctionConstants()
 	require.Nil(t, err)
-	assert.Equal(t, auctionConstants.BlocksPerSlot, BLOCKSPERSLOT)
+	assert.Equal(t, auctionConstants.BlocksPerSlot, blocksPerSlot)
 	assert.Equal(t, auctionConstants.GenesisBlockNum, genesisBlock)
 	assert.Equal(t, auctionConstants.HermezRollup, hermezRollupAddressTestConst)
 	assert.Equal(t, auctionConstants.InitialMinimalBidding, INITMINBID)
@@ -277,7 +277,7 @@ func TestAuctionBid(t *testing.T) {
 
 func TestAuctionGetSlotNumber(t *testing.T) {
 	slotConst := 4
-	blockNum := int(BLOCKSPERSLOT)*slotConst + int(genesisBlock)
+	blockNum := int(blocksPerSlot)*slotConst + int(genesisBlock)
 
 	slot, err := auctionClientTest.AuctionGetSlotNumber(int64(blockNum))
 	require.Nil(t, err)
@@ -286,7 +286,7 @@ func TestAuctionGetSlotNumber(t *testing.T) {
 
 func TestAuctionCanForge(t *testing.T) {
 	slotConst := 4
-	blockNum := int(BLOCKSPERSLOT)*slotConst + int(genesisBlock)
+	blockNum := int(blocksPerSlot)*slotConst + int(genesisBlock)
 
 	canForge, err := auctionClientTest.AuctionCanForge(governanceAddressConst, int64(blockNum))
 	require.Nil(t, err)
@@ -344,7 +344,7 @@ func TestAuctionForge(t *testing.T) {
 	auctionClientTestHermez, err := NewAuctionClient(ethereumClientHermez, auctionTestAddressConst, tokenHEZ)
 	require.Nil(t, err)
 	slotConst := 4
-	blockNum := int64(int(BLOCKSPERSLOT)*slotConst + int(genesisBlock))
+	blockNum := int64(int(blocksPerSlot)*slotConst + int(genesisBlock))
 	currentBlockNum, _ := auctionClientTestHermez.client.EthCurrentBlock()
 	blocksToAdd := blockNum - currentBlockNum
 	addBlocks(blocksToAdd, ethClientDialURL)

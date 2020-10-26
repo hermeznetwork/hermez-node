@@ -94,34 +94,34 @@ func TestClientAuction(t *testing.T) {
 
 	// Check several cases in which bid doesn't succed, and also do 2 successful bids.
 
-	_, err := c.AuctionBid(0, big.NewInt(1))
+	_, err := c.AuctionBidSimple(0, big.NewInt(1))
 	assert.Equal(t, errBidClosed, err)
 
-	_, err = c.AuctionBid(4322, big.NewInt(1))
+	_, err = c.AuctionBidSimple(4322, big.NewInt(1))
 	assert.Equal(t, errBidNotOpen, err)
 
 	// 101 % 6 = 5;  defaultSlotSetBid[5] = 1500;  1500 + 10% = 1650
-	_, err = c.AuctionBid(101, big.NewInt(1650))
+	_, err = c.AuctionBidSimple(101, big.NewInt(1650))
 	assert.Equal(t, errCoordNotReg, err)
 
 	_, err = c.AuctionSetCoordinator(addrForge, "https://foo.bar")
 	assert.Nil(t, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(1))
+	_, err = c.AuctionBidSimple(3, big.NewInt(1))
 	assert.Equal(t, errBidBelowMin, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(1650))
+	_, err = c.AuctionBidSimple(3, big.NewInt(1650))
 	assert.Nil(t, err)
 
 	c.CtlSetAddr(addrBidder2)
 	_, err = c.AuctionSetCoordinator(addrForge2, "https://foo2.bar")
 	assert.Nil(t, err)
 
-	_, err = c.AuctionBid(3, big.NewInt(16))
+	_, err = c.AuctionBidSimple(3, big.NewInt(16))
 	assert.Equal(t, errBidBelowMin, err)
 
 	// 1650 + 10% = 1815
-	_, err = c.AuctionBid(3, big.NewInt(1815))
+	_, err = c.AuctionBidSimple(3, big.NewInt(1815))
 	assert.Nil(t, err)
 
 	c.CtlMineBlock()
@@ -143,7 +143,7 @@ func TestClientRollup(t *testing.T) {
 
 	// Add a token
 
-	tx, err := c.RollupAddToken(token1Addr, clientSetup.RollupVariables.FeeAddToken)
+	tx, err := c.RollupAddTokenSimple(token1Addr, clientSetup.RollupVariables.FeeAddToken)
 	require.Nil(t, err)
 	assert.NotNil(t, tx)
 

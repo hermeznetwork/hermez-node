@@ -290,13 +290,14 @@ type RollupInterface interface {
 type RollupClient struct {
 	client      *EthereumClient
 	address     ethCommon.Address
-	tokenHEZ    TokenConfig
+	tokenHEZCfg TokenConfig
 	hermez      *Hermez.Hermez
+	tokenHEZ    *HEZ.HEZ
 	contractAbi abi.ABI
 }
 
 // NewRollupClient creates a new RollupClient
-func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ TokenConfig) (*RollupClient, error) {
+func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZCfg TokenConfig) (*RollupClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(Hermez.HermezABI)))
 	if err != nil {
 		return nil, err
@@ -305,11 +306,16 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 	if err != nil {
 		return nil, err
 	}
+	tokenHEZ, err := HEZ.NewHEZ(tokenHEZCfg.Address, client.Client())
+	if err != nil {
+		return nil, err
+	}
 	return &RollupClient{
 		client:      client,
 		address:     address,
-		tokenHEZ:    tokenHEZ,
+		tokenHEZCfg: tokenHEZCfg,
 		hermez:      hermez,
+		tokenHEZ:    tokenHEZ,
 		contractAbi: contractAbi,
 	}, nil
 }
@@ -375,17 +381,16 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToke
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			tokenHEZcontract, err := HEZ.NewHEZ(c.tokenHEZ.Address, ec)
+			owner := c.client.account.Address
+			spender := c.address
+			nonce, err := c.tokenHEZ.Nonces(nil, owner)
 			if err != nil {
 				return nil, err
 			}
-			owner := c.client.account.Address
-			spender := c.address
-			nonce, err := tokenHEZcontract.Nonces(nil, owner)
-			tokenname := c.tokenHEZ.Name
-			tokenAddr := c.tokenHEZ.Address
-			chainid, _ := c.client.client.ChainID(context.Background())
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, feeAddToken, nonce, deadline, tokenname)
+			tokenName := c.tokenHEZCfg.Name
+			tokenAddr := c.tokenHEZCfg.Address
+			chainid, _ := c.client.Client().ChainID(context.Background())
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, feeAddToken, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, feeAddToken, deadline, digest, signature)
 
@@ -431,7 +436,6 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 			babyPubKey := new(big.Int).SetBytes(pkCompB)
 			fromIdxBig := big.NewInt(fromIdx)
 			toIdxBig := big.NewInt(toIdx)
-			tokenIDBig := uint32(tokenID)
 			loadAmountF, err := common.NewFloat16(loadAmount)
 			if err != nil {
 				return nil, err
@@ -444,7 +448,8 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 				auth.Value = loadAmount
 			}
 			var permit []byte
-			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF), uint16(amountF), tokenIDBig, toIdxBig, permit)
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF),
+				uint16(amountF), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed add L1 Tx ERC20/ETH: %w", err)
@@ -462,7 +467,6 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 			babyPubKey := new(big.Int).SetBytes(pkCompB)
 			fromIdxBig := big.NewInt(fromIdx)
 			toIdxBig := big.NewInt(toIdx)
-			tokenIDBig := uint32(tokenID)
 			loadAmountF, err := common.NewFloat16(loadAmount)
 			if err != nil {
 				return nil, err
@@ -474,20 +478,20 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 			if tokenID == 0 {
 				auth.Value = loadAmount
 			}
-			tokenHEZcontract, err := HEZ.NewHEZ(c.tokenHEZ.Address, ec)
+			owner := c.client.account.Address
+			spender := c.address
+			nonce, err := c.tokenHEZ.Nonces(nil, owner)
 			if err != nil {
 				return nil, err
 			}
-			owner := c.client.account.Address
-			spender := c.address
-			nonce, err := tokenHEZcontract.Nonces(nil, owner)
-			tokenname := c.tokenHEZ.Name
-			tokenAddr := c.tokenHEZ.Address
-			chainid, _ := c.client.client.ChainID(context.Background())
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenname)
+			tokenName := c.tokenHEZCfg.Name
+			tokenAddr := c.tokenHEZCfg.Address
+			chainid, _ := c.client.Client().ChainID(context.Background())
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
-			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF), uint16(amountF), tokenIDBig, toIdxBig, permit)
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF),
+				uint16(amountF), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed add L1 Tx ERC20Permit: %w", err)

@@ -277,6 +277,8 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 
 // EthERC20Consts returns the constants defined for a particular ERC20 Token instance.
 func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20Consts, error) {
+	// We use the HEZ token smart contract interfacehere because it's an
+	// ERC20, which allows us to access the standard ERC20 constants.
 	instance, err := HEZ.NewHEZ(tokenAddress, c.client)
 	if err != nil {
 		return nil, err

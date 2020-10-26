@@ -146,7 +146,7 @@ func TestSync(t *testing.T) {
 	// Add tokens to ethereum, and to rollup
 	for _, token := range tokens {
 		client.CtlAddERC20(token.Addr, token.Consts)
-		_, err := client.RollupAddToken(token.Addr, clientSetup.RollupVariables.FeeAddToken)
+		_, err := client.RollupAddTokenSimple(token.Addr, clientSetup.RollupVariables.FeeAddToken)
 		require.Nil(t, err)
 	}
 
