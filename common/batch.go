@@ -18,6 +18,7 @@ type Batch struct {
 	CollectedFees map[TokenID]*big.Int `meddler:"fees_collected,json"`
 	StateRoot     *big.Int             `meddler:"state_root,bigint"`
 	NumAccounts   int                  `meddler:"num_accounts"`
+	LastIdx       int64                `meddler:"last_idx"`
 	ExitRoot      *big.Int             `meddler:"exit_root,bigint"`
 	ForgeL1TxsNum *int64               `meddler:"forge_l1_txs_num"` // optional, Only when the batch forges L1 txs. Identifier that corresponds to the group of L1 txs forged in the current batch.
 	SlotNum       int64                `meddler:"slot_num"`         // Slot in which the batch is forged

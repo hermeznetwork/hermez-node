@@ -23,6 +23,7 @@ CREATE TABLE batch (
     fees_collected BYTEA NOT NULL,
     state_root BYTEA NOT NULL,
     num_accounts BIGINT NOT NULL,
+    last_idx BIGINT NOT NULL,
     exit_root BYTEA NOT NULL,
     forge_l1_txs_num BIGINT,
     slot_num BIGINT NOT NULL,
