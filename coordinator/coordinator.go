@@ -220,7 +220,7 @@ func (c *Coordinator) forge(serverProof ServerProofInterface) (*BatchInfo, error
 		}
 	} else {
 		// 2b: only L2 txs
-		poolL2Txs, err = c.txsel.GetL2TxSelection([]common.Idx{}, c.batchNum) // TODO once feesInfo is added to method return, add the var
+		_, poolL2Txs, err = c.txsel.GetL2TxSelection([]common.Idx{}, c.batchNum) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
 			return nil, err
 		}

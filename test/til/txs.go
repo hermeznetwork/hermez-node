@@ -30,7 +30,7 @@ type Context struct {
 	Instructions          []instruction
 	userNames             []string
 	Users                 map[string]*User
-	lastRegisteredTokenID common.TokenID
+	LastRegisteredTokenID common.TokenID
 	l1CreatedAccounts     map[string]*Account
 
 	// rollupConstMaxL1UserTx Maximum L1-user transactions allowed to be queued in a batch
@@ -56,7 +56,7 @@ func NewContext(rollupConstMaxL1UserTx int) *Context {
 	return &Context{
 		Users:                 make(map[string]*User),
 		l1CreatedAccounts:     make(map[string]*Account),
-		lastRegisteredTokenID: 0,
+		LastRegisteredTokenID: 0,
 
 		rollupConstMaxL1UserTx: rollupConstMaxL1UserTx,
 		idx:                    common.UserThreshold,
@@ -323,10 +323,10 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				TokenID:     inst.tokenID,
 				EthBlockNum: tc.blockNum,
 			}
-			if inst.tokenID != tc.lastRegisteredTokenID+1 {
-				return nil, fmt.Errorf("Line %d: AddToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", inst.lineNum, tc.lastRegisteredTokenID+1, inst.tokenID)
+			if inst.tokenID != tc.LastRegisteredTokenID+1 {
+				return nil, fmt.Errorf("Line %d: AddToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", inst.lineNum, tc.LastRegisteredTokenID+1, inst.tokenID)
 			}
-			tc.lastRegisteredTokenID++
+			tc.LastRegisteredTokenID++
 			tc.currBlock.AddedTokens = append(tc.currBlock.AddedTokens, newToken)
 		default:
 			return nil, fmt.Errorf("Line %d: Unexpected type: %s", inst.lineNum, inst.typ)
@@ -457,8 +457,8 @@ func (tc *Context) checkIfAccountExists(tf string, inst instruction) error {
 	return nil
 }
 func (tc *Context) checkIfTokenIsRegistered(inst instruction) error {
-	if inst.tokenID > tc.lastRegisteredTokenID {
-		return fmt.Errorf("Can not process %s: TokenID %d not registered, last registered TokenID: %d", inst.typ, inst.tokenID, tc.lastRegisteredTokenID)
+	if inst.tokenID > tc.LastRegisteredTokenID {
+		return fmt.Errorf("Can not process %s: TokenID %d not registered, last registered TokenID: %d", inst.typ, inst.tokenID, tc.LastRegisteredTokenID)
 	}
 	return nil
 }

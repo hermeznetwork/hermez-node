@@ -33,51 +33,60 @@ func TestGetIdx(t *testing.T) {
 	idx2 := common.Idx(12345)
 	idx3 := common.Idx(1233)
 
+	tokenID0 := common.TokenID(0)
+	tokenID1 := common.TokenID(1)
+
 	// store the keys for idx by Addr & BJJ
-	err = sdb.setIdxByEthAddrBJJ(idx, addr, pk)
+	err = sdb.setIdxByEthAddrBJJ(idx, addr, pk, tokenID0)
 	require.Nil(t, err)
 
-	idxR, err := sdb.GetIdxByEthAddrBJJ(addr, pk)
+	idxR, err := sdb.GetIdxByEthAddrBJJ(addr, pk, tokenID0)
 	assert.Nil(t, err)
 	assert.Equal(t, idx, idxR)
 
 	// expect error when getting only by EthAddr, as value does not exist
 	// in the db for only EthAddr
-	_, err = sdb.GetIdxByEthAddr(addr)
+	_, err = sdb.GetIdxByEthAddr(addr, tokenID0)
 	assert.Nil(t, err)
-	_, err = sdb.GetIdxByEthAddr(addr2)
+	_, err = sdb.GetIdxByEthAddr(addr2, tokenID0)
+	assert.NotNil(t, err)
+	// expect error when getting by EthAddr and BJJ, but for another TokenID
+	_, err = sdb.GetIdxByEthAddrBJJ(addr, pk, tokenID1)
 	assert.NotNil(t, err)
 
 	// expect to fail
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk, tokenID0)
 	assert.NotNil(t, err)
 	assert.Equal(t, common.Idx(0), idxR)
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk2)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk2, tokenID0)
 	assert.NotNil(t, err)
 	assert.Equal(t, common.Idx(0), idxR)
 
 	// try to store bigger idx, will not affect as already exist a smaller
 	// Idx for that Addr & BJJ
-	err = sdb.setIdxByEthAddrBJJ(idx2, addr, pk)
+	err = sdb.setIdxByEthAddrBJJ(idx2, addr, pk, tokenID0)
 	assert.Nil(t, err)
 
 	// store smaller idx
-	err = sdb.setIdxByEthAddrBJJ(idx3, addr, pk)
+	err = sdb.setIdxByEthAddrBJJ(idx3, addr, pk, tokenID0)
 	assert.Nil(t, err)
 
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk, tokenID0)
 	assert.Nil(t, err)
 	assert.Equal(t, idx3, idxR)
 
 	// by EthAddr should work
-	idxR, err = sdb.GetIdxByEthAddr(addr)
+	idxR, err = sdb.GetIdxByEthAddr(addr, tokenID0)
 	assert.Nil(t, err)
 	assert.Equal(t, idx3, idxR)
 	// expect error when trying to get Idx by addr2 & pk2
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2, tokenID0)
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrToIdxNotFound, err)
 	assert.Equal(t, common.Idx(0), idxR)
+	// expect error when trying to get Idx by addr with not used TokenID
+	_, err = sdb.GetIdxByEthAddr(addr, tokenID1)
+	assert.NotNil(t, err)
 }
 
 func TestBJJCompressedTo256BigInt(t *testing.T) {

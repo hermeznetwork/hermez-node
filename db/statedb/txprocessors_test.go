@@ -44,6 +44,8 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	// Idx of user 'A'
 	idxA1 := tc.Users["A"].Accounts[common.TokenID(1)].Idx
 
+	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
+	// to create the Coordinator accounts to receive the fees
 	log.Debug("1st batch, 1st block, only L1CoordinatorTxs")
 	ptOut, err := sdb.ProcessTxs(nil, nil, blocks[0].Batches[0].L1CoordinatorTxs, nil)
 	require.Nil(t, err)

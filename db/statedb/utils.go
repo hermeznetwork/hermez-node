@@ -12,11 +12,18 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
-func concatEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) []byte {
+func concatEthAddrTokenID(addr ethCommon.Address, tokenID common.TokenID) []byte {
+	var b []byte
+	b = append(b, addr.Bytes()...)
+	b = append(b[:], tokenID.Bytes()[:]...)
+	return b
+}
+func concatEthAddrBJJTokenID(addr ethCommon.Address, pk *babyjub.PublicKey, tokenID common.TokenID) []byte {
 	pkComp := pk.Compress()
 	var b []byte
 	b = append(b, addr.Bytes()...)
 	b = append(b[:], pkComp[:]...)
+	b = append(b[:], tokenID.Bytes()[:]...)
 	return b
 }
 
@@ -25,8 +32,8 @@ func concatEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) []byte {
 // - key: EthAddr & BabyJubJub PublicKey Compressed, value: idx
 // If Idx already exist for the given EthAddr & BJJ, the remaining Idx will be
 // always the smallest one.
-func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk *babyjub.PublicKey) error {
-	oldIdx, err := s.GetIdxByEthAddrBJJ(addr, pk)
+func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk *babyjub.PublicKey, tokenID common.TokenID) error {
+	oldIdx, err := s.GetIdxByEthAddrBJJ(addr, pk, tokenID)
 	if err == nil {
 		// EthAddr & BJJ already have an Idx
 		// check which Idx is smaller
@@ -46,7 +53,7 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 	if err != nil {
 		return err
 	}
-	k := concatEthAddrBJJ(addr, pk)
+	k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 	// store Addr&BJJ-idx
 	idxBytes, err := idx.Bytes()
 	if err != nil {
@@ -57,7 +64,8 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 		return err
 	}
 	// store Addr-idx
-	err = tx.Put(append(PrefixKeyAddr, addr.Bytes()...), idxBytes[:])
+	k = concatEthAddrTokenID(addr, tokenID)
+	err = tx.Put(append(PrefixKeyAddr, k...), idxBytes[:])
 	if err != nil {
 		return err
 	}
@@ -71,8 +79,9 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 // GetIdxByEthAddr returns the smallest Idx in the StateDB for the given
 // Ethereum Address. Will return common.Idx(0) and error in case that Idx is
 // not found in the StateDB.
-func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
-	b, err := s.db.Get(append(PrefixKeyAddr, addr.Bytes()...))
+func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID) (common.Idx, error) {
+	k := concatEthAddrTokenID(addr, tokenID)
+	b, err := s.db.Get(append(PrefixKeyAddr, k...))
 	if err != nil {
 		return common.Idx(0), ErrToIdxNotFound
 	}
@@ -88,13 +97,13 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address) (common.Idx, error) {
 // address, it's ignored in the query.  If `pk` is nil, it's ignored in the
 // query.  Will return common.Idx(0) and error in case that Idx is not found in
 // the StateDB.
-func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey) (common.Idx, error) {
+func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey, tokenID common.TokenID) (common.Idx, error) {
 	if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk == nil {
 		// case ToEthAddr!=0 && ToBJJ=0
-		return s.GetIdxByEthAddr(addr)
+		return s.GetIdxByEthAddr(addr, tokenID)
 	} else if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk != nil {
 		// case ToEthAddr!=0 && ToBJJ!=0
-		k := concatEthAddrBJJ(addr, pk)
+		k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 		b, err := s.db.Get(append(PrefixKeyAddrBJJ, k...))
 		if err != nil {
 			return common.Idx(0), ErrToIdxNotFound
