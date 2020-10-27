@@ -82,20 +82,20 @@ type l2Info struct {
 }
 
 type historyTxAPI struct {
-	IsL1        string           `json:"L1orL2"`
-	TxID        common.TxID      `json:"id"`
-	ItemID      int              `json:"itemId"`
-	Type        common.TxType    `json:"type"`
-	Position    int              `json:"position"`
-	FromIdx     *string          `json:"fromAccountIndex"`
-	ToIdx       string           `json:"toAccountIndex"`
-	Amount      string           `json:"amount"`
-	BatchNum    *common.BatchNum `json:"batchNum"`
-	HistoricUSD *float64         `json:"historicUSD"`
-	Timestamp   time.Time        `json:"timestamp"`
-	L1Info      *l1Info          `json:"L1Info"`
-	L2Info      *l2Info          `json:"L2Info"`
-	Token       tokenAPI         `json:"token"`
+	IsL1        string                 `json:"L1orL2"`
+	TxID        common.TxID            `json:"id"`
+	ItemID      int                    `json:"itemId"`
+	Type        common.TxType          `json:"type"`
+	Position    int                    `json:"position"`
+	FromIdx     *string                `json:"fromAccountIndex"`
+	ToIdx       string                 `json:"toAccountIndex"`
+	Amount      string                 `json:"amount"`
+	BatchNum    *common.BatchNum       `json:"batchNum"`
+	HistoricUSD *float64               `json:"historicUSD"`
+	Timestamp   time.Time              `json:"timestamp"`
+	L1Info      *l1Info                `json:"L1Info"`
+	L2Info      *l2Info                `json:"L2Info"`
+	Token       historydb.TokenWithUSD `json:"token"`
 }
 
 func historyTxsToAPI(dbTxs []historydb.HistoryTx) []historyTxAPI {
@@ -111,7 +111,7 @@ func historyTxsToAPI(dbTxs []historydb.HistoryTx) []historyTxAPI {
 			HistoricUSD: dbTxs[i].HistoricUSD,
 			BatchNum:    dbTxs[i].BatchNum,
 			Timestamp:   dbTxs[i].Timestamp,
-			Token: tokenAPI{
+			Token: historydb.TokenWithUSD{
 				TokenID:     dbTxs[i].TokenID,
 				EthBlockNum: dbTxs[i].TokenEthBlockNum,
 				EthAddr:     dbTxs[i].TokenEthAddr,
@@ -184,15 +184,15 @@ type merkleProofAPI struct {
 }
 
 type exitAPI struct {
-	ItemID                 int             `json:"itemId"`
-	BatchNum               common.BatchNum `json:"batchNum"`
-	AccountIdx             string          `json:"accountIndex"`
-	MerkleProof            merkleProofAPI  `json:"merkleProof"`
-	Balance                string          `json:"balance"`
-	InstantWithdrawn       *int64          `json:"instantWithdrawn"`
-	DelayedWithdrawRequest *int64          `json:"delayedWithdrawRequest"`
-	DelayedWithdrawn       *int64          `json:"delayedWithdrawn"`
-	Token                  tokenAPI        `json:"token"`
+	ItemID                 int                    `json:"itemId"`
+	BatchNum               common.BatchNum        `json:"batchNum"`
+	AccountIdx             string                 `json:"accountIndex"`
+	MerkleProof            merkleProofAPI         `json:"merkleProof"`
+	Balance                string                 `json:"balance"`
+	InstantWithdrawn       *int64                 `json:"instantWithdrawn"`
+	DelayedWithdrawRequest *int64                 `json:"delayedWithdrawRequest"`
+	DelayedWithdrawn       *int64                 `json:"delayedWithdrawn"`
+	Token                  historydb.TokenWithUSD `json:"token"`
 }
 
 func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
@@ -215,7 +215,7 @@ func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
 			InstantWithdrawn:       dbExits[i].InstantWithdrawn,
 			DelayedWithdrawRequest: dbExits[i].DelayedWithdrawRequest,
 			DelayedWithdrawn:       dbExits[i].DelayedWithdrawn,
-			Token: tokenAPI{
+			Token: historydb.TokenWithUSD{
 				TokenID:     dbExits[i].TokenID,
 				EthBlockNum: dbExits[i].TokenEthBlockNum,
 				EthAddr:     dbExits[i].TokenEthAddr,
@@ -234,54 +234,6 @@ func historyExitsToAPI(dbExits []historydb.HistoryExit) []exitAPI {
 		apiExits = append(apiExits, exit)
 	}
 	return apiExits
-}
-
-// Tokens
-type tokensAPI struct {
-	Tokens     []tokenAPI     `json:"tokens"`
-	Pagination *db.Pagination `json:"pagination"`
-}
-
-func (t *tokensAPI) GetPagination() *db.Pagination {
-	if t.Tokens[0].ItemID < t.Tokens[len(t.Tokens)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Tokens[0].ItemID
-		t.Pagination.LastReturnedItem = t.Tokens[len(t.Tokens)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Tokens[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Tokens[len(t.Tokens)-1].ItemID
-	}
-	return t.Pagination
-}
-func (t *tokensAPI) Len() int { return len(t.Tokens) }
-
-type tokenAPI struct {
-	ItemID      int               `json:"itemId"`
-	TokenID     common.TokenID    `json:"id"`
-	EthBlockNum int64             `json:"ethereumBlockNum"` // Ethereum block number in which this token was registered
-	EthAddr     ethCommon.Address `json:"ethereumAddress"`
-	Name        string            `json:"name"`
-	Symbol      string            `json:"symbol"`
-	Decimals    uint64            `json:"decimals"`
-	USD         *float64          `json:"USD"`
-	USDUpdate   *time.Time        `json:"fiatUpdate"`
-}
-
-func tokensToAPI(dbTokens []historydb.TokenRead) []tokenAPI {
-	apiTokens := []tokenAPI{}
-	for i := 0; i < len(dbTokens); i++ {
-		apiTokens = append(apiTokens, tokenAPI{
-			ItemID:      dbTokens[i].ItemID,
-			TokenID:     dbTokens[i].TokenID,
-			EthBlockNum: dbTokens[i].EthBlockNum,
-			EthAddr:     dbTokens[i].EthAddr,
-			Name:        dbTokens[i].Name,
-			Symbol:      dbTokens[i].Symbol,
-			Decimals:    dbTokens[i].Decimals,
-			USD:         dbTokens[i].USD,
-			USDUpdate:   dbTokens[i].USDUpdate,
-		})
-	}
-	return apiTokens
 }
 
 // Config
@@ -533,28 +485,28 @@ func validatePoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 }
 
 type sendPoolTx struct {
-	TxID        common.TxID           `json:"id"`
-	Type        common.TxType         `json:"type"`
-	FromIdx     string                `json:"fromAccountIndex"`
-	ToIdx       *string               `json:"toAccountIndex"`
-	ToEthAddr   *string               `json:"toHezEthereumAddress"`
-	ToBJJ       *string               `json:"toBjj"`
-	Amount      string                `json:"amount"`
-	Fee         common.FeeSelector    `json:"fee"`
-	Nonce       common.Nonce          `json:"nonce"`
-	State       common.PoolL2TxState  `json:"state"`
-	Signature   babyjub.SignatureComp `json:"signature"`
-	Timestamp   time.Time             `json:"timestamp"`
-	BatchNum    *common.BatchNum      `json:"batchNum"`
-	RqFromIdx   *string               `json:"requestFromAccountIndex"`
-	RqToIdx     *string               `json:"requestToAccountIndex"`
-	RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
-	RqToBJJ     *string               `json:"requestToBJJ"`
-	RqTokenID   *common.TokenID       `json:"requestTokenId"`
-	RqAmount    *string               `json:"requestAmount"`
-	RqFee       *common.FeeSelector   `json:"requestFee"`
-	RqNonce     *common.Nonce         `json:"requestNonce"`
-	Token       tokenAPI              `json:"token"`
+	TxID        common.TxID            `json:"id"`
+	Type        common.TxType          `json:"type"`
+	FromIdx     string                 `json:"fromAccountIndex"`
+	ToIdx       *string                `json:"toAccountIndex"`
+	ToEthAddr   *string                `json:"toHezEthereumAddress"`
+	ToBJJ       *string                `json:"toBjj"`
+	Amount      string                 `json:"amount"`
+	Fee         common.FeeSelector     `json:"fee"`
+	Nonce       common.Nonce           `json:"nonce"`
+	State       common.PoolL2TxState   `json:"state"`
+	Signature   babyjub.SignatureComp  `json:"signature"`
+	Timestamp   time.Time              `json:"timestamp"`
+	BatchNum    *common.BatchNum       `json:"batchNum"`
+	RqFromIdx   *string                `json:"requestFromAccountIndex"`
+	RqToIdx     *string                `json:"requestToAccountIndex"`
+	RqToEthAddr *string                `json:"requestToHezEthereumAddress"`
+	RqToBJJ     *string                `json:"requestToBJJ"`
+	RqTokenID   *common.TokenID        `json:"requestTokenId"`
+	RqAmount    *string                `json:"requestAmount"`
+	RqFee       *common.FeeSelector    `json:"requestFee"`
+	RqNonce     *common.Nonce          `json:"requestNonce"`
+	Token       historydb.TokenWithUSD `json:"token"`
 }
 
 func poolL2TxReadToSend(dbTx *l2db.PoolL2TxRead) *sendPoolTx {
@@ -572,7 +524,7 @@ func poolL2TxReadToSend(dbTx *l2db.PoolL2TxRead) *sendPoolTx {
 		RqTokenID: dbTx.RqTokenID,
 		RqFee:     dbTx.RqFee,
 		RqNonce:   dbTx.RqNonce,
-		Token: tokenAPI{
+		Token: historydb.TokenWithUSD{
 			TokenID:     dbTx.TokenID,
 			EthBlockNum: dbTx.TokenEthBlockNum,
 			EthAddr:     dbTx.TokenEthAddr,

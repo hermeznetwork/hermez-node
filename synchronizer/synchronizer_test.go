@@ -251,10 +251,10 @@ func TestSync(t *testing.T) {
 		assert.Equal(t, tokenConst.Symbol, syncToken.Symbol)
 		assert.Equal(t, tokenConst.Decimals, syncToken.Decimals)
 
-		var tokenCpy historydb.TokenRead
+		var tokenCpy historydb.TokenWithUSD
 		//nolint:gosec
-		require.Nil(t, copier.Copy(&tokenCpy, &token))      // copy common.Token to historydb.TokenRead
-		require.Nil(t, copier.Copy(&tokenCpy, &tokenConst)) // copy common.Token to historydb.TokenRead
+		require.Nil(t, copier.Copy(&tokenCpy, &token))      // copy common.Token to historydb.TokenWithUSD
+		require.Nil(t, copier.Copy(&tokenCpy, &tokenConst)) // copy common.Token to historydb.TokenWithUSD
 		tokenCpy.ItemID = dbToken.ItemID                    // we don't care about ItemID
 		assert.Equal(t, tokenCpy, dbToken)
 	}
