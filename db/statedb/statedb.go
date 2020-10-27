@@ -372,7 +372,7 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 		return cpp, err
 	}
 	// store idx by EthAddr & BJJ
-	err = s.setIdxByEthAddrBJJ(idx, account.EthAddr, account.PublicKey)
+	err = s.setIdxByEthAddrBJJ(idx, account.EthAddr, account.PublicKey, account.TokenID)
 	return cpp, err
 }
 
