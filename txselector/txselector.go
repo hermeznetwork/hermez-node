@@ -89,7 +89,7 @@ func (txsel *TxSelector) GetL2TxSelection(coordIdxs []common.Idx, batchNum commo
 	txs := txsel.getL2Profitable(validTxs, txsel.MaxTxs)
 
 	// process the txs in the local AccountsDB
-	_, _, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, nil, nil, txs)
+	_, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, nil, nil, txs)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
 
 	// process the txs in the local AccountsDB
-	_, _, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, l1Txs, l1CoordinatorTxs, l2Txs)
+	_, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, l1Txs, l1CoordinatorTxs, l2Txs)
 	if err != nil {
 		return nil, nil, nil, err
 	}

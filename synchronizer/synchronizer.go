@@ -405,7 +405,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 		// TODO: Get CollectedFees from ProcessTxs()
 		// TODO: Pass forgeBatchArgs.FeeIdxCoordinator to ProcessTxs()
 		// ProcessTxs updates poolL2Txs adding: Nonce, TokenID
-		_, exitInfo, err := s.stateDB.ProcessTxs([]common.Idx{}, l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
+		ptOut, err := s.stateDB.ProcessTxs([]common.Idx{}, l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, err
 		}
@@ -429,7 +429,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 			position++
 		}
 
-		batchData.ExitTree = exitInfo
+		batchData.ExitTree = ptOut.ExitInfos
 
 		slotNum := int64(0)
 		if ethBlock.EthBlockNum >= s.auctionConstants.GenesisBlockNum {
