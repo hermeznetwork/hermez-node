@@ -219,52 +219,6 @@ func getRecommendedFee(c *gin.Context) {
 
 }
 
-func getCoordinators(c *gin.Context) {
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-
-	// Fetch coordinators from historyDB
-	coordinators, pagination, err := h.GetCoordinators(fromItem, limit, order)
-	if err != nil {
-		retSQLErr(err, c)
-		return
-	}
-
-	// Build succesfull response
-	apiCoordinators := coordinatorsToAPI(coordinators)
-	c.JSON(http.StatusOK, &coordinatorsAPI{
-		Coordinators: apiCoordinators,
-		Pagination:   pagination,
-	})
-}
-
-func getCoordinator(c *gin.Context) {
-	// Get bidderAddr
-	const name = "bidderAddr"
-	bidderAddr, err := parseParamEthAddr(name, c)
-
-	if err != nil {
-		retBadReq(err, c)
-		return
-	} else if bidderAddr == nil {
-		retBadReq(ErrNillBidderAddr, c)
-		return
-	}
-
-	coordinator, err := h.GetCoordinator(*bidderAddr)
-	if err != nil {
-		retSQLErr(err, c)
-		return
-	}
-
-	apiCoordinator := coordinatorsToAPI([]historydb.HistoryCoordinator{*coordinator})
-	c.JSON(http.StatusOK, apiCoordinator[0])
-}
-
 func retSQLErr(err error, c *gin.Context) {
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, errorMsg{
