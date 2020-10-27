@@ -109,11 +109,21 @@ type RollupPublicConstants struct {
 	WithdrawDelayerContract     ethCommon.Address      `json:"withdrawDelayerContract"`
 }
 
+// Bucket are the variables of each Bucket of Rollup Smart Contract
+type Bucket struct {
+	CeilUSD             uint64 `json:"ceilUSD"`
+	BlockStamp          uint64 `json:"blockStamp"`
+	Withdrawals         uint64 `json:"withdrawals"`
+	BlockWithdrawalRate uint64 `json:"blockWithdrawalRate"`
+	MaxWithdrawals      uint64 `json:"maxWithdrawals"`
+}
+
 // RollupVariables are the variables of the Rollup Smart Contract
 type RollupVariables struct {
-	FeeAddToken           *big.Int
-	ForgeL1L2BatchTimeout int64
-	WithdrawalDelay       uint64
+	FeeAddToken           *big.Int                      `json:"feeAddToken" meddler:"fee_addtoken"`
+	ForgeL1L2BatchTimeout int64                         `json:"forgeL1L2BatchTimeout" meddler:"forge_l1l2_timeout"`
+	WithdrawalDelay       uint64                        `json:"withdrawalDelay" meddler:"withdrawal_delay"`
+	Buckets               [RollupConstNumBuckets]Bucket `json:"buckets" meddler:"buckets,json"`
 }
 
 // QueueStruct is the queue of L1Txs for a batch
