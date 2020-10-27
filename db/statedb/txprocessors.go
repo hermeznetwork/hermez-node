@@ -429,10 +429,10 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, exitTr
 		// as type==TypeSynchronizer, always tx.ToIdx!=0
 		acc, err := s.GetAccount(tx.FromIdx)
 		if err != nil {
-			log.Error(err)
+			log.Errorw("GetAccount", "fromIdx", tx.FromIdx, "err", err)
 			return nil, nil, false, err
 		}
-		tx.Nonce = acc.Nonce
+		tx.Nonce = acc.Nonce + 1
 		tx.TokenID = acc.TokenID
 	}
 
@@ -592,14 +592,14 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, tx c
 		// send the fee to the Idx of the Coordinator for the TokenID
 		accCoord, err := s.GetAccount(coordIdxsMap[tx.TokenID])
 		if err != nil {
-			log.Errorf("applyTransfer error: Tx=%s, error: %s", tx.String(), err)
-			return err
-		}
-		accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
-		_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
-		if err != nil {
-			log.Error(err)
-			return err
+			log.Debugw("No coord Idx to receive fee", "tx", tx)
+		} else {
+			accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
+			_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
 		}
 	}
 
@@ -726,14 +726,14 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, exitTree
 		// send the fee to the Idx of the Coordinator for the TokenID
 		accCoord, err := s.GetAccount(coordIdxsMap[tx.TokenID])
 		if err != nil {
-			log.Errorf("applyExit error: Tx=%s, error: %s", tx.String(), err)
-			return nil, false, err
-		}
-		accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
-		_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
-		if err != nil {
-			log.Error(err)
-			return nil, false, err
+			log.Debugw("No coord Idx to receive fee", "tx", tx)
+		} else {
+			accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
+			_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
+			if err != nil {
+				log.Error(err)
+				return nil, false, err
+			}
 		}
 	}
 

@@ -8,16 +8,16 @@ import (
 // L2Tx is a struct that represents an already forged L2 tx
 type L2Tx struct {
 	// Stored in DB: mandatory fileds
-	TxID        TxID
-	BatchNum    BatchNum // batchNum in which this tx was forged.
-	Position    int
-	FromIdx     Idx
-	ToIdx       Idx
-	Amount      *big.Int
-	Fee         FeeSelector
-	Nonce       Nonce
-	Type        TxType
-	EthBlockNum int64 // Ethereum Block Number in which this L2Tx was added to the queue
+	TxID        TxID        `meddler:"id"`
+	BatchNum    BatchNum    `meddler:"batch_num"` // batchNum in which this tx was forged.
+	Position    int         `meddler:"position"`
+	FromIdx     Idx         `meddler:"from_idx"`
+	ToIdx       Idx         `meddler:"to_idx"`
+	Amount      *big.Int    `meddler:"amount,bigint"`
+	Fee         FeeSelector `meddler:"fee"`
+	Nonce       Nonce       `meddler:"nonce"`
+	Type        TxType      `meddler:"type"`
+	EthBlockNum int64       `meddler:"eth_block_num"` // Ethereum Block Number in which this L2Tx was added to the queue
 }
 
 // NewL2Tx returns the given L2Tx with the TxId & Type parameters calculated

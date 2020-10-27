@@ -25,6 +25,15 @@ func newBatchData(batchNum int) common.BatchData {
 	}
 }
 
+func newBlock(blockNum int64) common.BlockData {
+	return common.BlockData{
+		Block: common.Block{
+			EthBlockNum: blockNum,
+		},
+		L1UserTxs: []common.L1Tx{},
+	}
+}
+
 // Context contains the data of the test
 type Context struct {
 	Instructions          []instruction
@@ -62,6 +71,7 @@ func NewContext(rollupConstMaxL1UserTx int) *Context {
 		idx:                    common.UserThreshold,
 		// We use some placeholder values for StateRoot and ExitTree
 		// because these values will never be nil
+		currBlock:    newBlock(2), //nolint:gomnd
 		currBatch:    newBatchData(currBatchNum),
 		currBatchNum: currBatchNum,
 		// start with 2 queues, one for toForge, and the other for openToForge
@@ -206,9 +216,10 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
 			}
 			tx := common.L2Tx{
-				Amount: big.NewInt(int64(inst.amount)),
-				Fee:    common.FeeSelector(inst.fee),
-				Type:   common.TxTypeTransfer,
+				Amount:      big.NewInt(int64(inst.amount)),
+				Fee:         common.FeeSelector(inst.fee),
+				Type:        common.TxTypeTransfer,
+				EthBlockNum: tc.blockNum,
 			}
 			tx.BatchNum = common.BatchNum(tc.currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
 			testTx := L2Tx{
@@ -245,9 +256,10 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
 			}
 			tx := common.L2Tx{
-				ToIdx:  common.Idx(1), // as is an Exit
-				Amount: big.NewInt(int64(inst.amount)),
-				Type:   common.TxTypeExit,
+				ToIdx:       common.Idx(1), // as is an Exit
+				Amount:      big.NewInt(int64(inst.amount)),
+				Type:        common.TxTypeExit,
+				EthBlockNum: tc.blockNum,
 			}
 			tx.BatchNum = common.BatchNum(tc.currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
 			testTx := L2Tx{
@@ -308,12 +320,9 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				tc.queues = append(tc.queues, newQueue)
 			}
 		case typeNewBlock:
-			tc.currBlock.Block = common.Block{
-				EthBlockNum: tc.blockNum,
-			}
 			blocks = append(blocks, tc.currBlock)
 			tc.blockNum++
-			tc.currBlock = common.BlockData{}
+			tc.currBlock = newBlock(tc.blockNum)
 		case typeAddToken:
 			newToken := common.Token{
 				EthAddr: ethCommon.BigToAddress(big.NewInt(int64(inst.tokenID * 100))), //nolint:gomnd

@@ -1,7 +1,6 @@
 package historydb
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 	"os"
@@ -409,11 +408,6 @@ func TestGetL1UserTxs(t *testing.T) {
 	toForgeL1TxsNum := int64(1)
 
 	for i := range blocks {
-		fmt.Printf("DBG %+v\n", blocks[i])
-		// fmt.Printf("DBG Batches %+v\n", blocks[i].Batches)
-		// for _, l1Tx := range blocks[i].L1UserTxs {
-		// 	fmt.Printf("DBG l1UserTx %+v\n", l1Tx)
-		// }
 		err = historyDB.AddBlockSCData(&blocks[i])
 		require.Nil(t, err)
 	}
