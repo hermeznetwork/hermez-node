@@ -67,34 +67,11 @@ func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 	return nil
 }
 
-// GetL2TxSelection returns a selection of the L2Txs for the next batch, from the L2DB pool
-func (txsel *TxSelector) GetL2TxSelection(coordIdxs []common.Idx, batchNum common.BatchNum) ([]common.PoolL2Tx, error) {
-	// get pending l2-tx from tx-pool
-	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // once l2db ready, maybe use parameter 'batchNum'
-	if err != nil {
-		return nil, err
-	}
-
-	// discard the txs that don't have an Account in the AccountDB
-	var validTxs txs
-	for _, tx := range l2TxsRaw {
-		_, err = txsel.localAccountsDB.GetAccount(tx.FromIdx)
-		if err == nil {
-			// if FromIdx has an account into the AccountsDB
-			validTxs = append(validTxs, tx)
-		}
-	}
-
-	// get most profitable L2-tx
-	txs := txsel.getL2Profitable(validTxs, txsel.MaxTxs)
-
-	// process the txs in the local AccountsDB
-	_, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, nil, nil, txs)
-	if err != nil {
-		return nil, err
-	}
-	err = txsel.localAccountsDB.MakeCheckpoint()
-	return txs, err
+// GetL2TxSelection returns the L1CoordinatorTxs and a selection of the L2Txs
+// for the next batch, from the L2DB pool
+func (txsel *TxSelector) GetL2TxSelection(coordIdxs []common.Idx, batchNum common.BatchNum) ([]common.L1Tx, []common.PoolL2Tx, error) {
+	_, l1CoordinatorTxs, l2Txs, err := txsel.GetL1L2TxSelection(coordIdxs, batchNum, []common.L1Tx{})
+	return l1CoordinatorTxs, l2Txs, err
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
@@ -138,7 +115,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 				if l2TxsRaw[i].ToBJJ != nil {
 					// case: ToBJJ!=0:
 					// if idx exist for EthAddr&BJJ use it
-					_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
+					_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ, l2TxsRaw[i].TokenID)
 					if err == nil {
 						// account for ToEthAddr&ToBJJ already exist,
 						// there is no need to create a new one.
@@ -163,7 +140,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 				} else {
 					// case: ToBJJ==0:
 					// if idx exist for EthAddr use it
-					_, err := txsel.localAccountsDB.GetIdxByEthAddr(l2TxsRaw[i].ToEthAddr)
+					_, err := txsel.localAccountsDB.GetIdxByEthAddr(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].TokenID)
 					if err == nil {
 						// account for ToEthAddr already exist,
 						// there is no need to create a new one.
@@ -194,7 +171,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 			} else if bytes.Equal(l2TxsRaw[i].ToEthAddr.Bytes(), common.FFAddr.Bytes()) && l2TxsRaw[i].ToBJJ != nil {
 				// if idx exist for EthAddr&BJJ use it
-				_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ)
+				_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2TxsRaw[i].ToEthAddr, l2TxsRaw[i].ToBJJ, l2TxsRaw[i].TokenID)
 				if err == nil {
 					// account for ToEthAddr&ToBJJ already exist, (where ToEthAddr==0xff)
 					// there is no need to create a new one.

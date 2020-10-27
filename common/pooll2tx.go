@@ -22,7 +22,7 @@ type PoolL2Tx struct {
 	FromIdx   Idx                   `meddler:"from_idx"`
 	ToIdx     Idx                   `meddler:"to_idx,zeroisnull"`
 	AuxToIdx  Idx                   `meddler:"-"` // AuxToIdx is only used internally at the StateDB to avoid repeated computation when processing transactions (from Synchronizer, TxSelector, BatchBuilder)
-	ToEthAddr ethCommon.Address     `meddler:"to_eth_addr"`
+	ToEthAddr ethCommon.Address     `meddler:"to_eth_addr,zeroisnull"`
 	ToBJJ     *babyjub.PublicKey    `meddler:"to_bjj"`
 	TokenID   TokenID               `meddler:"token_id"`
 	Amount    *big.Int              `meddler:"amount,bigint"` // TODO: change to float16
@@ -34,7 +34,7 @@ type PoolL2Tx struct {
 	// Stored in DB: optional fileds, may be uninitialized
 	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
 	RqToIdx           Idx                `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	RqToEthAddr       ethCommon.Address  `meddler:"rq_to_eth_addr"`
+	RqToEthAddr       ethCommon.Address  `meddler:"rq_to_eth_addr,zeroisnull"`
 	RqToBJJ           *babyjub.PublicKey `meddler:"rq_to_bjj"` // TODO: stop using json, use scanner/valuer
 	RqTokenID         TokenID            `meddler:"rq_token_id,zeroisnull"`
 	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16

@@ -82,7 +82,7 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 		Amount:    tx.Amount,
 		Fee:       tx.Fee,
 		Nonce:     tx.Nonce,
-		State:     tx.State,
+		State:     common.PoolL2TxStatePending,
 		Signature: tx.Signature,
 		RqToBJJ:   tx.RqToBJJ,
 		RqAmount:  tx.RqAmount,
