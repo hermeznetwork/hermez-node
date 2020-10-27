@@ -198,6 +198,18 @@ func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
 	return tokensIDs, symbols, nameStr, nil
 }
 
+func parseBidFilters(c querier) (*uint, *ethCommon.Address, error) {
+	slotNum, err := parseQueryUint("slotNum", nil, 0, maxUint32, c)
+	if err != nil {
+		return nil, nil, err
+	}
+	bidderAddr, err := parseQueryEthAddr("bidderAddr", c)
+	if err != nil {
+		return nil, nil, err
+	}
+	return slotNum, bidderAddr, nil
+}
+
 // Param parsers
 
 type paramer interface {

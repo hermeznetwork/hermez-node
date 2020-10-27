@@ -52,6 +52,7 @@ type testCommon struct {
 	poolTxsToReceive []testPoolTxReceive
 	auths            []accountCreationAuthAPI
 	router           *swagger.Router
+	bids             []testBid
 }
 
 var tc testCommon
@@ -348,6 +349,15 @@ func TestMain(m *testing.M) {
 		apiAuth := accountCreationAuthToAPI(auth)
 		apiAuths = append(apiAuths, *apiAuth)
 	}
+
+	// Bids
+	const nBids = 10
+	bids := test.GenBids(nBids, blocks, coords)
+	err = hdb.AddBids(bids)
+	if err != nil {
+		panic(err)
+	}
+
 	// Set testCommon
 	usrTxs, allTxs := genTestTxs(sortedTxs, usrIdxs, accs, tokensUSD, blocks)
 	poolTxsToSend, poolTxsToReceive := genTestPoolTx(accs, []babyjub.PrivateKey{privK}, tokensUSD) // NOTE: pool txs are not inserted to the DB here. In the test they will be posted and getted.
@@ -367,7 +377,9 @@ func TestMain(m *testing.M) {
 		poolTxsToReceive: poolTxsToReceive,
 		auths:            apiAuths,
 		router:           router,
+		bids:             genTestBids(blocks, coordinators, bids),
 	}
+
 	// Fake server
 	if os.Getenv("FAKE_SERVER") == "yes" {
 		for {
@@ -815,4 +827,22 @@ func getAccountByIdx(idx common.Idx, accs []common.Account) *common.Account {
 		}
 	}
 	panic("account not found")
+}
+
+func getBlockByNum(ethBlockNum int64, blocks []common.Block) common.Block {
+	for _, b := range blocks {
+		if b.EthBlockNum == ethBlockNum {
+			return b
+		}
+	}
+	panic("block not found")
+}
+
+func getCoordinatorByBidder(bidder ethCommon.Address, coordinators []historydb.CoordinatorAPI) historydb.CoordinatorAPI {
+	for _, c := range coordinators {
+		if c.Bidder == bidder {
+			return c
+		}
+	}
+	panic("coordinator not found")
 }

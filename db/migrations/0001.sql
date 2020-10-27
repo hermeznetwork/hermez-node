@@ -31,11 +31,11 @@ CREATE TABLE batch (
 );
 
 CREATE TABLE bid (
+    item_id SERIAL PRIMARY KEY,
     slot_num BIGINT NOT NULL,
     bid_value BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    bidder_addr BYTEA NOT NULL, -- fake foreign key for coordinator
-    PRIMARY KEY (slot_num, bid_value)
+    bidder_addr BYTEA NOT NULL -- fake foreign key for coordinator
 );
 
 CREATE TABLE token (

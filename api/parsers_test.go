@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"math/big"
 	"strconv"
+	"strings"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -321,4 +322,23 @@ func TestParseEthAddr(t *testing.T) {
 	res, err = parseQueryEthAddr(name, c)
 	assert.NoError(t, err)
 	assert.Equal(t, ethAddr, *res)
+}
+
+func TestParseBidFilters(t *testing.T) {
+	slotNum := "slotNum"
+	bidderAddr := "bidderAddr"
+	slotNumValue := "2"
+	bidderAddrValue := "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+	c := &queryParser{}
+	c.m = make(map[string]string)
+	// Incorrect values
+	c.m[slotNum] = slotNumValue
+	c.m[bidderAddr] = bidderAddrValue
+
+	slotNumParse, bidderAddrParse, err := parseBidFilters(c)
+	assert.NoError(t, err)
+
+	// Correct values
+	assert.Equal(t, strings.ToLower(bidderAddrParse.Hex()), bidderAddrValue)
+	assert.Equal(t, slotNumValue, strconv.FormatUint(uint64(*slotNumParse), 10))
 }

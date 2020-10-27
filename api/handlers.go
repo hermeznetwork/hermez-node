@@ -141,10 +141,6 @@ func getSlots(c *gin.Context) {
 
 }
 
-func getBids(c *gin.Context) {
-
-}
-
 func getNextForgers(c *gin.Context) {
 
 }

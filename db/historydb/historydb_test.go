@@ -159,7 +159,7 @@ func TestBids(t *testing.T) {
 	err = historyDB.AddBids(bids)
 	assert.NoError(t, err)
 	// Fetch bids
-	fetchedBids, err := historyDB.GetBids()
+	fetchedBids, err := historyDB.GetAllBids()
 	assert.NoError(t, err)
 	// Compare fetched bids vs generated bids
 	for i, bid := range fetchedBids {

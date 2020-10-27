@@ -339,14 +339,87 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	)
 }
 
-// GetBids return the bids
-func (hdb *HistoryDB) GetBids() ([]common.Bid, error) {
+// GetAllBids retrieve all bids from the DB
+func (hdb *HistoryDB) GetAllBids() ([]common.Bid, error) {
 	var bids []*common.Bid
 	err := meddler.QueryAll(
 		hdb.db, &bids,
-		"SELECT * FROM bid;",
+		`SELECT bid.slot_num, bid.bid_value, bid.eth_block_num, bid.bidder_addr FROM bid;`,
 	)
 	return db.SlicePtrsToSlice(bids).([]common.Bid), err
+}
+
+// GetBidsAPI return the bids applying the given filters
+func (hdb *HistoryDB) GetBidsAPI(slotNum *uint, forgerAddr *ethCommon.Address, fromItem, limit *uint, order string) ([]BidAPI, *db.Pagination, error) {
+	var query string
+	var args []interface{}
+	queryStr := `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url, 
+	COUNT(*) OVER() AS total_items, MIN(bid.item_id) OVER() AS first_item, 
+	MAX(bid.item_id) OVER() AS last_item FROM bid
+	INNER JOIN block ON bid.eth_block_num = block.eth_block_num 
+	INNER JOIN coordinator ON bid.bidder_addr = coordinator.bidder_addr `
+	// Apply filters
+	nextIsAnd := false
+	// slotNum filter
+	if slotNum != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "bid.slot_num = ? "
+		args = append(args, slotNum)
+		nextIsAnd = true
+	}
+	// slotNum filter
+	if forgerAddr != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "bid.bidder_addr = ? "
+		args = append(args, forgerAddr)
+		nextIsAnd = true
+	}
+	if fromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if order == OrderAsc {
+			queryStr += "bid.item_id >= ? "
+		} else {
+			queryStr += "bid.item_id <= ? "
+		}
+		args = append(args, fromItem)
+	}
+	// pagination
+	queryStr += "ORDER BY bid.item_id "
+	if order == OrderAsc {
+		queryStr += "ASC "
+	} else {
+		queryStr += "DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	query, argsQ, err := sqlx.In(queryStr, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	query = hdb.db.Rebind(query)
+	bids := []*BidAPI{}
+	if err := meddler.QueryAll(hdb.db, &bids, query, argsQ...); err != nil {
+		return nil, nil, err
+	}
+	if len(bids) == 0 {
+		return nil, nil, sql.ErrNoRows
+	}
+	return db.SlicePtrsToSlice(bids).([]BidAPI), &db.Pagination{
+		TotalItems: bids[0].TotalItems,
+		FirstItem:  bids[0].FirstItem,
+		LastItem:   bids[0].LastItem,
+	}, nil
 }
 
 // AddCoordinators insert Coordinators into the DB
