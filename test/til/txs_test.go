@@ -54,8 +54,8 @@ func TestGenerateBlocks(t *testing.T) {
 
 		// set new batch
 		> batch // batchNum = 3
-		CreateAccountDepositCoordinator(1) E
-		CreateAccountDepositCoordinator(2) B
+		CreateAccountCoordinator(1) E
+		CreateAccountCoordinator(2) B
 
 		DepositTransfer(1) A-B: 15, 10
 		Transfer(1) C-A : 3 (1)
@@ -64,8 +64,8 @@ func TestGenerateBlocks(t *testing.T) {
 
 		CreateAccountDeposit(1) User0: 20
 		CreateAccountDeposit(3) User1: 20
-		CreateAccountDepositCoordinator(1) User1
-		CreateAccountDepositCoordinator(3) User0
+		CreateAccountCoordinator(1) User1
+		CreateAccountCoordinator(3) User0
 		> batchL1 // batchNum = 4
 		Transfer(1) User0-User1: 15 (1)
 		Transfer(3) User1-User0: 15 (1)
@@ -329,7 +329,7 @@ func TestGenerateErrors(t *testing.T) {
 		AddToken(1)
 		CreateAccountDeposit(1) A: 10
 		> batchL1
-		CreateAccountDepositCoordinator(1) B
+		CreateAccountCoordinator(1) B
 		> batchL1
 		> batch
 		Transfer(1) A-B: 6 (1)
@@ -345,7 +345,7 @@ func TestGenerateErrors(t *testing.T) {
 		AddToken(1)
 		CreateAccountDeposit(1) A: 10
 		> batchL1
-		CreateAccountDepositCoordinator(1) B
+		CreateAccountCoordinator(1) B
 		> batchL1
 		Transfer(1) A-B: 6 (1)
 		Transfer(1) A-B: 6 (1) // on purpose this is moving more money that what it has in the account, Til should not fail

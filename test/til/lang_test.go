@@ -25,7 +25,7 @@ func TestParseBlockchainTxs(t *testing.T) {
 		Deposit(1) B: 5
 		CreateAccountDeposit(1) C: 5
 		CreateAccountDepositTransfer(1) D-A: 15, 10
-		CreateAccountDepositCoordinator(1) E
+		CreateAccountCoordinator(1) E
 
 		// L2 transactions
 		Transfer(1) A-B: 6 (1)

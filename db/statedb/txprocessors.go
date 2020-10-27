@@ -38,7 +38,7 @@ type processedExit struct {
 // type==TypeSynchronizer, assumes that the call is done from the Synchronizer,
 // returns common.ExitTreeLeaf that is later used by the Synchronizer to update
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
-func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
+func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 
@@ -53,6 +53,12 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 		return nil, nil, nil
 	}
 	exits := make([]processedExit, nTx)
+
+	// get TokenIDs of coordIdxs
+	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	if s.typ == TypeBatchBuilder {
 		s.zki = common.NewZKInputs(nTx, 24, 32) // TODO this values will be parameters of the function, taken from config file/coordinator call
@@ -121,7 +127,7 @@ func (s *StateDB) ProcessTxs(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []
 		}
 	}
 	for i := 0; i < len(l2txs); i++ {
-		exitIdx, exitAccount, newExit, err := s.processL2Tx(exitTree, &l2txs[i])
+		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, exitTree, &l2txs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -258,10 +264,13 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	}
 
 	switch tx.Type {
-	case common.TxTypeForceTransfer, common.TxTypeTransfer:
+	case common.TxTypeForceTransfer:
 		// go to the MT account of sender and receiver, and update balance
 		// & nonce
-		err := s.applyTransfer(tx.Tx(), 0) // 0 for the parameter toIdx, as at L1Tx ToIdx can only be 0 in the Deposit type case.
+
+		// coordIdxsMap is 'nil', as at L1Txs there is no L2 fees
+		// 0 for the parameter toIdx, as at L1Tx ToIdx can only be 0 in the Deposit type case.
+		err := s.applyTransfer(nil, tx.Tx(), 0)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
@@ -309,9 +318,10 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 			s.zki.AuxFromIdx[s.i] = s.idx.BigInt() // last s.idx is the one used for creating the new account
 			s.zki.NewAccount[s.i] = big.NewInt(1)
 		}
-	case common.TxTypeExit:
+	case common.TxTypeForceExit:
 		// execute exit flow
-		exitAccount, newExit, err := s.applyExit(exitTree, tx.Tx())
+		// coordIdxsMap is 'nil', as at L1Txs there is no L2 fees
+		exitAccount, newExit, err := s.applyExit(nil, exitTree, tx.Tx())
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
@@ -327,7 +337,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 // StateDB depending on the transaction Type. It returns the 3 parameters
 // related to the Exit (in case of): Idx, ExitAccount, boolean determining if
 // the Exit created a new Leaf in the ExitTree.
-func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
+func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
 	var err error
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
 	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
@@ -394,14 +404,14 @@ func (s *StateDB) processL2Tx(exitTree *merkletree.MerkleTree, tx *common.PoolL2
 	case common.TxTypeTransfer, common.TxTypeTransferToEthAddr, common.TxTypeTransferToBJJ:
 		// go to the MT account of sender and receiver, and update
 		// balance & nonce
-		err = s.applyTransfer(tx.Tx(), tx.AuxToIdx)
+		err = s.applyTransfer(coordIdxsMap, tx.Tx(), tx.AuxToIdx)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
 		}
 	case common.TxTypeExit:
 		// execute exit flow
-		exitAccount, newExit, err := s.applyExit(exitTree, tx.Tx())
+		exitAccount, newExit, err := s.applyExit(coordIdxsMap, exitTree, tx.Tx())
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
@@ -519,7 +529,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 // tx.ToIdx==0, then toIdx!=0, and will be used the toIdx parameter as Idx of
 // the receiver. This parameter is used when the tx.ToIdx is not specified and
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
-func (s *StateDB) applyTransfer(tx common.Tx, auxToIdx common.Idx) error {
+func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, tx common.Tx, auxToIdx common.Idx) error {
 	if auxToIdx == common.Idx(0) {
 		auxToIdx = tx.ToIdx
 	}
@@ -543,8 +553,18 @@ func (s *StateDB) applyTransfer(tx common.Tx, auxToIdx common.Idx) error {
 		fee := common.CalcFeeAmount(tx.Amount, *tx.Fee)
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
-		// TODO send the fee to the Fee Idx of the Coordinator for the
-		// TokenID
+		// send the fee to the Idx of the Coordinator for the TokenID
+		accCoord, err := s.GetAccount(coordIdxsMap[tx.TokenID])
+		if err != nil {
+			log.Errorf("applyTransfer error: Tx=%s, error: %s", tx.String(), err)
+			return err
+		}
+		accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
+		_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 	}
 
 	// add amount-feeAmount to the receiver
@@ -653,7 +673,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 
 // It returns the ExitAccount and a boolean determining if the Exit created a
 // new Leaf in the ExitTree.
-func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx common.Tx) (*common.Account, bool, error) {
+func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, exitTree *merkletree.MerkleTree, tx common.Tx) (*common.Account, bool, error) {
 	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := s.GetAccount(tx.FromIdx)
@@ -666,8 +686,19 @@ func (s *StateDB) applyExit(exitTree *merkletree.MerkleTree, tx common.Tx) (*com
 		fee := common.CalcFeeAmount(tx.Amount, *tx.Fee)
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
-		// TODO send the fee to the Fee Idx of the Coordinator for the
-		// TokenID
+
+		// send the fee to the Idx of the Coordinator for the TokenID
+		accCoord, err := s.GetAccount(coordIdxsMap[tx.TokenID])
+		if err != nil {
+			log.Errorf("applyExit error: Tx=%s, error: %s", tx.String(), err)
+			return nil, false, err
+		}
+		accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
+		_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
+		if err != nil {
+			log.Error(err)
+			return nil, false, err
+		}
 	}
 
 	p, err := s.UpdateAccount(tx.FromIdx, acc)

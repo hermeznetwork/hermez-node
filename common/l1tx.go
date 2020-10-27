@@ -60,7 +60,7 @@ func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 		if l1Tx.ToIdx == Idx(0) {
 			txType = TxTypeDeposit
 		} else if l1Tx.ToIdx == Idx(1) {
-			txType = TxTypeExit
+			txType = TxTypeForceExit
 		} else if l1Tx.ToIdx >= IdxUserThreshold {
 			if l1Tx.LoadAmount.Int64() == int64(0) {
 				txType = TxTypeForceTransfer

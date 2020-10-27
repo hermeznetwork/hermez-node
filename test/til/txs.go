@@ -219,6 +219,26 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				L2Tx:        tx,
 			}
 			tc.currBatchTest.l2Txs = append(tc.currBatchTest.l2Txs, testTx)
+		case common.TxTypeForceTransfer: // tx source: L1UserTx
+			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
+				log.Error(err)
+				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
+			}
+			tx := common.L1Tx{
+				TokenID:    inst.tokenID,
+				Amount:     big.NewInt(int64(inst.amount)),
+				LoadAmount: big.NewInt(0),
+				Type:       common.TxTypeForceTransfer,
+			}
+			testTx := L1Tx{
+				lineNum:     inst.lineNum,
+				fromIdxName: inst.from,
+				toIdxName:   inst.to,
+				L1Tx:        tx,
+			}
+			if err := tc.addToL1Queue(testTx); err != nil {
+				return nil, err
+			}
 		case common.TxTypeExit: // tx source: L2Tx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
@@ -248,7 +268,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				TokenID:    inst.tokenID,
 				Amount:     big.NewInt(int64(inst.amount)),
 				LoadAmount: big.NewInt(0),
-				Type:       common.TxTypeExit,
+				Type:       common.TxTypeForceExit,
 			}
 			testTx := L1Tx{
 				lineNum:     inst.lineNum,
@@ -415,7 +435,7 @@ func (tc *Context) addToL1Queue(tx L1Tx) error {
 		}
 		tx.L1Tx.ToIdx = account.Idx
 	}
-	if tx.L1Tx.Type == common.TxTypeExit {
+	if tx.L1Tx.Type == common.TxTypeForceExit {
 		tx.L1Tx.ToIdx = common.Idx(1)
 	}
 	nTx, err := common.NewL1Tx(&tx.L1Tx)

@@ -103,7 +103,7 @@ func TestSync(t *testing.T) {
 		CreateAccountDeposit(1) C: 5  // Idx=256+4
 		CreateAccountDeposit(1) D: 5  // Idx=256+5
 
-		CreateAccountDepositCoordinator(2) B // Idx=256+0
+		CreateAccountCoordinator(2) B // Idx=256+0
 
 		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs
 		> batchL1 // forge defined L1UserTxs, freeze L1UserTxs{nil}

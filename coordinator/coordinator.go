@@ -213,14 +213,14 @@ func (c *Coordinator) forge(serverProof ServerProofInterface) (*BatchInfo, error
 	if c.shouldL1L2Batch() {
 		// 2a: L1+L2 txs
 		// l1UserTxs, toForgeL1TxsNumber := c.hdb.GetNextL1UserTxs() // TODO once HistoryDB is ready, uncomment
-		var l1UserTxs []common.L1Tx = nil                                                                 // tmp, depends on HistoryDB
-		l1UserTxsExtra, l1OperatorTxs, poolL2Txs, err = c.txsel.GetL1L2TxSelection(c.batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
+		var l1UserTxs []common.L1Tx = nil                                                                                 // tmp, depends on HistoryDB
+		l1UserTxsExtra, l1OperatorTxs, poolL2Txs, err = c.txsel.GetL1L2TxSelection([]common.Idx{}, c.batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		// 2b: only L2 txs
-		poolL2Txs, err = c.txsel.GetL2TxSelection(c.batchNum) // TODO once feesInfo is added to method return, add the var
+		poolL2Txs, err = c.txsel.GetL2TxSelection([]common.Idx{}, c.batchNum) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ func (c *Coordinator) forge(serverProof ServerProofInterface) (*BatchInfo, error
 	configBatch := &batchbuilder.ConfigBatch{
 		ForgerAddress: c.config.ForgerAddress,
 	}
-	zkInputs, err := c.batchBuilder.BuildBatch(configBatch, l1UserTxsExtra, l1OperatorTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
+	zkInputs, err := c.batchBuilder.BuildBatch([]common.Idx{}, configBatch, l1UserTxsExtra, l1OperatorTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
 	if err != nil {
 		return nil, err
 	}

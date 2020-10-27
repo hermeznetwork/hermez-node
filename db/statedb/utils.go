@@ -2,6 +2,7 @@ package statedb
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -106,6 +107,18 @@ func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicK
 	}
 	// rest of cases (included case ToEthAddr==0) are not possible
 	return common.Idx(0), ErrToIdxNotFound
+}
+
+func (s *StateDB) getTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]common.Idx, error) {
+	m := make(map[common.TokenID]common.Idx)
+	for i := 0; i < len(idxs); i++ {
+		a, err := s.GetAccount(idxs[i])
+		if err != nil {
+			return nil, fmt.Errorf("getTokenIDsFromIdxs error on GetAccount with Idx==%d: %s", idxs[i], err.Error())
+		}
+		m[a.TokenID] = idxs[i]
+	}
+	return m, nil
 }
 
 func siblingsToZKInputFormat(s []*merkletree.Hash) []*big.Int {
