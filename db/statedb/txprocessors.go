@@ -38,26 +38,29 @@ type processedExit struct {
 // type==TypeSynchronizer, assumes that the call is done from the Synchronizer,
 // returns common.ExitTreeLeaf that is later used by the Synchronizer to update
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
-func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, error) {
+// And if TypeSynchronizer returns an array of common.Account with all the
+// created accounts.
+func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, []common.Account, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
+	var createdAccounts []common.Account
 
 	if s.zki != nil {
-		return nil, nil, errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty")
+		return nil, nil, nil, errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty")
 	}
 	defer s.resetZKInputs()
 
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
 	if nTx == 0 {
 		// TODO return ZKInputs of batch without txs
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	exits := make([]processedExit, nTx)
 
 	// get TokenIDs of coordIdxs
 	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if s.typ == TypeBatchBuilder {
@@ -71,7 +74,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 		tmpDir, err := ioutil.TempDir("", "hermez-statedb-exittree")
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		defer func() {
 			if err := os.RemoveAll(tmpDir); err != nil {
@@ -80,19 +83,19 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}()
 		sto, err := pebble.NewPebbleStorage(tmpDir, false)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		exitTree, err = merkletree.NewMerkleTree(sto, s.mt.MaxLevels())
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
 	// assumption: l1usertx are sorted by L1Tx.Position
 	for i := 0; i < len(l1usertxs); i++ {
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &l1usertxs[i])
+		exitIdx, exitAccount, newExit, createdAccount, err := s.processL1Tx(exitTree, &l1usertxs[i])
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -105,31 +108,26 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 			}
 			s.i++
 		}
+		if s.typ == TypeSynchronizer && createdAccount != nil {
+			createdAccounts = append(createdAccounts, *createdAccount)
+		}
 	}
 	for i := 0; i < len(l1coordinatortxs); i++ {
-		exitIdx, exitAccount, newExit, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
+		exitIdx, _, _, createdAccount, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if exitIdx != nil {
 			log.Error("Unexpected Exit in L1CoordinatorTx")
 		}
-		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
-			if exitIdx != nil && exitTree != nil {
-				exits[s.i] = processedExit{
-					exit:    true,
-					newExit: newExit,
-					idx:     *exitIdx,
-					acc:     *exitAccount,
-				}
-			}
-			s.i++
+		if s.typ == TypeSynchronizer && createdAccount != nil {
+			createdAccounts = append(createdAccounts, *createdAccount)
 		}
 	}
 	for i := 0; i < len(l2txs); i++ {
 		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, exitTree, &l2txs[i])
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -145,7 +143,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	}
 
 	if s.typ == TypeTxSelector {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	// once all txs processed (exitTree root frozen), for each Exit,
@@ -161,7 +159,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		// 0. generate MerkleProof
 		p, err := exitTree.GenerateCircomVerifierProof(exitIdx.BigInt(), nil)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		// 1. generate common.ExitInfo
 		ei := common.ExitInfo{
@@ -192,7 +190,9 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}
 	}
 	if s.typ == TypeSynchronizer {
-		return nil, exitInfos, nil
+		// return exitInfos and createdAccounts, so Synchronizer will be able
+		// to store it into HistoryDB for the concrete BatchNum
+		return nil, exitInfos, createdAccounts, nil
 	}
 
 	// compute last ZKInputs parameters
@@ -200,7 +200,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	// zki.FeeIdxs = ? // TODO, this will be get from the config file
 	tokenIDs, err := s.getTokenIDsBigInt(l1usertxs, l1coordinatortxs, l2txs)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	s.zki.FeePlanTokens = tokenIDs
 
@@ -209,9 +209,8 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	// TODO once the Node Config sets the Accounts where to send the Fees
 	// compute fees & update ZKInputs
 
-	// return exitInfos, so Synchronizer will be able to store it into
-	// HistoryDB for the concrete BatchNum
-	return s.zki, exitInfos, nil
+	// return ZKInputs as the BatchBuilder will return it to forge the Batch
+	return s.zki, nil, nil, nil
 }
 
 // getTokenIDsBigInt returns the list of TokenIDs in *big.Int format
@@ -243,7 +242,10 @@ func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []common.L1Tx, l
 // StateDB depending on the transaction Type. It returns the 3 parameters
 // related to the Exit (in case of): Idx, ExitAccount, boolean determining if
 // the Exit created a new Leaf in the ExitTree.
-func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx, *common.Account, bool, error) {
+// And another *common.Account parameter which contains the created account in
+// case that has been a new created account and that the StateDB is of type
+// TypeSynchronizer.
+func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx, *common.Account, bool, *common.Account, error) {
 	// ZKInputs
 	if s.zki != nil {
 		// Txs
@@ -273,14 +275,14 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyTransfer(nil, tx.Tx(), 0)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, nil, err
 		}
 	case common.TxTypeCreateAccountDeposit:
 		// add new account to the MT, update balance of the MT account
 		err := s.applyCreateAccount(tx)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, nil, err
 		}
 		// TODO applyCreateAccount will return the created account,
 		// which in the case type==TypeSynchronizer will be added to an
@@ -295,7 +297,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyDeposit(tx, false)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, nil, err
 		}
 	case common.TxTypeDepositTransfer:
 		// update balance in MT account, update balance & nonce of sender
@@ -303,7 +305,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyDeposit(tx, true)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, nil, err
 		}
 	case common.TxTypeCreateAccountDepositTransfer:
 		// add new account to the merkletree, update balance in MT account,
@@ -311,7 +313,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyCreateAccountDepositTransfer(tx)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, nil, err
 		}
 
 		if s.zki != nil {
@@ -324,13 +326,23 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		exitAccount, newExit, err := s.applyExit(nil, exitTree, tx.Tx())
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, nil, err
 		}
-		return &tx.FromIdx, exitAccount, newExit, nil
+		return &tx.FromIdx, exitAccount, newExit, nil, nil
 	default:
 	}
 
-	return nil, nil, false, nil
+	var createdAccount *common.Account
+	if s.typ == TypeSynchronizer && (tx.Type == common.TxTypeCreateAccountDeposit || tx.Type == common.TxTypeCreateAccountDepositTransfer) {
+		var err error
+		createdAccount, err = s.GetAccount(s.idx)
+		if err != nil {
+			log.Error(err)
+			return nil, nil, false, nil, err
+		}
+	}
+
+	return nil, nil, false, createdAccount, nil
 }
 
 // processL2Tx process the given L2Tx applying the needed updates to the
