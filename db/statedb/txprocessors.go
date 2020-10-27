@@ -21,7 +21,7 @@ var (
 
 func (s *StateDB) resetZKInputs() {
 	s.zki = nil
-	s.i = 0
+	s.i = 0 // initialize current transaction index in the ZKInputs generation
 }
 
 type processedExit struct {
@@ -29,6 +29,14 @@ type processedExit struct {
 	newExit bool
 	idx     common.Idx
 	acc     common.Account
+}
+
+// ProcessTxOutput contains the output of the ProcessTxs method
+type ProcessTxOutput struct {
+	ZKInputs           *common.ZKInputs
+	ExitInfos          []common.ExitInfo
+	CreatedAccounts    []common.Account
+	CoordinatorIdxsMap map[common.TokenID]common.Idx
 }
 
 // ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
@@ -40,27 +48,32 @@ type processedExit struct {
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
 // And if TypeSynchronizer returns an array of common.Account with all the
 // created accounts.
-func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*common.ZKInputs, []common.ExitInfo, []common.Account, error) {
+func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*ProcessTxOutput, error) {
 	var err error
 	var exitTree *merkletree.MerkleTree
 	var createdAccounts []common.Account
 
 	if s.zki != nil {
-		return nil, nil, nil, errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty")
+		return nil, errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty")
 	}
 	defer s.resetZKInputs()
 
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
 	if nTx == 0 {
 		// TODO return ZKInputs of batch without txs
-		return nil, nil, nil, nil
+		return &ProcessTxOutput{
+			ZKInputs:           nil,
+			ExitInfos:          nil,
+			CreatedAccounts:    nil,
+			CoordinatorIdxsMap: nil,
+		}, nil
 	}
 	exits := make([]processedExit, nTx)
 
 	// get TokenIDs of coordIdxs
 	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	if s.typ == TypeBatchBuilder {
@@ -74,7 +87,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 		tmpDir, err := ioutil.TempDir("", "hermez-statedb-exittree")
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 		defer func() {
 			if err := os.RemoveAll(tmpDir); err != nil {
@@ -83,11 +96,11 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}()
 		sto, err := pebble.NewPebbleStorage(tmpDir, false)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 		exitTree, err = merkletree.NewMerkleTree(sto, s.mt.MaxLevels())
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -95,7 +108,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	for i := 0; i < len(l1usertxs); i++ {
 		exitIdx, exitAccount, newExit, createdAccount, err := s.processL1Tx(exitTree, &l1usertxs[i])
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -115,7 +128,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	for i := 0; i < len(l1coordinatortxs); i++ {
 		exitIdx, _, _, createdAccount, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 		if exitIdx != nil {
 			log.Error("Unexpected Exit in L1CoordinatorTx")
@@ -127,7 +140,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	for i := 0; i < len(l2txs); i++ {
 		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, exitTree, &l2txs[i])
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -143,12 +156,13 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	}
 
 	if s.typ == TypeTxSelector {
-		return nil, nil, nil, nil
+		return nil, nil
 	}
 
 	// once all txs processed (exitTree root frozen), for each Exit,
 	// generate common.ExitInfo data
 	var exitInfos []common.ExitInfo
+	// exitInfos := []common.ExitInfo{}
 	for i := 0; i < nTx; i++ {
 		if !exits[i].exit {
 			continue
@@ -159,7 +173,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		// 0. generate MerkleProof
 		p, err := exitTree.GenerateCircomVerifierProof(exitIdx.BigInt(), nil)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 		// 1. generate common.ExitInfo
 		ei := common.ExitInfo{
@@ -190,9 +204,14 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}
 	}
 	if s.typ == TypeSynchronizer {
-		// return exitInfos and createdAccounts, so Synchronizer will be able
-		// to store it into HistoryDB for the concrete BatchNum
-		return nil, exitInfos, createdAccounts, nil
+		// return exitInfos and createdAccounts, so Synchronizer will
+		// be able to store it into HistoryDB for the concrete BatchNum
+		return &ProcessTxOutput{
+			ZKInputs:           nil,
+			ExitInfos:          exitInfos,
+			CreatedAccounts:    createdAccounts,
+			CoordinatorIdxsMap: coordIdxsMap,
+		}, nil
 	}
 
 	// compute last ZKInputs parameters
@@ -200,7 +219,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	// zki.FeeIdxs = ? // TODO, this will be get from the config file
 	tokenIDs, err := s.getTokenIDsBigInt(l1usertxs, l1coordinatortxs, l2txs)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 	s.zki.FeePlanTokens = tokenIDs
 
@@ -210,7 +229,12 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	// compute fees & update ZKInputs
 
 	// return ZKInputs as the BatchBuilder will return it to forge the Batch
-	return s.zki, nil, nil, nil
+	return &ProcessTxOutput{
+		ZKInputs:           s.zki,
+		ExitInfos:          nil,
+		CreatedAccounts:    nil,
+		CoordinatorIdxsMap: coordIdxsMap,
+	}, nil
 }
 
 // getTokenIDsBigInt returns the list of TokenIDs in *big.Int format

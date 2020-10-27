@@ -45,50 +45,50 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	idxA1 := tc.Users["A"].Accounts[common.TokenID(1)].Idx
 
 	log.Debug("1st batch, 1st block, only L1CoordinatorTxs")
-	_, _, createdAccounts, err := sdb.ProcessTxs(nil, nil, blocks[0].Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := sdb.ProcessTxs(nil, nil, blocks[0].Batches[0].L1CoordinatorTxs, nil)
 	require.Nil(t, err)
-	assert.Equal(t, 4, len(createdAccounts))
+	assert.Equal(t, 4, len(ptOut.CreatedAccounts))
 
 	log.Debug("2nd batch, 1st block")
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Batches[1].L2Txs)
-	_, exitInfos, createdAccounts, err := sdb.ProcessTxs(coordIdxs, blocks[0].L1UserTxs, blocks[0].Batches[1].L1CoordinatorTxs, l2Txs)
+	ptOut, err = sdb.ProcessTxs(coordIdxs, blocks[0].L1UserTxs, blocks[0].Batches[1].L1CoordinatorTxs, l2Txs)
 	require.Nil(t, err)
-	assert.Equal(t, 0, len(exitInfos))
-	assert.Equal(t, 31, len(createdAccounts))
+	assert.Equal(t, 0, len(ptOut.ExitInfos))
+	assert.Equal(t, 31, len(ptOut.CreatedAccounts))
 	acc, err := sdb.GetAccount(idxA1)
 	require.Nil(t, err)
 	assert.Equal(t, "50", acc.Balance.String())
 
 	log.Debug("3rd batch, 1st block")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Batches[2].L2Txs)
-	_, exitInfos, createdAccounts, err = sdb.ProcessTxs(coordIdxs, nil, blocks[0].Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = sdb.ProcessTxs(coordIdxs, nil, blocks[0].Batches[2].L1CoordinatorTxs, l2Txs)
 	require.Nil(t, err)
 	// TODO once TTGL is updated, add a check that a input poolL2Tx with
 	// Nonce & TokenID =0, after ProcessTxs call has the expected value
 
-	assert.Equal(t, 0, len(exitInfos))
-	assert.Equal(t, 0, len(createdAccounts))
+	assert.Equal(t, 0, len(ptOut.ExitInfos))
+	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
 	acc, err = sdb.GetAccount(idxA1)
 	require.Nil(t, err)
 	assert.Equal(t, "28", acc.Balance.String())
 
 	log.Debug("1st batch, 2nd block")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Batches[0].L2Txs)
-	_, exitInfos, createdAccounts, err = sdb.ProcessTxs(coordIdxs, nil, blocks[1].Batches[0].L1CoordinatorTxs, l2Txs)
+	ptOut, err = sdb.ProcessTxs(coordIdxs, nil, blocks[1].Batches[0].L1CoordinatorTxs, l2Txs)
 	require.Nil(t, err)
-	assert.Equal(t, 4, len(exitInfos)) // the 'ForceExit(1)' is not computed yet, as the batch is without L1UserTxs
-	assert.Equal(t, 1, len(createdAccounts))
+	assert.Equal(t, 4, len(ptOut.ExitInfos)) // the 'ForceExit(1)' is not computed yet, as the batch is without L1UserTxs
+	assert.Equal(t, 1, len(ptOut.CreatedAccounts))
 	acc, err = sdb.GetAccount(idxA1)
 	require.Nil(t, err)
 	assert.Equal(t, "53", acc.Balance.String())
 
 	log.Debug("2nd batch, 2nd block")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Batches[1].L2Txs)
-	_, exitInfos, createdAccounts, err = sdb.ProcessTxs(coordIdxs, blocks[1].L1UserTxs, blocks[1].Batches[1].L1CoordinatorTxs, l2Txs)
+	ptOut, err = sdb.ProcessTxs(coordIdxs, blocks[1].L1UserTxs, blocks[1].Batches[1].L1CoordinatorTxs, l2Txs)
 	require.Nil(t, err)
 
-	assert.Equal(t, 2, len(exitInfos)) // 2, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5'
-	assert.Equal(t, 1, len(createdAccounts))
+	assert.Equal(t, 2, len(ptOut.ExitInfos)) // 2, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5'
+	assert.Equal(t, 1, len(ptOut.CreatedAccounts))
 	acc, err = sdb.GetAccount(idxA1)
 	assert.Nil(t, err)
 	assert.Equal(t, "78", acc.Balance.String())
