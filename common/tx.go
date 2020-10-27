@@ -168,7 +168,7 @@ func (tx *Tx) String() string {
 		tx.Type == TxTypeCreateAccountDepositTransfer {
 		fmt.Fprintf(buf, "Fee: %d, ", tx.Fee)
 	}
-	fmt.Fprintf(buf, "TokenID: %d\n", tx.TokenID)
+	fmt.Fprintf(buf, "TokenID: %d", tx.TokenID)
 
 	return buf.String()
 }

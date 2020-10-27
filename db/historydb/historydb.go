@@ -272,7 +272,9 @@ func (hdb *HistoryDB) GetAllBatches() ([]common.Batch, error) {
 	var batches []*common.Batch
 	err := meddler.QueryAll(
 		hdb.db, &batches,
-		"SELECT * FROM batch;",
+		`SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr, batch.fees_collected,
+		 batch.state_root, batch.num_accounts, batch.last_idx, batch.exit_root,
+		 batch.forge_l1_txs_num, batch.slot_num, batch.total_fees_usd FROM batch;`,
 	)
 	return db.SlicePtrsToSlice(batches).([]common.Batch), err
 }
@@ -796,6 +798,18 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	}, nil
 }
 
+// GetAllExits returns all exit from the DB
+func (hdb *HistoryDB) GetAllExits() ([]common.ExitInfo, error) {
+	var exits []*common.ExitInfo
+	err := meddler.QueryAll(
+		hdb.db, &exits,
+		`SELECT exit_tree.batch_num, exit_tree.account_idx, exit_tree.merkle_proof,
+		exit_tree.balance, exit_tree.instant_withdrawn, exit_tree.delayed_withdraw_request,
+		exit_tree.delayed_withdrawn FROM exit_tree;`,
+	)
+	return db.SlicePtrsToSlice(exits).([]common.ExitInfo), err
+}
+
 // GetExit returns a exit from the DB
 func (hdb *HistoryDB) GetExit(batchNum *uint, idx *common.Idx) (*HistoryExit, error) {
 	exit := &HistoryExit{}
@@ -929,6 +943,32 @@ func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE;`,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), err
+}
+
+// GetAllL1CoordinatorTxs returns all L1CoordinatorTxs from the DB
+func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
+	var txs []*common.L1Tx
+	err := meddler.QueryAll(
+		hdb.db, &txs,
+		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
+		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id, tx.amount,
+		tx.load_amount, tx.eth_block_num, tx.type, tx.batch_num
+		FROM tx WHERE is_l1 = TRUE AND user_origin = FALSE;`,
+	)
+	return db.SlicePtrsToSlice(txs).([]common.L1Tx), err
+}
+
+// GetAllL2Txs returns all L2Txs from the DB
+func (hdb *HistoryDB) GetAllL2Txs() ([]common.L2Tx, error) {
+	var txs []*common.L2Tx
+	err := meddler.QueryAll(
+		hdb.db, &txs,
+		`SELECT tx.id, tx.batch_num, tx.position,
+		tx.from_idx, tx.to_idx, tx.amount, tx.fee, tx.nonce,
+		tx.type, tx.eth_block_num
+		FROM tx WHERE is_l1 = FALSE;`,
+	)
+	return db.SlicePtrsToSlice(txs).([]common.L2Tx), err
 }
 
 // GetL1UserTxs gets L1 User Txs to be forged in the L1Batch with toForgeL1TxsNum.
