@@ -149,6 +149,14 @@ type ZKInputs struct {
 	//
 
 	// Intermediate States to parallelize witness computation
+	// Note: the Intermediate States (IS) of the last transaction does not
+	// exist. Meaning that transaction 3 (4th) will fill the parameters
+	// FromIdx[3] and ISOnChain[3], but last transaction (nTx-1) will fill
+	// FromIdx[nTx-1] but will not fill ISOnChain. That's why IS have
+	// length of nTx-1, while the other parameters have length of nTx.
+	// Last transaction does not need intermediate state since its output
+	// will not be used.
+
 	// decode-tx
 	// ISOnChain indicates if tx is L1 (true) or L2 (false)
 	ISOnChain []*big.Int // bool, len: [nTx - 1]

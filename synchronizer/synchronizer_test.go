@@ -24,6 +24,7 @@ import (
 
 var tokenConsts = map[common.TokenID]eth.ERC20Consts{}
 var forceExits = map[int64][]common.ExitInfo{} // ForgeL1TxsNum -> []exit
+var nonces = map[common.Idx]common.Nonce{}
 
 type timer struct {
 	time int64
@@ -441,6 +442,8 @@ func TestSync(t *testing.T) {
 				tx := &batch.L2Txs[k]
 				tx.Position = position
 				position++
+				nonces[tx.FromIdx]++
+				tx.Nonce = nonces[tx.FromIdx]
 				nTx, err := common.NewL2Tx(tx)
 				require.Nil(t, err)
 				*tx = *nTx

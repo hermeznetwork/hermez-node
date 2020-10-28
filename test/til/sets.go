@@ -10,6 +10,8 @@ AddToken(1)
 AddToken(2)
 AddToken(3)
 
+// block:0 batch:0
+
 // Coordinator accounts, Idxs: 256, 257, 258, 259
 CreateAccountCoordinator(0) Coord
 CreateAccountCoordinator(1) Coord
@@ -17,11 +19,12 @@ CreateAccountCoordinator(2) Coord
 CreateAccountCoordinator(3) Coord
 
 > batch
+// block:0 batch:1
 
 // deposits TokenID: 1
 CreateAccountDeposit(1) A: 50
 CreateAccountDeposit(1) B: 5
-CreateAccountDeposit(1) C: 20
+CreateAccountDeposit(1) C: 200
 CreateAccountDeposit(1) D: 25
 CreateAccountDeposit(1) E: 25
 CreateAccountDeposit(1) F: 25
@@ -55,6 +58,7 @@ CreateAccountDeposit(0) B: 10000
 CreateAccountDeposit(0) C: 1
 
 > batchL1
+// block:0 batch:2
 
 // transactions TokenID: 1
 Transfer(1) A-B: 5 (1)
@@ -63,7 +67,7 @@ Transfer(1) A-M: 5 (1)
 Transfer(1) A-N: 5 (1)
 Transfer(1) A-O: 5 (1)
 Transfer(1) B-C: 3 (1)
-Transfer(1) C-A: 3 (255)
+Transfer(1) C-A: 10 (200)
 Transfer(1) D-A: 5 (1)
 Transfer(1) D-Z: 5 (1)
 Transfer(1) D-Y: 5 (1)
@@ -82,9 +86,15 @@ Transfer(0) B-C: 50 (192)
 
 > batchL1
 > block
+
+// block:1 batch:0
+
 // A (3) still does not exist, coordinator should create new L1Tx to create the account
 CreateAccountCoordinator(3) A
 
+Transfer(1) A-B: 1 (1)
+Transfer(1) A-B: 1 (1)
+Transfer(1) A-B: 1 (1)
 Transfer(3) B-A: 5 (1)
 Transfer(2) A-B: 5 (1)
 Transfer(1) I-K: 3 (1)
@@ -132,7 +142,7 @@ Transfer(1) W-J: 3 (1)
 Transfer(1) W-A: 5 (1)
 Transfer(1) W-Z: 5 (1)
 Transfer(1) X-B: 5 (1)
-Transfer(1) X-C: 5 (50)
+Transfer(1) X-C: 10 (200)
 Transfer(1) X-D: 5 (1)
 Transfer(1) X-E: 5 (1)
 Transfer(1) Y-B: 5 (1)
@@ -148,6 +158,7 @@ Exit(1) Y: 5 (1)
 Exit(1) Z: 5 (1)
 
 > batch
+// block:1 batch:1
 
 Deposit(1) A: 50
 Deposit(1) B: 5

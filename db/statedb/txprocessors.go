@@ -214,7 +214,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}
 	}
 	if s.typ == TypeSynchronizer {
-		// return exitInfos and createdAccounts, so Synchronizer will
+		// return exitInfos, createdAccounts and collectedFees, so Synchronizer will
 		// be able to store it into HistoryDB for the concrete BatchNum
 		return &ProcessTxOutput{
 			ZKInputs:           nil,
@@ -230,6 +230,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	// zki.FeeIdxs = ? // TODO, this will be get from the config file
 	tokenIDs, err := s.getTokenIDsBigInt(l1usertxs, l1coordinatortxs, l2txs)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	s.zki.FeePlanTokens = tokenIDs
@@ -261,8 +262,9 @@ func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []common.L1Tx, l
 	for i := 0; i < len(l2txs); i++ {
 		// as L2Tx does not have parameter TokenID, get it from the
 		// AccountsDB (in the StateDB)
-		acc, err := s.GetAccount(l2txs[i].ToIdx)
+		acc, err := s.GetAccount(l2txs[i].FromIdx)
 		if err != nil {
+			log.Errorf("ToIdx %d not found: %s", l2txs[i].ToIdx, err.Error())
 			return nil, err
 		}
 		tokenIDs[acc.TokenID] = true
@@ -297,8 +299,10 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 			s.zki.FromBJJCompressed[s.i] = BJJCompressedTo256BigInts(tx.FromBJJ.Compress())
 		}
 
-		// Intermediate States
-		s.zki.ISOnChain[s.i] = big.NewInt(1)
+		// Intermediate States, for all the transactions except for the last one
+		if s.i < len(s.zki.ISOnChain) { // len(s.zki.ISOnChain) == nTx
+			s.zki.ISOnChain[s.i] = big.NewInt(1)
+		}
 	}
 
 	switch tx.Type {
@@ -604,18 +608,18 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
 		// send the fee to the Idx of the Coordinator for the TokenID
-		accCoord, err := s.GetAccount(coordIdxsMap[tx.TokenID])
+		accCoord, err := s.GetAccount(coordIdxsMap[accSender.TokenID])
 		if err != nil {
 			log.Debugw("No coord Idx to receive fee", "tx", tx)
 		} else {
 			accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
-			_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
+			_, err = s.UpdateAccount(coordIdxsMap[accSender.TokenID], accCoord)
 			if err != nil {
 				log.Error(err)
 				return err
 			}
 			if s.typ == TypeSynchronizer {
-				collected := collectedFees[tx.TokenID]
+				collected := collectedFees[accSender.TokenID]
 				collected.Add(collected, fee)
 			}
 		}
@@ -743,18 +747,18 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
 
 		// send the fee to the Idx of the Coordinator for the TokenID
-		accCoord, err := s.GetAccount(coordIdxsMap[tx.TokenID])
+		accCoord, err := s.GetAccount(coordIdxsMap[acc.TokenID])
 		if err != nil {
 			log.Debugw("No coord Idx to receive fee", "tx", tx)
 		} else {
 			accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
-			_, err = s.UpdateAccount(coordIdxsMap[tx.TokenID], accCoord)
+			_, err = s.UpdateAccount(coordIdxsMap[acc.TokenID], accCoord)
 			if err != nil {
 				log.Error(err)
 				return nil, false, err
 			}
 			if s.typ == TypeSynchronizer {
-				collected := collectedFees[tx.TokenID]
+				collected := collectedFees[acc.TokenID]
 				collected.Add(collected, fee)
 			}
 		}
