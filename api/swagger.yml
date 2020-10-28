@@ -892,9 +892,9 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/SlotNum'
-        - name: forgerAddr
+        - name: bidderAddr
           in: query
-          description: Get only bids made by a coordinator identified by its forger address.
+          description: Get only bids made by a coordinator identified by its bidder address.
           required: false
           schema:
             $ref: '#/components/schemas/EthereumAddress'
@@ -1918,12 +1918,14 @@ components:
       type: object
       description: Tokens placed in an auction by a coordinator to gain the right to forge batches during a specific slot.
       properties:
+        itemId:
+          $ref: '#/components/schemas/ItemId'
+        bidderAddr:
+          $ref: '#/components/schemas/EthereumAddress'
         forgerAddr:
           $ref: '#/components/schemas/EthereumAddress'
         slotNum:
           $ref: '#/components/schemas/SlotNum'
-        withdrawAddr:
-          $ref: '#/components/schemas/EthereumAddress'
         URL:
           $ref: '#/components/schemas/URL'
         bidValue:
@@ -1933,6 +1935,15 @@ components:
         timestamp:
           type: string
           format: date-time
+      additionalProperties: false
+      require:
+        - bidderAddr
+        - forgerAddr
+        - slotNum
+        - URL
+        - bidValue
+        - ethereumBlockNum
+        - timestamp
     Bids:
       type: object
       properties:
@@ -1943,6 +1954,10 @@ components:
             $ref: '#/components/schemas/Bid'
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
+      additionalProperties: false
+      require:
+        - bids
+        - pagination
     RecommendedFee:  
       type: object
       description: Fee that the coordinator recommends per transaction in USD.

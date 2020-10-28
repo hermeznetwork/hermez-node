@@ -227,3 +227,19 @@ type Metrics struct {
 	TotalBJJs             int64   `json:"totalBJJs"`
 	AvgTransactionFee     float64 `json:"avgTransactionFee"`
 }
+
+// BidAPI is a representation of a bid with additional information
+// required by the API
+type BidAPI struct {
+	ItemID      int                `json:"itemId" meddler:"item_id"`
+	SlotNum     int64              `json:"slotNum" meddler:"slot_num"`
+	BidValue    apitypes.BigIntStr `json:"bidValue" meddler:"bid_value"`
+	EthBlockNum int64              `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	Bidder      ethCommon.Address  `json:"bidderAddr" meddler:"bidder_addr"`
+	Forger      ethCommon.Address  `json:"forgerAddr" meddler:"forger_addr"`
+	URL         string             `json:"URL" meddler:"url"`
+	Timestamp   time.Time          `json:"timestamp" meddler:"timestamp,utctime"`
+	TotalItems  int                `json:"-" meddler:"total_items"`
+	FirstItem   int                `json:"-" meddler:"first_item"`
+	LastItem    int                `json:"-" meddler:"last_item"`
+}
