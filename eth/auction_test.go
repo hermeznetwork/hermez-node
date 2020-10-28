@@ -35,7 +35,7 @@ func TestAuctionConstants(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, auctionConstants.BlocksPerSlot, blocksPerSlot)
 	assert.Equal(t, auctionConstants.GenesisBlockNum, genesisBlock)
-	assert.Equal(t, auctionConstants.HermezRollup, hermezRollupAddressTestConst)
+	assert.Equal(t, auctionConstants.HermezRollup, hermezRollupTestAddressConst)
 	assert.Equal(t, auctionConstants.InitialMinimalBidding, INITMINBID)
 	assert.Equal(t, auctionConstants.TokenHEZ, tokenHEZAddressConst)
 }

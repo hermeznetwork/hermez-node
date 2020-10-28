@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +16,7 @@ func TestCompileSetsBase(t *testing.T) {
 	_, err = parser.parse()
 	assert.Nil(t, err)
 
-	tc := NewContext(eth.RollupConstMaxL1UserTx)
+	tc := NewContext(common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(SetBlockchain0)
 	assert.Nil(t, err)
 	_, err = tc.GeneratePoolL2Txs(SetPool0)
@@ -25,7 +25,7 @@ func TestCompileSetsBase(t *testing.T) {
 
 func TestCompileSetsMinimumFlow(t *testing.T) {
 	// minimum flow
-	tc := NewContext(eth.RollupConstMaxL1UserTx)
+	tc := NewContext(common.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(SetBlockchainMinimumFlow0)
 	assert.Nil(t, err)
 	_, err = tc.GeneratePoolL2Txs(SetPoolL2MinimumFlow0)

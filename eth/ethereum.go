@@ -270,6 +270,7 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 	b := &common.Block{
 		EthBlockNum: block.Number().Int64(),
 		Timestamp:   time.Unix(int64(block.Time()), 0),
+		ParentHash:  block.ParentHash(),
 		Hash:        block.Hash(),
 	}
 	return b, nil

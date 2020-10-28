@@ -70,7 +70,7 @@ func TestRollupRegisterTokensCount(t *testing.T) {
 	assert.Equal(t, big.NewInt(1), registerTokensCount)
 }
 
-func TestAddToken(t *testing.T) {
+func TestRollupAddToken(t *testing.T) {
 	feeAddToken := big.NewInt(10)
 	// Addtoken ERC20Permit
 	registerTokensCount, err := rollupClient.RollupRegisterTokensCount()
@@ -731,7 +731,7 @@ func TestRollupForgeBatch2(t *testing.T) {
 	newStateRoot := new(big.Int)
 	newStateRoot.SetString("0", 10)
 	newExitRoot := new(big.Int)
-	newExitRoot.SetString("6442511778188868333499919207091562876207840300369859025739972956758642594045", 10)
+	newExitRoot.SetString("4694629460381124336935185586347620040847956843554725549791403956105308092690", 10)
 	args.NewLastIdx = int64(1000)
 	args.NewStRoot = newStateRoot
 	args.NewExitRoot = newExitRoot
@@ -760,11 +760,12 @@ func TestRollupWithdrawMerkleProof(t *testing.T) {
 	require.Nil(t, err)
 
 	var pkComp babyjub.PublicKeyComp
-	pkCompB, err := hex.DecodeString("9a0c13552c3a0b7b2b63ec4ab8a906b4af471ef3aa4463491ff08a0b489ac50f")
+	pkCompBE, err := hex.DecodeString("adc3b754f8da621967b073a787bef8eec7052f2ba712b23af57d98f65beea8b2")
 	require.Nil(t, err)
-	pkCompL := common.SwapEndianness(pkCompB)
-	err = pkComp.UnmarshalText([]byte(hex.EncodeToString(pkCompL)))
-	require.Nil(t, err)
+	pkCompLE := common.SwapEndianness(pkCompBE)
+	copy(pkComp[:], pkCompLE)
+	// err = pkComp.UnmarshalText([]byte(hex.EncodeToString(pkCompL)))
+	// require.Nil(t, err)
 
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
@@ -774,13 +775,13 @@ func TestRollupWithdrawMerkleProof(t *testing.T) {
 	numExitRoot := int64(2)
 	fromIdx := int64(256)
 	amount := big.NewInt(10)
-	siblingBytes0, _ := new(big.Int).SetString("19508838618377323910556678335932426220272947530531646682154552299216398748115", 10)
-	require.Nil(t, err)
-	siblingBytes1, _ := new(big.Int).SetString("15198806719713909654457742294233381653226080862567104272457668857208564789571", 10)
-	require.Nil(t, err)
+	// siblingBytes0, _ := new(big.Int).SetString("19508838618377323910556678335932426220272947530531646682154552299216398748115", 10)
+	// require.Nil(t, err)
+	// siblingBytes1, _ := new(big.Int).SetString("15198806719713909654457742294233381653226080862567104272457668857208564789571", 10)
+	// require.Nil(t, err)
 	var siblings []*big.Int
-	siblings = append(siblings, siblingBytes0)
-	siblings = append(siblings, siblingBytes1)
+	// siblings = append(siblings, siblingBytes0)
+	// siblings = append(siblings, siblingBytes1)
 	instantWithdraw := true
 
 	_, err = rollupClientAux.RollupWithdrawMerkleProof(pk, tokenID, numExitRoot, fromIdx, amount, siblings, instantWithdraw)
@@ -789,7 +790,7 @@ func TestRollupWithdrawMerkleProof(t *testing.T) {
 	currentBlockNum, _ := rollupClient.client.EthCurrentBlock()
 	rollupEvents, _, _ := rollupClient.RollupEventsByBlock(currentBlockNum)
 
-	assert.Equal(t, uint64(fromIdx), rollupEvents.WithdrawEvent[0].Idx)
-	assert.Equal(t, instantWithdraw, rollupEvents.WithdrawEvent[0].InstantWithdraw)
-	assert.Equal(t, uint64(numExitRoot), rollupEvents.WithdrawEvent[0].NumExitRoot)
+	assert.Equal(t, uint64(fromIdx), rollupEvents.Withdraw[0].Idx)
+	assert.Equal(t, instantWithdraw, rollupEvents.Withdraw[0].InstantWithdraw)
+	assert.Equal(t, uint64(numExitRoot), rollupEvents.Withdraw[0].NumExitRoot)
 }

@@ -14,20 +14,61 @@ type Block struct {
 	ParentHash  ethCommon.Hash `meddler:"-"`
 }
 
-// BlockData contains the information of a Block
-type BlockData struct {
-	Block Block
-	// Rollup
+// RollupData contains information returned by the Rollup smart contract
+type RollupData struct {
 	// L1UserTxs that were submitted in the block
 	L1UserTxs   []L1Tx
 	Batches     []BatchData
 	AddedTokens []Token
-	RollupVars  *RollupVars
-	// Auction
-	Bids                []Bid
-	Coordinators        []Coordinator
-	AuctionVars         *AuctionVars
-	WithdrawDelayerVars *WithdrawDelayerVars
+	Withdrawals []WithdrawInfo
+	Vars        *RollupVariables
+}
+
+// NewRollupData creates an empty RollupData with the slices initialized.
+func NewRollupData() RollupData {
+	return RollupData{
+		L1UserTxs:   make([]L1Tx, 0),
+		Batches:     make([]BatchData, 0),
+		AddedTokens: make([]Token, 0),
+		Withdrawals: make([]WithdrawInfo, 0),
+		Vars:        nil,
+	}
+}
+
+// AuctionData contains information returned by the Action smart contract
+type AuctionData struct {
+	Bids         []Bid
+	Coordinators []Coordinator
+	Vars         *AuctionVariables
+}
+
+// NewAuctionData creates an empty AuctionData with the slices initialized.
+func NewAuctionData() AuctionData {
+	return AuctionData{
+		Bids:         make([]Bid, 0),
+		Coordinators: make([]Coordinator, 0),
+		Vars:         nil,
+	}
+}
+
+// WDelayerData contains information returned by the WDelayer smart contract
+type WDelayerData struct {
+	Vars *WDelayerVariables
+}
+
+// NewWDelayerData creates an empty WDelayerData.
+func NewWDelayerData() WDelayerData {
+	return WDelayerData{
+		Vars: nil,
+	}
+}
+
+// BlockData contains the information of a Block
+type BlockData struct {
+	Block    Block
+	Rollup   RollupData
+	Auction  AuctionData
+	WDelayer WDelayerData
 	// TODO: enable when common.WithdrawalDelayerVars is Merged from Synchronizer PR
 	// WithdrawalDelayerVars *common.WithdrawalDelayerVars
 }

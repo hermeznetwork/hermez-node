@@ -13,29 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hermeznetwork/hermez-node/common"
 	WithdrawalDelayer "github.com/hermeznetwork/hermez-node/eth/contracts/withdrawdelayer"
+	"github.com/hermeznetwork/hermez-node/log"
 )
-
-// WDelayerConstants are the constants of the Withdrawal Delayer Smart Contract
-type WDelayerConstants struct {
-	// Max Withdrawal Delay
-	MaxWithdrawalDelay uint64 `json:"maxWithdrawalDelay"`
-	// Max Emergency mode time
-	MaxEmergencyModeTime uint64 `json:"maxEmergencyModeTime"`
-	// HermezRollup smartcontract address
-	HermezRollup ethCommon.Address `json:"hermezRollup"`
-}
-
-// WDelayerVariables are the variables of the Withdrawal Delayer Smart Contract
-type WDelayerVariables struct {
-	HermezRollupAddress        ethCommon.Address `json:"hermezRollupAddress" meddler:"rollup_address"`
-	HermezGovernanceDAOAddress ethCommon.Address `json:"hermezGovernanceDAOAddress" meddler:"govdao_address"`
-	WhiteHackGroupAddress      ethCommon.Address `json:"whiteHackGroupAddress" meddler:"whg_address"`
-	HermezKeeperAddress        ethCommon.Address `json:"hermezKeeperAddress" meddler:"keeper_address"`
-	WithdrawalDelay            uint64            `json:"withdrawalDelay" meddler:"withdrawal_delay"`
-	EmergencyModeStartingTime  uint64            `json:"emergencyModeStartingTime" meddler:"emergency_start_time"`
-	EmergencyMode              bool              `json:"emergencyMode" meddler:"emergency_mode"`
-}
 
 // DepositState is the state of Deposit
 type DepositState struct {
@@ -137,6 +118,9 @@ type WDelayerInterface interface {
 	WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int) (*types.Transaction, error)
 	WDelayerWithdrawal(owner, token ethCommon.Address) (*types.Transaction, error)
 	WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (*types.Transaction, error)
+
+	WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error)
+	WDelayerConstants() (*common.WDelayerConstants, error)
 }
 
 //
@@ -355,6 +339,28 @@ func (c *WDelayerClient) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Addre
 	return tx, nil
 }
 
+// WDelayerConstants returns the Constants of the WDelayer Smart Contract
+func (c *WDelayerClient) WDelayerConstants() (constants common.WDelayerConstants, err error) {
+	if err := c.client.Call(func(ec *ethclient.Client) error {
+		constants.MaxWithdrawalDelay, err = c.wdelayer.MAXWITHDRAWALDELAY(nil)
+		if err != nil {
+			return err
+		}
+		constants.MaxEmergencyModeTime, err = c.wdelayer.MAXEMERGENCYMODETIME(nil)
+		if err != nil {
+			return err
+		}
+		constants.HermezRollup, err = c.wdelayer.HermezRollupAddress(nil)
+		if err != nil {
+			return err
+		}
+		return err
+	}); err != nil {
+		return constants, err
+	}
+	return constants, nil
+}
+
 var (
 	logWDelayerDeposit                       = crypto.Keccak256Hash([]byte("Deposit(address,address,uint192,uint64)"))
 	logWDelayerWithdraw                      = crypto.Keccak256Hash([]byte("Withdraw(address,address,uint192)"))
@@ -392,6 +398,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 	}
 	for _, vLog := range logs {
 		if vLog.BlockHash != blockHash {
+			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
 			return nil, nil, ErrBlockHashMismatchEvent
 		}
 		switch vLog.Topics[0] {

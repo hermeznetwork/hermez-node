@@ -17,6 +17,15 @@ var wdelayerClientTest *WDelayerClient
 var initWithdrawalDelay = big.NewInt(60)
 var newWithdrawalDelay = big.NewInt(79)
 var maxEmergencyModeTime = time.Hour * 24 * 7 * 26
+var maxWithdrawalDelay = time.Hour * 24 * 7 * 2
+
+func TestWDelayerConstants(t *testing.T) {
+	wDelayerConstants, err := wdelayerClientTest.WDelayerConstants()
+	require.Nil(t, err)
+	assert.Equal(t, uint64(maxWithdrawalDelay.Seconds()), wDelayerConstants.MaxWithdrawalDelay)
+	assert.Equal(t, uint64(maxEmergencyModeTime.Seconds()), wDelayerConstants.MaxEmergencyModeTime)
+	assert.Equal(t, hermezRollupTestAddressConst, wDelayerConstants.HermezRollup)
+}
 
 func TestWDelayerGetHermezGovernanceDAOAddress(t *testing.T) {
 	governanceAddress, err := wdelayerClientTest.WDelayerGetHermezGovernanceDAOAddress()
@@ -139,7 +148,8 @@ func TestWDelayerWithdrawal(t *testing.T) {
 	amount.SetString("1100000000000000000", 10)
 	_, err := wdelayerClientTest.WDelayerWithdrawal(auxAddressConst, tokenHEZAddressConst)
 	require.Contains(t, err.Error(), "WITHDRAWAL_NOT_ALLOWED")
-	addBlocks(newWithdrawalDelay.Int64(), ethClientDialURL)
+	addTime(float64(newWithdrawalDelay.Int64()), ethClientDialURL)
+	addBlock(ethClientDialURL)
 	_, err = wdelayerClientTest.WDelayerWithdrawal(auxAddressConst, tokenHEZAddressConst)
 	require.Nil(t, err)
 	currentBlockNum, _ := wdelayerClientTest.client.EthCurrentBlock()

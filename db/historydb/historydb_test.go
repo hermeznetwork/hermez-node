@@ -408,7 +408,7 @@ func TestGetL1UserTxs(t *testing.T) {
 	require.Nil(t, err)
 	// Sanity check
 	require.Equal(t, 1, len(blocks))
-	require.Equal(t, 5, len(blocks[0].L1UserTxs))
+	require.Equal(t, 5, len(blocks[0].Rollup.L1UserTxs))
 	// fmt.Printf("DBG Blocks: %+v\n", blocks)
 
 	toForgeL1TxsNum := int64(1)
@@ -421,7 +421,7 @@ func TestGetL1UserTxs(t *testing.T) {
 	l1UserTxs, err := historyDB.GetL1UserTxs(toForgeL1TxsNum)
 	require.Nil(t, err)
 	assert.Equal(t, 5, len(l1UserTxs))
-	assert.Equal(t, blocks[0].L1UserTxs, l1UserTxs)
+	assert.Equal(t, blocks[0].Rollup.L1UserTxs, l1UserTxs)
 
 	// No l1UserTxs for this toForgeL1TxsNum
 	l1UserTxs, err = historyDB.GetL1UserTxs(2)
