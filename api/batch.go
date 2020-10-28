@@ -85,7 +85,7 @@ func getBatch(c *gin.Context) {
 
 type fullBatch struct {
 	Batch *historydb.BatchAPI
-	Txs   []historyTxAPI
+	Txs   []historydb.TxAPI
 }
 
 func getFullBatch(c *gin.Context) {
@@ -107,7 +107,7 @@ func getFullBatch(c *gin.Context) {
 	}
 	// Fetch txs from historyDB
 	// TODO
-	txs := []historyTxAPI{}
+	txs := []historydb.TxAPI{}
 	// JSON response
 	c.JSON(http.StatusOK, fullBatch{
 		Batch: batch,

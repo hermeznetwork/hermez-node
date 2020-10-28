@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func getHistoryTxs(c *gin.Context) {
@@ -42,9 +44,29 @@ func getHistoryTxs(c *gin.Context) {
 	}
 
 	// Build succesfull response
-	apiTxs := historyTxsToAPI(txs)
-	c.JSON(http.StatusOK, &historyTxsAPI{
-		Txs:        apiTxs,
+	type txsResponse struct {
+		Txs        []historydb.TxAPI `json:"transactions"`
+		Pagination *db.Pagination    `json:"pagination"`
+	}
+	c.JSON(http.StatusOK, &txsResponse{
+		Txs:        txs,
 		Pagination: pagination,
 	})
+}
+
+func getHistoryTx(c *gin.Context) {
+	// Get TxID
+	txID, err := parseParamTxID(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch tx from historyDB
+	tx, err := h.GetHistoryTx(txID)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	// Build succesfull response
+	c.JSON(http.StatusOK, tx)
 }

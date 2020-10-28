@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -71,6 +72,19 @@ func (b BigIntStr) Value() (driver.Value, error) {
 	return base64.StdEncoding.EncodeToString(bigInt.Bytes()), nil
 }
 
+// StrBigInt is used to unmarshal BigIntStr directly into an alias of big.Int
+type StrBigInt big.Int
+
+// UnmarshalText unmarshals a StrBigInt
+func (s *StrBigInt) UnmarshalText(text []byte) error {
+	bi, ok := (*big.Int)(s).SetString(string(text), 10)
+	if !ok {
+		return fmt.Errorf("could not unmarshal %s into a StrBigInt", text)
+	}
+	*s = StrBigInt(*bi)
+	return nil
+}
+
 // CollectedFees is used to retrieve common.batch.CollectedFee from the DB
 type CollectedFees map[common.TokenID]BigIntStr
 
@@ -127,6 +141,20 @@ func (a HezEthAddr) Value() (driver.Value, error) {
 	return ethAddr.Value()
 }
 
+// StrHezEthAddr is used to unmarshal HezEthAddr directly into an alias of ethCommon.Address
+type StrHezEthAddr ethCommon.Address
+
+// UnmarshalText unmarshals a StrHezEthAddr
+func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
+	withoutHez := strings.TrimPrefix(string(text), "hez:")
+	var addr ethCommon.Address
+	if err := addr.UnmarshalText([]byte(withoutHez)); err != nil {
+		return err
+	}
+	*s = StrHezEthAddr(addr)
+	return nil
+}
+
 // HezBJJ is used to scan/value *babyjub.PublicKey directly into strings that follow the BJJ public key hez fotmat (^hez:[A-Za-z0-9_-]{44}$) from/to sql DBs.
 // It assumes that *babyjub.PublicKey are inserted/fetched to/from the DB using the default Scan/Value interface
 type HezBJJ string
@@ -143,12 +171,11 @@ func NewHezBJJ(bjj *babyjub.PublicKey) HezBJJ {
 	return HezBJJ("hez:" + base64.RawURLEncoding.EncodeToString(bjjSum))
 }
 
-// ToBJJ returns a *babyjub.PublicKey created from HezBJJ
-func (b HezBJJ) ToBJJ() (*babyjub.PublicKey, error) {
+func hezStrToBJJ(s string) (*babyjub.PublicKey, error) {
 	const decodedLen = 33
 	const encodedLen = 44
 	formatErr := errors.New("invalid BJJ format. Must follow this regex: ^hez:[A-Za-z0-9_-]{44}$")
-	encoded := strings.TrimPrefix(string(b), "hez:")
+	encoded := strings.TrimPrefix(s, "hez:")
 	if len(encoded) != encodedLen {
 		return nil, formatErr
 	}
@@ -172,6 +199,11 @@ func (b HezBJJ) ToBJJ() (*babyjub.PublicKey, error) {
 	return bjjComp.Decompress()
 }
 
+// ToBJJ returns a *babyjub.PublicKey created from HezBJJ
+func (b HezBJJ) ToBJJ() (*babyjub.PublicKey, error) {
+	return hezStrToBJJ(string(b))
+}
+
 // Scan implements Scanner for database/sql
 func (b *HezBJJ) Scan(src interface{}) error {
 	bjj := &babyjub.PublicKey{}
@@ -192,4 +224,40 @@ func (b HezBJJ) Value() (driver.Value, error) {
 		return nil, err
 	}
 	return bjj.Value()
+}
+
+// StrHezBJJ is used to unmarshal HezBJJ directly into an alias of babyjub.PublicKey
+type StrHezBJJ babyjub.PublicKey
+
+// UnmarshalText unmarshals a StrHezBJJ
+func (s *StrHezBJJ) UnmarshalText(text []byte) error {
+	bjj, err := hezStrToBJJ(string(text))
+	if err != nil {
+		return err
+	}
+	*s = StrHezBJJ(*bjj)
+	return nil
+}
+
+// HezIdx is used to value common.Idx directly into strings that follow the Idx key hez fotmat (hez:tokenSymbol:idx) to sql DBs.
+// Note that this can only be used to insert to DB since there is no way to automaticaly read from the DB since it needs the tokenSymbol
+type HezIdx string
+
+// StrHezIdx is used to unmarshal HezIdx directly into an alias of common.Idx
+type StrHezIdx common.Idx
+
+// UnmarshalText unmarshals a StrHezIdx
+func (s *StrHezIdx) UnmarshalText(text []byte) error {
+	withoutHez := strings.TrimPrefix(string(text), "hez:")
+	splitted := strings.Split(withoutHez, ":")
+	const expectedLen = 2
+	if len(splitted) != expectedLen {
+		return fmt.Errorf("can not unmarshal %s into StrHezIdx", text)
+	}
+	idxInt, err := strconv.Atoi(splitted[1])
+	if err != nil {
+		return err
+	}
+	*s = StrHezIdx(common.Idx(idxInt))
+	return nil
 }

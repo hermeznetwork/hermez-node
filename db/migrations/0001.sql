@@ -50,6 +50,22 @@ CREATE TABLE token (
     usd_update TIMESTAMP WITHOUT TIME ZONE
 );
 
+
+-- +migrate StatementBegin
+CREATE FUNCTION hez_idx(BIGINT, VARCHAR) 
+    RETURNS VARCHAR 
+AS 
+$BODY$
+BEGIN
+    IF $1 = 1 THEN
+        RETURN 'hez:EXIT:1';
+    END IF;
+    RETURN 'hez:' || $2 || ':' || $1;
+END;
+$BODY$
+LANGUAGE plpgsql;
+-- +migrate StatementEnd
+
 CREATE TABLE account (
     idx BIGINT PRIMARY KEY,
     token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
@@ -96,7 +112,11 @@ CREATE TABLE tx (
     type VARCHAR(40) NOT NULL,
     position INT NOT NULL,
     from_idx BIGINT,
+    from_eth_addr BYTEA,
+    from_bjj BYTEA,
     to_idx BIGINT NOT NULL,
+    to_eth_addr BYTEA,
+    to_bjj BYTEA,
     amount BYTEA NOT NULL,
     amount_f NUMERIC NOT NULL,
     token_id INT NOT NULL REFERENCES token (token_id),
@@ -106,8 +126,6 @@ CREATE TABLE tx (
     -- L1
     to_forge_l1_txs_num BIGINT,
     user_origin BOOLEAN,
-    from_eth_addr BYTEA,
-    from_bjj BYTEA,
     load_amount BYTEA,
     load_amount_f NUMERIC,
     load_amount_usd NUMERIC,
@@ -398,28 +416,31 @@ DECLARE
 	_usd_update TIMESTAMP;
     _tx_timestamp TIMESTAMP;
 BEGIN
-    -- Validate L1/L2 constrains
-    IF NEW.is_l1 AND (( -- L1 mandatory fields
-        NEW.user_origin IS NULL OR
+    IF NEW.is_l1  THEN
+        -- Validate
+        IF NEW.user_origin IS NULL OR
         NEW.from_eth_addr IS NULL OR
         NEW.from_bjj IS NULL OR
         NEW.load_amount IS NULL OR
-        NEW.load_amount_f IS NULL
-    ) OR (NOT NEW.user_origin AND NEW.batch_num IS NULL)) THEN -- If is Coordinator L1, must include batch_num
-        RAISE EXCEPTION 'Invalid L1 tx.';
-    ELSIF NOT NEW.is_l1 THEN
-        IF NEW.fee IS NULL THEN
-            NEW.fee = (SELECT 0);
+        NEW.load_amount_f IS NULL OR
+        (NOT NEW.user_origin AND NEW.batch_num IS NULL)  THEN -- If is Coordinator L1, must include batch_num
+            RAISE EXCEPTION 'Invalid L1 tx.';
         END IF;
+    ELSE
+        -- Validate
         IF NEW.batch_num IS NULL OR NEW.nonce IS NULL THEN
             RAISE EXCEPTION 'Invalid L2 tx.';
         END IF;
-    END IF;
-    -- If is L2, add token_id
-    IF NOT NEW.is_l1 THEN
+        -- Set fee if it's null
+        IF NEW.fee IS NULL THEN
+            NEW.fee = (SELECT 0);
+        END IF;
+        -- Set token_id
         NEW."token_id" = (SELECT token_id FROM account WHERE idx = NEW."from_idx");
+        -- Set from_{eth_addr,bjj}
+        SELECT INTO NEW."from_eth_addr", NEW."from_bjj" eth_addr, bjj FROM account WHERE idx = NEW.from_idx;
     END IF;
-    -- Set value_usd
+    -- Set USD related
     SELECT INTO _value, _usd_update, _tx_timestamp 
         usd / POWER(10, decimals), usd_update, timestamp FROM token INNER JOIN block on token.eth_block_num = block.eth_block_num WHERE token_id = NEW.token_id;
     IF _tx_timestamp - interval '24 hours' < _usd_update AND _tx_timestamp + interval '24 hours' > _usd_update THEN
@@ -429,6 +450,10 @@ BEGIN
         ELSE 
             NEW."load_amount_usd" = (SELECT _value * NEW.load_amount_f);
         END IF;
+    END IF;
+    -- Set to_{eth_addr,bjj}
+    IF NEW.to_idx > 255 THEN
+        SELECT INTO NEW."to_eth_addr", NEW."to_bjj" eth_addr, bjj FROM account WHERE idx = NEW.to_idx;
     END IF;
     RETURN NEW;
 END;
@@ -487,6 +512,8 @@ CREATE TABLE consensus_vars (
 CREATE TABLE tx_pool (
     tx_id BYTEA PRIMARY KEY,
     from_idx BIGINT NOT NULL,
+    from_eth_addr BYTEA,
+    from_bjj BYTEA,
     to_idx BIGINT,
     to_eth_addr BYTEA,
     to_bjj BYTEA,
@@ -509,6 +536,25 @@ CREATE TABLE tx_pool (
     rq_nonce BIGINT,
     tx_type VARCHAR(40) NOT NULL
 );
+
+-- +migrate StatementBegin
+CREATE FUNCTION set_pool_tx()
+    RETURNS TRIGGER 
+AS 
+$BODY$
+BEGIN
+    SELECT INTO NEW."from_eth_addr", NEW."from_bjj" eth_addr, bjj FROM account WHERE idx = NEW."from_idx";
+     -- Set to_{eth_addr,bjj}
+    IF NEW.to_idx > 255 THEN
+        SELECT INTO NEW."to_eth_addr", NEW."to_bjj" eth_addr, bjj FROM account WHERE idx = NEW."to_idx";
+    END IF;
+    RETURN NEW;
+END;
+$BODY$
+LANGUAGE plpgsql;
+-- +migrate StatementEnd
+CREATE TRIGGER trigger_set_pool_tx BEFORE INSERT ON tx_pool
+FOR EACH ROW EXECUTE PROCEDURE set_pool_tx();
 
 CREATE TABLE account_creation_auth (
     eth_addr BYTEA PRIMARY KEY,

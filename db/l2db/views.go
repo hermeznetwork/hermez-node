@@ -1,10 +1,12 @@
 package l2db
 
 import (
+	"encoding/json"
 	"math/big"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -34,24 +36,26 @@ type PoolL2TxWrite struct {
 	Type        common.TxType         `meddler:"tx_type"`
 }
 
-// PoolL2TxRead represents a L2 Tx pool with extra metadata used by the API
-type PoolL2TxRead struct {
+// PoolTxAPI represents a L2 Tx pool with extra metadata used by the API
+type PoolTxAPI struct {
 	TxID        common.TxID           `meddler:"tx_id"`
-	FromIdx     common.Idx            `meddler:"from_idx"`
-	ToIdx       *common.Idx           `meddler:"to_idx"`
-	ToEthAddr   *ethCommon.Address    `meddler:"to_eth_addr"`
-	ToBJJ       *babyjub.PublicKey    `meddler:"to_bjj"`
-	Amount      *big.Int              `meddler:"amount,bigint"`
+	FromIdx     apitypes.HezIdx       `meddler:"from_idx"`
+	FromEthAddr *apitypes.HezEthAddr  `meddler:"from_eth_addr"`
+	FromBJJ     *apitypes.HezBJJ      `meddler:"from_bjj"`
+	ToIdx       *apitypes.HezIdx      `meddler:"to_idx"`
+	ToEthAddr   *apitypes.HezEthAddr  `meddler:"to_eth_addr"`
+	ToBJJ       *apitypes.HezBJJ      `meddler:"to_bjj"`
+	Amount      apitypes.BigIntStr    `meddler:"amount"`
 	Fee         common.FeeSelector    `meddler:"fee"`
 	Nonce       common.Nonce          `meddler:"nonce"`
 	State       common.PoolL2TxState  `meddler:"state"`
 	Signature   babyjub.SignatureComp `meddler:"signature"`
-	RqFromIdx   *common.Idx           `meddler:"rq_from_idx"`
-	RqToIdx     *common.Idx           `meddler:"rq_to_idx"`
-	RqToEthAddr *ethCommon.Address    `meddler:"rq_to_eth_addr"`
-	RqToBJJ     *babyjub.PublicKey    `meddler:"rq_to_bjj"`
+	RqFromIdx   *apitypes.HezIdx      `meddler:"rq_from_idx"`
+	RqToIdx     *apitypes.HezIdx      `meddler:"rq_to_idx"`
+	RqToEthAddr *apitypes.HezEthAddr  `meddler:"rq_to_eth_addr"`
+	RqToBJJ     *apitypes.HezBJJ      `meddler:"rq_to_bjj"`
 	RqTokenID   *common.TokenID       `meddler:"rq_token_id"`
-	RqAmount    *big.Int              `meddler:"rq_amount,bigintnull"`
+	RqAmount    *apitypes.BigIntStr   `meddler:"rq_amount"`
 	RqFee       *common.FeeSelector   `meddler:"rq_fee"`
 	RqNonce     *common.Nonce         `meddler:"rq_nonce"`
 	Type        common.TxType         `meddler:"tx_type"`
@@ -60,6 +64,7 @@ type PoolL2TxRead struct {
 	Timestamp        time.Time         `meddler:"timestamp,utctime"`
 	TotalItems       int               `meddler:"total_items"`
 	TokenID          common.TokenID    `meddler:"token_id"`
+	TokenItemID      int               `meddler:"token_item_id"`
 	TokenEthBlockNum int64             `meddler:"eth_block_num"`
 	TokenEthAddr     ethCommon.Address `meddler:"eth_addr"`
 	TokenName        string            `meddler:"name"`
@@ -67,4 +72,45 @@ type PoolL2TxRead struct {
 	TokenDecimals    uint64            `meddler:"decimals"`
 	TokenUSD         *float64          `meddler:"usd"`
 	TokenUSDUpdate   *time.Time        `meddler:"usd_update"`
+}
+
+// MarshalJSON is used to neast some of the fields of PoolTxAPI
+// without the need of auxiliar structs
+func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"id":                          tx.TxID,
+		"type":                        tx.Type,
+		"fromAccountIndex":            tx.FromIdx,
+		"fromHezEthereumAddress":      tx.FromEthAddr,
+		"fromBJJ":                     tx.FromBJJ,
+		"toAccountIndex":              tx.ToIdx,
+		"toHezEthereumAddress":        tx.ToEthAddr,
+		"toBjj":                       tx.ToBJJ,
+		"amount":                      tx.Amount,
+		"fee":                         tx.Fee,
+		"nonce":                       tx.Nonce,
+		"state":                       tx.State,
+		"signature":                   tx.Signature,
+		"timestamp":                   tx.Timestamp,
+		"batchNum":                    tx.BatchNum,
+		"requestFromAccountIndex":     tx.RqFromIdx,
+		"requestToAccountIndex":       tx.RqToIdx,
+		"requestToHezEthereumAddress": tx.RqToEthAddr,
+		"requestToBJJ":                tx.RqToBJJ,
+		"requestTokenId":              tx.RqTokenID,
+		"requestAmount":               tx.RqAmount,
+		"requestFee":                  tx.RqFee,
+		"requestNonce":                tx.RqNonce,
+		"token": map[string]interface{}{
+			"id":               tx.TokenID,
+			"itemId":           tx.TokenItemID,
+			"ethereumBlockNum": tx.TokenEthBlockNum,
+			"ethereumAddress":  tx.TokenEthAddr,
+			"name":             tx.TokenName,
+			"symbol":           tx.TokenSymbol,
+			"decimals":         tx.TokenDecimals,
+			"USD":              tx.TokenUSD,
+			"fiatUpdate":       tx.TokenUSDUpdate,
+		},
+	})
 }

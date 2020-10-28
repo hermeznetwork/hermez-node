@@ -1314,6 +1314,18 @@ components:
           $ref: '#/components/schemas/TransactionTypeL2'
         fromAccountIndex:
           $ref: '#/components/schemas/AccountIndex'
+        fromHezEthereumAddress:
+          type: string
+          description: "Address of an Etherum account linked to the Hermez network."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+          nullable: true
+        fromBJJ:
+          type: string
+          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          example: "hez:9CK9fjQdMUTGm8KDvGLy3MB-vnP0NCcGX7Uh7OO6KRJm"
+          nullable: true
         toAccountIndex:
           type: string
           description: >-
@@ -1416,6 +1428,8 @@ components:
         - id
         - type
         - fromAccountIndex
+        - fromHezEthereumAddress
+        - fromBJJ
         - toAccountIndex
         - toHezEthereumAddress
         - toBjj
@@ -1588,10 +1602,34 @@ components:
             The identifier is built using: `hez:` + `token symbol:` + `index`
           example: "hez:DAI:4444"
           nullable: true
+        fromHezEthereumAddress:
+          type: string
+          description: "Address of an Etherum account linked to the Hermez network."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+          nullable: true
+        fromBJJ:
+          type: string
+          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          example: "hez:9CK9fjQdMUTGm8KDvGLy3MB-vnP0NCcGX7Uh7OO6KRJm"
+          nullable: true
         toAccountIndex:
           allOf:
             - $ref: '#/components/schemas/AccountIndex'
             - example: "hez:DAI:672"
+        toHezEthereumAddress:
+          type: string
+          description: "Address of an Etherum account linked to the Hermez network."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+          nullable: true
+        toBJJ:
+          type: string
+          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          example: "hez:f1J78_6uqTyjX6jrVCqN4RFeRBnWQAGl477ZFtOnH6Sm"
+          nullable: true
         amount:
           allOf:
             - $ref: '#/components/schemas/BigInt'
@@ -1625,10 +1663,6 @@ components:
             userOrigin:
               type: boolean
               description: True if the transaction was sent by a user. False if it was sent by a coordinator.
-            fromHezEthereumAddress:
-              $ref: '#/components/schemas/HezEthereumAddress'
-            fromBJJ:
-              $ref: '#/components/schemas/BJJ'
             loadAmount:
               allOf:
                 - $ref: '#/components/schemas/BigInt'
@@ -1647,8 +1681,6 @@ components:
           required:
             - toForgeL1TransactionsNum
             - userOrigin
-            - fromHezEthereumAddress
-            - fromBJJ
             - loadAmount
             - historicLoadAmountUSD
             - ethereumBlockNum
@@ -1680,7 +1712,11 @@ components:
         - type
         - position
         - fromAccountIndex
+        - fromHezEthereumAddress
+        - fromBJJ
         - toAccountIndex
+        - toHezEthereumAddress
+        - toBJJ
         - amount
         - batchNum
         - historicUSD

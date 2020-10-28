@@ -114,30 +114,41 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	return meddler.Insert(l2db.db, "tx_pool", insertTx)
 }
 
-// selectPoolTxRead select part of queries to get PoolL2TxRead
-const selectPoolTxRead = `SELECT  tx_pool.tx_id, tx_pool.from_idx, tx_pool.to_idx, tx_pool.to_eth_addr, 
+// selectPoolTxAPI select part of queries to get PoolL2TxRead
+const selectPoolTxAPI = `SELECT  tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.from_eth_addr, 
+tx_pool.from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.to_eth_addr, 
 tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, tx_pool.rq_from_idx, 
-tx_pool.rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
+tx_pool.state, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
+hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
-token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
+token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
-const selectPoolTxCommon = `SELECT  tx_pool.tx_id, tx_pool.from_idx, tx_pool.to_idx, tx_pool.to_eth_addr, 
+const selectPoolTxCommon = `SELECT  tx_pool.tx_id, from_idx, to_idx, tx_pool.to_eth_addr, 
 tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.signature, tx_pool.timestamp, tx_pool.rq_from_idx, 
-tx_pool.rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
+tx_pool.state, tx_pool.signature, tx_pool.timestamp, rq_from_idx, 
+rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f AS fee_usd, token.usd_update  
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
-// GetTx return the specified Tx
-func (l2db *L2DB) GetTx(txID common.TxID) (*PoolL2TxRead, error) {
-	tx := new(PoolL2TxRead)
+// GetTx  return the specified Tx in common.PoolL2Tx format
+func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
+	tx := new(common.PoolL2Tx)
 	return tx, meddler.QueryRow(
 		l2db.db, tx,
-		selectPoolTxRead+"WHERE tx_id = $1;",
+		selectPoolTxCommon+"WHERE tx_id = $1;",
+		txID,
+	)
+}
+
+// GetTxAPI return the specified Tx in PoolTxAPI format
+func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
+	tx := new(PoolTxAPI)
+	return tx, meddler.QueryRow(
+		l2db.db, tx,
+		selectPoolTxAPI+"WHERE tx_id = $1;",
 		txID,
 	)
 }
