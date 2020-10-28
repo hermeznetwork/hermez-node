@@ -18,15 +18,17 @@ URL = "http://localhost:8545"
 
 [Synchronizer]
 SyncLoopInterval = "1s"
+
     [Synchronizer.StartBlockNum]
     Rollup = 1
     Auction = 1
     WDelayer = 1
 
 [SmartContracts]
-Rollup   = "0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe"
-Auction  = "0x038B86d9d8FAFdd0a02ebd1A476432877b0107C8"
-TokenHEZ = "0xf4e77E5Da47AC3125140c470c71cBca77B5c638c"
+Rollup   = "0x6F4e99522F4eB37e0B73D0C0373147893EF12fD5"
+Auction  = "0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F"
+WDelayer = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
+TokenHEZ = "0x2b7dEe2CF60484325716A1c6A193519c8c3b19F3"
 TokenHEZName = "Hermez Network Token"
 
 [EthClient]
@@ -35,3 +37,64 @@ DeployGasLimit      = 1000000
 GasPriceDiv         = 100
 ReceiptTimeout      = "60s"
 IntervalReceiptLoop = "200ms"
+
+    [Synchronizer.InitialVariables.Auction]
+    DonationAddress = "0x0000000000000000000000000000000000000001"
+    BootCoordinator = "0x0000000000000000000000000000000000000001"
+    DefaultSlotSetBid = [
+        "10000000000000000000",
+        "10000000000000000000",
+        "10000000000000000000",
+        "10000000000000000000",
+        "10000000000000000000",
+        "10000000000000000000",
+    ]
+    ClosedAuctionSlots = 2
+    OpenAuctionSlots = 4320
+    AllocationRatio = [4000, 4000, 2000]
+    Outbidding = 1000
+    SlotDeadline = 20
+
+    [Synchronizer.InitialVariables.WDelayer]
+	# HermezRollupAddress        =
+	HermezGovernanceDAOAddress = "0x0000000000000000000000000000000000000001"
+	WhiteHackGroupAddress      = "0x0000000000000000000000000000000000000001"
+	HermezKeeperAddress        = "0x0000000000000000000000000000000000000001"
+	WithdrawalDelay            = 60
+	EmergencyModeStartingTime  = 0
+	EmergencyMode              = false
+
+    [Synchronizer.InitialVariables.Rollup]
+    FeeAddToken = "10"
+    ForgeL1L2BatchTimeout = 10
+    WithdrawalDelay = 1209600 # 60 * 60 * 24 * 7 * 2
+        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        # CeilUSD             = 0
+        # BlockStamp          = 0
+        # Withdrawals         = 0
+        # BlockWithdrawalRate = 0
+        # MaxWithdrawals      = 0
+        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        # CeilUSD             = 0
+        # BlockStamp          = 0
+        # Withdrawals         = 0
+        # BlockWithdrawalRate = 0
+        # MaxWithdrawals      = 0
+        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        # CeilUSD             = 0
+        # BlockStamp          = 0
+        # Withdrawals         = 0
+        # BlockWithdrawalRate = 0
+        # MaxWithdrawals      = 0
+        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        # CeilUSD             = 0
+        # BlockStamp          = 0
+        # Withdrawals         = 0
+        # BlockWithdrawalRate = 0
+        # MaxWithdrawals      = 0
+        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        # CeilUSD             = 0
+        # BlockStamp          = 0
+        # Withdrawals         = 0
+        # BlockWithdrawalRate = 0
+        # MaxWithdrawals      = 0

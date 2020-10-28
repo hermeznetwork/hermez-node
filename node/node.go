@@ -102,17 +102,17 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 				Name:    cfg.SmartContracts.TokenHEZName,
 			},
 		},
+		WDelayer: eth.WDelayerConfig{
+			Address: cfg.SmartContracts.WDelayer,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB, synchronizer.Config{
-		StartBlockNum: synchronizer.ConfigStartBlockNum{
-			Rollup:   cfg.Synchronizer.StartBlockNum.Rollup,
-			Auction:  cfg.Synchronizer.StartBlockNum.Auction,
-			WDelayer: cfg.Synchronizer.StartBlockNum.WDelayer,
-		},
+		StartBlockNum:    cfg.Synchronizer.StartBlockNum,
+		InitialVariables: cfg.Synchronizer.InitialVariables,
 	})
 	if err != nil {
 		return nil, err
@@ -176,9 +176,9 @@ func (n *Node) StartCoordinator() {
 	n.stopGetProofCallForge = make(chan bool)
 	n.stopForgeCallConfirm = make(chan bool)
 
-	n.stoppedForge = make(chan bool)
-	n.stoppedGetProofCallForge = make(chan bool)
-	n.stoppedForgeCallConfirm = make(chan bool)
+	n.stoppedForge = make(chan bool, 1)
+	n.stoppedGetProofCallForge = make(chan bool, 1)
+	n.stoppedForgeCallConfirm = make(chan bool, 1)
 
 	queueSize := 1
 	batchCh0 := make(chan *coordinator.BatchInfo, queueSize)
@@ -249,15 +249,18 @@ func (n *Node) StopCoordinator() {
 // StartSynchronizer starts the synchronizer
 func (n *Node) StartSynchronizer() {
 	log.Info("Starting Synchronizer...")
-	n.stoppedSync = make(chan bool)
+	// stopped channel is size 1 so that the defer doesn't block
+	n.stoppedSync = make(chan bool, 1)
 	go func() {
-		defer func() { n.stoppedSync <- true }()
+		defer func() {
+			n.stoppedSync <- true
+		}()
 		var lastBlock *common.Block
 		d := time.Duration(0)
 		for {
 			select {
 			case <-n.ctx.Done():
-				log.Info("Coordinator stopped")
+				log.Info("Synchronizer stopped")
 				return
 			case <-time.After(d):
 				if blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock); err != nil {

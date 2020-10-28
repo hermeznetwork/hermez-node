@@ -282,5 +282,7 @@ func L1CoordinatorTxFromBytes(b []byte) (*L1Tx, error) {
 		return nil, err
 	}
 	tx.FromEthAddr = crypto.PubkeyToAddress(*pubKey)
+	tx.Amount = big.NewInt(0)
+	tx.LoadAmount = big.NewInt(0)
 	return tx, nil
 }

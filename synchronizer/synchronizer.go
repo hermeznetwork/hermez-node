@@ -41,14 +41,22 @@ var (
 // ConfigStartBlockNum sets the first block used to start tracking the smart
 // contracts
 type ConfigStartBlockNum struct {
-	Rollup   int64
-	Auction  int64
-	WDelayer int64
+	Rollup   int64 `validate:"required"`
+	Auction  int64 `validate:"required"`
+	WDelayer int64 `validate:"required"`
+}
+
+// SCVariables joins all the smart contract variables in a single struct
+type SCVariables struct {
+	Rollup   common.RollupVariables   `validate:"required"`
+	Auction  common.AuctionVariables  `validate:"required"`
+	WDelayer common.WDelayerVariables `validate:"required"`
 }
 
 // Config is the Synchronizer configuration
 type Config struct {
-	StartBlockNum ConfigStartBlockNum
+	StartBlockNum    ConfigStartBlockNum
+	InitialVariables SCVariables
 }
 
 // Synchronizer implements the Synchronizer type
@@ -61,6 +69,7 @@ type Synchronizer struct {
 	stateDB           *statedb.StateDB
 	cfg               Config
 	startBlockNum     int64
+	vars              SCVariables
 	// firstSavedBlock  *common.Block
 	// mux sync.Mutex
 }
@@ -78,12 +87,11 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 		log.Errorw("NewSynchronizer ethClient.RollupConstants()", "err", err)
 		return nil, err
 	}
-	// TODO: Uncomment once ethClient.WDelayerConstants() is implemented
-	// wDelayerConstants, err := ethClient.WDelayerConstants()
-	// if err != nil {
-	// 	log.Errorw("NewSynchronizer ethClient.WDelayerConstants()", "err", err)
-	// 	return nil, err
-	// }
+	wDelayerConstants, err := ethClient.WDelayerConstants()
+	if err != nil {
+		log.Errorw("NewSynchronizer ethClient.WDelayerConstants()", "err", err)
+		return nil, err
+	}
 
 	// Set startBlockNum to the minimum between Auction, Rollup and
 	// WDelayer StartBlockNum
@@ -94,19 +102,17 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 	if startBlockNum < cfg.StartBlockNum.WDelayer {
 		startBlockNum = cfg.StartBlockNum.WDelayer
 	}
-	return &Synchronizer{
-		ethClient:        ethClient,
-		auctionConstants: *auctionConstants,
-		// auctionConstants: common.AuctionConstants{},
-		rollupConstants: *rollupConstants,
-		// rollupConstants: common.RollupConstants{},
-		// wDelayerConstants: *wDelayerConstants,
-		wDelayerConstants: common.WDelayerConstants{},
+	s := &Synchronizer{
+		ethClient:         ethClient,
+		auctionConstants:  *auctionConstants,
+		rollupConstants:   *rollupConstants,
+		wDelayerConstants: *wDelayerConstants,
 		historyDB:         historyDB,
 		stateDB:           stateDB,
 		cfg:               cfg,
 		startBlockNum:     startBlockNum,
-	}, nil
+	}
+	return s, s.init()
 }
 
 // AuctionConstants returns the AuctionConstants read from the smart contract
@@ -122,6 +128,23 @@ func (s *Synchronizer) RollupConstants() *common.RollupConstants {
 // WDelayerConstants returns the WDelayerConstants read from the smart contract
 func (s *Synchronizer) WDelayerConstants() *common.WDelayerConstants {
 	return &s.wDelayerConstants
+}
+
+func (s *Synchronizer) init() error {
+	rollup, auction, wDelayer, err := s.historyDB.GetSCVars()
+	if err == sql.ErrNoRows {
+		rollup = &s.cfg.InitialVariables.Rollup
+		auction = &s.cfg.InitialVariables.Auction
+		wDelayer = &s.cfg.InitialVariables.WDelayer
+		log.Debug("Setting initial SCVars in HistoryDB")
+		if err = s.historyDB.SetInitialSCVars(rollup, auction, wDelayer); err != nil {
+			return err
+		}
+	}
+	s.vars.Rollup = *rollup
+	s.vars.Auction = *auction
+	s.vars.WDelayer = *wDelayer
+	return nil
 }
 
 // Sync2 attems to synchronize an ethereum block starting from lastSavedBlock.
@@ -325,7 +348,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		return &rollupData, nil
 	}
 	if *blockHash != ethBlock.Hash {
-		log.Errorw("Block hash mismatch", "expectd", ethBlock.Hash.String(),
+		log.Errorw("Block hash mismatch in Rollup events", "expected", ethBlock.Hash.String(),
 			"got", blockHash.String())
 		return nil, eth.ErrBlockHashMismatchEvent
 	}
@@ -498,16 +521,15 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		rollupData.AddedTokens = append(rollupData.AddedTokens, token)
 	}
 
-	var vars common.RollupVariables
 	varsUpdate := false
 
 	for _, evtUpdateForgeL1L2BatchTimeout := range rollupEvents.UpdateForgeL1L2BatchTimeout {
-		vars.ForgeL1L2BatchTimeout = evtUpdateForgeL1L2BatchTimeout.NewForgeL1L2BatchTimeout
+		s.vars.Rollup.ForgeL1L2BatchTimeout = evtUpdateForgeL1L2BatchTimeout.NewForgeL1L2BatchTimeout
 		varsUpdate = true
 	}
 
 	for _, evtUpdateFeeAddToken := range rollupEvents.UpdateFeeAddToken {
-		vars.FeeAddToken = evtUpdateFeeAddToken.NewFeeAddToken
+		s.vars.Rollup.FeeAddToken = evtUpdateFeeAddToken.NewFeeAddToken
 		varsUpdate = true
 	}
 
@@ -524,7 +546,8 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 	}
 
 	if varsUpdate {
-		rollupData.Vars = &vars
+		s.vars.Rollup.EthBlockNum = blockNum
+		rollupData.Vars = &s.vars.Rollup
 	}
 
 	return &rollupData, nil
@@ -552,7 +575,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 		return &auctionData, nil
 	}
 	if *blockHash != ethBlock.Hash {
-		log.Errorw("Block hash mismatch", "expectd", ethBlock.Hash.String(),
+		log.Errorw("Block hash mismatch in Auction events", "expected", ethBlock.Hash.String(),
 			"got", blockHash.String())
 		return nil, eth.ErrBlockHashMismatchEvent
 	}
@@ -578,35 +601,34 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 		auctionData.Coordinators = append(auctionData.Coordinators, coordinator)
 	}
 
-	var vars common.AuctionVariables
 	varsUpdate := false
 
 	for _, evt := range auctionEvents.NewSlotDeadline {
-		vars.SlotDeadline = evt.NewSlotDeadline
+		s.vars.Auction.SlotDeadline = evt.NewSlotDeadline
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewClosedAuctionSlots {
-		vars.ClosedAuctionSlots = evt.NewClosedAuctionSlots
+		s.vars.Auction.ClosedAuctionSlots = evt.NewClosedAuctionSlots
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewOutbidding {
-		vars.Outbidding = evt.NewOutbidding
+		s.vars.Auction.Outbidding = evt.NewOutbidding
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewDonationAddress {
-		vars.DonationAddress = evt.NewDonationAddress
+		s.vars.Auction.DonationAddress = evt.NewDonationAddress
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewBootCoordinator {
-		vars.BootCoordinator = evt.NewBootCoordinator
+		s.vars.Auction.BootCoordinator = evt.NewBootCoordinator
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewOpenAuctionSlots {
-		vars.OpenAuctionSlots = evt.NewOpenAuctionSlots
+		s.vars.Auction.OpenAuctionSlots = evt.NewOpenAuctionSlots
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewAllocationRatio {
-		vars.AllocationRatio = evt.NewAllocationRatio
+		s.vars.Auction.AllocationRatio = evt.NewAllocationRatio
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewDefaultSlotSetBid {
@@ -614,7 +636,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 			return nil, fmt.Errorf("unexpected SlotSet in "+
 				"auctionEvents.NewDefaultSlotSetBid: %v", evt.SlotSet)
 		}
-		vars.DefaultSlotSetBid[evt.SlotSet] = evt.NewInitialMinBid
+		s.vars.Auction.DefaultSlotSetBid[evt.SlotSet] = evt.NewInitialMinBid
 		varsUpdate = true
 	}
 
@@ -623,7 +645,8 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	// NOTE: We ignore HEZClaimed
 
 	if varsUpdate {
-		auctionData.Vars = &vars
+		s.vars.Auction.EthBlockNum = blockNum
+		auctionData.Vars = &s.vars.Auction
 	}
 
 	return &auctionData, nil
@@ -631,11 +654,54 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 
 // wdelayerSync gets information from the Withdrawal Delayer Contract
 func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerData, error) {
-	// blockNum := ethBlock.EthBlockNum
-
-	// TODO: Parse events to generate varialbes once ethClient.WDelayerEventsByBlock is implemented
-
+	blockNum := ethBlock.EthBlockNum
 	wDelayerData := common.NewWDelayerData()
+
+	// Get wDelayer events in the block
+	wDelayerEvents, blockHash, err := s.ethClient.WDelayerEventsByBlock(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	// No events in this block
+	if blockHash == nil {
+		return &wDelayerData, nil
+	}
+	if *blockHash != ethBlock.Hash {
+		log.Errorw("Block hash mismatch in WDelayer events", "expected", ethBlock.Hash.String(),
+			"got", blockHash.String())
+		return nil, eth.ErrBlockHashMismatchEvent
+	}
+
+	varsUpdate := false
+
+	// TODO Deposit
+	// TODO Withdraw
+	// TODO EscapeHatchWithdrawal
+	for range wDelayerEvents.EmergencyModeEnabled {
+		s.vars.WDelayer.EmergencyMode = true
+		varsUpdate = true
+	}
+	for _, evt := range wDelayerEvents.NewWithdrawalDelay {
+		s.vars.WDelayer.WithdrawalDelay = evt.WithdrawalDelay
+		varsUpdate = true
+	}
+	for _, evt := range wDelayerEvents.NewHermezKeeperAddress {
+		s.vars.WDelayer.HermezKeeperAddress = evt.NewHermezKeeperAddress
+		varsUpdate = true
+	}
+	for _, evt := range wDelayerEvents.NewWhiteHackGroupAddress {
+		s.vars.WDelayer.WhiteHackGroupAddress = evt.NewWhiteHackGroupAddress
+		varsUpdate = true
+	}
+	for _, evt := range wDelayerEvents.NewHermezGovernanceDAOAddress {
+		s.vars.WDelayer.HermezGovernanceDAOAddress = evt.NewHermezGovernanceDAOAddress
+		varsUpdate = true
+	}
+
+	if varsUpdate {
+		s.vars.WDelayer.EthBlockNum = blockNum
+		wDelayerData.Vars = &s.vars.WDelayer
+	}
 
 	return &wDelayerData, nil
 }

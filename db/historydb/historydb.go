@@ -1097,6 +1097,72 @@ func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {
 	return lastL1TxsPosition, row.Scan(&lastL1TxsPosition)
 }
 
+// GetSCVars returns the rollup, auction and wdelayer smart contracts variables at their last update.
+func (hdb *HistoryDB) GetSCVars() (*common.RollupVariables, *common.AuctionVariables,
+	*common.WDelayerVariables, error) {
+	var rollup common.RollupVariables
+	var auction common.AuctionVariables
+	var wDelayer common.WDelayerVariables
+	if err := meddler.QueryRow(hdb.db, &rollup,
+		"SELECT * FROM rollup_vars ORDER BY eth_block_num DESC LIMIT 1;"); err != nil {
+		return nil, nil, nil, err
+	}
+	if err := meddler.QueryRow(hdb.db, &auction,
+		"SELECT * FROM auction_vars ORDER BY eth_block_num DESC LIMIT 1;"); err != nil {
+		return nil, nil, nil, err
+	}
+	if err := meddler.QueryRow(hdb.db, &wDelayer,
+		"SELECT * FROM wdelayer_vars ORDER BY eth_block_num DESC LIMIT 1;"); err != nil {
+		return nil, nil, nil, err
+	}
+	return &rollup, &auction, &wDelayer, nil
+}
+
+func (hdb *HistoryDB) setRollupVars(d meddler.DB, rollup *common.RollupVariables) error {
+	return meddler.Insert(d, "rollup_vars", rollup)
+}
+
+func (hdb *HistoryDB) setAuctionVars(d meddler.DB, auction *common.AuctionVariables) error {
+	return meddler.Insert(d, "auction_vars", auction)
+}
+
+func (hdb *HistoryDB) setWDelayerVars(d meddler.DB, wDelayer *common.WDelayerVariables) error {
+	return meddler.Insert(d, "wdelayer_vars", wDelayer)
+}
+
+// SetInitialSCVars sets the initial state of rollup, auction, wdelayer smart
+// contract variables.  This initial state is stored linked to block 0, which
+// always exist in the DB and is used to store initialization data that always
+// exist in the smart contracts.
+func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
+	auction *common.AuctionVariables, wDelayer *common.WDelayerVariables) error {
+	txn, err := hdb.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			db.Rollback(txn)
+		}
+	}()
+	// Force EthBlockNum to be 0 because it's the block used to link data
+	// that belongs to the creation of the smart contracts
+	rollup.EthBlockNum = 0
+	auction.EthBlockNum = 0
+	wDelayer.EthBlockNum = 0
+	if err := hdb.setRollupVars(txn, rollup); err != nil {
+		return err
+	}
+	if err := hdb.setAuctionVars(txn, auction); err != nil {
+		return err
+	}
+	if err := hdb.setWDelayerVars(txn, wDelayer); err != nil {
+		return err
+	}
+
+	return txn.Commit()
+}
+
 // AddBlockSCData stores all the information of a block retrieved by the
 // Synchronizer.  Blocks should be inserted in order, leaving no gaps because
 // the pagination system of the API/DB depends on this.  Within blocks, all
@@ -1108,47 +1174,39 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	}
 	defer func() {
 		if err != nil {
-			errRollback := txn.Rollback()
-			if errRollback != nil {
-				log.Errorw("Rollback", "err", errRollback)
-			}
+			db.Rollback(txn)
 		}
 	}()
 
 	// Add block
-	err = hdb.addBlock(txn, &blockData.Block)
-	if err != nil {
+	if err := hdb.addBlock(txn, &blockData.Block); err != nil {
 		return err
 	}
 
 	// Add Coordinators
 	if len(blockData.Auction.Coordinators) > 0 {
-		err = hdb.addCoordinators(txn, blockData.Auction.Coordinators)
-		if err != nil {
+		if err := hdb.addCoordinators(txn, blockData.Auction.Coordinators); err != nil {
 			return err
 		}
 	}
 
 	// Add Bids
 	if len(blockData.Auction.Bids) > 0 {
-		err = hdb.addBids(txn, blockData.Auction.Bids)
-		if err != nil {
+		if err := hdb.addBids(txn, blockData.Auction.Bids); err != nil {
 			return err
 		}
 	}
 
 	// Add Tokens
 	if len(blockData.Rollup.AddedTokens) > 0 {
-		err = hdb.addTokens(txn, blockData.Rollup.AddedTokens)
-		if err != nil {
+		if err := hdb.addTokens(txn, blockData.Rollup.AddedTokens); err != nil {
 			return err
 		}
 	}
 
 	// Add l1 Txs
 	if len(blockData.Rollup.L1UserTxs) > 0 {
-		err = hdb.addL1Txs(txn, blockData.Rollup.L1UserTxs)
-		if err != nil {
+		if err := hdb.addL1Txs(txn, blockData.Rollup.L1UserTxs); err != nil {
 			return err
 		}
 	}
@@ -1158,16 +1216,14 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		batch := &blockData.Rollup.Batches[i]
 		// Add Batch: this will trigger an update on the DB
 		// that will set the batch num of forged L1 txs in this batch
-		err = hdb.addBatch(txn, &batch.Batch)
-		if err != nil {
+		if err = hdb.addBatch(txn, &batch.Batch); err != nil {
 			return err
 		}
 
 		// Add unforged l1 Txs
 		if batch.L1Batch {
 			if len(batch.L1CoordinatorTxs) > 0 {
-				err = hdb.addL1Txs(txn, batch.L1CoordinatorTxs)
-				if err != nil {
+				if err := hdb.addL1Txs(txn, batch.L1CoordinatorTxs); err != nil {
 					return err
 				}
 			}
@@ -1175,29 +1231,39 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 
 		// Add l2 Txs
 		if len(batch.L2Txs) > 0 {
-			err = hdb.addL2Txs(txn, batch.L2Txs)
-			if err != nil {
+			if err := hdb.addL2Txs(txn, batch.L2Txs); err != nil {
 				return err
 			}
 		}
 
 		// Add accounts
 		if len(batch.CreatedAccounts) > 0 {
-			err = hdb.addAccounts(txn, batch.CreatedAccounts)
-			if err != nil {
+			if err := hdb.addAccounts(txn, batch.CreatedAccounts); err != nil {
 				return err
 			}
 		}
 
 		// Add exit tree
 		if len(batch.ExitTree) > 0 {
-			err = hdb.addExitTree(txn, batch.ExitTree)
-			if err != nil {
+			if err := hdb.addExitTree(txn, batch.ExitTree); err != nil {
 				return err
 			}
 		}
-
-		// TODO: INSERT CONTRACTS VARS
+	}
+	if blockData.Rollup.Vars != nil {
+		if err := hdb.setRollupVars(txn, blockData.Rollup.Vars); err != nil {
+			return err
+		}
+	}
+	if blockData.Auction.Vars != nil {
+		if err := hdb.setAuctionVars(txn, blockData.Auction.Vars); err != nil {
+			return err
+		}
+	}
+	if blockData.WDelayer.Vars != nil {
+		if err := hdb.setWDelayerVars(txn, blockData.WDelayer.Vars); err != nil {
+			return err
+		}
 	}
 
 	// TODO: Process withdrawals

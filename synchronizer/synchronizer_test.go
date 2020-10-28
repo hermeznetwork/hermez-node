@@ -241,6 +241,11 @@ func TestSync(t *testing.T) {
 			Auction:  1,
 			WDelayer: 1,
 		},
+		InitialVariables: SCVariables{
+			Rollup:   *clientSetup.RollupVariables,
+			Auction:  *clientSetup.AuctionVariables,
+			WDelayer: *clientSetup.WDelayerVariables,
+		},
 	})
 	require.Nil(t, err)
 

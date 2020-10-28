@@ -516,23 +516,31 @@ FOR EACH ROW EXECUTE PROCEDURE forge_l1_user_txs();
 
 CREATE TABLE rollup_vars (
     eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    forge_l1_timeout BYTEA NOT NULL,
-    fee_l1_user_tx BYTEA NOT NULL,
     fee_add_token BYTEA NOT NULL,
-    tokens_hez BYTEA NOT NULL,
-    governance BYTEA NOT NULL
+    forge_l1_timeout BYTEA NOT NULL,
+    withdrawal_delay BIGINT NOT NULL
 );
 
-CREATE TABLE consensus_vars (
+CREATE TABLE auction_vars (
     eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    slot_deadline INT NOT NULL,
-    close_auction_slots INT NOT NULL,
-    open_auction_slots INT NOT NULL,
-    min_bid_slots VARCHAR(200) NOT NULL,
-    outbidding INT NOT NULL,
     donation_address BYTEA NOT NULL,
-    governance_address BYTEA NOT NULL,
-    allocation_ratio VARCHAR(200)
+    boot_coordinator BYTEA NOT NULL,
+    default_slot_set_bid BYTEA NOT NULL,
+    closed_auction_slots INT NOT NULL,
+    open_auction_slots INT NOT NULL,
+    allocation_ratio VARCHAR(200),
+    outbidding INT NOT NULL,
+    slot_deadline INT NOT NULL
+);
+
+CREATE TABLE wdelayer_vars (
+    eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    govdao_address BYTEA NOT NULL,
+    whg_address BYTEA NOT NULL,
+    keeper_address BYTEA NOT NULL,
+    withdrawal_delay BIGINT NOT NULL,
+    emergency_start_time BIGINT NOT NULL,
+    emergency_mode BOOLEAN NOT NULL
 );
 
 -- L2
@@ -606,8 +614,9 @@ DROP FUNCTION set_pool_tx;
 -- drop tables
 DROP TABLE account_creation_auth;
 DROP TABLE tx_pool;
-DROP TABLE consensus_vars;
+DROP TABLE auction_vars;
 DROP TABLE rollup_vars;
+DROP TABLE wdelayer_vars;
 DROP TABLE tx;
 DROP TABLE exit_tree;
 DROP TABLE account;
