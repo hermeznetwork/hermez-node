@@ -257,6 +257,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 			}
 			tx := common.L2Tx{
 				ToIdx:       common.Idx(1), // as is an Exit
+				Fee:         common.FeeSelector(inst.fee),
 				Amount:      big.NewInt(int64(inst.amount)),
 				Type:        common.TxTypeExit,
 				EthBlockNum: tc.blockNum,

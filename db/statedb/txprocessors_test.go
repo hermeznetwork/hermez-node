@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: Test CollectedFees output
+
 func TestProcessTxsSynchronizer(t *testing.T) {
 	// TODO once TTGL is updated, use the blockchain L2Tx (not PoolL2Tx) for
 	// the Synchronizer tests
