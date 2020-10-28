@@ -41,7 +41,7 @@ type testCommon struct {
 	blocks           []common.Block
 	tokens           []historydb.TokenWithUSD
 	batches          []testBatch
-	coordinators     []coordinatorAPI
+	coordinators     []historydb.CoordinatorAPI
 	usrAddr          string
 	usrBjj           string
 	accs             []common.Account
@@ -633,8 +633,7 @@ func TestMain(m *testing.M) {
 	}
 	fromItem := uint(0)
 	limit := uint(99999)
-	coordinators, _, err := hdb.GetCoordinators(&fromItem, &limit, historydb.OrderAsc)
-	apiCoordinators := coordinatorsToAPI(coordinators)
+	coordinators, _, err := hdb.GetCoordinatorsAPI(&fromItem, &limit, historydb.OrderAsc)
 	if err != nil {
 		panic(err)
 	}
@@ -652,7 +651,7 @@ func TestMain(m *testing.M) {
 		blocks:           blocks,
 		tokens:           tokensUSD,
 		batches:          genTestBatches(blocks, batches),
-		coordinators:     apiCoordinators,
+		coordinators:     coordinators,
 		usrAddr:          ethAddrToHez(usrAddr),
 		usrBjj:           bjjToString(usrBjj),
 		accs:             accs,
@@ -1162,58 +1161,6 @@ func assertPoolTx(t *testing.T, expected, actual sendPoolTx) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestGetCoordinators(t *testing.T) {
-	endpoint := apiURL + "coordinators"
-	fetchedCoordinators := []coordinatorAPI{}
-
-	appendIter := func(intr interface{}) {
-		for i := 0; i < len(intr.(*coordinatorsAPI).Coordinators); i++ {
-			tmp, err := copystructure.Copy(intr.(*coordinatorsAPI).Coordinators[i])
-			if err != nil {
-				panic(err)
-			}
-			fetchedCoordinators = append(fetchedCoordinators, tmp.(coordinatorAPI))
-		}
-	}
-
-	limit := 5
-
-	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &coordinatorsAPI{}, appendIter)
-	assert.NoError(t, err)
-	assert.Equal(t, tc.coordinators, fetchedCoordinators)
-
-	// Reverse Order
-	reversedCoordinators := []coordinatorAPI{}
-	appendIter = func(intr interface{}) {
-		for i := 0; i < len(intr.(*coordinatorsAPI).Coordinators); i++ {
-			tmp, err := copystructure.Copy(intr.(*coordinatorsAPI).Coordinators[i])
-			if err != nil {
-				panic(err)
-			}
-			reversedCoordinators = append(reversedCoordinators, tmp.(coordinatorAPI))
-		}
-	}
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &coordinatorsAPI{}, appendIter)
-	assert.NoError(t, err)
-	for i := 0; i < len(fetchedCoordinators); i++ {
-		assert.Equal(t, reversedCoordinators[i], fetchedCoordinators[len(fetchedCoordinators)-1-i])
-	}
-
-	// Test GetCoordinator
-	path = fmt.Sprintf("%s/%s", endpoint, fetchedCoordinators[2].Forger.String())
-	coordinator := coordinatorAPI{}
-	assert.NoError(t, doGoodReq("GET", path, nil, &coordinator))
-	assert.Equal(t, fetchedCoordinators[2], coordinator)
-	// 400
-	path = fmt.Sprintf("%s/0x001", endpoint)
-	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	// 404
-	path = fmt.Sprintf("%s/0xaa942cfcd25ad4d90a62358b0dd84f33b398262a", endpoint)
-	err = doBadReq("GET", path, nil, 404)
-	assert.NoError(t, err)
-}
 func TestAccountCreationAuth(t *testing.T) {
 	// POST
 	endpoint := apiURL + "account-creation-authorization"

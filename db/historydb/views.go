@@ -120,17 +120,17 @@ type HistoryExit struct {
 	TokenUSDUpdate         *time.Time                      `meddler:"usd_update"`
 }
 
-// HistoryCoordinator is a representation of a coordinator with additional information
+// CoordinatorAPI is a representation of a coordinator with additional information
 // required by the API
-type HistoryCoordinator struct {
-	ItemID      int               `meddler:"item_id"`
-	Bidder      ethCommon.Address `meddler:"bidder_addr"`
-	Forger      ethCommon.Address `meddler:"forger_addr"`
-	EthBlockNum int64             `meddler:"eth_block_num"`
-	URL         string            `meddler:"url"`
-	TotalItems  int               `meddler:"total_items"`
-	FirstItem   int               `meddler:"first_item"`
-	LastItem    int               `meddler:"last_item"`
+type CoordinatorAPI struct {
+	ItemID      int               `json:"itemId" meddler:"item_id"`
+	Bidder      ethCommon.Address `json:"bidderAddr" meddler:"bidder_addr"`
+	Forger      ethCommon.Address `json:"forgerAddr" meddler:"forger_addr"`
+	EthBlockNum int64             `json:"ethereumBlock" meddler:"eth_block_num"`
+	URL         string            `json:"URL" meddler:"url"`
+	TotalItems  int               `json:"-" meddler:"total_items"`
+	FirstItem   int               `json:"-" meddler:"first_item"`
+	LastItem    int               `json:"-" meddler:"last_item"`
 }
 
 // BatchAPI is a representation of a batch with additional information
@@ -157,10 +157,10 @@ type BatchAPI struct {
 
 // Network define status of the network
 type Network struct {
-	LastBlock   int64                `json:"lastBlock"`
-	LastBatch   BatchAPI             `json:"lastBatch"`
-	CurrentSlot int64                `json:"currentSlot"`
-	NextForgers []HistoryCoordinator `json:"nextForgers"`
+	LastBlock   int64            `json:"lastBlock"`
+	LastBatch   BatchAPI         `json:"lastBatch"`
+	CurrentSlot int64            `json:"currentSlot"`
+	NextForgers []CoordinatorAPI `json:"nextForgers"`
 }
 
 // Metrics define metrics of the network

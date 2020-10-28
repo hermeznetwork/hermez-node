@@ -145,7 +145,7 @@ func assertTokensAPIs(t *testing.T, expected, actual []historydb.TokenWithUSD) {
 		if expected[i].USDUpdate == nil {
 			assert.Equal(t, expected[i].USDUpdate, actual[i].USDUpdate)
 		} else {
-			assert.Equal(t, expected[i].USDUpdate.Unix(), actual[i].USDUpdate.Unix())
+			assert.Less(t, expected[i].USDUpdate.Unix()-3, actual[i].USDUpdate.Unix())
 			expected[i].USDUpdate = actual[i].USDUpdate
 		}
 		assert.Equal(t, expected[i], actual[i])
