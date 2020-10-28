@@ -37,6 +37,7 @@ type ProcessTxOutput struct {
 	ExitInfos          []common.ExitInfo
 	CreatedAccounts    []common.Account
 	CoordinatorIdxsMap map[common.TokenID]common.Idx
+	CollectedFees      map[common.TokenID]*big.Int
 }
 
 // ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
@@ -66,6 +67,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 			ExitInfos:          nil,
 			CreatedAccounts:    nil,
 			CoordinatorIdxsMap: nil,
+			CollectedFees:      nil,
 		}, nil
 	}
 	exits := make([]processedExit, nTx)
@@ -74,6 +76,14 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
 	if err != nil {
 		return nil, err
+	}
+
+	var collectedFees map[common.TokenID]*big.Int
+	if s.typ == TypeSynchronizer {
+		collectedFees = make(map[common.TokenID]*big.Int)
+		for tokenID := range coordIdxsMap {
+			collectedFees[tokenID] = big.NewInt(0)
+		}
 	}
 
 	if s.typ == TypeBatchBuilder {
@@ -138,7 +148,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}
 	}
 	for i := 0; i < len(l2txs); i++ {
-		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, exitTree, &l2txs[i])
+		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, collectedFees, exitTree, &l2txs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -211,6 +221,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 			ExitInfos:          exitInfos,
 			CreatedAccounts:    createdAccounts,
 			CoordinatorIdxsMap: coordIdxsMap,
+			CollectedFees:      collectedFees,
 		}, nil
 	}
 
@@ -234,6 +245,7 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		ExitInfos:          nil,
 		CreatedAccounts:    nil,
 		CoordinatorIdxsMap: coordIdxsMap,
+		CollectedFees:      nil,
 	}, nil
 }
 
@@ -296,7 +308,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 
 		// coordIdxsMap is 'nil', as at L1Txs there is no L2 fees
 		// 0 for the parameter toIdx, as at L1Tx ToIdx can only be 0 in the Deposit type case.
-		err := s.applyTransfer(nil, tx.Tx(), 0)
+		err := s.applyTransfer(nil, nil, tx.Tx(), 0)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, nil, err
@@ -347,7 +359,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	case common.TxTypeForceExit:
 		// execute exit flow
 		// coordIdxsMap is 'nil', as at L1Txs there is no L2 fees
-		exitAccount, newExit, err := s.applyExit(nil, exitTree, tx.Tx())
+		exitAccount, newExit, err := s.applyExit(nil, nil, exitTree, tx.Tx())
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, nil, err
@@ -373,7 +385,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 // StateDB depending on the transaction Type. It returns the 3 parameters
 // related to the Exit (in case of): Idx, ExitAccount, boolean determining if
 // the Exit created a new Leaf in the ExitTree.
-func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
+func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collectedFees map[common.TokenID]*big.Int,
+	exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
 	var err error
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
 	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
@@ -440,14 +453,14 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, exitTr
 	case common.TxTypeTransfer, common.TxTypeTransferToEthAddr, common.TxTypeTransferToBJJ:
 		// go to the MT account of sender and receiver, and update
 		// balance & nonce
-		err = s.applyTransfer(coordIdxsMap, tx.Tx(), tx.AuxToIdx)
+		err = s.applyTransfer(coordIdxsMap, collectedFees, tx.Tx(), tx.AuxToIdx)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
 		}
 	case common.TxTypeExit:
 		// execute exit flow
-		exitAccount, newExit, err := s.applyExit(coordIdxsMap, exitTree, tx.Tx())
+		exitAccount, newExit, err := s.applyExit(coordIdxsMap, collectedFees, exitTree, tx.Tx())
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, err
@@ -565,7 +578,8 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 // tx.ToIdx==0, then toIdx!=0, and will be used the toIdx parameter as Idx of
 // the receiver. This parameter is used when the tx.ToIdx is not specified and
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
-func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, tx common.Tx, auxToIdx common.Idx) error {
+func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, collectedFees map[common.TokenID]*big.Int,
+	tx common.Tx, auxToIdx common.Idx) error {
 	if auxToIdx == common.Idx(0) {
 		auxToIdx = tx.ToIdx
 	}
@@ -599,6 +613,10 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, tx c
 			if err != nil {
 				log.Error(err)
 				return err
+			}
+			if s.typ == TypeSynchronizer {
+				collected := collectedFees[tx.TokenID]
+				collected.Add(collected, fee)
 			}
 		}
 	}
@@ -709,7 +727,8 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 
 // It returns the ExitAccount and a boolean determining if the Exit created a
 // new Leaf in the ExitTree.
-func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, exitTree *merkletree.MerkleTree, tx common.Tx) (*common.Account, bool, error) {
+func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collectedFees map[common.TokenID]*big.Int,
+	exitTree *merkletree.MerkleTree, tx common.Tx) (*common.Account, bool, error) {
 	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := s.GetAccount(tx.FromIdx)
@@ -733,6 +752,10 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, exitTree
 			if err != nil {
 				log.Error(err)
 				return nil, false, err
+			}
+			if s.typ == TypeSynchronizer {
+				collected := collectedFees[tx.TokenID]
+				collected.Add(collected, fee)
 			}
 		}
 	}

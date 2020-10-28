@@ -123,6 +123,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 		// has a TotalFeesUSD inserted by the HistoryDB
 		batch.Batch.TotalFeesUSD = syncBatch.Batch.TotalFeesUSD
 		batch.CreatedAccounts = syncBatch.CreatedAccounts // til doesn't output CreatedAccounts
+		batch.Batch.NumAccounts = len(batch.CreatedAccounts)
 
 		// Test field by field to facilitate debugging of errors
 		assert.Equal(t, batch.L1CoordinatorTxs, syncBatch.L1CoordinatorTxs)
@@ -135,6 +136,12 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 			assert.Equal(t, exit.Balance, syncBatch.ExitTree[j].Balance)
 			*exit = syncBatch.ExitTree[j]
 		}
+		// We are collecting fees after blockNum=2 in 2 idxs
+		if block.Block.EthBlockNum > 2 {
+			// fmt.Printf("DBG collectedFees: %+v\n", syncBatch.Batch.CollectedFees)
+			assert.Equal(t, 2, len(syncBatch.Batch.CollectedFees))
+		}
+		batch.Batch.CollectedFees = syncBatch.Batch.CollectedFees
 		assert.Equal(t, batch.Batch, syncBatch.Batch)
 		assert.Equal(t, batch, syncBatch)
 		assert.Equal(t, &batch.Batch, dbBatch) //nolint:gosec
@@ -254,10 +261,6 @@ func TestSync(t *testing.T) {
 	// Generate blockchain and smart contract data, and fill the test smart contracts
 	//
 
-	// TODO: Test CreateAccountDepositTransfer
-	// TODO: Test ForceTransfer
-	// TODO: Test ForceExit
-
 	// Generate blockchain data with til
 	set1 := `
 		Type: Blockchain
@@ -266,23 +269,28 @@ func TestSync(t *testing.T) {
 		AddToken(2)
 		AddToken(3)
 
-		CreateAccountDeposit(1) C: 20 // Idx=256+2=258
-		CreateAccountDeposit(2) A: 20 // Idx=256+3=259
-		CreateAccountDeposit(1) D: 5  // Idx=256+4=260
-		CreateAccountDeposit(2) B: 5  // Idx=256+5=261
-		CreateAccountDeposit(2) C: 5  // Idx=256+6=262
+		CreateAccountDeposit(1) C: 2000 // Idx=256+2=258
+		CreateAccountDeposit(2) A: 2000 // Idx=256+3=259
+		CreateAccountDeposit(1) D: 500  // Idx=256+4=260
+		CreateAccountDeposit(2) B: 500  // Idx=256+5=261
+		CreateAccountDeposit(2) C: 500  // Idx=256+6=262
 
 		CreateAccountCoordinator(1) A // Idx=256+0=256
 		CreateAccountCoordinator(1) B // Idx=256+1=257
 
-		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs
-		> batchL1 // forge defined L1UserTxs, freeze L1UserTxs{nil}
+		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs{5}
+		> batchL1 // forge defined L1UserTxs{5}, freeze L1UserTxs{nil}
 		> block // blockNum=2
 
-		Transfer(1) C-A: 10 (10)
-		Exit(1) D: 3 (5)
+		CreateAccountDepositTransfer(1) E-A: 1000, 200 // Idx=256+7=263
+		ForceExit(1) A: 100
+		ForceTransfer(1) A-D: 100
 
-		> batch
+		Transfer(1) C-A: 100 (200)
+		Exit(1) D: 30 (200)
+
+		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs{2}
+		> batchL1 // forge L1UserTxs{2}, freeze defined L1UserTxs{nil}
 		> block // blockNum=3
 
 	`
@@ -301,7 +309,8 @@ func TestSync(t *testing.T) {
 	// blocks 1 (blockNum=3)
 	i = 1
 	require.Equal(t, 3, int(blocks[i].Block.EthBlockNum))
-	require.Equal(t, 1, len(blocks[i].Batches))
+	require.Equal(t, 3, len(blocks[i].L1UserTxs))
+	require.Equal(t, 2, len(blocks[i].Batches))
 	require.Equal(t, 2, len(blocks[i].Batches[0].L2Txs))
 
 	// Generate extra required data
@@ -330,6 +339,12 @@ func TestSync(t *testing.T) {
 			require.Nil(t, err)
 		}
 		client.CtlSetAddr(bootCoordAddr)
+		feeIdxCoordinator := []common.Idx{}
+		if block.Block.EthBlockNum > 2 {
+			// After blockNum=2 we have some accounts, use them as
+			// coordinator owned to receive fees.
+			feeIdxCoordinator = []common.Idx{common.Idx(256), common.Idx(259)}
+		}
 		for _, batch := range block.Batches {
 			_, err := client.RollupForgeBatch(&eth.RollupForgeBatchArgs{
 				NewLastIdx:            batch.Batch.LastIdx,
@@ -338,7 +353,7 @@ func TestSync(t *testing.T) {
 				L1CoordinatorTxs:      batch.L1CoordinatorTxs,
 				L1CoordinatorTxsAuths: [][]byte{}, // Intentionally empty
 				L2TxsData:             batch.L2Txs,
-				FeeIdxCoordinator:     []common.Idx{}, // TODO
+				FeeIdxCoordinator:     feeIdxCoordinator,
 				// Circuit selector
 				VerifierIdx: 0, // Intentionally empty
 				L1Batch:     batch.L1Batch,

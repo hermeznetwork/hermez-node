@@ -296,7 +296,6 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 	blockNum := ethBlock.EthBlockNum
 	var rollupData = newRollupData()
 	// var forgeL1TxsNum int64
-	var numAccounts int
 
 	// Get rollup events in the block, and make sure the block hash matches
 	// the expected one.
@@ -393,20 +392,19 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 		// processed.
 		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData) // TODO: This is a big ugly, find a better way
 
-		// TODO: Get CollectedFees from ProcessTxs()
-		// TODO: Pass forgeBatchArgs.FeeIdxCoordinator to ProcessTxs()
-		// ProcessTxs updates poolL2Txs adding: Nonce, TokenID
-		ptOut, err := s.stateDB.ProcessTxs([]common.Idx{}, l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
+		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
+		processTxsOut, err := s.stateDB.ProcessTxs(forgeBatchArgs.FeeIdxCoordinator, l1UserTxs,
+			batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, err
 		}
 
 		// Set batchNum in exits
-		for i := range ptOut.ExitInfos {
-			exit := &ptOut.ExitInfos[i]
+		for i := range processTxsOut.ExitInfos {
+			exit := &processTxsOut.ExitInfos[i]
 			exit.BatchNum = batchNum
 		}
-		batchData.ExitTree = ptOut.ExitInfos
+		batchData.ExitTree = processTxsOut.ExitInfos
 
 		l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // TODO: This is a big uggly, find a better way
 		if err != nil {
@@ -427,11 +425,11 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 			position++
 		}
 
-		for i := range ptOut.CreatedAccounts {
-			createdAccount := &ptOut.CreatedAccounts[i]
+		for i := range processTxsOut.CreatedAccounts {
+			createdAccount := &processTxsOut.CreatedAccounts[i]
 			createdAccount.BatchNum = batchNum
 		}
-		batchData.CreatedAccounts = ptOut.CreatedAccounts
+		batchData.CreatedAccounts = processTxsOut.CreatedAccounts
 
 		slotNum := int64(0)
 		if ethBlock.EthBlockNum >= s.auctionConstants.GenesisBlockNum {
@@ -441,15 +439,15 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 
 		// Get Batch information
 		batch := common.Batch{
-			BatchNum:    batchNum,
-			EthBlockNum: blockNum,
-			ForgerAddr:  *sender,
-			// CollectedFees: , TODO: Clarify where to get them if they are still needed
-			StateRoot:   forgeBatchArgs.NewStRoot,
-			NumAccounts: numAccounts, // TODO: Calculate this value
-			LastIdx:     forgeBatchArgs.NewLastIdx,
-			ExitRoot:    forgeBatchArgs.NewExitRoot,
-			SlotNum:     slotNum,
+			BatchNum:      batchNum,
+			EthBlockNum:   blockNum,
+			ForgerAddr:    *sender,
+			CollectedFees: processTxsOut.CollectedFees,
+			StateRoot:     forgeBatchArgs.NewStRoot,
+			NumAccounts:   len(batchData.CreatedAccounts),
+			LastIdx:       forgeBatchArgs.NewLastIdx,
+			ExitRoot:      forgeBatchArgs.NewExitRoot,
+			SlotNum:       slotNum,
 		}
 		nextForgeL1TxsNumCpy := nextForgeL1TxsNum
 		if forgeBatchArgs.L1Batch {
@@ -471,7 +469,6 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*rollupData, error) {
 
 		if consts, err := s.ethClient.EthERC20Consts(evtAddToken.TokenAddress); err != nil {
 			log.Warnw("Error retreiving ERC20 token constants", "addr", evtAddToken.TokenAddress)
-			// TODO: Add external information consulting SC about it using Address
 			token.Name = "ERC20_ETH_ERROR"
 			token.Symbol = "ERROR"
 			token.Decimals = 1
