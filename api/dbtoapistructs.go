@@ -2,12 +2,8 @@ package api
 
 import (
 	"encoding/base64"
-	"encoding/hex"
-	"errors"
 	"math/big"
 	"strconv"
-	"strings"
-	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -151,48 +147,4 @@ type configAPI struct {
 	RollupConstants   rollupConstants       `json:"hermez"`
 	AuctionConstants  eth.AuctionConstants  `json:"auction"`
 	WDelayerConstants eth.WDelayerConstants `json:"withdrawalDelayer"`
-}
-
-// AccountCreationAuth
-
-type accountCreationAuthAPI struct {
-	EthAddr   string    `json:"hezEthereumAddress" binding:"required"`
-	BJJ       string    `json:"bjj" binding:"required"`
-	Signature string    `json:"signature" binding:"required"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-func accountCreationAuthToAPI(dbAuth *common.AccountCreationAuth) *accountCreationAuthAPI {
-	return &accountCreationAuthAPI{
-		EthAddr:   ethAddrToHez(dbAuth.EthAddr),
-		BJJ:       bjjToString(dbAuth.BJJ),
-		Signature: "0x" + hex.EncodeToString(dbAuth.Signature),
-		Timestamp: dbAuth.Timestamp,
-	}
-}
-
-func accountCreationAuthAPIToCommon(apiAuth *accountCreationAuthAPI) (*common.AccountCreationAuth, error) {
-	ethAddr, err := hezStringToEthAddr(apiAuth.EthAddr, "hezEthereumAddress")
-	if err != nil {
-		return nil, err
-	}
-	bjj, err := hezStringToBJJ(apiAuth.BJJ, "bjj")
-	if err != nil {
-		return nil, err
-	}
-	without0x := strings.TrimPrefix(apiAuth.Signature, "0x")
-	s, err := hex.DecodeString(without0x)
-	if err != nil {
-		return nil, err
-	}
-	auth := &common.AccountCreationAuth{
-		EthAddr:   *ethAddr,
-		BJJ:       bjj,
-		Signature: s,
-		Timestamp: apiAuth.Timestamp,
-	}
-	if !auth.VerifySignature() {
-		return nil, errors.New("invalid signature")
-	}
-	return auth, nil
 }

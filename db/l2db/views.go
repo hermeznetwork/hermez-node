@@ -114,3 +114,10 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 		},
 	})
 }
+
+type AccountCreationAuthAPI struct {
+	EthAddr   apitypes.HezEthAddr   `json:"hezEthereumAddress" meddler:"eth_addr" `
+	BJJ       apitypes.HezBJJ       `json:"bjj"                meddler:"bjj" `
+	Signature apitypes.EthSignature `json:"signature"          meddler:"signature" `
+	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
+}

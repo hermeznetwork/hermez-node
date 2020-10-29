@@ -55,9 +55,19 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 	return err
 }
 
-// GetAccountCreationAuth returns an account creation authorization into the DB
+// GetAccountCreationAuth returns an account creation authorization from the DB
 func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.AccountCreationAuth, error) {
 	auth := new(common.AccountCreationAuth)
+	return auth, meddler.QueryRow(
+		l2db.db, auth,
+		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",
+		addr,
+	)
+}
+
+// GetAccountCreationAuthAPI returns an account creation authorization from the DB
+func (l2db *L2DB) GetAccountCreationAuthAPI(addr ethCommon.Address) (*AccountCreationAuthAPI, error) {
+	auth := new(AccountCreationAuthAPI)
 	return auth, meddler.QueryRow(
 		l2db.db, auth,
 		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",

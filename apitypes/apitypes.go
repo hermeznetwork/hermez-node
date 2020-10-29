@@ -3,6 +3,7 @@ package apitypes
 import (
 	"database/sql/driver"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -155,6 +156,20 @@ func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// StrEthSignature is used to unmarshal EthSignature directly into an alias of []byte
+type StrEthSignature []byte
+
+// UnmarshalText unmarshals a StrEthSignature
+func (s *StrEthSignature) UnmarshalText(text []byte) error {
+	without0x := strings.TrimPrefix(string(text), "0x")
+	signature, err := hex.DecodeString(without0x)
+	if err != nil {
+		return err
+	}
+	*s = signature
+	return nil
+}
+
 // HezBJJ is used to scan/value *babyjub.PublicKey directly into strings that follow the BJJ public key hez fotmat (^hez:[A-Za-z0-9_-]{44}$) from/to sql DBs.
 // It assumes that *babyjub.PublicKey are inserted/fetched to/from the DB using the default Scan/Value interface
 type HezBJJ string
@@ -260,4 +275,39 @@ func (s *StrHezIdx) UnmarshalText(text []byte) error {
 	}
 	*s = StrHezIdx(common.Idx(idxInt))
 	return nil
+}
+
+// EthSignature is used to scan/value []byte representing an Ethereum signatue directly into strings from/to sql DBs.
+type EthSignature string
+
+// NewEthSignature creates a *EthSignature from []byte
+// If the provided signature is nil the returned *EthSignature will also be nil
+func NewEthSignature(signature []byte) *EthSignature {
+	if signature == nil {
+		return nil
+	}
+	ethSignature := EthSignature("0x" + hex.EncodeToString(signature))
+	return &ethSignature
+}
+
+// Scan implements Scanner for database/sql
+func (e *EthSignature) Scan(src interface{}) error {
+	if srcStr, ok := src.(string); ok {
+		// src is a string
+		*e = *(NewEthSignature([]byte(srcStr)))
+		return nil
+	} else if srcBytes, ok := src.([]byte); ok {
+		// src is []byte
+		*e = *(NewEthSignature(srcBytes))
+		return nil
+	} else {
+		// unexpected src
+		return fmt.Errorf("can't scan %T into apitypes.EthSignature", src)
+	}
+}
+
+// Value implements valuer for database/sql
+func (e EthSignature) Value() (driver.Value, error) {
+	without0x := strings.TrimPrefix(string(e), "0x")
+	return hex.DecodeString(without0x)
 }
