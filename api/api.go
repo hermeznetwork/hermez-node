@@ -51,7 +51,7 @@ func SetAPIEndpoints(
 	if explorerEndpoints {
 		// Account
 		server.GET("/accounts", getAccounts)
-		server.GET("/accounts/:hermezEthereumAddress/:accountIndex", getAccount)
+		server.GET("/accounts/:accountIndex", getAccount)
 		server.GET("/exits", getExits)
 		server.GET("/exits/:batchNum/:accountIndex", getExit)
 		// Transaction

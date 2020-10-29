@@ -37,6 +37,7 @@ type testCommon struct {
 	batches          []testBatch
 	fullBatches      []testFullBatch
 	coordinators     []historydb.CoordinatorAPI
+	accounts         []testAccount
 	usrAddr          string
 	usrBjj           string
 	accs             []common.Account
@@ -65,6 +66,7 @@ func TestMain(m *testing.M) {
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// HistoryDB
 	pass := os.Getenv("POSTGRES_PASS")
+
 	database, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
 		panic(err)
@@ -294,6 +296,7 @@ func TestMain(m *testing.M) {
 		batches:          testBatches,
 		fullBatches:      fullBatches,
 		coordinators:     coordinators,
+		accounts:         genTestAccounts(accs, tokensUSD),
 		usrAddr:          ethAddrToHez(usrAddr),
 		usrBjj:           bjjToString(usrBjj),
 		accs:             accs,

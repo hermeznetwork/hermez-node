@@ -31,14 +31,6 @@ var (
 	ErrNillBidderAddr = errors.New("biderAddr can not be nil")
 )
 
-func getAccounts(c *gin.Context) {
-
-}
-
-func getAccount(c *gin.Context) {
-
-}
-
 func getNextForgers(c *gin.Context) {
 
 }

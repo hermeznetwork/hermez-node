@@ -228,6 +228,55 @@ type CoordinatorAPI struct {
 	LastItem    int               `json:"-" meddler:"last_item"`
 }
 
+// AccountAPI is a representation of a account with additional information
+// required by the API
+type AccountAPI struct {
+	ItemID           int                 `meddler:"item_id"`
+	Idx              apitypes.HezIdx     `meddler:"idx"`
+	BatchNum         common.BatchNum     `meddler:"batch_num"`
+	PublicKey        apitypes.HezBJJ     `meddler:"bjj"`
+	EthAddr          apitypes.HezEthAddr `meddler:"eth_addr"`
+	Nonce            common.Nonce        `meddler:"-"` // max of 40 bits used
+	Balance          *apitypes.BigIntStr `meddler:"-"` // max of 192 bits used
+	TotalItems       int                 `meddler:"total_items"`
+	FirstItem        int                 `meddler:"first_item"`
+	LastItem         int                 `meddler:"last_item"`
+	TokenID          common.TokenID      `meddler:"token_id"`
+	TokenItemID      int                 `meddler:"token_item_id"`
+	TokenEthBlockNum int64               `meddler:"token_block"`
+	TokenEthAddr     ethCommon.Address   `meddler:"token_eth_addr"`
+	TokenName        string              `meddler:"name"`
+	TokenSymbol      string              `meddler:"symbol"`
+	TokenDecimals    uint64              `meddler:"decimals"`
+	TokenUSD         *float64            `meddler:"usd"`
+	TokenUSDUpdate   *time.Time          `meddler:"usd_update"`
+}
+
+// MarshalJSON is used to neast some of the fields of AccountAPI
+// without the need of auxiliar structs
+func (account AccountAPI) MarshalJSON() ([]byte, error) {
+	jsonAccount := map[string]interface{}{
+		"itemId":             account.ItemID,
+		"accountIndex":       account.Idx,
+		"nonce":              account.Nonce,
+		"balance":            account.Balance,
+		"bjj":                account.PublicKey,
+		"hezEthereumAddress": account.EthAddr,
+		"token": map[string]interface{}{
+			"id":               account.TokenID,
+			"itemId":           account.TokenItemID,
+			"ethereumBlockNum": account.TokenEthBlockNum,
+			"ethereumAddress":  account.TokenEthAddr,
+			"name":             account.TokenName,
+			"symbol":           account.TokenSymbol,
+			"decimals":         account.TokenDecimals,
+			"USD":              account.TokenUSD,
+			"fiatUpdate":       account.TokenUSDUpdate,
+		},
+	}
+	return json.Marshal(jsonAccount)
+}
+
 // BatchAPI is a representation of a batch with additional information
 // required by the API, and extracted by joining block table
 type BatchAPI struct {

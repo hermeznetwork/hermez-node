@@ -11,7 +11,7 @@ import (
 func getExits(c *gin.Context) {
 	// Get query parameters
 	// Account filters
-	tokenID, addr, bjj, idx, err := parseAccountFilters(c)
+	tokenID, addr, bjj, idx, err := parseExitFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

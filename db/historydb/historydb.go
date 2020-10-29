@@ -1332,9 +1332,7 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 // GetCoordinatorAPI returns a coordinator by its bidderAddr
 func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*CoordinatorAPI, error) {
 	coordinator := &CoordinatorAPI{}
-	err := meddler.QueryRow(
-		hdb.db, coordinator, `SELECT * FROM coordinator WHERE bidder_addr = $1;`, bidderAddr,
-	)
+	err := meddler.QueryRow(hdb.db, coordinator, "SELECT * FROM coordinator WHERE bidder_addr = $1;", bidderAddr)
 	return coordinator, err
 }
 
@@ -1391,4 +1389,96 @@ func (hdb *HistoryDB) GetAuctionVars() (*common.AuctionVariables, error) {
 		hdb.db, auctionVars, `SELECT * FROM auction_vars;`,
 	)
 	return auctionVars, err
+}
+
+// GetAccountAPI returns an account by its index
+func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
+	account := &AccountAPI{}
+	err := meddler.QueryRow(hdb.db, account, `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
+	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
+	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
+	FROM account INNER JOIN token ON account.token_id = token.token_id WHERE idx = $1;`, idx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
+}
+
+// GetAccountsAPI returns a list of accounts from the DB and pagination info
+func (hdb *HistoryDB) GetAccountsAPI(tokenIDs []common.TokenID, ethAddr *ethCommon.Address, bjj *babyjub.PublicKey, fromItem, limit *uint, order string) ([]AccountAPI, *db.Pagination, error) {
+	if ethAddr != nil && bjj != nil {
+		return nil, nil, errors.New("ethAddr and bjj are incompatible")
+	}
+	var query string
+	var args []interface{}
+	queryStr := `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
+	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
+	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
+	COUNT(*) OVER() AS total_items, MIN(account.item_id) OVER() AS first_item, MAX(account.item_id) OVER() AS last_item  
+	FROM account INNER JOIN token ON account.token_id = token.token_id `
+	// Apply filters
+	nextIsAnd := false
+	// ethAddr filter
+	if ethAddr != nil {
+		queryStr += "WHERE account.eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, ethAddr)
+	} else if bjj != nil { // bjj filter
+		queryStr += "WHERE account.bjj = ? "
+		nextIsAnd = true
+		args = append(args, bjj)
+	}
+	// tokenID filter
+	if len(tokenIDs) > 0 {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "account.token_id IN (?) "
+		args = append(args, tokenIDs)
+		nextIsAnd = true
+	}
+	if fromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if order == OrderAsc {
+			queryStr += "account.item_id >= ? "
+		} else {
+			queryStr += "account.item_id <= ? "
+		}
+		args = append(args, fromItem)
+	}
+	// pagination
+	queryStr += "ORDER BY account.item_id "
+	if order == OrderAsc {
+		queryStr += " ASC "
+	} else {
+		queryStr += " DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	query, argsQ, err := sqlx.In(queryStr, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	query = hdb.db.Rebind(query)
+
+	accounts := []*AccountAPI{}
+	if err := meddler.QueryAll(hdb.db, &accounts, query, argsQ...); err != nil {
+		return nil, nil, err
+	}
+	if len(accounts) == 0 {
+		return nil, nil, sql.ErrNoRows
+	}
+
+	return db.SlicePtrsToSlice(accounts).([]AccountAPI), &db.Pagination{
+		TotalItems: accounts[0].TotalItems,
+		FirstItem:  accounts[0].FirstItem,
+		LastItem:   accounts[0].LastItem,
+	}, nil
 }
