@@ -42,6 +42,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	// Check Blocks
 	dbBlocks, err := s.historyDB.GetAllBlocks()
 	require.Nil(t, err)
+	dbBlocks = dbBlocks[1:] // ignore block 0, added by default in the DB
 	assert.Equal(t, blockNum, len(dbBlocks))
 	assert.Equal(t, int64(blockNum), dbBlocks[blockNum-1].EthBlockNum)
 	assert.NotEqual(t, dbBlocks[blockNum-1].Hash, dbBlocks[blockNum-2].Hash)
@@ -51,6 +52,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	assert.Equal(t, len(block.AddedTokens), len(syncBlock.AddedTokens))
 	dbTokens, err := s.historyDB.GetAllTokens()
 	require.Nil(t, err)
+	dbTokens = dbTokens[1:] // ignore token 0, added by default in the DB
 	for i, token := range block.AddedTokens {
 		dbToken := dbTokens[i]
 		syncToken := syncBlock.AddedTokens[i]
@@ -224,8 +226,7 @@ func TestSync(t *testing.T) {
 	require.Nil(t, err)
 	historyDB := historydb.NewHistoryDB(db)
 	// Clear DB
-	err = historyDB.Reorg(-1)
-	assert.Nil(t, err)
+	test.WipeDB(historyDB.DB())
 
 	// Init eth client
 	var timer timer
@@ -249,8 +250,8 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, int64(1), syncBlock.Block.EthBlockNum)
 	dbBlocks, err := s.historyDB.GetAllBlocks()
 	require.Nil(t, err)
-	assert.Equal(t, 1, len(dbBlocks))
-	assert.Equal(t, int64(1), dbBlocks[0].EthBlockNum)
+	assert.Equal(t, 2, len(dbBlocks))
+	assert.Equal(t, int64(1), dbBlocks[1].EthBlockNum)
 
 	// Sync again and expect no new blocks
 	syncBlock, discards, err = s.Sync2(ctx, nil)

@@ -27,10 +27,8 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	l2DB = NewL2DB(db, 10, 100, 24*time.Hour)
+	test.WipeDB(l2DB.DB())
 	tokens, tokensUSD = prepareHistoryDB(db)
-	if err != nil {
-		panic(err)
-	}
 	// Run tests
 	result := m.Run()
 	// Close DB
@@ -44,10 +42,6 @@ func prepareHistoryDB(db *sqlx.DB) ([]common.Token, []historydb.TokenWithUSD) {
 	historyDB := historydb.NewHistoryDB(db)
 	const fromBlock int64 = 1
 	const toBlock int64 = 5
-	// Clean historyDB
-	if err := historyDB.Reorg(-1); err != nil {
-		panic(err)
-	}
 	// Store blocks to historyDB
 	blocks := test.GenBlocks(fromBlock, toBlock)
 	if err := historyDB.AddBlocks(blocks); err != nil {
@@ -55,10 +49,11 @@ func prepareHistoryDB(db *sqlx.DB) ([]common.Token, []historydb.TokenWithUSD) {
 	}
 	// Store tokens to historyDB
 	const nTokens = 5
-	tokens := test.GenTokens(nTokens, blocks)
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
 	if err := historyDB.AddTokens(tokens); err != nil {
 		panic(err)
 	}
+	tokens = append([]common.Token{ethToken}, tokens...)
 	readTokens := []historydb.TokenWithUSD{}
 	for i, token := range tokens {
 		readToken := historydb.TokenWithUSD{
@@ -86,7 +81,7 @@ func prepareHistoryDB(db *sqlx.DB) ([]common.Token, []historydb.TokenWithUSD) {
 func TestAddTxTest(t *testing.T) {
 	// Gen poolTxs
 	const nInserts = 20
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	for _, tx := range txs {
 		err := l2DB.AddTxTest(tx)
@@ -127,7 +122,7 @@ func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
 
 func BenchmarkAddTxTest(b *testing.B) {
 	const nInserts = 20
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	now := time.Now()
 	for _, tx := range txs {
@@ -139,7 +134,7 @@ func BenchmarkAddTxTest(b *testing.B) {
 
 func TestGetPending(t *testing.T) {
 	const nInserts = 20
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	var pendingTxs []*common.PoolL2Tx
 	for _, tx := range txs {
@@ -163,7 +158,7 @@ func TestStartForging(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	var startForgingTxIDs []common.TxID
 	randomizer := 0
@@ -195,7 +190,7 @@ func TestDoneForging(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	var doneForgingTxIDs []common.TxID
 	randomizer := 0
@@ -227,7 +222,7 @@ func TestInvalidate(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	var invalidTxIDs []common.TxID
 	randomizer := 0
@@ -259,7 +254,7 @@ func TestCheckNonces(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
 	const fakeBatchNum common.BatchNum = 33
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	var invalidTxIDs []common.TxID
 	// Generate accounts
@@ -304,7 +299,7 @@ func TestReorg(t *testing.T) {
 	const nInserts = 20
 	const lastValidBatch common.BatchNum = 20
 	const reorgBatch common.BatchNum = lastValidBatch + 1
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	// Add txs to the DB
 	reorgedTxIDs := []common.TxID{}
@@ -346,7 +341,7 @@ func TestPurge(t *testing.T) {
 		WARNING: this should be fixed once transaktio is ready
 		// Generate txs
 		nInserts := l2DB.maxTxs + 20
-		test.CleanL2DB(l2DB.DB())
+		test.WipeDB(l2DB.DB())
 		txs := test.GenPoolTxs(int(nInserts), tokens)
 		deletedIDs := []common.TxID{}
 		keepedIDs := []common.TxID{}
@@ -408,7 +403,7 @@ func TestPurge(t *testing.T) {
 }
 
 func TestAuth(t *testing.T) {
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB())
 	const nAuths = 5
 	// Generate authorizations
 	auths := test.GenAuths(nAuths)

@@ -349,24 +349,24 @@ func TestGetHistoryTxs(t *testing.T) {
 		}
 	}
 	assertTxs(t, tokenIDTxs, fetchedTxs)
-	// idx
-	fetchedTxs = []testTx{}
-	limit = 4
+	// // idx
+	// fetchedTxs = []testTx{}
+	// limit = 4
 	idx := tc.allTxs[0].ToIdx
-	path = fmt.Sprintf(
-		"%s?accountIndex=%s&limit=%d&fromItem=",
-		endpoint, idx, limit,
-	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
-	assert.NoError(t, err)
-	idxTxs := []testTx{}
-	for i := 0; i < len(tc.allTxs); i++ {
-		if (tc.allTxs[i].FromIdx != nil && (*tc.allTxs[i].FromIdx)[6:] == idx[6:]) ||
-			tc.allTxs[i].ToIdx[6:] == idx[6:] {
-			idxTxs = append(idxTxs, tc.allTxs[i])
-		}
-	}
-	assertTxs(t, idxTxs, fetchedTxs)
+	// path = fmt.Sprintf(
+	// 	"%s?accountIndex=%s&limit=%d&fromItem=",
+	// 	endpoint, idx, limit,
+	// )
+	// err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	// assert.NoError(t, err)
+	// idxTxs := []testTx{}
+	// for i := 0; i < len(tc.allTxs); i++ {
+	// 	if (tc.allTxs[i].FromIdx != nil && (*tc.allTxs[i].FromIdx)[6:] == idx[6:]) ||
+	// 		tc.allTxs[i].ToIdx[6:] == idx[6:] {
+	// 		idxTxs = append(idxTxs, tc.allTxs[i])
+	// 	}
+	// }
+	// assertHistoryTxAPIs(t, idxTxs, fetchedTxs)
 	// batchNum
 	fetchedTxs = []testTx{}
 	limit = 3

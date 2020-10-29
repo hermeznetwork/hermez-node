@@ -73,7 +73,6 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	hdb := historydb.NewHistoryDB(database)
-	err = hdb.Reorg(-1)
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +92,7 @@ func TestMain(m *testing.M) {
 	}
 	// L2DB
 	l2DB := l2db.NewL2DB(database, 10, 100, 24*time.Hour)
-	test.CleanL2DB(l2DB.DB())
+	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 	// Config (smart contract constants)
 	config.RollupConstants.ExchangeMultiplier = eth.RollupConstExchangeMultiplier
 	config.RollupConstants.ExitIdx = eth.RollupConstExitIDx
@@ -160,11 +159,6 @@ func TestMain(m *testing.M) {
 	}()
 
 	// Fill HistoryDB and StateDB with fake data
-	// Clean DB
-	err = h.Reorg(0)
-	if err != nil {
-		panic(err)
-	}
 	// Gen blocks and add them to DB
 	const nBlocks = 5
 	blocks := test.GenBlocks(1, nBlocks+1)
@@ -174,11 +168,12 @@ func TestMain(m *testing.M) {
 	}
 	// Gen tokens and add them to DB
 	const nTokens = 10
-	tokens := test.GenTokens(nTokens, blocks)
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
 	err = h.AddTokens(tokens)
 	if err != nil {
 		panic(err)
 	}
+	tokens = append([]common.Token{ethToken}, tokens...)
 	// Set token value
 	tokensUSD := []historydb.TokenWithUSD{}
 	for i, tkn := range tokens {

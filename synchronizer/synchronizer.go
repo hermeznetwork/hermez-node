@@ -116,8 +116,9 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 			return nil, nil, err
 		}
 		// If we don't have any stored block, we must do a full sync starting from the rollup genesis block
-		if err == sql.ErrNoRows {
+		if err == sql.ErrNoRows || lastSavedBlock.EthBlockNum == 0 {
 			nextBlockNum = s.auctionConstants.GenesisBlockNum
+			lastSavedBlock = nil
 		}
 	}
 	if lastSavedBlock != nil {

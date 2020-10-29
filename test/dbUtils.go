@@ -3,6 +3,9 @@ package test
 import (
 	"testing"
 
+	"github.com/gobuffalo/packr/v2"
+	"github.com/jmoiron/sqlx"
+	migrate "github.com/rubenv/sql-migrate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,4 +23,20 @@ func AssertUSD(t *testing.T, expected, actual *float64) {
 		assert.InEpsilon(t, *expected, *actual, 0.0001)
 	}
 	*expected = *actual
+}
+
+// WipeDB redo all the migrations of the SQL DB (HistoryDB and L2DB),
+// efectively recreating the original state
+func WipeDB(db *sqlx.DB) {
+	migrations := &migrate.PackrMigrationSource{
+		Box: packr.New("hermez-db-migrations", "../db/migrations"),
+	}
+	_, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Down)
+	if err != nil {
+		panic(err)
+	}
+	_, err = migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+	if err != nil {
+		panic(err)
+	}
 }
