@@ -21,6 +21,9 @@ const (
 
 	// 2^32 -1
 	maxUint32 = 4294967295
+
+	// 2^64 /2 -1
+	maxInt64 = 9223372036854775807
 )
 
 var (
@@ -33,10 +36,6 @@ func getAccounts(c *gin.Context) {
 }
 
 func getAccount(c *gin.Context) {
-
-}
-
-func getSlots(c *gin.Context) {
 
 }
 

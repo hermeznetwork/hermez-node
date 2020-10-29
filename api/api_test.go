@@ -49,6 +49,8 @@ type testCommon struct {
 	auths            []testAuth
 	router           *swagger.Router
 	bids             []testBid
+	slots            []testSlot
+	auctionVars      common.AuctionVariables
 }
 
 var tc testCommon
@@ -122,6 +124,8 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	lastBlockNum := blocks[nBlocks-1].EthBlockNum
+
 	// Gen tokens and add them to DB
 	const nTokens = 10
 	tokens, ethToken := test.GenTokens(nTokens, blocks)
@@ -258,12 +262,26 @@ func TestMain(m *testing.M) {
 	}
 
 	// Bids
-	const nBids = 10
+	const nBids = 20
 	bids := test.GenBids(nBids, blocks, coords)
 	err = hdb.AddBids(bids)
 	if err != nil {
 		panic(err)
 	}
+	testBids := genTestBids(blocks, coordinators, bids)
+
+	// Vars
+	auctionVars := common.AuctionVariables{
+		BootCoordinator:    ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+		ClosedAuctionSlots: uint16(2),
+		OpenAuctionSlots:   uint16(5),
+	}
+	err = hdb.AddAuctionVars(&auctionVars)
+	if err != nil {
+		panic(err)
+	}
+
+	const nSlots = 20
 
 	// Set testCommon
 	usrTxs, allTxs := genTestTxs(sortedTxs, usrIdxs, accs, tokensUSD, blocks)
@@ -287,7 +305,9 @@ func TestMain(m *testing.M) {
 		poolTxsToReceive: poolTxsToReceive,
 		auths:            genTestAuths(test.GenAuths(5)),
 		router:           router,
-		bids:             genTestBids(blocks, coordinators, bids),
+		bids:             testBids,
+		slots:            genTestSlots(nSlots, lastBlockNum, testBids, auctionVars),
+		auctionVars:      auctionVars,
 	}
 
 	// Fake server
@@ -317,15 +337,18 @@ func doGoodReqPaginated(
 	iterStruct db.Paginationer,
 	appendIter func(res interface{}),
 ) error {
-	next := 0
+	next := -1
 	for {
 		// Call API to get this iteration items
 		iterPath := path
-		if next == 0 && order == historydb.OrderDesc {
+		if next == -1 && order == historydb.OrderDesc {
 			// Fetch first item in reverse order
 			iterPath += "99999"
 		} else {
 			// Fetch from next item or 0 if it's ascending order
+			if next == -1 {
+				next = 0
+			}
 			iterPath += strconv.Itoa(next)
 		}
 		if err := doGoodReq("GET", iterPath+"&order="+order, nil, iterStruct); err != nil {

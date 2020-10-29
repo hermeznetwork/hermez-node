@@ -62,6 +62,7 @@ func SetAPIEndpoints(
 		server.GET("/batches/:batchNum", getBatch)
 		server.GET("/full-batches/:batchNum", getFullBatch)
 		server.GET("/slots", getSlots)
+		server.GET("/slots/:slotNum", getSlot)
 		server.GET("/bids", getBids)
 		server.GET("/next-forgers", getNextForgers)
 		server.GET("/state", getState)
