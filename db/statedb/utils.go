@@ -63,6 +63,7 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 	if err != nil {
 		return err
 	}
+
 	// store Addr-idx
 	k = concatEthAddrTokenID(addr, tokenID)
 	err = tx.Put(append(PrefixKeyAddr, k...), idxBytes[:])
@@ -83,11 +84,11 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID
 	k := concatEthAddrTokenID(addr, tokenID)
 	b, err := s.db.Get(append(PrefixKeyAddr, k...))
 	if err != nil {
-		return common.Idx(0), ErrToIdxNotFound
+		return common.Idx(0), fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d", ErrToIdxNotFound, addr.Hex(), tokenID)
 	}
 	idx, err := common.IdxFromBytes(b)
 	if err != nil {
-		return common.Idx(0), ErrToIdxNotFound
+		return common.Idx(0), fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d", err, addr.Hex(), tokenID)
 	}
 	return idx, nil
 }
@@ -99,6 +100,7 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID
 // the StateDB.
 func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicKey, tokenID common.TokenID) (common.Idx, error) {
 	if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk == nil {
+		// ToEthAddr
 		// case ToEthAddr!=0 && ToBJJ=0
 		return s.GetIdxByEthAddr(addr, tokenID)
 	} else if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk != nil {
@@ -106,16 +108,16 @@ func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicK
 		k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 		b, err := s.db.Get(append(PrefixKeyAddrBJJ, k...))
 		if err != nil {
-			return common.Idx(0), ErrToIdxNotFound
+			return common.Idx(0), fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrToIdxNotFound, addr.Hex(), pk, tokenID)
 		}
 		idx, err := common.IdxFromBytes(b)
 		if err != nil {
-			return common.Idx(0), ErrToIdxNotFound
+			return common.Idx(0), fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", err, addr.Hex(), pk, tokenID)
 		}
 		return idx, nil
 	}
 	// rest of cases (included case ToEthAddr==0) are not possible
-	return common.Idx(0), ErrToIdxNotFound
+	return common.Idx(0), fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrGetIdxNoCase, addr.Hex(), pk, tokenID)
 }
 
 func (s *StateDB) getTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]common.Idx, error) {

@@ -49,8 +49,8 @@ type Context struct {
 	currBlock     common.BlockData
 	currBatch     common.BatchData
 	currBatchNum  int
-	queues        [][]L1Tx
-	toForgeNum    int
+	Queues        [][]L1Tx
+	ToForgeNum    int
 	openToForge   int
 	currBatchTest struct {
 		l1CoordinatorTxs []L1Tx
@@ -75,8 +75,8 @@ func NewContext(rollupConstMaxL1UserTx int) *Context {
 		currBatch:    newBatchData(currBatchNum),
 		currBatchNum: currBatchNum,
 		// start with 2 queues, one for toForge, and the other for openToForge
-		queues:      make([][]L1Tx, 2),
-		toForgeNum:  0,
+		Queues:      make([][]L1Tx, 2),
+		ToForgeNum:  0,
 		openToForge: 1,
 		//nolint:gomnd
 		blockNum: 2, // rollup genesis blockNum
@@ -301,8 +301,8 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				return nil, err
 			}
 		case typeNewBatchL1:
-			// for each L1UserTx of the queues[ToForgeNum], calculate the Idx
-			if err = tc.calculateIdxForL1Txs(false, tc.queues[tc.toForgeNum]); err != nil {
+			// for each L1UserTx of the Queues[ToForgeNum], calculate the Idx
+			if err = tc.calculateIdxForL1Txs(false, tc.Queues[tc.ToForgeNum]); err != nil {
 				return nil, err
 			}
 			if err = tc.calculateIdxForL1Txs(true, tc.currBatchTest.l1CoordinatorTxs); err != nil {
@@ -313,12 +313,14 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				log.Error(err)
 				return nil, err
 			}
+			toForgeL1TxsNum := int64(tc.openToForge)
+			tc.currBatch.Batch.ForgeL1TxsNum = &toForgeL1TxsNum
 			// advance batch
-			tc.toForgeNum++
-			if tc.toForgeNum == tc.openToForge {
+			tc.ToForgeNum++
+			if tc.ToForgeNum == tc.openToForge {
 				tc.openToForge++
 				newQueue := []L1Tx{}
-				tc.queues = append(tc.queues, newQueue)
+				tc.Queues = append(tc.Queues, newQueue)
 			}
 		case typeNewBlock:
 			blocks = append(blocks, tc.currBlock)
@@ -349,12 +351,12 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 // calculateIdxsForL1Txs calculates new Idx for new created accounts. If
 // 'isCoordinatorTxs==true', adds the tx to tc.currBatch.L1CoordinatorTxs.
 func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error {
-	// for each batch.L1CoordinatorTxs of the queues[ToForgeNum], calculate the Idx
+	// for each batch.L1CoordinatorTxs of the Queues[ToForgeNum], calculate the Idx
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
 		if tx.L1Tx.Type == common.TxTypeCreateAccountDeposit || tx.L1Tx.Type == common.TxTypeCreateAccountDepositTransfer {
 			if tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] != nil { // if account already exists, return error
-				return fmt.Errorf("Can not create same account twice (same User & same TokenID) (this is a design property of Til)")
+				return fmt.Errorf("Can not create same account twice (same User (%s) & same TokenID (%d)) (this is a design property of Til)", tx.fromIdxName, tx.L1Tx.TokenID)
 			}
 			tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] = &Account{
 				Idx:   common.Idx(tc.idx),
@@ -418,19 +420,19 @@ func (tc *Context) setIdxs() error {
 
 // addToL1Queue adds the L1Tx into the queue that is open and has space
 func (tc *Context) addToL1Queue(tx L1Tx) error {
-	if len(tc.queues[tc.openToForge]) >= tc.rollupConstMaxL1UserTx {
+	if len(tc.Queues[tc.openToForge]) >= tc.rollupConstMaxL1UserTx {
 		// if current OpenToForge queue reached its Max, move into a
 		// new queue
 		tc.openToForge++
 		newQueue := []L1Tx{}
-		tc.queues = append(tc.queues, newQueue)
+		tc.Queues = append(tc.Queues, newQueue)
 	}
 	// Fill L1UserTx specific parameters
 	tx.L1Tx.UserOrigin = true
 	toForgeL1TxsNum := int64(tc.openToForge)
 	tx.L1Tx.ToForgeL1TxsNum = &toForgeL1TxsNum
 	tx.L1Tx.EthBlockNum = tc.blockNum
-	tx.L1Tx.Position = len(tc.queues[tc.openToForge])
+	tx.L1Tx.Position = len(tc.Queues[tc.openToForge])
 
 	// When an L1UserTx is generated, all idxs must be available (except when idx == 0 or idx == 1)
 	if tx.L1Tx.Type != common.TxTypeCreateAccountDeposit && tx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {
@@ -457,7 +459,7 @@ func (tc *Context) addToL1Queue(tx L1Tx) error {
 	}
 	tx.L1Tx = *nTx
 
-	tc.queues[tc.openToForge] = append(tc.queues[tc.openToForge], tx)
+	tc.Queues[tc.openToForge] = append(tc.Queues[tc.openToForge], tx)
 	tc.currBlock.L1UserTxs = append(tc.currBlock.L1UserTxs, tx.L1Tx)
 
 	return nil
@@ -554,6 +556,7 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 			tx := common.PoolL2Tx{
 				FromIdx: tc.Users[inst.from].Accounts[inst.tokenID].Idx,
 				ToIdx:   common.Idx(1), // as is an Exit
+				Fee:     common.FeeSelector(inst.fee),
 				TokenID: inst.tokenID,
 				Amount:  big.NewInt(int64(inst.amount)),
 				Nonce:   tc.Users[inst.from].Accounts[inst.tokenID].Nonce,
@@ -607,4 +610,13 @@ func (tc *Context) generateKeys(userNames []string) {
 		}
 		tc.Users[userNames[i-1]] = &u
 	}
+}
+
+// L1TxsToCommonL1Txs converts an array of []til.L1Tx to []common.L1Tx
+func L1TxsToCommonL1Txs(l1 []L1Tx) []common.L1Tx {
+	var r []common.L1Tx
+	for i := 0; i < len(l1); i++ {
+		r = append(r, l1[i].L1Tx)
+	}
+	return r
 }

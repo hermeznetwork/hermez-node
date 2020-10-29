@@ -28,6 +28,9 @@ var (
 	// ErrToIdxNotFound is used when trying to get the ToIdx from ToEthAddr
 	// or ToEthAddr&ToBJJ
 	ErrToIdxNotFound = errors.New("ToIdx can not be found")
+	// ErrGetIdxNoCase is used when trying to get the Idx from EthAddr &
+	// BJJ with not compatible combination
+	ErrGetIdxNoCase = errors.New("Can not get Idx due unexpected combination of ethereum Address & BabyJubJub PublicKey")
 
 	// KeyCurrentBatch is used as key in the db to store the current BatchNum
 	KeyCurrentBatch = []byte("k:currentbatch")

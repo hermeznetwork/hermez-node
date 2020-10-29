@@ -264,7 +264,7 @@ func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []common.L1Tx, l
 		// AccountsDB (in the StateDB)
 		acc, err := s.GetAccount(l2txs[i].FromIdx)
 		if err != nil {
-			log.Errorf("ToIdx %d not found: %s", l2txs[i].ToIdx, err.Error())
+			log.Errorf("could not get account to determine TokenID of L2Tx: FromIdx %d not found: %s", l2txs[i].FromIdx, err.Error())
 			return nil, err
 		}
 		tokenIDs[acc.TokenID] = true
@@ -397,7 +397,6 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 		// case when tx.Type== common.TxTypeTransferToEthAddr or common.TxTypeTransferToBJJ
 		tx.AuxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ, tx.TokenID)
 		if err != nil {
-			log.Error(err)
 			return nil, nil, false, err
 		}
 	}
@@ -607,6 +606,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		fee := common.CalcFeeAmount(tx.Amount, *tx.Fee)
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
+
 		// send the fee to the Idx of the Coordinator for the TokenID
 		accCoord, err := s.GetAccount(coordIdxsMap[accSender.TokenID])
 		if err != nil {
@@ -623,6 +623,8 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 				collected.Add(collected, fee)
 			}
 		}
+	} else {
+		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
 	}
 
 	// add amount-feeAmount to the receiver
@@ -676,7 +678,6 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		PublicKey: tx.FromBJJ,
 		EthAddr:   tx.FromEthAddr,
 	}
-	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.LoadAmount)
 	accReceiver, err := s.GetAccount(tx.ToIdx)
 	if err != nil {
 		return err
@@ -762,6 +763,8 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 				collected.Add(collected, fee)
 			}
 		}
+	} else {
+		acc.Balance = new(big.Int).Sub(acc.Balance, tx.Amount)
 	}
 
 	p, err := s.UpdateAccount(tx.FromIdx, acc)
