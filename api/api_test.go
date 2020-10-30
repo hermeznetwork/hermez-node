@@ -40,6 +40,7 @@ type testCommon struct {
 	blocks           []common.Block
 	tokens           []historydb.TokenWithUSD
 	batches          []testBatch
+	fullBatches      []testFullBatch
 	coordinators     []historydb.CoordinatorAPI
 	usrAddr          string
 	usrBjj           string
@@ -361,10 +362,12 @@ func TestMain(m *testing.M) {
 	// Set testCommon
 	usrTxs, allTxs := genTestTxs(sortedTxs, usrIdxs, accs, tokensUSD, blocks)
 	poolTxsToSend, poolTxsToReceive := genTestPoolTx(accs, []babyjub.PrivateKey{privK}, tokensUSD) // NOTE: pool txs are not inserted to the DB here. In the test they will be posted and getted.
+	testBatches, fullBatches := genTestBatches(blocks, batches, allTxs)
 	tc = testCommon{
 		blocks:           blocks,
 		tokens:           tokensUSD,
-		batches:          genTestBatches(blocks, batches),
+		batches:          testBatches,
+		fullBatches:      fullBatches,
 		coordinators:     coordinators,
 		usrAddr:          ethAddrToHez(usrAddr),
 		usrBjj:           bjjToString(usrBjj),
