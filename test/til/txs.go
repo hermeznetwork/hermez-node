@@ -385,7 +385,10 @@ func (tc *Context) setIdxs() error {
 			}
 		}
 		tc.Users[testTx.fromIdxName].Accounts[testTx.tokenID].Nonce++
-		testTx.L2Tx.Nonce = tc.Users[testTx.fromIdxName].Accounts[testTx.tokenID].Nonce
+		// next line is commented to avoid Blockchain L2Txs to have
+		// Nonce different from 0, as from Blockchain those
+		// transactions will come without Nonce
+		// testTx.L2Tx.Nonce = tc.Users[testTx.fromIdxName].Accounts[testTx.tokenID].Nonce
 
 		// set real Idx
 		testTx.L2Tx.FromIdx = tc.Users[testTx.fromIdxName].Accounts[testTx.tokenID].Idx

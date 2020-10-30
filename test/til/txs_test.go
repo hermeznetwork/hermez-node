@@ -110,36 +110,36 @@ func TestGenerateBlocks(t *testing.T) {
 	// // #4: CreateAccountDeposit(1) D: 5
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[4], common.TxTypeCreateAccountDeposit, 1, "D", "", big.NewInt(5), nil)
 	// #5: Transfer(1) A-B: 6 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[0], common.TxTypeTransfer, 1, "A", "B", big.NewInt(6), common.BatchNum(3), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[0], common.TxTypeTransfer, 1, "A", "B", big.NewInt(6), common.BatchNum(3))
 	// #6: Transfer(1) B-D: 3 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[1], common.TxTypeTransfer, 1, "B", "D", big.NewInt(3), common.BatchNum(3), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[1], common.TxTypeTransfer, 1, "B", "D", big.NewInt(3), common.BatchNum(3))
 	// #7: Transfer(1) A-D: 1 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[2], common.TxTypeTransfer, 1, "A", "D", big.NewInt(1), common.BatchNum(3), common.Nonce(2))
+	tc.checkL2TxParams(t, blocks[0].Batches[2].L2Txs[2], common.TxTypeTransfer, 1, "A", "D", big.NewInt(1), common.BatchNum(3))
 	// change of Batch
 	// #8: CreateAccountDepositTransfer(1) F-A: 15, 10 (3)
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[5], common.TxTypeCreateAccountDepositTransfer, 1, "F", "A", big.NewInt(15), big.NewInt(10))
 	// #9: DepositTransfer(1) A-B: 15, 10 (1)
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[6], common.TxTypeDepositTransfer, 1, "A", "B", big.NewInt(15), big.NewInt(10))
 	// #11: Transfer(1) C-A : 3 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[0], common.TxTypeTransfer, 1, "C", "A", big.NewInt(3), common.BatchNum(4), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[0], common.TxTypeTransfer, 1, "C", "A", big.NewInt(3), common.BatchNum(4))
 	// #12: Transfer(2) A-B: 15 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[1], common.TxTypeTransfer, 2, "A", "B", big.NewInt(15), common.BatchNum(4), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[3].L2Txs[1], common.TxTypeTransfer, 2, "A", "B", big.NewInt(15), common.BatchNum(4))
 	// #13: Deposit(1) User0: 20
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[7], common.TxTypeCreateAccountDeposit, 1, "User0", "", big.NewInt(20), nil)
 	// // #14: Deposit(3) User1: 20
 	tc.checkL1TxParams(t, blocks[0].L1UserTxs[8], common.TxTypeCreateAccountDeposit, 3, "User1", "", big.NewInt(20), nil)
 	// #15: Transfer(1) User0-User1: 15 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[0], common.TxTypeTransfer, 1, "User0", "User1", big.NewInt(15), common.BatchNum(5), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[0], common.TxTypeTransfer, 1, "User0", "User1", big.NewInt(15), common.BatchNum(5))
 	// #16: Transfer(3) User1-User0: 15 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[1], common.TxTypeTransfer, 3, "User1", "User0", big.NewInt(15), common.BatchNum(5), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[1], common.TxTypeTransfer, 3, "User1", "User0", big.NewInt(15), common.BatchNum(5))
 	// #17: Transfer(1) A-C: 1 (1)
-	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[2], common.TxTypeTransfer, 1, "A", "C", big.NewInt(1), common.BatchNum(5), common.Nonce(4))
+	tc.checkL2TxParams(t, blocks[0].Batches[4].L2Txs[2], common.TxTypeTransfer, 1, "A", "C", big.NewInt(1), common.BatchNum(5))
 	// change of Batch
 	// #18: Transfer(1) User1-User0: 1 (1)
-	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[0], common.TxTypeTransfer, 1, "User1", "User0", big.NewInt(1), common.BatchNum(6), common.Nonce(1))
+	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[0], common.TxTypeTransfer, 1, "User1", "User0", big.NewInt(1), common.BatchNum(6))
 	// change of Block (implies also a change of batch)
 	// #19: Transfer(1) A-B: 1 (1)
-	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[1], common.TxTypeTransfer, 1, "A", "B", big.NewInt(1), common.BatchNum(6), common.Nonce(5))
+	tc.checkL2TxParams(t, blocks[1].Batches[0].L2Txs[1], common.TxTypeTransfer, 1, "A", "B", big.NewInt(1), common.BatchNum(6))
 }
 
 func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxType, tokenID common.TokenID, from, to string, loadAmount, amount *big.Int) {
@@ -160,7 +160,7 @@ func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxTy
 	}
 }
 
-func (tc *Context) checkL2TxParams(t *testing.T, tx common.L2Tx, typ common.TxType, tokenID common.TokenID, from, to string, amount *big.Int, batchNum common.BatchNum, nonce common.Nonce) {
+func (tc *Context) checkL2TxParams(t *testing.T, tx common.L2Tx, typ common.TxType, tokenID common.TokenID, from, to string, amount *big.Int, batchNum common.BatchNum) {
 	assert.Equal(t, typ, tx.Type)
 	assert.Equal(t, tc.Users[from].Accounts[tokenID].Idx, tx.FromIdx)
 	if tx.Type != common.TxTypeExit {
@@ -170,7 +170,6 @@ func (tc *Context) checkL2TxParams(t *testing.T, tx common.L2Tx, typ common.TxTy
 		assert.Equal(t, amount, tx.Amount)
 	}
 	assert.Equal(t, batchNum, tx.BatchNum)
-	assert.Equal(t, nonce, tx.Nonce)
 }
 
 func TestGeneratePoolL2Txs(t *testing.T) {
