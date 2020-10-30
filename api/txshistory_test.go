@@ -310,7 +310,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
-	assertHistoryTxAPIs(t, tc.allTxs, fetchedTxs)
+	assertTxs(t, tc.allTxs, fetchedTxs)
 	// Uncomment once tx generation for tests is fixed
 	// // Get by ethAddr
 	// fetchedTxs = []testTx{}
@@ -321,7 +321,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// )
 	// err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	// assert.NoError(t, err)
-	// assertHistoryTxAPIs(t, tc.usrTxs, fetchedTxs)
+	// assertTxs(t, tc.usrTxs, fetchedTxs)
 	// // Get by bjj
 	// fetchedTxs = []testTx{}
 	// limit = 6
@@ -331,7 +331,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// )
 	// err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	// assert.NoError(t, err)
-	// assertHistoryTxAPIs(t, tc.usrTxs, fetchedTxs)
+	// assertTxs(t, tc.usrTxs, fetchedTxs)
 	// Get by tokenID
 	fetchedTxs = []testTx{}
 	limit = 5
@@ -348,7 +348,7 @@ func TestGetHistoryTxs(t *testing.T) {
 			tokenIDTxs = append(tokenIDTxs, tc.allTxs[i])
 		}
 	}
-	assertHistoryTxAPIs(t, tokenIDTxs, fetchedTxs)
+	assertTxs(t, tokenIDTxs, fetchedTxs)
 	// idx
 	fetchedTxs = []testTx{}
 	limit = 4
@@ -366,7 +366,7 @@ func TestGetHistoryTxs(t *testing.T) {
 			idxTxs = append(idxTxs, tc.allTxs[i])
 		}
 	}
-	assertHistoryTxAPIs(t, idxTxs, fetchedTxs)
+	assertTxs(t, idxTxs, fetchedTxs)
 	// batchNum
 	fetchedTxs = []testTx{}
 	limit = 3
@@ -384,7 +384,7 @@ func TestGetHistoryTxs(t *testing.T) {
 			batchNumTxs = append(batchNumTxs, tc.allTxs[i])
 		}
 	}
-	assertHistoryTxAPIs(t, batchNumTxs, fetchedTxs)
+	assertTxs(t, batchNumTxs, fetchedTxs)
 	// type
 	txTypes := []common.TxType{
 		// Uncomment once test gen is fixed
@@ -414,7 +414,7 @@ func TestGetHistoryTxs(t *testing.T) {
 				txTypeTxs = append(txTypeTxs, tc.allTxs[i])
 			}
 		}
-		assertHistoryTxAPIs(t, txTypeTxs, fetchedTxs)
+		assertTxs(t, txTypeTxs, fetchedTxs)
 	}
 	// Multiple filters
 	fetchedTxs = []testTx{}
@@ -433,7 +433,7 @@ func TestGetHistoryTxs(t *testing.T) {
 			}
 		}
 	}
-	assertHistoryTxAPIs(t, mixedTxs, fetchedTxs)
+	assertTxs(t, mixedTxs, fetchedTxs)
 	// All, in reverse order
 	fetchedTxs = []testTx{}
 	limit = 5
@@ -444,7 +444,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	for i := 0; i < len(tc.allTxs); i++ {
 		flipedTxs = append(flipedTxs, tc.allTxs[len(tc.allTxs)-1-i])
 	}
-	assertHistoryTxAPIs(t, flipedTxs, fetchedTxs)
+	assertTxs(t, flipedTxs, fetchedTxs)
 	// 400
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&hermezEthereumAddress=%s",
@@ -474,7 +474,7 @@ func TestGetHistoryTx(t *testing.T) {
 		assert.NoError(t, err)
 		fetchedTxs = append(fetchedTxs, fetchedTx)
 	}
-	assertHistoryTxAPIs(t, tc.allTxs, fetchedTxs)
+	assertTxs(t, tc.allTxs, fetchedTxs)
 	// 400
 	err := doBadReq("GET", endpoint+"0x001", nil, 400)
 	assert.NoError(t, err)
@@ -483,7 +483,7 @@ func TestGetHistoryTx(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func assertHistoryTxAPIs(t *testing.T, expected, actual []testTx) {
+func assertTxs(t *testing.T, expected, actual []testTx) {
 	require.Equal(t, len(expected), len(actual))
 	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
 		actual[i].ItemID = 0

@@ -84,8 +84,8 @@ func getBatch(c *gin.Context) {
 }
 
 type fullBatch struct {
-	Batch *historydb.BatchAPI
-	Txs   []historydb.TxAPI
+	Batch *historydb.BatchAPI `json:"batch"`
+	Txs   []historydb.TxAPI   `json:"transactions"`
 }
 
 func getFullBatch(c *gin.Context) {
@@ -105,9 +105,15 @@ func getFullBatch(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
-	// Fetch txs from historyDB
-	// TODO
-	txs := []historydb.TxAPI{}
+	// Fetch txs forged in the batch from historyDB
+	maxTxsPerBatch := uint(2048) //nolint:gomnd
+	txs, _, err := h.GetHistoryTxs(
+		nil, nil, nil, nil, batchNum, nil, nil, &maxTxsPerBatch, historydb.OrderAsc,
+	)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
 	// JSON response
 	c.JSON(http.StatusOK, fullBatch{
 		Batch: batch,

@@ -49,7 +49,16 @@ func (t testBatchesResponse) Len() int {
 	return len(t.Batches)
 }
 
-func genTestBatches(blocks []common.Block, cBatches []common.Batch) []testBatch {
+type testFullBatch struct {
+	Batch testBatch `json:"batch"`
+	Txs   []testTx  `json:"transactions"`
+}
+
+func genTestBatches(
+	blocks []common.Block,
+	cBatches []common.Batch,
+	txs []testTx,
+) ([]testBatch, []testFullBatch) {
 	tBatches := []testBatch{}
 	for _, cBatch := range cBatches {
 		block := common.Block{}
@@ -84,7 +93,20 @@ func genTestBatches(blocks []common.Block, cBatches []common.Batch) []testBatch 
 		}
 		tBatches = append(tBatches, tBatch)
 	}
-	return tBatches
+	fullBatches := []testFullBatch{}
+	for i := 0; i < len(tBatches); i++ {
+		forgedTxs := []testTx{}
+		for j := 0; j < len(txs); j++ {
+			if txs[j].BatchNum != nil && *txs[j].BatchNum == tBatches[i].BatchNum {
+				forgedTxs = append(forgedTxs, txs[j])
+			}
+		}
+		fullBatches = append(fullBatches, testFullBatch{
+			Batch: tBatches[i],
+			Txs:   forgedTxs,
+		})
+	}
+	return tBatches, fullBatches
 }
 
 func TestGetBatches(t *testing.T) {
@@ -221,6 +243,26 @@ func TestGetBatch(t *testing.T) {
 			),
 		)
 		assertBatch(t, batch, fetchedBatch)
+	}
+	// 400
+	assert.NoError(t, doBadReq("GET", endpoint+"foo", nil, 400))
+	// 404
+	assert.NoError(t, doBadReq("GET", endpoint+"99999", nil, 404))
+}
+
+func TestGetFullBatch(t *testing.T) {
+	endpoint := apiURL + "full-batches/"
+	for _, fullBatch := range tc.fullBatches {
+		fetchedFullBatch := testFullBatch{}
+		assert.NoError(
+			t, doGoodReq(
+				"GET",
+				endpoint+strconv.Itoa(int(fullBatch.Batch.BatchNum)),
+				nil, &fetchedFullBatch,
+			),
+		)
+		assertBatch(t, fullBatch.Batch, fetchedFullBatch.Batch)
+		assertTxs(t, fullBatch.Txs, fetchedFullBatch.Txs)
 	}
 	// 400
 	assert.NoError(t, doBadReq("GET", endpoint+"foo", nil, 400))
