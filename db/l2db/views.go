@@ -115,6 +115,7 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// AccountCreationAuthAPI represents an account creation auth in the expected format by the API
 type AccountCreationAuthAPI struct {
 	EthAddr   apitypes.HezEthAddr   `json:"hezEthereumAddress" meddler:"eth_addr" `
 	BJJ       apitypes.HezBJJ       `json:"bjj"                meddler:"bjj" `

@@ -151,14 +151,14 @@ type TokenWithUSD struct {
 	LastItem    int               `json:"-" meddler:"last_item"`
 }
 
-// HistoryExit is a representation of a exit with additional information
+// ExitAPI is a representation of a exit with additional information
 // required by the API, and extracted by joining token table
-type HistoryExit struct {
+type ExitAPI struct {
 	ItemID                 int                             `meddler:"item_id"`
 	BatchNum               common.BatchNum                 `meddler:"batch_num"`
-	AccountIdx             common.Idx                      `meddler:"account_idx"`
+	AccountIdx             apitypes.HezIdx                 `meddler:"account_idx"`
 	MerkleProof            *merkletree.CircomVerifierProof `meddler:"merkle_proof,json"`
-	Balance                *big.Int                        `meddler:"balance,bigint"`
+	Balance                apitypes.BigIntStr              `meddler:"balance"`
 	InstantWithdrawn       *int64                          `meddler:"instant_withdrawn"`
 	DelayedWithdrawRequest *int64                          `meddler:"delayed_withdraw_request"`
 	DelayedWithdrawn       *int64                          `meddler:"delayed_withdrawn"`
@@ -166,6 +166,7 @@ type HistoryExit struct {
 	FirstItem              int                             `meddler:"first_item"`
 	LastItem               int                             `meddler:"last_item"`
 	TokenID                common.TokenID                  `meddler:"token_id"`
+	TokenItemID            int                             `meddler:"token_item_id"`
 	TokenEthBlockNum       int64                           `meddler:"token_block"`
 	TokenEthAddr           ethCommon.Address               `meddler:"eth_addr"`
 	TokenName              string                          `meddler:"name"`
@@ -173,6 +174,45 @@ type HistoryExit struct {
 	TokenDecimals          uint64                          `meddler:"decimals"`
 	TokenUSD               *float64                        `meddler:"usd"`
 	TokenUSDUpdate         *time.Time                      `meddler:"usd_update"`
+}
+
+// MarshalJSON is used to neast some of the fields of ExitAPI
+// without the need of auxiliar structs
+func (e ExitAPI) MarshalJSON() ([]byte, error) {
+	siblings := []string{}
+	for i := 0; i < len(e.MerkleProof.Siblings); i++ {
+		siblings = append(siblings, e.MerkleProof.Siblings[i].String())
+	}
+	return json.Marshal(map[string]interface{}{
+		"itemId":       e.ItemID,
+		"batchNum":     e.BatchNum,
+		"accountIndex": e.AccountIdx,
+		"merkleProof": map[string]interface{}{
+			"Root":     e.MerkleProof.Root.String(),
+			"Siblings": siblings,
+			"OldKey":   e.MerkleProof.OldKey.String(),
+			"OldValue": e.MerkleProof.OldValue.String(),
+			"IsOld0":   e.MerkleProof.IsOld0,
+			"Key":      e.MerkleProof.Key.String(),
+			"Value":    e.MerkleProof.Value.String(),
+			"Fnc":      e.MerkleProof.Fnc,
+		},
+		"balance":                e.Balance,
+		"instantWithdrawn":       e.InstantWithdrawn,
+		"delayedWithdrawRequest": e.DelayedWithdrawRequest,
+		"delayedWithdrawn":       e.DelayedWithdrawn,
+		"token": map[string]interface{}{
+			"id":               e.TokenID,
+			"itemId":           e.TokenItemID,
+			"ethereumBlockNum": e.TokenEthBlockNum,
+			"ethereumAddress":  e.TokenEthAddr,
+			"name":             e.TokenName,
+			"symbol":           e.TokenSymbol,
+			"decimals":         e.TokenDecimals,
+			"USD":              e.TokenUSD,
+			"fiatUpdate":       e.TokenUSDUpdate,
+		},
+	})
 }
 
 // CoordinatorAPI is a representation of a coordinator with additional information
@@ -198,16 +238,15 @@ type BatchAPI struct {
 	Timestamp     time.Time              `json:"timestamp" meddler:"timestamp,utctime"`
 	ForgerAddr    ethCommon.Address      `json:"forgerAddr" meddler:"forger_addr"`
 	CollectedFees apitypes.CollectedFees `json:"collectedFees" meddler:"fees_collected,json"`
-	// CollectedFees map[common.TokenID]*big.Int `json:"collectedFees" meddler:"fees_collected,json"`
-	TotalFeesUSD  *float64           `json:"historicTotalCollectedFeesUSD" meddler:"total_fees_usd"`
-	StateRoot     apitypes.BigIntStr `json:"stateRoot" meddler:"state_root"`
-	NumAccounts   int                `json:"numAccounts" meddler:"num_accounts"`
-	ExitRoot      apitypes.BigIntStr `json:"exitRoot" meddler:"exit_root"`
-	ForgeL1TxsNum *int64             `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
-	SlotNum       int64              `json:"slotNum" meddler:"slot_num"`
-	TotalItems    int                `json:"-" meddler:"total_items"`
-	FirstItem     int                `json:"-" meddler:"first_item"`
-	LastItem      int                `json:"-" meddler:"last_item"`
+	TotalFeesUSD  *float64               `json:"historicTotalCollectedFeesUSD" meddler:"total_fees_usd"`
+	StateRoot     apitypes.BigIntStr     `json:"stateRoot" meddler:"state_root"`
+	NumAccounts   int                    `json:"numAccounts" meddler:"num_accounts"`
+	ExitRoot      apitypes.BigIntStr     `json:"exitRoot" meddler:"exit_root"`
+	ForgeL1TxsNum *int64                 `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
+	SlotNum       int64                  `json:"slotNum" meddler:"slot_num"`
+	TotalItems    int                    `json:"-" meddler:"total_items"`
+	FirstItem     int                    `json:"-" meddler:"first_item"`
+	LastItem      int                    `json:"-" meddler:"last_item"`
 }
 
 // Network define status of the network

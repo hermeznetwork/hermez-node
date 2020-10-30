@@ -156,20 +156,6 @@ func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// StrEthSignature is used to unmarshal EthSignature directly into an alias of []byte
-type StrEthSignature []byte
-
-// UnmarshalText unmarshals a StrEthSignature
-func (s *StrEthSignature) UnmarshalText(text []byte) error {
-	without0x := strings.TrimPrefix(string(text), "0x")
-	signature, err := hex.DecodeString(without0x)
-	if err != nil {
-		return err
-	}
-	*s = signature
-	return nil
-}
-
 // HezBJJ is used to scan/value *babyjub.PublicKey directly into strings that follow the BJJ public key hez fotmat (^hez:[A-Za-z0-9_-]{44}$) from/to sql DBs.
 // It assumes that *babyjub.PublicKey are inserted/fetched to/from the DB using the default Scan/Value interface
 type HezBJJ string
@@ -277,7 +263,7 @@ func (s *StrHezIdx) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// EthSignature is used to scan/value []byte representing an Ethereum signatue directly into strings from/to sql DBs.
+// EthSignature is used to scan/value []byte representing an Ethereum signature directly into strings from/to sql DBs.
 type EthSignature string
 
 // NewEthSignature creates a *EthSignature from []byte
@@ -310,4 +296,15 @@ func (e *EthSignature) Scan(src interface{}) error {
 func (e EthSignature) Value() (driver.Value, error) {
 	without0x := strings.TrimPrefix(string(e), "0x")
 	return hex.DecodeString(without0x)
+}
+
+// UnmarshalText unmarshals a StrEthSignature
+func (e *EthSignature) UnmarshalText(text []byte) error {
+	without0x := strings.TrimPrefix(string(text), "0x")
+	signature, err := hex.DecodeString(without0x)
+	if err != nil {
+		return err
+	}
+	*e = EthSignature([]byte(signature))
+	return nil
 }

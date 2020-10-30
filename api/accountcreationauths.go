@@ -52,10 +52,10 @@ func getAccountCreationAuth(c *gin.Context) {
 }
 
 type receivedAuth struct {
-	EthAddr   apitypes.StrHezEthAddr   `json:"hezEthereumAddress" binding:"required"`
-	BJJ       apitypes.StrHezBJJ       `json:"bjj" binding:"required"`
-	Signature apitypes.StrEthSignature `json:"signature" binding:"required"`
-	Timestamp time.Time                `json:"timestamp"`
+	EthAddr   apitypes.StrHezEthAddr `json:"hezEthereumAddress" binding:"required"`
+	BJJ       apitypes.StrHezBJJ     `json:"bjj" binding:"required"`
+	Signature apitypes.EthSignature  `json:"signature" binding:"required"`
+	Timestamp time.Time              `json:"timestamp"`
 }
 
 func accountCreationAuthAPIToCommon(apiAuth *receivedAuth) *common.AccountCreationAuth {

@@ -152,7 +152,13 @@ func (tx *wrappedL2) L2() *common.L2Tx {
 	return &l2tx
 }
 
-func genTestTxs(genericTxs []txSortFielder, usrIdxs []string, accs []common.Account, tokens []historydb.TokenWithUSD, blocks []common.Block) (usrTxs []testTx, allTxs []testTx) {
+func genTestTxs(
+	genericTxs []txSortFielder,
+	usrIdxs []string,
+	accs []common.Account,
+	tokens []historydb.TokenWithUSD,
+	blocks []common.Block,
+) (usrTxs []testTx, allTxs []testTx) {
 	usrTxs = []testTx{}
 	allTxs = []testTx{}
 	isUsrTx := func(tx testTx) bool {
