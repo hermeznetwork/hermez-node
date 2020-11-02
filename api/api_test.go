@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,9 +27,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const apiPort = ":4010"
@@ -47,11 +44,11 @@ type testCommon struct {
 	accs             []common.Account
 	usrTxs           []testTx
 	allTxs           []testTx
-	exits            []exitAPI
-	usrExits         []exitAPI
+	exits            []testExit
+	usrExits         []testExit
 	poolTxsToSend    []testPoolTxSend
 	poolTxsToReceive []testPoolTxReceive
-	auths            []accountCreationAuthAPI
+	auths            []testAuth
 	router           *swagger.Router
 	bids             []testBid
 }
@@ -287,42 +284,6 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	// Transform exits to API
-	exitsToAPIExits := func(exits []common.ExitInfo, accs []common.Account, tokens []common.Token) []exitAPI {
-		historyExits := []historydb.HistoryExit{}
-		for _, exit := range exits {
-			token := getTokenByIdx(exit.AccountIdx, tokensUSD, accs)
-			historyExits = append(historyExits, historydb.HistoryExit{
-				BatchNum:               exit.BatchNum,
-				AccountIdx:             exit.AccountIdx,
-				MerkleProof:            exit.MerkleProof,
-				Balance:                exit.Balance,
-				InstantWithdrawn:       exit.InstantWithdrawn,
-				DelayedWithdrawRequest: exit.DelayedWithdrawRequest,
-				DelayedWithdrawn:       exit.DelayedWithdrawn,
-				TokenID:                token.TokenID,
-				TokenEthBlockNum:       token.EthBlockNum,
-				TokenEthAddr:           token.EthAddr,
-				TokenName:              token.Name,
-				TokenSymbol:            token.Symbol,
-				TokenDecimals:          token.Decimals,
-				TokenUSD:               token.USD,
-				TokenUSDUpdate:         token.USDUpdate,
-			})
-		}
-		return historyExitsToAPI(historyExits)
-	}
-	apiExits := exitsToAPIExits(exits, accs, tokens)
-	// sort.Sort(apiExits)
-	usrExits := []exitAPI{}
-	for _, exit := range apiExits {
-		for _, idx := range usrIdxs {
-			if idx == exit.AccountIdx {
-				usrExits = append(usrExits, exit)
-			}
-		}
-	}
-
 	// Coordinators
 	const nCoords = 10
 	coords := test.GenCoordinators(nCoords, blocks)
@@ -335,15 +296,6 @@ func TestMain(m *testing.M) {
 	coordinators, _, err := hdb.GetCoordinatorsAPI(&fromItem, &limit, historydb.OrderAsc)
 	if err != nil {
 		panic(err)
-	}
-	// Account creation auth
-	const nAuths = 5
-	auths := test.GenAuths(nAuths)
-	// Transform auths to API format
-	apiAuths := []accountCreationAuthAPI{}
-	for _, auth := range auths {
-		apiAuth := accountCreationAuthToAPI(auth)
-		apiAuths = append(apiAuths, *apiAuth)
 	}
 
 	// Bids
@@ -358,6 +310,7 @@ func TestMain(m *testing.M) {
 	usrTxs, allTxs := genTestTxs(sortedTxs, usrIdxs, accs, tokensUSD, blocks)
 	poolTxsToSend, poolTxsToReceive := genTestPoolTx(accs, []babyjub.PrivateKey{privK}, tokensUSD) // NOTE: pool txs are not inserted to the DB here. In the test they will be posted and getted.
 	testBatches, fullBatches := genTestBatches(blocks, batches, allTxs)
+	usrExits, allExits := genTestExits(exits, tokensUSD, accs, usrIdxs)
 	tc = testCommon{
 		blocks:           blocks,
 		tokens:           tokensUSD,
@@ -369,11 +322,11 @@ func TestMain(m *testing.M) {
 		accs:             accs,
 		usrTxs:           usrTxs,
 		allTxs:           allTxs,
-		exits:            apiExits,
+		exits:            allExits,
 		usrExits:         usrExits,
 		poolTxsToSend:    poolTxsToSend,
 		poolTxsToReceive: poolTxsToReceive,
-		auths:            apiAuths,
+		auths:            genTestAuths(test.GenAuths(5)),
 		router:           router,
 		bids:             genTestBids(blocks, coordinators, bids),
 	}
@@ -400,249 +353,12 @@ func TestMain(m *testing.M) {
 	os.Exit(result)
 }
 
-func TestGetExits(t *testing.T) {
-	endpoint := apiURL + "exits"
-	fetchedExits := []exitAPI{}
-	appendIter := func(intr interface{}) {
-		for i := 0; i < len(intr.(*exitsAPI).Exits); i++ {
-			tmp, err := copystructure.Copy(intr.(*exitsAPI).Exits[i])
-			if err != nil {
-				panic(err)
-			}
-			fetchedExits = append(fetchedExits, tmp.(exitAPI))
-		}
-	}
-	// Get all (no filters)
-	limit := 8
-	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	assertExitAPIs(t, tc.exits, fetchedExits)
-
-	// Get by ethAddr
-	fetchedExits = []exitAPI{}
-	limit = 7
-	path = fmt.Sprintf(
-		"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
-		endpoint, tc.usrAddr, limit,
-	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	assertExitAPIs(t, tc.usrExits, fetchedExits)
-	// Get by bjj
-	fetchedExits = []exitAPI{}
-	limit = 6
-	path = fmt.Sprintf(
-		"%s?BJJ=%s&limit=%d&fromItem=",
-		endpoint, tc.usrBjj, limit,
-	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	assertExitAPIs(t, tc.usrExits, fetchedExits)
-	// Get by tokenID
-	fetchedExits = []exitAPI{}
-	limit = 5
-	tokenID := tc.exits[0].Token.TokenID
-	path = fmt.Sprintf(
-		"%s?tokenId=%d&limit=%d&fromItem=",
-		endpoint, tokenID, limit,
-	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	tokenIDExits := []exitAPI{}
-	for i := 0; i < len(tc.exits); i++ {
-		if tc.exits[i].Token.TokenID == tokenID {
-			tokenIDExits = append(tokenIDExits, tc.exits[i])
-		}
-	}
-	assertExitAPIs(t, tokenIDExits, fetchedExits)
-	// idx
-	fetchedExits = []exitAPI{}
-	limit = 4
-	idx := tc.exits[0].AccountIdx
-	path = fmt.Sprintf(
-		"%s?accountIndex=%s&limit=%d&fromItem=",
-		endpoint, idx, limit,
-	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	idxExits := []exitAPI{}
-	for i := 0; i < len(tc.exits); i++ {
-		if tc.exits[i].AccountIdx[6:] == idx[6:] {
-			idxExits = append(idxExits, tc.exits[i])
-		}
-	}
-	assertExitAPIs(t, idxExits, fetchedExits)
-	// batchNum
-	fetchedExits = []exitAPI{}
-	limit = 3
-	batchNum := tc.exits[0].BatchNum
-	path = fmt.Sprintf(
-		"%s?batchNum=%d&limit=%d&fromItem=",
-		endpoint, batchNum, limit,
-	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	batchNumExits := []exitAPI{}
-	for i := 0; i < len(tc.exits); i++ {
-		if tc.exits[i].BatchNum == batchNum {
-			batchNumExits = append(batchNumExits, tc.exits[i])
-		}
-	}
-	assertExitAPIs(t, batchNumExits, fetchedExits)
-	// Multiple filters
-	fetchedExits = []exitAPI{}
-	limit = 1
-	path = fmt.Sprintf(
-		"%s?batchNum=%d&tokeId=%d&limit=%d&fromItem=",
-		endpoint, batchNum, tokenID, limit,
-	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	mixedExits := []exitAPI{}
-	flipedExits := []exitAPI{}
-	for i := 0; i < len(tc.exits); i++ {
-		if tc.exits[i].BatchNum == batchNum && tc.exits[i].Token.TokenID == tokenID {
-			mixedExits = append(mixedExits, tc.exits[i])
-		}
-		flipedExits = append(flipedExits, tc.exits[len(tc.exits)-1-i])
-	}
-	assertExitAPIs(t, mixedExits, fetchedExits)
-	// All, in reverse order
-	fetchedExits = []exitAPI{}
-	limit = 5
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &exitsAPI{}, appendIter)
-	assert.NoError(t, err)
-	assertExitAPIs(t, flipedExits, fetchedExits)
-	// 400
-	path = fmt.Sprintf(
-		"%s?accountIndex=%s&hermezEthereumAddress=%s",
-		endpoint, idx, tc.usrAddr,
-	)
-	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?tokenId=X", endpoint)
-	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	// 404
-	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
-	err = doBadReq("GET", path, nil, 404)
-	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?limit=1000&fromItem=999999", endpoint)
-	err = doBadReq("GET", path, nil, 404)
-	assert.NoError(t, err)
-}
-
-func TestGetExit(t *testing.T) {
-	// Get all txs by their ID
-	endpoint := apiURL + "exits/"
-	fetchedExits := []exitAPI{}
-	for _, exit := range tc.exits {
-		fetchedExit := exitAPI{}
-		assert.NoError(
-			t, doGoodReq(
-				"GET",
-				fmt.Sprintf("%s%d/%s", endpoint, exit.BatchNum, exit.AccountIdx),
-				nil, &fetchedExit,
-			),
-		)
-		fetchedExits = append(fetchedExits, fetchedExit)
-	}
-	assertExitAPIs(t, tc.exits, fetchedExits)
-	// 400
-	err := doBadReq("GET", endpoint+"1/haz:BOOM:1", nil, 400)
-	assert.NoError(t, err)
-	err = doBadReq("GET", endpoint+"-1/hez:BOOM:1", nil, 400)
-	assert.NoError(t, err)
-	// 404
-	err = doBadReq("GET", endpoint+"494/hez:XXX:1", nil, 404)
-	assert.NoError(t, err)
-}
-
-func assertExitAPIs(t *testing.T, expected, actual []exitAPI) {
-	require.Equal(t, len(expected), len(actual))
-	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
-		actual[i].ItemID = 0
-		if expected[i].Token.USDUpdate == nil {
-			assert.Equal(t, expected[i].Token.USDUpdate, actual[i].Token.USDUpdate)
-		} else {
-			assert.Equal(t, expected[i].Token.USDUpdate.Unix(), actual[i].Token.USDUpdate.Unix())
-			expected[i].Token.USDUpdate = actual[i].Token.USDUpdate
-		}
-		assert.Equal(t, expected[i], actual[i])
-	}
-}
 func TestGetConfig(t *testing.T) {
 	endpoint := apiURL + "config"
 	var configTest configAPI
 	assert.NoError(t, doGoodReq("GET", endpoint, nil, &configTest))
 	assert.Equal(t, config, configTest)
 	assert.Equal(t, cg, &configTest)
-}
-
-func TestAccountCreationAuth(t *testing.T) {
-	// POST
-	endpoint := apiURL + "account-creation-authorization"
-	for _, auth := range tc.auths {
-		jsonAuthBytes, err := json.Marshal(auth)
-		assert.NoError(t, err)
-		jsonAuthReader := bytes.NewReader(jsonAuthBytes)
-		fmt.Println(string(jsonAuthBytes))
-		assert.NoError(
-			t, doGoodReq(
-				"POST",
-				endpoint,
-				jsonAuthReader, nil,
-			),
-		)
-	}
-	// GET
-	endpoint += "/"
-	for _, auth := range tc.auths {
-		fetchedAuth := accountCreationAuthAPI{}
-		assert.NoError(
-			t, doGoodReq(
-				"GET",
-				endpoint+auth.EthAddr,
-				nil, &fetchedAuth,
-			),
-		)
-		assertAuth(t, auth, fetchedAuth)
-	}
-	// POST
-	// 400
-	// Wrong addr
-	badAuth := tc.auths[0]
-	badAuth.EthAddr = ethAddrToHez(ethCommon.BigToAddress(big.NewInt(1)))
-	jsonAuthBytes, err := json.Marshal(badAuth)
-	assert.NoError(t, err)
-	jsonAuthReader := bytes.NewReader(jsonAuthBytes)
-	err = doBadReq("POST", endpoint, jsonAuthReader, 400)
-	assert.NoError(t, err)
-	// Wrong signature
-	badAuth = tc.auths[0]
-	badAuth.Signature = badAuth.Signature[:len(badAuth.Signature)-1]
-	badAuth.Signature += "F"
-	jsonAuthBytes, err = json.Marshal(badAuth)
-	assert.NoError(t, err)
-	jsonAuthReader = bytes.NewReader(jsonAuthBytes)
-	err = doBadReq("POST", endpoint, jsonAuthReader, 400)
-	assert.NoError(t, err)
-	// GET
-	// 400
-	err = doBadReq("GET", endpoint+"hez:0xFooBar", nil, 400)
-	assert.NoError(t, err)
-	// 404
-	err = doBadReq("GET", endpoint+"hez:0x0000000000000000000000000000000000000001", nil, 404)
-	assert.NoError(t, err)
-}
-
-func assertAuth(t *testing.T, expected, actual accountCreationAuthAPI) {
-	// timestamp should be very close to now
-	assert.Less(t, time.Now().UTC().Unix()-3, actual.Timestamp.Unix())
-	expected.Timestamp = actual.Timestamp
-	assert.Equal(t, expected, actual)
 }
 
 func doGoodReqPaginated(

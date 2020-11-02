@@ -3,6 +3,7 @@ package apitypes
 import (
 	"database/sql/driver"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -259,5 +260,51 @@ func (s *StrHezIdx) UnmarshalText(text []byte) error {
 		return err
 	}
 	*s = StrHezIdx(common.Idx(idxInt))
+	return nil
+}
+
+// EthSignature is used to scan/value []byte representing an Ethereum signature directly into strings from/to sql DBs.
+type EthSignature string
+
+// NewEthSignature creates a *EthSignature from []byte
+// If the provided signature is nil the returned *EthSignature will also be nil
+func NewEthSignature(signature []byte) *EthSignature {
+	if signature == nil {
+		return nil
+	}
+	ethSignature := EthSignature("0x" + hex.EncodeToString(signature))
+	return &ethSignature
+}
+
+// Scan implements Scanner for database/sql
+func (e *EthSignature) Scan(src interface{}) error {
+	if srcStr, ok := src.(string); ok {
+		// src is a string
+		*e = *(NewEthSignature([]byte(srcStr)))
+		return nil
+	} else if srcBytes, ok := src.([]byte); ok {
+		// src is []byte
+		*e = *(NewEthSignature(srcBytes))
+		return nil
+	} else {
+		// unexpected src
+		return fmt.Errorf("can't scan %T into apitypes.EthSignature", src)
+	}
+}
+
+// Value implements valuer for database/sql
+func (e EthSignature) Value() (driver.Value, error) {
+	without0x := strings.TrimPrefix(string(e), "0x")
+	return hex.DecodeString(without0x)
+}
+
+// UnmarshalText unmarshals a StrEthSignature
+func (e *EthSignature) UnmarshalText(text []byte) error {
+	without0x := strings.TrimPrefix(string(text), "0x")
+	signature, err := hex.DecodeString(without0x)
+	if err != nil {
+		return err
+	}
+	*e = EthSignature([]byte(signature))
 	return nil
 }

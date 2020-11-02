@@ -332,3 +332,82 @@ func TestHezBJJ(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, toBJJNil.I)
 }
+
+func TestEthSignature(t *testing.T) {
+	// Clean DB
+	_, err := db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Example structs
+	type ethSignStruct struct {
+		I []byte `meddler:"i"`
+	}
+	type hezEthSignStruct struct {
+		I EthSignature `meddler:"i"`
+	}
+	type hezEthSignStructNil struct {
+		I *EthSignature `meddler:"i"`
+	}
+
+	// Not nil case
+	// Insert into DB using []byte Scan/Value
+	s := "someRandomFooForYou"
+	fromEth := ethSignStruct{
+		I: []byte(s),
+	}
+	err = meddler.Insert(db, "test", &fromEth)
+	assert.NoError(t, err)
+	// Read from DB using EthSignature Scan/Value
+	toHezEth := hezEthSignStruct{}
+	err = meddler.QueryRow(db, &toHezEth, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, NewEthSignature(fromEth.I), &toHezEth.I)
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using EthSignature Scan/Value
+	fromHezEth := hezEthSignStruct{
+		I: *NewEthSignature([]byte(s)),
+	}
+	err = meddler.Insert(db, "test", &fromHezEth)
+	assert.NoError(t, err)
+	// Read from DB using []byte Scan/Value
+	toEth := ethSignStruct{}
+	err = meddler.QueryRow(db, &toEth, "select * from test")
+	assert.NoError(t, err)
+	assert.Equal(t, &fromHezEth.I, NewEthSignature(toEth.I))
+
+	// Nil case
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using []byte Scan/Value
+	fromEthNil := ethSignStruct{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromEthNil)
+	assert.NoError(t, err)
+	// Read from DB using EthSignature Scan/Value
+	foo := EthSignature("foo")
+	toHezEthNil := hezEthSignStructNil{
+		I: &foo, // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toHezEthNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toHezEthNil.I)
+	// Clean DB
+	_, err = db.Exec("delete from test")
+	assert.NoError(t, err)
+	// Insert into DB using EthSignature Scan/Value
+	fromHezEthNil := hezEthSignStructNil{
+		I: nil,
+	}
+	err = meddler.Insert(db, "test", &fromHezEthNil)
+	assert.NoError(t, err)
+	// Read from DB using []byte Scan/Value
+	toEthNil := ethSignStruct{
+		I: []byte(s), // check that this will be set to nil, not because of not being initialized
+	}
+	err = meddler.QueryRow(db, &toEthNil, "select * from test")
+	assert.NoError(t, err)
+	assert.Nil(t, toEthNil.I)
+}

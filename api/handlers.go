@@ -28,113 +28,12 @@ var (
 	ErrNillBidderAddr = errors.New("biderAddr can not be nil")
 )
 
-func postAccountCreationAuth(c *gin.Context) {
-	// Parse body
-	var apiAuth accountCreationAuthAPI
-	if err := c.ShouldBindJSON(&apiAuth); err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// API to common + verify signature
-	dbAuth, err := accountCreationAuthAPIToCommon(&apiAuth)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Insert to DB
-	if err := l2.AddAccountCreationAuth(dbAuth); err != nil {
-		retSQLErr(err, c)
-		return
-	}
-	// Return OK
-	c.Status(http.StatusOK)
-}
-
-func getAccountCreationAuth(c *gin.Context) {
-	// Get hezEthereumAddress
-	addr, err := parseParamHezEthAddr(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Fetch auth from l2DB
-	dbAuth, err := l2.GetAccountCreationAuth(*addr)
-	if err != nil {
-		retSQLErr(err, c)
-		return
-	}
-	apiAuth := accountCreationAuthToAPI(dbAuth)
-	// Build succesfull response
-	c.JSON(http.StatusOK, apiAuth)
-}
-
 func getAccounts(c *gin.Context) {
 
 }
 
 func getAccount(c *gin.Context) {
 
-}
-
-func getExits(c *gin.Context) {
-	// Get query parameters
-	// Account filters
-	tokenID, addr, bjj, idx, err := parseAccountFilters(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// BatchNum
-	batchNum, err := parseQueryUint("batchNum", nil, 0, maxUint32, c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-
-	// Fetch exits from historyDB
-	exits, pagination, err := h.GetExits(
-		addr, bjj, tokenID, idx, batchNum, fromItem, limit, order,
-	)
-	if err != nil {
-		retSQLErr(err, c)
-		return
-	}
-
-	// Build succesfull response
-	apiExits := historyExitsToAPI(exits)
-	c.JSON(http.StatusOK, &exitsAPI{
-		Exits:      apiExits,
-		Pagination: pagination,
-	})
-}
-
-func getExit(c *gin.Context) {
-	// Get batchNum and accountIndex
-	batchNum, err := parseParamUint("batchNum", nil, 0, maxUint32, c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	idx, err := parseParamIdx(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Fetch tx from historyDB
-	exit, err := h.GetExit(batchNum, idx)
-	if err != nil {
-		retSQLErr(err, c)
-		return
-	}
-	apiExits := historyExitsToAPI([]historydb.HistoryExit{*exit})
-	// Build succesfull response
-	c.JSON(http.StatusOK, apiExits[0])
 }
 
 func getSlots(c *gin.Context) {
