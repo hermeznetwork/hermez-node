@@ -202,3 +202,131 @@ PoolTransfer(1) A-C: 3 (1)
 PoolTransferToEthAddr(1) A-C: 3 (1)
 PoolTransferToBJJ(1) A-C: 3 (1)
 `
+
+// Minimum flow
+
+// SetBlockchainMinimumFlow0 contains a set of transactions with a minimal flow
+var SetBlockchainMinimumFlow0 = `
+Type: Blockchain
+
+AddToken(1)
+
+
+// Coordinator accounts, Idxs: 256, 257
+CreateAccountCoordinator(0) Coord
+CreateAccountCoordinator(1) Coord
+
+// close Block:0, Batch:0
+> batch // forge L1Coord{2}
+
+CreateAccountDeposit(0) A: 500
+CreateAccountDeposit(1) C: 0
+CreateAccountCoordinator(0) C
+
+// close Block:0, Batch:1
+> batchL1 // freeze L1User{2}, forge L1Coord{1}
+// Expected balances:
+//     Coord(0): 0, Coord(1): 0
+//     C(0): 0
+
+CreateAccountDeposit(1) A: 500
+
+// close Block:0, Batch:2
+> batchL1 // freeze L1User{1}, forge L1User{2}
+// Expected balances:
+//     Coord(0): 0, Coord(1): 0
+//     A(0): 500
+//     C(0): 0, C(1): 0
+
+// close Block:0, Batch:3
+> batchL1 // freeze L1User{nil}, forge L1User{1}
+// Expected balances:
+//     Coord(0): 0, Coord(1): 0
+//     A(0): 500, A(1): 500
+//     C(0): 0
+
+
+CreateAccountDepositTransfer(0) B-A: 500, 100
+
+// close Block:0, Batch:4
+> batchL1 // freeze L1User{1}, forge L1User{nil}
+CreateAccountDeposit(0) D: 800
+
+// close Block:0, Batch:5
+> batchL1 // freeze L1User{1}, forge L1User{1}
+// Expected balances:
+//     Coord(0): 0, Coord(1): 0
+//     A(0): 600, A(1): 500
+//     B(0): 400
+//     C(0): 0
+
+CreateAccountCoordinator(1) B
+
+Transfer(1) A-B: 200 (200)
+Transfer(0) B-C: 100 (200)
+
+// close Block:0, Batch:6
+> batchL1 // forge L1User{1}, forge L1Coord{2}, forge L2{2}
+// Expected balances:
+//     Coord(0): 10, Coord(1): 20
+//     A(0): 600, A(1): 280
+//     B(0): 290, B(1): 200
+//     C(0): 100, C(1): 0
+//     D(0): 800
+
+Deposit(0) C: 500
+DepositTransfer(0) C-D: 400, 100
+
+Transfer(0) A-B: 100 (200)
+Transfer(0) C-A: 50 (200)
+Transfer(1) B-C: 100 (200)
+Exit(0) A: 100 (200)
+
+ForceTransfer(0) D-B: 200
+ForceExit(0) B: 100
+
+// close Block:0, Batch:7
+> batchL1 // freeze L1User{4}, forge L1User{nil}, forge L2{4}
+> block
+// Expected balances:
+//     Coord(0): 35, Coord(1): 30
+//     A(0): 430, A(1): 280
+//     B(0): 390, B(1): 90
+//     C(0): 45, C(1): 100
+//     D(0): 800
+
+Transfer(0) D-A: 300 (200)
+Transfer(0) B-D: 100 (200)
+
+// close Block:1, Batch:0
+> batchL1 // freeze L1User{nil}, forge L1User{4}, forge L2{1}
+// Expected balances:
+//     Coord(0): 75, Coord(1): 30
+//     A(0): 730, A(1): 280
+//     B(0): 380, B(1): 90
+//     C(0): 845, C(1): 100
+//     D(0): 470
+
+CreateAccountCoordinator(0) F
+
+> batch // forge L1CoordinatorTx{1}
+> block
+`
+
+// SetPoolL2MinimumFlow0 contains a set of transactions with a minimal flow
+var SetPoolL2MinimumFlow0 = `
+Type: PoolL2
+
+PoolTransfer(0) A-B: 100 (200)
+PoolTransferToEthAddr(0) D-F: 100 (200)
+PoolExit(0) A: 100 (200)
+PoolTransferToEthAddr(1) A-B: 100 (200)
+
+// Expected balances:
+//     Coord(0): 105, Coord(1): 40
+//     A(0): 510, A(1): 170
+//     B(0): 480, B(1): 190
+//     C(0): 845, C(1): 100
+//     D(0): 360
+//     F(0): 100
+`

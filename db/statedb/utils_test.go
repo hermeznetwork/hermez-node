@@ -1,6 +1,7 @@
 package statedb
 
 import (
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -82,7 +83,8 @@ func TestGetIdx(t *testing.T) {
 	// expect error when trying to get Idx by addr2 & pk2
 	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2, tokenID0)
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrToIdxNotFound, err)
+	expectedErr := fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrToIdxNotFound, addr2.Hex(), pk2, tokenID0)
+	assert.Equal(t, expectedErr, err)
 	assert.Equal(t, common.Idx(0), idxR)
 	// expect error when trying to get Idx by addr with not used TokenID
 	_, err = sdb.GetIdxByEthAddr(addr, tokenID1)
