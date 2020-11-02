@@ -50,6 +50,33 @@ CREATE TABLE token (
     usd_update TIMESTAMP WITHOUT TIME ZONE
 );
 
+-- Add ETH as TokenID 0
+INSERT INTO block (
+    eth_block_num,
+    timestamp,
+    hash
+) VALUES (
+    0,
+    '2015-07-30 03:26:13',
+    '\xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3'
+); -- info from https://etherscan.io/block/0
+
+INSERT INTO token (
+    token_id,
+    eth_block_num,
+    eth_addr,
+    name,
+    symbol,
+    decimals
+) VALUES (
+    0,
+    0,
+    '\x0000000000000000000000000000000000000000',
+    'Ether',
+    'ETH',
+    18
+);
+
 
 -- +migrate StatementBegin
 CREATE FUNCTION hez_idx(BIGINT, VARCHAR) 
@@ -564,15 +591,30 @@ CREATE TABLE account_creation_auth (
 );
 
 -- +migrate Down
+-- drop triggers
+DROP TRIGGER trigger_token_usd_update ON token;
+DROP TRIGGER trigger_set_tx ON tx;
+DROP TRIGGER trigger_forge_l1_txs ON batch;
+DROP TRIGGER trigger_set_pool_tx ON tx_pool;
+-- drop functions
+DROP FUNCTION hez_idx;
+DROP FUNCTION set_token_usd_update;
+DROP FUNCTION fee_percentage;
+DROP FUNCTION set_tx;
+DROP FUNCTION forge_l1_user_txs;
+DROP FUNCTION set_pool_tx;
+-- drop tables
 DROP TABLE account_creation_auth;
 DROP TABLE tx_pool;
 DROP TABLE consensus_vars;
 DROP TABLE rollup_vars;
-DROP TABLE account;
 DROP TABLE tx;
+DROP TABLE exit_tree;
+DROP TABLE account;
 DROP TABLE token;
 DROP TABLE bid;
-DROP TABLE exit_tree;
 DROP TABLE batch;
 DROP TABLE coordinator;
 DROP TABLE block;
+-- drop sequences
+DROP SEQUENCE tx_item_id;

@@ -50,7 +50,7 @@ func TestBlocks(t *testing.T) {
 	fromBlock = 1
 	toBlock = 5
 	// Delete peviously created rows (clean previous test execs)
-	assert.NoError(t, historyDB.Reorg(fromBlock-1))
+	test.WipeDB(historyDB.DB())
 	// Generate fake blocks
 	blocks := test.GenBlocks(fromBlock, toBlock)
 	// Insert blocks into DB
@@ -116,9 +116,10 @@ func TestBatches(t *testing.T) {
 	// Test total fee
 	// Generate fake tokens
 	const nTokens = 5
-	tokens := test.GenTokens(nTokens, blocks)
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
 	err = historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
+	tokens = append([]common.Token{ethToken}, tokens...)
 	feeBatch := batches[0]
 	feeBatch.BatchNum = 9999
 	feeBatch.CollectedFees = make(map[common.TokenID]*big.Int)
@@ -174,9 +175,10 @@ func TestTokens(t *testing.T) {
 	blocks := setTestBlocks(fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 5
-	tokens := test.GenTokens(nTokens, blocks)
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
 	err := historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
+	tokens = append([]common.Token{ethToken}, tokens...)
 	limit := uint(10)
 	// Fetch tokens6
 	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
@@ -201,9 +203,10 @@ func TestAccounts(t *testing.T) {
 	blocks := setTestBlocks(fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 5
-	tokens := test.GenTokens(nTokens, blocks)
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
 	err := historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
+	tokens = append([]common.Token{ethToken}, tokens...)
 	// Generate fake batches
 	const nBatches = 10
 	batches := test.GenBatches(nBatches, blocks)
@@ -231,9 +234,10 @@ func TestTxs(t *testing.T) {
 	blocks := setTestBlocks(fromBlock, toBlock)
 	// Generate fake tokens
 	const nTokens = 500
-	tokens := test.GenTokens(nTokens, blocks)
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
 	err := historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
+	tokens = append([]common.Token{ethToken}, tokens...)
 	// Generate fake batches
 	const nBatches = 10
 	batches := test.GenBatches(nBatches, blocks)
@@ -365,13 +369,15 @@ func fetchAndAssertTxs(t *testing.T, l1txs []common.L1Tx, l2txs []common.L2Tx) {
 
 func TestExitTree(t *testing.T) {
 	nBatches := 17
-	blocks := setTestBlocks(0, 10)
+	blocks := setTestBlocks(1, 10)
 	batches := test.GenBatches(nBatches, blocks)
 	err := historyDB.AddBatches(batches)
-	const nTokens = 50
-	tokens := test.GenTokens(nTokens, blocks)
-	assert.NoError(t, historyDB.AddTokens(tokens))
 	assert.NoError(t, err)
+	const nTokens = 50
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
+	err = historyDB.AddTokens(tokens)
+	assert.NoError(t, err)
+	tokens = append([]common.Token{ethToken}, tokens...)
 	const nAccounts = 3
 	accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
 	assert.NoError(t, historyDB.AddAccounts(accs))
@@ -381,7 +387,7 @@ func TestExitTree(t *testing.T) {
 }
 
 func TestGetL1UserTxs(t *testing.T) {
-	require.NoError(t, cleanHistoryDB())
+	test.WipeDB(historyDB.DB())
 
 	set := `
 		Type: Blockchain
@@ -425,16 +431,10 @@ func TestGetL1UserTxs(t *testing.T) {
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them
 func setTestBlocks(from, to int64) []common.Block {
-	if err := cleanHistoryDB(); err != nil {
-		panic(err)
-	}
+	test.WipeDB(historyDB.DB())
 	blocks := test.GenBlocks(from, to)
 	if err := historyDB.AddBlocks(blocks); err != nil {
 		panic(err)
 	}
 	return blocks
-}
-
-func cleanHistoryDB() error {
-	return historyDB.Reorg(-1)
 }

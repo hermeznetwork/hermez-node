@@ -30,9 +30,9 @@ func GenBlocks(from, to int64) []common.Block {
 }
 
 // GenTokens generates tokens. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenTokens(nTokens int, blocks []common.Block) []common.Token {
-	tokens := []common.Token{}
-	for i := 0; i < nTokens; i++ {
+func GenTokens(nTokens int, blocks []common.Block) (tokensToAddInDB []common.Token, ethToken common.Token) {
+	tokensToAddInDB = []common.Token{}
+	for i := 1; i < nTokens; i++ {
 		token := common.Token{
 			TokenID:     common.TokenID(i),
 			Name:        "NAME" + fmt.Sprint(i),
@@ -41,9 +41,16 @@ func GenTokens(nTokens int, blocks []common.Block) []common.Token {
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			EthAddr:     ethCommon.BigToAddress(big.NewInt(int64(i))),
 		}
-		tokens = append(tokens, token)
+		tokensToAddInDB = append(tokensToAddInDB, token)
 	}
-	return tokens
+	return tokensToAddInDB, common.Token{
+		TokenID:     0,
+		Name:        "Ether",
+		Symbol:      "ETH",
+		Decimals:    18, //nolint:gomnd
+		EthBlockNum: 0,
+		EthAddr:     ethCommon.BigToAddress(big.NewInt(0)),
+	}
 }
 
 // GenBatches generates batches. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.

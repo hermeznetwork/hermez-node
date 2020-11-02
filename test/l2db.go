@@ -4,18 +4,7 @@ import (
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/jmoiron/sqlx"
 )
-
-// CleanL2DB deletes 'tx_pool' and 'account_creation_auth' from the given DB
-func CleanL2DB(db *sqlx.DB) {
-	if _, err := db.Exec("DELETE FROM tx_pool;"); err != nil {
-		panic(err)
-	}
-	if _, err := db.Exec("DELETE FROM account_creation_auth;"); err != nil {
-		panic(err)
-	}
-}
 
 // GenPoolTxs generates L2 pool txs.
 // WARNING: This tx doesn't follow the protocol (signature, txID, ...)

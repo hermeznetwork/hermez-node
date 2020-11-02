@@ -20,21 +20,13 @@ func TestPriceUpdater(t *testing.T) {
 	assert.NoError(t, err)
 	historyDB := historydb.NewHistoryDB(db)
 	// Clean DB
-	assert.NoError(t, historyDB.Reorg(-1))
+	test.WipeDB(historyDB.DB())
 	// Populate DB
 	// Gen blocks and add them to DB
 	blocks := test.GenBlocks(1, 2)
 	assert.NoError(t, historyDB.AddBlocks(blocks))
 	// Gen tokens and add them to DB
 	tokens := []common.Token{}
-	tokens = append(tokens, common.Token{
-		TokenID:     0,
-		EthBlockNum: blocks[0].EthBlockNum,
-		EthAddr:     ethCommon.BigToAddress(big.NewInt(1)),
-		Name:        "Ether",
-		Symbol:      "ETH",
-		Decimals:    18,
-	})
 	tokens = append(tokens, common.Token{
 		TokenID:     1,
 		EthBlockNum: blocks[0].EthBlockNum,
@@ -54,6 +46,8 @@ func TestPriceUpdater(t *testing.T) {
 	limit := uint(10)
 	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, historydb.OrderAsc)
 	assert.NoError(t, err)
+	// TokenID 0 (ETH) is always on the DB
+	assert.Equal(t, 2, len(fetchedTokens))
 	for _, token := range fetchedTokens {
 		assert.NotNil(t, token.USD)
 		assert.NotNil(t, token.USDUpdate)

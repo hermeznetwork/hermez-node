@@ -38,6 +38,12 @@ func NewHistoryDB(db *sqlx.DB) *HistoryDB {
 	return &HistoryDB{db: db}
 }
 
+// DB returns a pointer to the L2DB.db. This method should be used only for
+// internal testing purposes.
+func (hdb *HistoryDB) DB() *sqlx.DB {
+	return hdb.db
+}
+
 // AddBlock insert a block into the DB
 func (hdb *HistoryDB) AddBlock(block *common.Block) error { return hdb.addBlock(hdb.db, block) }
 func (hdb *HistoryDB) addBlock(d meddler.DB, block *common.Block) error {

@@ -50,7 +50,7 @@ func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []common.PoolL2Tx) {
 
 func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 	hdb := historydb.NewHistoryDB(db)
-	assert.Nil(t, hdb.Reorg(-1))
+	test.WipeDB(hdb.DB())
 	assert.Nil(t, hdb.AddBlock(&common.Block{
 		EthBlockNum: 1,
 	}))
@@ -59,7 +59,7 @@ func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 
 func TestGetL2TxSelection(t *testing.T) {
 	txsel := initTest(t, til.SetPool0, 5, 5, 10)
-	test.CleanL2DB(txsel.l2db.DB())
+	test.WipeDB(txsel.l2db.DB())
 
 	tc := til.NewContext(eth.RollupConstMaxL1UserTx)
 	// generate test transactions
@@ -74,9 +74,9 @@ func TestGetL2TxSelection(t *testing.T) {
 	var tokens []common.Token
 	for i := 0; i < int(tc.LastRegisteredTokenID); i++ {
 		tokens = append(tokens, common.Token{
-			TokenID:     common.TokenID(i),
+			TokenID:     common.TokenID(i + 1),
 			EthBlockNum: 1,
-			EthAddr:     ethCommon.BytesToAddress([]byte{byte(i)}),
+			EthAddr:     ethCommon.BytesToAddress([]byte{byte(i + 1)}),
 			Name:        strconv.Itoa(i),
 			Symbol:      strconv.Itoa(i),
 			Decimals:    18,
