@@ -911,8 +911,8 @@ func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, err
 
 // GetExitsAPI returns a list of exits from the DB and pagination info
 func (hdb *HistoryDB) GetExitsAPI(
-	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
-	tokenID *common.TokenID, idx *common.Idx, batchNum *uint,
+	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey, tokenID *common.TokenID,
+	idx *common.Idx, batchNum *uint, onlyPendingWithdraws *bool,
 	fromItem, limit *uint, order string,
 ) ([]ExitAPI, *db.Pagination, error) {
 	if ethAddr != nil && bjj != nil {
@@ -974,6 +974,18 @@ func (hdb *HistoryDB) GetExitsAPI(
 		queryStr += "exit_tree.batch_num = ? "
 		args = append(args, batchNum)
 		nextIsAnd = true
+	}
+	// onlyPendingWithdraws
+	if onlyPendingWithdraws != nil {
+		if *onlyPendingWithdraws {
+			if nextIsAnd {
+				queryStr += "AND "
+			} else {
+				queryStr += "WHERE "
+			}
+			queryStr += "(exit_tree.instant_withdrawn IS NULL AND exit_tree.delayed_withdrawn IS NULL) "
+			nextIsAnd = true
+		}
 	}
 	if fromItem != nil {
 		if nextIsAnd {

@@ -286,6 +286,12 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/BatchNum'
+        - name: onlyPendingWithdraws
+          in: query
+          description: Get exits with pending withdrawals.
+          required: false
+          schema:
+            type: boolean
         - name: fromItem
           in: query
           required: false

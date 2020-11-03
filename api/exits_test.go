@@ -190,6 +190,22 @@ func TestGetExits(t *testing.T) {
 		}
 	}
 	assertExitAPIs(t, batchNumExits, fetchedExits)
+	// OnlyPendingWithdraws
+	fetchedExits = []testExit{}
+	limit = 7
+	path = fmt.Sprintf(
+		"%s?&onlyPendingWithdraws=%t&limit=%d&fromItem=",
+		endpoint, true, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	assert.NoError(t, err)
+	pendingExits := []testExit{}
+	for i := 0; i < len(tc.exits); i++ {
+		if tc.exits[i].InstantWithdrawn == nil && tc.exits[i].DelayedWithdrawn == nil {
+			pendingExits = append(pendingExits, tc.exits[i])
+		}
+	}
+	assertExitAPIs(t, pendingExits, fetchedExits)
 	// Multiple filters
 	fetchedExits = []testExit{}
 	limit = 1
