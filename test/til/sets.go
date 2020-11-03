@@ -2,6 +2,9 @@ package til
 
 // sets of instructions to be used in tests of other packages
 
+// NOTE: FeeSelector(126) ~ 10%
+// NOTE: FeeSelector(100) ~ 4%
+
 // SetBlockchain0 contains a set of transactions simulated to be from the smart contract
 var SetBlockchain0 = `
 // Set containing Blockchain transactions
@@ -67,7 +70,7 @@ Transfer(1) A-M: 5 (1)
 Transfer(1) A-N: 5 (1)
 Transfer(1) A-O: 5 (1)
 Transfer(1) B-C: 3 (1)
-Transfer(1) C-A: 10 (200)
+Transfer(1) C-A: 10 (126)
 Transfer(1) D-A: 5 (1)
 Transfer(1) D-Z: 5 (1)
 Transfer(1) D-Y: 5 (1)
@@ -82,7 +85,7 @@ Transfer(1) G-K: 3 (1)
 Transfer(1) H-K: 3 (2)
 Transfer(1) H-K: 3 (1)
 Transfer(1) H-K: 3 (1)
-Transfer(0) B-C: 50 (192)
+Transfer(0) B-C: 50 (100)
 
 > batchL1
 > block
@@ -142,7 +145,7 @@ Transfer(1) W-J: 3 (1)
 Transfer(1) W-A: 5 (1)
 Transfer(1) W-Z: 5 (1)
 Transfer(1) X-B: 5 (1)
-Transfer(1) X-C: 10 (200)
+Transfer(1) X-C: 10 (126)
 Transfer(1) X-D: 5 (1)
 Transfer(1) X-E: 5 (1)
 Transfer(1) Y-B: 5 (1)
@@ -262,8 +265,8 @@ CreateAccountDeposit(0) D: 800
 
 CreateAccountCoordinator(1) B
 
-Transfer(1) A-B: 200 (200)
-Transfer(0) B-C: 100 (200)
+Transfer(1) A-B: 200 (126)
+Transfer(0) B-C: 100 (126)
 
 // close Block:0, Batch:6
 > batchL1 // forge L1User{1}, forge L1Coord{2}, forge L2{2}
@@ -277,10 +280,10 @@ Transfer(0) B-C: 100 (200)
 Deposit(0) C: 500
 DepositTransfer(0) C-D: 400, 100
 
-Transfer(0) A-B: 100 (200)
-Transfer(0) C-A: 50 (200)
-Transfer(1) B-C: 100 (200)
-Exit(0) A: 100 (200)
+Transfer(0) A-B: 100 (126)
+Transfer(0) C-A: 50 (126)
+Transfer(1) B-C: 100 (126)
+Exit(0) A: 100 (126)
 
 ForceTransfer(0) D-B: 200
 ForceExit(0) B: 100
@@ -295,8 +298,8 @@ ForceExit(0) B: 100
 //     C(0): 45, C(1): 100
 //     D(0): 800
 
-Transfer(0) D-A: 300 (200)
-Transfer(0) B-D: 100 (200)
+Transfer(0) D-A: 300 (126)
+Transfer(0) B-D: 100 (126)
 
 // close Block:1, Batch:0
 > batchL1 // freeze L1User{nil}, forge L1User{4}, forge L2{1}
@@ -317,10 +320,10 @@ CreateAccountCoordinator(0) F
 var SetPoolL2MinimumFlow0 = `
 Type: PoolL2
 
-PoolTransfer(0) A-B: 100 (200)
-PoolTransferToEthAddr(0) D-F: 100 (200)
-PoolExit(0) A: 100 (200)
-PoolTransferToEthAddr(1) A-B: 100 (200)
+PoolTransfer(0) A-B: 100 (126)
+PoolTransferToEthAddr(0) D-F: 100 (126)
+PoolExit(0) A: 100 (126)
+PoolTransferToEthAddr(1) A-B: 100 (126)
 
 // Expected balances:
 //     Coord(0): 105, Coord(1): 40

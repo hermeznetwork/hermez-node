@@ -603,7 +603,10 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 
 	if !tx.IsL1 {
 		// compute fee and subtract it from the accSender
-		fee := common.CalcFeeAmount(tx.Amount, *tx.Fee)
+		fee, err := common.CalcFeeAmount(tx.Amount, *tx.Fee)
+		if err != nil {
+			return err
+		}
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
 
@@ -743,7 +746,10 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 
 	if !tx.IsL1 {
 		// compute fee and subtract it from the accSender
-		fee := common.CalcFeeAmount(tx.Amount, *tx.Fee)
+		fee, err := common.CalcFeeAmount(tx.Amount, *tx.Fee)
+		if err != nil {
+			return nil, false, err
+		}
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
 
