@@ -48,10 +48,6 @@ func getState(c *gin.Context) {
 
 }
 
-func getConfig(c *gin.Context) {
-	c.JSON(http.StatusOK, cg)
-}
-
 func getRecommendedFee(c *gin.Context) {
 
 }
