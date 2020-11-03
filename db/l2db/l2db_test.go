@@ -84,6 +84,7 @@ func TestAddTxTest(t *testing.T) {
 	test.WipeDB(l2DB.DB())
 	txs := test.GenPoolTxs(nInserts, tokens)
 	for _, tx := range txs {
+		// TODO: UPDATE with til
 		err := l2DB.AddTxTest(tx)
 		assert.NoError(t, err)
 		fetchedTx, err := l2DB.GetTx(tx.TxID)
@@ -123,21 +124,23 @@ func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
 	assert.Equal(t, expected, actual)
 }
 
-func BenchmarkAddTxTest(b *testing.B) {
-	const nInserts = 20
-	test.WipeDB(l2DB.DB())
-	txs := test.GenPoolTxs(nInserts, tokens)
-	now := time.Now()
-	for _, tx := range txs {
-		_ = l2DB.AddTxTest(tx)
-	}
-	elapsedTime := time.Since(now)
-	log.Info("Time to insert 2048 txs:", elapsedTime)
-}
+// NO UPDATE: benchmarks will be done after impl is finished
+// func BenchmarkAddTxTest(b *testing.B) {
+// 	const nInserts = 20
+// 	test.WipeDB(l2DB.DB())
+// 	txs := test.GenPoolTxs(nInserts, tokens)
+// 	now := time.Now()
+// 	for _, tx := range txs {
+// 		_ = l2DB.AddTxTest(tx)
+// 	}
+// 	elapsedTime := time.Since(now)
+// 	log.Info("Time to insert 2048 txs:", elapsedTime)
+// }
 
 func TestGetPending(t *testing.T) {
 	const nInserts = 20
 	test.WipeDB(l2DB.DB())
+	// TODO: UPDATE with til
 	txs := test.GenPoolTxs(nInserts, tokens)
 	var pendingTxs []*common.PoolL2Tx
 	for _, tx := range txs {
@@ -156,7 +159,7 @@ func TestGetPending(t *testing.T) {
 }
 
 /*
-	WARNING: this should be fixed once transaktio is ready
+		TODO: update with til
 func TestStartForging(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
@@ -188,7 +191,7 @@ func TestStartForging(t *testing.T) {
 */
 
 /*
-	WARNING: this should be fixed once transaktio is ready
+		TODO: update with til
 func TestDoneForging(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
@@ -220,7 +223,7 @@ func TestDoneForging(t *testing.T) {
 */
 
 /*
-	WARNING: this should be fixed once transaktio is ready
+		TODO: update with til
 func TestInvalidate(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
@@ -252,7 +255,10 @@ func TestInvalidate(t *testing.T) {
 */
 
 /*
-	WARNING: this should be fixed once transaktio is ready
+
+		TODO: update with til
+
+
 func TestCheckNonces(t *testing.T) {
 	// Generate txs
 	const nInserts = 60
@@ -303,6 +309,7 @@ func TestReorg(t *testing.T) {
 	const lastValidBatch common.BatchNum = 20
 	const reorgBatch common.BatchNum = lastValidBatch + 1
 	test.WipeDB(l2DB.DB())
+	// TODO: update with til
 	txs := test.GenPoolTxs(nInserts, tokens)
 	// Add txs to the DB
 	reorgedTxIDs := []common.TxID{}
@@ -341,6 +348,9 @@ func TestReorg(t *testing.T) {
 
 func TestPurge(t *testing.T) {
 	/*
+
+		TODO: update with til
+
 		WARNING: this should be fixed once transaktio is ready
 		// Generate txs
 		nInserts := l2DB.maxTxs + 20

@@ -1109,16 +1109,6 @@ func (hdb *HistoryDB) GetExitsAPI(
 	return db.SlicePtrsToSlice(exits).([]ExitAPI), exits[0].TotalItems - uint64(len(exits)), nil
 }
 
-// // GetTx returns a tx from the DB
-// func (hdb *HistoryDB) GetTx(txID common.TxID) (*common.Tx, error) {
-// 	tx := new(common.Tx)
-// 	return tx, meddler.QueryRow(
-// 		hdb.db, tx,
-// 		"SELECT * FROM tx WHERE id = $1;",
-// 		txID,
-// 	)
-// }
-
 // GetAllL1UserTxs returns all L1UserTxs from the DB
 func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 	var txs []*common.L1Tx

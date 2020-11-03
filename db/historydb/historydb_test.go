@@ -50,27 +50,44 @@ func TestMain(m *testing.M) {
 
 func TestBlocks(t *testing.T) {
 	var fromBlock, toBlock int64
-	fromBlock = 1
-	toBlock = 5
-	// Delete peviously created rows (clean previous test execs)
+	fromBlock = 0
+	toBlock = 7
+	// Reset DB
 	test.WipeDB(historyDB.DB())
-	// Generate fake blocks
-	blocks := test.GenBlocks(fromBlock, toBlock)
+	// Generate blocks using til
+	set1 := `
+		Type: Blockchain
+		// block 0 is stored as default in the DB
+		// block 1 does not exist
+		> block // blockNum=2
+		> block // blockNum=3 
+		> block // blockNum=4
+		> block // blockNum=5
+		> block // blockNum=6
+	`
+	tc := til.NewContext(1)
+	blocks, err := tc.GenerateBlocks(set1)
+	require.NoError(t, err)
 	// Save timestamp of a block with UTC and change it without UTC
 	timestamp := time.Now().Add(time.Second * 13)
-	blocks[fromBlock].Timestamp = timestamp
+	blocks[fromBlock].Block.Timestamp = timestamp
 	// Insert blocks into DB
 	for i := 0; i < len(blocks); i++ {
-		err := historyDB.AddBlock(&blocks[i])
+		err := historyDB.AddBlock(&blocks[i].Block)
 		assert.NoError(t, err)
 	}
+	// Add block 0 to the generated blocks
+	blocks = append(
+		[]common.BlockData{common.BlockData{Block: test.Block0}}, //nolint:gofmt
+		blocks...,
+	)
 	// Get all blocks from DB
 	fetchedBlocks, err := historyDB.GetBlocks(fromBlock, toBlock)
 	assert.Equal(t, len(blocks), len(fetchedBlocks))
 	// Compare generated vs getted blocks
 	assert.NoError(t, err)
 	for i := range fetchedBlocks {
-		assertEqualBlock(t, &blocks[i], &fetchedBlocks[i])
+		assertEqualBlock(t, &blocks[i].Block, &fetchedBlocks[i])
 	}
 	// Compare saved timestamp vs getted
 	nameZoneUTC, offsetUTC := timestamp.UTC().Zone()
@@ -78,15 +95,15 @@ func TestBlocks(t *testing.T) {
 	assert.Equal(t, nameZoneUTC, zoneFetchedBlock)
 	assert.Equal(t, offsetUTC, offsetFetchedBlock)
 	// Get blocks from the DB one by one
-	for i := fromBlock; i < toBlock; i++ {
+	for i := int64(2); i < toBlock; i++ { // avoid block 0 for simplicity
 		fetchedBlock, err := historyDB.GetBlock(i)
 		assert.NoError(t, err)
-		assertEqualBlock(t, &blocks[i-1], fetchedBlock)
+		assertEqualBlock(t, &blocks[i-1].Block, fetchedBlock)
 	}
 	// Get last block
 	lastBlock, err := historyDB.GetLastBlock()
 	assert.NoError(t, err)
-	assertEqualBlock(t, &blocks[len(blocks)-1], lastBlock)
+	assertEqualBlock(t, &blocks[len(blocks)-1].Block, lastBlock)
 }
 
 func assertEqualBlock(t *testing.T, expected *common.Block, actual *common.Block) {
@@ -96,23 +113,81 @@ func assertEqualBlock(t *testing.T, expected *common.Block, actual *common.Block
 }
 
 func TestBatches(t *testing.T) {
-	const fromBlock int64 = 1
-	const toBlock int64 = 3
-	// Prepare blocks in the DB
-	blocks := setTestBlocks(fromBlock, toBlock)
-	// Generate fake batches
-	const nBatches = 9
-	batches := test.GenBatches(nBatches, blocks)
-	// Test GetLastL1TxsNum with no batches
-	fetchedLastL1TxsNum, err := historyDB.GetLastL1TxsNum()
-	assert.NoError(t, err)
-	assert.Nil(t, fetchedLastL1TxsNum)
-	// Add batches to the DB
-	err = historyDB.AddBatches(batches)
-	assert.NoError(t, err)
+	// Reset DB
+	test.WipeDB(historyDB.DB())
+	// Generate batches using til (and blocks for foreign key)
+	set := `
+		Type: Blockchain
+		
+		AddToken(1) // Will have value in USD
+		AddToken(2) // Will NOT have value in USD
+		CreateAccountDeposit(1) A: 2000
+		CreateAccountDeposit(2) A: 2000
+		CreateAccountDeposit(1) B: 1000
+		CreateAccountDeposit(2) B: 1000
+		> batchL1 
+		> batchL1 
+		Transfer(1) A-B: 100 (5)
+		Transfer(2) B-A: 100 (199)
+		> batch   // batchNum=2, L2 only batch, forges transfers (mixed case of with(out) USD value)
+		> block
+		Transfer(1) A-B: 100 (5)
+		> batch   // batchNum=3, L2 only batch, forges transfer (with USD value)
+		Transfer(2) B-A: 100 (199)
+		> batch   // batchNum=4, L2 only batch, forges transfer (without USD value)
+		> block
+	`
+	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		CoordUser:     "A",
+	}
+	blocks, err := tc.GenerateBlocks(set)
+	require.Nil(t, err)
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	assert.Nil(t, err)
+	// Insert to DB
+	batches := []common.Batch{}
+	tokensValue := make(map[common.TokenID]float64)
+	lastL1TxsNum := new(int64)
+	for _, block := range blocks {
+		// Insert block
+		assert.NoError(t, historyDB.AddBlock(&block.Block))
+		// Insert tokens
+		for i, token := range block.Rollup.AddedTokens {
+			assert.NoError(t, historyDB.AddToken(&token)) //nolint:gosec
+			if i%2 != 0 {
+				// Set value to the token
+				value := (float64(i) + 5) * 5.389329
+				assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
+				tokensValue[token.TokenID] = value / math.Pow(10, float64(token.Decimals))
+			}
+		}
+		// Combine all generated batches into single array
+		for _, batch := range block.Rollup.Batches {
+			batches = append(batches, batch.Batch)
+			forgeTxsNum := batch.Batch.ForgeL1TxsNum
+			if forgeTxsNum != nil && (lastL1TxsNum == nil || *lastL1TxsNum < *forgeTxsNum) {
+				*lastL1TxsNum = *forgeTxsNum
+			}
+		}
+	}
+	// Insert batches
+	assert.NoError(t, historyDB.AddBatches(batches))
+	// Set expected total fee
+	for _, batch := range batches {
+		total := .0
+		for tokenID, amount := range batch.CollectedFees {
+			af := new(big.Float).SetInt(amount)
+			amountFloat, _ := af.Float64()
+			total += tokensValue[tokenID] * amountFloat
+		}
+		batch.TotalFeesUSD = &total
+	}
 	// Get batches from the DB
-	fetchedBatches, err := historyDB.GetBatches(0, common.BatchNum(nBatches))
+	fetchedBatches, err := historyDB.GetBatches(0, common.BatchNum(len(batches)+1))
 	assert.NoError(t, err)
+	assert.Equal(t, len(batches), len(fetchedBatches))
 	for i, fetchedBatch := range fetchedBatches {
 		assert.Equal(t, batches[i], fetchedBatch)
 	}
@@ -121,38 +196,9 @@ func TestBatches(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, batches[len(batches)-1].BatchNum, fetchedLastBatchNum)
 	// Test GetLastL1TxsNum
-	fetchedLastL1TxsNum, err = historyDB.GetLastL1TxsNum()
+	fetchedLastL1TxsNum, err := historyDB.GetLastL1TxsNum()
 	assert.NoError(t, err)
-	assert.Equal(t, *batches[nBatches-1].ForgeL1TxsNum, *fetchedLastL1TxsNum)
-	// Test total fee
-	// Generate fake tokens
-	const nTokens = 5
-	tokens, ethToken := test.GenTokens(nTokens, blocks)
-	err = historyDB.AddTokens(tokens)
-	assert.NoError(t, err)
-	tokens = append([]common.Token{ethToken}, tokens...)
-	feeBatch := batches[0]
-	feeBatch.BatchNum = 9999
-	feeBatch.CollectedFees = make(map[common.TokenID]*big.Int)
-	var total float64
-	for i, token := range tokens {
-		value := 3.019237 * float64(i)
-		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
-		bigAmount := big.NewInt(345000000)
-		feeBatch.CollectedFees[token.TokenID] = bigAmount
-		f := new(big.Float).SetInt(bigAmount)
-		amount, _ := f.Float64()
-		total += value * (amount / math.Pow(10, float64(token.Decimals)))
-	}
-	err = historyDB.AddBatch(&feeBatch)
-	assert.NoError(t, err)
-	fetchedBatches, err = historyDB.GetBatches(feeBatch.BatchNum-1, feeBatch.BatchNum+1)
-	assert.NoError(t, err)
-	for _, fetchedBatch := range fetchedBatches {
-		if fetchedBatch.BatchNum == feeBatch.BatchNum {
-			assert.Equal(t, total, *fetchedBatch.TotalFeesUSD)
-		}
-	}
+	assert.Equal(t, lastL1TxsNum, fetchedLastL1TxsNum)
 }
 
 func TestBids(t *testing.T) {
@@ -257,119 +303,144 @@ func TestAccounts(t *testing.T) {
 }
 
 func TestTxs(t *testing.T) {
-	const fromBlock int64 = 1
-	const toBlock int64 = 5
-	// Prepare blocks in the DB
-	blocks := setTestBlocks(fromBlock, toBlock)
-	// Generate fake tokens
-	const nTokens = 500
-	tokens, ethToken := test.GenTokens(nTokens, blocks)
-	err := historyDB.AddTokens(tokens)
-	assert.NoError(t, err)
-	tokens = append([]common.Token{ethToken}, tokens...)
-	// Generate fake batches
-	const nBatches = 10
-	batches := test.GenBatches(nBatches, blocks)
-	err = historyDB.AddBatches(batches)
-	assert.NoError(t, err)
-	// Generate fake accounts
-	const nAccounts = 3
-	accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
-	err = historyDB.AddAccounts(accs)
-	assert.NoError(t, err)
+	// Reset DB
+	test.WipeDB(historyDB.DB())
+	// TODO: Generate batches using til (and blocks for foreign key)
+	set := `
+		Type: Blockchain
+
+		// Things to test:
+		// One tx of each type
+		// batches that forge user L1s
+		// historic USD is not set if USDUpdate is too old (24h)
+	`
+	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		CoordUser:     "A",
+	}
+	blocks, err := tc.GenerateBlocks(set)
+	require.Nil(t, err)
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	assert.Nil(t, err)
 
 	/*
-		Uncomment once the transaction generation is fixed
-		!! test that batches that forge user L1s !!
-		!! Missing tests to check that historic USD is not set if USDUpdate is too old (24h) !!
 
-		// Generate fake L1 txs
-		const nL1s = 64
-		_, l1txs := test.GenL1Txs(256, nL1s, 0, nil, accs, tokens, blocks, batches)
-		err = historyDB.AddL1Txs(l1txs)
+		OLD TEST
+
+
+		const fromBlock int64 = 1
+		const toBlock int64 = 5
+		// Prepare blocks in the DB
+		blocks := setTestBlocks(fromBlock, toBlock)
+		// Generate fake tokens
+		const nTokens = 500
+		tokens, ethToken := test.GenTokens(nTokens, blocks)
+		err := historyDB.AddTokens(tokens)
 		assert.NoError(t, err)
-		// Generate fake L2 txs
-		const nL2s = 2048 - nL1s
-		_, l2txs := test.GenL2Txs(256, nL2s, 0, nil, accs, tokens, blocks, batches)
-		err = historyDB.AddL2Txs(l2txs)
+		tokens = append([]common.Token{ethToken}, tokens...)
+		// Generate fake batches
+		const nBatches = 10
+		batches := test.GenBatches(nBatches, blocks)
+		err = historyDB.AddBatches(batches)
 		assert.NoError(t, err)
-		// Compare fetched txs vs generated txs.
-		fetchAndAssertTxs(t, l1txs, l2txs)
-		// Test trigger: L1 integrity
-		// from_eth_addr can't be null
-		l1txs[0].FromEthAddr = ethCommon.Address{}
-		err = historyDB.AddL1Txs(l1txs)
-		assert.Error(t, err)
-		l1txs[0].FromEthAddr = ethCommon.BigToAddress(big.NewInt(int64(5)))
-		// from_bjj can't be null
-		l1txs[0].FromBJJ = nil
-		err = historyDB.AddL1Txs(l1txs)
-		assert.Error(t, err)
-		privK := babyjub.NewRandPrivKey()
-		l1txs[0].FromBJJ = privK.Public()
-		// load_amount can't be null
-		l1txs[0].LoadAmount = nil
-		err = historyDB.AddL1Txs(l1txs)
-		assert.Error(t, err)
-		// Test trigger: L2 integrity
-		// batch_num can't be null
-		l2txs[0].BatchNum = 0
-		err = historyDB.AddL2Txs(l2txs)
-		assert.Error(t, err)
-		l2txs[0].BatchNum = 1
-		// nonce can't be null
-		l2txs[0].Nonce = 0
-		err = historyDB.AddL2Txs(l2txs)
-		assert.Error(t, err)
-		// Test trigger: forge L1 txs
-		// add next batch to DB
-		batchNum, toForgeL1TxsNum := test.GetNextToForgeNumAndBatch(batches)
-		batch := batches[0]
-		batch.BatchNum = batchNum
-		batch.ForgeL1TxsNum = toForgeL1TxsNum
-		assert.NoError(t, historyDB.AddBatch(&batch)) // This should update nL1s / 2 rows
-		// Set batch num in txs that should have been marked as forged in the DB
-		for i := 0; i < len(l1txs); i++ {
-			fetchedTx, err := historyDB.GetTx(l1txs[i].TxID)
+		// Generate fake accounts
+		const nAccounts = 3
+		accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
+		err = historyDB.AddAccounts(accs)
+		assert.NoError(t, err)
+
+			Uncomment once the transaction generation is fixed
+			!! test that batches that forge user L1s !!
+			!! Missing tests to check that  !!
+
+			// Generate fake L1 txs
+			const nL1s = 64
+			_, l1txs := test.GenL1Txs(256, nL1s, 0, nil, accs, tokens, blocks, batches)
+			err = historyDB.AddL1Txs(l1txs)
 			assert.NoError(t, err)
-			if l1txs[i].ToForgeL1TxsNum == toForgeL1TxsNum {
-				assert.Equal(t, batchNum, *fetchedTx.BatchNum)
-			} else {
-				if fetchedTx.BatchNum != nil {
-					assert.NotEqual(t, batchNum, *fetchedTx.BatchNum)
+			// Generate fake L2 txs
+			const nL2s = 2048 - nL1s
+			_, l2txs := test.GenL2Txs(256, nL2s, 0, nil, accs, tokens, blocks, batches)
+			err = historyDB.AddL2Txs(l2txs)
+			assert.NoError(t, err)
+			// Compare fetched txs vs generated txs.
+			fetchAndAssertTxs(t, l1txs, l2txs)
+			// Test trigger: L1 integrity
+			// from_eth_addr can't be null
+			l1txs[0].FromEthAddr = ethCommon.Address{}
+			err = historyDB.AddL1Txs(l1txs)
+			assert.Error(t, err)
+			l1txs[0].FromEthAddr = ethCommon.BigToAddress(big.NewInt(int64(5)))
+			// from_bjj can't be null
+			l1txs[0].FromBJJ = nil
+			err = historyDB.AddL1Txs(l1txs)
+			assert.Error(t, err)
+			privK := babyjub.NewRandPrivKey()
+			l1txs[0].FromBJJ = privK.Public()
+			// load_amount can't be null
+			l1txs[0].LoadAmount = nil
+			err = historyDB.AddL1Txs(l1txs)
+			assert.Error(t, err)
+			// Test trigger: L2 integrity
+			// batch_num can't be null
+			l2txs[0].BatchNum = 0
+			err = historyDB.AddL2Txs(l2txs)
+			assert.Error(t, err)
+			l2txs[0].BatchNum = 1
+			// nonce can't be null
+			l2txs[0].Nonce = 0
+			err = historyDB.AddL2Txs(l2txs)
+			assert.Error(t, err)
+			// Test trigger: forge L1 txs
+			// add next batch to DB
+			batchNum, toForgeL1TxsNum := test.GetNextToForgeNumAndBatch(batches)
+			batch := batches[0]
+			batch.BatchNum = batchNum
+			batch.ForgeL1TxsNum = toForgeL1TxsNum
+			assert.NoError(t, historyDB.AddBatch(&batch)) // This should update nL1s / 2 rows
+			// Set batch num in txs that should have been marked as forged in the DB
+			for i := 0; i < len(l1txs); i++ {
+				fetchedTx, err := historyDB.GetTx(l1txs[i].TxID)
+				assert.NoError(t, err)
+				if l1txs[i].ToForgeL1TxsNum == toForgeL1TxsNum {
+					assert.Equal(t, batchNum, *fetchedTx.BatchNum)
+				} else {
+					if fetchedTx.BatchNum != nil {
+						assert.NotEqual(t, batchNum, *fetchedTx.BatchNum)
+					}
 				}
 			}
-		}
 
-		// Test helper functions for Synchronizer
-		// GetLastTxsPosition
-		expectedPosition := -1
-		var choosenToForgeL1TxsNum int64 = -1
-		for _, tx := range l1txs {
-			if choosenToForgeL1TxsNum == -1 && tx.ToForgeL1TxsNum > 0 {
-				choosenToForgeL1TxsNum = tx.ToForgeL1TxsNum
-				expectedPosition = tx.Position
-			} else if choosenToForgeL1TxsNum == tx.ToForgeL1TxsNum && expectedPosition < tx.Position {
-				expectedPosition = tx.Position
+			// Test helper functions for Synchronizer
+			// GetLastTxsPosition
+			expectedPosition := -1
+			var choosenToForgeL1TxsNum int64 = -1
+			for _, tx := range l1txs {
+				if choosenToForgeL1TxsNum == -1 && tx.ToForgeL1TxsNum > 0 {
+					choosenToForgeL1TxsNum = tx.ToForgeL1TxsNum
+					expectedPosition = tx.Position
+				} else if choosenToForgeL1TxsNum == tx.ToForgeL1TxsNum && expectedPosition < tx.Position {
+					expectedPosition = tx.Position
+				}
 			}
-		}
-		position, err := historyDB.GetLastTxsPosition(choosenToForgeL1TxsNum)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedPosition, position)
+			position, err := historyDB.GetLastTxsPosition(choosenToForgeL1TxsNum)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedPosition, position)
 
-		// GetL1UserTxs: not needed? tests were broken
-		// txs, err := historyDB.GetL1UserTxs(2)
-		// assert.NoError(t, err)
-		// assert.NotZero(t, len(txs))
-		// assert.NoError(t, err)
-		// assert.Equal(t, 22, position)
-		// // Test Update L1 TX Batch_num
-		// assert.Equal(t, common.BatchNum(0), txs[0].BatchNum)
-		// txs[0].BatchNum = common.BatchNum(1)
-		// txs, err = historyDB.GetL1UserTxs(2)
-		// assert.NoError(t, err)
-		// assert.NotZero(t, len(txs))
-		// assert.Equal(t, common.BatchNum(1), txs[0].BatchNum)
+			// GetL1UserTxs: not needed? tests were broken
+			// txs, err := historyDB.GetL1UserTxs(2)
+			// assert.NoError(t, err)
+			// assert.NotZero(t, len(txs))
+			// assert.NoError(t, err)
+			// assert.Equal(t, 22, position)
+			// // Test Update L1 TX Batch_num
+			// assert.Equal(t, common.BatchNum(0), txs[0].BatchNum)
+			// txs[0].BatchNum = common.BatchNum(1)
+			// txs, err = historyDB.GetL1UserTxs(2)
+			// assert.NoError(t, err)
+			// assert.NotZero(t, len(txs))
+			// assert.Equal(t, common.BatchNum(1), txs[0].BatchNum)
 	*/
 }
 

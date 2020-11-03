@@ -12,6 +12,30 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
+// Block0 represents Ethereum's genesis block,
+// which is stored by default at HistoryDB
+var Block0 common.Block = common.Block{
+	EthBlockNum: 0,
+	Hash: ethCommon.Hash([32]byte{
+		212, 229, 103, 64, 248, 118, 174, 248,
+		192, 16, 184, 106, 64, 213, 245, 103,
+		69, 161, 24, 208, 144, 106, 52, 230,
+		154, 236, 140, 13, 177, 203, 143, 163,
+	}), // 0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3
+	Timestamp: time.Date(2015, time.July, 30, 3, 26, 13, 0, time.UTC), // 2015-07-30 03:26:13
+}
+
+// EthToken represents the Ether coin, which is stored by default in the DB
+// with TokenID = 0
+var EthToken common.Token = common.Token{
+	TokenID:     0,
+	Name:        "Ether",
+	Symbol:      "ETH",
+	Decimals:    18, //nolint:gomnd
+	EthBlockNum: 0,
+	EthAddr:     ethCommon.BigToAddress(big.NewInt(0)),
+}
+
 // WARNING: the generators in this file doesn't necessary follow the protocol
 // they are intended to check that the parsers between struct <==> DB are correct
 
