@@ -22,6 +22,12 @@ func getExits(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
+	// OnlyPendingWithdraws
+	onlyPendingWithdraws, err := parseQueryBool("onlyPendingWithdraws", nil, c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
 	// Pagination
 	fromItem, order, limit, err := parsePagination(c)
 	if err != nil {
@@ -31,7 +37,7 @@ func getExits(c *gin.Context) {
 
 	// Fetch exits from historyDB
 	exits, pagination, err := h.GetExitsAPI(
-		addr, bjj, tokenID, idx, batchNum, fromItem, limit, order,
+		addr, bjj, tokenID, idx, batchNum, onlyPendingWithdraws, fromItem, limit, order,
 	)
 	if err != nil {
 		retSQLErr(err, c)
