@@ -889,7 +889,7 @@ paths:
       tags:
         - Hermez status
       summary: Get a list of bids made for a specific slot auction.
-      description: Get a list of bids made for a specific slot auction.
+      description: Get a list of bids made for a specific slot auction. Is necessary to add a filter (`slotNum` or `bidderAddr`).
       operationId: getSlotBids
       parameters:
         - name: slotNum
@@ -900,7 +900,7 @@ paths:
             $ref: '#/components/schemas/SlotNum'
         - name: bidderAddr
           in: query
-          description: Get only bids made by a coordinator identified by its bidder address.
+          description: Get only bids made by a coordinator identified by its bidder address. In this case, the bids will be returned in the order that the coordinator made them.
           required: false
           schema:
             $ref: '#/components/schemas/EthereumAddress'
