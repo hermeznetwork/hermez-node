@@ -329,7 +329,7 @@ func (hdb *HistoryDB) SyncPoD(
 	blockNum uint64,
 	bids []common.Bid,
 	coordinators []common.Coordinator,
-	vars *common.AuctionVars,
+	vars *common.AuctionVariables,
 ) error {
 	return nil
 }
@@ -1122,40 +1122,40 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	}
 
 	// Add Coordinators
-	if len(blockData.Coordinators) > 0 {
-		err = hdb.addCoordinators(txn, blockData.Coordinators)
+	if len(blockData.Auction.Coordinators) > 0 {
+		err = hdb.addCoordinators(txn, blockData.Auction.Coordinators)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Add Bids
-	if len(blockData.Bids) > 0 {
-		err = hdb.addBids(txn, blockData.Bids)
+	if len(blockData.Auction.Bids) > 0 {
+		err = hdb.addBids(txn, blockData.Auction.Bids)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Add Tokens
-	if len(blockData.AddedTokens) > 0 {
-		err = hdb.addTokens(txn, blockData.AddedTokens)
+	if len(blockData.Rollup.AddedTokens) > 0 {
+		err = hdb.addTokens(txn, blockData.Rollup.AddedTokens)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Add l1 Txs
-	if len(blockData.L1UserTxs) > 0 {
-		err = hdb.addL1Txs(txn, blockData.L1UserTxs)
+	if len(blockData.Rollup.L1UserTxs) > 0 {
+		err = hdb.addL1Txs(txn, blockData.Rollup.L1UserTxs)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Add Batches
-	for i := range blockData.Batches {
-		batch := &blockData.Batches[i]
+	for i := range blockData.Rollup.Batches {
+		batch := &blockData.Rollup.Batches[i]
 		// Add Batch: this will trigger an update on the DB
 		// that will set the batch num of forged L1 txs in this batch
 		err = hdb.addBatch(txn, &batch.Batch)
@@ -1199,6 +1199,8 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 
 		// TODO: INSERT CONTRACTS VARS
 	}
+
+	// TODO: Process withdrawals
 
 	return txn.Commit()
 }

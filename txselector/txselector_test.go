@@ -13,7 +13,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
-	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/jmoiron/sqlx"
@@ -61,7 +60,7 @@ func TestGetL2TxSelection(t *testing.T) {
 	txsel := initTest(t, til.SetPool0, 5, 5, 10)
 	test.WipeDB(txsel.l2db.DB())
 
-	tc := til.NewContext(eth.RollupConstMaxL1UserTx)
+	tc := til.NewContext(common.RollupConstMaxL1UserTx)
 	// generate test transactions
 	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
 	assert.Nil(t, err)
@@ -86,18 +85,18 @@ func TestGetL2TxSelection(t *testing.T) {
 
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
-	_, err = txsel.localAccountsDB.ProcessTxs(nil, nil, blocks[0].Batches[0].L1CoordinatorTxs, nil)
+	_, err = txsel.localAccountsDB.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.Nil(t, err)
 
 	// add the 1st batch of transactions to the TxSelector
-	addL2Txs(t, txsel, common.L2TxsToPoolL2Txs(blocks[0].Batches[0].L2Txs))
+	addL2Txs(t, txsel, common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[0].L2Txs))
 
 	l1CoordTxs, l2Txs, err := txsel.GetL2TxSelection(coordIdxs, 0)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(l2Txs))
 	assert.Equal(t, 0, len(l1CoordTxs))
 
-	_, _, _, err = txsel.GetL1L2TxSelection(coordIdxs, 0, blocks[0].L1UserTxs)
+	_, _, _, err = txsel.GetL1L2TxSelection(coordIdxs, 0, blocks[0].Rollup.L1UserTxs)
 	assert.Nil(t, err)
 
 	// TODO once L2DB is updated to return error in case that AddTxTest

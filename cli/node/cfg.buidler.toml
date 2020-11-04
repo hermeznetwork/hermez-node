@@ -1,0 +1,37 @@
+[StateDB]
+Path = "/tmp/iden3-test/hermez/statedb"
+
+[PostgreSQL]
+Port     = 5432
+Host     = "localhost"
+User     = "hermez"
+Password = "yourpasswordhere"
+Name     = "hermez"
+
+[L2DB]
+SafetyPeriod = 10
+MaxTxs       = 512
+TTL          = "24h"
+
+[Web3]
+URL = "http://localhost:8545"
+
+[Synchronizer]
+SyncLoopInterval = "1s"
+    [Synchronizer.StartBlockNum]
+    Rollup = 1
+    Auction = 1
+    WDelayer = 1
+
+[SmartContracts]
+Rollup   = "0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe"
+Auction  = "0x038B86d9d8FAFdd0a02ebd1A476432877b0107C8"
+TokenHEZ = "0xf4e77E5Da47AC3125140c470c71cBca77B5c638c"
+TokenHEZName = "Hermez Network Token"
+
+[EthClient]
+CallGasLimit        = 300000
+DeployGasLimit      = 1000000
+GasPriceDiv         = 100
+ReceiptTimeout      = "60s"
+IntervalReceiptLoop = "200ms"

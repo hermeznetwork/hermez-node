@@ -24,3 +24,10 @@ type ExitInfo struct {
 	// happened.
 	DelayedWithdrawn *int64 `meddler:"delayed_withdrawn"`
 }
+
+// WithdrawInfo represents a withdraw action to the rollup
+type WithdrawInfo struct {
+	Idx             Idx
+	NumExitRoot     BatchNum
+	InstantWithdraw bool
+}

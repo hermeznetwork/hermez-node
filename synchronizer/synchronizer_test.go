@@ -49,13 +49,13 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	assert.Greater(t, dbBlocks[blockNum-1].Timestamp.Unix(), dbBlocks[blockNum-2].Timestamp.Unix())
 
 	// Check Tokens
-	assert.Equal(t, len(block.AddedTokens), len(syncBlock.AddedTokens))
+	assert.Equal(t, len(block.Rollup.AddedTokens), len(syncBlock.Rollup.AddedTokens))
 	dbTokens, err := s.historyDB.GetAllTokens()
 	require.Nil(t, err)
 	dbTokens = dbTokens[1:] // ignore token 0, added by default in the DB
-	for i, token := range block.AddedTokens {
+	for i, token := range block.Rollup.AddedTokens {
 		dbToken := dbTokens[i]
-		syncToken := syncBlock.AddedTokens[i]
+		syncToken := syncBlock.Rollup.AddedTokens[i]
 
 		assert.Equal(t, block.Block.EthBlockNum, syncToken.EthBlockNum)
 		assert.Equal(t, token.TokenID, syncToken.TokenID)
@@ -74,15 +74,15 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	}
 
 	// Check L1UserTxs
-	assert.Equal(t, len(block.L1UserTxs), len(syncBlock.L1UserTxs))
+	assert.Equal(t, len(block.Rollup.L1UserTxs), len(syncBlock.Rollup.L1UserTxs))
 	dbL1UserTxs, err := s.historyDB.GetAllL1UserTxs()
 	require.Nil(t, err)
 	// Ignore BatchNum in syncBlock.L1UserTxs because this value is set by the HistoryDB
-	for i := range syncBlock.L1UserTxs {
-		syncBlock.L1UserTxs[i].BatchNum = block.L1UserTxs[i].BatchNum
+	for i := range syncBlock.Rollup.L1UserTxs {
+		syncBlock.Rollup.L1UserTxs[i].BatchNum = block.Rollup.L1UserTxs[i].BatchNum
 	}
-	assert.Equal(t, block.L1UserTxs, syncBlock.L1UserTxs)
-	for _, tx := range block.L1UserTxs {
+	assert.Equal(t, block.Rollup.L1UserTxs, syncBlock.Rollup.L1UserTxs)
+	for _, tx := range block.Rollup.L1UserTxs {
 		var dbTx *common.L1Tx
 		// Find tx in DB output
 		for _, _dbTx := range dbL1UserTxs {
@@ -97,7 +97,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	}
 
 	// Check Batches
-	assert.Equal(t, len(block.Batches), len(syncBlock.Batches))
+	assert.Equal(t, len(block.Rollup.Batches), len(syncBlock.Rollup.Batches))
 	dbBatches, err := s.historyDB.GetAllBatches()
 	require.Nil(t, err)
 
@@ -110,7 +110,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	dbExits, err := s.historyDB.GetAllExits()
 	require.Nil(t, err)
 	// dbL1CoordinatorTxs := []common.L1Tx{}
-	for i, batch := range block.Batches {
+	for i, batch := range block.Rollup.Batches {
 		var dbBatch *common.Batch
 		// Find batch in DB output
 		for _, _dbBatch := range dbBatches {
@@ -120,7 +120,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 				break
 			}
 		}
-		syncBatch := syncBlock.Batches[i]
+		syncBatch := syncBlock.Rollup.Batches[i]
 
 		// We don't care about TotalFeesUSD.  Use the syncBatch that
 		// has a TotalFeesUSD inserted by the HistoryDB
@@ -235,7 +235,13 @@ func TestSync(t *testing.T) {
 	client := test.NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 
 	// Create Synchronizer
-	s, err := NewSynchronizer(client, historyDB, stateDB)
+	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
+		StartBlockNum: ConfigStartBlockNum{
+			Rollup:   1,
+			Auction:  1,
+			WDelayer: 1,
+		},
+	})
 	require.Nil(t, err)
 
 	//
@@ -296,7 +302,7 @@ func TestSync(t *testing.T) {
 		> block // blockNum=3
 
 	`
-	tc := til.NewContext(eth.RollupConstMaxL1UserTx)
+	tc := til.NewContext(common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set1)
 	require.Nil(t, err)
 	// Sanity check
@@ -304,20 +310,20 @@ func TestSync(t *testing.T) {
 	// blocks 0 (blockNum=2)
 	i := 0
 	require.Equal(t, 2, int(blocks[i].Block.EthBlockNum))
-	require.Equal(t, 3, len(blocks[i].AddedTokens))
-	require.Equal(t, 5, len(blocks[i].L1UserTxs))
-	require.Equal(t, 2, len(blocks[i].Batches))
-	require.Equal(t, 2, len(blocks[i].Batches[0].L1CoordinatorTxs))
+	require.Equal(t, 3, len(blocks[i].Rollup.AddedTokens))
+	require.Equal(t, 5, len(blocks[i].Rollup.L1UserTxs))
+	require.Equal(t, 2, len(blocks[i].Rollup.Batches))
+	require.Equal(t, 2, len(blocks[i].Rollup.Batches[0].L1CoordinatorTxs))
 	// blocks 1 (blockNum=3)
 	i = 1
 	require.Equal(t, 3, int(blocks[i].Block.EthBlockNum))
-	require.Equal(t, 3, len(blocks[i].L1UserTxs))
-	require.Equal(t, 2, len(blocks[i].Batches))
-	require.Equal(t, 2, len(blocks[i].Batches[0].L2Txs))
+	require.Equal(t, 3, len(blocks[i].Rollup.L1UserTxs))
+	require.Equal(t, 2, len(blocks[i].Rollup.Batches))
+	require.Equal(t, 2, len(blocks[i].Rollup.Batches[0].L2Txs))
 
 	// Generate extra required data
 	for _, block := range blocks {
-		for _, token := range block.AddedTokens {
+		for _, token := range block.Rollup.AddedTokens {
 			consts := eth.ERC20Consts{
 				Name:     fmt.Sprintf("Token %d", token.TokenID),
 				Symbol:   fmt.Sprintf("TK%d", token.TokenID),
@@ -330,11 +336,11 @@ func TestSync(t *testing.T) {
 
 	// Add block data to the smart contracts
 	for _, block := range blocks {
-		for _, token := range block.AddedTokens {
+		for _, token := range block.Rollup.AddedTokens {
 			_, err := client.RollupAddTokenSimple(token.EthAddr, clientSetup.RollupVariables.FeeAddToken)
 			require.Nil(t, err)
 		}
-		for _, tx := range block.L1UserTxs {
+		for _, tx := range block.Rollup.L1UserTxs {
 			client.CtlSetAddr(tx.FromEthAddr)
 			_, err := client.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.LoadAmount, tx.Amount,
 				uint32(tx.TokenID), int64(tx.ToIdx))
@@ -347,7 +353,7 @@ func TestSync(t *testing.T) {
 			// coordinator owned to receive fees.
 			feeIdxCoordinator = []common.Idx{common.Idx(256), common.Idx(259)}
 		}
-		for _, batch := range block.Batches {
+		for _, batch := range block.Rollup.Batches {
 			_, err := client.RollupForgeBatch(&eth.RollupForgeBatchArgs{
 				NewLastIdx:            batch.Batch.LastIdx,
 				NewStRoot:             batch.Batch.StateRoot,
@@ -377,8 +383,8 @@ func TestSync(t *testing.T) {
 		block := &blocks[i]
 		// Count number of L1UserTxs in each queue, to figure out later
 		// position of L1CoordinatorTxs and L2Txs
-		for j := range block.L1UserTxs {
-			tx := &block.L1UserTxs[j]
+		for j := range block.Rollup.L1UserTxs {
+			tx := &block.Rollup.L1UserTxs[j]
 			l1UserTxsLen[*tx.ToForgeL1TxsNum]++
 			if tx.Type == common.TxTypeForceExit {
 				forceExits[*tx.ToForgeL1TxsNum] = append(forceExits[*tx.ToForgeL1TxsNum],
@@ -388,15 +394,15 @@ func TestSync(t *testing.T) {
 					})
 			}
 		}
-		for j := range block.Batches {
-			batch := &block.Batches[j]
+		for j := range block.Rollup.Batches {
+			batch := &block.Rollup.Batches[j]
 			if batch.L1Batch {
 				// Set BatchNum for forged L1UserTxs to til blocks
 				bn := batch.Batch.BatchNum
 				for k := range blocks {
 					block := &blocks[k]
-					for l := range block.L1UserTxs {
-						tx := &block.L1UserTxs[l]
+					for l := range block.Rollup.L1UserTxs {
+						tx := &block.Rollup.L1UserTxs[l]
 						if *tx.ToForgeL1TxsNum == openToForge {
 							tx.BatchNum = &bn
 						}
@@ -425,8 +431,8 @@ func TestSync(t *testing.T) {
 	// Fill expected positions in L1CoordinatorTxs and L2Txs
 	for i := range blocks {
 		block := &blocks[i]
-		for j := range block.Batches {
-			batch := &block.Batches[j]
+		for j := range block.Rollup.Batches {
+			batch := &block.Rollup.Batches[j]
 			position := 0
 			if batch.L1Batch {
 				position = l1UserTxsLen[*batch.Batch.ForgeL1TxsNum]
@@ -455,8 +461,8 @@ func TestSync(t *testing.T) {
 	// Fill ExitTree (only AccountIdx and Balance)
 	for i := range blocks {
 		block := &blocks[i]
-		for j := range block.Batches {
-			batch := &block.Batches[j]
+		for j := range block.Rollup.Batches {
+			batch := &block.Rollup.Batches[j]
 			if batch.L1Batch {
 				for forgeL1TxsNum, exits := range forceExits {
 					if forgeL1TxsNum == *batch.Batch.ForgeL1TxsNum {

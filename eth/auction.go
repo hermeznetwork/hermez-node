@@ -13,26 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hermeznetwork/hermez-node/common"
 	HermezAuctionProtocol "github.com/hermeznetwork/hermez-node/eth/contracts/auction"
 	HEZ "github.com/hermeznetwork/hermez-node/eth/contracts/tokenHEZ"
+	"github.com/hermeznetwork/hermez-node/log"
 )
-
-// AuctionConstants are the constants of the Rollup Smart Contract
-type AuctionConstants struct {
-	// Blocks per slot
-	BlocksPerSlot uint8 `json:"blocksPerSlot"`
-	// Minimum bid when no one has bid yet
-	InitialMinimalBidding *big.Int `json:"initialMinimalBidding"`
-	// First block where the first slot begins
-	GenesisBlockNum int64 `json:"genesisBlockNum"`
-	// ERC777 token with which the bids will be made
-	TokenHEZ ethCommon.Address `json:"tokenHEZ"`
-	// HermezRollup smartcontract address
-	HermezRollup ethCommon.Address `json:"hermezRollup"`
-	// Hermez Governanze Token smartcontract address who controls some parameters and collects HEZ fee
-	// Only for test
-	GovernanceAddress ethCommon.Address `json:"governanceAddress"`
-}
 
 // SlotState is the state of a slot
 type SlotState struct {
@@ -56,26 +41,6 @@ func NewSlotState() *SlotState {
 type Coordinator struct {
 	Forger ethCommon.Address
 	URL    string
-}
-
-// AuctionVariables are the variables of the Auction Smart Contract
-type AuctionVariables struct {
-	// Boot Coordinator Address
-	DonationAddress ethCommon.Address `json:"donationAddress" meddler:"donation_address"`
-	// Boot Coordinator Address
-	BootCoordinator ethCommon.Address `json:"bootCoordinator" meddler:"boot_coordinator"`
-	// The minimum bid value in a series of 6 slots
-	DefaultSlotSetBid [6]*big.Int `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json"`
-	// Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
-	ClosedAuctionSlots uint16 `json:"closedAuctionSlots" meddler:"closed_auction_slots"`
-	// Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )
-	OpenAuctionSlots uint16 `json:"openAuctionSlots" meddler:"open_auction_slots"`
-	// How the HEZ tokens deposited by the slot winner are distributed (Burn: 40% - Donation: 40% - HGT: 20%)
-	AllocationRatio [3]uint16 `json:"allocationRatio" meddler:"allocation_ratio,json"`
-	// Minimum outbid (percentage) over the previous one to consider it valid
-	Outbidding uint16 `json:"outbidding" meddler:"outbidding"`
-	// Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before
-	SlotDeadline uint8 `json:"slotDeadline" meddler:"slot_deadline"`
 }
 
 // AuctionState represents the state of the Rollup in the Smart Contract
@@ -251,7 +216,7 @@ type AuctionInterface interface {
 	// Smart Contract Status
 	//
 
-	AuctionConstants() (*AuctionConstants, error)
+	AuctionConstants() (*common.AuctionConstants, error)
 	AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error)
 }
 
@@ -655,8 +620,8 @@ func (c *AuctionClient) AuctionForge(forger ethCommon.Address) (tx *types.Transa
 }
 
 // AuctionConstants returns the Constants of the Auction Smart Contract
-func (c *AuctionClient) AuctionConstants() (auctionConstants *AuctionConstants, err error) {
-	auctionConstants = new(AuctionConstants)
+func (c *AuctionClient) AuctionConstants() (auctionConstants *common.AuctionConstants, err error) {
+	auctionConstants = new(common.AuctionConstants)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auctionConstants.BlocksPerSlot, err = c.auction.BLOCKSPERSLOT(nil)
 		if err != nil {
@@ -684,8 +649,8 @@ func (c *AuctionClient) AuctionConstants() (auctionConstants *AuctionConstants, 
 }
 
 // AuctionVariables returns the variables of the Auction Smart Contract
-func (c *AuctionClient) AuctionVariables() (auctionVariables *AuctionVariables, err error) {
-	auctionVariables = new(AuctionVariables)
+func (c *AuctionClient) AuctionVariables() (auctionVariables *common.AuctionVariables, err error) {
+	auctionVariables = new(common.AuctionVariables)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auctionVariables.AllocationRatio, err = c.AuctionGetAllocationRatio()
 		if err != nil {
@@ -751,7 +716,7 @@ var (
 // are no events in that block, blockHash is nil.
 func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error) {
 	var auctionEvents AuctionEvents
-	var blockHash ethCommon.Hash
+	var blockHash *ethCommon.Hash
 
 	query := ethereum.FilterQuery{
 		FromBlock: big.NewInt(blockNum),
@@ -767,10 +732,11 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		return nil, nil, err
 	}
 	if len(logs) > 0 {
-		blockHash = logs[0].BlockHash
+		blockHash = &logs[0].BlockHash
 	}
 	for _, vLog := range logs {
-		if vLog.BlockHash != blockHash {
+		if vLog.BlockHash != *blockHash {
+			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
 			return nil, nil, ErrBlockHashMismatchEvent
 		}
 		switch vLog.Topics[0] {
@@ -869,5 +835,5 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			auctionEvents.HEZClaimed = append(auctionEvents.HEZClaimed, HEZClaimed)
 		}
 	}
-	return &auctionEvents, &blockHash, nil
+	return &auctionEvents, blockHash, nil
 }

@@ -66,6 +66,11 @@ type Node struct {
 	} `validate:"required"`
 	Synchronizer struct {
 		SyncLoopInterval Duration `validate:"required"`
+		StartBlockNum    struct {
+			Rollup   int64 `validate:"required"`
+			Auction  int64 `validate:"required"`
+			WDelayer int64 `validate:"required"`
+		} `validate:"required"`
 	} `validate:"required"`
 	SmartContracts struct {
 		Rollup       ethCommon.Address `validate:"required"`

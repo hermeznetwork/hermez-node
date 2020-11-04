@@ -107,7 +107,13 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		return nil, err
 	}
 
-	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB)
+	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB, synchronizer.Config{
+		StartBlockNum: synchronizer.ConfigStartBlockNum{
+			Rollup:   cfg.Synchronizer.StartBlockNum.Rollup,
+			Auction:  cfg.Synchronizer.StartBlockNum.Auction,
+			WDelayer: cfg.Synchronizer.StartBlockNum.WDelayer,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}

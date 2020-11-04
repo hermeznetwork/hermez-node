@@ -32,10 +32,10 @@ func init() {
 // RollupBlock stores all the data related to the Rollup SC from an ethereum block
 type RollupBlock struct {
 	State     eth.RollupState
-	Vars      eth.RollupVariables
+	Vars      common.RollupVariables
 	Events    eth.RollupEvents
 	Txs       map[ethCommon.Hash]*types.Transaction
-	Constants *eth.RollupPublicConstants
+	Constants *common.RollupConstants
 	Eth       *EthereumBlock
 }
 
@@ -55,10 +55,10 @@ var (
 // AuctionBlock stores all the data related to the Auction SC from an ethereum block
 type AuctionBlock struct {
 	State     eth.AuctionState
-	Vars      eth.AuctionVariables
+	Vars      common.AuctionVariables
 	Events    eth.AuctionEvents
 	Txs       map[ethCommon.Hash]*types.Transaction
-	Constants *eth.AuctionConstants
+	Constants *common.AuctionConstants
 	Eth       *EthereumBlock
 }
 
@@ -219,10 +219,10 @@ func (b *Block) Next() *Block {
 // ClientSetup is used to initialize the constants of the Smart Contracts and
 // other details of the test Client
 type ClientSetup struct {
-	RollupConstants  *eth.RollupPublicConstants
-	RollupVariables  *eth.RollupVariables
-	AuctionConstants *eth.AuctionConstants
-	AuctionVariables *eth.AuctionVariables
+	RollupConstants  *common.RollupConstants
+	RollupVariables  *common.RollupVariables
+	AuctionConstants *common.AuctionConstants
+	AuctionVariables *common.AuctionVariables
 	VerifyProof      bool
 }
 
@@ -241,8 +241,8 @@ func NewClientSetupExample() *ClientSetup {
 	}
 	tokenHEZ := ethCommon.HexToAddress("0x51D243D62852Bba334DD5cc33f242BAc8c698074")
 	governanceAddress := ethCommon.HexToAddress("0x688EfD95BA4391f93717CF02A9aED9DBD2855cDd")
-	rollupConstants := &eth.RollupPublicConstants{
-		Verifiers: []eth.RollupVerifierStruct{
+	rollupConstants := &common.RollupConstants{
+		Verifiers: []common.RollupVerifierStruct{
 			{
 				MaxTx:   2048,
 				NLevels: 32,
@@ -254,12 +254,12 @@ func NewClientSetupExample() *ClientSetup {
 		HermezAuctionContract:      ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
 		WithdrawDelayerContract:    ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
 	}
-	rollupVariables := &eth.RollupVariables{
+	rollupVariables := &common.RollupVariables{
 		FeeAddToken:           big.NewInt(11),
 		ForgeL1L2BatchTimeout: 9,
 		WithdrawalDelay:       80,
 	}
-	auctionConstants := &eth.AuctionConstants{
+	auctionConstants := &common.AuctionConstants{
 		BlocksPerSlot:         40,
 		InitialMinimalBidding: initialMinimalBidding,
 		GenesisBlockNum:       1,
@@ -267,7 +267,7 @@ func NewClientSetupExample() *ClientSetup {
 		TokenHEZ:              tokenHEZ,
 		HermezRollup:          ethCommon.HexToAddress("0x474B6e29852257491cf283EfB1A9C61eBFe48369"),
 	}
-	auctionVariables := &eth.AuctionVariables{
+	auctionVariables := &common.AuctionVariables{
 		DonationAddress: ethCommon.HexToAddress("0x61Ed87CF0A1496b49A420DA6D84B58196b98f2e7"),
 		BootCoordinator: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		DefaultSlotSetBid: [6]*big.Int{
@@ -310,8 +310,8 @@ type Client struct {
 	rw               *sync.RWMutex
 	log              bool
 	addr             *ethCommon.Address
-	rollupConstants  *eth.RollupPublicConstants
-	auctionConstants *eth.AuctionConstants
+	rollupConstants  *common.RollupConstants
+	auctionConstants *common.AuctionConstants
 	blocks           map[int64]*Block
 	// state            state
 	blockNum    int64 // last mined block num
@@ -653,7 +653,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 	nextBlock := c.nextBlock()
 	r := nextBlock.Rollup
 	queue := r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
-	if len(queue.L1TxQueue) >= eth.RollupConstMaxL1UserTx {
+	if len(queue.L1TxQueue) >= common.RollupConstMaxL1UserTx {
 		r.State.LastToForgeL1TxsNum++
 		r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum] = eth.NewQueueStruct()
 		queue = r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum]
@@ -883,12 +883,11 @@ func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Tra
 // }
 
 // RollupConstants returns the Constants of the Rollup Smart Contract
-func (c *Client) RollupConstants() (*eth.RollupPublicConstants, error) {
+func (c *Client) RollupConstants() (*common.RollupConstants, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
-	log.Error("TODO")
-	return nil, errTODO
+	return c.rollupConstants, nil
 }
 
 // RollupEventsByBlock returns the events in a block that happened in the Rollup Smart Contract
@@ -1326,7 +1325,7 @@ func (c *Client) AuctionGetClaimableHEZ(bidder ethCommon.Address) (*big.Int, err
 }
 
 // AuctionConstants returns the Constants of the Auction Smart Contract
-func (c *Client) AuctionConstants() (*eth.AuctionConstants, error) {
+func (c *Client) AuctionConstants() (*common.AuctionConstants, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 

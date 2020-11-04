@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/aristanetworks/goarista v0.0.0-20190712234253-ed1100a1c015
+	github.com/aristanetworks/goarista v0.0.0-20190912214011-b54698eaaca6
 	github.com/dghubble/sling v1.3.0
 	github.com/ethereum/go-ethereum v1.9.17
 	github.com/getkin/kin-openapi v0.22.0
@@ -19,6 +19,7 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/rogpeppe/go-internal v1.6.1 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351

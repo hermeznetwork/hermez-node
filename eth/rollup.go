@@ -20,112 +20,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-const (
-	// RollupConstMaxFeeIdxCoordinator is the maximum number of tokens the
-	// coordinator can use to collect fees (determines the number of tokens
-	// that the coordinator can collect fees from).  This value is
-	// determined by the circuit.
-	RollupConstMaxFeeIdxCoordinator = 64
-	// RollupConstReservedIDx First 256 indexes reserved, first user index will be the 256
-	RollupConstReservedIDx = 255
-	// RollupConstExitIDx IDX 1 is reserved for exits
-	RollupConstExitIDx = 1
-	// RollupConstLimitLoadAmount Max load amount allowed (loadAmount: L1 --> L2)
-	RollupConstLimitLoadAmount = (1 << 128)
-	// RollupConstLimitL2TransferAmount Max amount allowed (amount L2 --> L2)
-	RollupConstLimitL2TransferAmount = (1 << 192)
-	// RollupConstLimitTokens Max number of tokens allowed to be registered inside the rollup
-	RollupConstLimitTokens = (1 << 32)
-	// RollupConstL1CoordinatorTotalBytes [4 bytes] token + [32 bytes] babyjub + [65 bytes] compressedSignature
-	RollupConstL1CoordinatorTotalBytes = 101
-	// RollupConstL1UserTotalBytes [20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx +
-	// [2 bytes] loadAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx
-	RollupConstL1UserTotalBytes = 72
-	// RollupConstMaxL1UserTx Maximum L1-user transactions allowed to be queued in a batch
-	RollupConstMaxL1UserTx = 128
-	// RollupConstMaxL1Tx Maximum L1 transactions allowed to be queued in a batch
-	RollupConstMaxL1Tx = 256
-	// RollupConstInputSHAConstantBytes [6 bytes] lastIdx + [6 bytes] newLastIdx  + [32 bytes] stateRoot  + [32 bytes] newStRoot  + [32 bytes] newExitRoot +
-	// [_MAX_L1_TX * _L1_USER_TOTALBYTES bytes] l1TxsData + totalL2TxsDataLength + feeIdxCoordinatorLength + [2 bytes] chainID =
-	// 18542 bytes +  totalL2TxsDataLength + feeIdxCoordinatorLength
-	RollupConstInputSHAConstantBytes = 18542
-	// RollupConstNumBuckets Number of buckets
-	RollupConstNumBuckets = 5
-	// RollupConstMaxWithdrawalDelay max withdrawal delay in seconds
-	RollupConstMaxWithdrawalDelay = 2 * 7 * 24 * 60 * 60
-	// RollupConstExchangeMultiplier exchange multiplier
-	RollupConstExchangeMultiplier = 1e14
-	// LenVerifiers number of Rollup Smart Contract Verifiers
-	LenVerifiers = 1
-)
-
-var (
-	// RollupConstEthAddressInternalOnly This ethereum address is used internally for rollup accounts that don't have ethereum address, only Babyjubjub
-	// This non-ethereum accounts can be created by the coordinator and allow users to have a rollup
-	// account without needing an ethereum address
-	RollupConstEthAddressInternalOnly = ethCommon.HexToAddress("0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF")
-	// RollupConstRfield Modulus zkSNARK
-	RollupConstRfield, _ = new(big.Int).SetString(
-		"21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
-
-	// RollupConstERC1820 ERC1820Registry address
-	RollupConstERC1820 = ethCommon.HexToAddress("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24")
-
-	// ERC777 tokens signatures
-
-	// RollupConstRecipientInterfaceHash ERC777 recipient interface hash
-	RollupConstRecipientInterfaceHash = crypto.Keccak256([]byte("ERC777TokensRecipient"))
-	// RollupConstPerformL1UserTxSignature the signature of the function that can be called thru an ERC777 `send`
-	RollupConstPerformL1UserTxSignature = crypto.Keccak256([]byte("addL1Transaction(uint256,uint48,uint16,uint16,uint32,uint48)"))
-	// RollupConstAddTokenSignature the signature of the function that can be called thru an ERC777 `send`
-	RollupConstAddTokenSignature = crypto.Keccak256([]byte("addToken(address)"))
-	// RollupConstSendSignature ERC777 Signature
-	RollupConstSendSignature = crypto.Keccak256([]byte("send(address,uint256,bytes)"))
-	// RollupConstERC777Granularity ERC777 Signature
-	RollupConstERC777Granularity = crypto.Keccak256([]byte("granularity()"))
-	// RollupConstWithdrawalDelayerDeposit  This constant are used to deposit tokens from ERC77 tokens into withdrawal delayer
-	RollupConstWithdrawalDelayerDeposit = crypto.Keccak256([]byte("deposit(address,address,uint192)"))
-
-	// ERC20 signature
-
-	// RollupConstTransferSignature This constant is used in the _safeTransfer internal method in order to safe GAS.
-	RollupConstTransferSignature = crypto.Keccak256([]byte("transfer(address,uint256)"))
-	// RollupConstTransferFromSignature This constant is used in the _safeTransfer internal method in order to safe GAS.
-	RollupConstTransferFromSignature = crypto.Keccak256([]byte("transferFrom(address,address,uint256)"))
-	// RollupConstApproveSignature This constant is used in the _safeTransfer internal method in order to safe GAS.
-	RollupConstApproveSignature = crypto.Keccak256([]byte("approve(address,uint256)"))
-	// RollupConstERC20Signature ERC20 decimals signature
-	RollupConstERC20Signature = crypto.Keccak256([]byte("decimals()"))
-)
-
-// RollupPublicConstants are the constants of the Rollup Smart Contract
-type RollupPublicConstants struct {
-	AbsoluteMaxL1L2BatchTimeout int64                  `json:"absoluteMaxL1L2BatchTimeout"`
-	TokenHEZ                    ethCommon.Address      `json:"tokenHEZ"`
-	Verifiers                   []RollupVerifierStruct `json:"verifiers"`
-	HermezAuctionContract       ethCommon.Address      `json:"hermezAuctionContract"`
-	HermezGovernanceDAOAddress  ethCommon.Address      `json:"hermezGovernanceDAOAddress"`
-	SafetyAddress               ethCommon.Address      `json:"safetyAddress"`
-	WithdrawDelayerContract     ethCommon.Address      `json:"withdrawDelayerContract"`
-}
-
-// Bucket are the variables of each Bucket of Rollup Smart Contract
-type Bucket struct {
-	CeilUSD             uint64 `json:"ceilUSD"`
-	BlockStamp          uint64 `json:"blockStamp"`
-	Withdrawals         uint64 `json:"withdrawals"`
-	BlockWithdrawalRate uint64 `json:"blockWithdrawalRate"`
-	MaxWithdrawals      uint64 `json:"maxWithdrawals"`
-}
-
-// RollupVariables are the variables of the Rollup Smart Contract
-type RollupVariables struct {
-	FeeAddToken           *big.Int                      `json:"feeAddToken" meddler:"fee_addtoken"`
-	ForgeL1L2BatchTimeout int64                         `json:"forgeL1L2BatchTimeout" meddler:"forge_l1l2_timeout"`
-	WithdrawalDelay       uint64                        `json:"withdrawalDelay" meddler:"withdrawal_delay"`
-	Buckets               [RollupConstNumBuckets]Bucket `json:"buckets" meddler:"buckets,json"`
-}
-
 // QueueStruct is the queue of L1Txs for a batch
 type QueueStruct struct {
 	L1TxQueue    []common.L1Tx
@@ -138,12 +32,6 @@ func NewQueueStruct() *QueueStruct {
 		L1TxQueue:    make([]common.L1Tx, 0),
 		TotalL1TxFee: big.NewInt(0),
 	}
-}
-
-// RollupVerifierStruct is the information about verifiers of the Rollup Smart Contract
-type RollupVerifierStruct struct {
-	MaxTx   int64 `json:"maxTx"`
-	NLevels int64 `json:"nlevels"`
 }
 
 // RollupState represents the state of the Rollup in the Smart Contract
@@ -197,8 +85,8 @@ type RollupEventUpdateFeeAddToken struct {
 	NewFeeAddToken *big.Int
 }
 
-// RollupEventWithdrawEvent is an event of the Rollup Smart Contract
-type RollupEventWithdrawEvent struct {
+// RollupEventWithdraw is an event of the Rollup Smart Contract
+type RollupEventWithdraw struct {
 	Idx             uint64
 	NumExitRoot     uint64
 	InstantWithdraw bool
@@ -211,7 +99,7 @@ type RollupEvents struct {
 	ForgeBatch                  []RollupEventForgeBatch
 	UpdateForgeL1L2BatchTimeout []RollupEventUpdateForgeL1L2BatchTimeout
 	UpdateFeeAddToken           []RollupEventUpdateFeeAddToken
-	WithdrawEvent               []RollupEventWithdrawEvent
+	Withdraw                    []RollupEventWithdraw
 }
 
 // NewRollupEvents creates an empty RollupEvents with the slices initialized.
@@ -222,7 +110,7 @@ func NewRollupEvents() RollupEvents {
 		ForgeBatch:                  make([]RollupEventForgeBatch, 0),
 		UpdateForgeL1L2BatchTimeout: make([]RollupEventUpdateForgeL1L2BatchTimeout, 0),
 		UpdateFeeAddToken:           make([]RollupEventUpdateFeeAddToken, 0),
-		WithdrawEvent:               make([]RollupEventWithdrawEvent, 0),
+		Withdraw:                    make([]RollupEventWithdraw, 0),
 	}
 }
 
@@ -287,7 +175,7 @@ type RollupInterface interface {
 	// Smart Contract Status
 	//
 
-	RollupConstants() (*RollupPublicConstants, error)
+	RollupConstants() (*common.RollupConstants, error)
 	RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethCommon.Hash, error)
 	RollupForgeBatchArgs(ethCommon.Hash) (*RollupForgeBatchArgs, *ethCommon.Address, error)
 }
@@ -361,11 +249,11 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (tx *types.T
 				l2DataBytes = append(l2DataBytes, bytesl2[:]...)
 			}
 			var feeIdxCoordinator []byte
-			if len(args.FeeIdxCoordinator) > RollupConstMaxFeeIdxCoordinator {
+			if len(args.FeeIdxCoordinator) > common.RollupConstMaxFeeIdxCoordinator {
 				return nil, fmt.Errorf("len(args.FeeIdxCoordinator) > %v",
-					RollupConstMaxFeeIdxCoordinator)
+					common.RollupConstMaxFeeIdxCoordinator)
 			}
-			for i := 0; i < RollupConstMaxFeeIdxCoordinator; i++ {
+			for i := 0; i < common.RollupConstMaxFeeIdxCoordinator; i++ {
 				feeIdx := common.Idx(0)
 				if i < len(args.FeeIdxCoordinator) {
 					feeIdx = args.FeeIdxCoordinator[i]
@@ -552,8 +440,8 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *typ
 }
 
 // RollupConstants returns the Constants of the Rollup Smart Contract
-func (c *RollupClient) RollupConstants() (rollupConstants *RollupPublicConstants, err error) {
-	rollupConstants = new(RollupPublicConstants)
+func (c *RollupClient) RollupConstants() (rollupConstants *common.RollupConstants, err error) {
+	rollupConstants = new(common.RollupConstants)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		absoluteMaxL1L2BatchTimeout, err := c.hermez.ABSOLUTEMAXL1L2BATCHTIMEOUT(nil)
 		if err != nil {
@@ -564,8 +452,8 @@ func (c *RollupClient) RollupConstants() (rollupConstants *RollupPublicConstants
 		if err != nil {
 			return err
 		}
-		for i := int64(0); i < int64(LenVerifiers); i++ {
-			var newRollupVerifier RollupVerifierStruct
+		for i := int64(0); i < int64(common.LenVerifiers); i++ {
+			var newRollupVerifier common.RollupVerifierStruct
 			rollupVerifier, err := c.hermez.RollupVerifiers(nil, big.NewInt(i))
 			if err != nil {
 				return err
@@ -606,7 +494,7 @@ var (
 // RollupEventsByBlock returns the events in a block that happened in the Rollup Smart Contract
 func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethCommon.Hash, error) {
 	var rollupEvents RollupEvents
-	var blockHash ethCommon.Hash
+	var blockHash *ethCommon.Hash
 
 	query := ethereum.FilterQuery{
 		FromBlock: big.NewInt(blockNum),
@@ -622,10 +510,14 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 		return nil, nil, err
 	}
 	if len(logs) > 0 {
-		blockHash = logs[0].BlockHash
+		for i := range logs {
+			log.Debugw("log", "i", i, "blockHash", logs[i].BlockHash)
+		}
+		blockHash = &logs[0].BlockHash
 	}
 	for _, vLog := range logs {
-		if vLog.BlockHash != blockHash {
+		if vLog.BlockHash != *blockHash {
+			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
 			return nil, nil, ErrBlockHashMismatchEvent
 		}
 		switch vLog.Topics[0] {
@@ -680,17 +572,17 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			}
 			rollupEvents.UpdateFeeAddToken = append(rollupEvents.UpdateFeeAddToken, updateFeeAddToken)
 		case logHermezWithdrawEvent:
-			var withdraw RollupEventWithdrawEvent
+			var withdraw RollupEventWithdraw
 			withdraw.Idx = new(big.Int).SetBytes(vLog.Topics[1][:]).Uint64()
 			withdraw.NumExitRoot = new(big.Int).SetBytes(vLog.Topics[2][:]).Uint64()
 			instantWithdraw := new(big.Int).SetBytes(vLog.Topics[3][:]).Uint64()
 			if instantWithdraw == 1 {
 				withdraw.InstantWithdraw = true
 			}
-			rollupEvents.WithdrawEvent = append(rollupEvents.WithdrawEvent, withdraw)
+			rollupEvents.Withdraw = append(rollupEvents.Withdraw, withdraw)
 		}
 	}
-	return &rollupEvents, &blockHash, nil
+	return &rollupEvents, blockHash, nil
 }
 
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the

@@ -30,7 +30,9 @@ func newBlock(blockNum int64) common.BlockData {
 		Block: common.Block{
 			EthBlockNum: blockNum,
 		},
-		L1UserTxs: []common.L1Tx{},
+		Rollup: common.RollupData{
+			L1UserTxs: []common.L1Tx{},
+		},
 	}
 }
 
@@ -339,7 +341,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				return nil, fmt.Errorf("Line %d: AddToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", inst.lineNum, tc.LastRegisteredTokenID+1, inst.tokenID)
 			}
 			tc.LastRegisteredTokenID++
-			tc.currBlock.AddedTokens = append(tc.currBlock.AddedTokens, newToken)
+			tc.currBlock.Rollup.AddedTokens = append(tc.currBlock.Rollup.AddedTokens, newToken)
 		default:
 			return nil, fmt.Errorf("Line %d: Unexpected type: %s", inst.lineNum, inst.typ)
 		}
@@ -410,7 +412,7 @@ func (tc *Context) setIdxs() error {
 	}
 
 	tc.currBatch.Batch.LastIdx = int64(tc.idx - 1) // `-1` because tc.idx is the next available idx
-	tc.currBlock.Batches = append(tc.currBlock.Batches, tc.currBatch)
+	tc.currBlock.Rollup.Batches = append(tc.currBlock.Rollup.Batches, tc.currBatch)
 	tc.currBatchNum++
 	tc.currBatch = newBatchData(tc.currBatchNum)
 	tc.currBatchTest.l1CoordinatorTxs = nil
@@ -460,7 +462,7 @@ func (tc *Context) addToL1Queue(tx L1Tx) error {
 	tx.L1Tx = *nTx
 
 	tc.Queues[tc.openToForge] = append(tc.Queues[tc.openToForge], tx)
-	tc.currBlock.L1UserTxs = append(tc.currBlock.L1UserTxs, tx.L1Tx)
+	tc.currBlock.Rollup.L1UserTxs = append(tc.currBlock.Rollup.L1UserTxs, tx.L1Tx)
 
 	return nil
 }
