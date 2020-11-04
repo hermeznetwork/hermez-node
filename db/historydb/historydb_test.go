@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -55,6 +56,9 @@ func TestBlocks(t *testing.T) {
 	test.WipeDB(historyDB.DB())
 	// Generate fake blocks
 	blocks := test.GenBlocks(fromBlock, toBlock)
+	// Save timestamp of a block with UTC and change it without UTC
+	timestamp := time.Now().Add(time.Second * 13)
+	blocks[fromBlock].Timestamp = timestamp
 	// Insert blocks into DB
 	for i := 0; i < len(blocks); i++ {
 		err := historyDB.AddBlock(&blocks[i])
@@ -68,6 +72,11 @@ func TestBlocks(t *testing.T) {
 	for i := range fetchedBlocks {
 		assertEqualBlock(t, &blocks[i], &fetchedBlocks[i])
 	}
+	// Compare saved timestamp vs getted
+	nameZoneUTC, offsetUTC := timestamp.UTC().Zone()
+	zoneFetchedBlock, offsetFetchedBlock := fetchedBlocks[fromBlock].Timestamp.Zone()
+	assert.Equal(t, nameZoneUTC, zoneFetchedBlock)
+	assert.Equal(t, offsetUTC, offsetFetchedBlock)
 	// Get blocks from the DB one by one
 	for i := fromBlock; i < toBlock; i++ {
 		fetchedBlock, err := historyDB.GetBlock(i)
@@ -182,7 +191,7 @@ func TestTokens(t *testing.T) {
 	assert.NoError(t, err)
 	tokens = append([]common.Token{ethToken}, tokens...)
 	limit := uint(10)
-	// Fetch tokens6
+	// Fetch tokens
 	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
 	assert.NoError(t, err)
 	// Compare fetched tokens vs generated tokens
@@ -195,6 +204,24 @@ func TestTokens(t *testing.T) {
 		assert.Equal(t, tokens[i].Symbol, token.Symbol)
 		assert.Nil(t, token.USD)
 		assert.Nil(t, token.USDUpdate)
+	}
+
+	// Update token value
+	for i, token := range tokens {
+		value := 1.01 * float64(i)
+		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
+	}
+	// Fetch tokens
+	fetchedTokens, _, err = historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
+	assert.NoError(t, err)
+	// Compare fetched tokens vs generated tokens
+	// All the tokens should have USDUpdate setted by the DB trigger
+	for i, token := range fetchedTokens {
+		value := 1.01 * float64(i)
+		assert.Equal(t, value, *token.USD)
+		nameZone, offset := token.USDUpdate.Zone()
+		assert.Equal(t, "UTC", nameZone)
+		assert.Equal(t, 0, offset)
 	}
 }
 

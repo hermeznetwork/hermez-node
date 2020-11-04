@@ -28,11 +28,11 @@ type testSlotsResponse struct {
 
 func (t testSlotsResponse) GetPagination() *db.Pagination {
 	if t.Slots[0].ItemID < t.Slots[len(t.Slots)-1].ItemID {
-		t.Pagination.FirstReturnedItem = int(t.Slots[0].ItemID)
-		t.Pagination.LastReturnedItem = int(t.Slots[len(t.Slots)-1].ItemID)
+		t.Pagination.FirstReturnedItem = uint64(t.Slots[0].ItemID)
+		t.Pagination.LastReturnedItem = uint64(t.Slots[len(t.Slots)-1].ItemID)
 	} else {
-		t.Pagination.LastReturnedItem = int(t.Slots[0].ItemID)
-		t.Pagination.FirstReturnedItem = int(t.Slots[len(t.Slots)-1].ItemID)
+		t.Pagination.LastReturnedItem = uint64(t.Slots[0].ItemID)
+		t.Pagination.FirstReturnedItem = uint64(t.Slots[len(t.Slots)-1].ItemID)
 	}
 	return t.Pagination
 }

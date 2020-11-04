@@ -14,7 +14,7 @@ import (
 )
 
 type testAccount struct {
-	ItemID    int                    `json:"itemId"`
+	ItemID    uint64                 `json:"itemId"`
 	Idx       apitypes.HezIdx        `json:"accountIndex"`
 	BatchNum  common.BatchNum        `json:"batchNum"`
 	PublicKey apitypes.HezBJJ        `json:"bjj"`
@@ -34,7 +34,7 @@ func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD)
 	for x, account := range accounts {
 		token := getTokenByID(account.TokenID, tokens)
 		tAccount := testAccount{
-			ItemID:    x + 1,
+			ItemID:    uint64(x + 1),
 			Idx:       apitypes.HezIdx(idxToHez(account.Idx, token.Symbol)),
 			PublicKey: apitypes.NewHezBJJ(account.PublicKey),
 			EthAddr:   apitypes.NewHezEthAddr(account.EthAddr),

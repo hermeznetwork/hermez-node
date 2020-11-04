@@ -34,7 +34,7 @@ type testL2Info struct {
 type testTx struct {
 	IsL1        string                 `json:"L1orL2"`
 	TxID        common.TxID            `json:"id"`
-	ItemID      int                    `json:"itemId"`
+	ItemID      uint64                 `json:"itemId"`
 	Type        common.TxType          `json:"type"`
 	Position    int                    `json:"position"`
 	FromIdx     *string                `json:"fromAccountIndex"`

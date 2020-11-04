@@ -181,11 +181,11 @@ func SlicePtrsToSlice(slice interface{}) interface{} {
 
 // Pagination give information on the items of a query
 type Pagination struct {
-	TotalItems        int `json:"totalItems"`
-	FirstItem         int `json:"firstItem"`
-	LastItem          int `json:"lastItem"`
-	FirstReturnedItem int `json:"-"`
-	LastReturnedItem  int `json:"-"`
+	TotalItems        uint64 `json:"totalItems"`
+	FirstItem         uint64 `json:"firstItem"`
+	LastItem          uint64 `json:"lastItem"`
+	FirstReturnedItem uint64 `json:"-"`
+	LastReturnedItem  uint64 `json:"-"`
 }
 
 // Paginationer is an interface that allows getting pagination info on any struct

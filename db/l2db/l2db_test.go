@@ -90,6 +90,9 @@ func TestAddTxTest(t *testing.T) {
 		assert.NoError(t, err)
 		// assertReadTx(t, commonToRead(tx, tokens), fetchedTx)
 		assertTx(t, tx, fetchedTx)
+		nameZone, offset := fetchedTx.Timestamp.Zone()
+		assert.Equal(t, "UTC", nameZone)
+		assert.Equal(t, 0, offset)
 	}
 }
 
@@ -419,5 +422,8 @@ func TestAuth(t *testing.T) {
 		assert.Equal(t, auths[i].BJJ, auth.BJJ)
 		assert.Equal(t, auths[i].Signature, auth.Signature)
 		assert.Equal(t, auths[i].Timestamp.Unix(), auths[i].Timestamp.Unix())
+		nameZone, offset := auths[i].Timestamp.Zone()
+		assert.Equal(t, "UTC", nameZone)
+		assert.Equal(t, 0, offset)
 	}
 }
