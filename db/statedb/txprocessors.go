@@ -87,7 +87,8 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	}
 
 	if s.typ == TypeBatchBuilder {
-		s.zki = common.NewZKInputs(nTx, 24, 32) // TODO this values will be parameters of the function, taken from config file/coordinator call
+		maxFeeTx := 2 // TODO this value will be a parameter
+		s.zki = common.NewZKInputs(nTx, maxFeeTx, s.mt.MaxLevels())
 		s.zki.OldLastIdx = (s.idx - 1).BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
 	}
@@ -202,7 +203,9 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 			s.zki.Ay2[i] = exitAccount.PublicKey.Y
 			s.zki.Balance2[i] = exitAccount.Balance
 			s.zki.EthAddr2[i] = common.EthAddrToBigInt(exitAccount.EthAddr)
-			s.zki.Siblings2[i] = p.Siblings
+			for j := 0; j < len(p.Siblings); j++ {
+				s.zki.Siblings2[i][j] = p.Siblings[j].BigInt()
+			}
 			if exits[i].newExit {
 				s.zki.NewExit[i] = big.NewInt(1)
 			}

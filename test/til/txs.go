@@ -150,7 +150,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				FromBJJ:     tc.Users[inst.from].BJJ.Public(),
 				TokenID:     inst.tokenID,
 				Amount:      big.NewInt(0),
-				LoadAmount:  big.NewInt(int64(inst.loadAmount)),
+				LoadAmount:  big.NewInt(0),
 				Type:        common.TxTypeCreateAccountDeposit, // as txTypeCreateAccountDepositCoordinator is not valid oustide Til package
 			}
 			testTx := L1Tx{

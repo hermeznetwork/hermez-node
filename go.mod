@@ -13,7 +13,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e
-	github.com/iden3/go-merkletree v0.0.0-20200902123354-eeb949f8c334
+	github.com/iden3/go-merkletree v0.0.0-20201103115630-ad30c8309b44
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/joho/godotenv v1.3.0
@@ -21,6 +21,7 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/mitchellh/copystructure v1.0.0
+	github.com/mitchellh/mapstructure v1.3.0
 	github.com/rogpeppe/go-internal v1.6.1 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/russross/meddler v1.0.0

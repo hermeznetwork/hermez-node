@@ -353,10 +353,10 @@ func GenExitTree(n int, batches []common.Batch, accounts []common.Account) []com
 			AccountIdx:             accounts[i%len(accounts)].Idx,
 			MerkleProof: &merkletree.CircomVerifierProof{
 				Root: &merkletree.Hash{byte(i), byte(i + 1)},
-				Siblings: []*big.Int{
-					big.NewInt(int64(i) * 10),
-					big.NewInt(int64(i)*100 + 1),
-					big.NewInt(int64(i)*1000 + 2)},
+				Siblings: []*merkletree.Hash{
+					merkletree.NewHashFromBigInt(big.NewInt(int64(i) * 10)),
+					merkletree.NewHashFromBigInt(big.NewInt(int64(i)*100 + 1)),
+					merkletree.NewHashFromBigInt(big.NewInt(int64(i)*1000 + 2))},
 				OldKey:   &merkletree.Hash{byte(i * 1), byte(i*1 + 1)},
 				OldValue: &merkletree.Hash{byte(i * 2), byte(i*2 + 1)},
 				IsOld0:   i%2 == 0,
