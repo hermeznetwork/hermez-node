@@ -322,6 +322,8 @@ github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e h1:DvzTgAk
 github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
 github.com/iden3/go-merkletree v0.0.0-20200902123354-eeb949f8c334 h1:FQngDJKiwM6i4kHlVFvSpJa9sO+QvZ7C+GqoPWe+5BI=
 github.com/iden3/go-merkletree v0.0.0-20200902123354-eeb949f8c334/go.mod h1:MRe6i0mi2oDVUzgBIHsNRE6XAg8EBuqIQZMsd+do+dU=
+github.com/iden3/go-merkletree v0.0.0-20201103115630-ad30c8309b44 h1:d6AbzJWWUosTpjb6Ab+I0bMO4UPY+u/HgkOdhksxDgY=
+github.com/iden3/go-merkletree v0.0.0-20201103115630-ad30c8309b44/go.mod h1:MRe6i0mi2oDVUzgBIHsNRE6XAg8EBuqIQZMsd+do+dU=
 github.com/iden3/go-wasm3 v0.0.1/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=
@@ -428,6 +430,7 @@ github.com/mitchellh/gox v0.4.0/go.mod h1:Sd9lOJ0+aimLBi73mGofS1ycjY8lL3uZM3JPS4
 github.com/mitchellh/iochan v1.0.0/go.mod h1:JwYml1nuB7xOzsp52dPpHFffvOCDupsG0QubkSMEySY=
 github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
+github.com/mitchellh/mapstructure v1.3.0 h1:iDwIio/3gk2QtLLEsqU5lInaMzos0hDTz8a6lazSFVw=
 github.com/mitchellh/mapstructure v1.3.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/reflectwalk v1.0.0 h1:9D+8oIskB4VJBN5SFlmc27fSlIBZaov1Wpk/IfikLNY=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=

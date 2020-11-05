@@ -3,7 +3,13 @@
 //nolint:deadcode,structcheck,unused
 package common
 
-import "math/big"
+import (
+	"encoding/json"
+	"math/big"
+
+	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/mitchellh/mapstructure"
+)
 
 // circuit parameters
 // absolute maximum of L1 or L2 transactions allowed
@@ -26,17 +32,17 @@ type ZKInputs struct {
 
 	// inputs for final `hashGlobalInputs`
 	// OldLastIdx is the last index assigned to an account
-	OldLastIdx *big.Int // uint64 (max nLevels bits)
+	OldLastIdx *big.Int `json:"oldLastIdx"` // uint64 (max nLevels bits)
 	// OldStateRoot is the current state merkle tree root
-	OldStateRoot *big.Int // Hash
+	OldStateRoot *big.Int `json:"oldStateRoot"` // Hash
 	// GlobalChainID is the blockchain ID (0 for Ethereum mainnet). This value can be get from the smart contract.
-	GlobalChainID *big.Int // uint16
+	GlobalChainID *big.Int `json:"globalChainID"` // uint16
 	// FeeIdxs is an array of merkle tree indexes where the coordinator will receive the accumulated fees
-	FeeIdxs []*big.Int // uint64 (max nLevels bits), len: [maxFeeTx]
+	FeeIdxs []*big.Int `json:"feeIdxs"` // uint64 (max nLevels bits), len: [maxFeeTx]
 
 	// accumulate fees
 	// FeePlanTokens contains all the tokenIDs for which the fees are being accumulated
-	FeePlanTokens []*big.Int // uint32 (max 32 bits), len: [maxFeeTx]
+	FeePlanTokens []*big.Int `json:"feePlanTokens"` // uint32 (max 32 bits), len: [maxFeeTx]
 
 	//
 	// Txs (L1&L2)
@@ -44,105 +50,105 @@ type ZKInputs struct {
 
 	// transaction L1-L2
 	// TxCompressedData
-	TxCompressedData []*big.Int // big.Int (max 251 bits), len: [nTx]
+	TxCompressedData []*big.Int `json:"txCompressedData"` // big.Int (max 251 bits), len: [nTx]
 	// TxCompressedDataV2, only used in L2Txs, in L1Txs is set to 0
-	TxCompressedDataV2 []*big.Int // big.Int (max 193 bits), len: [nTx]
+	TxCompressedDataV2 []*big.Int `json:"txCompressedDataV2"` // big.Int (max 193 bits), len: [nTx]
 
 	// FromIdx
-	FromIdx []*big.Int // uint64 (max nLevels bits), len: [nTx]
+	FromIdx []*big.Int `json:"fromIdx"` // uint64 (max nLevels bits), len: [nTx]
 	// AuxFromIdx is the Idx of the new created account which is consequence of a L1CreateAccountTx
-	AuxFromIdx []*big.Int // uint64 (max nLevels bits), len: [nTx]
+	AuxFromIdx []*big.Int `json:"auxFromIdx"` // uint64 (max nLevels bits), len: [nTx]
 
 	// ToIdx
-	ToIdx []*big.Int // uint64 (max nLevels bits), len: [nTx]
+	ToIdx []*big.Int `json:"toIdx"` // uint64 (max nLevels bits), len: [nTx]
 	// AuxToIdx is the Idx of the Tx that has 'toIdx==0', is the coordinator who will find which Idx corresponds to the 'toBJJAy' or 'toEthAddr'
-	AuxToIdx []*big.Int // uint64 (max nLevels bits), len: [nTx]
+	AuxToIdx []*big.Int `json:"auxToIdx"` // uint64 (max nLevels bits), len: [nTx]
 	// ToBJJAy
-	ToBJJAy []*big.Int // big.Int, len: [nTx]
+	ToBJJAy []*big.Int `json:"toBjjAy"` // big.Int, len: [nTx]
 	// ToEthAddr
-	ToEthAddr []*big.Int // ethCommon.Address, len: [nTx]
+	ToEthAddr []*big.Int `json:"toEthAddr"` // ethCommon.Address, len: [nTx]
 
 	// OnChain determines if is L1 (1/true) or L2 (0/false)
-	OnChain []*big.Int // bool, len: [nTx]
+	OnChain []*big.Int `json:"onChain"` // bool, len: [nTx]
 
 	//
 	// Txs/L1Txs
 	//
 	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new account (fromIdx==0)
-	NewAccount []*big.Int // bool, len: [nTx]
+	NewAccount []*big.Int `json:"newAccount"` // bool, len: [nTx]
 	// LoadAmountF encoded as float16
-	LoadAmountF []*big.Int // uint16, len: [nTx]
+	LoadAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [nTx]
 	// FromEthAddr
-	FromEthAddr []*big.Int // ethCommon.Address, len: [nTx]
+	FromEthAddr []*big.Int `json:"fromEthAddr"` // ethCommon.Address, len: [nTx]
 	// FromBJJCompressed boolean encoded where each value is a *big.Int
-	FromBJJCompressed [][256]*big.Int // bool array, len: [nTx][256]
+	FromBJJCompressed [][256]*big.Int `json:"fromBjjCompressed"` // bool array, len: [nTx][256]
 
 	//
 	// Txs/L2Txs
 	//
 
 	// RqOffset relative transaction position to be linked. Used to perform atomic transactions.
-	RqOffset []*big.Int // uint8 (max 3 bits), len: [nTx]
+	RqOffset []*big.Int `json:"rqOffset"` // uint8 (max 3 bits), len: [nTx]
 
 	// transaction L2 request data
 	// RqTxCompressedDataV2
-	RqTxCompressedDataV2 []*big.Int // big.Int (max 251 bits), len: [nTx]
+	RqTxCompressedDataV2 []*big.Int `json:"rqTxCompressedDataV2"` // big.Int (max 251 bits), len: [nTx]
 	// RqToEthAddr
-	RqToEthAddr []*big.Int // ethCommon.Address, len: [nTx]
+	RqToEthAddr []*big.Int `json:"rqToEthAddr"` // ethCommon.Address, len: [nTx]
 	// RqToBJJAy
-	RqToBJJAy []*big.Int // big.Int, len: [nTx]
+	RqToBJJAy []*big.Int `json:"rqToBjjAy"` // big.Int, len: [nTx]
 
 	// transaction L2 signature
 	// S
-	S []*big.Int // big.Int, len: [nTx]
+	S []*big.Int `json:"s"` // big.Int, len: [nTx]
 	// R8x
-	R8x []*big.Int // big.Int, len: [nTx]
+	R8x []*big.Int `json:"r8x"` // big.Int, len: [nTx]
 	// R8y
-	R8y []*big.Int // big.Int, len: [nTx]
+	R8y []*big.Int `json:"r8y"` // big.Int, len: [nTx]
 
 	//
 	// State MerkleTree Leafs transitions
 	//
 
 	// state 1, value of the sender (from) account leaf
-	TokenID1  []*big.Int   // uint32, len: [nTx]
-	Nonce1    []*big.Int   // uint64 (max 40 bits), len: [nTx]
-	Sign1     []*big.Int   // bool, len: [nTx]
-	Ay1       []*big.Int   // big.Int, len: [nTx]
-	Balance1  []*big.Int   // big.Int (max 192 bits), len: [nTx]
-	EthAddr1  []*big.Int   // ethCommon.Address, len: [nTx]
-	Siblings1 [][]*big.Int // big.Int, len: [nTx][nLevels + 1]
+	TokenID1  []*big.Int   `json:"tokenID1"`  // uint32, len: [nTx]
+	Nonce1    []*big.Int   `json:"nonce1"`    // uint64 (max 40 bits), len: [nTx]
+	Sign1     []*big.Int   `json:"sign1"`     // bool, len: [nTx]
+	Ay1       []*big.Int   `json:"ay1"`       // big.Int, len: [nTx]
+	Balance1  []*big.Int   `json:"balance1"`  // big.Int (max 192 bits), len: [nTx]
+	EthAddr1  []*big.Int   `json:"ethAddr1"`  // ethCommon.Address, len: [nTx]
+	Siblings1 [][]*big.Int `json:"siblings1"` // big.Int, len: [nTx][nLevels + 1]
 	// Required for inserts and deletes, values of the CircomProcessorProof (smt insert proof)
-	IsOld0_1  []*big.Int // bool, len: [nTx]
-	OldKey1   []*big.Int // uint64 (max 40 bits), len: [nTx]
-	OldValue1 []*big.Int // Hash, len: [nTx]
+	IsOld0_1  []*big.Int `json:"isOld0_1"`  // bool, len: [nTx]
+	OldKey1   []*big.Int `json:"oldKey1"`   // uint64 (max 40 bits), len: [nTx]
+	OldValue1 []*big.Int `json:"oldValue1"` // Hash, len: [nTx]
 
 	// state 2, value of the receiver (to) account leaf
 	// if Tx is an Exit, state 2 is used for the Exit Merkle Proof
-	TokenID2  []*big.Int   // uint32, len: [nTx]
-	Nonce2    []*big.Int   // uint64 (max 40 bits), len: [nTx]
-	Sign2     []*big.Int   // bool, len: [nTx]
-	Ay2       []*big.Int   // big.Int, len: [nTx]
-	Balance2  []*big.Int   // big.Int (max 192 bits), len: [nTx]
-	EthAddr2  []*big.Int   // ethCommon.Address, len: [nTx]
-	Siblings2 [][]*big.Int // big.Int, len: [nTx][nLevels + 1]
+	TokenID2  []*big.Int   `json:"tokenID2"`  // uint32, len: [nTx]
+	Nonce2    []*big.Int   `json:"nonce2"`    // uint64 (max 40 bits), len: [nTx]
+	Sign2     []*big.Int   `json:"sign2"`     // bool, len: [nTx]
+	Ay2       []*big.Int   `json:"ay2"`       // big.Int, len: [nTx]
+	Balance2  []*big.Int   `json:"balance2"`  // big.Int (max 192 bits), len: [nTx]
+	EthAddr2  []*big.Int   `json:"ethAddr2"`  // ethCommon.Address, len: [nTx]
+	Siblings2 [][]*big.Int `json:"siblings2"` // big.Int, len: [nTx][nLevels + 1]
 	// newExit determines if an exit transaction has to create a new leaf in the exit tree
-	NewExit []*big.Int // bool, len: [nTx]
+	NewExit []*big.Int `json:"newExit"` // bool, len: [nTx]
 	// Required for inserts and deletes, values of the CircomProcessorProof (smt insert proof)
-	IsOld0_2  []*big.Int // bool, len: [nTx]
-	OldKey2   []*big.Int // uint64 (max 40 bits), len: [nTx]
-	OldValue2 []*big.Int // Hash, len: [nTx]
+	IsOld0_2  []*big.Int `json:"isOld0_2"`  // bool, len: [nTx]
+	OldKey2   []*big.Int `json:"oldKey2"`   // uint64 (max 40 bits), len: [nTx]
+	OldValue2 []*big.Int `json:"oldValue2"` // Hash, len: [nTx]
 
 	// state 3, value of the account leaf receiver of the Fees
 	// fee tx
 	// State fees
-	TokenID3  []*big.Int   // uint32, len: [maxFeeTx]
-	Nonce3    []*big.Int   // uint64 (max 40 bits), len: [maxFeeTx]
-	Sign3     []*big.Int   // bool, len: [maxFeeTx]
-	Ay3       []*big.Int   // big.Int, len: [maxFeeTx]
-	Balance3  []*big.Int   // big.Int (max 192 bits), len: [maxFeeTx]
-	EthAddr3  []*big.Int   // ethCommon.Address, len: [maxFeeTx]
-	Siblings3 [][]*big.Int // Hash, len: [maxFeeTx][nLevels + 1]
+	TokenID3  []*big.Int   `json:"tokenID3"`  // uint32, len: [maxFeeTx]
+	Nonce3    []*big.Int   `json:"nonce3"`    // uint64 (max 40 bits), len: [maxFeeTx]
+	Sign3     []*big.Int   `json:"sign3"`     // bool, len: [maxFeeTx]
+	Ay3       []*big.Int   `json:"ay3"`       // big.Int, len: [maxFeeTx]
+	Balance3  []*big.Int   `json:"balance3"`  // big.Int (max 192 bits), len: [maxFeeTx]
+	EthAddr3  []*big.Int   `json:"ethAddr3"`  // ethCommon.Address, len: [maxFeeTx]
+	Siblings3 [][]*big.Int `json:"siblings3"` // Hash, len: [maxFeeTx][nLevels + 1]
 
 	//
 	// Intermediate States
@@ -159,23 +165,78 @@ type ZKInputs struct {
 
 	// decode-tx
 	// ISOnChain indicates if tx is L1 (true) or L2 (false)
-	ISOnChain []*big.Int // bool, len: [nTx - 1]
+	ISOnChain []*big.Int `json:"imOnChain"` // bool, len: [nTx - 1]
 	// ISOutIdx current index account for each Tx
-	ISOutIdx []*big.Int // uint64 (max nLevels bits), len: [nTx - 1]
+	ISOutIdx []*big.Int `json:"imOutIdx"` // uint64 (max nLevels bits), len: [nTx - 1]
 	// rollup-tx
 	// ISStateRoot root at the moment of the Tx, the state root value once the Tx is processed into the state tree
-	ISStateRoot []*big.Int // Hash, len: [nTx - 1]
+	ISStateRoot []*big.Int `json:"imStateRoot"` // Hash, len: [nTx - 1]
 	// ISExitTree root at the moment of the Tx the value once the Tx is processed into the exit tree
-	ISExitRoot []*big.Int // Hash, len: [nTx - 1]
+	ISExitRoot []*big.Int `json:"imExitRoot"` // Hash, len: [nTx - 1]
 	// ISAccFeeOut accumulated fees once the Tx is processed
-	ISAccFeeOut [][]*big.Int // big.Int, len: [nTx - 1][maxFeeTx]
+	ISAccFeeOut [][]*big.Int `json:"imAccFeeOut"` // big.Int, len: [nTx - 1][maxFeeTx]
 	// fee-tx
 	// ISStateRootFee root at the moment of the Tx, the state root value once the Tx is processed into the state tree
-	ISStateRootFee []*big.Int // Hash, len: [maxFeeTx - 1]
+	ISStateRootFee []*big.Int `json:"imStateRootFee"` // Hash, len: [maxFeeTx - 1]
 	// ISInitStateRootFee state root once all L1-L2 tx are processed (before computing the fees-tx)
-	ISInitStateRootFee *big.Int // Hash
+	ISInitStateRootFee *big.Int `json:"imInitStateRootFee"` // Hash
 	// ISFinalAccFee final accumulated fees (before computing the fees-tx)
-	ISFinalAccFee []*big.Int // big.Int, len: [maxFeeTx - 1]
+	ISFinalAccFee []*big.Int `json:"imFinalAccFee"` // big.Int, len: [maxFeeTx - 1]
+}
+
+func bigIntsToStrings(v interface{}) interface{} {
+	switch c := v.(type) {
+	case *big.Int:
+		return c.String()
+	case []*big.Int:
+		r := make([]interface{}, len(c))
+		for i := range c {
+			r[i] = bigIntsToStrings(c[i])
+		}
+		return r
+	case [256]*big.Int:
+		r := make([]interface{}, len(c))
+		for i := range c {
+			r[i] = bigIntsToStrings(c[i])
+		}
+		return r
+	case [][]*big.Int:
+		r := make([]interface{}, len(c))
+		for i := range c {
+			r[i] = bigIntsToStrings(c[i])
+		}
+		return r
+	case [][256]*big.Int:
+		r := make([]interface{}, len(c))
+		for i := range c {
+			r[i] = bigIntsToStrings(c[i])
+		}
+		return r
+	default:
+		log.Warnf("bigIntsToStrings unexpected type: %T\n", v)
+	}
+	return nil
+}
+
+// MarshalJSON implements the json marshaler for ZKInputs
+func (z ZKInputs) MarshalJSON() ([]byte, error) {
+	var m map[string]interface{}
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName: "json",
+		Result:  &m,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = dec.Decode(z)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range m {
+		m[k] = bigIntsToStrings(v)
+	}
+	return json.Marshal(m)
 }
 
 // NewZKInputs returns a pointer to an initialized struct of ZKInputs

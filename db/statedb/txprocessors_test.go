@@ -352,24 +352,45 @@ func TestZKInputsGeneration(t *testing.T) {
 	require.Nil(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, 4)
 	assert.Nil(t, err)
 
+	set := `
+		Type: Blockchain
+		AddToken(1)
+		CreateAccountDeposit(1) A: 10
+		> batchL1
+		CreateAccountCoordinator(1) B
+		CreateAccountCoordinator(1) C
+		> batchL1
+		// idxs: A:258, B:256, C:257
+
+		Transfer(1) A-B: 6 (1)
+		Transfer(1) A-C: 2 (1)
+		> batch
+		> block
+	`
 	// generate test transactions from test.SetBlockchain0 code
 	tc := til.NewContext(common.RollupConstMaxL1UserTx)
-	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
+	blocks, err := tc.GenerateBlocks(set)
 	require.Nil(t, err)
 
 	// Coordinator Idx where to send the fees
-	coordIdxs := []common.Idx{256, 257, 258, 259}
+	coordIdxs := []common.Idx{256}
 
-	log.Debug("block:0 batch:0, only L1CoordinatorTxs")
-	_, err = sdb.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	log.Debug("block:0 batch:0, only L1UserTx")
+	_, err = sdb.ProcessTxs(nil, blocks[0].Rollup.L1UserTxs, nil, nil)
 	require.Nil(t, err)
 
-	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	ptOut, err := sdb.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	log.Debug("block:0 batch:1, only L1CoordinatorTxs")
+	_, err = sdb.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, nil)
 	require.Nil(t, err)
+
+	log.Debug("block:0 batch:2, only L2Txs")
+	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
+	ptOut, err := sdb.ProcessTxs(coordIdxs, nil, nil, l2Txs)
+	require.Nil(t, err)
+	checkBalance(t, tc, sdb, "A", 1, "2")
 
 	s, err := json.Marshal(ptOut.ZKInputs)
 	require.Nil(t, err)
