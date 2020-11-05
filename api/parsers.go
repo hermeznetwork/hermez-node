@@ -54,6 +54,11 @@ func parseQueryUint(name string, dflt *uint, min, max uint, c querier) (*uint, e
 	return stringToUint(str, name, dflt, min, max)
 }
 
+func parseQueryInt64(name string, dflt *int64, min, max int64, c querier) (*int64, error) { //nolint:SA4009 res may be not overwriten
+	str := c.Query(name)
+	return stringToInt64(str, name, dflt, min, max)
+}
+
 func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolint:SA4009 res may be not overwriten
 	str := c.Query(name)
 	if str == "" {
@@ -69,7 +74,7 @@ func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolin
 		*res = false
 		return res, nil
 	}
-	return nil, fmt.Errorf("Inavlid %s. Must be eithe true or false", name)
+	return nil, fmt.Errorf("Invalid %s. Must be eithe true or false", name)
 }
 
 func parseQueryHezEthAddr(c querier) (*ethCommon.Address, error) {
@@ -198,8 +203,8 @@ func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
 	return tokensIDs, symbols, nameStr, nil
 }
 
-func parseBidFilters(c querier) (*uint, *ethCommon.Address, error) {
-	slotNum, err := parseQueryUint("slotNum", nil, 0, maxUint32, c)
+func parseBidFilters(c querier) (*int64, *ethCommon.Address, error) {
+	slotNum, err := parseQueryInt64("slotNum", nil, 0, maxInt64, c)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -208,6 +213,26 @@ func parseBidFilters(c querier) (*uint, *ethCommon.Address, error) {
 		return nil, nil, err
 	}
 	return slotNum, bidderAddr, nil
+}
+
+func parseSlotFilters(c querier) (*int64, *int64, *ethCommon.Address, *bool, error) {
+	minSlotNum, err := parseQueryInt64("minSlotNum", nil, 0, maxInt64, c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	maxSlotNum, err := parseQueryInt64("maxSlotNum", nil, 0, maxInt64, c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	wonByEthereumAddress, err := parseQueryEthAddr("wonByEthereumAddress", c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	finishedAuction, err := parseQueryBool("finishedAuction", nil, c)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	return minSlotNum, maxSlotNum, wonByEthereumAddress, finishedAuction, nil
 }
 
 // Param parsers
@@ -240,6 +265,11 @@ func parseParamUint(name string, dflt *uint, min, max uint, c paramer) (*uint, e
 	return stringToUint(str, name, dflt, min, max)
 }
 
+func parseParamInt64(name string, dflt *int64, min, max int64, c paramer) (*int64, error) { //nolint:SA4009 res may be not overwriten
+	str := c.Param(name)
+	return stringToInt64(str, name, dflt, min, max)
+}
+
 func stringToIdx(idxStr, name string) (*common.Idx, error) {
 	if idxStr == "" {
 		return nil, nil
@@ -261,10 +291,24 @@ func stringToUint(uintStr, name string, dflt *uint, min, max uint) (*uint, error
 		resInt, err := strconv.Atoi(uintStr)
 		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
 			return nil, fmt.Errorf(
-				"Inavlid %s. Must be an integer within the range [%d, %d]",
+				"Invalid %s. Must be an integer within the range [%d, %d]",
 				name, min, max)
 		}
 		res := uint(resInt)
+		return &res, nil
+	}
+	return dflt, nil
+}
+
+func stringToInt64(uintStr, name string, dflt *int64, min, max int64) (*int64, error) {
+	if uintStr != "" {
+		resInt, err := strconv.Atoi(uintStr)
+		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
+			return nil, fmt.Errorf(
+				"Invalid %s. Must be an integer within the range [%d, %d]",
+				name, min, max)
+		}
+		res := int64(resInt)
 		return &res, nil
 	}
 	return dflt, nil

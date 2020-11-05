@@ -108,7 +108,7 @@ func TestGetBids(t *testing.T) {
 	// slotNum, in reverse order
 	fetchedBids = []testBid{}
 	path = fmt.Sprintf("%s?slotNum=%d&limit=%d&fromItem=", endpoint, slotNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, historydb.OrderDesc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flippedBids := []testBid{}
 	for i := len(slotNumBids) - 1; i >= 0; i-- {

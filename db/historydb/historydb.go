@@ -10,7 +10,6 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
@@ -257,7 +256,7 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	}
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query = hdb.db.Rebind(queryStr)
-	log.Debug(query)
+	// log.Debug(query)
 	batchPtrs := []*BatchAPI{}
 	if err := meddler.QueryAll(hdb.db, &batchPtrs, query, args...); err != nil {
 		return nil, nil, err
@@ -355,8 +354,67 @@ func (hdb *HistoryDB) GetAllBids() ([]common.Bid, error) {
 	return db.SlicePtrsToSlice(bids).([]common.Bid), err
 }
 
+// GetBestBidAPI returns the best bid in specific slot by slotNum
+func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
+	bid := &BidAPI{}
+	err := meddler.QueryRow(
+		hdb.db, bid, `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url 
+		FROM bid INNER JOIN block ON bid.eth_block_num = block.eth_block_num 
+		INNER JOIN coordinator ON bid.bidder_addr = coordinator.bidder_addr 
+		WHERE slot_num = $1 ORDER BY item_id DESC LIMIT 1;`, slotNum,
+	)
+	return *bid, err
+}
+
+// GetBestBidsAPI returns the best bid in specific slot by slotNum
+func (hdb *HistoryDB) GetBestBidsAPI(minSlotNum, maxSlotNum *int64, bidderAddr *ethCommon.Address, limit *uint, order string) ([]BidAPI, *db.Pagination, error) {
+	var query string
+	var args []interface{}
+	queryStr := `SELECT b.*, block.timestamp, coordinator.forger_addr, coordinator.url, 
+	COUNT(*) OVER() AS total_items, MIN(b.slot_num) OVER() AS first_item, 
+	MAX(b.slot_num) OVER() AS last_item FROM (
+	   SELECT slot_num, MAX(item_id) as maxitem 
+	   FROM bid GROUP BY slot_num
+	   )
+	AS x INNER JOIN bid AS b ON b.item_id = x.maxitem
+	INNER JOIN block ON b.eth_block_num = block.eth_block_num
+	INNER JOIN coordinator ON b.bidder_addr = coordinator.bidder_addr 
+	WHERE (b.slot_num >= ? AND b.slot_num <= ?)`
+	args = append(args, minSlotNum)
+	args = append(args, maxSlotNum)
+	// Apply filters
+	if bidderAddr != nil {
+		queryStr += " AND b.bidder_addr = ? "
+		args = append(args, bidderAddr)
+	}
+	queryStr += " ORDER BY b.slot_num "
+	if order == OrderAsc {
+		queryStr += "ASC "
+	} else {
+		queryStr += "DESC "
+	}
+	if limit != nil {
+		queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	}
+	query = hdb.db.Rebind(queryStr)
+	bidPtrs := []*BidAPI{}
+	if err := meddler.QueryAll(hdb.db, &bidPtrs, query, args...); err != nil {
+		return nil, nil, err
+	}
+	// log.Debug(query)
+	bids := db.SlicePtrsToSlice(bidPtrs).([]BidAPI)
+	if len(bids) == 0 {
+		return nil, nil, sql.ErrNoRows
+	}
+	return bids, &db.Pagination{
+		TotalItems: bids[0].TotalItems,
+		FirstItem:  bids[0].FirstItem,
+		LastItem:   bids[0].LastItem,
+	}, nil
+}
+
 // GetBidsAPI return the bids applying the given filters
-func (hdb *HistoryDB) GetBidsAPI(slotNum *uint, forgerAddr *ethCommon.Address, fromItem, limit *uint, order string) ([]BidAPI, *db.Pagination, error) {
+func (hdb *HistoryDB) GetBidsAPI(slotNum *int64, forgerAddr *ethCommon.Address, fromItem, limit *uint, order string) ([]BidAPI, *db.Pagination, error) {
 	var query string
 	var args []interface{}
 	queryStr := `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url, 
@@ -863,7 +921,7 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	}
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query = hdb.db.Rebind(queryStr)
-	log.Debug(query)
+	// log.Debug(query)
 	txsPtrs := []*TxAPI{}
 	if err := meddler.QueryAll(hdb.db, &txsPtrs, query, args...); err != nil {
 		return nil, nil, err
@@ -1319,4 +1377,18 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(fromItem, limit *uint, order string) ([
 		FirstItem:  coordinators[0].FirstItem,
 		LastItem:   coordinators[0].LastItem,
 	}, nil
+}
+
+// AddAuctionVars insert auction vars into the DB
+func (hdb *HistoryDB) AddAuctionVars(auctionVars *common.AuctionVariables) error {
+	return meddler.Insert(hdb.db, "auction_vars", auctionVars)
+}
+
+// GetAuctionVars returns auction variables
+func (hdb *HistoryDB) GetAuctionVars() (*common.AuctionVariables, error) {
+	auctionVars := &common.AuctionVariables{}
+	err := meddler.QueryRow(
+		hdb.db, auctionVars, `SELECT * FROM auction_vars;`,
+	)
+	return auctionVars, err
 }

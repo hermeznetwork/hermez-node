@@ -774,19 +774,19 @@ paths:
         - name: minSlotNum
           in: query
           required: false
-          description: Only include batches with `slotNum < minSlotNum`.
+          description: Only include slots with `slotNum >= minSlotNum`. By default, `minSlotNum = 0`.
           schema:
             $ref: '#/components/schemas/SlotNum'
         - name: maxSlothNum
           in: query
           required: false
-          description: Only include batches with `slotNum > maxSlotNum`.
+          description: Only include slots with `slotNum <= maxSlotNum`.
           schema:
             $ref: '#/components/schemas/SlotNum'
         - name: wonByEthereumAddress
           in: query
           required: false
-          description: Only include slots won by a coordinator whose `forgerAddr == wonByEthereumAddress`.
+          description: Only include slots won by a coordinator whose `bidderAddr == wonByEthereumAddress`.
           schema:
             $ref: '#/components/schemas/EthereumAddress'
         - name: finishedAuction
@@ -2171,6 +2171,8 @@ components:
       type: object
       description: Slot information.
       properties:
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         slotNum:
           $ref: '#/components/schemas/SlotNum'
         firstBlock:
@@ -2183,25 +2185,67 @@ components:
             - $ref: '#/components/schemas/EthBlockNum'
             - description: Block in which the slot ended or will end
             - example: 4475934
-        closedAuction:
+        openAuction:
           type: boolean
-          description: Whether the auction of the slot has finished or not.
-        winner:
-          allOf:
-            - $ref: '#/components/schemas/Coordinator'
-            - description: Coordinator who won the auction. Only applicable if the auction is closed.
-            - nullable: true
-            - example: null
+          description: Whether the auction of the slot is open or not.
+        winnerBid:
+          type: object
+          description: The winning bid of the auction. If openAuction == true, is the current winner. If the auction is closed because it has already been finalized, the bid is the final winner. If the winnerBid is null, it is because no coordinator has bid for that slot.
+          nullable: true
+          properties:
+            itemId:
+              $ref: '#/components/schemas/ItemId'
+            bidderAddr:
+              $ref: '#/components/schemas/EthereumAddress'
+            forgerAddr:
+              $ref: '#/components/schemas/EthereumAddress'
+            slotNum:
+              $ref: '#/components/schemas/SlotNum'
+            URL:
+              $ref: '#/components/schemas/URL'
+            bidValue:
+              type: string
+              description: BigInt is an integer encoded as a string for numbers that are very large.
+              example: "8708856933496328593"
+              pattern: "^\\d+$"
+            ethereumBlockNum:
+              $ref: '#/components/schemas/EthBlockNum'
+            timestamp:
+              type: string
+              format: date-time
+          additionalProperties: false
+          require:
+            - bidderAddr
+            - forgerAddr
+            - slotNum
+            - URL
+            - bidValue
+            - ethereumBlockNum
+            - timestamp
+      additionalProperties: false
+      require:
+        - slotNum
+        - firstBlock
+        - lastBlock
+        - openAuction
+        - winner
+        - winnerBid
     Slots:
       type: object
       properties:
-        nextForgers:
+        slots:
           type: array
           description: List of slots.
           items: 
-            $ref: '#/components/schemas/Slot'
+            allOf:
+                - $ref: '#/components/schemas/Slot'
+                - description: Last synchronized Etherum block.
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
+      additionalProperties: false
+      require:
+        - slots
+        - pagination
     NextForger:
       type: object
       description: Coordinator information along with the scheduled forging period

@@ -329,9 +329,15 @@ func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 // GenBids generates bids. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
 func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []common.Bid {
 	bids := []common.Bid{}
-	for i := 0; i < nBids; i++ {
+	for i := 0; i < nBids*2; i = i + 2 { //nolint:gomnd
+		var slotNum int64
+		if i < nBids {
+			slotNum = int64(i)
+		} else {
+			slotNum = int64(i - nBids)
+		}
 		bids = append(bids, common.Bid{
-			SlotNum:     int64(i),
+			SlotNum:     slotNum,
 			BidValue:    big.NewInt(int64(i)),
 			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
 			Bidder:      coords[i%len(blocks)].Bidder,
