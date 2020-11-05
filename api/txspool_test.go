@@ -205,12 +205,21 @@ func TestPoolTxs(t *testing.T) {
 		assert.Equal(t, tx.TxID, fetchedTxID)
 	}
 	// 400
-	// Wrong signature
+	// Wrong fee
 	badTx := tc.poolTxsToSend[0]
-	badTx.FromIdx = "hez:foo:1000"
+	badTx.Amount = "99999999999999999999999"
+	badTx.Fee = 255
 	jsonTxBytes, err := json.Marshal(badTx)
 	assert.NoError(t, err)
 	jsonTxReader := bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", endpoint, jsonTxReader, 400)
+	assert.NoError(t, err)
+	// Wrong signature
+	badTx = tc.poolTxsToSend[0]
+	badTx.FromIdx = "hez:foo:1000"
+	jsonTxBytes, err = json.Marshal(badTx)
+	assert.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
 	assert.NoError(t, err)
 	// Wrong to

@@ -163,6 +163,11 @@ func verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	if err != nil {
 		return err
 	}
+	// Validate feeAmount
+	_, err = common.CalcFeeAmount(poolTx.Amount, poolTx.Fee)
+	if err != nil {
+		return err
+	}
 	// Check signature
 	if !poolTx.VerifySignature(account.PublicKey) {
 		return errors.New("wrong signature")
