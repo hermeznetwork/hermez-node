@@ -158,6 +158,8 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 		TokenID:     231,
 		FromBJJ:     pk,
 		FromEthAddr: fromEthAddr,
+		Amount:      big.NewInt(0),
+		LoadAmount:  big.NewInt(0),
 	}
 
 	bytesCoordinatorL1, err := l1Tx.BytesCoordinatorTx(signature)

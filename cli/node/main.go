@@ -107,6 +107,7 @@ func getConfig(c *cli.Context) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	// nodeCfg.Synchronizer.InitialVariables.WDelayer.HermezRollupAddress = nodeCfg.SmartContracts.Rollup
 	cfg.node = nodeCfg
 
 	return &cfg, nil

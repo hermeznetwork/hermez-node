@@ -29,6 +29,16 @@ func init() {
 		}
 }
 
+// WDelayerBlock stores all the data related to the WDelayer SC from an ethereum block
+type WDelayerBlock struct {
+	// State     eth.WDelayerState // TODO
+	Vars      common.WDelayerVariables
+	Events    eth.WDelayerEvents
+	Txs       map[ethCommon.Hash]*types.Transaction
+	Constants *common.WDelayerConstants
+	Eth       *EthereumBlock
+}
+
 // RollupBlock stores all the data related to the Rollup SC from an ethereum block
 type RollupBlock struct {
 	State     eth.RollupState
@@ -185,9 +195,10 @@ type EthereumBlock struct {
 
 // Block represents a ethereum block
 type Block struct {
-	Rollup  *RollupBlock
-	Auction *AuctionBlock
-	Eth     *EthereumBlock
+	Rollup   *RollupBlock
+	Auction  *AuctionBlock
+	WDelayer *WDelayerBlock
+	Eth      *EthereumBlock
 }
 
 func (b *Block) copy() *Block {
@@ -210,8 +221,10 @@ func (b *Block) Next() *Block {
 
 	blockNext.Rollup.Constants = b.Rollup.Constants
 	blockNext.Auction.Constants = b.Auction.Constants
+	blockNext.WDelayer.Constants = b.WDelayer.Constants
 	blockNext.Rollup.Eth = blockNext.Eth
 	blockNext.Auction.Eth = blockNext.Eth
+	blockNext.WDelayer.Eth = blockNext.Eth
 
 	return blockNext
 }
@@ -219,11 +232,13 @@ func (b *Block) Next() *Block {
 // ClientSetup is used to initialize the constants of the Smart Contracts and
 // other details of the test Client
 type ClientSetup struct {
-	RollupConstants  *common.RollupConstants
-	RollupVariables  *common.RollupVariables
-	AuctionConstants *common.AuctionConstants
-	AuctionVariables *common.AuctionVariables
-	VerifyProof      bool
+	RollupConstants   *common.RollupConstants
+	RollupVariables   *common.RollupVariables
+	AuctionConstants  *common.AuctionConstants
+	AuctionVariables  *common.AuctionVariables
+	WDelayerConstants *common.WDelayerConstants
+	WDelayerVariables *common.WDelayerVariables
+	VerifyProof       bool
 }
 
 // NewClientSetupExample returns a ClientSetup example with hardcoded realistic
@@ -279,11 +294,26 @@ func NewClientSetupExample() *ClientSetup {
 		Outbidding:         1000,
 		SlotDeadline:       20,
 	}
+	wDelayerConstants := &common.WDelayerConstants{
+		MaxWithdrawalDelay:   60 * 60 * 24 * 7 * 2,  // 2 weeks
+		MaxEmergencyModeTime: 60 * 60 * 24 * 7 * 26, // 26 weeks
+		HermezRollup:         auctionConstants.HermezRollup,
+	}
+	wDelayerVariables := &common.WDelayerVariables{
+		HermezGovernanceDAOAddress: ethCommon.HexToAddress("0xcfD0d163AE6432a72682323E2C3A5a69e6B37D12"),
+		WhiteHackGroupAddress:      ethCommon.HexToAddress("0x2730700932a4FDB97B9268A3Ca29f97Ea5fd7EA0"),
+		HermezKeeperAddress:        ethCommon.HexToAddress("0x92aAD86176dC0f0046FE85Ed5dA008a828bE3868"),
+		WithdrawalDelay:            60,
+		EmergencyModeStartingTime:  0,
+		EmergencyMode:              false,
+	}
 	return &ClientSetup{
-		RollupConstants:  rollupConstants,
-		RollupVariables:  rollupVariables,
-		AuctionConstants: auctionConstants,
-		AuctionVariables: auctionVariables,
+		RollupConstants:   rollupConstants,
+		RollupVariables:   rollupVariables,
+		AuctionConstants:  auctionConstants,
+		AuctionVariables:  auctionVariables,
+		WDelayerConstants: wDelayerConstants,
+		WDelayerVariables: wDelayerVariables,
 	}
 }
 
@@ -307,12 +337,13 @@ type batch struct {
 // Client implements the eth.ClientInterface interface, allowing to manipulate the
 // values for testing, working with deterministic results.
 type Client struct {
-	rw               *sync.RWMutex
-	log              bool
-	addr             *ethCommon.Address
-	rollupConstants  *common.RollupConstants
-	auctionConstants *common.AuctionConstants
-	blocks           map[int64]*Block
+	rw                *sync.RWMutex
+	log               bool
+	addr              *ethCommon.Address
+	rollupConstants   *common.RollupConstants
+	auctionConstants  *common.AuctionConstants
+	wDelayerConstants *common.WDelayerConstants
+	blocks            map[int64]*Block
 	// state            state
 	blockNum    int64 // last mined block num
 	maxBlockNum int64 // highest block num calculated
@@ -365,6 +396,13 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 			Events:    eth.NewAuctionEvents(),
 			Constants: setup.AuctionConstants,
 		},
+		WDelayer: &WDelayerBlock{
+			// State: TODO
+			Vars:      *setup.WDelayerVariables,
+			Txs:       make(map[ethCommon.Hash]*types.Transaction),
+			Events:    eth.NewWDelayerEvents(),
+			Constants: setup.WDelayerConstants,
+		},
 		Eth: &EthereumBlock{
 			BlockNum:   blockNum,
 			Time:       timer.Time(),
@@ -385,6 +423,7 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 		addr:                  addr,
 		rollupConstants:       setup.RollupConstants,
 		auctionConstants:      setup.AuctionConstants,
+		wDelayerConstants:     setup.WDelayerConstants,
 		blocks:                blocks,
 		timer:                 timer,
 		hasher:                hasher,
@@ -1342,4 +1381,203 @@ func (c *Client) AuctionEventsByBlock(blockNum int64) (*eth.AuctionEvents, *ethC
 		return nil, nil, fmt.Errorf("Block %v doesn't exist", blockNum)
 	}
 	return &block.Auction.Events, &block.Eth.Hash, nil
+}
+
+//
+// WDelayer
+//
+
+// WDelayerGetHermezGovernanceDAOAddress is the interface to call the smart contract function
+func (c *Client) WDelayerGetHermezGovernanceDAOAddress() (*ethCommon.Address, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerSetHermezGovernanceDAOAddress is the interface to call the smart contract function
+func (c *Client) WDelayerSetHermezGovernanceDAOAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerGetHermezKeeperAddress is the interface to call the smart contract function
+func (c *Client) WDelayerGetHermezKeeperAddress() (*ethCommon.Address, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerSetHermezKeeperAddress is the interface to call the smart contract function
+func (c *Client) WDelayerSetHermezKeeperAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerGetWhiteHackGroupAddress is the interface to call the smart contract function
+func (c *Client) WDelayerGetWhiteHackGroupAddress() (*ethCommon.Address, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerSetWhiteHackGroupAddress is the interface to call the smart contract function
+func (c *Client) WDelayerSetWhiteHackGroupAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerIsEmergencyMode is the interface to call the smart contract function
+func (c *Client) WDelayerIsEmergencyMode() (bool, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return false, errTODO
+}
+
+// WDelayerGetWithdrawalDelay is the interface to call the smart contract function
+func (c *Client) WDelayerGetWithdrawalDelay() (*big.Int, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerGetEmergencyModeStartingTime is the interface to call the smart contract function
+func (c *Client) WDelayerGetEmergencyModeStartingTime() (*big.Int, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerEnableEmergencyMode is the interface to call the smart contract function
+func (c *Client) WDelayerEnableEmergencyMode() (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerChangeWithdrawalDelay is the interface to call the smart contract function
+func (c *Client) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerDepositInfo is the interface to call the smart contract function
+func (c *Client) WDelayerDepositInfo(owner, token ethCommon.Address) (eth.DepositState, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	log.Error("TODO")
+	return eth.DepositState{}, errTODO
+}
+
+// WDelayerDeposit is the interface to call the smart contract function
+func (c *Client) WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerWithdrawal is the interface to call the smart contract function
+func (c *Client) WDelayerWithdrawal(owner, token ethCommon.Address) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerEscapeHatchWithdrawal is the interface to call the smart contract function
+func (c *Client) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, eth.ErrAccountNil
+	}
+
+	log.Error("TODO")
+	return nil, errTODO
+}
+
+// WDelayerEventsByBlock returns the events in a block that happened in the WDelayer Contract
+func (c *Client) WDelayerEventsByBlock(blockNum int64) (*eth.WDelayerEvents, *ethCommon.Hash, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	block, ok := c.blocks[blockNum]
+	if !ok {
+		return nil, nil, fmt.Errorf("Block %v doesn't exist", blockNum)
+	}
+	return &block.WDelayer.Events, &block.Eth.Hash, nil
+}
+
+// WDelayerConstants returns the Constants of the WDelayer Contract
+func (c *Client) WDelayerConstants() (*common.WDelayerConstants, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	return c.wDelayerConstants, nil
 }

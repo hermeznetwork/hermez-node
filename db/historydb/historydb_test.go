@@ -1,11 +1,13 @@
 package historydb
 
 import (
+	"database/sql"
 	"math"
 	"math/big"
 	"os"
 	"testing"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -427,6 +429,52 @@ func TestGetL1UserTxs(t *testing.T) {
 	l1UserTxs, err = historyDB.GetL1UserTxs(2)
 	require.Nil(t, err)
 	assert.Equal(t, 0, len(l1UserTxs))
+}
+
+func TestSetInitialSCVars(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	_, _, _, err := historyDB.GetSCVars()
+	assert.Equal(t, sql.ErrNoRows, err)
+
+	//nolint:govet
+	rollup := &common.RollupVariables{
+		0,
+		big.NewInt(10),
+		12,
+		13,
+	}
+	//nolint:govet
+	auction := &common.AuctionVariables{
+		0,
+		ethCommon.BigToAddress(big.NewInt(2)),
+		ethCommon.BigToAddress(big.NewInt(3)),
+		[6]*big.Int{
+			big.NewInt(1), big.NewInt(2), big.NewInt(3),
+			big.NewInt(4), big.NewInt(5), big.NewInt(6),
+		},
+		2,
+		4320,
+		[3]uint16{10, 11, 12},
+		1000,
+		20,
+	}
+	//nolint:govet
+	wDelayer := &common.WDelayerVariables{
+		0,
+		ethCommon.BigToAddress(big.NewInt(2)),
+		ethCommon.BigToAddress(big.NewInt(3)),
+		ethCommon.BigToAddress(big.NewInt(4)),
+		13,
+		14,
+		false,
+	}
+	err = historyDB.SetInitialSCVars(rollup, auction, wDelayer)
+	require.Nil(t, err)
+	dbRollup, dbAuction, dbWDelayer, err := historyDB.GetSCVars()
+	assert.Nil(t, err)
+	require.Equal(t, rollup, dbRollup)
+	require.Equal(t, auction, dbAuction)
+	require.Equal(t, wDelayer, dbWDelayer)
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them

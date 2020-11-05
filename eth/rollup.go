@@ -510,9 +510,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 		return nil, nil, err
 	}
 	if len(logs) > 0 {
-		for i := range logs {
-			log.Debugw("log", "i", i, "blockHash", logs[i].BlockHash)
-		}
 		blockHash = &logs[0].BlockHash
 	}
 	for _, vLog := range logs {

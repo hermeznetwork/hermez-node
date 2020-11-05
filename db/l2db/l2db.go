@@ -7,7 +7,6 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/jmoiron/sqlx"
 
 	//nolint:errcheck // driver for postgres DB
@@ -243,10 +242,7 @@ func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.
 	defer func() {
 		// Rollback the transaction if there was an error.
 		if err != nil {
-			errRollback := txn.Rollback()
-			if errRollback != nil {
-				log.Errorw("Rollback", "err", errRollback)
-			}
+			db.Rollback(txn)
 		}
 	}()
 	for i := 0; i < len(updatedAccounts); i++ {
@@ -291,10 +287,7 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 	defer func() {
 		// Rollback the transaction if there was an error.
 		if err != nil {
-			errRollback := txn.Rollback()
-			if errRollback != nil {
-				log.Errorw("Rollback", "err", errRollback)
-			}
+			db.Rollback(txn)
 		}
 	}()
 	// Delete pending txs that have been in the pool after the TTL if maxTxs is reached

@@ -114,7 +114,7 @@ type WDelayerInterface interface {
 	WDelayerGetEmergencyModeStartingTime() (*big.Int, error)
 	WDelayerEnableEmergencyMode() (*types.Transaction, error)
 	WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (*types.Transaction, error)
-	WDelayerDepositInfo(owner, token ethCommon.Address) (*big.Int, uint64)
+	WDelayerDepositInfo(owner, token ethCommon.Address) (depositInfo DepositState, err error)
 	WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int) (*types.Transaction, error)
 	WDelayerWithdrawal(owner, token ethCommon.Address) (*types.Transaction, error)
 	WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (*types.Transaction, error)
@@ -340,7 +340,8 @@ func (c *WDelayerClient) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Addre
 }
 
 // WDelayerConstants returns the Constants of the WDelayer Smart Contract
-func (c *WDelayerClient) WDelayerConstants() (constants common.WDelayerConstants, err error) {
+func (c *WDelayerClient) WDelayerConstants() (constants *common.WDelayerConstants, err error) {
+	constants = new(common.WDelayerConstants)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		constants.MaxWithdrawalDelay, err = c.wdelayer.MAXWITHDRAWALDELAY(nil)
 		if err != nil {
@@ -377,7 +378,7 @@ var (
 // there are no events in that block, blockHash is nil.
 func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error) {
 	var wdelayerEvents WDelayerEvents
-	var blockHash ethCommon.Hash
+	var blockHash *ethCommon.Hash
 
 	query := ethereum.FilterQuery{
 		FromBlock: big.NewInt(blockNum),
@@ -394,10 +395,10 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 		return nil, nil, err
 	}
 	if len(logs) > 0 {
-		blockHash = logs[0].BlockHash
+		blockHash = &logs[0].BlockHash
 	}
 	for _, vLog := range logs {
-		if vLog.BlockHash != blockHash {
+		if vLog.BlockHash != *blockHash {
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
 			return nil, nil, ErrBlockHashMismatchEvent
 		}
@@ -470,5 +471,5 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			wdelayerEvents.NewHermezGovernanceDAOAddress = append(wdelayerEvents.NewHermezGovernanceDAOAddress, governanceDAOAddress)
 		}
 	}
-	return &wdelayerEvents, &blockHash, nil
+	return &wdelayerEvents, blockHash, nil
 }
