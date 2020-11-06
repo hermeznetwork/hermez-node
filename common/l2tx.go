@@ -105,49 +105,54 @@ func L2TxsToPoolL2Txs(txs []L2Tx) []PoolL2Tx {
 
 // Bytes encodes a L2Tx into []byte
 func (tx *L2Tx) Bytes(nLevels int) ([]byte, error) {
-	fromIdxNumBytes := nLevels / 8 //nolint:gomnd
-	toIdxNumBytes := nLevels / 8   //nolint:gomnd
-	var b []byte
+	idxLen := nLevels / 8 //nolint:gomnd
+
+	b := make([]byte, ((nLevels*2)+16+8)/8)
+
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
 		return nil, err
 	}
-	b = append(b, fromIdxBytes[6-fromIdxNumBytes:]...)
+	copy(b[0:idxLen], fromIdxBytes[6-idxLen:]) // [6-idxLen:] as is BigEndian
+
 	toIdxBytes, err := tx.ToIdx.Bytes()
 	if err != nil {
 		return nil, err
 	}
-	b = append(b, toIdxBytes[6-toIdxNumBytes:]...)
+	copy(b[idxLen:idxLen*2], toIdxBytes[6-idxLen:])
+
 	amountFloat16, err := NewFloat16(tx.Amount)
 	if err != nil {
 		return nil, err
 	}
-	b = append(b, amountFloat16.Bytes()...)
-	b = append(b, byte(tx.Fee))
+
+	copy(b[idxLen*2:idxLen*2+2], amountFloat16.Bytes())
+	b[idxLen*2+2] = byte(tx.Fee)
+
 	return b[:], nil
 }
 
 // L2TxFromBytes decodes a L1Tx from []byte
 func L2TxFromBytes(b []byte, nLevels int) (*L2Tx, error) {
-	fromIdxNumByte := nLevels / 8              //nolint:gomnd
-	toIdxNumByte := fromIdxNumByte + nLevels/8 //nolint:gomnd
-	amountLenBytes := 2
-	amountNumByte := toIdxNumByte + amountLenBytes
+	idxLen := nLevels / 8 //nolint:gomnd
 	tx := &L2Tx{}
 	var err error
+
 	var paddedFromIdxBytes [6]byte
-	copy(paddedFromIdxBytes[6-len(b[0:fromIdxNumByte]):], b[0:fromIdxNumByte])
+	copy(paddedFromIdxBytes[6-idxLen:], b[0:idxLen])
 	tx.FromIdx, err = IdxFromBytes(paddedFromIdxBytes[:])
 	if err != nil {
 		return nil, err
 	}
+
 	var paddedToIdxBytes [6]byte
-	copy(paddedToIdxBytes[6-len(b[fromIdxNumByte:toIdxNumByte]):6], b[fromIdxNumByte:toIdxNumByte])
+	copy(paddedToIdxBytes[6-idxLen:6], b[idxLen:idxLen*2])
 	tx.ToIdx, err = IdxFromBytes(paddedToIdxBytes[:])
 	if err != nil {
 		return nil, err
 	}
-	tx.Amount = Float16FromBytes(b[toIdxNumByte:amountNumByte]).BigInt()
-	tx.Fee = FeeSelector(b[amountNumByte])
+
+	tx.Amount = Float16FromBytes(b[idxLen*2 : idxLen*2+2]).BigInt()
+	tx.Fee = FeeSelector(b[idxLen*2+2])
 	return tx, nil
 }
