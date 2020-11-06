@@ -10,7 +10,7 @@ import (
 
 func getHistoryTxs(c *gin.Context) {
 	// Get query parameters
-	tokenID, addr, bjj, idx, err := parseAccountFilters(c)
+	tokenID, addr, bjj, idx, err := parseExitFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

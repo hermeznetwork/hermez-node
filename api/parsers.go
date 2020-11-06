@@ -142,7 +142,7 @@ func parseIdx(c querier) (*common.Idx, error) {
 	return stringToIdx(idxStr, name)
 }
 
-func parseAccountFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.PublicKey, *common.Idx, error) {
+func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.PublicKey, *common.Idx, error) {
 	// TokenID
 	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
 	if err != nil {
@@ -233,6 +233,40 @@ func parseSlotFilters(c querier) (*int64, *int64, *ethCommon.Address, *bool, err
 		return nil, nil, nil, nil, err
 	}
 	return minSlotNum, maxSlotNum, wonByEthereumAddress, finishedAuction, nil
+}
+
+func parseAccountFilters(c querier) ([]common.TokenID, *ethCommon.Address, *babyjub.PublicKey, error) {
+	// TokenID
+	idsStr := c.Query("tokenIds")
+	var tokenIDs []common.TokenID
+	if idsStr != "" {
+		ids := strings.Split(idsStr, ",")
+
+		for _, id := range ids {
+			idUint, err := strconv.Atoi(id)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			tokenID := common.TokenID(idUint)
+			tokenIDs = append(tokenIDs, tokenID)
+		}
+	}
+	// Hez Eth addr
+	addr, err := parseQueryHezEthAddr(c)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	// BJJ
+	bjj, err := parseQueryBJJ(c)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if addr != nil && bjj != nil {
+		return nil, nil, nil,
+			errors.New("bjj and hermezEthereumAddress params are incompatible")
+	}
+
+	return tokenIDs, addr, bjj, nil
 }
 
 // Param parsers

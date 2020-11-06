@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -41,7 +40,6 @@ func TestAccountCreationAuth(t *testing.T) {
 		jsonAuthBytes, err := json.Marshal(auth)
 		assert.NoError(t, err)
 		jsonAuthReader := bytes.NewReader(jsonAuthBytes)
-		fmt.Println(string(jsonAuthBytes))
 		assert.NoError(
 			t, doGoodReq(
 				"POST",

@@ -94,6 +94,7 @@ LANGUAGE plpgsql;
 -- +migrate StatementEnd
 
 CREATE TABLE account (
+    item_id SERIAL,
     idx BIGINT PRIMARY KEY,
     token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
     batch_num BIGINT NOT NULL REFERENCES batch (batch_num) ON DELETE CASCADE,

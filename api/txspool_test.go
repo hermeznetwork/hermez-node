@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -96,7 +95,6 @@ func genTestPoolTx(accs []common.Account, privKs []babyjub.PrivateKey, tokens []
 	poolTxsToSend = []testPoolTxSend{}
 	poolTxsToReceive = []testPoolTxReceive{}
 	for _, poolTx := range poolTxs {
-		fmt.Println(poolTx)
 		// common.PoolL2Tx ==> testPoolTxSend
 		token := getTokenByID(poolTx.TokenID, tokens)
 		genSendTx := testPoolTxSend{

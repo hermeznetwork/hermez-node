@@ -2145,6 +2145,8 @@ components:
       type: object
       description: State tree leaf. It contains balance and nonce of an account.
       properties:
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         accountIndex:
           $ref: '#/components/schemas/AccountIndex'
         nonce:
@@ -2157,6 +2159,15 @@ components:
           $ref: '#/components/schemas/HezEthereumAddress'
         token:
           $ref: '#/components/schemas/Token'
+      additionaProperties: false
+      required:
+        - itemId
+        - accountIndex
+        - nonce
+        - balance
+        - bjj
+        - hezEthereumAddress
+        - token
     Accounts:
       type: object
       properties:
@@ -2167,6 +2178,10 @@ components:
             $ref: '#/components/schemas/Account'
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
+      additionalProperties: false
+      required:
+        - accounts
+        - pagination
     Slot:
       type: object
       description: Slot information.
