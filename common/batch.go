@@ -12,17 +12,18 @@ const batchNumBytesLen = 8
 
 // Batch is a struct that represents Hermez network batch
 type Batch struct {
-	BatchNum      BatchNum             `meddler:"batch_num"`
-	EthBlockNum   int64                `meddler:"eth_block_num"` // Ethereum block in which the batch is forged
-	ForgerAddr    ethCommon.Address    `meddler:"forger_addr"`
-	CollectedFees map[TokenID]*big.Int `meddler:"fees_collected,json"`
-	StateRoot     *big.Int             `meddler:"state_root,bigint"`
-	NumAccounts   int                  `meddler:"num_accounts"`
-	LastIdx       int64                `meddler:"last_idx"`
-	ExitRoot      *big.Int             `meddler:"exit_root,bigint"`
-	ForgeL1TxsNum *int64               `meddler:"forge_l1_txs_num"` // optional, Only when the batch forges L1 txs. Identifier that corresponds to the group of L1 txs forged in the current batch.
-	SlotNum       int64                `meddler:"slot_num"`         // Slot in which the batch is forged
-	TotalFeesUSD  *float64             `meddler:"total_fees_usd"`
+	BatchNum           BatchNum             `meddler:"batch_num"`
+	EthBlockNum        int64                `meddler:"eth_block_num"` // Ethereum block in which the batch is forged
+	ForgerAddr         ethCommon.Address    `meddler:"forger_addr"`
+	CollectedFees      map[TokenID]*big.Int `meddler:"fees_collected,json"`
+	FeeIdxsCoordinator []Idx                `meddler:"fee_idxs_coordinator,json"`
+	StateRoot          *big.Int             `meddler:"state_root,bigint"`
+	NumAccounts        int                  `meddler:"num_accounts"`
+	LastIdx            int64                `meddler:"last_idx"`
+	ExitRoot           *big.Int             `meddler:"exit_root,bigint"`
+	ForgeL1TxsNum      *int64               `meddler:"forge_l1_txs_num"` // optional, Only when the batch forges L1 txs. Identifier that corresponds to the group of L1 txs forged in the current batch.
+	SlotNum            int64                `meddler:"slot_num"`         // Slot in which the batch is forged
+	TotalFeesUSD       *float64             `meddler:"total_fees_usd"`
 }
 
 // BatchNum identifies a batch

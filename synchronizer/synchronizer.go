@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -467,6 +468,8 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 		for i := range processTxsOut.CreatedAccounts {
 			createdAccount := &processTxsOut.CreatedAccounts[i]
+			createdAccount.Nonce = 0
+			createdAccount.Balance = big.NewInt(0)
 			createdAccount.BatchNum = batchNum
 		}
 		batchData.CreatedAccounts = processTxsOut.CreatedAccounts
@@ -478,16 +481,18 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		}
 
 		// Get Batch information
+		// fmt.Printf("DBG: %#v\n", forgeBatchArgs.FeeIdxCoordinator)
 		batch := common.Batch{
-			BatchNum:      batchNum,
-			EthBlockNum:   blockNum,
-			ForgerAddr:    *sender,
-			CollectedFees: processTxsOut.CollectedFees,
-			StateRoot:     forgeBatchArgs.NewStRoot,
-			NumAccounts:   len(batchData.CreatedAccounts),
-			LastIdx:       forgeBatchArgs.NewLastIdx,
-			ExitRoot:      forgeBatchArgs.NewExitRoot,
-			SlotNum:       slotNum,
+			BatchNum:           batchNum,
+			EthBlockNum:        blockNum,
+			ForgerAddr:         *sender,
+			CollectedFees:      processTxsOut.CollectedFees,
+			FeeIdxsCoordinator: forgeBatchArgs.FeeIdxCoordinator,
+			StateRoot:          forgeBatchArgs.NewStRoot,
+			NumAccounts:        len(batchData.CreatedAccounts),
+			LastIdx:            forgeBatchArgs.NewLastIdx,
+			ExitRoot:           forgeBatchArgs.NewExitRoot,
+			SlotNum:            slotNum,
 		}
 		nextForgeL1TxsNumCpy := nextForgeL1TxsNum
 		if forgeBatchArgs.L1Batch {
