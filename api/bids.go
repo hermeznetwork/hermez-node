@@ -9,7 +9,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-func getBids(c *gin.Context) {
+func (a *API) getBids(c *gin.Context) {
 	slotNum, bidderAddr, err := parseBidFilters(c)
 	if err != nil {
 		retBadReq(err, c)
@@ -26,7 +26,7 @@ func getBids(c *gin.Context) {
 		return
 	}
 
-	bids, pagination, err := h.GetBidsAPI(
+	bids, pagination, err := a.h.GetBidsAPI(
 		slotNum, bidderAddr, fromItem, limit, order,
 	)
 

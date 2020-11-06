@@ -9,15 +9,15 @@ import (
 )
 
 func TestFeePercentage(t *testing.T) {
-	assert.InEpsilon(t, 2.68E-18, FeeSelector(1).Percentage(), 0.002)
-	assert.InEpsilon(t, 6.76E-14, FeeSelector(10).Percentage(), 0.002)
-	assert.InEpsilon(t, 3.91E-03, FeeSelector(32).Percentage(), 0.002)
-	assert.InEpsilon(t, 7.29E-03, FeeSelector(50).Percentage(), 0.002)
-	assert.InEpsilon(t, 4.12E-02, FeeSelector(100).Percentage(), 0.002)
-	assert.InEpsilon(t, 2.33E-01, FeeSelector(150).Percentage(), 0.002)
-	assert.InEpsilon(t, 1.00E+00, FeeSelector(192).Percentage(), 0.002)
-	assert.InEpsilon(t, 2.56E+02, FeeSelector(200).Percentage(), 0.002)
-	assert.InEpsilon(t, 2.88E+17, FeeSelector(250).Percentage(), 0.002)
+	assert.InEpsilon(t, 2.68e-18, FeeSelector(1).Percentage(), 0.002)
+	assert.InEpsilon(t, 6.76e-14, FeeSelector(10).Percentage(), 0.002)
+	assert.InEpsilon(t, 3.91e-03, FeeSelector(32).Percentage(), 0.002)
+	assert.InEpsilon(t, 7.29e-03, FeeSelector(50).Percentage(), 0.002)
+	assert.InEpsilon(t, 4.12e-02, FeeSelector(100).Percentage(), 0.002)
+	assert.InEpsilon(t, 2.33e-01, FeeSelector(150).Percentage(), 0.002)
+	assert.InEpsilon(t, 1.00e+00, FeeSelector(192).Percentage(), 0.002)
+	assert.InEpsilon(t, 2.56e+02, FeeSelector(200).Percentage(), 0.002)
+	assert.InEpsilon(t, 2.88e+17, FeeSelector(250).Percentage(), 0.002)
 }
 
 func TestCalcFeeAmount(t *testing.T) {

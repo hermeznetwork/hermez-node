@@ -8,7 +8,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-func getHistoryTxs(c *gin.Context) {
+func (a *API) getHistoryTxs(c *gin.Context) {
 	// Get query parameters
 	tokenID, addr, bjj, idx, err := parseExitFilters(c)
 	if err != nil {
@@ -35,7 +35,7 @@ func getHistoryTxs(c *gin.Context) {
 	}
 
 	// Fetch txs from historyDB
-	txs, pagination, err := h.GetHistoryTxs(
+	txs, pagination, err := a.h.GetHistoryTxs(
 		addr, bjj, tokenID, idx, batchNum, txType, fromItem, limit, order,
 	)
 	if err != nil {
@@ -54,7 +54,7 @@ func getHistoryTxs(c *gin.Context) {
 	})
 }
 
-func getHistoryTx(c *gin.Context) {
+func (a *API) getHistoryTx(c *gin.Context) {
 	// Get TxID
 	txID, err := parseParamTxID(c)
 	if err != nil {
@@ -62,7 +62,7 @@ func getHistoryTx(c *gin.Context) {
 		return
 	}
 	// Fetch tx from historyDB
-	tx, err := h.GetHistoryTx(txID)
+	tx, err := a.h.GetHistoryTx(txID)
 	if err != nil {
 		retSQLErr(err, c)
 		return

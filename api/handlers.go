@@ -31,18 +31,6 @@ var (
 	ErrNillBidderAddr = errors.New("biderAddr can not be nil")
 )
 
-func getNextForgers(c *gin.Context) {
-
-}
-
-func getState(c *gin.Context) {
-
-}
-
-func getRecommendedFee(c *gin.Context) {
-
-}
-
 func retSQLErr(err error, c *gin.Context) {
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, errorMsg{

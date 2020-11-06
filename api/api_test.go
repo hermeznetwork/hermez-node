@@ -56,6 +56,7 @@ type testCommon struct {
 
 var tc testCommon
 var config configAPI
+var api *API
 
 // TestMain initializes the API server, and fill HistoryDB and StateDB with fake data,
 // emulating the task of the synchronizer in order to have data to be returned
@@ -97,20 +98,21 @@ func TestMain(m *testing.M) {
 	config = getConfigTest()
 
 	// API
-	api := gin.Default()
-	if err := SetAPIEndpoints(
+	apiGin := gin.Default()
+	api, err = NewAPI(
 		true,
 		true,
-		api,
+		apiGin,
 		hdb,
 		sdb,
 		l2DB,
 		&config,
-	); err != nil {
+	)
+	if err != nil {
 		panic(err)
 	}
 	// Start server
-	server := &http.Server{Addr: apiPort, Handler: api}
+	server := &http.Server{Addr: apiPort, Handler: apiGin}
 	go func() {
 		if err := server.ListenAndServe(); err != nil &&
 			err != http.ErrServerClosed {
@@ -122,7 +124,7 @@ func TestMain(m *testing.M) {
 	// Gen blocks and add them to DB
 	const nBlocks = 5
 	blocks := test.GenBlocks(1, nBlocks+1)
-	err = h.AddBlocks(blocks)
+	err = api.h.AddBlocks(blocks)
 	if err != nil {
 		panic(err)
 	}
@@ -131,7 +133,7 @@ func TestMain(m *testing.M) {
 	// Gen tokens and add them to DB
 	const nTokens = 10
 	tokens, ethToken := test.GenTokens(nTokens, blocks)
-	err = h.AddTokens(tokens)
+	err = api.h.AddTokens(tokens)
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +155,7 @@ func TestMain(m *testing.M) {
 			now := time.Now().UTC()
 			token.USD = &value
 			token.USDUpdate = &now
-			err = h.UpdateTokenValue(token.Symbol, value)
+			err = api.h.UpdateTokenValue(token.Symbol, value)
 			if err != nil {
 				panic(err)
 			}
@@ -163,7 +165,7 @@ func TestMain(m *testing.M) {
 	// Gen batches and add them to DB
 	const nBatches = 10
 	batches := test.GenBatches(nBatches, blocks)
-	err = h.AddBatches(batches)
+	err = api.h.AddBatches(batches)
 	if err != nil {
 		panic(err)
 	}
@@ -174,12 +176,12 @@ func TestMain(m *testing.M) {
 	privK := babyjub.NewRandPrivKey()
 	usrBjj := privK.Public()
 	accs := test.GenAccounts(totalAccounts, userAccounts, tokens, &usrAddr, usrBjj, batches)
-	err = h.AddAccounts(accs)
+	err = api.h.AddAccounts(accs)
 	if err != nil {
 		panic(err)
 	}
 	for i := 0; i < len(accs); i++ {
-		if _, err := s.CreateAccount(accs[i].Idx, &accs[i]); err != nil {
+		if _, err := api.s.CreateAccount(accs[i].Idx, &accs[i]); err != nil {
 			panic(err)
 		}
 	}
@@ -197,7 +199,7 @@ func TestMain(m *testing.M) {
 	// Gen exits and add them to DB
 	const totalExits = 40
 	exits := test.GenExitTree(totalExits, batches, accs)
-	err = h.AddExitTree(exits)
+	err = api.h.AddExitTree(exits)
 	if err != nil {
 		panic(err)
 	}
@@ -235,12 +237,12 @@ func TestMain(m *testing.M) {
 		l1 := genericTx.L1()
 		l2 := genericTx.L2()
 		if l1 != nil {
-			err = h.AddL1Txs([]common.L1Tx{*l1})
+			err = api.h.AddL1Txs([]common.L1Tx{*l1})
 			if err != nil {
 				panic(err)
 			}
 		} else if l2 != nil {
-			err = h.AddL2Txs([]common.L2Tx{*l2})
+			err = api.h.AddL2Txs([]common.L2Tx{*l2})
 			if err != nil {
 				panic(err)
 			}
@@ -252,13 +254,13 @@ func TestMain(m *testing.M) {
 	// Coordinators
 	const nCoords = 10
 	coords := test.GenCoordinators(nCoords, blocks)
-	err = hdb.AddCoordinators(coords)
+	err = api.h.AddCoordinators(coords)
 	if err != nil {
 		panic(err)
 	}
 	fromItem := uint(0)
 	limit := uint(99999)
-	coordinators, _, err := hdb.GetCoordinatorsAPI(&fromItem, &limit, historydb.OrderAsc)
+	coordinators, _, err := api.h.GetCoordinatorsAPI(&fromItem, &limit, historydb.OrderAsc)
 	if err != nil {
 		panic(err)
 	}
@@ -266,7 +268,7 @@ func TestMain(m *testing.M) {
 	// Bids
 	const nBids = 20
 	bids := test.GenBids(nBids, blocks, coords)
-	err = hdb.AddBids(bids)
+	err = api.h.AddBids(bids)
 	if err != nil {
 		panic(err)
 	}
@@ -278,7 +280,7 @@ func TestMain(m *testing.M) {
 		ClosedAuctionSlots: uint16(2),
 		OpenAuctionSlots:   uint16(5),
 	}
-	err = hdb.AddAuctionVars(&auctionVars)
+	err = api.h.AddAuctionVars(&auctionVars)
 	if err != nil {
 		panic(err)
 	}
@@ -309,7 +311,7 @@ func TestMain(m *testing.M) {
 		auths:            genTestAuths(test.GenAuths(5)),
 		router:           router,
 		bids:             testBids,
-		slots:            genTestSlots(nSlots, lastBlockNum, testBids, auctionVars),
+		slots:            api.genTestSlots(nSlots, lastBlockNum, testBids, auctionVars),
 		auctionVars:      auctionVars,
 	}
 
