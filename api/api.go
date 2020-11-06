@@ -12,7 +12,7 @@ import (
 
 // Status define status of the network
 type Status struct {
-	Network           historydb.Network        `json:"network"`
+	Network           Network                  `json:"network"`
 	Metrics           historydb.Metrics        `json:"metrics"`
 	Rollup            common.RollupVariables   `json:"rollup"`
 	Auction           common.AuctionVariables  `json:"auction"`

@@ -1482,3 +1482,9 @@ func (hdb *HistoryDB) GetAccountsAPI(tokenIDs []common.TokenID, ethAddr *ethComm
 		LastItem:   accounts[0].LastItem,
 	}, nil
 }
+
+// GetMetrics returns metrics
+func (hdb *HistoryDB) GetMetrics() (Metrics, error) {
+	metrics := Metrics{}
+	return metrics, nil
+}
