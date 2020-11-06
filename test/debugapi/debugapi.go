@@ -92,6 +92,9 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 
 	debugAPI.GET("sdb/batchnum", a.handleCurrentBatch)
 	debugAPI.GET("sdb/mtroot", a.handleMTRoot)
+	// Accounts returned by these endpoints will always have BatchNum = 0,
+	// because the stateDB doesn't store the BatchNum in which an account
+	// is created.
 	debugAPI.GET("sdb/accounts", a.handleAccounts)
 	debugAPI.GET("sdb/accounts/:Idx", a.handleAccount)
 
@@ -104,7 +107,7 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
 	}
 	go func() {
-		log.Infof("Debug API is ready at %v", a.addr)
+		log.Infof("DebugAPI is ready at %v", a.addr)
 		if err := debugAPIServer.ListenAndServe(); err != nil &&
 			err != http.ErrServerClosed {
 			log.Fatalf("Listen: %s\n", err)
@@ -112,10 +115,10 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 	}()
 
 	<-ctx.Done()
-	log.Info("Stopping Debug API...")
+	log.Info("Stopping DebugAPI...")
 	if err := debugAPIServer.Shutdown(context.Background()); err != nil {
 		return err
 	}
-	log.Info("Debug API stopped")
+	log.Info("DebugAPI done")
 	return nil
 }

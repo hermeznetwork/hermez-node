@@ -48,8 +48,6 @@ var (
 )
 
 const (
-	// PathStateDB defines the subpath of the StateDB
-	PathStateDB = "/statedb"
 	// PathBatchNum defines the subpath of the Batch Checkpoint in the
 	// subpath of the StateDB
 	PathBatchNum = "/BatchNum"
@@ -88,7 +86,7 @@ type StateDB struct {
 func NewStateDB(path string, typ TypeStateDB, nLevels int) (*StateDB, error) {
 	var sto *pebble.PebbleStorage
 	var err error
-	sto, err = pebble.NewPebbleStorage(path+PathStateDB+PathCurrent, false)
+	sto, err = pebble.NewPebbleStorage(path+PathCurrent, false)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +103,7 @@ func NewStateDB(path string, typ TypeStateDB, nLevels int) (*StateDB, error) {
 	}
 
 	sdb := &StateDB{
-		path: path + PathStateDB,
+		path: path,
 		db:   sto,
 		mt:   mt,
 		typ:  typ,
@@ -163,6 +161,7 @@ func (s *StateDB) setCurrentBatch() error {
 func (s *StateDB) MakeCheckpoint() error {
 	// advance currentBatch
 	s.currentBatch++
+	log.Debugw("Making StateDB checkpoint", "batch", s.currentBatch, "type", s.typ)
 
 	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(s.currentBatch))
 

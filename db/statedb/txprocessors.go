@@ -49,8 +49,13 @@ type ProcessTxOutput struct {
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
 // And if TypeSynchronizer returns an array of common.Account with all the
 // created accounts.
-func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (*ProcessTxOutput, error) {
-	var err error
+func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (ptOut *ProcessTxOutput, err error) {
+	defer func() {
+		if err == nil {
+			err = s.MakeCheckpoint()
+		}
+	}()
+
 	var exitTree *merkletree.MerkleTree
 	var createdAccounts []common.Account
 
@@ -829,7 +834,7 @@ func (s *StateDB) getIdx() (common.Idx, error) {
 	if err != nil {
 		return 0, err
 	}
-	return common.IdxFromBytes(idxBytes[:4])
+	return common.IdxFromBytes(idxBytes[:])
 }
 
 // setIdx stores Idx in the localStateDB
