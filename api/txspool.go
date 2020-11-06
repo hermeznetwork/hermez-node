@@ -13,7 +13,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-func postPoolTx(c *gin.Context) {
+func (a *API) postPoolTx(c *gin.Context) {
 	// Parse body
 	var receivedTx receivedPoolTx
 	if err := c.ShouldBindJSON(&receivedTx); err != nil {
@@ -22,12 +22,12 @@ func postPoolTx(c *gin.Context) {
 	}
 	// Transform from received to insert format and validate
 	writeTx := receivedTx.toPoolL2TxWrite()
-	if err := verifyPoolL2TxWrite(writeTx); err != nil {
+	if err := a.verifyPoolL2TxWrite(writeTx); err != nil {
 		retBadReq(err, c)
 		return
 	}
 	// Insert to DB
-	if err := l2.AddTx(writeTx); err != nil {
+	if err := a.l2.AddTx(writeTx); err != nil {
 		retSQLErr(err, c)
 		return
 	}
@@ -35,7 +35,7 @@ func postPoolTx(c *gin.Context) {
 	c.JSON(http.StatusOK, writeTx.TxID.String())
 }
 
-func getPoolTx(c *gin.Context) {
+func (a *API) getPoolTx(c *gin.Context) {
 	// Get TxID
 	txID, err := parseParamTxID(c)
 	if err != nil {
@@ -43,7 +43,7 @@ func getPoolTx(c *gin.Context) {
 		return
 	}
 	// Fetch tx from l2DB
-	tx, err := l2.GetTxAPI(txID)
+	tx, err := a.l2.GetTxAPI(txID)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -102,7 +102,7 @@ func (tx *receivedPoolTx) toPoolL2TxWrite() *l2db.PoolL2TxWrite {
 	}
 }
 
-func verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
+func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	poolTx := common.PoolL2Tx{
 		TxID:    txw.TxID,
 		FromIdx: txw.FromIdx,
@@ -159,7 +159,7 @@ func verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 		return err
 	}
 	// Get public key
-	account, err := s.GetAccount(poolTx.FromIdx)
+	account, err := a.s.GetAccount(poolTx.FromIdx)
 	if err != nil {
 		return err
 	}

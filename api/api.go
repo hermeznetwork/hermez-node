@@ -4,75 +4,90 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 )
 
-var h *historydb.HistoryDB
-var cg *configAPI
-var s *statedb.StateDB
-var l2 *l2db.L2DB
+// Status define status of the network
+type Status struct {
+	Network           historydb.Network        `json:"network"`
+	Metrics           historydb.Metrics        `json:"metrics"`
+	Rollup            common.RollupVariables   `json:"rollup"`
+	Auction           common.AuctionVariables  `json:"auction"`
+	WithdrawalDelayer common.WDelayerVariables `json:"withdrawalDelayer"`
+	RecommendedFee    common.RecommendedFee    `json:"recommendedFee"`
+}
 
-// SetAPIEndpoints sets the endpoints and the appropriate handlers, but doesn't start the server
-func SetAPIEndpoints(
+// API serves HTTP requests to allow external interaction with the Hermez node
+type API struct {
+	h      *historydb.HistoryDB
+	cg     *configAPI
+	s      *statedb.StateDB
+	l2     *l2db.L2DB
+	status Status
+}
+
+// NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
+func NewAPI(
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
 	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
 	config *configAPI,
-) error {
+) (*API, error) {
 	// Check input
 	// TODO: is stateDB only needed for explorer endpoints or for both?
 	if coordinatorEndpoints && l2db == nil {
-		return errors.New("cannot serve Coordinator endpoints without L2DB")
+		return nil, errors.New("cannot serve Coordinator endpoints without L2DB")
 	}
 	if explorerEndpoints && hdb == nil {
-		return errors.New("cannot serve Explorer endpoints without HistoryDB")
+		return nil, errors.New("cannot serve Explorer endpoints without HistoryDB")
 	}
 
-	h = hdb
-	cg = config
-	s = sdb
-	l2 = l2db
+	a := &API{
+		h:  hdb,
+		cg: config,
+		s:  sdb,
+		l2: l2db,
+	}
 
 	// Add coordinator endpoints
 	if coordinatorEndpoints {
 		// Account
-		server.POST("/account-creation-authorization", postAccountCreationAuth)
-		server.GET("/account-creation-authorization/:hermezEthereumAddress", getAccountCreationAuth)
+		server.POST("/account-creation-authorization", a.postAccountCreationAuth)
+		server.GET("/account-creation-authorization/:hermezEthereumAddress", a.getAccountCreationAuth)
 		// Transaction
-		server.POST("/transactions-pool", postPoolTx)
-		server.GET("/transactions-pool/:id", getPoolTx)
+		server.POST("/transactions-pool", a.postPoolTx)
+		server.GET("/transactions-pool/:id", a.getPoolTx)
 	}
 
 	// Add explorer endpoints
 	if explorerEndpoints {
 		// Account
-		server.GET("/accounts", getAccounts)
-		server.GET("/accounts/:accountIndex", getAccount)
-		server.GET("/exits", getExits)
-		server.GET("/exits/:batchNum/:accountIndex", getExit)
+		server.GET("/accounts", a.getAccounts)
+		server.GET("/accounts/:accountIndex", a.getAccount)
+		server.GET("/exits", a.getExits)
+		server.GET("/exits/:batchNum/:accountIndex", a.getExit)
 		// Transaction
-		server.GET("/transactions-history", getHistoryTxs)
-		server.GET("/transactions-history/:id", getHistoryTx)
+		server.GET("/transactions-history", a.getHistoryTxs)
+		server.GET("/transactions-history/:id", a.getHistoryTx)
 		// Status
-		server.GET("/batches", getBatches)
-		server.GET("/batches/:batchNum", getBatch)
-		server.GET("/full-batches/:batchNum", getFullBatch)
-		server.GET("/slots", getSlots)
-		server.GET("/slots/:slotNum", getSlot)
-		server.GET("/bids", getBids)
-		server.GET("/next-forgers", getNextForgers)
-		server.GET("/state", getState)
-		server.GET("/config", getConfig)
-		server.GET("/tokens", getTokens)
-		server.GET("/tokens/:id", getToken)
-		server.GET("/recommendedFee", getRecommendedFee)
-		server.GET("/coordinators", getCoordinators)
-		server.GET("/coordinators/:bidderAddr", getCoordinator)
+		server.GET("/batches", a.getBatches)
+		server.GET("/batches/:batchNum", a.getBatch)
+		server.GET("/full-batches/:batchNum", a.getFullBatch)
+		server.GET("/slots", a.getSlots)
+		server.GET("/slots/:slotNum", a.getSlot)
+		server.GET("/bids", a.getBids)
+		server.GET("/state", a.getState)
+		server.GET("/config", a.getConfig)
+		server.GET("/tokens", a.getTokens)
+		server.GET("/tokens/:id", a.getToken)
+		server.GET("/coordinators", a.getCoordinators)
+		server.GET("/coordinators/:bidderAddr", a.getCoordinator)
 	}
 
-	return nil
+	return a, nil
 }

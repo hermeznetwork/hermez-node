@@ -32,6 +32,6 @@ type configAPI struct {
 	WDelayerConstants common.WDelayerConstants `json:"withdrawalDelayer"`
 }
 
-func getConfig(c *gin.Context) {
-	c.JSON(http.StatusOK, cg)
+func (a *API) getConfig(c *gin.Context) {
+	c.JSON(http.StatusOK, a.cg)
 }

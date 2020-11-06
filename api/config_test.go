@@ -62,5 +62,5 @@ func TestGetConfig(t *testing.T) {
 	var configTest configAPI
 	assert.NoError(t, doGoodReq("GET", endpoint, nil, &configTest))
 	assert.Equal(t, config, configTest)
-	assert.Equal(t, cg, &configTest)
+	assert.Equal(t, api.cg, &configTest)
 }

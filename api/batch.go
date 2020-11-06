@@ -10,7 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-func getBatches(c *gin.Context) {
+func (a *API) getBatches(c *gin.Context) {
 	// Get query parameters
 	// minBatchNum
 	minBatchNum, err := parseQueryUint("minBatchNum", nil, 0, maxUint32, c)
@@ -43,7 +43,7 @@ func getBatches(c *gin.Context) {
 		return
 	}
 	// Fetch batches from historyDB
-	batches, pagination, err := h.GetBatchesAPI(
+	batches, pagination, err := a.h.GetBatchesAPI(
 		minBatchNum, maxBatchNum, slotNum, forgerAddr, fromItem, limit, order,
 	)
 	if err != nil {
@@ -62,7 +62,7 @@ func getBatches(c *gin.Context) {
 	})
 }
 
-func getBatch(c *gin.Context) {
+func (a *API) getBatch(c *gin.Context) {
 	// Get batchNum
 	batchNum, err := parseParamUint("batchNum", nil, 0, maxUint32, c)
 	if err != nil {
@@ -74,7 +74,7 @@ func getBatch(c *gin.Context) {
 		return
 	}
 	// Fetch batch from historyDB
-	batch, err := h.GetBatchAPI(common.BatchNum(*batchNum))
+	batch, err := a.h.GetBatchAPI(common.BatchNum(*batchNum))
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -88,7 +88,7 @@ type fullBatch struct {
 	Txs   []historydb.TxAPI   `json:"transactions"`
 }
 
-func getFullBatch(c *gin.Context) {
+func (a *API) getFullBatch(c *gin.Context) {
 	// Get batchNum
 	batchNum, err := parseParamUint("batchNum", nil, 0, maxUint32, c)
 	if err != nil {
@@ -100,14 +100,14 @@ func getFullBatch(c *gin.Context) {
 		return
 	}
 	// Fetch batch from historyDB
-	batch, err := h.GetBatchAPI(common.BatchNum(*batchNum))
+	batch, err := a.h.GetBatchAPI(common.BatchNum(*batchNum))
 	if err != nil {
 		retSQLErr(err, c)
 		return
 	}
 	// Fetch txs forged in the batch from historyDB
 	maxTxsPerBatch := uint(2048) //nolint:gomnd
-	txs, _, err := h.GetHistoryTxs(
+	txs, _, err := a.h.GetHistoryTxs(
 		nil, nil, nil, nil, batchNum, nil, nil, &maxTxsPerBatch, historydb.OrderAsc,
 	)
 	if err != nil {

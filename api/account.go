@@ -9,21 +9,21 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-func getAccount(c *gin.Context) {
+func (a *API) getAccount(c *gin.Context) {
 	// Get Addr
 	idx, err := parseParamIdx(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
-	apiAccount, err := h.GetAccountAPI(*idx)
+	apiAccount, err := a.h.GetAccountAPI(*idx)
 	if err != nil {
 		retSQLErr(err, c)
 		return
 	}
 
 	// Get balance from stateDB
-	account, err := s.GetAccount(*idx)
+	account, err := a.s.GetAccount(*idx)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -34,7 +34,7 @@ func getAccount(c *gin.Context) {
 	c.JSON(http.StatusOK, apiAccount)
 }
 
-func getAccounts(c *gin.Context) {
+func (a *API) getAccounts(c *gin.Context) {
 	// Account filters
 	tokenIDs, addr, bjj, err := parseAccountFilters(c)
 	if err != nil {
@@ -49,7 +49,7 @@ func getAccounts(c *gin.Context) {
 	}
 
 	// Fetch Accounts from historyDB
-	apiAccounts, pagination, err := h.GetAccountsAPI(tokenIDs, addr, bjj, fromItem, limit, order)
+	apiAccounts, pagination, err := a.h.GetAccountsAPI(tokenIDs, addr, bjj, fromItem, limit, order)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -62,7 +62,7 @@ func getAccounts(c *gin.Context) {
 			retSQLErr(err, c)
 			return
 		}
-		account, err := s.GetAccount(*idx)
+		account, err := a.s.GetAccount(*idx)
 		if err != nil {
 			retSQLErr(err, c)
 			return

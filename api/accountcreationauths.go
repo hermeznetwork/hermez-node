@@ -12,7 +12,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-func postAccountCreationAuth(c *gin.Context) {
+func (a *API) postAccountCreationAuth(c *gin.Context) {
 	// Parse body
 	var apiAuth receivedAuth
 	if err := c.ShouldBindJSON(&apiAuth); err != nil {
@@ -26,7 +26,7 @@ func postAccountCreationAuth(c *gin.Context) {
 		return
 	}
 	// Insert to DB
-	if err := l2.AddAccountCreationAuth(commonAuth); err != nil {
+	if err := a.l2.AddAccountCreationAuth(commonAuth); err != nil {
 		retSQLErr(err, c)
 		return
 	}
@@ -34,7 +34,7 @@ func postAccountCreationAuth(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func getAccountCreationAuth(c *gin.Context) {
+func (a *API) getAccountCreationAuth(c *gin.Context) {
 	// Get hezEthereumAddress
 	addr, err := parseParamHezEthAddr(c)
 	if err != nil {
@@ -42,7 +42,7 @@ func getAccountCreationAuth(c *gin.Context) {
 		return
 	}
 	// Fetch auth from l2DB
-	auth, err := l2.GetAccountCreationAuthAPI(*addr)
+	auth, err := a.l2.GetAccountCreationAuthAPI(*addr)
 	if err != nil {
 		retSQLErr(err, c)
 		return

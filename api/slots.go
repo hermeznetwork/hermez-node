@@ -24,23 +24,23 @@ type SlotAPI struct {
 	LastItem    int               `json:"-"`
 }
 
-func getFirstLastBlock(slotNum int64) (int64, int64) {
-	genesisBlock := cg.AuctionConstants.GenesisBlockNum
-	blocksPerSlot := int64(cg.AuctionConstants.BlocksPerSlot)
+func (a *API) getFirstLastBlock(slotNum int64) (int64, int64) {
+	genesisBlock := a.cg.AuctionConstants.GenesisBlockNum
+	blocksPerSlot := int64(a.cg.AuctionConstants.BlocksPerSlot)
 	firstBlock := slotNum*blocksPerSlot + genesisBlock
 	lastBlock := (slotNum+1)*blocksPerSlot + genesisBlock - 1
 	return firstBlock, lastBlock
 }
 
-func getCurrentSlot(currentBlock int64) int64 {
-	genesisBlock := cg.AuctionConstants.GenesisBlockNum
-	blocksPerSlot := int64(cg.AuctionConstants.BlocksPerSlot)
+func (a *API) getCurrentSlot(currentBlock int64) int64 {
+	genesisBlock := a.cg.AuctionConstants.GenesisBlockNum
+	blocksPerSlot := int64(a.cg.AuctionConstants.BlocksPerSlot)
 	currentSlot := (currentBlock - genesisBlock) / blocksPerSlot
 	return currentSlot
 }
 
-func isOpenAuction(currentBlock, slotNum int64, auctionVars common.AuctionVariables) bool {
-	currentSlot := getCurrentSlot(currentBlock)
+func (a *API) isOpenAuction(currentBlock, slotNum int64, auctionVars common.AuctionVariables) bool {
+	currentSlot := a.getCurrentSlot(currentBlock)
 	closedAuctionSlots := currentSlot + int64(auctionVars.ClosedAuctionSlots)
 	openAuctionSlots := int64(auctionVars.OpenAuctionSlots)
 	if slotNum > closedAuctionSlots && slotNum <= (closedAuctionSlots+openAuctionSlots) {
@@ -61,9 +61,9 @@ func getPagination(totalItems int, minSlotNum, maxSlotNum *int64) *db.Pagination
 	return pagination
 }
 
-func newSlotAPI(slotNum, currentBlockNum int64, bid *historydb.BidAPI, auctionVars *common.AuctionVariables) SlotAPI {
-	firstBlock, lastBlock := getFirstLastBlock(slotNum)
-	openAuction := isOpenAuction(currentBlockNum, slotNum, *auctionVars)
+func (a *API) newSlotAPI(slotNum, currentBlockNum int64, bid *historydb.BidAPI, auctionVars *common.AuctionVariables) SlotAPI {
+	firstBlock, lastBlock := a.getFirstLastBlock(slotNum)
+	openAuction := a.isOpenAuction(currentBlockNum, slotNum, *auctionVars)
 	slot := SlotAPI{
 		ItemID:      int(slotNum),
 		SlotNum:     slotNum,
@@ -75,10 +75,10 @@ func newSlotAPI(slotNum, currentBlockNum int64, bid *historydb.BidAPI, auctionVa
 	return slot
 }
 
-func newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []historydb.BidAPI, currentBlockNum int64, auctionVars *common.AuctionVariables) (slots []SlotAPI) {
+func (a *API) newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []historydb.BidAPI, currentBlockNum int64, auctionVars *common.AuctionVariables) (slots []SlotAPI) {
 	for i := range bids {
 		slotNum := bids[i].SlotNum
-		slot := newSlotAPI(slotNum, currentBlockNum, &bids[i], auctionVars)
+		slot := a.newSlotAPI(slotNum, currentBlockNum, &bids[i], auctionVars)
 		if order == historydb.OrderAsc {
 			if slot.ItemID >= int(*fromItem) {
 				slots = append(slots, slot)
@@ -92,8 +92,8 @@ func newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []historydb.Bi
 	return slots
 }
 
-func addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64, auctionVars *common.AuctionVariables, fromItem *uint, order string) ([]SlotAPI, error) {
-	emptySlot := newSlotAPI(slotNum, currentBlockNum, nil, auctionVars)
+func (a *API) addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64, auctionVars *common.AuctionVariables, fromItem *uint, order string) ([]SlotAPI, error) {
+	emptySlot := a.newSlotAPI(slotNum, currentBlockNum, nil, auctionVars)
 	if order == historydb.OrderAsc {
 		if emptySlot.ItemID >= int(*fromItem) {
 			slots = append(slots, emptySlot)
@@ -106,25 +106,25 @@ func addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64, auction
 	return slots, nil
 }
 
-func getSlot(c *gin.Context) {
+func (a *API) getSlot(c *gin.Context) {
 	slotNumUint, err := parseParamUint("slotNum", nil, 0, maxUint32, c)
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
-	currentBlock, err := h.GetLastBlock()
+	currentBlock, err := a.h.GetLastBlock()
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
-	auctionVars, err := h.GetAuctionVars()
+	auctionVars, err := a.h.GetAuctionVars()
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
 
 	slotNum := int64(*slotNumUint)
-	bid, err := h.GetBestBidAPI(&slotNum)
+	bid, err := a.h.GetBestBidAPI(&slotNum)
 	if err != nil && err != sql.ErrNoRows {
 		retSQLErr(err, c)
 		return
@@ -132,9 +132,9 @@ func getSlot(c *gin.Context) {
 
 	var slot SlotAPI
 	if err == sql.ErrNoRows {
-		slot = newSlotAPI(slotNum, currentBlock.EthBlockNum, nil, auctionVars)
+		slot = a.newSlotAPI(slotNum, currentBlock.EthBlockNum, nil, auctionVars)
 	} else {
-		slot = newSlotAPI(bid.SlotNum, currentBlock.EthBlockNum, &bid, auctionVars)
+		slot = a.newSlotAPI(bid.SlotNum, currentBlock.EthBlockNum, &bid, auctionVars)
 	}
 
 	// JSON response
@@ -193,7 +193,7 @@ func getLimitsWithAddr(minSlotNum, maxSlotNum *int64, fromItem, limit *uint, ord
 	return minLim, maxLim
 }
 
-func getSlots(c *gin.Context) {
+func (a *API) getSlots(c *gin.Context) {
 	var slots []SlotAPI
 	minSlotNumDflt := int64(0)
 
@@ -211,12 +211,12 @@ func getSlots(c *gin.Context) {
 		return
 	}
 
-	currentBlock, err := h.GetLastBlock()
+	currentBlock, err := a.h.GetLastBlock()
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
-	auctionVars, err := h.GetAuctionVars()
+	auctionVars, err := a.h.GetAuctionVars()
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -231,13 +231,13 @@ func getSlots(c *gin.Context) {
 			retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
 			return
 		} else if *finishedAuction {
-			currentBlock, err := h.GetLastBlock()
+			currentBlock, err := a.h.GetLastBlock()
 			if err != nil {
 				retBadReq(err, c)
 				return
 			}
-			currentSlot := getCurrentSlot(currentBlock.EthBlockNum)
-			auctionVars, err := h.GetAuctionVars()
+			currentSlot := a.getCurrentSlot(currentBlock.EthBlockNum)
+			auctionVars, err := a.h.GetAuctionVars()
 			if err != nil {
 				retBadReq(err, c)
 				return
@@ -267,7 +267,7 @@ func getSlots(c *gin.Context) {
 	if wonByEthereumAddress == nil {
 		slotMinLim, slotMaxLim = getLimits(minSlotNum, maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
-		bids, _, err = h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, nil, order)
+		bids, _, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, nil, order)
 		if err != nil && err != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
@@ -275,7 +275,7 @@ func getSlots(c *gin.Context) {
 		totalItems = int(*maxSlotNum) - int(*minSlotNum) + 1
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
-		bids, pag, err = h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
+		bids, pag, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
 		if err != nil && err != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
@@ -290,7 +290,7 @@ func getSlots(c *gin.Context) {
 	// Build the slot information with previous bids
 	var slotsBids []SlotAPI
 	if len(bids) > 0 {
-		slotsBids = newSlotsAPIFromWinnerBids(fromItem, order, bids, currentBlock.EthBlockNum, auctionVars)
+		slotsBids = a.newSlotsAPIFromWinnerBids(fromItem, order, bids, currentBlock.EthBlockNum, auctionVars)
 		if err != nil {
 			retBadReq(err, c)
 			return
@@ -318,7 +318,7 @@ func getSlots(c *gin.Context) {
 				}
 			}
 			if !found {
-				slots, err = addEmptySlot(slots, i, currentBlock.EthBlockNum, auctionVars, fromItem, order)
+				slots, err = a.addEmptySlot(slots, i, currentBlock.EthBlockNum, auctionVars, fromItem, order)
 				if err != nil {
 					retBadReq(err, c)
 					return

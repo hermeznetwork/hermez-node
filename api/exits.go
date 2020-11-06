@@ -8,7 +8,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-func getExits(c *gin.Context) {
+func (a *API) getExits(c *gin.Context) {
 	// Get query parameters
 	// Account filters
 	tokenID, addr, bjj, idx, err := parseExitFilters(c)
@@ -36,7 +36,7 @@ func getExits(c *gin.Context) {
 	}
 
 	// Fetch exits from historyDB
-	exits, pagination, err := h.GetExitsAPI(
+	exits, pagination, err := a.h.GetExitsAPI(
 		addr, bjj, tokenID, idx, batchNum, onlyPendingWithdraws, fromItem, limit, order,
 	)
 	if err != nil {
@@ -55,7 +55,7 @@ func getExits(c *gin.Context) {
 	})
 }
 
-func getExit(c *gin.Context) {
+func (a *API) getExit(c *gin.Context) {
 	// Get batchNum and accountIndex
 	batchNum, err := parseParamUint("batchNum", nil, 0, maxUint32, c)
 	if err != nil {
@@ -68,7 +68,7 @@ func getExit(c *gin.Context) {
 		return
 	}
 	// Fetch tx from historyDB
-	exit, err := h.GetExitAPI(batchNum, idx)
+	exit, err := a.h.GetExitAPI(batchNum, idx)
 	if err != nil {
 		retSQLErr(err, c)
 		return

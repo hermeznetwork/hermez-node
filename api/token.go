@@ -10,7 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-func getToken(c *gin.Context) {
+func (a *API) getToken(c *gin.Context) {
 	// Get TokenID
 	tokenIDUint, err := parseParamUint("id", nil, 0, maxUint32, c)
 	if err != nil {
@@ -23,7 +23,7 @@ func getToken(c *gin.Context) {
 	}
 	tokenID := common.TokenID(*tokenIDUint)
 	// Fetch token from historyDB
-	token, err := h.GetToken(tokenID)
+	token, err := a.h.GetToken(tokenID)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -31,7 +31,7 @@ func getToken(c *gin.Context) {
 	c.JSON(http.StatusOK, token)
 }
 
-func getTokens(c *gin.Context) {
+func (a *API) getTokens(c *gin.Context) {
 	// Account filters
 	tokenIDs, symbols, name, err := parseTokenFilters(c)
 	if err != nil {
@@ -46,7 +46,7 @@ func getTokens(c *gin.Context) {
 		return
 	}
 	// Fetch exits from historyDB
-	tokens, pagination, err := h.GetTokens(
+	tokens, pagination, err := a.h.GetTokens(
 		tokenIDs, symbols, name, fromItem, limit, order,
 	)
 	if err != nil {
