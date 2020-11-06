@@ -2488,11 +2488,11 @@ components:
             withdrawalDelay:
               allOf:
                 - $ref: '#/components/schemas/EthBlockNum'
-                - description: The time that anyone needs to wait until a withdrawal of the funds is allowed, in Ethereum blocks.
+                - description: The time that anyone needs to wait until a withdrawal of the funds is allowed, in seconds.
                 - example: 539573849
             emergencyModeStartingTime:
               type: integer
-              description: Ethereum block in which the emergency mode will be activated.
+              description: Second (since unix epoch) in which the emergency mode has been activated.
               example: 10
             emergencyMode:
               type: boolean
@@ -2716,11 +2716,11 @@ components:
           properties:
             maxWithdrawalDelay:
               type: integer
-              description: Maximum time delay in which the tokens can be locked in the contract. Time is measured in Ethereum blocks.
+              description: Maximum time delay in which the tokens can be locked in the contract. Time is measured in seconds.
               example: 200
             maxEmergencyModeTime:
               type: integer
-              description: Maximum amount of time in which the contract can be in emergency mode. Time is measured in Ethereum blocks.
+              description: Maximum amount of time in which the contract can be in emergency mode. Time is measured in seconds.
               example: 2000
             hermezRollup:
               allOf:

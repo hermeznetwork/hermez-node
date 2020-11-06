@@ -13,15 +13,15 @@ import (
 
 // SlotAPI is a repesentation of a slot information
 type SlotAPI struct {
-	ItemID      int               `json:"itemId"`
+	ItemID      uint64            `json:"itemId"`
 	SlotNum     int64             `json:"slotNum"`
 	FirstBlock  int64             `json:"firstBlock"`
 	LastBlock   int64             `json:"lastBlock"`
 	OpenAuction bool              `json:"openAuction"`
 	WinnerBid   *historydb.BidAPI `json:"winnerBid"`
-	TotalItems  int               `json:"-"`
-	FirstItem   int               `json:"-"`
-	LastItem    int               `json:"-"`
+	TotalItems  uint64            `json:"-"`
+	FirstItem   uint64            `json:"-"`
+	LastItem    uint64            `json:"-"`
 }
 
 func getFirstLastBlock(slotNum int64) (int64, int64) {
@@ -49,14 +49,14 @@ func isOpenAuction(currentBlock, slotNum int64, auctionVars common.AuctionVariab
 	return false
 }
 
-func getPagination(totalItems int, minSlotNum, maxSlotNum *int64) *db.Pagination {
+func getPagination(totalItems uint64, minSlotNum, maxSlotNum *int64) *db.Pagination {
 	// itemID is slotNum
 	firstItem := *minSlotNum
 	lastItem := *maxSlotNum
 	pagination := &db.Pagination{
-		TotalItems: int(totalItems),
-		FirstItem:  int(firstItem),
-		LastItem:   int(lastItem),
+		TotalItems: totalItems,
+		FirstItem:  uint64(firstItem),
+		LastItem:   uint64(lastItem),
 	}
 	return pagination
 }
@@ -65,7 +65,7 @@ func newSlotAPI(slotNum, currentBlockNum int64, bid *historydb.BidAPI, auctionVa
 	firstBlock, lastBlock := getFirstLastBlock(slotNum)
 	openAuction := isOpenAuction(currentBlockNum, slotNum, *auctionVars)
 	slot := SlotAPI{
-		ItemID:      int(slotNum),
+		ItemID:      uint64(slotNum),
 		SlotNum:     slotNum,
 		FirstBlock:  firstBlock,
 		LastBlock:   lastBlock,
@@ -80,11 +80,11 @@ func newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []historydb.Bi
 		slotNum := bids[i].SlotNum
 		slot := newSlotAPI(slotNum, currentBlockNum, &bids[i], auctionVars)
 		if order == historydb.OrderAsc {
-			if slot.ItemID >= int(*fromItem) {
+			if slot.ItemID >= uint64(*fromItem) {
 				slots = append(slots, slot)
 			}
 		} else {
-			if slot.ItemID <= int(*fromItem) {
+			if slot.ItemID <= uint64(*fromItem) {
 				slots = append(slots, slot)
 			}
 		}
@@ -95,11 +95,11 @@ func newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []historydb.Bi
 func addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64, auctionVars *common.AuctionVariables, fromItem *uint, order string) ([]SlotAPI, error) {
 	emptySlot := newSlotAPI(slotNum, currentBlockNum, nil, auctionVars)
 	if order == historydb.OrderAsc {
-		if emptySlot.ItemID >= int(*fromItem) {
+		if emptySlot.ItemID >= uint64(*fromItem) {
 			slots = append(slots, emptySlot)
 		}
 	} else {
-		if emptySlot.ItemID <= int(*fromItem) {
+		if emptySlot.ItemID <= uint64(*fromItem) {
 			slots = append([]SlotAPI{emptySlot}, slots...)
 		}
 	}
@@ -263,7 +263,7 @@ func getSlots(c *gin.Context) {
 	var slotMinLim, slotMaxLim int64
 	var bids []historydb.BidAPI
 	var pag *db.Pagination
-	totalItems := 0
+	totalItems := uint64(0)
 	if wonByEthereumAddress == nil {
 		slotMinLim, slotMaxLim = getLimits(minSlotNum, maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
@@ -272,7 +272,7 @@ func getSlots(c *gin.Context) {
 			retSQLErr(err, c)
 			return
 		}
-		totalItems = int(*maxSlotNum) - int(*minSlotNum) + 1
+		totalItems = uint64(*maxSlotNum) - uint64(*minSlotNum) + 1
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
 		bids, pag, err = h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
@@ -281,7 +281,7 @@ func getSlots(c *gin.Context) {
 			return
 		}
 		if len(bids) > 0 {
-			totalItems = pag.TotalItems
+			totalItems = uint64(pag.TotalItems)
 			*maxSlotNum = int64(pag.LastItem)
 			*minSlotNum = int64(pag.FirstItem)
 		}
@@ -306,11 +306,11 @@ func getSlots(c *gin.Context) {
 				if slotsBids[j].SlotNum == i {
 					found = true
 					if order == historydb.OrderAsc {
-						if slotsBids[j].ItemID >= int(*fromItem) {
+						if slotsBids[j].ItemID >= uint64(*fromItem) {
 							slots = append(slots, slotsBids[j])
 						}
 					} else {
-						if slotsBids[j].ItemID <= int(*fromItem) {
+						if slotsBids[j].ItemID <= uint64(*fromItem) {
 							slots = append([]SlotAPI{slotsBids[j]}, slots...)
 						}
 					}

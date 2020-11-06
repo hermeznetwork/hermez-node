@@ -24,7 +24,7 @@ type testCVP struct {
 }
 
 type testExit struct {
-	ItemID                 int                    `json:"itemId"`
+	ItemID                 uint64                 `json:"itemId"`
 	BatchNum               common.BatchNum        `json:"batchNum"`
 	AccountIdx             string                 `json:"accountIndex"`
 	MerkleProof            testCVP                `json:"merkleProof"`

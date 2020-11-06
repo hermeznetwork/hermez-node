@@ -18,7 +18,7 @@ type TxAPI struct {
 	// Generic
 	IsL1        bool                 `meddler:"is_l1"`
 	TxID        common.TxID          `meddler:"id"`
-	ItemID      int                  `meddler:"item_id"`
+	ItemID      uint64               `meddler:"item_id"`
 	Type        common.TxType        `meddler:"type"`
 	Position    int                  `meddler:"position"`
 	FromIdx     *apitypes.HezIdx     `meddler:"from_idx"`
@@ -42,11 +42,11 @@ type TxAPI struct {
 	Nonce          *common.Nonce       `meddler:"nonce"`
 	// API extras
 	Timestamp        time.Time         `meddler:"timestamp,utctime"`
-	TotalItems       int               `meddler:"total_items"`
-	FirstItem        int               `meddler:"first_item"`
-	LastItem         int               `meddler:"last_item"`
+	TotalItems       uint64            `meddler:"total_items"`
+	FirstItem        uint64            `meddler:"first_item"`
+	LastItem         uint64            `meddler:"last_item"`
 	TokenID          common.TokenID    `meddler:"token_id"`
-	TokenItemID      int               `meddler:"token_item_id"`
+	TokenItemID      uint64            `meddler:"token_item_id"`
 	TokenEthBlockNum int64             `meddler:"token_block"`
 	TokenEthAddr     ethCommon.Address `meddler:"eth_addr"`
 	TokenName        string            `meddler:"name"`
@@ -137,7 +137,7 @@ type txWrite struct {
 
 // TokenWithUSD add USD info to common.Token
 type TokenWithUSD struct {
-	ItemID      int               `json:"itemId" meddler:"item_id"`
+	ItemID      uint64            `json:"itemId" meddler:"item_id"`
 	TokenID     common.TokenID    `json:"id" meddler:"token_id"`
 	EthBlockNum int64             `json:"ethereumBlockNum" meddler:"eth_block_num"` // Ethereum block number in which this token was registered
 	EthAddr     ethCommon.Address `json:"ethereumAddress" meddler:"eth_addr"`
@@ -146,15 +146,15 @@ type TokenWithUSD struct {
 	Decimals    uint64            `json:"decimals" meddler:"decimals"`
 	USD         *float64          `json:"USD" meddler:"usd"`
 	USDUpdate   *time.Time        `json:"fiatUpdate" meddler:"usd_update,utctime"`
-	TotalItems  int               `json:"-" meddler:"total_items"`
-	FirstItem   int               `json:"-" meddler:"first_item"`
-	LastItem    int               `json:"-" meddler:"last_item"`
+	TotalItems  uint64            `json:"-" meddler:"total_items"`
+	FirstItem   uint64            `json:"-" meddler:"first_item"`
+	LastItem    uint64            `json:"-" meddler:"last_item"`
 }
 
 // ExitAPI is a representation of a exit with additional information
 // required by the API, and extracted by joining token table
 type ExitAPI struct {
-	ItemID                 int                             `meddler:"item_id"`
+	ItemID                 uint64                          `meddler:"item_id"`
 	BatchNum               common.BatchNum                 `meddler:"batch_num"`
 	AccountIdx             apitypes.HezIdx                 `meddler:"account_idx"`
 	MerkleProof            *merkletree.CircomVerifierProof `meddler:"merkle_proof,json"`
@@ -162,11 +162,11 @@ type ExitAPI struct {
 	InstantWithdrawn       *int64                          `meddler:"instant_withdrawn"`
 	DelayedWithdrawRequest *int64                          `meddler:"delayed_withdraw_request"`
 	DelayedWithdrawn       *int64                          `meddler:"delayed_withdrawn"`
-	TotalItems             int                             `meddler:"total_items"`
-	FirstItem              int                             `meddler:"first_item"`
-	LastItem               int                             `meddler:"last_item"`
+	TotalItems             uint64                          `meddler:"total_items"`
+	FirstItem              uint64                          `meddler:"first_item"`
+	LastItem               uint64                          `meddler:"last_item"`
 	TokenID                common.TokenID                  `meddler:"token_id"`
-	TokenItemID            int                             `meddler:"token_item_id"`
+	TokenItemID            uint64                          `meddler:"token_item_id"`
 	TokenEthBlockNum       int64                           `meddler:"token_block"`
 	TokenEthAddr           ethCommon.Address               `meddler:"eth_addr"`
 	TokenName              string                          `meddler:"name"`
@@ -218,29 +218,29 @@ func (e ExitAPI) MarshalJSON() ([]byte, error) {
 // CoordinatorAPI is a representation of a coordinator with additional information
 // required by the API
 type CoordinatorAPI struct {
-	ItemID      int               `json:"itemId" meddler:"item_id"`
+	ItemID      uint64            `json:"itemId" meddler:"item_id"`
 	Bidder      ethCommon.Address `json:"bidderAddr" meddler:"bidder_addr"`
 	Forger      ethCommon.Address `json:"forgerAddr" meddler:"forger_addr"`
 	EthBlockNum int64             `json:"ethereumBlock" meddler:"eth_block_num"`
 	URL         string            `json:"URL" meddler:"url"`
-	TotalItems  int               `json:"-" meddler:"total_items"`
-	FirstItem   int               `json:"-" meddler:"first_item"`
-	LastItem    int               `json:"-" meddler:"last_item"`
+	TotalItems  uint64            `json:"-" meddler:"total_items"`
+	FirstItem   uint64            `json:"-" meddler:"first_item"`
+	LastItem    uint64            `json:"-" meddler:"last_item"`
 }
 
 // AccountAPI is a representation of a account with additional information
 // required by the API
 type AccountAPI struct {
-	ItemID           int                 `meddler:"item_id"`
+	ItemID           uint64              `meddler:"item_id"`
 	Idx              apitypes.HezIdx     `meddler:"idx"`
 	BatchNum         common.BatchNum     `meddler:"batch_num"`
 	PublicKey        apitypes.HezBJJ     `meddler:"bjj"`
 	EthAddr          apitypes.HezEthAddr `meddler:"eth_addr"`
 	Nonce            common.Nonce        `meddler:"-"` // max of 40 bits used
 	Balance          *apitypes.BigIntStr `meddler:"-"` // max of 192 bits used
-	TotalItems       int                 `meddler:"total_items"`
-	FirstItem        int                 `meddler:"first_item"`
-	LastItem         int                 `meddler:"last_item"`
+	TotalItems       uint64              `meddler:"total_items"`
+	FirstItem        uint64              `meddler:"first_item"`
+	LastItem         uint64              `meddler:"last_item"`
 	TokenID          common.TokenID      `meddler:"token_id"`
 	TokenItemID      int                 `meddler:"token_item_id"`
 	TokenEthBlockNum int64               `meddler:"token_block"`
@@ -280,7 +280,7 @@ func (account AccountAPI) MarshalJSON() ([]byte, error) {
 // BatchAPI is a representation of a batch with additional information
 // required by the API, and extracted by joining block table
 type BatchAPI struct {
-	ItemID        int                    `json:"itemId" meddler:"item_id"`
+	ItemID        uint64                 `json:"itemId" meddler:"item_id"`
 	BatchNum      common.BatchNum        `json:"batchNum" meddler:"batch_num"`
 	EthBlockNum   int64                  `json:"ethereumBlockNum" meddler:"eth_block_num"`
 	EthBlockHash  ethCommon.Hash         `json:"ethereumBlockHash" meddler:"hash"`
@@ -293,9 +293,9 @@ type BatchAPI struct {
 	ExitRoot      apitypes.BigIntStr     `json:"exitRoot" meddler:"exit_root"`
 	ForgeL1TxsNum *int64                 `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
 	SlotNum       int64                  `json:"slotNum" meddler:"slot_num"`
-	TotalItems    int                    `json:"-" meddler:"total_items"`
-	FirstItem     int                    `json:"-" meddler:"first_item"`
-	LastItem      int                    `json:"-" meddler:"last_item"`
+	TotalItems    uint64                 `json:"-" meddler:"total_items"`
+	FirstItem     uint64                 `json:"-" meddler:"first_item"`
+	LastItem      uint64                 `json:"-" meddler:"last_item"`
 }
 
 // Network define status of the network
@@ -319,7 +319,7 @@ type Metrics struct {
 // BidAPI is a representation of a bid with additional information
 // required by the API
 type BidAPI struct {
-	ItemID      int                `json:"itemId" meddler:"item_id"`
+	ItemID      uint64             `json:"itemId" meddler:"item_id"`
 	SlotNum     int64              `json:"slotNum" meddler:"slot_num"`
 	BidValue    apitypes.BigIntStr `json:"bidValue" meddler:"bid_value"`
 	EthBlockNum int64              `json:"ethereumBlockNum" meddler:"eth_block_num"`
@@ -327,7 +327,7 @@ type BidAPI struct {
 	Forger      ethCommon.Address  `json:"forgerAddr" meddler:"forger_addr"`
 	URL         string             `json:"URL" meddler:"url"`
 	Timestamp   time.Time          `json:"timestamp" meddler:"timestamp,utctime"`
-	TotalItems  int                `json:"-" meddler:"total_items"`
-	FirstItem   int                `json:"-" meddler:"first_item"`
-	LastItem    int                `json:"-" meddler:"last_item"`
+	TotalItems  uint64             `json:"-" meddler:"total_items"`
+	FirstItem   uint64             `json:"-" meddler:"first_item"`
+	LastItem    uint64             `json:"-" meddler:"last_item"`
 }

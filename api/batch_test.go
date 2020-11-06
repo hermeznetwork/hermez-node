@@ -15,7 +15,7 @@ import (
 )
 
 type testBatch struct {
-	ItemID        int                       `json:"itemId"`
+	ItemID        uint64                    `json:"itemId"`
 	BatchNum      common.BatchNum           `json:"batchNum"`
 	EthBlockNum   int64                     `json:"ethereumBlockNum"`
 	EthBlockHash  ethCommon.Hash            `json:"ethereumBlockHash"`

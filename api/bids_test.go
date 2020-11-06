@@ -14,7 +14,7 @@ import (
 )
 
 type testBid struct {
-	ItemID      int               `json:"itemId"`
+	ItemID      uint64            `json:"itemId"`
 	SlotNum     int64             `json:"slotNum"`
 	BidValue    string            `json:"bidValue"`
 	EthBlockNum int64             `json:"ethereumBlockNum"`

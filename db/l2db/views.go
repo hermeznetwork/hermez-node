@@ -62,9 +62,9 @@ type PoolTxAPI struct {
 	// Extra read fileds
 	BatchNum         *common.BatchNum  `meddler:"batch_num"`
 	Timestamp        time.Time         `meddler:"timestamp,utctime"`
-	TotalItems       int               `meddler:"total_items"`
+	TotalItems       uint64            `meddler:"total_items"`
 	TokenID          common.TokenID    `meddler:"token_id"`
-	TokenItemID      int               `meddler:"token_item_id"`
+	TokenItemID      uint64            `meddler:"token_item_id"`
 	TokenEthBlockNum int64             `meddler:"eth_block_num"`
 	TokenEthAddr     ethCommon.Address `meddler:"eth_addr"`
 	TokenName        string            `meddler:"name"`

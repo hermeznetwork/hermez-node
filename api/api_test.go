@@ -364,13 +364,13 @@ func doGoodReqPaginated(
 			if pag.LastReturnedItem == pag.LastItem { // No
 				break
 			} else { // Yes
-				next = pag.LastReturnedItem + 1
+				next = int(pag.LastReturnedItem + 1)
 			}
 		} else {
 			if pag.FirstReturnedItem == pag.FirstItem { // No
 				break
 			} else { // Yes
-				next = pag.FirstReturnedItem - 1
+				next = int(pag.FirstReturnedItem - 1)
 			}
 		}
 	}
