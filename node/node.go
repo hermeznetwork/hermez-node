@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -16,6 +17,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
+	"github.com/hermeznetwork/hermez-node/test/debugapi"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/jmoiron/sqlx"
 )
@@ -37,6 +39,7 @@ const (
 
 // Node is the Hermez Node
 type Node struct {
+	debugAPI *debugapi.DebugAPI
 	// Coordinator
 	coord                    *coordinator.Coordinator
 	coordCfg                 *config.Coordinator
@@ -48,14 +51,14 @@ type Node struct {
 	stoppedForgeCallConfirm  chan bool
 
 	// Synchronizer
-	sync        *synchronizer.Synchronizer
-	stoppedSync chan bool
+	sync *synchronizer.Synchronizer
 
 	// General
 	cfg     *config.Node
 	mode    Mode
 	sqlConn *sqlx.DB
 	ctx     context.Context
+	wg      sync.WaitGroup
 	cancel  context.CancelFunc
 }
 
@@ -155,8 +158,14 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			client,
 		)
 	}
+	var debugAPI *debugapi.DebugAPI
+	println("apiaddr", cfg.Debug.APIAddress)
+	if cfg.Debug.APIAddress != "" {
+		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{
+		debugAPI: debugAPI,
 		coord:    coord,
 		coordCfg: coordCfg,
 		sync:     sync,
@@ -171,6 +180,9 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 // StartCoordinator starts the coordinator
 func (n *Node) StartCoordinator() {
 	log.Info("Starting Coordinator...")
+
+	// TODO: Replace stopXXX by context
+	// TODO: Replace stoppedXXX by waitgroup
 
 	n.stopForge = make(chan bool)
 	n.stopGetProofCallForge = make(chan bool)
@@ -249,18 +261,18 @@ func (n *Node) StopCoordinator() {
 // StartSynchronizer starts the synchronizer
 func (n *Node) StartSynchronizer() {
 	log.Info("Starting Synchronizer...")
-	// stopped channel is size 1 so that the defer doesn't block
-	n.stoppedSync = make(chan bool, 1)
+	n.wg.Add(1)
 	go func() {
 		defer func() {
-			n.stoppedSync <- true
+			log.Info("Synchronizer routine stopped")
+			n.wg.Done()
 		}()
 		var lastBlock *common.Block
 		d := time.Duration(0)
 		for {
 			select {
 			case <-n.ctx.Done():
-				log.Info("Synchronizer stopped")
+				log.Info("Synchronizer done")
 				return
 			case <-time.After(d):
 				if blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock); err != nil {
@@ -283,15 +295,27 @@ func (n *Node) StartSynchronizer() {
 	// TODO: Run price updater.  This is required by the API and the TxSelector
 }
 
-// WaitStopSynchronizer waits for the synchronizer to stop
-func (n *Node) WaitStopSynchronizer() {
-	log.Info("Waiting for Synchronizer to stop...")
-	<-n.stoppedSync
+// StartDebugAPI starts the DebugAPI
+func (n *Node) StartDebugAPI() {
+	log.Info("Starting DebugAPI...")
+	n.wg.Add(1)
+	go func() {
+		defer func() {
+			log.Info("DebugAPI routine stopped")
+			n.wg.Done()
+		}()
+		if err := n.debugAPI.Run(n.ctx); err != nil {
+			log.Fatalw("DebugAPI.Run", "err", err)
+		}
+	}()
 }
 
 // Start the node
 func (n *Node) Start() {
 	log.Infow("Starting node...", "mode", n.mode)
+	if n.debugAPI != nil {
+		n.StartDebugAPI()
+	}
 	if n.mode == ModeCoordinator {
 		n.StartCoordinator()
 	}
@@ -305,5 +329,5 @@ func (n *Node) Stop() {
 	if n.mode == ModeCoordinator {
 		n.StopCoordinator()
 	}
-	n.WaitStopSynchronizer()
+	n.wg.Wait()
 }

@@ -1,3 +1,6 @@
+[Debug]
+APIAddress = "localhost:12345"
+
 [StateDB]
 Path = "/tmp/iden3-test/hermez/statedb"
 

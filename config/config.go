@@ -84,6 +84,9 @@ type Node struct {
 		ReceiptTimeout      Duration `validate:"required"`
 		IntervalReceiptLoop Duration `validate:"required"`
 	} `validate:"required"`
+	Debug struct {
+		APIAddress string
+	}
 }
 
 // Load loads a generic config.
