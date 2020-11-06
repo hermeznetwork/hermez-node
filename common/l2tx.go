@@ -107,7 +107,7 @@ func L2TxsToPoolL2Txs(txs []L2Tx) []PoolL2Tx {
 func (tx *L2Tx) Bytes(nLevels int) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 
-	b := make([]byte, ((nLevels*2)+16+8)/8)
+	b := make([]byte, ((nLevels*2)+16+8)/8) //nolint:gomnd
 
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {

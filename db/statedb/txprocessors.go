@@ -64,6 +64,8 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	}
 	defer s.resetZKInputs()
 
+	s.accumulatedFees = make(map[common.Idx]*big.Int)
+
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
 	if nTx == 0 {
 		// TODO return ZKInputs of batch without txs
@@ -77,22 +79,8 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	}
 	exits := make([]processedExit, nTx)
 
-	// get TokenIDs of coordIdxs
-	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
-	if err != nil {
-		return nil, err
-	}
-
-	var collectedFees map[common.TokenID]*big.Int
-	if s.typ == TypeSynchronizer {
-		collectedFees = make(map[common.TokenID]*big.Int)
-		for tokenID := range coordIdxsMap {
-			collectedFees[tokenID] = big.NewInt(0)
-		}
-	}
-
 	if s.typ == TypeBatchBuilder {
-		maxFeeTx := 2 // TODO this value will be a parameter
+		maxFeeTx := 64 // TODO this value will be a parameter
 		s.zki = common.NewZKInputs(nTx, maxFeeTx, s.mt.MaxLevels())
 		s.zki.OldLastIdx = (s.idx - 1).BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
@@ -120,8 +108,9 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}
 	}
 
-	// assumption: l1usertx are sorted by L1Tx.Position
+	// Process L1UserTxs
 	for i := 0; i < len(l1usertxs); i++ {
+		// assumption: l1usertx are sorted by L1Tx.Position
 		exitIdx, exitAccount, newExit, createdAccount, err := s.processL1Tx(exitTree, &l1usertxs[i])
 		if err != nil {
 			return nil, err
@@ -140,7 +129,17 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		if s.typ == TypeSynchronizer && createdAccount != nil {
 			createdAccounts = append(createdAccounts, *createdAccount)
 		}
+
+		if s.zki != nil {
+			l1TxData, err := l1usertxs[i].BytesGeneric()
+			if err != nil {
+				return nil, err
+			}
+			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
+		}
 	}
+
+	// Process L1CoordinatorTxs
 	for i := 0; i < len(l1coordinatortxs); i++ {
 		exitIdx, _, _, createdAccount, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
@@ -152,7 +151,36 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		if s.typ == TypeSynchronizer && createdAccount != nil {
 			createdAccounts = append(createdAccounts, *createdAccount)
 		}
+		if s.zki != nil {
+			l1TxData, err := l1coordinatortxs[i].BytesGeneric()
+			if err != nil {
+				return nil, err
+			}
+			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
+		}
 	}
+
+	s.accumulatedFees = make(map[common.Idx]*big.Int)
+	for _, idx := range coordIdxs {
+		s.accumulatedFees[idx] = big.NewInt(0)
+	}
+
+	// once L1UserTxs & L1CoordinatorTxs are processed, get TokenIDs of
+	// coordIdxs. In this way, if a coordIdx uses an Idx that is being
+	// created in the current batch, at this point the Idx will be created
+	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
+	if err != nil {
+		return nil, err
+	}
+	var collectedFees map[common.TokenID]*big.Int
+	if s.typ == TypeSynchronizer {
+		collectedFees = make(map[common.TokenID]*big.Int)
+		for tokenID := range coordIdxsMap {
+			collectedFees[tokenID] = big.NewInt(0)
+		}
+	}
+
+	// Process L2Txs
 	for i := 0; i < len(l2txs); i++ {
 		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, collectedFees, exitTree, &l2txs[i])
 		if err != nil {
@@ -171,6 +199,39 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		}
 	}
 
+	// distribute the AccumulatedFees from the processed L2Txs into the
+	// Coordinator Idxs
+	iFee := 0
+	for idx, accumulatedFee := range s.accumulatedFees {
+		// send the fee to the Idx of the Coordinator for the TokenID
+		accCoord, err := s.GetAccount(idx)
+		if err != nil {
+			log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
+			return nil, err
+		}
+		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
+		pFee, err := s.UpdateAccount(idx, accCoord)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		if s.zki != nil {
+			s.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
+			s.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
+			if babyjub.PointCoordSign(accCoord.PublicKey.X) {
+				s.zki.Sign3[iFee] = big.NewInt(1)
+			}
+			s.zki.Ay3[iFee] = accCoord.PublicKey.Y
+			s.zki.Balance3[iFee] = accCoord.Balance
+			s.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
+			s.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
+
+			// add Coord Idx to ZKInputs.FeeTxsData
+			s.zki.FeeIdxs[iFee] = idx.BigInt()
+		}
+		iFee++
+	}
+
 	if s.typ == TypeTxSelector {
 		return nil, nil
 	}
@@ -178,7 +239,6 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	// once all txs processed (exitTree root frozen), for each Exit,
 	// generate common.ExitInfo data
 	var exitInfos []common.ExitInfo
-	// exitInfos := []common.ExitInfo{}
 	for i := 0; i < nTx; i++ {
 		if !exits[i].exit {
 			continue
@@ -244,9 +304,6 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	s.zki.FeePlanTokens = tokenIDs
 
 	// s.zki.ISInitStateRootFee = s.mt.Root().BigInt()
-
-	// TODO once the Node Config sets the Accounts where to send the Fees
-	// compute fees & update ZKInputs
 
 	// return ZKInputs as the BatchBuilder will return it to forge the Batch
 	return &ProcessTxOutput{
@@ -606,10 +663,10 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		return err
 	}
 
-	// increment nonce
-	accSender.Nonce++
-
 	if !tx.IsL1 {
+		// increment nonce
+		accSender.Nonce++
+
 		// compute fee and subtract it from the accSender
 		fee, err := common.CalcFeeAmount(tx.Amount, *tx.Fee)
 		if err != nil {
@@ -618,19 +675,16 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
 
-		// send the fee to the Idx of the Coordinator for the TokenID
 		accCoord, err := s.GetAccount(coordIdxsMap[accSender.TokenID])
 		if err != nil {
 			log.Debugw("No coord Idx to receive fee", "tx", tx)
 		} else {
-			accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
-			_, err = s.UpdateAccount(coordIdxsMap[accSender.TokenID], accCoord)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
+			// accumulate the fee for the Coord account
+			accumulated := s.accumulatedFees[accCoord.Idx]
+			accumulated.Add(accumulated, fee)
+
 			if s.typ == TypeSynchronizer {
-				collected := collectedFees[accSender.TokenID]
+				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}
 		}
@@ -753,6 +807,9 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 	}
 
 	if !tx.IsL1 {
+		// increment nonce
+		acc.Nonce++
+
 		// compute fee and subtract it from the accSender
 		fee, err := common.CalcFeeAmount(tx.Amount, *tx.Fee)
 		if err != nil {
@@ -761,19 +818,16 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
 
-		// send the fee to the Idx of the Coordinator for the TokenID
 		accCoord, err := s.GetAccount(coordIdxsMap[acc.TokenID])
 		if err != nil {
 			log.Debugw("No coord Idx to receive fee", "tx", tx)
 		} else {
-			accCoord.Balance = new(big.Int).Add(accCoord.Balance, fee)
-			_, err = s.UpdateAccount(coordIdxsMap[acc.TokenID], accCoord)
-			if err != nil {
-				log.Error(err)
-				return nil, false, err
-			}
+			// accumulate the fee for the Coord account
+			accumulated := s.accumulatedFees[accCoord.Idx]
+			accumulated.Add(accumulated, fee)
+
 			if s.typ == TypeSynchronizer {
-				collected := collectedFees[acc.TokenID]
+				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}
 		}
