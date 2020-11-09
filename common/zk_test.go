@@ -8,7 +8,7 @@ import (
 )
 
 func TestZKInputs(t *testing.T) {
-	zki := NewZKInputs(100, 24, 32)
+	zki := NewZKInputs(100, 16, 512, 24, 32)
 	_, err := json.Marshal(zki)
 	require.Nil(t, err)
 	// fmt.Println(string(s))

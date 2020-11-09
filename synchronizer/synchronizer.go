@@ -616,7 +616,14 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData) // NOTE: This is a big ugly, find a better way
 
 		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
-		processTxsOut, err := s.stateDB.ProcessTxs(forgeBatchArgs.FeeIdxCoordinator, l1UserTxs,
+		//nolint:gomnd
+		ptc := statedb.ProcessTxsConfig{ // TODO TMP
+			NLevels:  32,
+			MaxFeeTx: 64,
+			MaxTx:    512,
+			MaxL1Tx:  64,
+		}
+		processTxsOut, err := s.stateDB.ProcessTxs(ptc, forgeBatchArgs.FeeIdxCoordinator, l1UserTxs,
 			batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, err

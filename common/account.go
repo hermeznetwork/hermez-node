@@ -125,11 +125,13 @@ type Account struct {
 
 func (a *Account) String() string {
 	buf := bytes.NewBufferString("")
+	fmt.Fprintf(buf, "Idx: %v, ", a.Idx)
 	fmt.Fprintf(buf, "PublicKey: %s..., ", a.PublicKey.String()[:10])
 	fmt.Fprintf(buf, "EthAddr: %s..., ", a.EthAddr.String()[:10])
 	fmt.Fprintf(buf, "TokenID: %v, ", a.TokenID)
 	fmt.Fprintf(buf, "Nonce: %d, ", a.Nonce)
 	fmt.Fprintf(buf, "Balance: %s, ", a.Balance.String())
+	fmt.Fprintf(buf, "BatchNum: %v, ", a.BatchNum)
 	return buf.String()
 }
 

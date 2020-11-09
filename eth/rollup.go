@@ -245,7 +245,7 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (tx *types.T
 			var l2DataBytes []byte
 			for i := 0; i < len(args.L2TxsData); i++ {
 				l2 := args.L2TxsData[i]
-				bytesl2, err := l2.Bytes(int(nLevels))
+				bytesl2, err := l2.Bytes(uint32(nLevels))
 				if err != nil {
 					return nil, err
 				}

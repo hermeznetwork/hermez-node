@@ -211,11 +211,18 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 	}
 
 	// get most profitable L2-tx
-	maxL2Txs := txsel.MaxTxs - uint64(len(l1CoordinatorTxs)) // - len(l1UserTxs)
+	maxL2Txs := txsel.MaxTxs - uint64(len(l1CoordinatorTxs)) // - len(l1UserTxs) // TODO if there are L1UserTxs take them in to account
 	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
 
+	//nolint:gomnd
+	ptc := statedb.ProcessTxsConfig{ // TODO TMP
+		NLevels:  32,
+		MaxFeeTx: 64,
+		MaxTx:    512,
+		MaxL1Tx:  64,
+	}
 	// process the txs in the local AccountsDB
-	_, err = txsel.localAccountsDB.ProcessTxs(coordIdxs, l1Txs, l1CoordinatorTxs, l2Txs)
+	_, err = txsel.localAccountsDB.ProcessTxs(ptc, coordIdxs, l1Txs, l1CoordinatorTxs, l2Txs)
 	if err != nil {
 		return nil, nil, nil, err
 	}

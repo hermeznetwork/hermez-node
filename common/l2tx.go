@@ -104,7 +104,7 @@ func L2TxsToPoolL2Txs(txs []L2Tx) []PoolL2Tx {
 }
 
 // Bytes encodes a L2Tx into []byte
-func (tx *L2Tx) Bytes(nLevels int) ([]byte, error) {
+func (tx L2Tx) Bytes(nLevels uint32) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 
 	b := make([]byte, ((nLevels*2)+16+8)/8) //nolint:gomnd
