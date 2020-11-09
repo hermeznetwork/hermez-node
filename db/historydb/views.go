@@ -298,14 +298,6 @@ type BatchAPI struct {
 	LastItem      uint64                 `json:"-" meddler:"last_item"`
 }
 
-// Network define status of the network
-type Network struct {
-	LastBlock   int64            `json:"lastBlock"`
-	LastBatch   BatchAPI         `json:"lastBatch"`
-	CurrentSlot int64            `json:"currentSlot"`
-	NextForgers []CoordinatorAPI `json:"nextForgers"`
-}
-
 // Metrics define metrics of the network
 type Metrics struct {
 	TransactionsPerBatch  float64 `json:"transactionsPerBatch"`

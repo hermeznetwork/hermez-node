@@ -52,6 +52,8 @@ type testCommon struct {
 	bids             []testBid
 	slots            []testSlot
 	auctionVars      common.AuctionVariables
+	rollupVars       common.RollupVariables
+	wdelayerVars     common.WDelayerVariables
 }
 
 var tc testCommon
@@ -280,6 +282,15 @@ func TestMain(m *testing.M) {
 		ClosedAuctionSlots: uint16(2),
 		OpenAuctionSlots:   uint16(5),
 	}
+
+	rollupVars := common.RollupVariables{
+		WithdrawalDelay: uint64(3000),
+	}
+
+	wdelayerVars := common.WDelayerVariables{
+		WithdrawalDelay: uint64(3000),
+	}
+
 	err = api.h.AddAuctionVars(&auctionVars)
 	if err != nil {
 		panic(err)
@@ -313,6 +324,8 @@ func TestMain(m *testing.M) {
 		bids:             testBids,
 		slots:            api.genTestSlots(nSlots, lastBlockNum, testBids, auctionVars),
 		auctionVars:      auctionVars,
+		rollupVars:       rollupVars,
+		wdelayerVars:     wdelayerVars,
 	}
 
 	// Fake server
