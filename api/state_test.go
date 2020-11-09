@@ -77,3 +77,22 @@ func TestUpdateNetworkInfo(t *testing.T) {
 	assert.Equal(t, currentSlotNum, api.status.Network.CurrentSlot)
 	assert.Equal(t, int(api.status.Auction.ClosedAuctionSlots)+1, len(api.status.Network.NextForgers))
 }
+
+func TestUpdateMetrics(t *testing.T) {
+	// TODO: Improve checks when til is integrated
+	// Update Metrics needs api.status.Network.LastBatch.BatchNum to be updated
+	lastBlock := tc.blocks[3]
+	lastBatchNum := common.BatchNum(3)
+	currentSlotNum := int64(1)
+	err := api.UpdateNetworkInfo(lastBlock, lastBatchNum, currentSlotNum)
+	assert.NoError(t, err)
+
+	err = api.UpdateMetrics()
+	assert.NoError(t, err)
+	assert.Greater(t, api.status.Metrics.TransactionsPerBatch, float64(0))
+	assert.Greater(t, api.status.Metrics.BatchFrequency, float64(0))
+	assert.Greater(t, api.status.Metrics.TransactionsPerBatch, float64(0))
+	assert.Greater(t, api.status.Metrics.TotalAccounts, int64(0))
+	assert.Greater(t, api.status.Metrics.TotalBJJs, int64(0))
+	assert.Greater(t, api.status.Metrics.AvgTransactionFee, float64(0))
+}

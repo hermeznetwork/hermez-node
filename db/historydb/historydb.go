@@ -1463,7 +1463,37 @@ func (hdb *HistoryDB) GetAccountsAPI(
 }
 
 // GetMetrics returns metrics
-func (hdb *HistoryDB) GetMetrics() (Metrics, error) {
-	metrics := Metrics{}
+func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error) {
+	metricsTotals := &MetricsTotals{}
+	metrics := &Metrics{}
+	err := meddler.QueryRow(
+		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs, MIN(tx.batch_num) as batch_num 
+		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
+		WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS';`)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics.TransactionsPerSecond = float64(metricsTotals.TotalTransactions / (24 * 60 * 60))
+	metrics.TransactionsPerBatch = float64(int64(metricsTotals.TotalTransactions) / int64(lastBatchNum-metricsTotals.FirstBatchNum))
+
+	err = meddler.QueryRow(
+		hdb.db, metricsTotals, `SELECT COUNT(*) AS total_batches, 
+		SUM(total_fees_usd) AS total_fees FROM batch 
+		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics.BatchFrequency = float64((24 * 60 * 60) / metricsTotals.TotalBatches)
+	metrics.AvgTransactionFee = metricsTotals.TotalFeesUSD / float64(metricsTotals.TotalTransactions)
+
+	err = meddler.QueryRow(
+		hdb.db, metrics,
+		`SELECT COUNT(*) AS total_bjjs, COUNT(DISTINCT(bjj)) AS total_accounts FROM account;`)
+	if err != nil {
+		return nil, err
+	}
+
 	return metrics, nil
 }

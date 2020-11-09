@@ -130,11 +130,11 @@ func (a *API) GetNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 
 // UpdateMetrics update Status.Metrics information
 func (a *API) UpdateMetrics() error {
-	metrics, err := a.h.GetMetrics()
+	metrics, err := a.h.GetMetrics(a.status.Network.LastBatch.BatchNum)
 	if err != nil {
 		return err
 	}
-	a.status.Metrics = metrics
+	a.status.Metrics = *metrics
 	return nil
 }
 
