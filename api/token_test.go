@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -13,19 +12,14 @@ import (
 )
 
 type testTokensResponse struct {
-	Tokens     []historydb.TokenWithUSD `json:"tokens"`
-	Pagination *db.Pagination           `json:"pagination"`
+	Tokens       []historydb.TokenWithUSD `json:"tokens"`
+	PendingItems uint64                   `json:"pendingItems"`
 }
 
-func (t *testTokensResponse) GetPagination() *db.Pagination {
-	if t.Tokens[0].ItemID < t.Tokens[len(t.Tokens)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Tokens[0].ItemID
-		t.Pagination.LastReturnedItem = t.Tokens[len(t.Tokens)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Tokens[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Tokens[len(t.Tokens)-1].ItemID
-	}
-	return t.Pagination
+func (t testTokensResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Tokens[len(t.Tokens)-1].ItemID
+	return pendingItems, lastItemID
 }
 
 func (t *testTokensResponse) Len() int {

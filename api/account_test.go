@@ -7,7 +7,6 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -25,9 +24,17 @@ type testAccount struct {
 }
 
 type testAccountsResponse struct {
-	Accounts   []testAccount  `json:"accounts"`
-	Pagination *db.Pagination `json:"pagination"`
+	Accounts     []testAccount `json:"accounts"`
+	PendingItems uint64        `json:"pendingItems"`
 }
+
+func (t testAccountsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Accounts[len(t.Accounts)-1].ItemID
+	return pendingItems, lastItemID
+}
+
+func (t *testAccountsResponse) Len() int { return len(t.Accounts) }
 
 func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD) []testAccount {
 	tAccounts := []testAccount{}
@@ -46,19 +53,6 @@ func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD)
 	}
 	return tAccounts
 }
-
-func (t *testAccountsResponse) GetPagination() *db.Pagination {
-	if t.Accounts[0].ItemID < t.Accounts[len(t.Accounts)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Accounts[0].ItemID
-		t.Pagination.LastReturnedItem = t.Accounts[len(t.Accounts)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Accounts[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Accounts[len(t.Accounts)-1].ItemID
-	}
-	return t.Pagination
-}
-
-func (t *testAccountsResponse) Len() int { return len(t.Accounts) }
 
 func TestGetAccounts(t *testing.T) {
 	endpoint := apiURL + "accounts"

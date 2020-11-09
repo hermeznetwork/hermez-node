@@ -6,14 +6,13 @@ import (
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 )
 
 type testSlot struct {
-	ItemID      int      `json:"itemId"`
+	ItemID      uint64   `json:"itemId"`
 	SlotNum     int64    `json:"slotNum"`
 	FirstBlock  int64    `json:"firstBlock"`
 	LastBlock   int64    `json:"lastBlock"`
@@ -22,19 +21,14 @@ type testSlot struct {
 }
 
 type testSlotsResponse struct {
-	Slots      []testSlot     `json:"slots"`
-	Pagination *db.Pagination `json:"pagination"`
+	Slots        []testSlot `json:"slots"`
+	PendingItems uint64     `json:"pendingItems"`
 }
 
-func (t testSlotsResponse) GetPagination() *db.Pagination {
-	if t.Slots[0].ItemID < t.Slots[len(t.Slots)-1].ItemID {
-		t.Pagination.FirstReturnedItem = uint64(t.Slots[0].ItemID)
-		t.Pagination.LastReturnedItem = uint64(t.Slots[len(t.Slots)-1].ItemID)
-	} else {
-		t.Pagination.LastReturnedItem = uint64(t.Slots[0].ItemID)
-		t.Pagination.FirstReturnedItem = uint64(t.Slots[len(t.Slots)-1].ItemID)
-	}
-	return t.Pagination
+func (t testSlotsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Slots[len(t.Slots)-1].ItemID
+	return pendingItems, lastItemID
 }
 
 func (t testSlotsResponse) Len() int {

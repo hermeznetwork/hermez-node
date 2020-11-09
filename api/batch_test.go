@@ -8,7 +8,6 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -30,19 +29,14 @@ type testBatch struct {
 	SlotNum       int64                     `json:"slotNum"`
 }
 type testBatchesResponse struct {
-	Batches    []testBatch    `json:"batches"`
-	Pagination *db.Pagination `json:"pagination"`
+	Batches      []testBatch `json:"batches"`
+	PendingItems uint64      `json:"pendingItems"`
 }
 
-func (t testBatchesResponse) GetPagination() *db.Pagination {
-	if t.Batches[0].ItemID < t.Batches[len(t.Batches)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Batches[0].ItemID
-		t.Pagination.LastReturnedItem = t.Batches[len(t.Batches)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Batches[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Batches[len(t.Batches)-1].ItemID
-	}
-	return t.Pagination
+func (t testBatchesResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Batches[len(t.Batches)-1].ItemID
+	return pendingItems, lastItemID
 }
 
 func (t testBatchesResponse) Len() int {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -12,18 +11,13 @@ import (
 
 type testCoordinatorsResponse struct {
 	Coordinators []historydb.CoordinatorAPI `json:"coordinators"`
-	Pagination   *db.Pagination             `json:"pagination"`
+	PendingItems uint64                     `json:"pendingItems"`
 }
 
-func (t *testCoordinatorsResponse) GetPagination() *db.Pagination {
-	if t.Coordinators[0].ItemID < t.Coordinators[len(t.Coordinators)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Coordinators[0].ItemID
-		t.Pagination.LastReturnedItem = t.Coordinators[len(t.Coordinators)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Coordinators[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Coordinators[len(t.Coordinators)-1].ItemID
-	}
-	return t.Pagination
+func (t testCoordinatorsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Coordinators[len(t.Coordinators)-1].ItemID
+	return pendingItems, lastItemID
 }
 
 func (t *testCoordinatorsResponse) Len() int { return len(t.Coordinators) }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/mitchellh/copystructure"
@@ -53,19 +52,14 @@ type testTx struct {
 }
 
 type testTxsResponse struct {
-	Txs        []testTx       `json:"transactions"`
-	Pagination *db.Pagination `json:"pagination"`
+	Txs          []testTx `json:"transactions"`
+	PendingItems uint64   `json:"pendingItems"`
 }
 
-func (t testTxsResponse) GetPagination() *db.Pagination {
-	if t.Txs[0].ItemID < t.Txs[len(t.Txs)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Txs[0].ItemID
-		t.Pagination.LastReturnedItem = t.Txs[len(t.Txs)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Txs[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Txs[len(t.Txs)-1].ItemID
-	}
-	return t.Pagination
+func (t testTxsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Txs[len(t.Txs)-1].ItemID
+	return pendingItems, lastItemID
 }
 
 func (t testTxsResponse) Len() int {

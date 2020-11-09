@@ -28,6 +28,13 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+// Pendinger is an interface that allows getting last returned item ID and PendingItems to be used for building fromItem
+// when testing paginated endpoints.
+type Pendinger interface {
+	GetPending() (pendingItems, lastItemID uint64)
+	Len() int
+}
+
 const apiPort = ":4010"
 const apiURL = "http://localhost" + apiPort + "/"
 
@@ -339,41 +346,52 @@ func TestMain(m *testing.M) {
 
 func doGoodReqPaginated(
 	path, order string,
-	iterStruct db.Paginationer,
+	iterStruct Pendinger,
 	appendIter func(res interface{}),
 ) error {
-	next := -1
+	var next uint64
+	firstIte := true
+	expectedTotal := 0
+	totalReceived := 0
 	for {
-		// Call API to get this iteration items
+		// Calculate fromItem
 		iterPath := path
-		if next == -1 && order == historydb.OrderDesc {
-			// Fetch first item in reverse order
-			iterPath += "99999"
-		} else {
-			// Fetch from next item or 0 if it's ascending order
-			if next == -1 {
-				next = 0
+		if firstIte {
+			if order == historydb.OrderDesc {
+				// Fetch first item in reverse order
+				iterPath += "99999" // Asumption that for testing there won't be any itemID > 99999
+			} else {
+				iterPath += "0"
 			}
-			iterPath += strconv.Itoa(next)
+		} else {
+			iterPath += strconv.Itoa(int(next))
 		}
+		// Call API to get this iteration items
 		if err := doGoodReq("GET", iterPath+"&order="+order, nil, iterStruct); err != nil {
 			return err
 		}
 		appendIter(iterStruct)
 		// Keep iterating?
-		pag := iterStruct.GetPagination()
-		if order == historydb.OrderAsc {
-			if pag.LastReturnedItem == pag.LastItem { // No
-				break
-			} else { // Yes
-				next = int(pag.LastReturnedItem + 1)
-			}
+		remaining, lastID := iterStruct.GetPending()
+		if remaining == 0 {
+			break
+		}
+		if order == historydb.OrderDesc {
+			next = lastID - 1
 		} else {
-			if pag.FirstReturnedItem == pag.FirstItem { // No
-				break
-			} else { // Yes
-				next = int(pag.FirstReturnedItem - 1)
-			}
+			next = lastID + 1
+		}
+		// Check that the expected amount of items is consistent across iterations
+		totalReceived += iterStruct.Len()
+		if firstIte {
+			firstIte = false
+			expectedTotal = totalReceived + int(remaining)
+		}
+		if expectedTotal != totalReceived+int(remaining) {
+			panic(fmt.Sprintf(
+				"pagination error, totalReceived + remaining should be %d, but is %d",
+				expectedTotal, totalReceived+int(remaining),
+			))
 		}
 	}
 	return nil

@@ -7,7 +7,6 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -25,19 +24,14 @@ type testBid struct {
 }
 
 type testBidsResponse struct {
-	Bids       []testBid      `json:"bids"`
-	Pagination *db.Pagination `json:"pagination"`
+	Bids         []testBid `json:"bids"`
+	PendingItems uint64    `json:"pendingItems"`
 }
 
-func (t testBidsResponse) GetPagination() *db.Pagination {
-	if t.Bids[0].ItemID < t.Bids[len(t.Bids)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Bids[0].ItemID
-		t.Pagination.LastReturnedItem = t.Bids[len(t.Bids)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Bids[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Bids[len(t.Bids)-1].ItemID
-	}
-	return t.Pagination
+func (t testBidsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Bids[len(t.Bids)-1].ItemID
+	return pendingItems, lastItemID
 }
 
 func (t testBidsResponse) Len() int {

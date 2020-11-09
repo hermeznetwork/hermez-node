@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -47,18 +46,6 @@ func (a *API) isOpenAuction(currentBlock, slotNum int64, auctionVars common.Auct
 		return true
 	}
 	return false
-}
-
-func getPagination(totalItems uint64, minSlotNum, maxSlotNum *int64) *db.Pagination {
-	// itemID is slotNum
-	firstItem := *minSlotNum
-	lastItem := *maxSlotNum
-	pagination := &db.Pagination{
-		TotalItems: totalItems,
-		FirstItem:  uint64(firstItem),
-		LastItem:   uint64(lastItem),
-	}
-	return pagination
 }
 
 func (a *API) newSlotAPI(slotNum, currentBlockNum int64, bid *historydb.BidAPI, auctionVars *common.AuctionVariables) SlotAPI {
@@ -141,34 +128,35 @@ func (a *API) getSlot(c *gin.Context) {
 	c.JSON(http.StatusOK, slot)
 }
 
-func getLimits(minSlotNum, maxSlotNum *int64, fromItem, limit *uint, order string) (int64, int64) {
-	var minLim, maxLim int64
-	if fromItem != nil {
-		if order == historydb.OrderAsc {
-			if int64(*fromItem) > *minSlotNum {
-				minLim = int64(*fromItem)
-			} else {
-				minLim = *minSlotNum
-			}
-			if (minLim + int64(*limit-1)) < *maxSlotNum {
-				maxLim = minLim + int64(*limit-1)
-			} else {
-				maxLim = *maxSlotNum
-			}
+func getLimits(
+	minSlotNum, maxSlotNum int64, fromItem, limit *uint, order string,
+) (minLimit, maxLimit int64, pendingItems uint64) {
+	if order == historydb.OrderAsc {
+		if fromItem != nil && int64(*fromItem) > minSlotNum {
+			minLimit = int64(*fromItem)
 		} else {
-			if int64(*fromItem) < *maxSlotNum {
-				maxLim = int64(*fromItem)
-			} else {
-				maxLim = *maxSlotNum
-			}
-			if (maxLim - int64(*limit-1)) < *minSlotNum {
-				minLim = *minSlotNum
-			} else {
-				minLim = maxLim - int64(*limit-1)
-			}
+			minLimit = minSlotNum
 		}
+		if limit != nil && (minLimit+int64(*limit-1)) < maxSlotNum {
+			maxLimit = minLimit + int64(*limit-1)
+		} else {
+			maxLimit = maxSlotNum
+		}
+		pendingItems = uint64(maxSlotNum - maxLimit)
+	} else {
+		if fromItem != nil && int64(*fromItem) < maxSlotNum {
+			maxLimit = int64(*fromItem)
+		} else {
+			maxLimit = maxSlotNum
+		}
+		if limit != nil && (maxLimit-int64(*limit-1)) < minSlotNum {
+			minLimit = minSlotNum
+		} else {
+			minLimit = maxLimit - int64(*limit-1)
+		}
+		pendingItems = uint64(-(minSlotNum - minLimit))
 	}
-	return minLim, maxLim
+	return minLimit, maxLimit, pendingItems
 }
 
 func getLimitsWithAddr(minSlotNum, maxSlotNum *int64, fromItem, limit *uint, order string) (int64, int64) {
@@ -262,28 +250,21 @@ func (a *API) getSlots(c *gin.Context) {
 	// Get bids and pagination according to filters
 	var slotMinLim, slotMaxLim int64
 	var bids []historydb.BidAPI
-	var pag *db.Pagination
-	totalItems := uint64(0)
+	var pendingItems uint64
 	if wonByEthereumAddress == nil {
-		slotMinLim, slotMaxLim = getLimits(minSlotNum, maxSlotNum, fromItem, limit, order)
+		slotMinLim, slotMaxLim, pendingItems = getLimits(*minSlotNum, *maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
 		bids, _, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, nil, order)
 		if err != nil && err != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
 		}
-		totalItems = uint64(*maxSlotNum) - uint64(*minSlotNum) + 1
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
-		bids, pag, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
+		bids, pendingItems, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
 		if err != nil && err != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
-		}
-		if len(bids) > 0 {
-			totalItems = uint64(pag.TotalItems)
-			*maxSlotNum = int64(pag.LastItem)
-			*minSlotNum = int64(pag.FirstItem)
 		}
 	}
 
@@ -336,11 +317,11 @@ func (a *API) getSlots(c *gin.Context) {
 
 	// Build succesfull response
 	type slotsResponse struct {
-		Slots      []SlotAPI      `json:"slots"`
-		Pagination *db.Pagination `json:"pagination"`
+		Slots        []SlotAPI `json:"slots"`
+		PendingItems uint64    `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &slotsResponse{
-		Slots:      slots,
-		Pagination: getPagination(totalItems, minSlotNum, maxSlotNum),
+		Slots:        slots,
+		PendingItems: pendingItems,
 	})
 }

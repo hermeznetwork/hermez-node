@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -36,7 +35,7 @@ func (a *API) getExits(c *gin.Context) {
 	}
 
 	// Fetch exits from historyDB
-	exits, pagination, err := a.h.GetExitsAPI(
+	exits, pendingItems, err := a.h.GetExitsAPI(
 		addr, bjj, tokenID, idx, batchNum, onlyPendingWithdraws, fromItem, limit, order,
 	)
 	if err != nil {
@@ -46,12 +45,12 @@ func (a *API) getExits(c *gin.Context) {
 
 	// Build succesfull response
 	type exitsResponse struct {
-		Exits      []historydb.ExitAPI `json:"exits"`
-		Pagination *db.Pagination      `json:"pagination"`
+		Exits        []historydb.ExitAPI `json:"exits"`
+		PendingItems uint64              `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &exitsResponse{
-		Exits:      exits,
-		Pagination: pagination,
+		Exits:        exits,
+		PendingItems: pendingItems,
 	})
 }
 
