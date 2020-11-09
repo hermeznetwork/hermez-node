@@ -287,13 +287,15 @@ func TestSync(t *testing.T) {
 
 		CreateAccountDepositTransfer(1) E-A: 1000, 200 // Idx=256+7=263
 		ForceExit(1) A: 100
+		ForceExit(1) B: 80
 		ForceTransfer(1) A-D: 100
 
 		Transfer(1) C-A: 100 (200)
+		Exit(1) C: 50 (200)
 		Exit(1) D: 30 (200)
 
-		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs{2}
-		> batchL1 // forge L1UserTxs{2}, freeze defined L1UserTxs{nil}
+		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs{3}
+		> batchL1 // forge L1UserTxs{3}, freeze defined L1UserTxs{nil}
 		> block // blockNum=3
 	`
 	tc := til.NewContext(common.RollupConstMaxL1UserTx)
@@ -315,9 +317,9 @@ func TestSync(t *testing.T) {
 	// blocks 1 (blockNum=3)
 	i = 1
 	require.Equal(t, 3, int(blocks[i].Block.EthBlockNum))
-	require.Equal(t, 3, len(blocks[i].Rollup.L1UserTxs))
+	require.Equal(t, 4, len(blocks[i].Rollup.L1UserTxs))
 	require.Equal(t, 2, len(blocks[i].Rollup.Batches))
-	require.Equal(t, 2, len(blocks[i].Rollup.Batches[0].L2Txs))
+	require.Equal(t, 3, len(blocks[i].Rollup.Batches[0].L2Txs))
 
 	// Generate extra required data
 	for _, block := range blocks {
@@ -334,6 +336,7 @@ func TestSync(t *testing.T) {
 
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
 	assert.Nil(t, err)
+	tc.FillBlocksL1UserTxsBatchNum(blocks)
 
 	// Add block data to the smart contracts
 	for _, block := range blocks {
@@ -400,6 +403,69 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, int64(3), syncBlock.Block.EthBlockNum)
 
 	checkSyncBlock(t, s, 3, &blocks[1], syncBlock)
+
+	// Block 4
+	// Generate 2 withdraws manually
+	_, err = client.RollupWithdrawMerkleProof(tc.Users["A"].BJJ.Public(), 1, 4, 256, big.NewInt(100), []*big.Int{}, true)
+	require.Nil(t, err)
+	_, err = client.RollupWithdrawMerkleProof(tc.Users["C"].BJJ.Public(), 1, 3, 258, big.NewInt(50), []*big.Int{}, false)
+	require.Nil(t, err)
+	client.CtlMineBlock()
+
+	syncBlock, discards, err = s.Sync2(ctx, nil)
+	require.Nil(t, err)
+	require.Nil(t, discards)
+	require.NotNil(t, syncBlock)
+	assert.Equal(t, int64(4), syncBlock.Block.EthBlockNum)
+	dbExits, err := s.historyDB.GetAllExits()
+	require.Nil(t, err)
+	foundA1, foundC1 := false, false
+	for _, exit := range dbExits {
+		if exit.AccountIdx == 256 && exit.BatchNum == 4 {
+			foundA1 = true
+			assert.Equal(t, int64(4), *exit.InstantWithdrawn)
+		}
+		if exit.AccountIdx == 258 && exit.BatchNum == 3 {
+			foundC1 = true
+			assert.Equal(t, int64(4), *exit.DelayedWithdrawRequest)
+		}
+	}
+	assert.True(t, foundA1)
+	assert.True(t, foundC1)
+
+	// Block 5
+	// Update variables manually
+	rollupVars, auctionVars, wDelayerVars, err := s.historyDB.GetSCVars()
+	require.Nil(t, err)
+	rollupVars.ForgeL1L2BatchTimeout = 42
+	_, err = client.RollupUpdateForgeL1L2BatchTimeout(rollupVars.ForgeL1L2BatchTimeout)
+	require.Nil(t, err)
+
+	auctionVars.OpenAuctionSlots = 17
+	_, err = client.AuctionSetOpenAuctionSlots(auctionVars.OpenAuctionSlots)
+	require.Nil(t, err)
+
+	wDelayerVars.WithdrawalDelay = 99
+	_, err = client.WDelayerChangeWithdrawalDelay(wDelayerVars.WithdrawalDelay)
+	require.Nil(t, err)
+
+	client.CtlMineBlock()
+
+	syncBlock, discards, err = s.Sync2(ctx, nil)
+	require.Nil(t, err)
+	require.Nil(t, discards)
+	require.NotNil(t, syncBlock)
+	assert.Equal(t, int64(5), syncBlock.Block.EthBlockNum)
+
+	dbRollupVars, dbAuctionVars, dbWDelayerVars, err := s.historyDB.GetSCVars()
+	require.Nil(t, err)
+	// Set EthBlockNum for Vars to the blockNum in which they were updated (should be 5)
+	rollupVars.EthBlockNum = syncBlock.Block.EthBlockNum
+	auctionVars.EthBlockNum = syncBlock.Block.EthBlockNum
+	wDelayerVars.EthBlockNum = syncBlock.Block.EthBlockNum
+	assert.Equal(t, rollupVars, dbRollupVars)
+	assert.Equal(t, auctionVars, dbAuctionVars)
+	assert.Equal(t, wDelayerVars, dbWDelayerVars)
 
 	// TODO: Reorg will be properly tested once we have the mock ethClient implemented
 	/*

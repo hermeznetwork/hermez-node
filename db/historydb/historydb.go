@@ -511,6 +511,51 @@ func (hdb *HistoryDB) addExitTree(d meddler.DB, exitTree []common.ExitInfo) erro
 	)
 }
 
+type exitID struct {
+	batchNum int64
+	idx      int64
+}
+
+func (hdb *HistoryDB) updateExitTree(d meddler.DB, blockNum int64,
+	instantWithdrawn []exitID, delayedWithdrawRequest []exitID) error {
+	// helperQueryExitIDTuples is a helper function to build the query with
+	// an array of tuples in the arguments side built from []exitID
+	helperQueryExitIDTuples := func(queryTmpl string, blockNum int64, exits []exitID) (string, []interface{}) {
+		args := make([]interface{}, len(exits)*2+1)
+		holder := ""
+		args[0] = blockNum
+		for i, v := range exits {
+			args[1+i*2+0] = v.batchNum
+			args[1+i*2+1] = v.idx
+			holder += "(?, ?),"
+		}
+		query := fmt.Sprintf(queryTmpl, holder[:len(holder)-1])
+		return hdb.db.Rebind(query), args
+	}
+
+	if len(instantWithdrawn) > 0 {
+		query, args := helperQueryExitIDTuples(
+			`UPDATE exit_tree SET instant_withdrawn = ? WHERE (batch_num, account_idx) IN (%s);`,
+			blockNum,
+			instantWithdrawn,
+		)
+		if _, err := hdb.db.DB.Exec(query, args...); err != nil {
+			return err
+		}
+	}
+	if len(delayedWithdrawRequest) > 0 {
+		query, args := helperQueryExitIDTuples(
+			`UPDATE exit_tree SET delayed_withdraw_request = ? WHERE (batch_num, account_idx) IN (%s);`,
+			blockNum,
+			delayedWithdrawRequest,
+		)
+		if _, err := hdb.db.DB.Exec(query, args...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // AddToken insert a token into the DB
 func (hdb *HistoryDB) AddToken(token *common.Token) error {
 	return meddler.Insert(hdb.db, "token", token)
@@ -1324,7 +1369,27 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		}
 	}
 
-	// TODO: Process withdrawals
+	if len(blockData.Rollup.Withdrawals) > 0 {
+		instantWithdrawn := []exitID{}
+		delayedWithdrawRequest := []exitID{}
+		for _, withdraw := range blockData.Rollup.Withdrawals {
+			exitID := exitID{
+				batchNum: int64(withdraw.NumExitRoot),
+				idx:      int64(withdraw.Idx),
+			}
+			if withdraw.InstantWithdraw {
+				instantWithdrawn = append(instantWithdrawn, exitID)
+			} else {
+				delayedWithdrawRequest = append(delayedWithdrawRequest, exitID)
+			}
+		}
+		if err := hdb.updateExitTree(txn, blockData.Block.EthBlockNum,
+			instantWithdrawn, delayedWithdrawRequest); err != nil {
+			return err
+		}
+	}
+
+	// TODO: Process WDelayer withdrawals
 
 	return txn.Commit()
 }
