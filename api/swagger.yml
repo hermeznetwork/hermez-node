@@ -17,7 +17,9 @@ info:
     * `order`: all pginated items are ordered chronologicaly. However the specific fields to guarantee this order depend on each endpoint. For this purpose, `itemId` is used (itemId follows ascending chronological order except for unforged L1 user transactions). If the parameter is not provided, ascending order will be used by default. 
     * `limit`: maximum amount of items to include in each response. Default is 20, maximum 2049.
     
-    Responses for those endpoint will always include a `pagination` object. This object includes the total amount of items that the endpoint will return at a given time with the given filters. Apart from that, it also includes the `itemId` of the last and first items that will be returned (not in a single response but within the total items). These two properties can be used to know when to stop querying. 
+    Responses for those endpoint will always include a `pendingItems` property. This property includes the amount of items that are not fetched yet. his can be used to:
+    * Calculate the amount of items that match the filters: `totalItems = length(alreadyFetchedItems) + pendingItems`
+    * Know when all items have been fetched: `if pendingItems == 0 {/* all items have been fetched */}`
 
     #### Reorgs and safetyness
 
@@ -1739,11 +1741,11 @@ components:
           description: List of history transactions.
           items: 
             $ref: '#/components/schemas/HistoryTransaction'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
       required:
         - transactions
-        - pagination
+        - pendingItems
       additionalProperties: false
     EthBlockNum:
       type: integer
@@ -1877,12 +1879,12 @@ components:
           description: List of batches.
           items:
             $ref: '#/components/schemas/Batch'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
       required:
         - batches
-        - pagination
+        - pendingItems
     Coordinator:
       type: object
       properties:
@@ -1914,12 +1916,12 @@ components:
           description: List of coordinators.
           items: 
             $ref: '#/components/schemas/Coordinator'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
       required:
         - coordinators
-        - pagination
+        - pendingItems
     Bid:
       type: object
       description: Tokens placed in an auction by a coordinator to gain the right to forge batches during a specific slot.
@@ -1958,12 +1960,12 @@ components:
           description: List of bids.
           items: 
             $ref: '#/components/schemas/Bid'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
       require:
         - bids
-        - pagination
+        - pendingItems
     RecommendedFee:  
       type: object
       description: Fee that the coordinator recommends per transaction in USD.
@@ -2042,8 +2044,8 @@ components:
           description: List of tokens.
           items: 
             $ref: '#/components/schemas/Token'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
     Exit:
       type: object
       description: Exit tree leaf. It Contains the necessary information to perform a withdrawal.
@@ -2135,11 +2137,11 @@ components:
           description: List of exits.
           items: 
             $ref: '#/components/schemas/Exit'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'   
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'   
       required:
           - exits
-          - pagination
+          - pendingItems
       additionalProperties: false 
     Account:
       type: object
@@ -2176,12 +2178,12 @@ components:
           description: List of accounts.
           items: 
             $ref: '#/components/schemas/Account'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
       required:
         - accounts
-        - pagination
+        - pendingItems
     Slot:
       type: object
       description: Slot information.
@@ -2255,12 +2257,12 @@ components:
             allOf:
                 - $ref: '#/components/schemas/Slot'
                 - description: Last synchronized Etherum block.
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
       require:
         - slots
-        - pagination
+        - pendingItems
     NextForger:
       type: object
       description: Coordinator information along with the scheduled forging period
@@ -2289,8 +2291,8 @@ components:
           description: List of next coordinators to forge.
           items: 
             $ref: '#/components/schemas/NextForger'
-        pagination:
-          $ref: '#/components/schemas/PaginationInfo'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
     State:
       type: object
       description: Gobal variables of the network
@@ -2517,22 +2519,10 @@ components:
         - auction
         - withdrawalDelayer
         - recomendedFee 
-    PaginationInfo:
-      type: object
-      description: Give pagination information
-      properties:
-        totalItems:
-          type: integer
-          description: Amount of items that the endpoint can return given the filters and the current state of the database.
-          example: 2048
-        firstItem:
-          type: integer
-          description: The smallest itemId that the endpoint will return with the given filters.
-          example: 50
-        lastItem:
-          type: integer
-          description: The greatest itemId that the endpoint will return with the given filters.
-          example: 2130
+    PendingItems:
+      type: integer
+      description: Amount of items that will be returned in subsequent calls to the endpoint, as long as they are done with same filters. When the value is 0 it means that all items have been sent.
+      example: 15
     Config:
       type: object
       description: Configuration parameters of the different smart contracts that power the Hermez network.

@@ -181,12 +181,11 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	minBatchNum, maxBatchNum, slotNum *uint,
 	forgerAddr *ethCommon.Address,
 	fromItem, limit *uint, order string,
-) ([]BatchAPI, *db.Pagination, error) {
+) ([]BatchAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	queryStr := `SELECT batch.*, block.timestamp, block.hash,
-	count(*) OVER() AS total_items, MIN(batch.item_id) OVER() AS first_item,
-	MAX(batch.item_id) OVER() AS last_item 
+	count(*) OVER() AS total_items
 	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num `
 	// Apply filters
 	nextIsAnd := false
@@ -259,17 +258,13 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	// log.Debug(query)
 	batchPtrs := []*BatchAPI{}
 	if err := meddler.QueryAll(hdb.db, &batchPtrs, query, args...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	batches := db.SlicePtrsToSlice(batchPtrs).([]BatchAPI)
 	if len(batches) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
-	return batches, &db.Pagination{
-		TotalItems: batches[0].TotalItems,
-		FirstItem:  batches[0].FirstItem,
-		LastItem:   batches[0].LastItem,
-	}, nil
+	return batches, batches[0].TotalItems - uint64(len(batches)), nil
 }
 
 // GetAllBatches retrieve all batches from the DB
@@ -367,12 +362,15 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 }
 
 // GetBestBidsAPI returns the best bid in specific slot by slotNum
-func (hdb *HistoryDB) GetBestBidsAPI(minSlotNum, maxSlotNum *int64, bidderAddr *ethCommon.Address, limit *uint, order string) ([]BidAPI, *db.Pagination, error) {
+func (hdb *HistoryDB) GetBestBidsAPI(
+	minSlotNum, maxSlotNum *int64,
+	bidderAddr *ethCommon.Address,
+	limit *uint, order string,
+) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	queryStr := `SELECT b.*, block.timestamp, coordinator.forger_addr, coordinator.url, 
-	COUNT(*) OVER() AS total_items, MIN(b.slot_num) OVER() AS first_item, 
-	MAX(b.slot_num) OVER() AS last_item FROM (
+	COUNT(*) OVER() AS total_items FROM (
 	   SELECT slot_num, MAX(item_id) as maxitem 
 	   FROM bid GROUP BY slot_num
 	   )
@@ -399,28 +397,26 @@ func (hdb *HistoryDB) GetBestBidsAPI(minSlotNum, maxSlotNum *int64, bidderAddr *
 	query = hdb.db.Rebind(queryStr)
 	bidPtrs := []*BidAPI{}
 	if err := meddler.QueryAll(hdb.db, &bidPtrs, query, args...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	// log.Debug(query)
 	bids := db.SlicePtrsToSlice(bidPtrs).([]BidAPI)
 	if len(bids) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
-	return bids, &db.Pagination{
-		TotalItems: bids[0].TotalItems,
-		FirstItem:  bids[0].FirstItem,
-		LastItem:   bids[0].LastItem,
-	}, nil
+	return bids, bids[0].TotalItems - uint64(len(bids)), nil
 }
 
 // GetBidsAPI return the bids applying the given filters
-func (hdb *HistoryDB) GetBidsAPI(slotNum *int64, forgerAddr *ethCommon.Address, fromItem, limit *uint, order string) ([]BidAPI, *db.Pagination, error) {
+func (hdb *HistoryDB) GetBidsAPI(
+	slotNum *int64, forgerAddr *ethCommon.Address,
+	fromItem, limit *uint, order string,
+) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	queryStr := `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url, 
-	COUNT(*) OVER() AS total_items, MIN(bid.item_id) OVER() AS first_item, 
-	MAX(bid.item_id) OVER() AS last_item FROM bid
-	INNER JOIN block ON bid.eth_block_num = block.eth_block_num 
+	COUNT(*) OVER() AS total_items
+	FROM bid INNER JOIN block ON bid.eth_block_num = block.eth_block_num 
 	INNER JOIN coordinator ON bid.bidder_addr = coordinator.bidder_addr `
 	// Apply filters
 	nextIsAnd := false
@@ -469,21 +465,17 @@ func (hdb *HistoryDB) GetBidsAPI(slotNum *int64, forgerAddr *ethCommon.Address, 
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	query = hdb.db.Rebind(query)
 	bids := []*BidAPI{}
 	if err := meddler.QueryAll(hdb.db, &bids, query, argsQ...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	if len(bids) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
-	return db.SlicePtrsToSlice(bids).([]BidAPI), &db.Pagination{
-		TotalItems: bids[0].TotalItems,
-		FirstItem:  bids[0].FirstItem,
-		LastItem:   bids[0].LastItem,
-	}, nil
+	return db.SlicePtrsToSlice(bids).([]BidAPI), bids[0].TotalItems - uint64(len(bids)), nil
 }
 
 // AddCoordinators insert Coordinators into the DB
@@ -562,10 +554,13 @@ func (hdb *HistoryDB) GetAllTokens() ([]TokenWithUSD, error) {
 }
 
 // GetTokens returns a list of tokens from the DB
-func (hdb *HistoryDB) GetTokens(ids []common.TokenID, symbols []string, name string, fromItem, limit *uint, order string) ([]TokenWithUSD, *db.Pagination, error) {
+func (hdb *HistoryDB) GetTokens(
+	ids []common.TokenID, symbols []string, name string, fromItem,
+	limit *uint, order string,
+) ([]TokenWithUSD, uint64, error) {
 	var query string
 	var args []interface{}
-	queryStr := `SELECT * , COUNT(*) OVER() AS total_items, MIN(token.item_id) OVER() AS first_item, MAX(token.item_id) OVER() AS last_item FROM token `
+	queryStr := `SELECT * , COUNT(*) OVER() AS total_items FROM token `
 	// Apply filters
 	nextIsAnd := false
 	if len(ids) > 0 {
@@ -616,21 +611,17 @@ func (hdb *HistoryDB) GetTokens(ids []common.TokenID, symbols []string, name str
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	query = hdb.db.Rebind(query)
 	tokens := []*TokenWithUSD{}
 	if err := meddler.QueryAll(hdb.db, &tokens, query, argsQ...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	if len(tokens) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
-	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), &db.Pagination{
-		TotalItems: tokens[0].TotalItems,
-		FirstItem:  tokens[0].FirstItem,
-		LastItem:   tokens[0].LastItem,
-	}, nil
+	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), uint64(len(tokens)) - tokens[0].TotalItems, nil
 }
 
 // GetTokenSymbols returns all the token symbols from the DB
@@ -813,9 +804,9 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
 	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
 	fromItem, limit *uint, order string,
-) ([]TxAPI, *db.Pagination, error) {
+) ([]TxAPI, uint64, error) {
 	if ethAddr != nil && bjj != nil {
-		return nil, nil, errors.New("ethAddr and bjj are incompatible")
+		return nil, 0, errors.New("ethAddr and bjj are incompatible")
 	}
 	var query string
 	var args []interface{}
@@ -827,8 +818,7 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	tx.load_amount, tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
 	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
-	token.usd_update, block.timestamp, count(*) OVER() AS total_items, 
-	MIN(tx.item_id)  OVER() AS first_item, MAX(tx.item_id) OVER() AS last_item 
+	token.usd_update, block.timestamp, count(*) OVER() AS total_items 
 	FROM tx INNER JOIN token ON tx.token_id = token.token_id 
 	INNER JOIN block ON tx.eth_block_num = block.eth_block_num `
 	// Apply filters
@@ -924,17 +914,13 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	// log.Debug(query)
 	txsPtrs := []*TxAPI{}
 	if err := meddler.QueryAll(hdb.db, &txsPtrs, query, args...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	txs := db.SlicePtrsToSlice(txsPtrs).([]TxAPI)
 	if len(txs) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
-	return txs, &db.Pagination{
-		TotalItems: txs[0].TotalItems,
-		FirstItem:  txs[0].FirstItem,
-		LastItem:   txs[0].LastItem,
-	}, nil
+	return txs, txs[0].TotalItems - uint64(len(txs)), nil
 }
 
 // GetAllExits returns all exit from the DB
@@ -972,9 +958,9 @@ func (hdb *HistoryDB) GetExitsAPI(
 	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey, tokenID *common.TokenID,
 	idx *common.Idx, batchNum *uint, onlyPendingWithdraws *bool,
 	fromItem, limit *uint, order string,
-) ([]ExitAPI, *db.Pagination, error) {
+) ([]ExitAPI, uint64, error) {
 	if ethAddr != nil && bjj != nil {
-		return nil, nil, errors.New("ethAddr and bjj are incompatible")
+		return nil, 0, errors.New("ethAddr and bjj are incompatible")
 	}
 	var query string
 	var args []interface{}
@@ -984,8 +970,7 @@ func (hdb *HistoryDB) GetExitsAPI(
 	exit_tree.delayed_withdraw_request, exit_tree.delayed_withdrawn,
 	token.token_id, token.item_id AS token_item_id,
 	token.eth_block_num AS token_block, token.eth_addr, token.name, token.symbol,
-	token.decimals, token.usd, token.usd_update, COUNT(*) OVER() AS total_items,
-	MIN(exit_tree.item_id) OVER() AS first_item, MAX(exit_tree.item_id) OVER() AS last_item
+	token.decimals, token.usd, token.usd_update, COUNT(*) OVER() AS total_items
 	FROM exit_tree INNER JOIN account ON exit_tree.account_idx = account.idx 
 	INNER JOIN token ON account.token_id = token.token_id `
 	// Apply filters
@@ -1071,16 +1056,12 @@ func (hdb *HistoryDB) GetExitsAPI(
 	// log.Debug(query)
 	exits := []*ExitAPI{}
 	if err := meddler.QueryAll(hdb.db, &exits, query, args...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	if len(exits) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
-	return db.SlicePtrsToSlice(exits).([]ExitAPI), &db.Pagination{
-		TotalItems: exits[0].TotalItems,
-		FirstItem:  exits[0].FirstItem,
-		LastItem:   exits[0].LastItem,
-	}, nil
+	return db.SlicePtrsToSlice(exits).([]ExitAPI), exits[0].TotalItems - uint64(len(exits)), nil
 }
 
 // // GetTx returns a tx from the DB
@@ -1337,11 +1318,11 @@ func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*Coordina
 }
 
 // GetCoordinatorsAPI returns a list of coordinators from the DB and pagination info
-func (hdb *HistoryDB) GetCoordinatorsAPI(fromItem, limit *uint, order string) ([]CoordinatorAPI, *db.Pagination, error) {
+func (hdb *HistoryDB) GetCoordinatorsAPI(fromItem, limit *uint, order string) ([]CoordinatorAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	queryStr := `SELECT coordinator.*, 
-	COUNT(*) OVER() AS total_items, MIN(coordinator.item_id) OVER() AS first_item, MAX(coordinator.item_id) OVER() AS last_item
+	COUNT(*) OVER() AS total_items
 	FROM coordinator `
 	// Apply filters
 	if fromItem != nil {
@@ -1365,16 +1346,13 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(fromItem, limit *uint, order string) ([
 
 	coordinators := []*CoordinatorAPI{}
 	if err := meddler.QueryAll(hdb.db, &coordinators, query, args...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	if len(coordinators) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
-	return db.SlicePtrsToSlice(coordinators).([]CoordinatorAPI), &db.Pagination{
-		TotalItems: coordinators[0].TotalItems,
-		FirstItem:  coordinators[0].FirstItem,
-		LastItem:   coordinators[0].LastItem,
-	}, nil
+	return db.SlicePtrsToSlice(coordinators).([]CoordinatorAPI),
+		coordinators[0].TotalItems - uint64(len(coordinators)), nil
 }
 
 // AddAuctionVars insert auction vars into the DB
@@ -1394,7 +1372,8 @@ func (hdb *HistoryDB) GetAuctionVars() (*common.AuctionVariables, error) {
 // GetAccountAPI returns an account by its index
 func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 	account := &AccountAPI{}
-	err := meddler.QueryRow(hdb.db, account, `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
+	err := meddler.QueryRow(hdb.db, account, `SELECT account.item_id, hez_idx(account.idx, 
+	token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
 	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
 	FROM account INNER JOIN token ON account.token_id = token.token_id WHERE idx = $1;`, idx)
@@ -1407,16 +1386,19 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 }
 
 // GetAccountsAPI returns a list of accounts from the DB and pagination info
-func (hdb *HistoryDB) GetAccountsAPI(tokenIDs []common.TokenID, ethAddr *ethCommon.Address, bjj *babyjub.PublicKey, fromItem, limit *uint, order string) ([]AccountAPI, *db.Pagination, error) {
+func (hdb *HistoryDB) GetAccountsAPI(
+	tokenIDs []common.TokenID, ethAddr *ethCommon.Address,
+	bjj *babyjub.PublicKey, fromItem, limit *uint, order string,
+) ([]AccountAPI, uint64, error) {
 	if ethAddr != nil && bjj != nil {
-		return nil, nil, errors.New("ethAddr and bjj are incompatible")
+		return nil, 0, errors.New("ethAddr and bjj are incompatible")
 	}
 	var query string
 	var args []interface{}
-	queryStr := `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
-	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
+	queryStr := `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, 
+	account.bjj, account.eth_addr, token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
-	COUNT(*) OVER() AS total_items, MIN(account.item_id) OVER() AS first_item, MAX(account.item_id) OVER() AS last_item  
+	COUNT(*) OVER() AS total_items
 	FROM account INNER JOIN token ON account.token_id = token.token_id `
 	// Apply filters
 	nextIsAnd := false
@@ -1464,23 +1446,20 @@ func (hdb *HistoryDB) GetAccountsAPI(tokenIDs []common.TokenID, ethAddr *ethComm
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	query = hdb.db.Rebind(query)
 
 	accounts := []*AccountAPI{}
 	if err := meddler.QueryAll(hdb.db, &accounts, query, argsQ...); err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 	if len(accounts) == 0 {
-		return nil, nil, sql.ErrNoRows
+		return nil, 0, sql.ErrNoRows
 	}
 
-	return db.SlicePtrsToSlice(accounts).([]AccountAPI), &db.Pagination{
-		TotalItems: accounts[0].TotalItems,
-		FirstItem:  accounts[0].FirstItem,
-		LastItem:   accounts[0].LastItem,
-	}, nil
+	return db.SlicePtrsToSlice(accounts).([]AccountAPI),
+		accounts[0].TotalItems - uint64(len(accounts)), nil
 }
 
 // GetMetrics returns metrics

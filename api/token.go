@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -46,7 +45,7 @@ func (a *API) getTokens(c *gin.Context) {
 		return
 	}
 	// Fetch exits from historyDB
-	tokens, pagination, err := a.h.GetTokens(
+	tokens, pendingItems, err := a.h.GetTokens(
 		tokenIDs, symbols, name, fromItem, limit, order,
 	)
 	if err != nil {
@@ -56,11 +55,11 @@ func (a *API) getTokens(c *gin.Context) {
 
 	// Build succesfull response
 	type tokensResponse struct {
-		Tokens     []historydb.TokenWithUSD `json:"tokens"`
-		Pagination *db.Pagination           `json:"pagination"`
+		Tokens       []historydb.TokenWithUSD `json:"tokens"`
+		PendingItems uint64                   `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &tokensResponse{
-		Tokens:     tokens,
-		Pagination: pagination,
+		Tokens:       tokens,
+		PendingItems: pendingItems,
 	})
 }

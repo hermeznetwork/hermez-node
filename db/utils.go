@@ -179,21 +179,6 @@ func SlicePtrsToSlice(slice interface{}) interface{} {
 	return res.Interface()
 }
 
-// Pagination give information on the items of a query
-type Pagination struct {
-	TotalItems        uint64 `json:"totalItems"`
-	FirstItem         uint64 `json:"firstItem"`
-	LastItem          uint64 `json:"lastItem"`
-	FirstReturnedItem uint64 `json:"-"`
-	LastReturnedItem  uint64 `json:"-"`
-}
-
-// Paginationer is an interface that allows getting pagination info on any struct
-type Paginationer interface {
-	GetPagination() *Pagination
-	Len() int
-}
-
 // Rollback an sql transaction, and log the error if it's not nil
 func Rollback(txn *sql.Tx) {
 	err := txn.Rollback()

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -43,7 +42,7 @@ func (a *API) getBatches(c *gin.Context) {
 		return
 	}
 	// Fetch batches from historyDB
-	batches, pagination, err := a.h.GetBatchesAPI(
+	batches, pendingItems, err := a.h.GetBatchesAPI(
 		minBatchNum, maxBatchNum, slotNum, forgerAddr, fromItem, limit, order,
 	)
 	if err != nil {
@@ -53,12 +52,12 @@ func (a *API) getBatches(c *gin.Context) {
 
 	// Build succesfull response
 	type batchesResponse struct {
-		Batches    []historydb.BatchAPI `json:"batches"`
-		Pagination *db.Pagination       `json:"pagination"`
+		Batches      []historydb.BatchAPI `json:"batches"`
+		PendingItems uint64               `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &batchesResponse{
-		Batches:    batches,
-		Pagination: pagination,
+		Batches:      batches,
+		PendingItems: pendingItems,
 	})
 }
 

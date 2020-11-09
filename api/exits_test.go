@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -36,19 +35,14 @@ type testExit struct {
 }
 
 type testExitsResponse struct {
-	Exits      []testExit     `json:"exits"`
-	Pagination *db.Pagination `json:"pagination"`
+	Exits        []testExit `json:"exits"`
+	PendingItems uint64     `json:"pendingItems"`
 }
 
-func (t *testExitsResponse) GetPagination() *db.Pagination {
-	if t.Exits[0].ItemID < t.Exits[len(t.Exits)-1].ItemID {
-		t.Pagination.FirstReturnedItem = t.Exits[0].ItemID
-		t.Pagination.LastReturnedItem = t.Exits[len(t.Exits)-1].ItemID
-	} else {
-		t.Pagination.LastReturnedItem = t.Exits[0].ItemID
-		t.Pagination.FirstReturnedItem = t.Exits[len(t.Exits)-1].ItemID
-	}
-	return t.Pagination
+func (t testExitsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Exits[len(t.Exits)-1].ItemID
+	return pendingItems, lastItemID
 }
 
 func (t *testExitsResponse) Len() int {

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -26,7 +25,7 @@ func (a *API) getBids(c *gin.Context) {
 		return
 	}
 
-	bids, pagination, err := a.h.GetBidsAPI(
+	bids, pendingItems, err := a.h.GetBidsAPI(
 		slotNum, bidderAddr, fromItem, limit, order,
 	)
 
@@ -37,11 +36,11 @@ func (a *API) getBids(c *gin.Context) {
 
 	// Build succesfull response
 	type bidsResponse struct {
-		Bids       []historydb.BidAPI `json:"bids"`
-		Pagination *db.Pagination     `json:"pagination"`
+		Bids         []historydb.BidAPI `json:"bids"`
+		PendingItems uint64             `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &bidsResponse{
-		Bids:       bids,
-		Pagination: pagination,
+		Bids:         bids,
+		PendingItems: pendingItems,
 	})
 }

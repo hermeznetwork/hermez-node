@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -39,7 +38,7 @@ func (a *API) getCoordinators(c *gin.Context) {
 	}
 
 	// Fetch coordinators from historyDB
-	coordinators, pagination, err := a.h.GetCoordinatorsAPI(fromItem, limit, order)
+	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(fromItem, limit, order)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -48,10 +47,10 @@ func (a *API) getCoordinators(c *gin.Context) {
 	// Build succesfull response
 	type coordinatorsResponse struct {
 		Coordinators []historydb.CoordinatorAPI `json:"coordinators"`
-		Pagination   *db.Pagination             `json:"pagination"`
+		PendingItems uint64                     `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &coordinatorsResponse{
 		Coordinators: coordinators,
-		Pagination:   pagination,
+		PendingItems: pendingItems,
 	})
 }

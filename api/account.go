@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/apitypes"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -49,7 +48,7 @@ func (a *API) getAccounts(c *gin.Context) {
 	}
 
 	// Fetch Accounts from historyDB
-	apiAccounts, pagination, err := a.h.GetAccountsAPI(tokenIDs, addr, bjj, fromItem, limit, order)
+	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(tokenIDs, addr, bjj, fromItem, limit, order)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -72,11 +71,11 @@ func (a *API) getAccounts(c *gin.Context) {
 
 	// Build succesfull response
 	type accountResponse struct {
-		Accounts   []historydb.AccountAPI `json:"accounts"`
-		Pagination *db.Pagination         `json:"pagination"`
+		Accounts     []historydb.AccountAPI `json:"accounts"`
+		PendingItems uint64                 `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &accountResponse{
-		Accounts:   apiAccounts,
-		Pagination: pagination,
+		Accounts:     apiAccounts,
+		PendingItems: pendingItems,
 	})
 }

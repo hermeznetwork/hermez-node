@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -35,7 +34,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 	}
 
 	// Fetch txs from historyDB
-	txs, pagination, err := a.h.GetHistoryTxs(
+	txs, pendingItems, err := a.h.GetHistoryTxs(
 		addr, bjj, tokenID, idx, batchNum, txType, fromItem, limit, order,
 	)
 	if err != nil {
@@ -45,12 +44,12 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 
 	// Build succesfull response
 	type txsResponse struct {
-		Txs        []historydb.TxAPI `json:"transactions"`
-		Pagination *db.Pagination    `json:"pagination"`
+		Txs          []historydb.TxAPI `json:"transactions"`
+		PendingItems uint64            `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &txsResponse{
-		Txs:        txs,
-		Pagination: pagination,
+		Txs:          txs,
+		PendingItems: pendingItems,
 	})
 }
 
