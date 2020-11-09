@@ -152,14 +152,20 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 		return b, err
 	}
 
-	copy(b[0:4], a.TokenID.Bytes())
-	copy(b[4:9], nonceBytes[:])
-	if babyjub.PointCoordSign(a.PublicKey.X) {
-		b[10] = 1
+	copy(b[28:32], a.TokenID.Bytes())
+	copy(b[23:28], nonceBytes[:])
+
+	if a.PublicKey == nil {
+		return b, fmt.Errorf("Account.PublicKey can not be nil")
 	}
-	copy(b[32:64], SwapEndianness(a.Balance.Bytes()))
-	copy(b[64:96], SwapEndianness(a.PublicKey.Y.Bytes()))
-	copy(b[96:116], a.EthAddr.Bytes())
+	if babyjub.PointCoordSign(a.PublicKey.X) {
+		b[22] = 1
+	}
+	balanceBytes := a.Balance.Bytes()
+	copy(b[64-len(balanceBytes):64], balanceBytes)
+	ayBytes := a.PublicKey.Y.Bytes()
+	copy(b[96-len(ayBytes):96], ayBytes)
+	copy(b[108:128], a.EthAddr.Bytes())
 
 	return b, nil
 }
@@ -173,26 +179,21 @@ func (a *Account) BigInts() ([NLeafElems]*big.Int, error) {
 		return e, err
 	}
 
-	e[0] = new(big.Int).SetBytes(SwapEndianness(b[0:32]))
-	e[1] = new(big.Int).SetBytes(SwapEndianness(b[32:64]))
-	e[2] = new(big.Int).SetBytes(SwapEndianness(b[64:96]))
-	e[3] = new(big.Int).SetBytes(SwapEndianness(b[96:128]))
+	e[0] = new(big.Int).SetBytes(b[0:32])
+	e[1] = new(big.Int).SetBytes(b[32:64])
+	e[2] = new(big.Int).SetBytes(b[64:96])
+	e[3] = new(big.Int).SetBytes(b[96:128])
 
 	return e, nil
 }
 
 // HashValue returns the value of the Account, which is the Poseidon hash of its *big.Int representation
 func (a *Account) HashValue() (*big.Int, error) {
-	b0 := big.NewInt(0)
-	toHash := []*big.Int{b0, b0, b0, b0, b0, b0}
-	lBI, err := a.BigInts()
+	bi, err := a.BigInts()
 	if err != nil {
 		return nil, err
 	}
-	copy(toHash[:], lBI[:])
-
-	v, err := poseidon.Hash(toHash)
-	return v, err
+	return poseidon.Hash(bi[:])
 }
 
 // AccountFromBigInts returns a Account from a [5]*big.Int
@@ -200,36 +201,42 @@ func AccountFromBigInts(e [NLeafElems]*big.Int) (*Account, error) {
 	if !cryptoUtils.CheckBigIntArrayInField(e[:]) {
 		return nil, ErrNotInFF
 	}
+	e0B := e[0].Bytes()
+	e1B := e[1].Bytes()
+	e2B := e[2].Bytes()
+	e3B := e[3].Bytes()
 	var b [32 * NLeafElems]byte
-	copy(b[0:32], SwapEndianness(e[0].Bytes())) // SwapEndianness, as big.Int uses BigEndian
-	copy(b[32:64], SwapEndianness(e[1].Bytes()))
-	copy(b[64:96], SwapEndianness(e[2].Bytes()))
-	copy(b[96:128], SwapEndianness(e[3].Bytes()))
+	copy(b[32-len(e0B):32], e0B)
+	copy(b[64-len(e1B):64], e1B)
+	copy(b[96-len(e2B):96], e2B)
+	copy(b[128-len(e3B):128], e3B)
 
 	return AccountFromBytes(b)
 }
 
 // AccountFromBytes returns a Account from a byte array
 func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
-	tokenID, err := TokenIDFromBytes(b[0:4])
+	tokenID, err := TokenIDFromBytes(b[28:32])
 	if err != nil {
 		return nil, err
 	}
 	var nonceBytes5 [5]byte
-	copy(nonceBytes5[:], b[4:9])
+	copy(nonceBytes5[:], b[23:28])
 	nonce := NonceFromBytes(nonceBytes5)
-	sign := b[10] == 1
-	balance := new(big.Int).SetBytes(SwapEndianness(b[32:56])) // b[32:56], as Balance is 192 bits (24 bytes)
-	if !bytes.Equal(b[56:64], []byte{0, 0, 0, 0, 0, 0, 0, 0}) {
+	sign := b[22] == 1
+
+	balance := new(big.Int).SetBytes(b[40:64])
+	// Balance is max of 192 bits (24 bytes)
+	if !bytes.Equal(b[32:40], []byte{0, 0, 0, 0, 0, 0, 0, 0}) {
 		return nil, fmt.Errorf("%s Balance", ErrNumOverflow)
 	}
-	ay := new(big.Int).SetBytes(SwapEndianness(b[64:96]))
+	ay := new(big.Int).SetBytes(b[64:96])
 	pkPoint, err := babyjub.PointFromSignAndY(sign, ay)
 	if err != nil {
 		return nil, err
 	}
 	publicKey := babyjub.PublicKey(*pkPoint)
-	ethAddr := ethCommon.BytesToAddress(b[96:116])
+	ethAddr := ethCommon.BytesToAddress(b[108:128])
 
 	if !cryptoUtils.CheckBigIntInField(balance) {
 		return nil, ErrNotInFF
