@@ -39,6 +39,12 @@ type WDelayerBlock struct {
 	Eth       *EthereumBlock
 }
 
+func (w *WDelayerBlock) addTransaction(tx *types.Transaction) *types.Transaction {
+	txHash := tx.Hash()
+	w.Txs[txHash] = tx
+	return tx
+}
+
 // RollupBlock stores all the data related to the Rollup SC from an ethereum block
 type RollupBlock struct {
 	State     eth.RollupState
@@ -369,8 +375,8 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 		Rollup: &RollupBlock{
 			State: eth.RollupState{
 				StateRoot:        big.NewInt(0),
-				ExitRoots:        make([]*big.Int, 0),
-				ExitNullifierMap: make(map[[256 / 8]byte]bool),
+				ExitRoots:        make([]*big.Int, 1),
+				ExitNullifierMap: make(map[int64]map[int64]bool),
 				// TokenID = 0 is ETH.  Set first entry in TokenList with 0x0 address for ETH.
 				TokenList:              []ethCommon.Address{{}},
 				TokenMap:               make(map[ethCommon.Address]bool),
@@ -746,9 +752,46 @@ func (c *Client) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]
 }
 
 // RollupWithdrawMerkleProof is the interface to call the smart contract function
-func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (*types.Transaction, error) {
-	log.Error("TODO")
-	return nil, errTODO
+func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+
+	nextBlock := c.nextBlock()
+	r := nextBlock.Rollup
+
+	if int(numExitRoot) >= len(r.State.ExitRoots) {
+		return nil, fmt.Errorf("numExitRoot >= len(r.State.ExitRoots)")
+	}
+	if _, ok := r.State.ExitNullifierMap[numExitRoot][idx]; ok {
+		return nil, fmt.Errorf("exit already withdrawn")
+	}
+	r.State.ExitNullifierMap[numExitRoot][idx] = true
+
+	r.Events.Withdraw = append(r.Events.Withdraw, eth.RollupEventWithdraw{
+		Idx:             uint64(idx),
+		NumExitRoot:     uint64(numExitRoot),
+		InstantWithdraw: instantWithdraw,
+	})
+	type data struct {
+		babyPubKey      *babyjub.PublicKey
+		tokenID         uint32
+		numExitRoot     int64
+		idx             int64
+		amount          *big.Int
+		siblings        []*big.Int
+		instantWithdraw bool
+	}
+	return r.addTransaction(newTransaction("withdrawMerkleProof", data{
+		babyPubKey:      babyPubKey,
+		tokenID:         tokenID,
+		numExitRoot:     numExitRoot,
+		idx:             idx,
+		amount:          amount,
+		siblings:        siblings,
+		instantWithdraw: instantWithdraw,
+	})), nil
 }
 
 type transactionData struct {
@@ -817,6 +860,7 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 		return nil, fmt.Errorf("args.NewLastIdx < r.State.CurrentIdx")
 	}
 	r.State.CurrentIdx = args.NewLastIdx
+	r.State.ExitNullifierMap[int64(len(r.State.ExitRoots))] = make(map[int64]bool)
 	r.State.ExitRoots = append(r.State.ExitRoots, args.NewExitRoot)
 	if args.L1Batch {
 		r.State.CurrentToForgeL1TxsNum++
@@ -828,7 +872,7 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 	ethTx := r.addTransaction(newTransaction("forgebatch", args))
 	c.forgeBatchArgsPending[ethTx.Hash()] = &batch{*args, *c.addr}
 	r.Events.ForgeBatch = append(r.Events.ForgeBatch, eth.RollupEventForgeBatch{
-		BatchNum:  int64(len(r.State.ExitRoots)),
+		BatchNum:  int64(len(r.State.ExitRoots)) - 1,
 		EthTxHash: ethTx.Hash(),
 	})
 
@@ -887,8 +931,13 @@ func (c *Client) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (tx 
 		return nil, eth.ErrAccountNil
 	}
 
-	log.Error("TODO")
-	return nil, errTODO
+	nextBlock := c.nextBlock()
+	r := nextBlock.Rollup
+	r.Vars.ForgeL1L2BatchTimeout = newForgeL1Timeout
+	r.Events.UpdateForgeL1L2BatchTimeout = append(r.Events.UpdateForgeL1L2BatchTimeout,
+		eth.RollupEventUpdateForgeL1L2BatchTimeout{NewForgeL1L2BatchTimeout: newForgeL1Timeout})
+
+	return r.addTransaction(newTransaction("updateForgeL1L2BatchTimeout", newForgeL1Timeout)), nil
 }
 
 // RollupUpdateFeeAddToken is the interface to call the smart contract function
@@ -990,8 +1039,13 @@ func (c *Client) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (tx *typ
 		return nil, eth.ErrAccountNil
 	}
 
-	log.Error("TODO")
-	return nil, errTODO
+	nextBlock := c.nextBlock()
+	a := nextBlock.Auction
+	a.Vars.OpenAuctionSlots = newOpenAuctionSlots
+	a.Events.NewOpenAuctionSlots = append(a.Events.NewOpenAuctionSlots,
+		eth.AuctionEventNewOpenAuctionSlots{NewOpenAuctionSlots: newOpenAuctionSlots})
+
+	return a.addTransaction(newTransaction("setOpenAuctionSlots", newOpenAuctionSlots)), nil
 }
 
 // AuctionGetOpenAuctionSlots is the interface to call the smart contract function
@@ -1507,8 +1561,13 @@ func (c *Client) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (tx *t
 		return nil, eth.ErrAccountNil
 	}
 
-	log.Error("TODO")
-	return nil, errTODO
+	nextBlock := c.nextBlock()
+	w := nextBlock.WDelayer
+	w.Vars.WithdrawalDelay = newWithdrawalDelay
+	w.Events.NewWithdrawalDelay = append(w.Events.NewWithdrawalDelay,
+		eth.WDelayerEventNewWithdrawalDelay{WithdrawalDelay: newWithdrawalDelay})
+
+	return w.addTransaction(newTransaction("changeWithdrawalDelay", newWithdrawalDelay)), nil
 }
 
 // WDelayerDepositInfo is the interface to call the smart contract function

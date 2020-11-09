@@ -36,9 +36,10 @@ func NewQueueStruct() *QueueStruct {
 
 // RollupState represents the state of the Rollup in the Smart Contract
 type RollupState struct {
-	StateRoot              *big.Int
-	ExitRoots              []*big.Int
-	ExitNullifierMap       map[[256 / 8]byte]bool
+	StateRoot *big.Int
+	ExitRoots []*big.Int
+	// ExitNullifierMap       map[[256 / 8]byte]bool
+	ExitNullifierMap       map[int64]map[int64]bool // batchNum -> idx -> bool
 	TokenList              []ethCommon.Address
 	TokenMap               map[ethCommon.Address]bool
 	MapL1TxQueue           map[int64]*QueueStruct
