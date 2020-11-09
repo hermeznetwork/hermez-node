@@ -10,6 +10,12 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 )
 
+// TODO: Add correct values to constants
+const (
+	createAccountExtraFeePercentage         float64 = 2
+	createAccountInternalExtraFeePercentage float64 = 2.5
+)
+
 // Status define status of the network
 type Status struct {
 	Network           Network                  `json:"network"`

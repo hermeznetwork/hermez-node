@@ -1475,7 +1475,12 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 	}
 
 	metrics.TransactionsPerSecond = float64(metricsTotals.TotalTransactions / (24 * 60 * 60))
-	metrics.TransactionsPerBatch = float64(int64(metricsTotals.TotalTransactions) / int64(lastBatchNum-metricsTotals.FirstBatchNum))
+	if (lastBatchNum - metricsTotals.FirstBatchNum) > 0 {
+		metrics.TransactionsPerBatch = float64(int64(metricsTotals.TotalTransactions) /
+			int64(lastBatchNum-metricsTotals.FirstBatchNum))
+	} else {
+		metrics.TransactionsPerBatch = float64(0)
+	}
 
 	err = meddler.QueryRow(
 		hdb.db, metricsTotals, `SELECT COUNT(*) AS total_batches, 
@@ -1484,10 +1489,16 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 	if err != nil {
 		return nil, err
 	}
-
-	metrics.BatchFrequency = float64((24 * 60 * 60) / metricsTotals.TotalBatches)
-	metrics.AvgTransactionFee = metricsTotals.TotalFeesUSD / float64(metricsTotals.TotalTransactions)
-
+	if metricsTotals.TotalBatches > 0 {
+		metrics.BatchFrequency = float64((24 * 60 * 60) / metricsTotals.TotalBatches)
+	} else {
+		metrics.BatchFrequency = 0
+	}
+	if metricsTotals.TotalTransactions > 0 {
+		metrics.AvgTransactionFee = metricsTotals.TotalFeesUSD / float64(metricsTotals.TotalTransactions)
+	} else {
+		metrics.AvgTransactionFee = 0
+	}
 	err = meddler.QueryRow(
 		hdb.db, metrics,
 		`SELECT COUNT(*) AS total_bjjs, COUNT(DISTINCT(bjj)) AS total_accounts FROM account;`)
@@ -1496,4 +1507,32 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 	}
 
 	return metrics, nil
+}
+
+// GetAvgTxFee returns average transaction fee of the last 1h
+func (hdb *HistoryDB) GetAvgTxFee() (float64, error) {
+	metricsTotals := &MetricsTotals{}
+	err := meddler.QueryRow(
+		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs, MIN(tx.batch_num) as batch_num 
+		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
+		WHERE block.timestamp >= NOW() - INTERVAL '1 HOURS';`)
+	if err != nil {
+		return 0, err
+	}
+	err = meddler.QueryRow(
+		hdb.db, metricsTotals, `SELECT COUNT(*) AS total_batches, 
+		SUM(total_fees_usd) AS total_fees FROM batch 
+		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
+	if err != nil {
+		return 0, err
+	}
+
+	var avgTransactionFee float64
+	if metricsTotals.TotalTransactions > 0 {
+		avgTransactionFee = metricsTotals.TotalFeesUSD / float64(metricsTotals.TotalTransactions)
+	} else {
+		avgTransactionFee = 0
+	}
+
+	return avgTransactionFee, nil
 }
