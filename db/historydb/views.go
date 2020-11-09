@@ -303,9 +303,18 @@ type Metrics struct {
 	TransactionsPerBatch  float64 `json:"transactionsPerBatch"`
 	BatchFrequency        float64 `json:"batchFrequency"`
 	TransactionsPerSecond float64 `json:"transactionsPerSecond"`
-	TotalAccounts         int64   `json:"totalAccounts"`
-	TotalBJJs             int64   `json:"totalBJJs"`
+	TotalAccounts         int64   `json:"totalAccounts" meddler:"total_accounts"`
+	TotalBJJs             int64   `json:"totalBJJs" meddler:"total_bjjs"`
 	AvgTransactionFee     float64 `json:"avgTransactionFee"`
+}
+
+// MetricsTotals is used to get temporal information from HistoryDB
+// to calculate data to be stored into the Metrics struct
+type MetricsTotals struct {
+	TotalTransactions uint64          `meddler:"total_txs"`
+	FirstBatchNum     common.BatchNum `meddler:"batch_num"`
+	TotalBatches      int64           `meddler:"total_batches"`
+	TotalFeesUSD      float64         `meddler:"total_fees"`
 }
 
 // BidAPI is a representation of a bid with additional information
