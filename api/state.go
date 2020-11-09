@@ -142,5 +142,12 @@ func (a *API) UpdateMetrics() error {
 
 // UpdateRecommendedFee update Status.RecommendedFee information
 func (a *API) UpdateRecommendedFee() error {
+	feeExistingAccount, err := a.h.GetAvgTxFee()
+	if err != nil {
+		return err
+	}
+	a.status.RecommendedFee.ExistingAccount = feeExistingAccount
+	a.status.RecommendedFee.CreatesAccount = createAccountExtraFeePercentage * feeExistingAccount
+	a.status.RecommendedFee.CreatesAccountAndRegister = createAccountInternalExtraFeePercentage * feeExistingAccount
 	return nil
 }

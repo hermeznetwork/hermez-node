@@ -96,3 +96,11 @@ func TestUpdateMetrics(t *testing.T) {
 	assert.Greater(t, api.status.Metrics.TotalBJJs, int64(0))
 	assert.Greater(t, api.status.Metrics.AvgTransactionFee, float64(0))
 }
+
+func TestUpdateRecommendedFee(t *testing.T) {
+	err := api.UpdateRecommendedFee()
+	assert.NoError(t, err)
+	assert.Greater(t, api.status.RecommendedFee.ExistingAccount, float64(0))
+	assert.Equal(t, api.status.RecommendedFee.CreatesAccount, api.status.RecommendedFee.ExistingAccount*createAccountExtraFeePercentage)
+	assert.Equal(t, api.status.RecommendedFee.CreatesAccountAndRegister, api.status.RecommendedFee.ExistingAccount*createAccountInternalExtraFeePercentage)
+}
