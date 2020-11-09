@@ -109,6 +109,7 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 		FromIdx:     Idx(29767899),
 		FromBJJ:     pk,
 		FromEthAddr: ethCommon.HexToAddress("0x85dab5b9e2e361d0c208d77be90efcc0439b0a53"),
+		UserOrigin:  true,
 	}
 
 	expected, err := utils.HexDecode("85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a000001c638db8be880f00020039c0000053cb88d")

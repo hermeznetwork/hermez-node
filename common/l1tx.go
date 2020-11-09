@@ -146,8 +146,11 @@ func (tx L1Tx) Tx() Tx {
 	return genericTx
 }
 
-// BytesUser encodes a L1Tx into []byte
-func (tx *L1Tx) BytesUser() ([]byte, error) {
+// BytesGeneric returns the generic representation of a L1Tx. This method is
+// used to compute the []byte representation of a L1UserTx, and also to compute
+// the L1TxData for the ZKInputs (at the HashGlobalInputs), using this method
+// for L1CoordinatorTxs & L1UserTxs (for the ZKInputs case).
+func (tx *L1Tx) BytesGeneric() ([]byte, error) {
 	var b [L1UserTxBytesLen]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
 	pkCompL := tx.FromBJJ.Compress()
@@ -177,8 +180,19 @@ func (tx *L1Tx) BytesUser() ([]byte, error) {
 	return b[:], nil
 }
 
+// BytesUser encodes a L1UserTx into []byte
+func (tx *L1Tx) BytesUser() ([]byte, error) {
+	if !tx.UserOrigin {
+		return nil, fmt.Errorf("Can not calculate BytesUser() for a L1CoordinatorTx")
+	}
+	return tx.BytesGeneric()
+}
+
 // BytesCoordinatorTx encodes a L1CoordinatorTx into []byte
 func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, error) {
+	if tx.UserOrigin {
+		return nil, fmt.Errorf("Can not calculate BytesCoordinatorTx() for a L1UserTx")
+	}
 	var b [L1CoordinatorTxBytesLen]byte
 	v := compressedSignatureBytes[64]
 	s := compressedSignatureBytes[32:64]
@@ -210,7 +224,6 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 	var pkComp babyjub.PublicKeyComp
 	copy(pkComp[:], pkCompL)
 	tx.FromBJJ, err = pkComp.Decompress()
-
 	if err != nil {
 		return nil, err
 	}

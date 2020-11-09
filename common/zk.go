@@ -1,6 +1,5 @@
 // Package common contains all the common data structures used at the
 // hermez-node, zk.go contains the zkSnark inputs used to generate the proof
-//nolint:deadcode,structcheck,unused
 package common
 
 import (
@@ -11,21 +10,30 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// circuit parameters
-// absolute maximum of L1 or L2 transactions allowed
-type nTx uint32
+// ZKMetadata contains ZKInputs metadata that is not used directly in the
+// ZKInputs result, but to calculate values for Hash check
+type ZKMetadata struct {
+	// Circuit parameters
+	// absolute maximum of L1 or L2 transactions allowed
+	NTx uint32
+	// merkle tree depth
+	NLevels   uint32
+	MaxLevels uint32
+	// absolute maximum of L1 transaction allowed
+	MaxL1Tx uint32
+	// Maximum number of Idxs where Fees can be send in a batch (currently
+	// is constant for all circuits: 64)
+	MaxFeeIdxs uint32
 
-// merkle tree depth
-type nLevels uint32
-
-// absolute maximum of L1 transaction allowed
-type maxL1Tx uint32
-
-//absolute maximum of fee transactions allowed
-type maxFeeTx uint32
+	L1TxsData [][]byte
+	L2TxsData [][]byte
+	ChainID   uint16
+}
 
 // ZKInputs represents the inputs that will be used to generate the zkSNARK proof
 type ZKInputs struct {
+	Metadata ZKMetadata
+
 	//
 	// General
 	//
@@ -38,11 +46,11 @@ type ZKInputs struct {
 	// GlobalChainID is the blockchain ID (0 for Ethereum mainnet). This value can be get from the smart contract.
 	GlobalChainID *big.Int `json:"globalChainID"` // uint16
 	// FeeIdxs is an array of merkle tree indexes where the coordinator will receive the accumulated fees
-	FeeIdxs []*big.Int `json:"feeIdxs"` // uint64 (max nLevels bits), len: [maxFeeTx]
+	FeeIdxs []*big.Int `json:"feeIdxs"` // uint64 (max nLevels bits), len: [maxFeeIdxs]
 
 	// accumulate fees
 	// FeePlanTokens contains all the tokenIDs for which the fees are being accumulated
-	FeePlanTokens []*big.Int `json:"feePlanTokens"` // uint32 (max 32 bits), len: [maxFeeTx]
+	FeePlanTokens []*big.Int `json:"feePlanTokens"` // uint32 (max 32 bits), len: [maxFeeIdxs]
 
 	//
 	// Txs (L1&L2)
@@ -142,13 +150,13 @@ type ZKInputs struct {
 	// state 3, value of the account leaf receiver of the Fees
 	// fee tx
 	// State fees
-	TokenID3  []*big.Int   `json:"tokenID3"`  // uint32, len: [maxFeeTx]
-	Nonce3    []*big.Int   `json:"nonce3"`    // uint64 (max 40 bits), len: [maxFeeTx]
-	Sign3     []*big.Int   `json:"sign3"`     // bool, len: [maxFeeTx]
-	Ay3       []*big.Int   `json:"ay3"`       // big.Int, len: [maxFeeTx]
-	Balance3  []*big.Int   `json:"balance3"`  // big.Int (max 192 bits), len: [maxFeeTx]
-	EthAddr3  []*big.Int   `json:"ethAddr3"`  // ethCommon.Address, len: [maxFeeTx]
-	Siblings3 [][]*big.Int `json:"siblings3"` // Hash, len: [maxFeeTx][nLevels + 1]
+	TokenID3  []*big.Int   `json:"tokenID3"`  // uint32, len: [maxFeeIdxs]
+	Nonce3    []*big.Int   `json:"nonce3"`    // uint64 (max 40 bits), len: [maxFeeIdxs]
+	Sign3     []*big.Int   `json:"sign3"`     // bool, len: [maxFeeIdxs]
+	Ay3       []*big.Int   `json:"ay3"`       // big.Int, len: [maxFeeIdxs]
+	Balance3  []*big.Int   `json:"balance3"`  // big.Int (max 192 bits), len: [maxFeeIdxs]
+	EthAddr3  []*big.Int   `json:"ethAddr3"`  // ethCommon.Address, len: [maxFeeIdxs]
+	Siblings3 [][]*big.Int `json:"siblings3"` // Hash, len: [maxFeeIdxs][nLevels + 1]
 
 	//
 	// Intermediate States
@@ -174,14 +182,14 @@ type ZKInputs struct {
 	// ISExitTree root at the moment of the Tx the value once the Tx is processed into the exit tree
 	ISExitRoot []*big.Int `json:"imExitRoot"` // Hash, len: [nTx - 1]
 	// ISAccFeeOut accumulated fees once the Tx is processed
-	ISAccFeeOut [][]*big.Int `json:"imAccFeeOut"` // big.Int, len: [nTx - 1][maxFeeTx]
+	ISAccFeeOut [][]*big.Int `json:"imAccFeeOut"` // big.Int, len: [nTx - 1][maxFeeIdxs]
 	// fee-tx
 	// ISStateRootFee root at the moment of the Tx, the state root value once the Tx is processed into the state tree
-	ISStateRootFee []*big.Int `json:"imStateRootFee"` // Hash, len: [maxFeeTx - 1]
+	ISStateRootFee []*big.Int `json:"imStateRootFee"` // Hash, len: [maxFeeIdxs - 1]
 	// ISInitStateRootFee state root once all L1-L2 tx are processed (before computing the fees-tx)
 	ISInitStateRootFee *big.Int `json:"imInitStateRootFee"` // Hash
 	// ISFinalAccFee final accumulated fees (before computing the fees-tx)
-	ISFinalAccFee []*big.Int `json:"imFinalAccFee"` // big.Int, len: [maxFeeTx - 1]
+	ISFinalAccFee []*big.Int `json:"imFinalAccFee"` // big.Int, len: [maxFeeIdxs - 1]
 }
 
 func bigIntsToStrings(v interface{}) interface{} {
@@ -212,6 +220,8 @@ func bigIntsToStrings(v interface{}) interface{} {
 			r[i] = bigIntsToStrings(c[i])
 		}
 		return r
+	case map[string]interface{}:
+		// avoid printing a warning when there is a struct type
 	default:
 		log.Warnf("bigIntsToStrings unexpected type: %T\n", v)
 	}
@@ -240,15 +250,18 @@ func (z ZKInputs) MarshalJSON() ([]byte, error) {
 }
 
 // NewZKInputs returns a pointer to an initialized struct of ZKInputs
-func NewZKInputs(nTx, maxFeeTx, nLevels int) *ZKInputs {
+func NewZKInputs(nTx, maxFeeIdxs, nLevels int) *ZKInputs {
 	zki := &ZKInputs{}
+	zki.Metadata.NTx = uint32(nTx)
+	zki.Metadata.MaxFeeIdxs = uint32(maxFeeIdxs)
+	zki.Metadata.NLevels = uint32(nLevels)
 
 	// General
 	zki.OldLastIdx = big.NewInt(0)
 	zki.OldStateRoot = big.NewInt(0)
 	zki.GlobalChainID = big.NewInt(0)
-	zki.FeeIdxs = newSlice(maxFeeTx)
-	zki.FeePlanTokens = newSlice(maxFeeTx)
+	zki.FeeIdxs = newSlice(maxFeeIdxs)
+	zki.FeePlanTokens = newSlice(maxFeeIdxs)
 
 	// Txs
 	zki.TxCompressedData = newSlice(nTx)
@@ -312,13 +325,13 @@ func NewZKInputs(nTx, maxFeeTx, nLevels int) *ZKInputs {
 	zki.OldKey2 = newSlice(nTx)
 	zki.OldValue2 = newSlice(nTx)
 
-	zki.TokenID3 = newSlice(maxFeeTx)
-	zki.Nonce3 = newSlice(maxFeeTx)
-	zki.Sign3 = newSlice(maxFeeTx)
-	zki.Ay3 = newSlice(maxFeeTx)
-	zki.Balance3 = newSlice(maxFeeTx)
-	zki.EthAddr3 = newSlice(maxFeeTx)
-	zki.Siblings3 = make([][]*big.Int, maxFeeTx)
+	zki.TokenID3 = newSlice(maxFeeIdxs)
+	zki.Nonce3 = newSlice(maxFeeIdxs)
+	zki.Sign3 = newSlice(maxFeeIdxs)
+	zki.Ay3 = newSlice(maxFeeIdxs)
+	zki.Balance3 = newSlice(maxFeeIdxs)
+	zki.EthAddr3 = newSlice(maxFeeIdxs)
+	zki.Siblings3 = make([][]*big.Int, maxFeeIdxs)
 	for i := 0; i < len(zki.Siblings3); i++ {
 		zki.Siblings3[i] = newSlice(nLevels + 1)
 	}
@@ -330,11 +343,11 @@ func NewZKInputs(nTx, maxFeeTx, nLevels int) *ZKInputs {
 	zki.ISExitRoot = newSlice(nTx - 1)
 	zki.ISAccFeeOut = make([][]*big.Int, nTx-1)
 	for i := 0; i < len(zki.ISAccFeeOut); i++ {
-		zki.ISAccFeeOut[i] = newSlice(maxFeeTx)
+		zki.ISAccFeeOut[i] = newSlice(maxFeeIdxs)
 	}
-	zki.ISStateRootFee = newSlice(maxFeeTx - 1)
+	zki.ISStateRootFee = newSlice(maxFeeIdxs - 1)
 	zki.ISInitStateRootFee = big.NewInt(0)
-	zki.ISFinalAccFee = newSlice(maxFeeTx - 1)
+	zki.ISFinalAccFee = newSlice(maxFeeIdxs - 1)
 
 	return zki
 }

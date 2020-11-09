@@ -48,8 +48,11 @@ func TestCalcFeeAmount(t *testing.T) {
 }
 
 func TestFeePrintSQLSwitch(t *testing.T) {
+	debug := false
 	for i := 0; i < 256; i++ {
 		f := FeeSelector(i).Percentage()
-		fmt.Printf("        WHEN $1 = %03d THEN %.6e\n", i, f)
+		if debug {
+			fmt.Printf("        WHEN $1 = %03d THEN %.6e\n", i, f)
+		}
 	}
 }

@@ -78,7 +78,11 @@ type StateDB struct {
 	// idx holds the current Idx that the BatchBuilder is using
 	idx common.Idx
 	zki *common.ZKInputs
-	i   int // i is the current transaction index in the ZKInputs generation (zki)
+	// i is the current transaction index in the ZKInputs generation (zki)
+	i int
+	// accumulatedFees contains the accumulated fees for each token (Coord
+	// Idx) in the processed batch
+	accumulatedFees map[common.Idx]*big.Int
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
