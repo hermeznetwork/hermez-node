@@ -503,48 +503,72 @@ func (hdb *HistoryDB) addExitTree(d meddler.DB, exitTree []common.ExitInfo) erro
 	)
 }
 
-type exitID struct {
-	batchNum int64
-	idx      int64
-}
-
-func (hdb *HistoryDB) updateExitTree(d meddler.DB, blockNum int64,
-	instantWithdrawn []exitID, delayedWithdrawRequest []exitID) error {
-	// helperQueryExitIDTuples is a helper function to build the query with
-	// an array of tuples in the arguments side built from []exitID
-	helperQueryExitIDTuples := func(queryTmpl string, blockNum int64, exits []exitID) (string, []interface{}) {
-		args := make([]interface{}, len(exits)*2+1)
-		holder := ""
-		args[0] = blockNum
-		for i, v := range exits {
-			args[1+i*2+0] = v.batchNum
-			args[1+i*2+1] = v.idx
-			holder += "(?, ?),"
-		}
-		query := fmt.Sprintf(queryTmpl, holder[:len(holder)-1])
-		return hdb.db.Rebind(query), args
+func (hdb *HistoryDB) updateExitTree(d sqlx.Ext, blockNum int64,
+	rollupWithdrawals []common.WithdrawInfo, wDelayerWithdrawals []common.WDelayerTransfer) error {
+	type withdrawal struct {
+		BatchNum               int64              `db:"batch_num"`
+		AccountIdx             int64              `db:"account_idx"`
+		InstantWithdrawn       *int64             `db:"instant_withdrawn"`
+		DelayedWithdrawRequest *int64             `db:"delayed_withdraw_request"`
+		DelayedWithdrawn       *int64             `db:"delayed_withdrawn"`
+		Owner                  *ethCommon.Address `db:"owner"`
+		Token                  *ethCommon.Address `db:"token"`
 	}
-
-	if len(instantWithdrawn) > 0 {
-		query, args := helperQueryExitIDTuples(
-			`UPDATE exit_tree SET instant_withdrawn = ? WHERE (batch_num, account_idx) IN (%s);`,
-			blockNum,
-			instantWithdrawn,
-		)
-		if _, err := hdb.db.DB.Exec(query, args...); err != nil {
+	withdrawals := make([]withdrawal, len(rollupWithdrawals)+len(wDelayerWithdrawals))
+	for i := range rollupWithdrawals {
+		info := &rollupWithdrawals[i]
+		withdrawals[i] = withdrawal{
+			BatchNum:   int64(info.NumExitRoot),
+			AccountIdx: int64(info.Idx),
+		}
+		if info.InstantWithdraw {
+			withdrawals[i].InstantWithdrawn = &blockNum
+		} else {
+			withdrawals[i].DelayedWithdrawRequest = &blockNum
+			withdrawals[i].Owner = &info.Owner
+			withdrawals[i].Token = &info.Token
+		}
+	}
+	for i := range wDelayerWithdrawals {
+		info := &wDelayerWithdrawals[i]
+		withdrawals[len(rollupWithdrawals)+i] = withdrawal{
+			DelayedWithdrawn: &blockNum,
+			Owner:            &info.Owner,
+			Token:            &info.Token,
+		}
+	}
+	// In VALUES we set an initial row of NULLs to set the types of each
+	// variable passed as argument
+	query := `
+		UPDATE exit_tree e SET
+			instant_withdrawn = d.instant_withdrawn,
+			delayed_withdraw_request = CASE
+				WHEN e.delayed_withdraw_request IS NOT NULL THEN e.delayed_withdraw_request
+				ELSE d.delayed_withdraw_request
+			END,
+			delayed_withdrawn = d.delayed_withdrawn,
+			owner = d.owner,
+			token = d.token
+		FROM (VALUES
+			(NULL::::BIGINT, NULL::::BIGINT, NULL::::BIGINT, NULL::::BIGINT, NULL::::BIGINT, NULL::::BYTEA, NULL::::BYTEA),
+			(:batch_num,
+			 :account_idx,
+			 :instant_withdrawn,
+			 :delayed_withdraw_request,
+			 :delayed_withdrawn,
+			 :owner,
+			 :token)
+		) as d (batch_num, account_idx, instant_withdrawn, delayed_withdraw_request, delayed_withdrawn, owner, token)
+		WHERE
+			(d.batch_num IS NOT NULL AND e.batch_num = d.batch_num AND e.account_idx = d.account_idx) OR
+			(d.delayed_withdrawn IS NOT NULL AND e.delayed_withdrawn IS NULL AND e.owner = d.owner AND e.token = d.token)
+		`
+	if len(withdrawals) > 0 {
+		if _, err := sqlx.NamedQuery(d, query, withdrawals); err != nil {
 			return err
 		}
 	}
-	if len(delayedWithdrawRequest) > 0 {
-		query, args := helperQueryExitIDTuples(
-			`UPDATE exit_tree SET delayed_withdraw_request = ? WHERE (batch_num, account_idx) IN (%s);`,
-			blockNum,
-			delayedWithdrawRequest,
-		)
-		if _, err := hdb.db.DB.Exec(query, args...); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 
@@ -1210,7 +1234,7 @@ func (hdb *HistoryDB) setWDelayerVars(d meddler.DB, wDelayer *common.WDelayerVar
 // exist in the smart contracts.
 func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 	auction *common.AuctionVariables, wDelayer *common.WDelayerVariables) error {
-	txn, err := hdb.db.Begin()
+	txn, err := hdb.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1242,7 +1266,7 @@ func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 // the pagination system of the API/DB depends on this.  Within blocks, all
 // items should also be in the correct order (Accounts, Tokens, Txs, etc.)
 func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
-	txn, err := hdb.db.Begin()
+	txn, err := hdb.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1340,27 +1364,10 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		}
 	}
 
-	if len(blockData.Rollup.Withdrawals) > 0 {
-		instantWithdrawn := []exitID{}
-		delayedWithdrawRequest := []exitID{}
-		for _, withdraw := range blockData.Rollup.Withdrawals {
-			exitID := exitID{
-				batchNum: int64(withdraw.NumExitRoot),
-				idx:      int64(withdraw.Idx),
-			}
-			if withdraw.InstantWithdraw {
-				instantWithdrawn = append(instantWithdrawn, exitID)
-			} else {
-				delayedWithdrawRequest = append(delayedWithdrawRequest, exitID)
-			}
-		}
-		if err := hdb.updateExitTree(txn, blockData.Block.EthBlockNum,
-			instantWithdrawn, delayedWithdrawRequest); err != nil {
-			return err
-		}
+	if err := hdb.updateExitTree(txn, blockData.Block.EthBlockNum,
+		blockData.Rollup.Withdrawals, blockData.WDelayer.Withdrawals); err != nil {
+		return err
 	}
-
-	// TODO: Process WDelayer withdrawals
 
 	return txn.Commit()
 }

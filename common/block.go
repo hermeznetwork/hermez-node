@@ -1,6 +1,7 @@
 package common
 
 import (
+	"math/big"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -51,15 +52,30 @@ func NewAuctionData() AuctionData {
 	}
 }
 
+// WDelayerTransfer represents a transfer (either deposit or withdrawal) in the
+// WDelayer smart contract
+type WDelayerTransfer struct {
+	Owner  ethCommon.Address
+	Token  ethCommon.Address
+	Amount *big.Int
+	// TxHash ethCommon.Hash // hash of the transaction in which the wdelayer transfer happened
+}
+
 // WDelayerData contains information returned by the WDelayer smart contract
 type WDelayerData struct {
-	Vars *WDelayerVariables
+	Vars             *WDelayerVariables
+	Deposits         []WDelayerTransfer
+	DepositsByTxHash map[ethCommon.Hash]*WDelayerTransfer
+	Withdrawals      []WDelayerTransfer
 }
 
 // NewWDelayerData creates an empty WDelayerData.
 func NewWDelayerData() WDelayerData {
 	return WDelayerData{
-		Vars: nil,
+		Vars:             nil,
+		Deposits:         make([]WDelayerTransfer, 0),
+		DepositsByTxHash: make(map[ethCommon.Hash]*WDelayerTransfer),
+		Withdrawals:      make([]WDelayerTransfer, 0),
 	}
 }
 

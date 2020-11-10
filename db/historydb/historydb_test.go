@@ -481,7 +481,7 @@ func TestExitTree(t *testing.T) {
 	const nAccounts = 3
 	accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
 	assert.NoError(t, historyDB.AddAccounts(accs))
-	exitTree := test.GenExitTree(nBatches, batches, accs)
+	exitTree := test.GenExitTree(nBatches, batches, accs, blocks)
 	err = historyDB.AddExitTree(exitTree)
 	assert.NoError(t, err)
 }
@@ -509,7 +509,6 @@ func TestGetL1UserTxs(t *testing.T) {
 	// Sanity check
 	require.Equal(t, 1, len(blocks))
 	require.Equal(t, 5, len(blocks[0].Rollup.L1UserTxs))
-	// fmt.Printf("DBG Blocks: %+v\n", blocks)
 
 	toForgeL1TxsNum := int64(1)
 
@@ -597,14 +596,15 @@ func TestUpdateExitTree(t *testing.T) {
 		ForceExit(1) A: 100
 		ForceExit(1) B: 80
 
-		Exit(1) C: 50 (200)
-		Exit(1) D: 30 (200)
+		Exit(1) C: 50 (172)
+		Exit(1) D: 30 (172)
 
 		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs{3}
 		> batchL1 // forge L1UserTxs{3}, freeze defined L1UserTxs{nil}
 		> block // blockNum=3
 
 		> block // blockNum=4 (empty block)
+		> block // blockNum=5 (empty block)
 	`
 
 	tc := til.NewContext(common.RollupConstMaxL1UserTx)
@@ -617,39 +617,33 @@ func TestUpdateExitTree(t *testing.T) {
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
 	assert.Nil(t, err)
 
-	// Add all blocks except for the last one
-	for i := range blocks[:len(blocks)-1] {
+	// Add all blocks except for the last two
+	for i := range blocks[:len(blocks)-2] {
 		err = historyDB.AddBlockSCData(&blocks[i])
 		require.Nil(t, err)
 	}
 
-	// Add withdraws to the last block, and insert block into the DB
-	block := &blocks[len(blocks)-1]
+	// Add withdraws to the second-to-last block, and insert block into the DB
+	block := &blocks[len(blocks)-2]
 	require.Equal(t, int64(4), block.Block.EthBlockNum)
+	tokenAddr := blocks[0].Rollup.AddedTokens[0].EthAddr
+	// block.WDelayer.Deposits = append(block.WDelayer.Deposits,
+	// 	common.WDelayerTransfer{Owner: tc.UsersByIdx[257].Addr, Token: tokenAddr, Amount: big.NewInt(80)}, // 257
+	// 	common.WDelayerTransfer{Owner: tc.UsersByIdx[259].Addr, Token: tokenAddr, Amount: big.NewInt(15)}, // 259
+	// )
 	block.Rollup.Withdrawals = append(block.Rollup.Withdrawals,
 		common.WithdrawInfo{Idx: 256, NumExitRoot: 4, InstantWithdraw: true},
-		common.WithdrawInfo{Idx: 257, NumExitRoot: 4, InstantWithdraw: false},
+		common.WithdrawInfo{Idx: 257, NumExitRoot: 4, InstantWithdraw: false,
+			Owner: tc.UsersByIdx[257].Addr, Token: tokenAddr},
 		common.WithdrawInfo{Idx: 258, NumExitRoot: 3, InstantWithdraw: true},
-		common.WithdrawInfo{Idx: 259, NumExitRoot: 3, InstantWithdraw: false},
+		common.WithdrawInfo{Idx: 259, NumExitRoot: 3, InstantWithdraw: false,
+			Owner: tc.UsersByIdx[259].Addr, Token: tokenAddr},
 	)
 	err = historyDB.addBlock(historyDB.db, &block.Block)
 	require.Nil(t, err)
 
-	// update exit trees in DB
-	instantWithdrawn := []exitID{}
-	delayedWithdrawRequest := []exitID{}
-	for _, withdraw := range block.Rollup.Withdrawals {
-		exitID := exitID{
-			batchNum: int64(withdraw.NumExitRoot),
-			idx:      int64(withdraw.Idx),
-		}
-		if withdraw.InstantWithdraw {
-			instantWithdrawn = append(instantWithdrawn, exitID)
-		} else {
-			delayedWithdrawRequest = append(delayedWithdrawRequest, exitID)
-		}
-	}
-	err = historyDB.updateExitTree(historyDB.db, block.Block.EthBlockNum, instantWithdrawn, delayedWithdrawRequest)
+	err = historyDB.updateExitTree(historyDB.db, block.Block.EthBlockNum,
+		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
 	require.Nil(t, err)
 
 	// Check that exits in DB match with the expected values
@@ -668,6 +662,30 @@ func TestUpdateExitTree(t *testing.T) {
 			assert.Equal(t, &block.Block.EthBlockNum, dbExitsByIdx[withdraw.Idx].DelayedWithdrawRequest)
 		}
 	}
+
+	// Add delayed withdraw to the last block, and insert block into the DB
+	block = &blocks[len(blocks)-1]
+	require.Equal(t, int64(5), block.Block.EthBlockNum)
+	block.WDelayer.Withdrawals = append(block.WDelayer.Withdrawals,
+		common.WDelayerTransfer{
+			Owner:  tc.UsersByIdx[257].Addr,
+			Token:  tokenAddr,
+			Amount: big.NewInt(80),
+		})
+	err = historyDB.addBlock(historyDB.db, &block.Block)
+	require.Nil(t, err)
+
+	err = historyDB.updateExitTree(historyDB.db, block.Block.EthBlockNum,
+		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
+	require.Nil(t, err)
+
+	// Check that delayed withdrawn has been set
+	dbExits, err = historyDB.GetAllExits()
+	require.Nil(t, err)
+	for _, dbExit := range dbExits {
+		dbExitsByIdx[dbExit.AccountIdx] = dbExit
+	}
+	require.Equal(t, &block.Block.EthBlockNum, dbExitsByIdx[257].DelayedWithdrawn)
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them

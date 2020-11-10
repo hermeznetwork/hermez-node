@@ -3,6 +3,7 @@ package common
 import (
 	"math/big"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-merkletree"
 )
 
@@ -30,4 +31,7 @@ type WithdrawInfo struct {
 	Idx             Idx
 	NumExitRoot     BatchNum
 	InstantWithdraw bool
+	TxHash          ethCommon.Hash // hash of the transaction in which the withdraw happened
+	Owner           ethCommon.Address
+	Token           ethCommon.Address
 }

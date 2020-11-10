@@ -109,9 +109,11 @@ CREATE TABLE exit_tree (
     account_idx BIGINT REFERENCES account (idx) ON DELETE CASCADE,
     merkle_proof BYTEA NOT NULL,
     balance BYTEA NOT NULL,
-    instant_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
-    delayed_withdraw_request BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL,
-    delayed_withdrawn BIGINT REFERENCES batch (batch_num) ON DELETE SET NULL
+    instant_withdrawn BIGINT REFERENCES block (eth_block_num) ON DELETE SET NULL,
+    delayed_withdraw_request BIGINT REFERENCES block (eth_block_num) ON DELETE SET NULL,
+    owner BYTEA,
+    token BYTEA,
+    delayed_withdrawn BIGINT REFERENCES block (eth_block_num) ON DELETE SET NULL
 );
 
 -- +migrate StatementBegin

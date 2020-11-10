@@ -91,6 +91,7 @@ type RollupEventWithdraw struct {
 	Idx             uint64
 	NumExitRoot     uint64
 	InstantWithdraw bool
+	TxHash          ethCommon.Hash // Hash of the transaction that generated this event
 }
 
 // RollupEvents is the list of events in a block of the Rollup Smart Contract
@@ -577,6 +578,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			if instantWithdraw == 1 {
 				withdraw.InstantWithdraw = true
 			}
+			withdraw.TxHash = vLog.TxHash
 			rollupEvents.Withdraw = append(rollupEvents.Withdraw, withdraw)
 		}
 	}

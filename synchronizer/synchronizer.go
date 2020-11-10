@@ -213,9 +213,22 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 	}
 
 	// Get data from the WithdrawalDelayer contract
-	wdelayerData, err := s.wdelayerSync(ethBlock)
+	wDelayerData, err := s.wdelayerSync(ethBlock)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	for i := range rollupData.Withdrawals {
+		withdrawal := &rollupData.Withdrawals[i]
+		if !withdrawal.InstantWithdraw {
+			wDelayerTransfer, ok := wDelayerData.DepositsByTxHash[withdrawal.TxHash]
+			if !ok {
+				return nil, nil, fmt.Errorf("WDelayer deposit corresponding to " +
+					"non-instant rollup withdrawal not found")
+			}
+			withdrawal.Owner = wDelayerTransfer.Owner
+			withdrawal.Token = wDelayerTransfer.Token
+		}
 	}
 
 	// Group all the block data into the structs to save into HistoryDB
@@ -223,7 +236,7 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 		Block:    *ethBlock,
 		Rollup:   *rollupData,
 		Auction:  *auctionData,
-		WDelayer: *wdelayerData,
+		WDelayer: *wDelayerData,
 	}
 
 	// log.Debugw("Sync()", "block", blockData)
@@ -481,7 +494,6 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		}
 
 		// Get Batch information
-		// fmt.Printf("DBG: %#v\n", forgeBatchArgs.FeeIdxCoordinator)
 		batch := common.Batch{
 			BatchNum:           batchNum,
 			EthBlockNum:        blockNum,
@@ -547,6 +559,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			Idx:             common.Idx(evtWithdraw.Idx),
 			NumExitRoot:     common.BatchNum(evtWithdraw.NumExitRoot),
 			InstantWithdraw: evtWithdraw.InstantWithdraw,
+			TxHash:          evtWithdraw.TxHash,
 		})
 	}
 
@@ -677,10 +690,25 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 		return nil, eth.ErrBlockHashMismatchEvent
 	}
 
+	for _, evt := range wDelayerEvents.Deposit {
+		wDelayerData.Deposits = append(wDelayerData.Deposits, common.WDelayerTransfer{
+			Owner:  evt.Owner,
+			Token:  evt.Token,
+			Amount: evt.Amount,
+		})
+		wDelayerData.DepositsByTxHash[evt.TxHash] =
+			&wDelayerData.Deposits[len(wDelayerData.Deposits)-1]
+	}
+	for _, evt := range wDelayerEvents.Withdraw {
+		wDelayerData.Withdrawals = append(wDelayerData.Withdrawals, common.WDelayerTransfer{
+			Owner:  evt.Owner,
+			Token:  evt.Token,
+			Amount: evt.Amount,
+		})
+	}
+
 	varsUpdate := false
 
-	// TODO Deposit
-	// TODO Withdraw
 	// TODO EscapeHatchWithdrawal
 	for range wDelayerEvents.EmergencyModeEnabled {
 		s.vars.WDelayer.EmergencyMode = true

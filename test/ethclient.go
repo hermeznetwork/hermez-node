@@ -45,6 +45,16 @@ func (w *WDelayerBlock) addTransaction(tx *types.Transaction) *types.Transaction
 	return tx
 }
 
+func (w *WDelayerBlock) deposit(txHash ethCommon.Hash, owner, token ethCommon.Address, amount *big.Int) {
+	w.Events.Deposit = append(w.Events.Deposit, eth.WDelayerEventDeposit{
+		Owner:            owner,
+		Token:            token,
+		Amount:           amount,
+		DepositTimestamp: uint64(w.Eth.Time),
+		TxHash:           txHash,
+	})
+}
+
 // RollupBlock stores all the data related to the Rollup SC from an ethereum block
 type RollupBlock struct {
 	State     eth.RollupState
@@ -57,6 +67,7 @@ type RollupBlock struct {
 
 func (r *RollupBlock) addTransaction(tx *types.Transaction) *types.Transaction {
 	txHash := tx.Hash()
+	fmt.Printf("DBG txHash %v\n", txHash.Hex())
 	r.Txs[txHash] = tx
 	return tx
 }
@@ -769,29 +780,36 @@ func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenI
 	}
 	r.State.ExitNullifierMap[numExitRoot][idx] = true
 
+	type data struct {
+		BabyPubKey      *babyjub.PublicKey
+		TokenID         uint32
+		NumExitRoot     int64
+		Idx             int64
+		Amount          *big.Int
+		Siblings        []*big.Int
+		InstantWithdraw bool
+	}
+	tx = r.addTransaction(newTransaction("withdrawMerkleProof", data{
+		BabyPubKey:      babyPubKey,
+		TokenID:         tokenID,
+		NumExitRoot:     numExitRoot,
+		Idx:             idx,
+		Amount:          amount,
+		Siblings:        siblings,
+		InstantWithdraw: instantWithdraw,
+	}))
 	r.Events.Withdraw = append(r.Events.Withdraw, eth.RollupEventWithdraw{
 		Idx:             uint64(idx),
 		NumExitRoot:     uint64(numExitRoot),
 		InstantWithdraw: instantWithdraw,
+		TxHash:          tx.Hash(),
 	})
-	type data struct {
-		babyPubKey      *babyjub.PublicKey
-		tokenID         uint32
-		numExitRoot     int64
-		idx             int64
-		amount          *big.Int
-		siblings        []*big.Int
-		instantWithdraw bool
+
+	if !instantWithdraw {
+		w := nextBlock.WDelayer
+		w.deposit(tx.Hash(), *c.addr, r.State.TokenList[int(tokenID)], amount)
 	}
-	return r.addTransaction(newTransaction("withdrawMerkleProof", data{
-		babyPubKey:      babyPubKey,
-		tokenID:         tokenID,
-		numExitRoot:     numExitRoot,
-		idx:             idx,
-		amount:          amount,
-		siblings:        siblings,
-		instantWithdraw: instantWithdraw,
-	})), nil
+	return tx, nil
 }
 
 type transactionData struct {
@@ -804,6 +822,7 @@ func newTransaction(name string, value interface{}) *types.Transaction {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("DBG dataJSON: %v\n", string(data))
 	return types.NewTransaction(0, ethCommon.Address{}, nil, 0, nil,
 		data)
 }

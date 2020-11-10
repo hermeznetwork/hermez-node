@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"math/big"
@@ -180,7 +179,7 @@ func SlicePtrsToSlice(slice interface{}) interface{} {
 }
 
 // Rollback an sql transaction, and log the error if it's not nil
-func Rollback(txn *sql.Tx) {
+func Rollback(txn *sqlx.Tx) {
 	err := txn.Rollback()
 	if err != nil {
 		log.Errorw("Rollback", "err", err)
