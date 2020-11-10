@@ -5,10 +5,27 @@ import (
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/stretchr/testify/assert"
 )
 
 const secondsPerBlock = 15
+
+type testStatus struct {
+	Network           testNetwork              `json:"network"`
+	Metrics           historydb.Metrics        `json:"metrics"`
+	Rollup            common.RollupVariables   `json:"rollup"`
+	Auction           common.AuctionVariables  `json:"auction"`
+	WithdrawalDelayer common.WDelayerVariables `json:"withdrawalDelayer"`
+	RecommendedFee    common.RecommendedFee    `json:"recommendedFee"`
+}
+
+type testNetwork struct {
+	LastBlock   int64        `json:"lastBlock"`
+	LastBatch   testBatch    `json:"lastBatch"`
+	CurrentSlot int64        `json:"currentSlot"`
+	NextForgers []NextForger `json:"nextForgers"`
+}
 
 func TestSetRollupVariables(t *testing.T) {
 	rollupVars := &common.RollupVariables{}
@@ -101,6 +118,46 @@ func TestUpdateRecommendedFee(t *testing.T) {
 	err := api.UpdateRecommendedFee()
 	assert.NoError(t, err)
 	assert.Greater(t, api.status.RecommendedFee.ExistingAccount, float64(0))
-	assert.Equal(t, api.status.RecommendedFee.CreatesAccount, api.status.RecommendedFee.ExistingAccount*createAccountExtraFeePercentage)
-	assert.Equal(t, api.status.RecommendedFee.CreatesAccountAndRegister, api.status.RecommendedFee.ExistingAccount*createAccountInternalExtraFeePercentage)
+	assert.Equal(t, api.status.RecommendedFee.CreatesAccount,
+		api.status.RecommendedFee.ExistingAccount*createAccountExtraFeePercentage)
+	assert.Equal(t, api.status.RecommendedFee.CreatesAccountAndRegister,
+		api.status.RecommendedFee.ExistingAccount*createAccountInternalExtraFeePercentage)
+}
+
+func TestGetStatus(t *testing.T) {
+	lastBlock := tc.blocks[3]
+	lastBatchNum := common.BatchNum(3)
+	currentSlotNum := int64(1)
+	api.SetRollupVariables(tc.rollupVars)
+	api.SetWDelayerVariables(tc.wdelayerVars)
+	api.SetAuctionVariables(tc.auctionVars)
+	err := api.UpdateNetworkInfo(lastBlock, lastBatchNum, currentSlotNum)
+	assert.NoError(t, err)
+	err = api.UpdateMetrics()
+	assert.NoError(t, err)
+	err = api.UpdateRecommendedFee()
+	assert.NoError(t, err)
+
+	endpoint := apiURL + "state"
+	var status testStatus
+
+	assert.NoError(t, doGoodReq("GET", endpoint, nil, &status))
+	assert.Equal(t, tc.rollupVars, status.Rollup)
+	assert.Equal(t, tc.auctionVars, status.Auction)
+	assert.Equal(t, tc.wdelayerVars, status.WithdrawalDelayer)
+	assert.Equal(t, lastBlock.EthBlockNum, status.Network.LastBlock)
+	assert.Equal(t, lastBatchNum, status.Network.LastBatch.BatchNum)
+	assert.Equal(t, currentSlotNum, status.Network.CurrentSlot)
+	assert.Equal(t, int(api.status.Auction.ClosedAuctionSlots)+1, len(status.Network.NextForgers))
+	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
+	assert.Greater(t, status.Metrics.BatchFrequency, float64(0))
+	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
+	assert.Greater(t, status.Metrics.TotalAccounts, int64(0))
+	assert.Greater(t, status.Metrics.TotalBJJs, int64(0))
+	assert.Greater(t, status.Metrics.AvgTransactionFee, float64(0))
+	assert.Greater(t, status.RecommendedFee.ExistingAccount, float64(0))
+	assert.Equal(t, status.RecommendedFee.CreatesAccount,
+		status.RecommendedFee.ExistingAccount*createAccountExtraFeePercentage)
+	assert.Equal(t, status.RecommendedFee.CreatesAccountAndRegister,
+		status.RecommendedFee.ExistingAccount*createAccountInternalExtraFeePercentage)
 }

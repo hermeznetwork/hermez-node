@@ -2273,6 +2273,8 @@ components:
           type: object
           description: Time period in which the coordinator will have the ability to forge. Specified both in Ethereum blocks and timestamp
           properties:
+            slotNum:
+              $ref: '#/components/schemas/SlotNum'
             fromBlock:
               $ref: '#/components/schemas/EthBlockNum'
             toBlock:
@@ -2283,242 +2285,261 @@ components:
             toTimestamp:
               type: string
               format: date-time
+          required:
+            - slotNum
+            - fromBlock
+            - toBlock
+            - fromTimestamp
+            - toTimestamp
+          additionalProperties: false
+      required:
+        - coordinator
+        - period
+      additionalProperties: false
     NextForgers:
-      type: object
-      properties:
-        nextForgers:
-          type: array
-          description: List of next coordinators to forge.
-          items: 
-            $ref: '#/components/schemas/NextForger'
-        pendingItems:
-          $ref: '#/components/schemas/PendingItems'
+      type: array
+      description: List of next coordinators to forge.
+      items: 
+        $ref: '#/components/schemas/NextForger'
     State:
       type: object
       description: Gobal variables of the network
       properties:
         network:
-          type: object
-          description: Gobal statistics of the network
-          properties:
-            lastBlock:
-              allOf:
-                - $ref: '#/components/schemas/EthBlockNum'
-                - description: Last synchronized Etherum block.
-                - example: 3457437
-            lastBatch:
-              $ref: '#/components/schemas/Batch'
-            currentSlot:
-              allOf:
-                - $ref: '#/components/schemas/SlotNum'
-                - description: Slot where batches are currently being forged.
-                - example: 2334
-            nextForgers:
-              $ref: '#/components/schemas/NextForgers'
-          additionalProperties: false
-          require: 
-            - lastBlock
-            - lastBatch
-            - currentSlot
-            - nextForgers
+          $ref: '#/components/schemas/StateNetwork'
         metrics:
-          type: object
-          description: Metrics of the network
-          properties:
-            transactionsPerBatch:
-              type: number
-              description: Average transactions per batch in the last 24 hours.
-              example: 2002.7
-            batchFrequency:
-              type: number
-              description: Average elapsed time between batches in the last 24 hours, in seconds.
-              example: 8.9
-            transactionsPerSecond:
-              type: number
-              description: Average transactions per second in the last 24 hours.
-              example: 302.3
-            totalAccounts:
-              type: integer
-              description: Number of created accounts.
-              example: 90473
-            totalBJJs:
-              type: integer
-              description: Number of different registered BJJs.
-              example: 23067
-            avgTransactionFee:
-              type: number
-              description: Average fee percentage paid for L2 transactions in the last 24 hours.
-              example: 1.54
-          additionalProperties: false
-          require:
-            - transactionsPerBatch
-            - batchFrequency
-            - transactionsPerSecond
-            - totalAccounts
-            - totalBJJs
-            - avgTransactionFee
+          $ref: '#/components/schemas/StateMetrics'
         rollup:
-          type: object
-          description: Rollup parameters
-          properties:
-            forgeL1L2BatchTimeout:
-              type: integer
-              description: Max ethereum blocks after the last L1-L2-batch, when exceeds the timeout only L1-L2-batch are allowed.
-              example: 5
-            feeAddToken:
-              type: integer
-              description: Fee to pay when registering tokens into the network.
-              example: 5698
-            withdrawalDelay:
-              type: integer
-              description: Withdraw delay in seconds
-              example: 432000
-            buckets:
-              type: array
-              description: List of buckets state
-              items:
-                type: object
-                properties:
-                  ceilUSD:
-                    type: integer
-                    description: Max USD value
-                    example: 1000
-                  blockStamp:
-                    type: integer
-                    description: Last time a withdrawal was added ( or removed if the bucket was full)
-                    example: 4475934
-                  withdrawals:
-                    type: integer
-                    description: Available withdrawals of the bucket
-                    example: 4
-                  blockWithdrawalRate:
-                    type: integer
-                    description: Every `blockWithdrawalRate` blocks add 1 withdrawal
-                    example: 8
-                  maxWithdrawals:
-                    type: integer
-                    description: Max withdrawals the bucket can hold
-                    example: 4
-                additionalProperties: false
-                require: 
-                  - ceilUSD
-                  - blockStamp
-                  - withdrawals
-                  - blockWithdrawalRate
-                  - maxWithdrawals
-          additionalProperties: false
-          require: 
-            - forgeL1L2BatchTimeout
-            - feeAddToken
-            - withdrawalDelay
-            - buckets
+          $ref: '#/components/schemas/StateRollup'
         auction:
-          type: object
-          description: Auction parameters.
-          properties:
-            bootCoordinator:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum address of the boot coordinator.
-                - example: "0x997dc4262BCDbf85190C01c996b4C06a461d2430"
-            slotDeadline:
-              type: integer
-              description: Number of blocks after the beginning of a slot after which any coordinator can forge if the winner has not forged any batch in that slot.
-              example: 3
-            closedAuctionSlots:
-              type: integer
-              description: Amount of slots between the current slot and the slot auction that is closed. Example if the value is 2, when slot 10 begins, the auction of the slot 12 gets closed.
-              example: 2
-            openAuctionSlots:
-              type: integer
-              description: How many days in advance are auctions opened.
-            defaultSlotSetBid:
-              type: array
-              description: "Initial minimal bid for each auction. Expressed as an array of 6 values. To calculate which value corresponds to each slot: `initialMinimalBidding[slotNum%6]`."
-              items:
-                type: integer
-              example: [32,0,68,21,55,99]
-            outbidding:
-              type: number
-              description: Minimum outbid over the previous one to consider it valid.
-              example: 3.64
-            donationAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum address where the donations will go to.
-                - example: "0x887dc4262BCDbf85190C01c996b4C06a461d2430"
-            allocationRatio:
-              type: array
-              description: Percentage in which fees will be splitted between donations, governance and burning. The sum of the tree values should be 100.
-              items:
-                type: integer
-              example: [80,10,10]
-          additionalProperties: false
-          require: 
-            - bootCoordinator
-            - slotDeadline
-            - closedAuctionSlots
-            - openAuctionSlots
-            - defaultSlotSetBid
-            - outbidding
-            - donationAddress
-            - allocationRatio
+          $ref: '#/components/schemas/StateAuction'
         withdrawalDelayer:
-          type: object
-          description: Withdrawal delayer parameters
-          properties:
-            hermezRollupAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum address of the rollup smart contract.
-                - example: "0x777dc4262BCDbf85190C01c996b4C06a461d2430"
-            hermezGovernanceDAOAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum address of the governance DAO.
-                - example: "0x667dc4262BCDbf85190C01c996b4C06a461d2430"
-            whiteHackGroupAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum Address that can claim the funds in an emergency when the maximum emergency mode time is exceeded.
-                - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
-            hermezKeeperAddress:
-              allOf:
-                - $ref: '#/components/schemas/EthereumAddress'
-                - description: Ethereum Address that can enable emergency mode and modify the delay to make a withdrawal.
-                - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
-            withdrawalDelay:
-              allOf:
-                - $ref: '#/components/schemas/EthBlockNum'
-                - description: The time that anyone needs to wait until a withdrawal of the funds is allowed, in seconds.
-                - example: 539573849
-            emergencyModeStartingTime:
-              type: integer
-              description: Second (since unix epoch) in which the emergency mode has been activated.
-              example: 10
-            emergencyMode:
-              type: boolean
-              description: Indicates if emergency mode has been activated.
-              example: false
-          additionalProperties: false
-          require: 
-            - hermezRollupAddress
-            - hermezGovernanceDAOAddress
-            - whiteHackGroupAddress
-            - hermezKeeperAddress
-            - withdrawalDelay
-            - emergencyModeStartingTime
-            - emergencyMode
+          $ref: '#/components/schemas/StateWithdrawDelayer'
         recommendedFee:
           $ref: '#/components/schemas/RecommendedFee'
       additionalProperties: false
-      require: 
+      required: 
         - network
         - metrics
         - rollup
         - auction
         - withdrawalDelayer
-        - recomendedFee 
+        - recommendedFee
+    StateNetwork:
+      type: object
+      description: Gobal statistics of the network
+      properties:
+        lastBlock:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Last synchronized Etherum block.
+            - example: 3457437
+        lastBatch:
+          $ref: '#/components/schemas/Batch'
+        currentSlot:
+          allOf:
+            - $ref: '#/components/schemas/SlotNum'
+            - description: Slot where batches are currently being forged.
+            - example: 2334
+        nextForgers:
+          $ref: '#/components/schemas/NextForgers'
+      additionalProperties: false
+      required: 
+        - lastBlock
+        - lastBatch
+        - currentSlot
+        - nextForgers
+    StateAuction:
+      type: object
+      description: Auction parameters.
+      properties:
+        ethereumBlockNum:
+          $ref: '#/components/schemas/EthBlockNum'
+        bootCoordinator:
+          allOf:
+            - $ref: '#/components/schemas/EthereumAddress'
+            - description: Ethereum address of the boot coordinator.
+            - example: "0x997dc4262BCDbf85190C01c996b4C06a461d2430"
+        slotDeadline:
+          type: integer
+          description: Number of blocks after the beginning of a slot after which any coordinator can forge if the winner has not forged any batch in that slot.
+          example: 3
+        closedAuctionSlots:
+          type: integer
+          description: Amount of slots between the current slot and the slot auction that is closed. Example if the value is 2, when slot 10 begins, the auction of the slot 12 gets closed.
+          example: 2
+        openAuctionSlots:
+          type: integer
+          description: How many days in advance are auctions opened.
+        defaultSlotSetBid:
+          type: array
+          description: "Initial minimal bid for each auction. Expressed as an array of 6 values. To calculate which value corresponds to each slot: `initialMinimalBidding[slotNum%6]`."
+          items:
+            type: integer
+          example: [32,0,68,21,55,99]
+        outbidding:
+          type: number
+          description: Minimum outbid over the previous one to consider it valid.
+          example: 3.64
+        donationAddress:
+          allOf:
+            - $ref: '#/components/schemas/EthereumAddress'
+            - description: Ethereum address where the donations will go to.
+            - example: "0x887dc4262BCDbf85190C01c996b4C06a461d2430"
+        allocationRatio:
+          type: array
+          description: Percentage in which fees will be splitted between donations, governance and burning. The sum of the tree values should be 100.
+          items:
+            type: integer
+          example: [80,10,10]
+      additionalProperties: false
+      required:
+        - ethereumBlockNum
+        - bootCoordinator
+        - slotDeadline
+        - closedAuctionSlots
+        - openAuctionSlots
+        - defaultSlotSetBid
+        - outbidding
+        - donationAddress
+        - allocationRatio
+    StateRollup:
+      type: object
+      description: Rollup parameters
+      properties:
+        ethereumBlockNum:
+          $ref: '#/components/schemas/EthBlockNum'
+        forgeL1L2BatchTimeout:
+          type: integer
+          description: Max ethereum blocks after the last L1-L2-batch, when exceeds the timeout only L1-L2-batch are allowed.
+          example: 5
+        feeAddToken:
+          type: integer
+          description: Fee to pay when registering tokens into the network.
+          example: 5698
+        withdrawalDelay:
+          type: integer
+          description: Withdraw delay in seconds
+          example: 432000
+        buckets:
+          type: array
+          description: List of buckets state
+          items:
+            type: object
+            properties:
+              ceilUSD:
+                type: integer
+                description: Max USD value
+                example: 1000
+              blockStamp:
+                type: integer
+                description: Last time a withdrawal was added ( or removed if the bucket was full)
+                example: 4475934
+              withdrawals:
+                type: integer
+                description: Available withdrawals of the bucket
+                example: 4
+              blockWithdrawalRate:
+                type: integer
+                description: Every `blockWithdrawalRate` blocks add 1 withdrawal
+                example: 8
+              maxWithdrawals:
+                type: integer
+                description: Max withdrawals the bucket can hold
+                example: 4
+            additionalProperties: false
+            required: 
+              - ceilUSD
+              - blockStamp
+              - withdrawals
+              - blockWithdrawalRate
+              - maxWithdrawals
+          additionalProperties: false
+          required:
+            - ethereumBlockNum
+            - forgeL1L2BatchTimeout
+            - feeAddToken
+            - withdrawalDelay
+            - buckets
+    StateWithdrawDelayer:
+      type: object
+      description: Withdrawal delayer parameters
+      properties:
+        ethereumBlockNum:
+          $ref: '#/components/schemas/EthBlockNum'
+        hermezGovernanceDAOAddress:
+          allOf:
+            - $ref: '#/components/schemas/EthereumAddress'
+            - description: Ethereum address of the governance DAO.
+            - example: "0x667dc4262BCDbf85190C01c996b4C06a461d2430"
+        whiteHackGroupAddress:
+          allOf:
+            - $ref: '#/components/schemas/EthereumAddress'
+            - description: Ethereum Address that can claim the funds in an emergency when the maximum emergency mode time is exceeded.
+            - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
+        hermezKeeperAddress:
+          allOf:
+            - $ref: '#/components/schemas/EthereumAddress'
+            - description: Ethereum Address that can enable emergency mode and modify the delay to make a withdrawal.
+            - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
+        withdrawalDelay:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: The time that anyone needs to wait until a withdrawal of the funds is allowed, in seconds.
+            - example: 539573849
+        emergencyModeStartingTime:
+          type: integer
+          description: Second (since unix epoch) in which the emergency mode has been activated.
+          example: 10
+        emergencyMode:
+          type: boolean
+          description: Indicates if emergency mode has been activated.
+          example: false
+      additionalProperties: false
+      required: 
+        - ethereumBlockNum
+        - hermezGovernanceDAOAddress
+        - whiteHackGroupAddress
+        - hermezKeeperAddress
+        - withdrawalDelay
+        - emergencyModeStartingTime
+        - emergencyMode
+    StateMetrics:
+      type: object
+      description: Metrics of the network
+      properties:
+        transactionsPerBatch:
+          type: number
+          description: Average transactions per batch in the last 24 hours.
+          example: 2002.7
+        batchFrequency:
+          type: number
+          description: Average elapsed time between batches in the last 24 hours, in seconds.
+          example: 8.9
+        transactionsPerSecond:
+          type: number
+          description: Average transactions per second in the last 24 hours.
+          example: 302.3
+        totalAccounts:
+          type: integer
+          description: Number of created accounts.
+          example: 90473
+        totalBJJs:
+          type: integer
+          description: Number of different registered BJJs.
+          example: 23067
+        avgTransactionFee:
+          type: number
+          description: Average fee percentage paid for L2 transactions in the last 24 hours.
+          example: 1.54
+      additionalProperties: false
+      required:
+        - transactionsPerBatch
+        - batchFrequency
+        - transactionsPerSecond
+        - totalAccounts
+        - totalBJJs
+        - avgTransactionFee
     PendingItems:
       type: integer
       description: Amount of items that will be returned in subsequent calls to the endpoint, as long as they are done with same filters. When the value is 0 it means that all items have been sent.

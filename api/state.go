@@ -20,17 +20,17 @@ type Network struct {
 
 // NextForger  is a representation of the information of a coordinator and the period will forge
 type NextForger struct {
-	Coordinator historydb.CoordinatorAPI
-	Period      Period
+	Coordinator historydb.CoordinatorAPI `json:"coordinator"`
+	Period      Period                   `json:"period"`
 }
 
 // Period is a representation of a period
 type Period struct {
-	SlotNum       int64
-	FromBlock     int64
-	ToBlock       int64
-	FromTimestamp time.Time
-	ToTimestamp   time.Time
+	SlotNum       int64     `json:"slotNum"`
+	FromBlock     int64     `json:"fromBlock"`
+	ToBlock       int64     `json:"toBlock"`
+	FromTimestamp time.Time `json:"fromTimestamp"`
+	ToTimestamp   time.Time `json:"toTimestamp"`
 }
 
 var bootCoordinator historydb.CoordinatorAPI = historydb.CoordinatorAPI{
@@ -41,6 +41,7 @@ var bootCoordinator historydb.CoordinatorAPI = historydb.CoordinatorAPI{
 }
 
 func (a *API) getState(c *gin.Context) {
+	// TODO: There are no events for the buckets information, so now this information will be 0
 	c.JSON(http.StatusOK, a.status)
 }
 
