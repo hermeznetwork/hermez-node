@@ -45,6 +45,10 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 		}
 	}
 
+	if pk == nil {
+		return fmt.Errorf("BabyJubJub pk not defined")
+	}
+
 	// store idx for EthAddr & BJJ assuming that EthAddr & BJJ still don't
 	// have an Idx stored in the DB, and if so, the already stored Idx is
 	// bigger than the given one, so should be updated to the new one
@@ -53,12 +57,12 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 	if err != nil {
 		return err
 	}
-	k := concatEthAddrBJJTokenID(addr, pk, tokenID)
-	// store Addr&BJJ-idx
 	idxBytes, err := idx.Bytes()
 	if err != nil {
 		return err
 	}
+	// store Addr&BJJ-idx
+	k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 	err = tx.Put(append(PrefixKeyAddrBJJ, k...), idxBytes[:])
 	if err != nil {
 		return err

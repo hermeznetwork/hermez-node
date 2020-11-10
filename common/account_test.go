@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -185,6 +186,9 @@ func TestAccountLoopRandom(t *testing.T) {
 }
 
 func bigFromStr(h string, u int) *big.Int {
+	if u == 16 {
+		h = strings.TrimPrefix(h, "0x")
+	}
 	b, ok := new(big.Int).SetString(h, u)
 	if !ok {
 		panic("bigFromStr err")
