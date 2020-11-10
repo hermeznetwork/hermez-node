@@ -14,10 +14,10 @@ info:
     All the endpoints that return a list of undefined size use pagination. Unless the opposite is explicitly said.
     In order to use pagination, three query parameters are used:
     * `fromItem`: indicates the first item to be returned. In general, this parameter shouldn't be provided in the first call to the endpoint, and use the `itemId` of the last returned item (+/-) 1, if the order is (ascending/descending).
-    * `order`: all pginated items are ordered chronologicaly. However the specific fields to guarantee this order depend on each endpoint. For this purpose, `itemId` is used (itemId follows ascending chronological order except for unforged L1 user transactions). If the parameter is not provided, ascending order will be used by default. 
-    * `limit`: maximum amount of items to include in each response. Default is 20, maximum 2049.
+    * `order`: all paginated items are ordered chronologicaly. However the specific fields to guarantee this order depend on each endpoint. For this purpose, `itemId` is used (itemId follows ascending chronological order except for unforged L1 user transactions). If the parameter is not provided, ascending order will be used by default. 
+    * `limit`: maximum amount of items to include in each response. Default is 20, maximum is 2049.
     
-    Responses for those endpoint will always include a `pendingItems` property. This property includes the amount of items that are not fetched yet. his can be used to:
+    Responses for those endpoints will always include a `pendingItems` property. This property includes the amount of items that are not fetched yet. This can be used to:
     * Calculate the amount of items that match the filters: `totalItems = length(alreadyFetchedItems) + pendingItems`
     * Know when all items have been fetched: `if pendingItems == 0 {/* all items have been fetched */}`
 
@@ -29,7 +29,7 @@ info:
 
     ### Signatures
 
-    The POST endpoint require to be signed using BabyJubJub or Ethereum keys. TODO: add references to libraries / examples / ...
+    The POST endpoint requires to be signed using BabyJubJub or Ethereum keys. TODO: add references to libraries / examples / ...
 
   version: "0.0.1"
   title: Hermez Network API
@@ -70,7 +70,7 @@ paths:
         - Account
       summary: Send an authorization that will allow the coordinator to register accounts associated to an Ethereum address on behalf of the user.
       description: >-
-        Send an authorization to create rollup accounts associated to an Ethereum address. Each account creation (an account can only hold a specific token) is effective once the coordinator forges the corresponding L1CoordinatorTx (which are always of type *account creation*).
+        Send an authorization to create rollup accounts associated to an Ethereum address. Each account creation (an account can only hold a specific token) is effective once the coordinator forges the corresponding L1CoordinatorTx (which is always of type *account creation*).
       operationId: postRegister
       requestBody:
         description: Account creation authorization.
@@ -392,7 +392,7 @@ paths:
     post:
       tags:
         - Transaction
-      summary: Add an L2 transaction to the coordinator's pool
+      summary: Add an L2 transaction to the coordinator's pool.
       description: >-
         Send L2 transaction. The transaction will be stored in the transaction pool of the coordinator and eventually forged.
       operationId: postTx
@@ -727,7 +727,7 @@ paths:
     get:
       tags:
         - Hermez status
-      summary: Get a full batch
+      summary: Get a full batch.
       description: >-
         Get a specific batch, including the associated transactions. The object returned in this method can be a bit heavy. 
         If you're devloping a front end, you may consider using a combinaton of `GET /batches/{batchnum}` and `GET /history-transactions?batchNum={batchNum}`.
@@ -1944,7 +1944,7 @@ components:
           type: string
           format: date-time
       additionalProperties: false
-      require:
+      required:
         - bidderAddr
         - forgerAddr
         - slotNum
@@ -1963,7 +1963,7 @@ components:
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
-      require:
+      required:
         - bids
         - pendingItems
     RecommendedFee:  
@@ -2161,7 +2161,7 @@ components:
           $ref: '#/components/schemas/HezEthereumAddress'
         token:
           $ref: '#/components/schemas/Token'
-      additionaProperties: false
+      additionalProperties: false
       required:
         - itemId
         - accountIndex
@@ -2231,7 +2231,7 @@ components:
               type: string
               format: date-time
           additionalProperties: false
-          require:
+          required:
             - bidderAddr
             - forgerAddr
             - slotNum
@@ -2240,12 +2240,11 @@ components:
             - ethereumBlockNum
             - timestamp
       additionalProperties: false
-      require:
+      required:
         - slotNum
         - firstBlock
         - lastBlock
         - openAuction
-        - winner
         - winnerBid
     Slots:
       type: object
@@ -2260,7 +2259,7 @@ components:
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
-      require:
+      required:
         - slots
         - pendingItems
     NextForger:
