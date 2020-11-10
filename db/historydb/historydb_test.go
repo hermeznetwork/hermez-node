@@ -469,6 +469,7 @@ func TestSetInitialSCVars(t *testing.T) {
 		big.NewInt(10),
 		12,
 		13,
+		[5]common.Bucket{},
 	}
 	//nolint:govet
 	auction := &common.AuctionVariables{

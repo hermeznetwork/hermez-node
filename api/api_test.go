@@ -284,14 +284,23 @@ func TestMain(m *testing.M) {
 	testBids := genTestBids(blocks, coordinators, bids)
 
 	// Vars
+	var defaultSlotSetBid [6]*big.Int = [6]*big.Int{big.NewInt(10), big.NewInt(10), big.NewInt(10), big.NewInt(10), big.NewInt(10), big.NewInt(10)}
 	auctionVars := common.AuctionVariables{
+		EthBlockNum:        int64(2),
+		DonationAddress:    ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+		DefaultSlotSetBid:  defaultSlotSetBid,
+		Outbidding:         uint16(1),
+		SlotDeadline:       uint8(20),
 		BootCoordinator:    ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
 		ClosedAuctionSlots: uint16(2),
 		OpenAuctionSlots:   uint16(5),
 	}
 
 	rollupVars := common.RollupVariables{
-		WithdrawalDelay: uint64(3000),
+		EthBlockNum:           int64(3),
+		FeeAddToken:           big.NewInt(100),
+		ForgeL1L2BatchTimeout: int64(44),
+		WithdrawalDelay:       uint64(3000),
 	}
 
 	wdelayerVars := common.WDelayerVariables{

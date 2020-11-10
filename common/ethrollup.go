@@ -157,9 +157,9 @@ type Bucket struct {
 
 // RollupVariables are the variables of the Rollup Smart Contract
 type RollupVariables struct {
-	EthBlockNum           int64    `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	FeeAddToken           *big.Int `json:"feeAddToken" meddler:"fee_add_token,bigint" validate:"required"`
-	ForgeL1L2BatchTimeout int64    `json:"forgeL1L2BatchTimeout" meddler:"forge_l1_timeout" validate:"required"`
-	WithdrawalDelay       uint64   `json:"withdrawalDelay" meddler:"withdrawal_delay" validate:"required"`
-	// Buckets               [RollupConstNumBuckets]Bucket `json:"buckets" meddler:"buckets,json"`
+	EthBlockNum           int64                         `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	FeeAddToken           *big.Int                      `json:"feeAddToken" meddler:"fee_add_token,bigint" validate:"required"`
+	ForgeL1L2BatchTimeout int64                         `json:"forgeL1L2BatchTimeout" meddler:"forge_l1_timeout" validate:"required"`
+	WithdrawalDelay       uint64                        `json:"withdrawalDelay" meddler:"withdrawal_delay" validate:"required"`
+	Buckets               [RollupConstNumBuckets]Bucket `json:"buckets" meddler:"buckets,json"`
 }
