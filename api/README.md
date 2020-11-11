@@ -9,7 +9,7 @@ As of now the documentation is not hosted anywhere, but you can easily do it you
 
 ## Mock Up
 
-To use a mock up of the endpoints in the API run `./run.sh doc` (UI + mock up server) or `./run.sh mock` (only mock up server). You can play with the mocked up endpoints using the [web UI](http://localhost:8001), importing `swagger.yml` into Postman or using your preferred language and using `http://loclahost:4010` as base URL.
+To use a mock up of the endpoints in the API run `./run.sh doc` (UI + mock up server) or `./run.sh mock` (only mock up server). You can play with the mocked up endpoints using the [web UI](http://localhost:8001), importing `swagger.yml` into Postman or using your preferred language and using `http://localhost:4010` as base URL.
 
 ## Editor
 
