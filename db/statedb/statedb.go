@@ -249,7 +249,6 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 // deleted when MakeCheckpoint overwrites them.  `closeCurrent` will close the
 // currently opened db before doing the reset.
 func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
-	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
 	currentPath := s.path + PathCurrent
 
 	if closeCurrent {
@@ -271,9 +270,19 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 		s.db = sto
 		s.idx = 255
 		s.currentBatch = batchNum
+
+		if s.mt != nil {
+			// open the MT for the current s.db
+			mt, err := merkletree.NewMerkleTree(s.db.WithPrefix(PrefixKeyMT), s.mt.MaxLevels())
+			if err != nil {
+				return err
+			}
+			s.mt = mt
+		}
 		return nil
 	}
 
+	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
 	// copy 'BatchNumX' to 'current'
 	err = pebbleMakeCheckpoint(checkpointPath, currentPath)
 	if err != nil {

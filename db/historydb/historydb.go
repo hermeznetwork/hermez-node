@@ -729,8 +729,8 @@ func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error
 	)
 }
 
-// GetAccounts returns a list of accounts from the DB
-func (hdb *HistoryDB) GetAccounts() ([]common.Account, error) {
+// GetAllAccounts returns a list of accounts from the DB
+func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 	var accs []*common.Account
 	err := meddler.QueryAll(
 		hdb.db, &accs,

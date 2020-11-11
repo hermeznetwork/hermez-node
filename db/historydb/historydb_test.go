@@ -293,7 +293,7 @@ func TestAccounts(t *testing.T) {
 	err = historyDB.AddAccounts(accs)
 	assert.NoError(t, err)
 	// Fetch accounts
-	fetchedAccs, err := historyDB.GetAccounts()
+	fetchedAccs, err := historyDB.GetAllAccounts()
 	assert.NoError(t, err)
 	// Compare fetched accounts vs generated accounts
 	for i, acc := range fetchedAccs {

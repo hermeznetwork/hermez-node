@@ -289,11 +289,12 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 	if err != nil && err != sql.ErrNoRows {
 		return 0, err
 	}
-	if batchNum != 0 {
-		err = s.stateDB.Reset(batchNum)
-		if err != nil {
-			return 0, err
-		}
+	if err == sql.ErrNoRows {
+		batchNum = 0
+	}
+	err = s.stateDB.Reset(batchNum)
+	if err != nil {
+		return 0, err
 	}
 
 	return blockNum, nil

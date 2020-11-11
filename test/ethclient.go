@@ -67,7 +67,6 @@ type RollupBlock struct {
 
 func (r *RollupBlock) addTransaction(tx *types.Transaction) *types.Transaction {
 	txHash := tx.Hash()
-	fmt.Printf("DBG txHash %v\n", txHash.Hex())
 	r.Txs[txHash] = tx
 	return tx
 }
@@ -552,6 +551,13 @@ func (c *Client) CtlRollback() {
 // Ethereum
 //
 
+// CtlCurrentBlock returns the current blockNum without checks
+func (c *Client) CtlCurrentBlock() int64 {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+	return c.blockNum
+}
+
 // EthCurrentBlock returns the current blockNum
 func (c *Client) EthCurrentBlock() (int64, error) {
 	c.rw.RLock()
@@ -822,7 +828,6 @@ func newTransaction(name string, value interface{}) *types.Transaction {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("DBG dataJSON: %v\n", string(data))
 	return types.NewTransaction(0, ethCommon.Address{}, nil, 0, nil,
 		data)
 }
