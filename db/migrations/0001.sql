@@ -453,12 +453,12 @@ BEGIN
         NEW.load_amount IS NULL OR
         NEW.load_amount_f IS NULL OR
         (NOT NEW.user_origin AND NEW.batch_num IS NULL)  THEN -- If is Coordinator L1, must include batch_num
-            RAISE EXCEPTION 'Invalid L1 tx.';
+            RAISE EXCEPTION 'Invalid L1 tx: %', NEW;
         END IF;
     ELSE
         -- Validate
         IF NEW.batch_num IS NULL OR NEW.nonce IS NULL THEN
-            RAISE EXCEPTION 'Invalid L2 tx.';
+            RAISE EXCEPTION 'Invalid L2 tx: %', NEW;
         END IF;
         -- Set fee if it's null
         IF NEW.fee IS NULL THEN
