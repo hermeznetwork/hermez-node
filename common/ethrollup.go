@@ -163,3 +163,9 @@ type RollupVariables struct {
 	WithdrawalDelay       uint64                        `json:"withdrawalDelay" meddler:"withdrawal_delay" validate:"required"`
 	Buckets               [RollupConstNumBuckets]Bucket `json:"buckets" meddler:"buckets,json"`
 }
+
+// Copy returns a deep copy of the Variables
+func (v *RollupVariables) Copy() *RollupVariables {
+	vCpy := *v
+	return &vCpy
+}

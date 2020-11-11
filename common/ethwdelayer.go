@@ -23,3 +23,9 @@ type WDelayerVariables struct {
 	EmergencyModeStartingTime  uint64            `json:"emergencyModeStartingTime" meddler:"emergency_start_time"`
 	EmergencyMode              bool              `json:"emergencyMode" meddler:"emergency_mode"`
 }
+
+// Copy returns a deep copy of the Variables
+func (v *WDelayerVariables) Copy() *WDelayerVariables {
+	vCpy := *v
+	return &vCpy
+}

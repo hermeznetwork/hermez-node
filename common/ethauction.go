@@ -43,3 +43,12 @@ type AuctionVariables struct {
 	// Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before
 	SlotDeadline uint8 `json:"slotDeadline" meddler:"slot_deadline" validate:"required"`
 }
+
+// Copy returns a deep copy of the Variables
+func (v *AuctionVariables) Copy() *AuctionVariables {
+	vCpy := *v
+	for i := range v.DefaultSlotSetBid {
+		vCpy.DefaultSlotSetBid[i] = new(big.Int).SetBytes(v.DefaultSlotSetBid[i].Bytes())
+	}
+	return &vCpy
+}

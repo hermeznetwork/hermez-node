@@ -21,6 +21,7 @@ URL = "http://localhost:8545"
 
 [Synchronizer]
 SyncLoopInterval = "1s"
+StatsRefreshPeriod = "1s"
 
     [Synchronizer.StartBlockNum]
     Rollup = 1
