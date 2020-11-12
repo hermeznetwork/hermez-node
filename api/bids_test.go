@@ -112,8 +112,8 @@ func TestGetBids(t *testing.T) {
 
 	// Mixed filters
 	fetchedBids = []testBid{}
-	bidderAddress = tc.bids[9].Bidder
-	slotNum = tc.bids[4].SlotNum
+	bidderAddress = tc.bids[1].Bidder
+	slotNum = tc.bids[5].SlotNum
 	path = fmt.Sprintf("%s?bidderAddr=%s&slotNum=%d&limit=%d&fromItem=", endpoint, bidderAddress.String(), slotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)

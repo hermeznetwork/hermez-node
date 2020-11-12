@@ -25,6 +25,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
+	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -37,6 +38,126 @@ type Pendinger interface {
 
 const apiPort = ":4010"
 const apiURL = "http://localhost" + apiPort + "/"
+
+var SetBlockchain = `
+	Type: Blockchain
+
+	AddToken(1)
+	AddToken(2)
+	AddToken(3)
+	AddToken(4)
+
+	// Coordinator accounts, Idxs: 256, 257
+	CreateAccountCoordinator(0) Coord
+	CreateAccountCoordinator(1) Coord
+
+	// close Block:0, Batch:0
+	> batch
+
+	CreateAccountDeposit(0) A: 500
+	CreateAccountDeposit(1) C: 0
+	CreateAccountCoordinator(0) C
+
+	// close Block:0, Batch:1
+	> batchL1
+	// Expected balances:
+	//     Coord(0): 0, Coord(1): 0
+	//     C(0): 0
+
+	CreateAccountDeposit(1) A: 500
+
+	// close Block:0, Batch:2
+	> batchL1
+
+	// close Block:0, Batch:3
+	> batchL1
+
+	CreateAccountDepositTransfer(0) B-A: 500, 100
+
+	// close Block:0, Batch:4
+	> batchL1
+	CreateAccountDeposit(0) D: 800
+
+	// close Block:0, Batch:5
+	> batchL1
+
+	CreateAccountCoordinator(1) B
+
+	Transfer(1) A-B: 200 (126)
+	Transfer(0) B-C: 100 (126)
+
+	// close Block:0, Batch:6
+	> batchL1 // forge L1User{1}, forge L1Coord{2}, forge L2{2}
+
+	Deposit(0) C: 500
+	DepositTransfer(0) C-D: 400, 100
+
+	Transfer(0) A-B: 100 (126)
+	Transfer(0) C-A: 50 (126)
+	Transfer(1) B-C: 100 (126)
+	Exit(0) A: 100 (126)
+
+	ForceTransfer(0) D-B: 200
+	ForceExit(0) B: 100
+
+	// close Block:0, Batch:7
+	> batchL1
+	> block
+
+	AddToken(5)
+	AddToken(6)
+	AddToken(7)
+	AddToken(8)
+
+	Transfer(0) D-A: 300 (126)
+	Transfer(0) B-D: 100 (126)
+
+	// close Block:1, Batch:0
+	> batchL1
+
+	CreateAccountCoordinator(0) F
+
+	CreateAccountCoordinator(0) G
+	CreateAccountCoordinator(0) H
+	CreateAccountCoordinator(0) I
+	CreateAccountCoordinator(0) J
+	CreateAccountCoordinator(0) K
+	CreateAccountCoordinator(0) L
+	CreateAccountCoordinator(0) M
+	CreateAccountCoordinator(0) N
+	CreateAccountCoordinator(0) O
+	CreateAccountCoordinator(0) P
+
+	CreateAccountCoordinator(5) G
+	CreateAccountCoordinator(5) H
+	CreateAccountCoordinator(5) I
+	CreateAccountCoordinator(5) J
+	CreateAccountCoordinator(5) K
+	CreateAccountCoordinator(5) L
+	CreateAccountCoordinator(5) M
+	CreateAccountCoordinator(5) N
+	CreateAccountCoordinator(5) O
+	CreateAccountCoordinator(5) P
+
+	CreateAccountCoordinator(2) G
+	CreateAccountCoordinator(2) H
+	CreateAccountCoordinator(2) I
+	CreateAccountCoordinator(2) J
+	CreateAccountCoordinator(2) K
+	CreateAccountCoordinator(2) L
+	CreateAccountCoordinator(2) M
+	CreateAccountCoordinator(2) N
+	CreateAccountCoordinator(2) O
+	CreateAccountCoordinator(2) P
+
+
+	> batch
+	> block
+	> batch
+	> block
+	> batch
+	> block
+`
 
 type testCommon struct {
 	blocks           []common.Block
@@ -203,11 +324,14 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	for i := 0; i < len(accs); i++ {
+
+	// api.s.CreateAccount called in new part with til
+	/* for i := 0; i < len(accs); i++ {
 		if _, err := api.s.CreateAccount(accs[i].Idx, &accs[i]); err != nil {
 			panic(err)
 		}
-	}
+	} */
+
 	// helper to vinculate user related resources
 	usrIdxs := []string{}
 	for _, acc := range accs {
@@ -335,8 +459,160 @@ func TestMain(m *testing.M) {
 	usrTxs, allTxs := genTestTxs(sortedTxs, usrIdxs, accs, tokensUSD, blocks)
 	poolTxsToSend, poolTxsToReceive := genTestPoolTx(accs, []babyjub.PrivateKey{privK}, tokensUSD) // NOTE: pool txs are not inserted to the DB here. In the test they will be posted and getted.
 	testBatches, fullBatches := genTestBatches(blocks, batches, allTxs)
-	usrExits, allExits := genTestExits(exits, tokensUSD, accs, usrIdxs)
+	/* usrExits, allExits*/ _, _ = genTestExits(exits, tokensUSD, accs, usrIdxs)
+
+	// NEW WITH TIL
+	// Reset DB
+	test.WipeDB(api.h.DB())
+
+	tcc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		CoordUser:     "A",
+	}
+	blocksData, err := tcc.GenerateBlocks(SetBlockchain)
+	if err != nil {
+		panic(err)
+	}
+	err = tcc.FillBlocksExtra(blocksData, &tilCfgExtra)
+	if err != nil {
+		panic(err)
+	}
+	// poolL2Txs, err := tcc.GeneratePoolL2Txs(til.SetPoolL2MinimumFlow0)
+
+	var blocksTc []common.Block
+	var batchesTc []common.Batch
+	var tokensTc []common.Token
+	var accountsTc []common.Account
+	var exitTreeTc []common.ExitInfo
+	var allL1TxsTc []common.L1Tx
+	var allL2TxsTc []common.L2Tx
+
+	AddAditionalInformation(blocksData)
+
+	for _, block := range blocksData {
+		// Insert block
+		err := api.h.AddBlockSCData(&block)
+		if err != nil {
+			panic(err)
+		}
+		blocksTc = append(blocksTc, block.Block)
+		tokensTc = append(tokensTc, block.Rollup.AddedTokens...)
+		allL1TxsTc = append(allL1TxsTc, block.Rollup.L1UserTxs...)
+		for _, batch := range block.Rollup.Batches {
+			allL2TxsTc = append(allL2TxsTc, batch.L2Txs...)
+			accountsTc = append(accountsTc, batch.CreatedAccounts...)
+			batchesTc = append(batchesTc, batch.Batch)
+			exitTreeTc = append(exitTreeTc, batch.ExitTree...)
+			allL1TxsTc = append(allL1TxsTc, batch.L1CoordinatorTxs...)
+		}
+	}
+	// lastBlockNum2 := blocksData[len(blocksData)-1].Block.EthBlockNum
+
+	tokensTc = append([]common.Token{ethToken}, tokensTc...)
+	tokensUSDTc := []historydb.TokenWithUSD{}
+	for i, tkn := range tokensTc {
+		token := historydb.TokenWithUSD{
+			TokenID:     tkn.TokenID,
+			EthBlockNum: tkn.EthBlockNum,
+			EthAddr:     tkn.EthAddr,
+			Name:        tkn.Name,
+			Symbol:      tkn.Symbol,
+			Decimals:    tkn.Decimals,
+		}
+		// Set value of 50% of the tokens
+		if i%2 != 0 {
+			value := float64(i) * 1.234567
+			now := time.Now().UTC()
+			token.USD = &value
+			token.USDUpdate = &now
+			err = api.h.UpdateTokenValue(token.Symbol, value)
+			if err != nil {
+				panic(err)
+			}
+		}
+		tokensUSDTc = append(tokensUSDTc, token)
+	}
+
+	for i := 0; i < len(accountsTc); i++ {
+		if _, err := api.s.CreateAccount(accountsTc[i].Idx, &accountsTc[i]); err != nil {
+			panic(err)
+		}
+	}
+
+	usrIdxsTc := []string{}
+	for _, acc := range accountsTc {
+		for _, token := range tokensTc {
+			if token.TokenID == acc.TokenID {
+				usrIdxsTc = append(usrIdxsTc, idxToHez(acc.Idx, token.Symbol))
+			}
+		}
+	}
+
+	// Sort txs
+	sortedTxsTc := []txSortFielder{}
+	for i := 0; i < len(allL1TxsTc); i++ {
+		wL1 := wrappedL1(allL1TxsTc[i])
+		sortedTxsTc = append(sortedTxsTc, &wL1)
+	}
+	for i := 0; i < len(allL2TxsTc); i++ {
+		wL2 := wrappedL2(allL2TxsTc[i])
+		sortedTxsTc = append(sortedTxsTc, &wL2)
+	}
+	sort.Sort(txsSort(sortedTxsTc))
+
+	// Coordinators
+	const nCoordsTc = 10
+	coordsTc := test.GenCoordinators(nCoordsTc, blocksTc)
+	err = api.h.AddCoordinators(coordsTc)
+	if err != nil {
+		panic(err)
+	}
+	coordinatorsTc, _, err := api.h.GetCoordinatorsAPI(&fromItem, &limit, historydb.OrderAsc)
+	if err != nil {
+		panic(err)
+	}
+
+	// Bids
+	const nBidsTc = 20
+	bidsTc := test.GenBids(nBidsTc, blocksTc, coordsTc)
+	err = api.h.AddBids(bidsTc)
+	if err != nil {
+		panic(err)
+	}
+	testBidsTc := genTestBids(blocksTc, coordinatorsTc, bidsTc)
+	usrExitsTc, allExitsTc := genTestExits(exitTreeTc, tokensUSDTc, accountsTc, usrIdxsTc)
+	_, allTxsTc := genTestTxs(sortedTxsTc, usrIdxsTc, accountsTc, tokensUSDTc, blocksTc)
+	fmt.Println(allTxsTc)
+	// allTxsTc == allTxs
+	// testBatchesTc, fullBatchesTc := genTestBatches(blocksTc, batchesTc, allTxsTc)
+
 	tc = testCommon{
+		blocks:           blocksTc,
+		tokens:           tokensUSDTc,
+		batches:          testBatches,
+		fullBatches:      fullBatches,
+		coordinators:     coordinatorsTc,
+		accounts:         genTestAccounts(accountsTc, tokensUSDTc),
+		usrAddr:          ethAddrToHez(usrAddr),
+		usrBjj:           bjjToString(usrBjj),
+		accs:             accountsTc,
+		usrTxs:           usrTxs,
+		allTxs:           allTxs,
+		exits:            allExitsTc,
+		usrExits:         usrExitsTc,
+		poolTxsToSend:    poolTxsToSend,
+		poolTxsToReceive: poolTxsToReceive,
+		auths:            genTestAuths(test.GenAuths(5)),
+		router:           router,
+		bids:             testBidsTc,
+		slots:            api.genTestSlots(nSlots, lastBlockNum, testBids, auctionVars),
+		auctionVars:      auctionVars,
+		rollupVars:       rollupVars,
+		wdelayerVars:     wdelayerVars,
+	}
+
+	/* tc = testCommon{
 		blocks:           blocks,
 		tokens:           tokensUSD,
 		batches:          testBatches,
@@ -359,7 +635,7 @@ func TestMain(m *testing.M) {
 		auctionVars:      auctionVars,
 		rollupVars:       rollupVars,
 		wdelayerVars:     wdelayerVars,
-	}
+	} */
 
 	// Fake server
 	if os.Getenv("FAKE_SERVER") == "yes" {

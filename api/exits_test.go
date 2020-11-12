@@ -116,23 +116,31 @@ func TestGetExits(t *testing.T) {
 	// Get by ethAddr
 	fetchedExits = []testExit{}
 	limit = 7
+	account := tc.accounts[3]
 	path = fmt.Sprintf(
 		"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
-		endpoint, tc.usrAddr, limit,
+		endpoint, account.EthAddr, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
-	assertExitAPIs(t, tc.usrExits, fetchedExits)
+	accountIdx := fetchedExits[0].AccountIdx
+	var hermezEthExits []testExit
+	for i := range tc.usrExits {
+		if tc.usrExits[i].AccountIdx == accountIdx {
+			hermezEthExits = append(hermezEthExits, tc.usrExits[i])
+		}
+	}
+	assertExitAPIs(t, hermezEthExits, fetchedExits)
 	// Get by bjj
 	fetchedExits = []testExit{}
 	limit = 6
 	path = fmt.Sprintf(
 		"%s?BJJ=%s&limit=%d&fromItem=",
-		endpoint, tc.usrBjj, limit,
+		endpoint, account.PublicKey, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
-	assertExitAPIs(t, tc.usrExits, fetchedExits)
+	assertExitAPIs(t, hermezEthExits, fetchedExits)
 	// Get by tokenID
 	fetchedExits = []testExit{}
 	limit = 5

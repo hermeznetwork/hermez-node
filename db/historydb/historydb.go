@@ -1318,12 +1318,10 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 			return err
 		}
 
-		// Add unforged l1 Txs
-		if batch.L1Batch {
-			if len(batch.L1CoordinatorTxs) > 0 {
-				if err := hdb.addL1Txs(txn, batch.L1CoordinatorTxs); err != nil {
-					return err
-				}
+		// Add forged l1 coordinator Txs
+		if len(batch.L1CoordinatorTxs) > 0 {
+			if err := hdb.addL1Txs(txn, batch.L1CoordinatorTxs); err != nil {
+				return err
 			}
 		}
 
