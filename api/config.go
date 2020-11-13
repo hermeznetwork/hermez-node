@@ -26,6 +26,33 @@ type rollupConstants struct {
 	ExchangeMultiplier      int                    `json:"exchangeMultiplier"`
 }
 
+func newRollupConstants(publicConstants common.RollupConstants) *rollupConstants {
+	return &rollupConstants{
+		PublicConstants:         publicConstants,
+		MaxFeeIdxCoordinator:    common.RollupConstMaxFeeIdxCoordinator,
+		ReservedIdx:             common.RollupConstReservedIDx,
+		ExitIdx:                 common.RollupConstExitIDx,
+		LimitLoadAmount:         common.RollupConstLimitLoadAmount,
+		LimitL2TransferAmount:   common.RollupConstLimitL2TransferAmount,
+		LimitTokens:             common.RollupConstLimitTokens,
+		L1CoordinatorTotalBytes: common.RollupConstL1CoordinatorTotalBytes,
+		L1UserTotalBytes:        common.RollupConstL1UserTotalBytes,
+		MaxL1UserTx:             common.RollupConstMaxL1UserTx,
+		MaxL1Tx:                 common.RollupConstMaxL1Tx,
+		InputSHAConstantBytes:   common.RollupConstInputSHAConstantBytes,
+		NumBuckets:              common.RollupConstNumBuckets,
+		MaxWithdrawalDelay:      common.RollupConstMaxWithdrawalDelay,
+		ExchangeMultiplier:      common.RollupConstExchangeMultiplier,
+	}
+}
+
+// Config of the API
+type Config struct {
+	RollupConstants   common.RollupConstants
+	AuctionConstants  common.AuctionConstants
+	WDelayerConstants common.WDelayerConstants
+}
+
 type configAPI struct {
 	RollupConstants   rollupConstants          `json:"hermez"`
 	AuctionConstants  common.AuctionConstants  `json:"auction"`

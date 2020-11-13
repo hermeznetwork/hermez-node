@@ -1,2 +1,14 @@
 ForgerAddress = "0x6BB84Cc84D4A34467aD12a2039A312f7029e2071"
 ForgerLoopInterval = "500ms"
+
+[EthClient]
+CallGasLimit        = 300000
+DeployGasLimit      = 1000000
+GasPriceDiv         = 100
+ReceiptTimeout      = "60s"
+IntervalReceiptLoop = "200ms"
+
+[L2DB]
+SafetyPeriod = 10
+MaxTxs       = 512
+TTL          = "24h"

@@ -126,7 +126,9 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 
 	<-ctx.Done()
 	log.Info("Stopping DebugAPI...")
-	if err := debugAPIServer.Shutdown(context.Background()); err != nil {
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:gomnd
+	defer cancel()
+	if err := debugAPIServer.Shutdown(ctxTimeout); err != nil {
 		return err
 	}
 	log.Info("DebugAPI done")

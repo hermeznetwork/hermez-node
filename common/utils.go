@@ -36,3 +36,8 @@ func BJJFromStringWithChecksum(s string) (*babyjub.PublicKey, error) {
 	copy(pkComp[:], pkBytes[:])
 	return pkComp.Decompress()
 }
+
+// CopyBigInt returns a copy of the big int
+func CopyBigInt(a *big.Int) *big.Int {
+	return new(big.Int).SetBytes(a.Bytes())
+}

@@ -14,6 +14,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/stretchr/testify/assert"
@@ -28,15 +29,6 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 	defer assert.Nil(t, os.RemoveAll(synchDBPath))
 	synchSdb, err := statedb.NewStateDB(synchDBPath, statedb.TypeSynchronizer, nLevels)
 	assert.Nil(t, err)
-
-	// txselDBPath, err := ioutil.TempDir("", "tmpTxSelDB")
-	// require.Nil(t, err)
-	// bbDBPath, err := ioutil.TempDir("", "tmpBBDB")
-	// require.Nil(t, err)
-	// txselSdb, err := statedb.NewLocalStateDB(txselDBPath, synchSdb, statedb.TypeTxSelector, nLevels)
-	// assert.Nil(t, err)
-	// bbSdb, err := statedb.NewLocalStateDB(bbDBPath, synchSdb, statedb.TypeBatchBuilder, nLevels)
-	// assert.Nil(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
@@ -60,85 +52,6 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 	return txsel, bb
 }
 
-// CoordNode is an example of a Node that handles the goroutines for the coordinator
-type CoordNode struct {
-	c                     *Coordinator
-	stopForge             chan bool
-	stopGetProofCallForge chan bool
-	stopForgeCallConfirm  chan bool
-}
-
-func NewCoordNode(c *Coordinator) *CoordNode {
-	return &CoordNode{
-		c: c,
-	}
-}
-
-func (cn *CoordNode) Start() {
-	log.Debugw("Starting CoordNode...")
-	cn.stopForge = make(chan bool)
-	cn.stopGetProofCallForge = make(chan bool)
-	cn.stopForgeCallConfirm = make(chan bool)
-	queueSize := 8
-	batchCh0 := make(chan *BatchInfo, queueSize)
-	batchCh1 := make(chan *BatchInfo, queueSize)
-
-	go func() {
-		for {
-			select {
-			case <-cn.stopForge:
-				return
-			default:
-				if forge, err := cn.c.ForgeLoopFn(batchCh0, cn.stopForge); err == ErrStop {
-					return
-				} else if err != nil {
-					log.Errorw("CoordNode ForgeLoopFn", "error", err)
-					time.Sleep(200 * time.Millisecond) // Avoid overflowing log with errors
-				} else if !forge {
-					time.Sleep(200 * time.Millisecond)
-				}
-			}
-		}
-	}()
-	go func() {
-		for {
-			select {
-			case <-cn.stopGetProofCallForge:
-				return
-			default:
-				if err := cn.c.GetProofCallForgeLoopFn(
-					batchCh0, batchCh1, cn.stopGetProofCallForge); err == ErrStop {
-					return
-				} else if err != nil {
-					log.Errorw("CoordNode GetProofCallForgeLoopFn", "error", err)
-				}
-			}
-		}
-	}()
-	go func() {
-		for {
-			select {
-			case <-cn.stopForgeCallConfirm:
-				return
-			default:
-				if err := cn.c.ForgeCallConfirmLoopFn(
-					batchCh1, cn.stopForgeCallConfirm); err == ErrStop {
-					return
-				} else if err != nil {
-					log.Errorw("CoordNode ForgeCallConfirmLoopFn", "error", err)
-				}
-			}
-		}
-	}()
-}
-
-func (cn *CoordNode) Stop() {
-	log.Debugw("Stopping CoordNode...")
-	cn.stopForge <- true
-	cn.stopGetProofCallForge <- true
-	cn.stopForgeCallConfirm <- true
-}
-
 type timer struct {
 	time int64
 }
@@ -149,9 +62,12 @@ func (t *timer) Time() int64 {
 	return currentTime
 }
 
-func waitForSlot(t *testing.T, c *test.Client, slot int64) {
+var forger ethCommon.Address
+var bidder ethCommon.Address
+
+func waitForSlot(t *testing.T, coord *Coordinator, c *test.Client, slot int64) {
 	for {
-		blockNum, err := c.EthCurrentBlock()
+		blockNum, err := c.EthLastBlock()
 		require.Nil(t, err)
 		nextBlockSlot, err := c.AuctionGetSlotNumber(blockNum + 1)
 		require.Nil(t, err)
@@ -159,20 +75,35 @@ func waitForSlot(t *testing.T, c *test.Client, slot int64) {
 			break
 		}
 		c.CtlMineBlock()
+		time.Sleep(100 * time.Millisecond)
+		var stats synchronizer.Stats
+		stats.Eth.LastBlock = c.CtlLastBlock()
+		stats.Sync.LastBlock = c.CtlLastBlock()
+		canForge, err := c.AuctionCanForge(forger, blockNum+1)
+		require.Nil(t, err)
+		if canForge {
+			// fmt.Println("DBG canForge")
+			stats.Sync.Auction.CurrentSlot.Forger = forger
+		}
+		coord.SendMsg(MsgSyncStats{
+			Stats: stats,
+		})
 	}
 }
 
 func TestCoordinator(t *testing.T) {
 	txsel, bb := newTestModules(t)
+	bidder = ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
+	forger = ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 
-	conf := Config{}
+	conf := Config{
+		ForgerAddress: forger,
+	}
 	hdb := &historydb.HistoryDB{}
 	serverProofs := []ServerProofInterface{&ServerProofMock{}, &ServerProofMock{}}
 
 	var timer timer
 	ethClientSetup := test.NewClientSetupExample()
-	bidder := ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
-	forger := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 
 	// Bid for slot 2 and 4
@@ -183,28 +114,40 @@ func TestCoordinator(t *testing.T) {
 	_, err = ethClient.AuctionBidSimple(4, big.NewInt(9999))
 	require.Nil(t, err)
 
-	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient)
-	cn := NewCoordNode(c)
-	cn.Start()
+	scConsts := &synchronizer.SCConsts{
+		Rollup:   *ethClientSetup.RollupConstants,
+		Auction:  *ethClientSetup.AuctionConstants,
+		WDelayer: *ethClientSetup.WDelayerConstants,
+	}
+	initSCVars := &synchronizer.SCVariables{
+		Rollup:   *ethClientSetup.RollupVariables,
+		Auction:  *ethClientSetup.AuctionVariables,
+		WDelayer: *ethClientSetup.WDelayerVariables,
+	}
+	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient, scConsts, initSCVars)
+	c.Start()
 	time.Sleep(1 * time.Second)
 
+	// NOTE: With the current test, the coordinator will enter in forge
+	// time before the bidded slot because no one else is forging in the
+	// other slots before the slot deadline.
 	// simulate forgeSequence time
-	waitForSlot(t, ethClient, 2)
-	log.Info("simulate entering in forge time")
+	waitForSlot(t, c, ethClient, 2)
+	log.Info("~~~ simulate entering in forge time")
 	time.Sleep(1 * time.Second)
 
 	// simulate going out from forgeSequence
-	waitForSlot(t, ethClient, 3)
-	log.Info("simulate going out from forge time")
+	waitForSlot(t, c, ethClient, 3)
+	log.Info("~~~ simulate going out from forge time")
 	time.Sleep(1 * time.Second)
 
 	// simulate entering forgeSequence time again
-	waitForSlot(t, ethClient, 4)
-	log.Info("simulate entering in forge time again")
+	waitForSlot(t, c, ethClient, 4)
+	log.Info("~~~ simulate entering in forge time again")
 	time.Sleep(2 * time.Second)
 
 	// simulate stopping forgerLoop by channel
-	log.Info("simulate stopping forgerLoop by closing coordinator stopch")
-	cn.Stop()
+	log.Info("~~~ simulate stopping forgerLoop by closing coordinator stopch")
+	c.Stop()
 	time.Sleep(1 * time.Second)
 }

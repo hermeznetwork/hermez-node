@@ -1,3 +1,7 @@
+[API]
+Address = "localhost:8086"
+Explorer = true
+
 [Debug]
 APIAddress = "localhost:12345"
 
@@ -10,11 +14,6 @@ Host     = "localhost"
 User     = "hermez"
 Password = "yourpasswordhere"
 Name     = "hermez"
-
-[L2DB]
-SafetyPeriod = 10
-MaxTxs       = 512
-TTL          = "24h"
 
 [Web3]
 URL = "http://localhost:8545"
@@ -35,16 +34,9 @@ WDelayer = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
 TokenHEZ = "0x2b7dEe2CF60484325716A1c6A193519c8c3b19F3"
 TokenHEZName = "Hermez Network Token"
 
-[EthClient]
-CallGasLimit        = 300000
-DeployGasLimit      = 1000000
-GasPriceDiv         = 100
-ReceiptTimeout      = "60s"
-IntervalReceiptLoop = "200ms"
-
     [Synchronizer.InitialVariables.Auction]
     DonationAddress = "0x0000000000000000000000000000000000000001"
-    BootCoordinator = "0x0000000000000000000000000000000000000001"
+    BootCoordinator = "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7"
     DefaultSlotSetBid = [
         "10000000000000000000",
         "10000000000000000000",

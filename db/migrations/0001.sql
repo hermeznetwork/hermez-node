@@ -536,6 +536,7 @@ CREATE TABLE auction_vars (
     donation_address BYTEA NOT NULL,
     boot_coordinator BYTEA NOT NULL,
     default_slot_set_bid BYTEA NOT NULL,
+    default_slot_set_bid_slot_num BIGINT NOT NULL, -- slot_num after which the new default_slot_set_bid applies
     closed_auction_slots INT NOT NULL,
     open_auction_slots INT NOT NULL,
     allocation_ratio VARCHAR(200),

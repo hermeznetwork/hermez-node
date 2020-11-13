@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"context"
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -10,7 +11,7 @@ import (
 // ServerProofInterface is the interface to a ServerProof that calculates zk proofs
 type ServerProofInterface interface {
 	CalculateProof(zkInputs *common.ZKInputs) error
-	GetProof(stopCh chan bool) (*Proof, error)
+	GetProof(ctx context.Context) (*Proof, error)
 }
 
 // ServerProof contains the data related to a ServerProof
@@ -33,7 +34,7 @@ func (p *ServerProof) CalculateProof(zkInputs *common.ZKInputs) error {
 }
 
 // GetProof retreives the Proof from the ServerProof
-func (p *ServerProof) GetProof(stopCh chan bool) (*Proof, error) {
+func (p *ServerProof) GetProof(ctx context.Context) (*Proof, error) {
 	log.Error("TODO")
 	return nil, errTODO
 }
@@ -49,13 +50,13 @@ func (p *ServerProofMock) CalculateProof(zkInputs *common.ZKInputs) error {
 }
 
 // GetProof retreives the Proof from the ServerProof
-func (p *ServerProofMock) GetProof(stopCh chan bool) (*Proof, error) {
+func (p *ServerProofMock) GetProof(ctx context.Context) (*Proof, error) {
 	// Simulate a delay
 	select {
 	case <-time.After(200 * time.Millisecond): //nolint:gomnd
 		return &Proof{}, nil
-	case <-stopCh:
-		return nil, ErrStop
+	case <-ctx.Done():
+		return nil, ErrDone
 	}
 }
 
@@ -77,18 +78,12 @@ func (p *ServerProofPool) Add(serverProof ServerProofInterface) {
 }
 
 // Get returns the next available ServerProof
-func (p *ServerProofPool) Get(stopCh chan bool) (ServerProofInterface, error) {
+func (p *ServerProofPool) Get(ctx context.Context) (ServerProofInterface, error) {
 	select {
-	case <-stopCh:
-		log.Info("ServerProofPool.Get stopped")
-		return nil, ErrStop
-	default:
-		select {
-		case <-stopCh:
-			log.Info("ServerProofPool.Get stopped")
-			return nil, ErrStop
-		case serverProof := <-p.pool:
-			return serverProof, nil
-		}
+	case <-ctx.Done():
+		log.Info("ServerProofPool.Get done")
+		return nil, ErrDone
+	case serverProof := <-p.pool:
+		return serverProof, nil
 	}
 }

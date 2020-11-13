@@ -290,6 +290,13 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, erro
 	return db.SlicePtrsToSlice(batches).([]common.Batch), err
 }
 
+// GetBatchesLen retrieve number of batches from the DB, given a slotNum
+func (hdb *HistoryDB) GetBatchesLen(slotNum int64) (int, error) {
+	row := hdb.db.QueryRow("SELECT COUNT(*) FROM batch WHERE slot_num = $1;", slotNum)
+	var batchesLen int
+	return batchesLen, row.Scan(&batchesLen)
+}
+
 // GetLastBatchNum returns the BatchNum of the latest forged batch
 func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 	row := hdb.db.QueryRow("SELECT batch_num FROM batch ORDER BY batch_num DESC LIMIT 1;")
@@ -316,16 +323,6 @@ func (hdb *HistoryDB) Reorg(lastValidBlock int64) error {
 		_, err = hdb.db.Exec("DELETE FROM block WHERE eth_block_num > $1;", lastValidBlock)
 	}
 	return err
-}
-
-// SyncPoD stores all the data that can be changed / added on a block in the PoD SC
-func (hdb *HistoryDB) SyncPoD(
-	blockNum uint64,
-	bids []common.Bid,
-	coordinators []common.Coordinator,
-	vars *common.AuctionVariables,
-) error {
-	return nil
 }
 
 // AddBids insert Bids into the DB
@@ -359,6 +356,27 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 		WHERE slot_num = $1 ORDER BY item_id DESC LIMIT 1;`, slotNum,
 	)
 	return *bid, err
+}
+
+// GetBestBidCoordinator returns the forger address of the highest bidder in a slot by slotNum
+func (hdb *HistoryDB) GetBestBidCoordinator(slotNum int64) (*common.BidCoordinator, error) {
+	bidCoord := &common.BidCoordinator{}
+	err := meddler.QueryRow(
+		hdb.db, bidCoord,
+		`SELECT (
+			SELECT default_slot_set_bid_slot_num
+			FROM auction_vars
+			WHERE default_slot_set_bid_slot_num <= $1
+			ORDER BY eth_block_num DESC LIMIT 1
+			),
+		bid.slot_num, bid.bid_value, bid.bidder_addr,
+		coordinator.forger_addr, coordinator.url
+		FROM bid
+		INNER JOIN coordinator ON bid.bidder_addr = coordinator.bidder_addr
+		WHERE bid.slot_num = $1 ORDER BY bid.item_id DESC LIMIT 1;`,
+		slotNum)
+
+	return bidCoord, err
 }
 
 // GetBestBidsAPI returns the best bid in specific slot by slotNum
@@ -1244,6 +1262,7 @@ func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 	rollup.EthBlockNum = 0
 	auction.EthBlockNum = 0
 	wDelayer.EthBlockNum = 0
+	auction.DefaultSlotSetBidSlotNum = 0
 	if err := hdb.setRollupVars(txn, rollup); err != nil {
 		return err
 	}

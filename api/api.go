@@ -42,7 +42,7 @@ func NewAPI(
 	hdb *historydb.HistoryDB,
 	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
-	config *configAPI,
+	config *Config,
 ) (*API, error) {
 	// Check input
 	// TODO: is stateDB only needed for explorer endpoints or for both?
@@ -54,8 +54,12 @@ func NewAPI(
 	}
 
 	a := &API{
-		h:  hdb,
-		cg: config,
+		h: hdb,
+		cg: &configAPI{
+			RollupConstants:   *newRollupConstants(config.RollupConstants),
+			AuctionConstants:  config.AuctionConstants,
+			WDelayerConstants: config.WDelayerConstants,
+		},
 		s:  sdb,
 		l2: l2db,
 	}

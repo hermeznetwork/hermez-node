@@ -633,11 +633,7 @@ func TestGetL1UserTxs(t *testing.T) {
 	assert.Equal(t, 0, len(l1UserTxs))
 }
 
-func TestSetInitialSCVars(t *testing.T) {
-	test.WipeDB(historyDB.DB())
-	_, _, _, err := historyDB.GetSCVars()
-	assert.Equal(t, sql.ErrNoRows, err)
-
+func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *common.WDelayerVariables) {
 	//nolint:govet
 	rollup := &common.RollupVariables{
 		0,
@@ -655,6 +651,7 @@ func TestSetInitialSCVars(t *testing.T) {
 			big.NewInt(1), big.NewInt(2), big.NewInt(3),
 			big.NewInt(4), big.NewInt(5), big.NewInt(6),
 		},
+		0,
 		2,
 		4320,
 		[3]uint16{10, 11, 12},
@@ -671,6 +668,14 @@ func TestSetInitialSCVars(t *testing.T) {
 		14,
 		false,
 	}
+	return rollup, auction, wDelayer
+}
+
+func TestSetInitialSCVars(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	_, _, _, err := historyDB.GetSCVars()
+	assert.Equal(t, sql.ErrNoRows, err)
+	rollup, auction, wDelayer := exampleInitSCVars()
 	err = historyDB.SetInitialSCVars(rollup, auction, wDelayer)
 	require.Nil(t, err)
 	dbRollup, dbAuction, dbWDelayer, err := historyDB.GetSCVars()
@@ -791,6 +796,64 @@ func TestUpdateExitTree(t *testing.T) {
 		dbExitsByIdx[dbExit.AccountIdx] = dbExit
 	}
 	require.Equal(t, &block.Block.EthBlockNum, dbExitsByIdx[257].DelayedWithdrawn)
+}
+
+func TestGetBestBidCoordinator(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+
+	rollup, auction, wDelayer := exampleInitSCVars()
+	err := historyDB.SetInitialSCVars(rollup, auction, wDelayer)
+	require.Nil(t, err)
+
+	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(`
+		Type: Blockchain
+		> block // blockNum=2
+	`)
+	require.Nil(t, err)
+	err = historyDB.AddBlockSCData(&blocks[0])
+	require.Nil(t, err)
+
+	coords := []common.Coordinator{
+		{
+			Bidder:      ethCommon.BigToAddress(big.NewInt(1)),
+			Forger:      ethCommon.BigToAddress(big.NewInt(2)),
+			EthBlockNum: 2,
+			URL:         "foo",
+		},
+		{
+			Bidder:      ethCommon.BigToAddress(big.NewInt(3)),
+			Forger:      ethCommon.BigToAddress(big.NewInt(4)),
+			EthBlockNum: 2,
+			URL:         "bar",
+		},
+	}
+	err = historyDB.addCoordinators(historyDB.db, coords)
+	require.Nil(t, err)
+	err = historyDB.addBids(historyDB.db, []common.Bid{
+		{
+			SlotNum:     10,
+			BidValue:    big.NewInt(10),
+			EthBlockNum: 2,
+			Bidder:      coords[0].Bidder,
+		},
+		{
+			SlotNum:     10,
+			BidValue:    big.NewInt(20),
+			EthBlockNum: 2,
+			Bidder:      coords[1].Bidder,
+		},
+	})
+	require.Nil(t, err)
+
+	forger10, err := historyDB.GetBestBidCoordinator(10)
+	require.Nil(t, err)
+	require.Equal(t, coords[1].Forger, forger10.Forger)
+	require.Equal(t, coords[1].Bidder, forger10.Bidder)
+	require.Equal(t, coords[1].URL, forger10.URL)
+
+	_, err = historyDB.GetBestBidCoordinator(11)
+	require.Equal(t, sql.ErrNoRows, err)
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them

@@ -535,7 +535,7 @@ func TestSync(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		client.CtlRollback()
 	}
-	blockNum := client.CtlCurrentBlock()
+	blockNum := client.CtlLastBlock()
 	require.Equal(t, int64(1), blockNum)
 
 	// Generate extra required data
