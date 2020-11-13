@@ -305,14 +305,52 @@ func TestAccounts(t *testing.T) {
 func TestTxs(t *testing.T) {
 	// Reset DB
 	test.WipeDB(historyDB.DB())
-	// TODO: Generate batches using til (and blocks for foreign key)
+
 	set := `
 		Type: Blockchain
+		
+		AddToken(1)
+		AddToken(2)
+		CreateAccountDeposit(1) A: 10
+		CreateAccountDeposit(1) B: 10
+		> batchL1
+		> batchL1
+		> block
+				
+		CreateAccountDepositTransfer(1) C-A: 20, 10
+		CreateAccountCoordinator(1) User0
+		> batchL1
+		> batchL1
+		> block
 
-		// Things to test:
-		// One tx of each type
-		// batches that forge user L1s
-		// historic USD is not set if USDUpdate is too old (24h)
+		Deposit(1) B: 10
+		Deposit(1) C: 10
+		Transfer(1) C-A : 10 (1)
+		Transfer(1) B-C : 10 (1)
+		Transfer(1) A-B : 10 (1)
+		Exit(1) A: 10 (1)
+		> batch
+		> block
+		
+		DepositTransfer(1) A-B: 10, 10
+		> batchL1
+		> block
+
+		ForceTransfer(1) A-B: 10
+		ForceExit(1) A: 5
+		> batchL1
+		> batchL1
+		> block
+
+		CreateAccountDeposit(2) D: 10
+		> batchL1
+		> block
+
+		CreateAccountDeposit(2) E: 10
+		> batchL1
+		> batchL1
+		> block
+
 	`
 	tc := til.NewContext(common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
@@ -324,148 +362,215 @@ func TestTxs(t *testing.T) {
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
 	assert.Nil(t, err)
 
-	/*
+	// Sanity check
+	require.Equal(t, 7, len(blocks))
+	require.Equal(t, 2, len(blocks[0].Rollup.L1UserTxs))
+	require.Equal(t, 1, len(blocks[1].Rollup.L1UserTxs))
+	require.Equal(t, 2, len(blocks[2].Rollup.L1UserTxs))
+	require.Equal(t, 1, len(blocks[3].Rollup.L1UserTxs))
+	require.Equal(t, 2, len(blocks[4].Rollup.L1UserTxs))
+	require.Equal(t, 1, len(blocks[5].Rollup.L1UserTxs))
+	require.Equal(t, 1, len(blocks[6].Rollup.L1UserTxs))
 
-		OLD TEST
+	var null *common.BatchNum = nil
+	var txID common.TxID
 
-
-		const fromBlock int64 = 1
-		const toBlock int64 = 5
-		// Prepare blocks in the DB
-		blocks := setTestBlocks(fromBlock, toBlock)
-		// Generate fake tokens
-		const nTokens = 500
-		tokens, ethToken := test.GenTokens(nTokens, blocks)
-		err := historyDB.AddTokens(tokens)
-		assert.NoError(t, err)
-		tokens = append([]common.Token{ethToken}, tokens...)
-		// Generate fake batches
-		const nBatches = 10
-		batches := test.GenBatches(nBatches, blocks)
-		err = historyDB.AddBatches(batches)
-		assert.NoError(t, err)
-		// Generate fake accounts
-		const nAccounts = 3
-		accs := test.GenAccounts(nAccounts, 0, tokens, nil, nil, batches)
-		err = historyDB.AddAccounts(accs)
-		assert.NoError(t, err)
-
-			Uncomment once the transaction generation is fixed
-			!! test that batches that forge user L1s !!
-			!! Missing tests to check that  !!
-
-			// Generate fake L1 txs
-			const nL1s = 64
-			_, l1txs := test.GenL1Txs(256, nL1s, 0, nil, accs, tokens, blocks, batches)
-			err = historyDB.AddL1Txs(l1txs)
+	// Insert blocks into DB
+	for i := range blocks {
+		if i == len(blocks)-1 {
+			blocks[i].Block.Timestamp = time.Now()
+			dbL1Txs, err := historyDB.GetAllL1UserTxs()
 			assert.NoError(t, err)
-			// Generate fake L2 txs
-			const nL2s = 2048 - nL1s
-			_, l2txs := test.GenL2Txs(256, nL2s, 0, nil, accs, tokens, blocks, batches)
-			err = historyDB.AddL2Txs(l2txs)
-			assert.NoError(t, err)
-			// Compare fetched txs vs generated txs.
-			fetchAndAssertTxs(t, l1txs, l2txs)
-			// Test trigger: L1 integrity
-			// from_eth_addr can't be null
-			l1txs[0].FromEthAddr = ethCommon.Address{}
-			err = historyDB.AddL1Txs(l1txs)
-			assert.Error(t, err)
-			l1txs[0].FromEthAddr = ethCommon.BigToAddress(big.NewInt(int64(5)))
-			// from_bjj can't be null
-			l1txs[0].FromBJJ = nil
-			err = historyDB.AddL1Txs(l1txs)
-			assert.Error(t, err)
-			privK := babyjub.NewRandPrivKey()
-			l1txs[0].FromBJJ = privK.Public()
-			// load_amount can't be null
-			l1txs[0].LoadAmount = nil
-			err = historyDB.AddL1Txs(l1txs)
-			assert.Error(t, err)
-			// Test trigger: L2 integrity
-			// batch_num can't be null
-			l2txs[0].BatchNum = 0
-			err = historyDB.AddL2Txs(l2txs)
-			assert.Error(t, err)
-			l2txs[0].BatchNum = 1
-			// nonce can't be null
-			l2txs[0].Nonce = 0
-			err = historyDB.AddL2Txs(l2txs)
-			assert.Error(t, err)
-			// Test trigger: forge L1 txs
-			// add next batch to DB
-			batchNum, toForgeL1TxsNum := test.GetNextToForgeNumAndBatch(batches)
-			batch := batches[0]
-			batch.BatchNum = batchNum
-			batch.ForgeL1TxsNum = toForgeL1TxsNum
-			assert.NoError(t, historyDB.AddBatch(&batch)) // This should update nL1s / 2 rows
-			// Set batch num in txs that should have been marked as forged in the DB
-			for i := 0; i < len(l1txs); i++ {
-				fetchedTx, err := historyDB.GetTx(l1txs[i].TxID)
-				assert.NoError(t, err)
-				if l1txs[i].ToForgeL1TxsNum == toForgeL1TxsNum {
-					assert.Equal(t, batchNum, *fetchedTx.BatchNum)
-				} else {
-					if fetchedTx.BatchNum != nil {
-						assert.NotEqual(t, batchNum, *fetchedTx.BatchNum)
-					}
-				}
-			}
-
-			// Test helper functions for Synchronizer
-			// GetLastTxsPosition
-			expectedPosition := -1
-			var choosenToForgeL1TxsNum int64 = -1
-			for _, tx := range l1txs {
-				if choosenToForgeL1TxsNum == -1 && tx.ToForgeL1TxsNum > 0 {
-					choosenToForgeL1TxsNum = tx.ToForgeL1TxsNum
-					expectedPosition = tx.Position
-				} else if choosenToForgeL1TxsNum == tx.ToForgeL1TxsNum && expectedPosition < tx.Position {
-					expectedPosition = tx.Position
-				}
-			}
-			position, err := historyDB.GetLastTxsPosition(choosenToForgeL1TxsNum)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedPosition, position)
-
-			// GetL1UserTxs: not needed? tests were broken
-			// txs, err := historyDB.GetL1UserTxs(2)
-			// assert.NoError(t, err)
-			// assert.NotZero(t, len(txs))
-			// assert.NoError(t, err)
-			// assert.Equal(t, 22, position)
-			// // Test Update L1 TX Batch_num
-			// assert.Equal(t, common.BatchNum(0), txs[0].BatchNum)
-			// txs[0].BatchNum = common.BatchNum(1)
-			// txs, err = historyDB.GetL1UserTxs(2)
-			// assert.NoError(t, err)
-			// assert.NotZero(t, len(txs))
-			// assert.Equal(t, common.BatchNum(1), txs[0].BatchNum)
-	*/
-}
-
-/*
-func fetchAndAssertTxs(t *testing.T, l1txs []common.L1Tx, l2txs []common.L2Tx) {
-	for i := 0; i < len(l1txs); i++ {
-		tx := l1txs[i].Tx()
-		fmt.Println("ASDF", i, tx.TxID)
-		fetchedTx, err := historyDB.GetTx(tx.TxID)
-		require.NoError(t, err)
-		test.AssertUSD(t, tx.USD, fetchedTx.USD)
-		test.AssertUSD(t, tx.LoadAmountUSD, fetchedTx.LoadAmountUSD)
-		assert.Equal(t, tx, fetchedTx)
+			// Check batch_num is nil before forging
+			assert.Equal(t, null, dbL1Txs[len(dbL1Txs)-1].BatchNum)
+			// Save this TxId
+			txID = dbL1Txs[len(dbL1Txs)-1].TxID
+		}
+		err = historyDB.AddBlockSCData(&blocks[i])
+		assert.NoError(t, err)
 	}
-	for i := 0; i < len(l2txs); i++ {
-		tx := l2txs[i].Tx()
-		fetchedTx, err := historyDB.GetTx(tx.TxID)
-		tx.TokenID = fetchedTx.TokenID
-		assert.NoError(t, err)
-		test.AssertUSD(t, fetchedTx.USD, tx.USD)
-		test.AssertUSD(t, fetchedTx.FeeUSD, tx.FeeUSD)
-		assert.Equal(t, tx, fetchedTx)
-	}
+
+	// Check blocks
+	dbBlocks, err := historyDB.GetAllBlocks()
+	assert.NoError(t, err)
+	assert.Equal(t, len(blocks)+1, len(dbBlocks))
+
+	// Check batches
+	batches, err := historyDB.GetAllBatches()
+	assert.NoError(t, err)
+	assert.Equal(t, 11, len(batches))
+
+	// Check L1 Transactions
+	dbL1Txs, err := historyDB.GetAllL1UserTxs()
+	assert.NoError(t, err)
+	assert.Equal(t, 10, len(dbL1Txs))
+
+	// Tx Type
+	assert.Equal(t, common.TxTypeCreateAccountDeposit, dbL1Txs[0].Type)
+	assert.Equal(t, common.TxTypeCreateAccountDeposit, dbL1Txs[1].Type)
+	assert.Equal(t, common.TxTypeCreateAccountDepositTransfer, dbL1Txs[2].Type)
+	assert.Equal(t, common.TxTypeDeposit, dbL1Txs[3].Type)
+	assert.Equal(t, common.TxTypeDeposit, dbL1Txs[4].Type)
+	assert.Equal(t, common.TxTypeDepositTransfer, dbL1Txs[5].Type)
+	assert.Equal(t, common.TxTypeForceTransfer, dbL1Txs[6].Type)
+	assert.Equal(t, common.TxTypeForceExit, dbL1Txs[7].Type)
+	assert.Equal(t, common.TxTypeCreateAccountDeposit, dbL1Txs[8].Type)
+	assert.Equal(t, common.TxTypeCreateAccountDeposit, dbL1Txs[9].Type)
+
+	// Tx ID
+	assert.Equal(t, "0x000000000000000001000000", dbL1Txs[0].TxID.String())
+	assert.Equal(t, "0x000000000000000001000100", dbL1Txs[1].TxID.String())
+	assert.Equal(t, "0x000000000000000003000000", dbL1Txs[2].TxID.String())
+	assert.Equal(t, "0x000000000000000005000000", dbL1Txs[3].TxID.String())
+	assert.Equal(t, "0x000000000000000005000100", dbL1Txs[4].TxID.String())
+	assert.Equal(t, "0x000000000000000005000200", dbL1Txs[5].TxID.String())
+	assert.Equal(t, "0x000000000000000006000000", dbL1Txs[6].TxID.String())
+	assert.Equal(t, "0x000000000000000006000100", dbL1Txs[7].TxID.String())
+	assert.Equal(t, "0x000000000000000008000000", dbL1Txs[8].TxID.String())
+	assert.Equal(t, "0x000000000000000009000000", dbL1Txs[9].TxID.String())
+
+	// Tx From IDx
+	assert.Equal(t, common.Idx(0), dbL1Txs[0].FromIdx)
+	assert.Equal(t, common.Idx(0), dbL1Txs[1].FromIdx)
+	assert.Equal(t, common.Idx(0), dbL1Txs[2].FromIdx)
+	assert.NotEqual(t, common.Idx(0), dbL1Txs[3].FromIdx)
+	assert.NotEqual(t, common.Idx(0), dbL1Txs[4].FromIdx)
+	assert.NotEqual(t, common.Idx(0), dbL1Txs[5].FromIdx)
+	assert.NotEqual(t, common.Idx(0), dbL1Txs[6].FromIdx)
+	assert.NotEqual(t, common.Idx(0), dbL1Txs[7].FromIdx)
+	assert.Equal(t, common.Idx(0), dbL1Txs[8].FromIdx)
+	assert.Equal(t, common.Idx(0), dbL1Txs[9].FromIdx)
+	assert.Equal(t, common.Idx(0), dbL1Txs[9].FromIdx)
+	assert.Equal(t, dbL1Txs[5].FromIdx, dbL1Txs[6].FromIdx)
+	assert.Equal(t, dbL1Txs[5].FromIdx, dbL1Txs[7].FromIdx)
+
+	// Tx to IDx
+	assert.Equal(t, dbL1Txs[2].ToIdx, dbL1Txs[5].FromIdx)
+	assert.Equal(t, dbL1Txs[5].ToIdx, dbL1Txs[3].FromIdx)
+	assert.Equal(t, dbL1Txs[6].ToIdx, dbL1Txs[3].FromIdx)
+
+	// Token ID
+	assert.Equal(t, common.TokenID(1), dbL1Txs[0].TokenID)
+	assert.Equal(t, common.TokenID(1), dbL1Txs[1].TokenID)
+	assert.Equal(t, common.TokenID(1), dbL1Txs[2].TokenID)
+	assert.Equal(t, common.TokenID(1), dbL1Txs[3].TokenID)
+	assert.Equal(t, common.TokenID(1), dbL1Txs[4].TokenID)
+	assert.Equal(t, common.TokenID(1), dbL1Txs[5].TokenID)
+	assert.Equal(t, common.TokenID(1), dbL1Txs[6].TokenID)
+	assert.Equal(t, common.TokenID(1), dbL1Txs[7].TokenID)
+	assert.Equal(t, common.TokenID(2), dbL1Txs[8].TokenID)
+	assert.Equal(t, common.TokenID(2), dbL1Txs[9].TokenID)
+
+	// Batch Number
+	var bn common.BatchNum = common.BatchNum(2)
+
+	assert.Equal(t, &bn, dbL1Txs[0].BatchNum)
+	assert.Equal(t, &bn, dbL1Txs[1].BatchNum)
+
+	bn = common.BatchNum(4)
+	assert.Equal(t, &bn, dbL1Txs[2].BatchNum)
+
+	bn = common.BatchNum(7)
+	assert.Equal(t, &bn, dbL1Txs[3].BatchNum)
+	assert.Equal(t, &bn, dbL1Txs[4].BatchNum)
+	assert.Equal(t, &bn, dbL1Txs[5].BatchNum)
+
+	bn = common.BatchNum(8)
+	assert.Equal(t, &bn, dbL1Txs[6].BatchNum)
+	assert.Equal(t, &bn, dbL1Txs[7].BatchNum)
+
+	bn = common.BatchNum(10)
+	assert.Equal(t, &bn, dbL1Txs[8].BatchNum)
+
+	bn = common.BatchNum(11)
+	assert.Equal(t, &bn, dbL1Txs[9].BatchNum)
+
+	// eth_block_num
+	assert.Equal(t, int64(2), dbL1Txs[0].EthBlockNum)
+	assert.Equal(t, int64(2), dbL1Txs[1].EthBlockNum)
+	assert.Equal(t, int64(3), dbL1Txs[2].EthBlockNum)
+	assert.Equal(t, int64(4), dbL1Txs[3].EthBlockNum)
+	assert.Equal(t, int64(4), dbL1Txs[4].EthBlockNum)
+	assert.Equal(t, int64(5), dbL1Txs[5].EthBlockNum)
+	assert.Equal(t, int64(6), dbL1Txs[6].EthBlockNum)
+	assert.Equal(t, int64(6), dbL1Txs[7].EthBlockNum)
+	assert.Equal(t, int64(7), dbL1Txs[8].EthBlockNum)
+	assert.Equal(t, int64(8), dbL1Txs[9].EthBlockNum)
+
+	// User Origin
+	assert.Equal(t, true, dbL1Txs[0].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[1].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[2].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[3].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[4].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[5].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[6].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[7].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[8].UserOrigin)
+	assert.Equal(t, true, dbL1Txs[9].UserOrigin)
+
+	// Load Amount
+	assert.Equal(t, big.NewInt(10), dbL1Txs[0].LoadAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[1].LoadAmount)
+	assert.Equal(t, big.NewInt(20), dbL1Txs[2].LoadAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[3].LoadAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[4].LoadAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[5].LoadAmount)
+	assert.Equal(t, big.NewInt(0), dbL1Txs[6].LoadAmount)
+	assert.Equal(t, big.NewInt(0), dbL1Txs[7].LoadAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[8].LoadAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[9].LoadAmount)
+
+	// Check saved txID's batch_num is not nil
+	assert.Equal(t, txID, dbL1Txs[len(dbL1Txs)-2].TxID)
+	assert.NotEqual(t, null, dbL1Txs[len(dbL1Txs)-2].BatchNum)
+
+	// Check Coordinator TXs
+	coordTxs, err := historyDB.GetAllL1CoordinatorTxs()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(coordTxs))
+	assert.Equal(t, common.TxTypeCreateAccountDeposit, coordTxs[0].Type)
+	assert.Equal(t, false, coordTxs[0].UserOrigin)
+
+	// Check L2 TXs
+	dbL2Txs, err := historyDB.GetAllL2Txs()
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(dbL2Txs))
+
+	// Tx Type
+	assert.Equal(t, common.TxTypeTransfer, dbL2Txs[0].Type)
+	assert.Equal(t, common.TxTypeTransfer, dbL2Txs[1].Type)
+	assert.Equal(t, common.TxTypeTransfer, dbL2Txs[2].Type)
+	assert.Equal(t, common.TxTypeExit, dbL2Txs[3].Type)
+
+	// Tx ID
+	assert.Equal(t, "0x020000000001030000000001", dbL2Txs[0].TxID.String())
+	assert.Equal(t, "0x020000000001010000000001", dbL2Txs[1].TxID.String())
+	assert.Equal(t, "0x020000000001000000000001", dbL2Txs[2].TxID.String())
+	assert.Equal(t, "0x020000000001000000000002", dbL2Txs[3].TxID.String())
+
+	// Tx From and To IDx
+	assert.Equal(t, dbL2Txs[0].ToIdx, dbL2Txs[2].FromIdx)
+	assert.Equal(t, dbL2Txs[1].ToIdx, dbL2Txs[0].FromIdx)
+	assert.Equal(t, dbL2Txs[2].ToIdx, dbL2Txs[1].FromIdx)
+
+	// Batch Number
+	assert.Equal(t, common.BatchNum(5), dbL2Txs[0].BatchNum)
+	assert.Equal(t, common.BatchNum(5), dbL2Txs[1].BatchNum)
+	assert.Equal(t, common.BatchNum(5), dbL2Txs[2].BatchNum)
+	assert.Equal(t, common.BatchNum(5), dbL2Txs[3].BatchNum)
+
+	// eth_block_num
+	assert.Equal(t, int64(4), dbL2Txs[0].EthBlockNum)
+	assert.Equal(t, int64(4), dbL2Txs[1].EthBlockNum)
+	assert.Equal(t, int64(4), dbL2Txs[2].EthBlockNum)
+
+	// Amount
+	assert.Equal(t, big.NewInt(10), dbL2Txs[0].Amount)
+	assert.Equal(t, big.NewInt(10), dbL2Txs[1].Amount)
+	assert.Equal(t, big.NewInt(10), dbL2Txs[2].Amount)
+	assert.Equal(t, big.NewInt(10), dbL2Txs[3].Amount)
 }
-*/
 
 func TestExitTree(t *testing.T) {
 	nBatches := 17
