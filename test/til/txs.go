@@ -591,6 +591,7 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 				TokenID: inst.tokenID,
 				Amount:  big.NewInt(int64(inst.amount)),
 				Nonce:   tc.Users[inst.from].Accounts[inst.tokenID].Nonce,
+				State:   common.PoolL2TxStatePending,
 				Type:    common.TxTypeExit,
 			}
 			nTx, err := common.NewPoolL2Tx(&tx)
