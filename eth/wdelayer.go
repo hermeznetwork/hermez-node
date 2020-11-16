@@ -30,6 +30,7 @@ type WDelayerEventDeposit struct {
 	Token            ethCommon.Address
 	Amount           *big.Int
 	DepositTimestamp uint64
+	TxHash           ethCommon.Hash // Hash of the transaction that generated this event
 }
 
 // WDelayerEventWithdraw is an event of the WithdrawalDelayer Smart Contract
@@ -411,6 +412,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			}
 			deposit.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			deposit.Token = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+			deposit.TxHash = vLog.TxHash
 			wdelayerEvents.Deposit = append(wdelayerEvents.Deposit, deposit)
 
 		case logWDelayerWithdraw:

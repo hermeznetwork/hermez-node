@@ -15,7 +15,7 @@ require (
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e
 	github.com/iden3/go-merkletree v0.0.0-20201103115630-ad30c8309b44
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
-	github.com/jmoiron/sqlx v1.2.0
+	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible

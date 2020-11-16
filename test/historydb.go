@@ -372,7 +372,7 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 
 // GenExitTree generates an exitTree (as an array of Exits)
 //nolint:gomnd
-func GenExitTree(n int, batches []common.Batch, accounts []common.Account) []common.ExitInfo {
+func GenExitTree(n int, batches []common.Batch, accounts []common.Account, blocks []common.Block) []common.ExitInfo {
 	exitTree := make([]common.ExitInfo, n)
 	for i := 0; i < n; i++ {
 		exitTree[i] = common.ExitInfo{
@@ -397,17 +397,14 @@ func GenExitTree(n int, batches []common.Batch, accounts []common.Account) []com
 			Balance: big.NewInt(int64(i) * 1000),
 		}
 		if i%2 == 0 {
-			instant := new(int64)
-			*instant = int64(batches[(i+1)%len(batches)].BatchNum)
-			exitTree[i].InstantWithdrawn = instant
+			instant := int64(blocks[i%len(blocks)].EthBlockNum)
+			exitTree[i].InstantWithdrawn = &instant
 		} else if i%3 == 0 {
-			delayedReq := new(int64)
-			*delayedReq = int64(batches[(i+1)%len(batches)].BatchNum)
-			exitTree[i].DelayedWithdrawRequest = delayedReq
+			delayedReq := int64(blocks[i%len(blocks)].EthBlockNum)
+			exitTree[i].DelayedWithdrawRequest = &delayedReq
 			if i%9 == 0 {
-				delayed := new(int64)
-				*delayed = int64(batches[(i+2)%len(batches)].BatchNum)
-				exitTree[i].DelayedWithdrawn = delayed
+				delayed := int64(blocks[i%len(blocks)].EthBlockNum)
+				exitTree[i].DelayedWithdrawn = &delayed
 			}
 		}
 	}

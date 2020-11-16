@@ -222,7 +222,7 @@ func TestMain(m *testing.M) {
 	// Gen exits and add them to DB
 	const totalExits = 40
 	// TODO: UPDATE with til
-	exits := test.GenExitTree(totalExits, batches, accs)
+	exits := test.GenExitTree(totalExits, batches, accs, blocks)
 	err = api.h.AddExitTree(exits)
 	if err != nil {
 		panic(err)

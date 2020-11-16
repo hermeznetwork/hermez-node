@@ -235,7 +235,7 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 // CheckNonces invalidate txs with nonces that are smaller or equal than their respective accounts nonces.
 // The state of the affected txs will be changed from Pending -> Invalid
 func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.BatchNum) (err error) {
-	txn, err := l2db.db.Begin()
+	txn, err := l2db.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 // Purge deletes transactions that have been forged or marked as invalid for longer than the safety period
 // it also deletes txs that has been in the L2DB for longer than the ttl if maxTxs has been exceeded
 func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
-	txn, err := l2db.db.Begin()
+	txn, err := l2db.db.Beginx()
 	if err != nil {
 		return err
 	}

@@ -51,7 +51,7 @@ type Context struct {
 	Instructions          []instruction
 	userNames             []string
 	Users                 map[string]*User // Name -> *User
-	usersByIdx            map[int]*User
+	UsersByIdx            map[int]*User
 	accountsByIdx         map[int]*Account
 	LastRegisteredTokenID common.TokenID
 	l1CreatedAccounts     map[string]*Account // (Name, TokenID) -> *Account
@@ -81,7 +81,7 @@ func NewContext(rollupConstMaxL1UserTx int) *Context {
 	return &Context{
 		Users:                 make(map[string]*User),
 		l1CreatedAccounts:     make(map[string]*Account),
-		usersByIdx:            make(map[int]*User),
+		UsersByIdx:            make(map[int]*User),
 		accountsByIdx:         make(map[int]*Account),
 		LastRegisteredTokenID: 0,
 
@@ -393,7 +393,7 @@ func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error
 			}
 			tc.l1CreatedAccounts[idxTokenIDToString(tx.fromIdxName, tx.L1Tx.TokenID)] = tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID]
 			tc.accountsByIdx[tc.idx] = tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID]
-			tc.usersByIdx[tc.idx] = tc.Users[tx.fromIdxName]
+			tc.UsersByIdx[tc.idx] = tc.Users[tx.fromIdxName]
 			tc.idx++
 		}
 		if isCoordinatorTxs {
@@ -745,7 +745,7 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 				tx := &l1Txs[k]
 				if tx.Type == common.TxTypeCreateAccountDeposit ||
 					tx.Type == common.TxTypeCreateAccountDepositTransfer {
-					user, ok := tc.usersByIdx[tc.extra.idx]
+					user, ok := tc.UsersByIdx[tc.extra.idx]
 					if !ok {
 						return fmt.Errorf("Created account with idx: %v not found", tc.extra.idx)
 					}
