@@ -10,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/synchronizer"
 )
 
 func handleNoRoute(c *gin.Context) {
@@ -33,13 +34,15 @@ func badReq(err error, c *gin.Context) {
 type DebugAPI struct {
 	addr    string
 	stateDB *statedb.StateDB // synchronizer statedb
+	sync    *synchronizer.Synchronizer
 }
 
 // NewDebugAPI creates a new DebugAPI
-func NewDebugAPI(addr string, stateDB *statedb.StateDB) *DebugAPI {
+func NewDebugAPI(addr string, stateDB *statedb.StateDB, sync *synchronizer.Synchronizer) *DebugAPI {
 	return &DebugAPI{
-		stateDB: stateDB,
 		addr:    addr,
+		stateDB: stateDB,
+		sync:    sync,
 	}
 }
 
@@ -82,6 +85,11 @@ func (a *DebugAPI) handleMTRoot(c *gin.Context) {
 	c.JSON(http.StatusOK, root)
 }
 
+func (a *DebugAPI) handleSyncStats(c *gin.Context) {
+	stats := a.sync.Stats()
+	c.JSON(http.StatusOK, stats)
+}
+
 // Run starts the http server of the DebugAPI.  To stop it, pass a context with
 // cancelation (see `debugapi_test.go` for an example).
 func (a *DebugAPI) Run(ctx context.Context) error {
@@ -97,6 +105,8 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 	// is created.
 	debugAPI.GET("sdb/accounts", a.handleAccounts)
 	debugAPI.GET("sdb/accounts/:Idx", a.handleAccount)
+
+	debugAPI.GET("sync/stats", a.handleSyncStats)
 
 	debugAPIServer := &http.Server{
 		Addr:    a.addr,

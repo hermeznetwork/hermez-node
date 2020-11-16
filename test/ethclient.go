@@ -762,6 +762,16 @@ func (c *Client) RollupRegisterTokensCount() (*big.Int, error) {
 	return nil, errTODO
 }
 
+// RollupLastForgedBatch is the interface to call the smart contract function
+func (c *Client) RollupLastForgedBatch() (int64, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	currentBlock := c.currentBlock()
+	e := currentBlock.Rollup
+	return int64(len(e.State.ExitRoots)) - 1, nil
+}
+
 // RollupWithdrawCircuit is the interface to call the smart contract function
 func (c *Client) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error) {
 	log.Error("TODO")

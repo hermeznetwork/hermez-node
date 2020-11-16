@@ -66,9 +66,10 @@ type Node struct {
 		URL string `validate:"required"`
 	} `validate:"required"`
 	Synchronizer struct {
-		SyncLoopInterval Duration                         `validate:"required"`
-		StartBlockNum    synchronizer.ConfigStartBlockNum `validate:"required"`
-		InitialVariables synchronizer.SCVariables         `validate:"required"`
+		SyncLoopInterval   Duration                         `validate:"required"`
+		StatsRefreshPeriod Duration                         `validate:"required"`
+		StartBlockNum      synchronizer.ConfigStartBlockNum `validate:"required"`
+		InitialVariables   synchronizer.SCVariables         `validate:"required"`
 	} `validate:"required"`
 	SmartContracts struct {
 		Rollup       ethCommon.Address `validate:"required"`

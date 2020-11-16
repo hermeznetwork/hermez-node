@@ -114,8 +114,9 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	}
 
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB, synchronizer.Config{
-		StartBlockNum:    cfg.Synchronizer.StartBlockNum,
-		InitialVariables: cfg.Synchronizer.InitialVariables,
+		StartBlockNum:      cfg.Synchronizer.StartBlockNum,
+		InitialVariables:   cfg.Synchronizer.InitialVariables,
+		StatsRefreshPeriod: cfg.Synchronizer.StatsRefreshPeriod.Duration,
 	})
 	if err != nil {
 		return nil, err
@@ -159,9 +160,8 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		)
 	}
 	var debugAPI *debugapi.DebugAPI
-	println("apiaddr", cfg.Debug.APIAddress)
 	if cfg.Debug.APIAddress != "" {
-		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB)
+		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB, sync)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{

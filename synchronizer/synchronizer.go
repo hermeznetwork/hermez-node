@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
+	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -39,6 +41,93 @@ var (
 // 	Synchronized      bool
 // }
 
+// Stats of the syncrhonizer
+type Stats struct {
+	Eth struct {
+		RefreshPeriod time.Duration
+		Updated       time.Time
+		FirstBlock    int64
+		LastBlock     int64
+		LastBatch     int64
+	}
+	Sync struct {
+		Updated   time.Time
+		LastBlock int64
+		LastBatch int64
+	}
+}
+
+// StatsHolder stores stats and that allows reading and writing them
+// concurrently
+type StatsHolder struct {
+	stats Stats
+	rw    sync.RWMutex
+}
+
+// NewStatsHolder creates a new StatsHolder
+func NewStatsHolder(firstBlock int64, refreshPeriod time.Duration) *StatsHolder {
+	stats := Stats{}
+	stats.Eth.RefreshPeriod = refreshPeriod
+	stats.Eth.FirstBlock = firstBlock
+	return &StatsHolder{stats: stats}
+}
+
+// UpdateSync updates the synchronizer stats
+func (s *StatsHolder) UpdateSync(lastBlock int64, lastBatch *common.BatchNum) {
+	now := time.Now()
+	s.rw.Lock()
+	s.stats.Sync.LastBlock = lastBlock
+	if lastBatch != nil {
+		s.stats.Sync.LastBatch = int64(*lastBatch)
+	}
+	s.stats.Sync.Updated = now
+	s.rw.Unlock()
+}
+
+// UpdateEth updates the ethereum stats, only if the previous stats expired
+func (s *StatsHolder) UpdateEth(ethClient eth.ClientInterface) error {
+	now := time.Now()
+	s.rw.RLock()
+	elapsed := now.Sub(s.stats.Eth.Updated)
+	s.rw.RUnlock()
+	if elapsed < s.stats.Eth.RefreshPeriod {
+		return nil
+	}
+
+	lastBlock, err := ethClient.EthCurrentBlock()
+	if err != nil {
+		return err
+	}
+	lastBatch, err := ethClient.RollupLastForgedBatch()
+	if err != nil {
+		return err
+	}
+	s.rw.Lock()
+	s.stats.Eth.Updated = now
+	s.stats.Eth.LastBlock = lastBlock
+	s.stats.Eth.LastBatch = lastBatch
+	s.rw.Unlock()
+	return nil
+}
+
+// CopyStats returns a copy of the inner Stats
+func (s *StatsHolder) CopyStats() *Stats {
+	s.rw.RLock()
+	sCopy := s.stats
+	s.rw.RUnlock()
+	return &sCopy
+}
+
+func (s *StatsHolder) blocksPerc() float64 {
+	return float64(s.stats.Sync.LastBlock-s.stats.Eth.FirstBlock) * 100.0 /
+		float64(s.stats.Eth.LastBlock-s.stats.Eth.FirstBlock)
+}
+
+func (s *StatsHolder) batchesPerc(batchNum int64) float64 {
+	return float64(batchNum) * 100.0 /
+		float64(s.stats.Eth.LastBatch)
+}
+
 // ConfigStartBlockNum sets the first block used to start tracking the smart
 // contracts
 type ConfigStartBlockNum struct {
@@ -56,8 +145,9 @@ type SCVariables struct {
 
 // Config is the Synchronizer configuration
 type Config struct {
-	StartBlockNum    ConfigStartBlockNum
-	InitialVariables SCVariables
+	StartBlockNum      ConfigStartBlockNum
+	InitialVariables   SCVariables
+	StatsRefreshPeriod time.Duration
 }
 
 // Synchronizer implements the Synchronizer type
@@ -71,6 +161,7 @@ type Synchronizer struct {
 	cfg               Config
 	startBlockNum     int64
 	vars              SCVariables
+	stats             *StatsHolder
 	// firstSavedBlock  *common.Block
 	// mux sync.Mutex
 }
@@ -103,6 +194,7 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 	if startBlockNum < cfg.StartBlockNum.WDelayer {
 		startBlockNum = cfg.StartBlockNum.WDelayer
 	}
+	stats := NewStatsHolder(startBlockNum, cfg.StatsRefreshPeriod)
 	s := &Synchronizer{
 		ethClient:         ethClient,
 		auctionConstants:  *auctionConstants,
@@ -112,8 +204,14 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 		stateDB:           stateDB,
 		cfg:               cfg,
 		startBlockNum:     startBlockNum,
+		stats:             stats,
 	}
 	return s, s.init()
+}
+
+// Stats returns a copy of the Synchronizer Stats
+func (s *Synchronizer) Stats() *Stats {
+	return s.stats.CopyStats()
 }
 
 // AuctionConstants returns the AuctionConstants read from the smart contract
@@ -133,11 +231,13 @@ func (s *Synchronizer) WDelayerConstants() *common.WDelayerConstants {
 
 func (s *Synchronizer) init() error {
 	rollup, auction, wDelayer, err := s.historyDB.GetSCVars()
+	// If SCVars are not in the HistoryDB, this is probably the first run
+	// of the Synchronizer: store the initial vars taken from config
 	if err == sql.ErrNoRows {
 		rollup = &s.cfg.InitialVariables.Rollup
 		auction = &s.cfg.InitialVariables.Auction
 		wDelayer = &s.cfg.InitialVariables.WDelayer
-		log.Debug("Setting initial SCVars in HistoryDB")
+		log.Info("Setting initial SCVars in HistoryDB")
 		if err = s.historyDB.SetInitialSCVars(rollup, auction, wDelayer); err != nil {
 			return err
 		}
@@ -145,6 +245,47 @@ func (s *Synchronizer) init() error {
 	s.vars.Rollup = *rollup
 	s.vars.Auction = *auction
 	s.vars.WDelayer = *wDelayer
+
+	// Update stats parameters so that they have valid values before the
+	// first Sync call
+	if err := s.stats.UpdateEth(s.ethClient); err != nil {
+		return err
+	}
+	var lastBlockNum int64
+	lastSavedBlock, err := s.historyDB.GetLastBlock()
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	// If there's no block in the DB (or we only have the default block 0),
+	// make sure that the stateDB is clean
+	if err == sql.ErrNoRows || lastSavedBlock.EthBlockNum == 0 {
+		if err := s.stateDB.Reset(0); err != nil {
+			return err
+		}
+	} else {
+		lastBlockNum = lastSavedBlock.EthBlockNum
+	}
+	lastBatchNum, err := s.historyDB.GetLastBatchNum()
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if err == sql.ErrNoRows {
+		lastBatchNum = 0
+	}
+
+	s.stats.UpdateSync(lastBlockNum, &lastBatchNum)
+
+	log.Infow("Sync init block",
+		"syncLastBlock", s.stats.stats.Sync.LastBlock,
+		"syncBlocksPerc", s.stats.blocksPerc(),
+		"ethFirstBlock", s.stats.stats.Eth.FirstBlock,
+		"ethLastBlock", s.stats.stats.Eth.LastBlock,
+	)
+	log.Infow("Sync init batch",
+		"syncLastBatch", s.stats.stats.Sync.LastBatch,
+		"syncBatchesPerc", s.stats.batchesPerc(s.stats.stats.Sync.LastBatch),
+		"ethLastBatch", s.stats.stats.Eth.LastBatch,
+	)
 	return nil
 }
 
@@ -182,7 +323,14 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 	}
 	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v", ethBlock.EthBlockNum, ethBlock.ParentHash.String(), ethBlock.Hash.String())
 
-	log.Debugw("Syncing...", "block", nextBlockNum)
+	if err := s.stats.UpdateEth(s.ethClient); err != nil {
+		return nil, nil, err
+	}
+
+	log.Debugw("Syncing...",
+		"block", nextBlockNum,
+		"ethLastBlock", s.stats.stats.Eth.LastBlock,
+	)
 
 	// Check that the obtianed ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
 	if lastSavedBlock != nil {
@@ -247,6 +395,26 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 	err = s.historyDB.AddBlockSCData(&blockData)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	batchesLen := len(rollupData.Batches)
+	if batchesLen == 0 {
+		s.stats.UpdateSync(ethBlock.EthBlockNum, nil)
+	} else {
+		s.stats.UpdateSync(ethBlock.EthBlockNum,
+			&rollupData.Batches[batchesLen-1].Batch.BatchNum)
+	}
+	log.Debugw("Synced block",
+		"syncLastBlock", s.stats.stats.Sync.LastBlock,
+		"syncBlocksPerc", s.stats.blocksPerc(),
+		"ethLastBlock", s.stats.stats.Eth.LastBlock,
+	)
+	for _, batchData := range rollupData.Batches {
+		log.Debugw("Synced batch",
+			"syncLastBatch", batchData.Batch.BatchNum,
+			"syncBatchesPerc", s.stats.batchesPerc(int64(batchData.Batch.BatchNum)),
+			"ethLastBatch", s.stats.stats.Eth.LastBatch,
+		)
 	}
 
 	return &blockData, nil, nil
@@ -566,7 +734,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 	if varsUpdate {
 		s.vars.Rollup.EthBlockNum = blockNum
-		rollupData.Vars = &s.vars.Rollup
+		rollupData.Vars = s.vars.Rollup.Copy()
 	}
 
 	return &rollupData, nil
@@ -665,7 +833,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 
 	if varsUpdate {
 		s.vars.Auction.EthBlockNum = blockNum
-		auctionData.Vars = &s.vars.Auction
+		auctionData.Vars = s.vars.Auction.Copy()
 	}
 
 	return &auctionData, nil
@@ -734,7 +902,7 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 
 	if varsUpdate {
 		s.vars.WDelayer.EthBlockNum = blockNum
-		wDelayerData.Vars = &s.vars.WDelayer
+		wDelayerData.Vars = s.vars.WDelayer.Copy()
 	}
 
 	return &wDelayerData, nil

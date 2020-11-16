@@ -172,6 +172,7 @@ type RollupInterface interface {
 
 	// Viewers
 	RollupRegisterTokensCount() (*big.Int, error)
+	RollupLastForgedBatch() (int64, error)
 
 	//
 	// Smart Contract Status
@@ -400,19 +401,26 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 }
 
 // RollupRegisterTokensCount is the interface to call the smart contract function
-func (c *RollupClient) RollupRegisterTokensCount() (*big.Int, error) {
-	var registerTokensCount *big.Int
+func (c *RollupClient) RollupRegisterTokensCount() (registerTokensCount *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		hermez, err := Hermez.NewHermez(c.address, ec)
-		if err != nil {
-			return err
-		}
-		registerTokensCount, err = hermez.RegisterTokensCount(nil)
+		registerTokensCount, err = c.hermez.RegisterTokensCount(nil)
 		return err
 	}); err != nil {
 		return nil, err
 	}
 	return registerTokensCount, nil
+}
+
+// RollupLastForgedBatch is the interface to call the smart contract function
+func (c *RollupClient) RollupLastForgedBatch() (lastForgedBatch int64, err error) {
+	if err := c.client.Call(func(ec *ethclient.Client) error {
+		_lastForgedBatch, err := c.hermez.LastForgedBatch(nil)
+		lastForgedBatch = int64(_lastForgedBatch)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+	return lastForgedBatch, nil
 }
 
 // RollupUpdateForgeL1L2BatchTimeout is the interface to call the smart contract function
