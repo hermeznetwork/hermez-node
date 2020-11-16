@@ -43,6 +43,8 @@ func (t testBatchesResponse) Len() int {
 	return len(t.Batches)
 }
 
+func (t testBatchesResponse) New() Pendinger { return &testBatchesResponse{} }
+
 type testFullBatch struct {
 	Batch testBatch `json:"batch"`
 	Txs   []testTx  `json:"transactions"`
@@ -54,11 +56,11 @@ func genTestBatches(
 	txs []testTx,
 ) ([]testBatch, []testFullBatch) {
 	tBatches := []testBatch{}
-	for _, cBatch := range cBatches {
+	for i := 0; i < len(cBatches); i++ {
 		block := common.Block{}
 		found := false
 		for _, b := range blocks {
-			if b.EthBlockNum == cBatch.EthBlockNum {
+			if b.EthBlockNum == cBatches[i].EthBlockNum {
 				block = b
 				found = true
 				break
@@ -68,22 +70,22 @@ func genTestBatches(
 			panic("block not found")
 		}
 		collectedFees := make(map[common.TokenID]string)
-		for k, v := range cBatch.CollectedFees {
+		for k, v := range cBatches[i].CollectedFees {
 			collectedFees[k] = v.String()
 		}
 		tBatch := testBatch{
-			BatchNum:      cBatch.BatchNum,
-			EthBlockNum:   cBatch.EthBlockNum,
+			BatchNum:      cBatches[i].BatchNum,
+			EthBlockNum:   cBatches[i].EthBlockNum,
 			EthBlockHash:  block.Hash,
 			Timestamp:     block.Timestamp,
-			ForgerAddr:    cBatch.ForgerAddr,
+			ForgerAddr:    cBatches[i].ForgerAddr,
 			CollectedFees: collectedFees,
-			TotalFeesUSD:  cBatch.TotalFeesUSD,
-			StateRoot:     cBatch.StateRoot.String(),
-			NumAccounts:   cBatch.NumAccounts,
-			ExitRoot:      cBatch.ExitRoot.String(),
-			ForgeL1TxsNum: cBatch.ForgeL1TxsNum,
-			SlotNum:       cBatch.SlotNum,
+			TotalFeesUSD:  cBatches[i].TotalFeesUSD,
+			StateRoot:     cBatches[i].StateRoot.String(),
+			NumAccounts:   cBatches[i].NumAccounts,
+			ExitRoot:      cBatches[i].ExitRoot.String(),
+			ForgeL1TxsNum: cBatches[i].ForgeL1TxsNum,
+			SlotNum:       cBatches[i].SlotNum,
 		}
 		tBatches = append(tBatches, tBatch)
 	}

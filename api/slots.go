@@ -17,7 +17,7 @@ type SlotAPI struct {
 	FirstBlock  int64             `json:"firstBlock"`
 	LastBlock   int64             `json:"lastBlock"`
 	OpenAuction bool              `json:"openAuction"`
-	WinnerBid   *historydb.BidAPI `json:"winnerBid"`
+	WinnerBid   *historydb.BidAPI `json:"bestBid"`
 	TotalItems  uint64            `json:"-"`
 	FirstItem   uint64            `json:"-"`
 	LastItem    uint64            `json:"-"`

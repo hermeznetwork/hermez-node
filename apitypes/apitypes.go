@@ -95,12 +95,12 @@ func (c *CollectedFees) UnmarshalJSON(text []byte) error {
 	if err := json.Unmarshal(text, &bigIntMap); err != nil {
 		return err
 	}
-	bStrMap := make(map[common.TokenID]BigIntStr)
+	*c = CollectedFees(make(map[common.TokenID]BigIntStr))
 	for k, v := range bigIntMap {
 		bStr := NewBigIntStr(v)
-		bStrMap[k] = *bStr
+		(CollectedFees(*c)[k]) = *bStr
 	}
-	*c = CollectedFees(bStrMap)
+	// *c = CollectedFees(bStrMap)
 	return nil
 }
 

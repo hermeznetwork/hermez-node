@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 
@@ -109,7 +110,7 @@ func (a *API) getFullBatch(c *gin.Context) {
 	txs, _, err := a.h.GetHistoryTxs(
 		nil, nil, nil, nil, batchNum, nil, nil, &maxTxsPerBatch, historydb.OrderAsc,
 	)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		retSQLErr(err, c)
 		return
 	}

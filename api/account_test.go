@@ -36,6 +36,8 @@ func (t testAccountsResponse) GetPending() (pendingItems, lastItemID uint64) {
 
 func (t *testAccountsResponse) Len() int { return len(t.Accounts) }
 
+func (t testAccountsResponse) New() Pendinger { return &testAccountsResponse{} }
+
 func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD) []testAccount {
 	tAccounts := []testAccount{}
 	for x, account := range accounts {

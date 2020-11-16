@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -22,10 +23,24 @@ func (t testCoordinatorsResponse) GetPending() (pendingItems, lastItemID uint64)
 
 func (t *testCoordinatorsResponse) Len() int { return len(t.Coordinators) }
 
+func (t testCoordinatorsResponse) New() Pendinger { return &testCoordinatorsResponse{} }
+
+func genTestCoordinators(coordinators []common.Coordinator) []historydb.CoordinatorAPI {
+	testCoords := []historydb.CoordinatorAPI{}
+	for i := 0; i < len(coordinators); i++ {
+		testCoords = append(testCoords, historydb.CoordinatorAPI{
+			Bidder:      coordinators[i].Bidder,
+			Forger:      coordinators[i].Forger,
+			EthBlockNum: coordinators[i].EthBlockNum,
+			URL:         coordinators[i].URL,
+		})
+	}
+	return testCoords
+}
+
 func TestGetCoordinators(t *testing.T) {
 	endpoint := apiURL + "coordinators"
 	fetchedCoordinators := []historydb.CoordinatorAPI{}
-
 	appendIter := func(intr interface{}) {
 		for i := 0; i < len(intr.(*testCoordinatorsResponse).Coordinators); i++ {
 			tmp, err := copystructure.Copy(intr.(*testCoordinatorsResponse).Coordinators[i])
@@ -36,45 +51,30 @@ func TestGetCoordinators(t *testing.T) {
 		}
 	}
 
+	// All
 	limit := 5
-
 	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testCoordinatorsResponse{}, appendIter)
 	assert.NoError(t, err)
-	for i := 0; i < len(fetchedCoordinators); i++ {
-		assert.Equal(t, tc.coordinators[i].ItemID, fetchedCoordinators[i].ItemID)
-		assert.Equal(t, tc.coordinators[i].Bidder, fetchedCoordinators[i].Bidder)
-		assert.Equal(t, tc.coordinators[i].Forger, fetchedCoordinators[i].Forger)
-		assert.Equal(t, tc.coordinators[i].EthBlockNum, fetchedCoordinators[i].EthBlockNum)
-		assert.Equal(t, tc.coordinators[i].URL, fetchedCoordinators[i].URL)
-	}
+	assertCoordinators(t, tc.coordinators, fetchedCoordinators)
 
-	// Reverse Order
-	reversedCoordinators := []historydb.CoordinatorAPI{}
-	appendIter = func(intr interface{}) {
-		for i := 0; i < len(intr.(*testCoordinatorsResponse).Coordinators); i++ {
-			tmp, err := copystructure.Copy(intr.(*testCoordinatorsResponse).Coordinators[i])
-			if err != nil {
-				panic(err)
-			}
-			reversedCoordinators = append(reversedCoordinators, tmp.(historydb.CoordinatorAPI))
-		}
-	}
+	// All in reverse order
+	fetchedCoordinators = []historydb.CoordinatorAPI{}
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testCoordinatorsResponse{}, appendIter)
 	assert.NoError(t, err)
-	for i := 0; i < len(fetchedCoordinators); i++ {
-		assert.Equal(t, reversedCoordinators[i].ItemID, fetchedCoordinators[len(fetchedCoordinators)-1-i].ItemID)
-		assert.Equal(t, reversedCoordinators[i].Bidder, fetchedCoordinators[len(fetchedCoordinators)-1-i].Bidder)
-		assert.Equal(t, reversedCoordinators[i].Forger, fetchedCoordinators[len(fetchedCoordinators)-1-i].Forger)
-		assert.Equal(t, reversedCoordinators[i].EthBlockNum, fetchedCoordinators[len(fetchedCoordinators)-1-i].EthBlockNum)
-		assert.Equal(t, reversedCoordinators[i].URL, fetchedCoordinators[len(fetchedCoordinators)-1-i].URL)
+	reversedCoordinators := []historydb.CoordinatorAPI{}
+	for i := 0; i < len(tc.coordinators); i++ {
+		reversedCoordinators = append(reversedCoordinators, tc.coordinators[len(tc.coordinators)-1-i])
 	}
+	assertCoordinators(t, reversedCoordinators, fetchedCoordinators)
 
 	// Test GetCoordinator
-	path = fmt.Sprintf("%s/%s", endpoint, fetchedCoordinators[2].Forger.String())
-	coordinator := historydb.CoordinatorAPI{}
-	assert.NoError(t, doGoodReq("GET", path, nil, &coordinator))
-	assert.Equal(t, fetchedCoordinators[2], coordinator)
+	for _, coord := range tc.coordinators {
+		path = fmt.Sprintf("%s/%s", endpoint, coord.Forger.String())
+		fetchedCoordinator := historydb.CoordinatorAPI{}
+		assert.NoError(t, doGoodReq("GET", path, nil, &fetchedCoordinator))
+		assertCoordinator(t, coord, fetchedCoordinator)
+	}
 
 	// 400
 	path = fmt.Sprintf("%s/0x001", endpoint)
@@ -84,4 +84,16 @@ func TestGetCoordinators(t *testing.T) {
 	path = fmt.Sprintf("%s/0xaa942cfcd25ad4d90a62358b0dd84f33b398262a", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
+}
+
+func assertCoordinator(t *testing.T, expected, actual historydb.CoordinatorAPI) {
+	actual.ItemID = 0
+	assert.Equal(t, expected, actual)
+}
+
+func assertCoordinators(t *testing.T, expected, actual []historydb.CoordinatorAPI) {
+	assert.Equal(t, len(expected), len(actual))
+	for i := 0; i < len(expected); i++ {
+		assertCoordinator(t, expected[i], actual[i])
+	}
 }

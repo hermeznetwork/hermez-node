@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"testing"
 	"time"
 
@@ -51,43 +52,14 @@ type testTx struct {
 	Token       historydb.TokenWithUSD `json:"token"`
 }
 
-type testTxsResponse struct {
-	Txs          []testTx `json:"transactions"`
-	PendingItems uint64   `json:"pendingItems"`
-}
-
-func (t testTxsResponse) GetPending() (pendingItems, lastItemID uint64) {
-	pendingItems = t.PendingItems
-	lastItemID = t.Txs[len(t.Txs)-1].ItemID
-	return pendingItems, lastItemID
-}
-
-func (t testTxsResponse) Len() int {
-	return len(t.Txs)
-}
-
-// TxSortFields represents the fields needed to sort L1 and L2 transactions
-type txSortFields struct {
-	BatchNum *common.BatchNum
-	Position int
-}
-
-// TxSortFielder is a interface that allows sorting L1 and L2 transactions in a combined way
-type txSortFielder interface {
-	SortFields() txSortFields
-	L1() *common.L1Tx
-	L2() *common.L2Tx
-}
-
-// TxsSort array of TxSortFielder
-type txsSort []txSortFielder
+type txsSort []testTx
 
 func (t txsSort) Len() int      { return len(t) }
 func (t txsSort) Swap(i, j int) { t[i], t[j] = t[j], t[i] }
 func (t txsSort) Less(i, j int) bool {
 	// i not forged yet
-	isf := t[i].SortFields()
-	jsf := t[j].SortFields()
+	isf := t[i]
+	jsf := t[j]
 	if isf.BatchNum == nil {
 		if jsf.BatchNum != nil { // j is already forged
 			return false
@@ -108,189 +80,166 @@ func (t txsSort) Less(i, j int) bool {
 	return *isf.BatchNum < *jsf.BatchNum
 }
 
-type wrappedL1 common.L1Tx
-
-// SortFields implements TxSortFielder
-func (tx *wrappedL1) SortFields() txSortFields {
-	return txSortFields{
-		BatchNum: tx.BatchNum,
-		Position: tx.Position,
-	}
+type testTxsResponse struct {
+	Txs          []testTx `json:"transactions"`
+	PendingItems uint64   `json:"pendingItems"`
 }
 
-// L1 implements TxSortFielder
-func (tx *wrappedL1) L1() *common.L1Tx {
-	l1tx := common.L1Tx(*tx)
-	return &l1tx
+func (t testTxsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	pendingItems = t.PendingItems
+	lastItemID = t.Txs[len(t.Txs)-1].ItemID
+	return pendingItems, lastItemID
 }
 
-// L2 implements TxSortFielder
-func (tx *wrappedL1) L2() *common.L2Tx { return nil }
-
-type wrappedL2 common.L2Tx
-
-// SortFields implements TxSortFielder
-func (tx *wrappedL2) SortFields() txSortFields {
-	return txSortFields{
-		BatchNum: &tx.BatchNum,
-		Position: tx.Position,
-	}
+func (t testTxsResponse) Len() int {
+	return len(t.Txs)
 }
 
-// L1 implements TxSortFielder
-func (tx *wrappedL2) L1() *common.L1Tx { return nil }
-
-// L2 implements TxSortFielder
-func (tx *wrappedL2) L2() *common.L2Tx {
-	l2tx := common.L2Tx(*tx)
-	return &l2tx
-}
+func (t testTxsResponse) New() Pendinger { return &testTxsResponse{} }
 
 func genTestTxs(
-	genericTxs []txSortFielder,
-	usrIdxs []string,
+	l1s []common.L1Tx,
+	l2s []common.L2Tx,
 	accs []common.Account,
 	tokens []historydb.TokenWithUSD,
 	blocks []common.Block,
-) (usrTxs []testTx, allTxs []testTx) {
-	usrTxs = []testTx{}
-	allTxs = []testTx{}
-	isUsrTx := func(tx testTx) bool {
-		for _, idx := range usrIdxs {
-			if tx.FromIdx != nil && *tx.FromIdx == idx {
-				return true
-			}
-			if tx.ToIdx == idx {
-				return true
-			}
+) []testTx {
+	txs := []testTx{}
+	// common.L1Tx ==> testTx
+	for _, l1 := range l1s {
+		token := getTokenByID(l1.TokenID, tokens)
+		// l1.FromEthAddr and l1.FromBJJ can't be nil
+		fromEthAddr := string(apitypes.NewHezEthAddr(l1.FromEthAddr))
+		fromBJJ := string(apitypes.NewHezBJJ(l1.FromBJJ))
+		tx := testTx{
+			IsL1:        "L1",
+			TxID:        l1.TxID,
+			Type:        l1.Type,
+			Position:    l1.Position,
+			FromEthAddr: &fromEthAddr,
+			FromBJJ:     &fromBJJ,
+			ToIdx:       idxToHez(l1.ToIdx, token.Symbol),
+			Amount:      l1.Amount.String(),
+			BatchNum:    l1.BatchNum,
+			Timestamp:   getTimestamp(l1.EthBlockNum, blocks),
+			L1Info: &testL1Info{
+				ToForgeL1TxsNum: l1.ToForgeL1TxsNum,
+				UserOrigin:      l1.UserOrigin,
+				LoadAmount:      l1.LoadAmount.String(),
+				EthBlockNum:     l1.EthBlockNum,
+			},
+			Token: token,
 		}
-		return false
-	}
-	for _, genericTx := range genericTxs {
-		l1 := genericTx.L1()
-		l2 := genericTx.L2()
-		if l1 != nil { // L1Tx to testTx
-			token := getTokenByID(l1.TokenID, tokens)
-			// l1.FromEthAddr and l1.FromBJJ can't be nil
-			fromEthAddr := string(apitypes.NewHezEthAddr(l1.FromEthAddr))
-			fromBJJ := string(apitypes.NewHezBJJ(l1.FromBJJ))
-			tx := testTx{
-				IsL1:        "L1",
-				TxID:        l1.TxID,
-				Type:        l1.Type,
-				Position:    l1.Position,
-				FromEthAddr: &fromEthAddr,
-				FromBJJ:     &fromBJJ,
-				ToIdx:       idxToHez(l1.ToIdx, token.Symbol),
-				Amount:      l1.Amount.String(),
-				BatchNum:    l1.BatchNum,
-				Timestamp:   getTimestamp(l1.EthBlockNum, blocks),
-				L1Info: &testL1Info{
-					ToForgeL1TxsNum: l1.ToForgeL1TxsNum,
-					UserOrigin:      l1.UserOrigin,
-					LoadAmount:      l1.LoadAmount.String(),
-					EthBlockNum:     l1.EthBlockNum,
-				},
-				Token: token,
-			}
-			// If FromIdx is not nil
-			if l1.FromIdx != 0 {
-				idxStr := idxToHez(l1.FromIdx, token.Symbol)
-				tx.FromIdx = &idxStr
-			}
-			// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
-			if l1.ToIdx >= common.UserThreshold {
-				// find account
-				for _, acc := range accs {
-					if l1.ToIdx == acc.Idx {
-						toEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
-						tx.ToEthAddr = &toEthAddr
-						toBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
-						tx.ToBJJ = &toBJJ
-						break
-					}
-				}
-			}
-			// If the token has USD value setted
-			if token.USD != nil {
-				af := new(big.Float).SetInt(l1.Amount)
-				amountFloat, _ := af.Float64()
-				usd := *token.USD * amountFloat / math.Pow(10, float64(token.Decimals))
-				tx.HistoricUSD = &usd
-				laf := new(big.Float).SetInt(l1.LoadAmount)
-				loadAmountFloat, _ := laf.Float64()
-				loadUSD := *token.USD * loadAmountFloat / math.Pow(10, float64(token.Decimals))
-				tx.L1Info.HistoricLoadAmountUSD = &loadUSD
-			}
-			allTxs = append(allTxs, tx)
-			if isUsrTx(tx) {
-				usrTxs = append(usrTxs, tx)
-			}
-		} else { // L2Tx to testTx
-			token := getTokenByIdx(l2.FromIdx, tokens, accs)
-			// l1.FromIdx can't be nil
-			fromIdx := idxToHez(l2.FromIdx, token.Symbol)
-			tx := testTx{
-				IsL1:      "L2",
-				TxID:      l2.TxID,
-				Type:      l2.Type,
-				Position:  l2.Position,
-				ToIdx:     idxToHez(l2.ToIdx, token.Symbol),
-				FromIdx:   &fromIdx,
-				Amount:    l2.Amount.String(),
-				BatchNum:  &l2.BatchNum,
-				Timestamp: getTimestamp(l2.EthBlockNum, blocks),
-				L2Info: &testL2Info{
-					Nonce: l2.Nonce,
-					Fee:   l2.Fee,
-				},
-				Token: token,
-			}
-			// If FromIdx is not nil
-			if l2.FromIdx != 0 {
-				idxStr := idxToHez(l2.FromIdx, token.Symbol)
-				tx.FromIdx = &idxStr
-			}
-			// Set FromEthAddr and FromBJJ (FromIdx it's always >255)
+		// set BatchNum for user txs
+		if tx.L1Info.ToForgeL1TxsNum != nil {
+			// WARNING: this is an asumption, and the test input data can brake it easily
+			bn := common.BatchNum(*tx.L1Info.ToForgeL1TxsNum + 2)
+			tx.BatchNum = &bn
+		}
+		// If FromIdx is not nil
+		idxStr := idxToHez(l1.FromIdx, token.Symbol)
+		tx.FromIdx = &idxStr
+		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
+		if l1.ToIdx >= common.UserThreshold {
+			// find account
 			for _, acc := range accs {
-				if l2.ToIdx == acc.Idx {
-					fromEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
-					tx.FromEthAddr = &fromEthAddr
-					fromBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
-					tx.FromBJJ = &fromBJJ
+				if l1.ToIdx == acc.Idx {
+					toEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
+					tx.ToEthAddr = &toEthAddr
+					toBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
+					tx.ToBJJ = &toBJJ
 					break
 				}
 			}
-			// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
-			if l2.ToIdx >= common.UserThreshold {
-				// find account
-				for _, acc := range accs {
-					if l2.ToIdx == acc.Idx {
-						toEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
-						tx.ToEthAddr = &toEthAddr
-						toBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
-						tx.ToBJJ = &toBJJ
-						break
-					}
-				}
-			}
-			// If the token has USD value setted
-			if token.USD != nil {
-				af := new(big.Float).SetInt(l2.Amount)
-				amountFloat, _ := af.Float64()
-				usd := *token.USD * amountFloat / math.Pow(10, float64(token.Decimals))
+		}
+		// If the token has USD value setted
+		if token.USD != nil {
+			af := new(big.Float).SetInt(l1.Amount)
+			amountFloat, _ := af.Float64()
+			usd := *token.USD * amountFloat / math.Pow(10, float64(token.Decimals))
+			if usd != 0 {
 				tx.HistoricUSD = &usd
-				feeUSD := usd * l2.Fee.Percentage()
-				tx.HistoricUSD = &usd
-				tx.L2Info.HistoricFeeUSD = &feeUSD
 			}
-			allTxs = append(allTxs, tx)
-			if isUsrTx(tx) {
-				usrTxs = append(usrTxs, tx)
+			laf := new(big.Float).SetInt(l1.LoadAmount)
+			loadAmountFloat, _ := laf.Float64()
+			loadUSD := *token.USD * loadAmountFloat / math.Pow(10, float64(token.Decimals))
+			if loadAmountFloat != 0 {
+				tx.L1Info.HistoricLoadAmountUSD = &loadUSD
 			}
 		}
+		txs = append(txs, tx)
 	}
-	return usrTxs, allTxs
+
+	// common.L2Tx ==> testTx
+	for i := 0; i < len(l2s); i++ {
+		token := getTokenByIdx(l2s[i].FromIdx, tokens, accs)
+		// l1.FromIdx can't be nil
+		fromIdx := idxToHez(l2s[i].FromIdx, token.Symbol)
+		tx := testTx{
+			IsL1:      "L2",
+			TxID:      l2s[i].TxID,
+			Type:      l2s[i].Type,
+			Position:  l2s[i].Position,
+			ToIdx:     idxToHez(l2s[i].ToIdx, token.Symbol),
+			FromIdx:   &fromIdx,
+			Amount:    l2s[i].Amount.String(),
+			BatchNum:  &l2s[i].BatchNum,
+			Timestamp: getTimestamp(l2s[i].EthBlockNum, blocks),
+			L2Info: &testL2Info{
+				Nonce: l2s[i].Nonce,
+				Fee:   l2s[i].Fee,
+			},
+			Token: token,
+		}
+		// If FromIdx is not nil
+		if l2s[i].FromIdx != 0 {
+			idxStr := idxToHez(l2s[i].FromIdx, token.Symbol)
+			tx.FromIdx = &idxStr
+		}
+		// Set FromEthAddr and FromBJJ (FromIdx it's always >255)
+		for _, acc := range accs {
+			if l2s[i].FromIdx == acc.Idx {
+				fromEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
+				tx.FromEthAddr = &fromEthAddr
+				fromBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
+				tx.FromBJJ = &fromBJJ
+				break
+			}
+		}
+		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
+		if l2s[i].ToIdx >= common.UserThreshold {
+			// find account
+			for _, acc := range accs {
+				if l2s[i].ToIdx == acc.Idx {
+					toEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
+					tx.ToEthAddr = &toEthAddr
+					toBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
+					tx.ToBJJ = &toBJJ
+					break
+				}
+			}
+		}
+		// If the token has USD value setted
+		if token.USD != nil {
+			af := new(big.Float).SetInt(l2s[i].Amount)
+			amountFloat, _ := af.Float64()
+			usd := *token.USD * amountFloat / math.Pow(10, float64(token.Decimals))
+			if usd != 0 {
+				tx.HistoricUSD = &usd
+				feeUSD := usd * l2s[i].Fee.Percentage()
+				if feeUSD != 0 {
+					tx.L2Info.HistoricFeeUSD = &feeUSD
+				}
+			}
+		}
+		txs = append(txs, tx)
+	}
+
+	// Sort txs
+	sortedTxs := txsSort(txs)
+	sort.Sort(sortedTxs)
+
+	return []testTx(sortedTxs)
 }
 
 func TestGetHistoryTxs(t *testing.T) {
@@ -310,32 +259,44 @@ func TestGetHistoryTxs(t *testing.T) {
 	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
-	assertTxs(t, tc.allTxs, fetchedTxs)
-	// Uncomment once tx generation for tests is fixed
-	// // Get by ethAddr
-	// fetchedTxs = []testTx{}
-	// limit = 7
-	// path = fmt.Sprintf(
-	// 	"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
-	// 	endpoint, tc.usrAddr, limit,
-	// )
-	// err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
-	// assert.NoError(t, err)
-	// assertTxs(t, tc.usrTxs, fetchedTxs)
-	// // Get by bjj
-	// fetchedTxs = []testTx{}
-	// limit = 6
-	// path = fmt.Sprintf(
-	// 	"%s?BJJ=%s&limit=%d&fromItem=",
-	// 	endpoint, tc.usrBjj, limit,
-	// )
-	// err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
-	// assert.NoError(t, err)
-	// assertTxs(t, tc.usrTxs, fetchedTxs)
+	assertTxs(t, tc.txs, fetchedTxs)
+	// Get by ethAddr
+	account := tc.accounts[2]
+	fetchedTxs = []testTx{}
+	limit = 7
+	path = fmt.Sprintf(
+		"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
+		endpoint, account.EthAddr, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	accountTxs := []testTx{}
+	for i := 0; i < len(tc.txs); i++ {
+		tx := tc.txs[i]
+		if (tx.FromIdx != nil && *tx.FromIdx == string(account.Idx)) ||
+			tx.ToIdx == string(account.Idx) ||
+			(tx.FromEthAddr != nil && *tx.FromEthAddr == string(account.EthAddr)) ||
+			(tx.ToEthAddr != nil && *tx.ToEthAddr == string(account.EthAddr)) ||
+			(tx.FromBJJ != nil && *tx.FromBJJ == string(account.PublicKey)) ||
+			(tx.ToBJJ != nil && *tx.ToBJJ == string(account.PublicKey)) {
+			accountTxs = append(accountTxs, tx)
+		}
+	}
+	assertTxs(t, accountTxs, fetchedTxs)
+	// Get by bjj
+	fetchedTxs = []testTx{}
+	limit = 6
+	path = fmt.Sprintf(
+		"%s?BJJ=%s&limit=%d&fromItem=",
+		endpoint, account.PublicKey, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	assertTxs(t, accountTxs, fetchedTxs)
 	// Get by tokenID
 	fetchedTxs = []testTx{}
 	limit = 5
-	tokenID := tc.allTxs[0].Token.TokenID
+	tokenID := tc.txs[0].Token.TokenID
 	path = fmt.Sprintf(
 		"%s?tokenId=%d&limit=%d&fromItem=",
 		endpoint, tokenID, limit,
@@ -343,34 +304,46 @@ func TestGetHistoryTxs(t *testing.T) {
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	tokenIDTxs := []testTx{}
-	for i := 0; i < len(tc.allTxs); i++ {
-		if tc.allTxs[i].Token.TokenID == tokenID {
-			tokenIDTxs = append(tokenIDTxs, tc.allTxs[i])
+	for i := 0; i < len(tc.txs); i++ {
+		if tc.txs[i].Token.TokenID == tokenID {
+			tokenIDTxs = append(tokenIDTxs, tc.txs[i])
 		}
 	}
 	assertTxs(t, tokenIDTxs, fetchedTxs)
-	// // idx
-	// fetchedTxs = []testTx{}
-	// limit = 4
-	idx := tc.allTxs[0].ToIdx
-	// path = fmt.Sprintf(
-	// 	"%s?accountIndex=%s&limit=%d&fromItem=",
-	// 	endpoint, idx, limit,
-	// )
-	// err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
-	// assert.NoError(t, err)
-	// idxTxs := []testTx{}
-	// for i := 0; i < len(tc.allTxs); i++ {
-	// 	if (tc.allTxs[i].FromIdx != nil && (*tc.allTxs[i].FromIdx)[6:] == idx[6:]) ||
-	// 		tc.allTxs[i].ToIdx[6:] == idx[6:] {
-	// 		idxTxs = append(idxTxs, tc.allTxs[i])
-	// 	}
-	// }
-	// assertHistoryTxAPIs(t, idxTxs, fetchedTxs)
+	// idx
+	fetchedTxs = []testTx{}
+	limit = 4
+	idxStr := tc.txs[0].ToIdx
+	idx, err := stringToIdx(idxStr, "")
+	assert.NoError(t, err)
+	path = fmt.Sprintf(
+		"%s?accountIndex=%s&limit=%d&fromItem=",
+		endpoint, idxStr, limit,
+	)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	idxTxs := []testTx{}
+	for i := 0; i < len(tc.txs); i++ {
+		var fromIdx *common.Idx
+		if tc.txs[i].FromIdx != nil {
+			fromIdx, err = stringToIdx(*tc.txs[i].FromIdx, "")
+			assert.NoError(t, err)
+			if *fromIdx == *idx {
+				idxTxs = append(idxTxs, tc.txs[i])
+				continue
+			}
+		}
+		toIdx, err := stringToIdx((tc.txs[i].ToIdx), "")
+		assert.NoError(t, err)
+		if *toIdx == *idx {
+			idxTxs = append(idxTxs, tc.txs[i])
+		}
+	}
+	assertTxs(t, idxTxs, fetchedTxs)
 	// batchNum
 	fetchedTxs = []testTx{}
 	limit = 3
-	batchNum := tc.allTxs[0].BatchNum
+	batchNum := tc.txs[0].BatchNum
 	path = fmt.Sprintf(
 		"%s?batchNum=%d&limit=%d&fromItem=",
 		endpoint, *batchNum, limit,
@@ -378,26 +351,24 @@ func TestGetHistoryTxs(t *testing.T) {
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	batchNumTxs := []testTx{}
-	for i := 0; i < len(tc.allTxs); i++ {
-		if tc.allTxs[i].BatchNum != nil &&
-			*tc.allTxs[i].BatchNum == *batchNum {
-			batchNumTxs = append(batchNumTxs, tc.allTxs[i])
+	for i := 0; i < len(tc.txs); i++ {
+		if tc.txs[i].BatchNum != nil &&
+			*tc.txs[i].BatchNum == *batchNum {
+			batchNumTxs = append(batchNumTxs, tc.txs[i])
 		}
 	}
 	assertTxs(t, batchNumTxs, fetchedTxs)
 	// type
 	txTypes := []common.TxType{
 		// Uncomment once test gen is fixed
-		// common.TxTypeExit,
-		// common.TxTypeTransfer,
-		// common.TxTypeDeposit,
+		common.TxTypeExit,
+		common.TxTypeTransfer,
+		common.TxTypeDeposit,
 		common.TxTypeCreateAccountDeposit,
-		// common.TxTypeCreateAccountDepositTransfer,
-		// common.TxTypeDepositTransfer,
+		common.TxTypeCreateAccountDepositTransfer,
+		common.TxTypeDepositTransfer,
 		common.TxTypeForceTransfer,
-		// common.TxTypeForceExit,
-		// common.TxTypeTransferToEthAddr,
-		// common.TxTypeTransferToBJJ,
+		common.TxTypeForceExit,
 	}
 	for _, txType := range txTypes {
 		fetchedTxs = []testTx{}
@@ -409,9 +380,9 @@ func TestGetHistoryTxs(t *testing.T) {
 		err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 		assert.NoError(t, err)
 		txTypeTxs := []testTx{}
-		for i := 0; i < len(tc.allTxs); i++ {
-			if tc.allTxs[i].Type == txType {
-				txTypeTxs = append(txTypeTxs, tc.allTxs[i])
+		for i := 0; i < len(tc.txs); i++ {
+			if tc.txs[i].Type == txType {
+				txTypeTxs = append(txTypeTxs, tc.txs[i])
 			}
 		}
 		assertTxs(t, txTypeTxs, fetchedTxs)
@@ -426,10 +397,10 @@ func TestGetHistoryTxs(t *testing.T) {
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	mixedTxs := []testTx{}
-	for i := 0; i < len(tc.allTxs); i++ {
-		if tc.allTxs[i].BatchNum != nil {
-			if *tc.allTxs[i].BatchNum == *batchNum && tc.allTxs[i].Token.TokenID == tokenID {
-				mixedTxs = append(mixedTxs, tc.allTxs[i])
+	for i := 0; i < len(tc.txs); i++ {
+		if tc.txs[i].BatchNum != nil {
+			if *tc.txs[i].BatchNum == *batchNum && tc.txs[i].Token.TokenID == tokenID {
+				mixedTxs = append(mixedTxs, tc.txs[i])
 			}
 		}
 	}
@@ -441,14 +412,14 @@ func TestGetHistoryTxs(t *testing.T) {
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flipedTxs := []testTx{}
-	for i := 0; i < len(tc.allTxs); i++ {
-		flipedTxs = append(flipedTxs, tc.allTxs[len(tc.allTxs)-1-i])
+	for i := 0; i < len(tc.txs); i++ {
+		flipedTxs = append(flipedTxs, tc.txs[len(tc.txs)-1-i])
 	}
 	assertTxs(t, flipedTxs, fetchedTxs)
 	// 400
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&hermezEthereumAddress=%s",
-		endpoint, idx, tc.usrAddr,
+		endpoint, idx, account.EthAddr,
 	)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
@@ -468,13 +439,13 @@ func TestGetHistoryTx(t *testing.T) {
 	// Get all txs by their ID
 	endpoint := apiURL + "transactions-history/"
 	fetchedTxs := []testTx{}
-	for _, tx := range tc.allTxs {
+	for _, tx := range tc.txs {
 		fetchedTx := testTx{}
 		err := doGoodReq("GET", endpoint+tx.TxID.String(), nil, &fetchedTx)
 		assert.NoError(t, err)
 		fetchedTxs = append(fetchedTxs, fetchedTx)
 	}
-	assertTxs(t, tc.allTxs, fetchedTxs)
+	assertTxs(t, tc.txs, fetchedTxs)
 	// 400
 	err := doBadReq("GET", endpoint+"0x001", nil, 400)
 	assert.NoError(t, err)
@@ -486,12 +457,15 @@ func TestGetHistoryTx(t *testing.T) {
 func assertTxs(t *testing.T, expected, actual []testTx) {
 	require.Equal(t, len(expected), len(actual))
 	for i := 0; i < len(actual); i++ { //nolint len(actual) won't change within the loop
+		assert.Equal(t, expected[i].BatchNum, actual[i].BatchNum)
+		assert.Equal(t, expected[i].Position, actual[i].Position)
 		actual[i].ItemID = 0
 		actual[i].Token.ItemID = 0
 		assert.Equal(t, expected[i].Timestamp.Unix(), actual[i].Timestamp.Unix())
 		expected[i].Timestamp = actual[i].Timestamp
 		if expected[i].Token.USDUpdate == nil {
 			assert.Equal(t, expected[i].Token.USDUpdate, actual[i].Token.USDUpdate)
+			expected[i].Token.USDUpdate = actual[i].Token.USDUpdate
 		} else {
 			assert.Equal(t, expected[i].Token.USDUpdate.Unix(), actual[i].Token.USDUpdate.Unix())
 			expected[i].Token.USDUpdate = actual[i].Token.USDUpdate

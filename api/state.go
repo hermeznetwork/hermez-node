@@ -12,10 +12,11 @@ import (
 
 // Network define status of the network
 type Network struct {
-	LastBlock   int64              `json:"lastBlock"`
-	LastBatch   historydb.BatchAPI `json:"lastBatch"`
-	CurrentSlot int64              `json:"currentSlot"`
-	NextForgers []NextForger       `json:"nextForgers"`
+	LastEthBlock  int64              `json:"lastEthereumBlock"`
+	LastSyncBlock int64              `json:"lastSynchedBlock"`
+	LastBatch     historydb.BatchAPI `json:"lastBatch"`
+	CurrentSlot   int64              `json:"currentSlot"`
+	NextForgers   []NextForger       `json:"nextForgers"`
 }
 
 // NextForger  is a representation of the information of a coordinator and the period will forge
@@ -65,8 +66,12 @@ func (a *API) SetAuctionVariables(auctionVariables common.AuctionVariables) {
 // Network
 
 // UpdateNetworkInfo update Status.Network information
-func (a *API) UpdateNetworkInfo(lastBlock common.Block, lastBatchNum common.BatchNum, currentSlot int64) error {
-	a.status.Network.LastBlock = lastBlock.EthBlockNum
+func (a *API) UpdateNetworkInfo(
+	lastEthBlock, lastSyncBlock common.Block,
+	lastBatchNum common.BatchNum, currentSlot int64,
+) error {
+	a.status.Network.LastSyncBlock = lastSyncBlock.EthBlockNum
+	a.status.Network.LastEthBlock = lastEthBlock.EthBlockNum
 	lastBatch, err := a.h.GetBatchAPI(lastBatchNum)
 	if err != nil {
 		return err
@@ -74,7 +79,7 @@ func (a *API) UpdateNetworkInfo(lastBlock common.Block, lastBatchNum common.Batc
 	a.status.Network.LastBatch = *lastBatch
 	a.status.Network.CurrentSlot = currentSlot
 	lastClosedSlot := currentSlot + int64(a.status.Auction.ClosedAuctionSlots)
-	nextForgers, err := a.GetNextForgers(lastBlock, currentSlot, lastClosedSlot)
+	nextForgers, err := a.GetNextForgers(lastSyncBlock, currentSlot, lastClosedSlot)
 	if err != nil {
 		return err
 	}
