@@ -17,7 +17,7 @@ type testSlot struct {
 	FirstBlock  int64    `json:"firstBlock"`
 	LastBlock   int64    `json:"lastBlock"`
 	OpenAuction bool     `json:"openAuction"`
-	WinnerBid   *testBid `json:"winnerBid"`
+	WinnerBid   *testBid `json:"bestBid"`
 }
 
 type testSlotsResponse struct {
@@ -34,6 +34,8 @@ func (t testSlotsResponse) GetPending() (pendingItems, lastItemID uint64) {
 func (t testSlotsResponse) Len() int {
 	return len(t.Slots)
 }
+
+func (t testSlotsResponse) New() Pendinger { return &testSlotsResponse{} }
 
 func (a *API) genTestSlots(nSlots int, lastBlockNum int64, bids []testBid, auctionVars common.AuctionVariables) []testSlot {
 	tSlots := []testSlot{}

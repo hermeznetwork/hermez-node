@@ -38,6 +38,8 @@ func (t testBidsResponse) Len() int {
 	return len(t.Bids)
 }
 
+func (t testBidsResponse) New() Pendinger { return &testBidsResponse{} }
+
 func genTestBids(blocks []common.Block, coordinators []historydb.CoordinatorAPI, bids []common.Bid) []testBid {
 	tBids := []testBid{}
 	for _, bid := range bids {
@@ -112,8 +114,8 @@ func TestGetBids(t *testing.T) {
 
 	// Mixed filters
 	fetchedBids = []testBid{}
-	bidderAddress = tc.bids[9].Bidder
-	slotNum = tc.bids[4].SlotNum
+	bidderAddress = tc.bids[1].Bidder
+	slotNum = tc.bids[1].SlotNum
 	path = fmt.Sprintf("%s?bidderAddr=%s&slotNum=%d&limit=%d&fromItem=", endpoint, bidderAddress.String(), slotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)

@@ -36,6 +36,8 @@ func (t testAccountsResponse) GetPending() (pendingItems, lastItemID uint64) {
 
 func (t *testAccountsResponse) Len() int { return len(t.Accounts) }
 
+func (t testAccountsResponse) New() Pendinger { return &testAccountsResponse{} }
+
 func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD) []testAccount {
 	tAccounts := []testAccount{}
 	for x, account := range accounts {
@@ -98,7 +100,7 @@ func TestGetAccounts(t *testing.T) {
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Token Ids + bjj
-	path = fmt.Sprintf("%s?tokenIds=%s&BJJ=%s&limit=%d&fromItem=", endpoint, stringIds, tc.accounts[0].PublicKey, limit)
+	path = fmt.Sprintf("%s?tokenIds=%s&BJJ=%s&limit=%d&fromItem=", endpoint, stringIds, tc.accounts[10].PublicKey, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)

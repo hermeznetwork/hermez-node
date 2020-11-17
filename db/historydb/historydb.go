@@ -894,17 +894,13 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	nextIsAnd := false
 	// ethAddr filter
 	if ethAddr != nil {
-		queryStr = `WITH acc AS 
-		(select idx from account where eth_addr = ?) ` + queryStr
-		queryStr += ", acc WHERE (tx.from_idx IN(acc.idx) OR tx.to_idx IN(acc.idx)) "
+		queryStr += "WHERE (tx.from_eth_addr = ? OR tx.to_eth_addr = ?) "
 		nextIsAnd = true
-		args = append(args, ethAddr)
+		args = append(args, ethAddr, ethAddr)
 	} else if bjj != nil { // bjj filter
-		queryStr = `WITH acc AS 
-		(select idx from account where bjj = ?) ` + queryStr
-		queryStr += ", acc WHERE (tx.from_idx IN(acc.idx) OR tx.to_idx IN(acc.idx)) "
+		queryStr += "WHERE (tx.from_bjj = ? OR tx.to_bjj = ?) "
 		nextIsAnd = true
-		args = append(args, bjj)
+		args = append(args, bjj, bjj)
 	}
 	// tokenID filter
 	if tokenID != nil {
@@ -1302,10 +1298,30 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		}
 	}
 
-	// Add l1 Txs
-	if len(blockData.Rollup.L1UserTxs) > 0 {
-		if err := hdb.addL1Txs(txn, blockData.Rollup.L1UserTxs); err != nil {
-			return err
+	// Prepare user L1 txs to be added.
+	// They must be added before the batch that will forge them (which can be in the same block)
+	// and after the account that will be sent to (also can be in the same block).
+	// Note: insert order is not relevant since item_id will be updated by a DB trigger when
+	// the batch that forges those txs is inserted
+	userL1s := make(map[common.BatchNum][]common.L1Tx)
+	for i := range blockData.Rollup.L1UserTxs {
+		batchThatForgesIsInTheBlock := false
+		for _, batch := range blockData.Rollup.Batches {
+			if batch.Batch.ForgeL1TxsNum != nil &&
+				*batch.Batch.ForgeL1TxsNum == *blockData.Rollup.L1UserTxs[i].ToForgeL1TxsNum {
+				// Tx is forged in this block. It's guaranteed that:
+				// * the first batch of the block won't forge user L1 txs that have been added in this block
+				// * batch nums are sequential therefore it's safe to add the tx at batch.BatchNum -1
+				batchThatForgesIsInTheBlock = true
+				addAtBatchNum := batch.Batch.BatchNum - 1
+				userL1s[addAtBatchNum] = append(userL1s[addAtBatchNum], blockData.Rollup.L1UserTxs[i])
+				break
+			}
+		}
+		if !batchThatForgesIsInTheBlock {
+			// User artificial batchNum 0 to add txs that are not forge in this block
+			// after all the accounts of the block have been added
+			userL1s[0] = append(userL1s[0], blockData.Rollup.L1UserTxs[i])
 		}
 	}
 
@@ -1318,12 +1334,17 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 			return err
 		}
 
-		// Add unforged l1 Txs
-		if batch.L1Batch {
-			if len(batch.L1CoordinatorTxs) > 0 {
-				if err := hdb.addL1Txs(txn, batch.L1CoordinatorTxs); err != nil {
-					return err
-				}
+		// Add accounts
+		if len(batch.CreatedAccounts) > 0 {
+			if err := hdb.addAccounts(txn, batch.CreatedAccounts); err != nil {
+				return err
+			}
+		}
+
+		// Add forged l1 coordinator Txs
+		if len(batch.L1CoordinatorTxs) > 0 {
+			if err := hdb.addL1Txs(txn, batch.L1CoordinatorTxs); err != nil {
+				return err
 			}
 		}
 
@@ -1334,9 +1355,9 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 			}
 		}
 
-		// Add accounts
-		if len(batch.CreatedAccounts) > 0 {
-			if err := hdb.addAccounts(txn, batch.CreatedAccounts); err != nil {
+		// Add user L1 txs that will be forged in next batch
+		if userlL1s, ok := userL1s[batch.Batch.BatchNum]; ok {
+			if err := hdb.addL1Txs(txn, userlL1s); err != nil {
 				return err
 			}
 		}
@@ -1346,6 +1367,12 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 			if err := hdb.addExitTree(txn, batch.ExitTree); err != nil {
 				return err
 			}
+		}
+	}
+	// Add user L1 txs that won't be forged in this block
+	if userL1sNotForgedInThisBlock, ok := userL1s[0]; ok {
+		if err := hdb.addL1Txs(txn, userL1sNotForgedInThisBlock); err != nil {
+			return err
 		}
 	}
 	if blockData.Rollup.Vars != nil {

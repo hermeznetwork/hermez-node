@@ -1857,6 +1857,7 @@ components:
           description: List of forged transactions in the batch
           items:
             $ref: '#/components/schemas/HistoryTransaction'
+          nullable: true
       additionalProperties: false
       required:
         - batch
@@ -2205,9 +2206,9 @@ components:
         openAuction:
           type: boolean
           description: Whether the auction of the slot is open or not.
-        winnerBid:
+        bestBid:
           type: object
-          description: The winning bid of the auction. If openAuction == true, is the current winner. If the auction is closed because it has already been finalized, the bid is the final winner. If the winnerBid is null, it is because no coordinator has bid for that slot.
+          description: The best bid of the auction. If the bestBid is null, it is because no coordinator has bid for that slot.
           nullable: true
           properties:
             itemId:
@@ -2245,7 +2246,7 @@ components:
         - firstBlock
         - lastBlock
         - openAuction
-        - winnerBid
+        - bestBid
     Slots:
       type: object
       properties:
@@ -2328,10 +2329,15 @@ components:
       type: object
       description: Gobal statistics of the network
       properties:
-        lastBlock:
+        lastEthereumBlock:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Last synchronized Etherum block.
+            - description: Current Etherum block. Note that this is the actual last block of Ethereum, not the last synchronized block by the node.
+            - example: 3457437
+        lastSynchedBlock:
+          allOf:
+            - $ref: '#/components/schemas/EthBlockNum'
+            - description: Last synchronized Etherum block. Compare with lastEthereumBlock to check the synchronization status of the node.
             - example: 3457437
         lastBatch:
           $ref: '#/components/schemas/Batch'
@@ -2344,7 +2350,8 @@ components:
           $ref: '#/components/schemas/NextForgers'
       additionalProperties: false
       required: 
-        - lastBlock
+        - lastEthereumBlock
+        - lastSynchedBlock 
         - lastBatch
         - currentSlot
         - nextForgers

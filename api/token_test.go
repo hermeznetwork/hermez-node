@@ -26,6 +26,8 @@ func (t *testTokensResponse) Len() int {
 	return len(t.Tokens)
 }
 
+func (t testTokensResponse) New() Pendinger { return &testTokensResponse{} }
+
 func TestGetToken(t *testing.T) {
 	// Get all txs by their ID
 	endpoint := apiURL + "tokens/"

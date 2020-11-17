@@ -21,10 +21,11 @@ type testStatus struct {
 }
 
 type testNetwork struct {
-	LastBlock   int64        `json:"lastBlock"`
-	LastBatch   testBatch    `json:"lastBatch"`
-	CurrentSlot int64        `json:"currentSlot"`
-	NextForgers []NextForger `json:"nextForgers"`
+	LastEthBlock  int64        `json:"lastEthereumBlock"`
+	LastSyncBlock int64        `json:"lastSynchedBlock"`
+	LastBatch     testBatch    `json:"lastBatch"`
+	CurrentSlot   int64        `json:"currentSlot"`
+	NextForgers   []NextForger `json:"nextForgers"`
 }
 
 func TestSetRollupVariables(t *testing.T) {
@@ -80,16 +81,16 @@ func TestNextForgers(t *testing.T) {
 
 func TestUpdateNetworkInfo(t *testing.T) {
 	status := &Network{}
-	assert.Equal(t, status.LastBlock, api.status.Network.LastBlock)
+	assert.Equal(t, status.LastSyncBlock, api.status.Network.LastSyncBlock)
 	assert.Equal(t, status.LastBatch.BatchNum, api.status.Network.LastBatch.BatchNum)
 	assert.Equal(t, status.CurrentSlot, api.status.Network.CurrentSlot)
 	assert.Equal(t, status.NextForgers, api.status.Network.NextForgers)
 	lastBlock := tc.blocks[3]
 	lastBatchNum := common.BatchNum(3)
 	currentSlotNum := int64(1)
-	err := api.UpdateNetworkInfo(lastBlock, lastBatchNum, currentSlotNum)
+	err := api.UpdateNetworkInfo(lastBlock, lastBlock, lastBatchNum, currentSlotNum)
 	assert.NoError(t, err)
-	assert.Equal(t, lastBlock.EthBlockNum, api.status.Network.LastBlock)
+	assert.Equal(t, lastBlock.EthBlockNum, api.status.Network.LastSyncBlock)
 	assert.Equal(t, lastBatchNum, api.status.Network.LastBatch.BatchNum)
 	assert.Equal(t, currentSlotNum, api.status.Network.CurrentSlot)
 	assert.Equal(t, int(api.status.Auction.ClosedAuctionSlots)+1, len(api.status.Network.NextForgers))
@@ -101,7 +102,7 @@ func TestUpdateMetrics(t *testing.T) {
 	lastBlock := tc.blocks[3]
 	lastBatchNum := common.BatchNum(3)
 	currentSlotNum := int64(1)
-	err := api.UpdateNetworkInfo(lastBlock, lastBatchNum, currentSlotNum)
+	err := api.UpdateNetworkInfo(lastBlock, lastBlock, lastBatchNum, currentSlotNum)
 	assert.NoError(t, err)
 
 	err = api.UpdateMetrics()
@@ -124,14 +125,14 @@ func TestUpdateRecommendedFee(t *testing.T) {
 		api.status.RecommendedFee.ExistingAccount*createAccountInternalExtraFeePercentage)
 }
 
-func TestGetStatus(t *testing.T) {
+func TestGetState(t *testing.T) {
 	lastBlock := tc.blocks[3]
 	lastBatchNum := common.BatchNum(3)
 	currentSlotNum := int64(1)
 	api.SetRollupVariables(tc.rollupVars)
 	api.SetWDelayerVariables(tc.wdelayerVars)
 	api.SetAuctionVariables(tc.auctionVars)
-	err := api.UpdateNetworkInfo(lastBlock, lastBatchNum, currentSlotNum)
+	err := api.UpdateNetworkInfo(lastBlock, lastBlock, lastBatchNum, currentSlotNum)
 	assert.NoError(t, err)
 	err = api.UpdateMetrics()
 	assert.NoError(t, err)
@@ -145,7 +146,8 @@ func TestGetStatus(t *testing.T) {
 	assert.Equal(t, tc.rollupVars, status.Rollup)
 	assert.Equal(t, tc.auctionVars, status.Auction)
 	assert.Equal(t, tc.wdelayerVars, status.WithdrawalDelayer)
-	assert.Equal(t, lastBlock.EthBlockNum, status.Network.LastBlock)
+	assert.Equal(t, lastBlock.EthBlockNum, status.Network.LastEthBlock)
+	assert.Equal(t, lastBlock.EthBlockNum, status.Network.LastSyncBlock)
 	assert.Equal(t, lastBatchNum, status.Network.LastBatch.BatchNum)
 	assert.Equal(t, currentSlotNum, status.Network.CurrentSlot)
 	assert.Equal(t, int(api.status.Auction.ClosedAuctionSlots)+1, len(status.Network.NextForgers))

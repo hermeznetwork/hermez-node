@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"math/big"
 	"testing"
 	"time"
 
@@ -66,32 +65,11 @@ type testPoolTxSend struct {
 	RqNonce     *common.Nonce         `json:"requestNonce"`
 }
 
-func genTestPoolTx(accs []common.Account, privKs []babyjub.PrivateKey, tokens []historydb.TokenWithUSD) (poolTxsToSend []testPoolTxSend, poolTxsToReceive []testPoolTxReceive) {
-	// Generate common.PoolL2Tx
-	// WARNING: this should be replaced once til is ready
-	poolTxs := []common.PoolL2Tx{}
-	amount := new(big.Int)
-	amount, ok := amount.SetString("100000000000000", 10)
-	if !ok {
-		panic("bad amount")
-	}
-	poolTx := common.PoolL2Tx{
-		FromIdx: accs[0].Idx,
-		ToIdx:   accs[1].Idx,
-		Amount:  amount,
-		TokenID: accs[0].TokenID,
-		Nonce:   6,
-	}
-	if _, err := common.NewPoolL2Tx(&poolTx); err != nil {
-		panic(err)
-	}
-	h, err := poolTx.HashToSign()
-	if err != nil {
-		panic(err)
-	}
-	poolTx.Signature = privKs[0].SignPoseidon(h).Compress()
-	poolTxs = append(poolTxs, poolTx)
-	// Transform to API formats
+func genTestPoolTxs(
+	poolTxs []common.PoolL2Tx,
+	tokens []historydb.TokenWithUSD,
+	accs []common.Account,
+) (poolTxsToSend []testPoolTxSend, poolTxsToReceive []testPoolTxReceive) {
 	poolTxsToSend = []testPoolTxSend{}
 	poolTxsToReceive = []testPoolTxReceive{}
 	for _, poolTx := range poolTxs {
@@ -125,7 +103,7 @@ func genTestPoolTx(accs []common.Account, privKs []babyjub.PrivateKey, tokens []
 			RqNonce: &poolTx.RqNonce,
 			Token:   token,
 		}
-		fromAcc := getAccountByIdx(poolTx.ToIdx, accs)
+		fromAcc := getAccountByIdx(poolTx.FromIdx, accs)
 		fromAddr := ethAddrToHez(fromAcc.EthAddr)
 		genReceiveTx.FromEthAddr = &fromAddr
 		fromBjj := bjjToString(fromAcc.PublicKey)
