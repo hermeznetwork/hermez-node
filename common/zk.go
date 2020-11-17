@@ -3,10 +3,15 @@
 package common
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/log"
+	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
+	"github.com/iden3/go-merkletree"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -21,6 +26,8 @@ type ZKMetadata struct {
 	MaxLevels uint32
 	// absolute maximum of L1 transaction allowed
 	MaxL1Tx uint32
+	// total txs allowed
+	MaxTx uint32
 	// Maximum number of Idxs where Fees can be send in a batch (currently
 	// is constant for all circuits: 64)
 	MaxFeeIdxs uint32
@@ -28,6 +35,10 @@ type ZKMetadata struct {
 	L1TxsData [][]byte
 	L2TxsData [][]byte
 	ChainID   uint16
+
+	NewLastIdxRaw   Idx
+	NewStateRootRaw *merkletree.Hash
+	NewExitRootRaw  *merkletree.Hash
 }
 
 // ZKInputs represents the inputs that will be used to generate the zkSNARK proof
@@ -250,11 +261,14 @@ func (z ZKInputs) MarshalJSON() ([]byte, error) {
 }
 
 // NewZKInputs returns a pointer to an initialized struct of ZKInputs
-func NewZKInputs(nTx, maxFeeIdxs, nLevels int) *ZKInputs {
+func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32) *ZKInputs {
 	zki := &ZKInputs{}
-	zki.Metadata.NTx = uint32(nTx)
-	zki.Metadata.MaxFeeIdxs = uint32(maxFeeIdxs)
-	zki.Metadata.NLevels = uint32(nLevels)
+	zki.Metadata.NTx = nTx
+	zki.Metadata.MaxFeeIdxs = maxFeeIdxs
+	zki.Metadata.NLevels = nLevels
+	zki.Metadata.MaxLevels = uint32(48) //nolint:gomnd
+	zki.Metadata.MaxL1Tx = maxL1Tx
+	zki.Metadata.MaxTx = maxTx
 
 	// General
 	zki.OldLastIdx = big.NewInt(0)
@@ -359,10 +373,113 @@ func NewZKInputs(nTx, maxFeeIdxs, nLevels int) *ZKInputs {
 // set all the elements, and if a transaction does not use a parameter, can be
 // leaved as it is in the ZKInputs, as will be 0, so later when using the
 // ZKInputs to generate the zkSnark proof there is no 'nil'/'null' values.
-func newSlice(n int) []*big.Int {
+func newSlice(n uint32) []*big.Int {
 	s := make([]*big.Int, n)
 	for i := 0; i < len(s); i++ {
 		s[i] = big.NewInt(0)
 	}
 	return s
+}
+
+// HashGlobalData returns the HashGlobalData
+func (z ZKInputs) HashGlobalData() (*big.Int, error) {
+	b, err := z.ToHashGlobalData()
+	if err != nil {
+		return nil, err
+	}
+
+	h := sha256.New()
+	_, err = h.Write(b)
+	if err != nil {
+		return nil, err
+	}
+
+	r := new(big.Int).SetBytes(h.Sum(nil))
+	v := r.Mod(r, cryptoConstants.Q)
+
+	return v, nil
+}
+
+// ToHashGlobalData returns the data to be hashed in the method HashGlobalData
+func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
+	var b []byte
+	bytesMaxLevels := int(z.Metadata.MaxLevels / 8) //nolint:gomnd
+
+	// [MAX_NLEVELS bits] oldLastIdx
+	oldLastIdx := make([]byte, bytesMaxLevels)
+	copy(oldLastIdx, z.OldLastIdx.Bytes())
+	b = append(b, SwapEndianness(oldLastIdx)...)
+
+	// [MAX_NLEVELS bits] newLastIdx
+	newLastIdx := make([]byte, bytesMaxLevels)
+	newLastIdxBytes, err := z.Metadata.NewLastIdxRaw.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(newLastIdx, newLastIdxBytes[len(newLastIdxBytes)-bytesMaxLevels:])
+	b = append(b, newLastIdx...)
+
+	// [256 bits] oldStRoot
+	oldStateRoot := make([]byte, 32)
+	copy(oldStateRoot, z.OldStateRoot.Bytes())
+	b = append(b, oldStateRoot...)
+
+	// [256 bits] newStateRoot
+	newStateRoot := make([]byte, 32)
+	copy(newStateRoot, z.Metadata.NewStateRootRaw.Bytes())
+	b = append(b, newStateRoot...)
+
+	// [256 bits] newExitRoot
+	newExitRoot := make([]byte, 32)
+	copy(newExitRoot, z.Metadata.NewExitRootRaw.Bytes())
+	b = append(b, newExitRoot...)
+
+	// [MAX_L1_TX * (2 * MAX_NLEVELS + 480) bits] L1TxsData
+	l1TxDataLen := (2*z.Metadata.MaxLevels + 480)
+	l1TxsDataLen := (z.Metadata.MaxL1Tx * l1TxDataLen)
+	l1TxsData := make([]byte, l1TxsDataLen/8) //nolint:gomnd
+	for i := 0; i < len(z.Metadata.L1TxsData); i++ {
+		dataLen := int(l1TxDataLen) / 8 //nolint:gomnd
+		pos0 := i * dataLen
+		pos1 := i*dataLen + dataLen
+		copy(l1TxsData[pos0:pos1], z.Metadata.L1TxsData[i])
+	}
+	b = append(b, l1TxsData...)
+
+	// [MAX_TX*(2*NLevels + 24) bits] L2TxsData
+	var l2TxsData []byte
+	l2TxDataLen := 2*z.Metadata.NLevels + 24 //nolint:gomnd
+	l2TxsDataLen := (z.Metadata.MaxTx * l2TxDataLen)
+	expectedL2TxsDataLen := l2TxsDataLen / 8 //nolint:gomnd
+	for i := 0; i < len(z.Metadata.L2TxsData); i++ {
+		l2TxsData = append(l2TxsData, z.Metadata.L2TxsData[i]...)
+	}
+	if len(l2TxsData) > int(expectedL2TxsDataLen) {
+		return nil, fmt.Errorf("len(l2TxsData): %d, expected: %d", len(l2TxsData), expectedL2TxsDataLen)
+	}
+
+	l2TxsPadding := make([]byte, (int(z.Metadata.MaxTx)-len(z.Metadata.L2TxsData))*int(l2TxDataLen)/8) //nolint:gomnd
+	b = append(b, l2TxsPadding...)
+	b = append(b, l2TxsData...)
+
+	// [NLevels * MAX_TOKENS_FEE bits] feeTxsData
+	for i := 0; i < len(z.FeeIdxs); i++ {
+		var r []byte
+
+		padding := make([]byte, bytesMaxLevels/4) //nolint:gomnd
+		r = append(r, padding...)
+
+		feeIdx := make([]byte, bytesMaxLevels/2) //nolint:gomnd
+		feeIdxBytes := z.FeeIdxs[i].Bytes()
+		copy(feeIdx[len(feeIdx)-len(feeIdxBytes):], feeIdxBytes[:])
+		r = append(r, feeIdx...)
+		b = append(b, r...)
+	}
+
+	// [16 bits] chainID
+	var chainID [2]byte
+	binary.BigEndian.PutUint16(chainID[:], z.Metadata.ChainID)
+	b = append(b, chainID[:]...)
+
+	return b, nil
 }

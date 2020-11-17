@@ -90,11 +90,11 @@ PoolExit(1) A: 3 (1)
 tc := til.NewContext(eth.RollupConstMaxL1UserTx)
 
 // generate Blockchain blocks data from the common.SetBlockcahin0 instructions set
-blocks, err = tc.GenerateBlocks(common.SetBlockchain0)
+blocks, err = tc.GenerateBlocks(common.SetBlockchainMinimumFlow0)
 assert.Nil(t, err)
 
 // generate PoolL2 transactions data from the common.SetPool0 instructions set
-poolL2Txs, err = tc.GenerateBlocks(common.SetPool0)
+poolL2Txs, err = tc.GeneratePoolL2Txs(common.SetPoolL2MinimumFlow0)
 assert.Nil(t, err)
 ```
 

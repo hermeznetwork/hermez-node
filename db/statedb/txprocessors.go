@@ -40,6 +40,14 @@ type ProcessTxOutput struct {
 	CollectedFees      map[common.TokenID]*big.Int
 }
 
+// ProcessTxsConfig contains the config for ProcessTxs
+type ProcessTxsConfig struct {
+	NLevels  uint32
+	MaxFeeTx uint32
+	MaxTx    uint32
+	MaxL1Tx  uint32
+}
+
 // ProcessTxs process the given L1Txs & L2Txs applying the needed updates to
 // the StateDB depending on the transaction Type.  If StateDB
 // type==TypeBatchBuilder, returns the common.ZKInputs to generate the
@@ -49,7 +57,7 @@ type ProcessTxOutput struct {
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
 // And if TypeSynchronizer returns an array of common.Account with all the
 // created accounts.
-func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (ptOut *ProcessTxOutput, err error) {
+func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) (ptOut *ProcessTxOutput, err error) {
 	defer func() {
 		if err == nil {
 			err = s.MakeCheckpoint()
@@ -80,9 +88,8 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 	exits := make([]processedExit, nTx)
 
 	if s.typ == TypeBatchBuilder {
-		maxFeeTx := 64 // TODO this value will be a parameter
-		s.zki = common.NewZKInputs(nTx, maxFeeTx, s.mt.MaxLevels())
-		s.zki.OldLastIdx = (s.idx - 1).BigInt()
+		s.zki = common.NewZKInputs(uint32(nTx), ptc.MaxL1Tx, ptc.MaxTx, ptc.MaxFeeTx, ptc.NLevels)
+		s.zki.OldLastIdx = s.idx.BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
 	}
 
@@ -197,6 +204,13 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 			}
 			s.i++
 		}
+		if s.zki != nil {
+			l2TxData, err := l2txs[i].L2Tx().Bytes(s.zki.Metadata.NLevels)
+			if err != nil {
+				return nil, err
+			}
+			s.zki.Metadata.L2TxsData = append(s.zki.Metadata.L2TxsData, l2TxData)
+		}
 	}
 
 	// distribute the AccumulatedFees from the processed L2Txs into the
@@ -302,6 +316,8 @@ func (s *StateDB) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs
 		return nil, err
 	}
 	s.zki.FeePlanTokens = tokenIDs
+	s.zki.Metadata.NewStateRootRaw = s.mt.Root()
+	s.zki.Metadata.NewExitRootRaw = exitTree.Root()
 
 	// s.zki.ISInitStateRootFee = s.mt.Root().BigInt()
 
@@ -569,6 +585,8 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 		}
 		s.zki.OldKey1[s.i] = p.OldKey.BigInt()
 		s.zki.OldValue1[s.i] = p.OldValue.BigInt()
+
+		s.zki.Metadata.NewLastIdxRaw = s.idx + 1
 	}
 
 	s.idx = s.idx + 1
@@ -657,12 +675,6 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		log.Error(err)
 		return err
 	}
-	accReceiver, err := s.GetAccount(auxToIdx)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
 	if !tx.IsL1 {
 		// increment nonce
 		accSender.Nonce++
@@ -690,6 +702,20 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		}
 	} else {
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
+	}
+
+	var accReceiver *common.Account
+	if tx.FromIdx == auxToIdx {
+		// if Sender is the Receiver, reuse 'accSender' pointer,
+		// because in the DB the account for 'auxToIdx' won't be
+		// updated yet
+		accReceiver = accSender
+	} else {
+		accReceiver, err = s.GetAccount(auxToIdx)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 	}
 
 	// add amount-feeAmount to the receiver
@@ -772,6 +798,8 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		}
 		s.zki.OldKey1[s.i] = p.OldKey.BigInt()
 		s.zki.OldValue1[s.i] = p.OldValue.BigInt()
+
+		s.zki.Metadata.NewLastIdxRaw = s.idx + 1
 	}
 
 	// update receiver account in localStateDB

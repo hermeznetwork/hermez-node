@@ -83,9 +83,15 @@ func TestGetL2TxSelection(t *testing.T) {
 	}
 	addTokens(t, tokens, txsel.l2db.DB())
 
+	ptc := statedb.ProcessTxsConfig{
+		NLevels:  32,
+		MaxFeeTx: 64,
+		MaxTx:    512,
+		MaxL1Tx:  64,
+	}
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
-	_, err = txsel.localAccountsDB.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	_, err = txsel.localAccountsDB.ProcessTxs(ptc, nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.Nil(t, err)
 
 	// add the 1st batch of transactions to the TxSelector

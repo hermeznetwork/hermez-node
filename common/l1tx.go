@@ -153,9 +153,11 @@ func (tx L1Tx) Tx() Tx {
 func (tx *L1Tx) BytesGeneric() ([]byte, error) {
 	var b [L1UserTxBytesLen]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
-	pkCompL := tx.FromBJJ.Compress()
-	pkCompB := SwapEndianness(pkCompL[:])
-	copy(b[20:52], pkCompB[:])
+	if tx.FromBJJ != nil {
+		pkCompL := tx.FromBJJ.Compress()
+		pkCompB := SwapEndianness(pkCompL[:])
+		copy(b[20:52], pkCompB[:])
+	}
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
 		return nil, err
