@@ -43,7 +43,7 @@ type ZKMetadata struct {
 
 // ZKInputs represents the inputs that will be used to generate the zkSNARK proof
 type ZKInputs struct {
-	Metadata ZKMetadata
+	Metadata ZKMetadata `json:"-"`
 
 	//
 	// General
@@ -183,23 +183,28 @@ type ZKInputs struct {
 	// will not be used.
 
 	// decode-tx
-	// ISOnChain indicates if tx is L1 (true) or L2 (false)
+	// ISOnChain indicates if tx is L1 (true (1)) or L2 (false (0))
 	ISOnChain []*big.Int `json:"imOnChain"` // bool, len: [nTx - 1]
 	// ISOutIdx current index account for each Tx
+	// Contains the index of the created account in case that the tx is of
+	// account creation type.
 	ISOutIdx []*big.Int `json:"imOutIdx"` // uint64 (max nLevels bits), len: [nTx - 1]
 	// rollup-tx
-	// ISStateRoot root at the moment of the Tx, the state root value once the Tx is processed into the state tree
+	// ISStateRoot root at the moment of the Tx (once processed), the state root value once the Tx is processed into the state tree
 	ISStateRoot []*big.Int `json:"imStateRoot"` // Hash, len: [nTx - 1]
-	// ISExitTree root at the moment of the Tx the value once the Tx is processed into the exit tree
+	// ISExitTree root at the moment (once processed) of the Tx the value
+	// once the Tx is processed into the exit tree
 	ISExitRoot []*big.Int `json:"imExitRoot"` // Hash, len: [nTx - 1]
-	// ISAccFeeOut accumulated fees once the Tx is processed
+	// ISAccFeeOut accumulated fees once the Tx is processed.  Contains the
+	// array of FeeAccount Balances at each moment of each Tx processed.
 	ISAccFeeOut [][]*big.Int `json:"imAccFeeOut"` // big.Int, len: [nTx - 1][maxFeeIdxs]
 	// fee-tx
-	// ISStateRootFee root at the moment of the Tx, the state root value once the Tx is processed into the state tree
+	// ISStateRootFee root at the moment of the Tx (once processed), the state root value once the Tx is processed into the state tree
 	ISStateRootFee []*big.Int `json:"imStateRootFee"` // Hash, len: [maxFeeIdxs - 1]
 	// ISInitStateRootFee state root once all L1-L2 tx are processed (before computing the fees-tx)
 	ISInitStateRootFee *big.Int `json:"imInitStateRootFee"` // Hash
-	// ISFinalAccFee final accumulated fees (before computing the fees-tx)
+	// ISFinalAccFee final accumulated fees (before computing the fees-tx).
+	// Contains the final values of the ISAccFeeOut parameter
 	ISFinalAccFee []*big.Int `json:"imFinalAccFee"` // big.Int, len: [maxFeeIdxs - 1]
 }
 

@@ -52,3 +52,8 @@ func TokenIDFromBytes(b []byte) (TokenID, error) {
 	tid := binary.BigEndian.Uint32(b[:4])
 	return TokenID(tid), nil
 }
+
+// TokenIDFromBigInt returns a TokenID with the value of the given *big.Int
+func TokenIDFromBigInt(b *big.Int) TokenID {
+	return TokenID(b.Int64())
+}
