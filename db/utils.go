@@ -1,7 +1,6 @@
 package db
 
 import (
-	"encoding/base64"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -95,14 +94,8 @@ func (b BigIntMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
 	if ptr == nil {
 		return fmt.Errorf("BigIntMeddler.PostRead: nil pointer")
 	}
-
-	data, err := base64.StdEncoding.DecodeString(*ptr)
-	if err != nil {
-		return fmt.Errorf("big.Int decode error: %v", err)
-	}
 	field := fieldPtr.(**big.Int)
-	*field = new(big.Int).SetBytes(data)
-
+	*field = new(big.Int).SetBytes([]byte(*ptr))
 	return nil
 }
 
@@ -110,9 +103,7 @@ func (b BigIntMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
 func (b BigIntMeddler) PreWrite(fieldPtr interface{}) (saveValue interface{}, err error) {
 	field := fieldPtr.(*big.Int)
 
-	str := base64.StdEncoding.EncodeToString(field.Bytes())
-
-	return str, nil
+	return field.Bytes(), nil
 }
 
 // BigIntNullMeddler encodes or decodes the field value to or from JSON
@@ -125,23 +116,19 @@ func (b BigIntNullMeddler) PreRead(fieldAddr interface{}) (scanTarget interface{
 
 // PostRead is called after a Scan operation for fields that have the BigIntNullMeddler
 func (b BigIntNullMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
-	sv := reflect.ValueOf(scanTarget)
-	if sv.Elem().IsNil() {
+	field := fieldPtr.(**big.Int)
+	ptrPtr := scanTarget.(*interface{})
+	if *ptrPtr == nil {
 		// null column, so set target to be zero value
-		fv := reflect.ValueOf(fieldPtr)
-		fv.Elem().Set(reflect.Zero(fv.Elem().Type()))
+		*field = nil
 		return nil
 	}
 	// not null
-	encoded := new([]byte)
-	refEnc := reflect.ValueOf(encoded)
-	refEnc.Elem().Set(sv.Elem().Elem())
-	data, err := base64.StdEncoding.DecodeString(string(*encoded))
-	if err != nil {
-		return fmt.Errorf("big.Int decode error: %v", err)
+	ptr := (*ptrPtr).([]byte)
+	if ptr == nil {
+		return fmt.Errorf("BigIntMeddler.PostRead: nil pointer")
 	}
-	field := fieldPtr.(**big.Int)
-	*field = new(big.Int).SetBytes(data)
+	*field = new(big.Int).SetBytes(ptr)
 	return nil
 }
 
@@ -151,7 +138,7 @@ func (b BigIntNullMeddler) PreWrite(fieldPtr interface{}) (saveValue interface{}
 	if field == nil {
 		return nil, nil
 	}
-	return base64.StdEncoding.EncodeToString(field.Bytes()), nil
+	return field.Bytes(), nil
 }
 
 // SliceToSlicePtrs converts any []Foo to []*Foo

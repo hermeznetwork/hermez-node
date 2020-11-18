@@ -33,25 +33,12 @@ func NewBigIntStr(bigInt *big.Int) *BigIntStr {
 
 // Scan implements Scanner for database/sql
 func (b *BigIntStr) Scan(src interface{}) error {
-	// decode base64 src
-	var decoded []byte
-	var err error
-	if srcStr, ok := src.(string); ok {
-		// src is a string
-		decoded, err = base64.StdEncoding.DecodeString(srcStr)
-	} else if srcBytes, ok := src.([]byte); ok {
-		// src is []byte
-		decoded, err = base64.StdEncoding.DecodeString(string(srcBytes))
-	} else {
-		// unexpected src
+	srcBytes, ok := src.([]byte)
+	if !ok {
 		return fmt.Errorf("can't scan %T into apitypes.BigIntStr", src)
 	}
-	if err != nil {
-		return err
-	}
-	// decoded bytes to *big.Int
-	bigInt := &big.Int{}
-	bigInt = bigInt.SetBytes(decoded)
+	// bytes to *big.Int
+	bigInt := new(big.Int).SetBytes(srcBytes)
 	// *big.Int to BigIntStr
 	bigIntStr := NewBigIntStr(bigInt)
 	if bigIntStr == nil {
@@ -64,13 +51,12 @@ func (b *BigIntStr) Scan(src interface{}) error {
 // Value implements valuer for database/sql
 func (b BigIntStr) Value() (driver.Value, error) {
 	// string to *big.Int
-	bigInt := &big.Int{}
-	bigInt, ok := bigInt.SetString(string(b), 10)
+	bigInt, ok := new(big.Int).SetString(string(b), 10)
 	if !ok || bigInt == nil {
 		return nil, errors.New("invalid representation of a *big.Int")
 	}
-	// *big.Int to base64
-	return base64.StdEncoding.EncodeToString(bigInt.Bytes()), nil
+	// *big.Int to bytes
+	return bigInt.Bytes(), nil
 }
 
 // StrBigInt is used to unmarshal BigIntStr directly into an alias of big.Int

@@ -526,7 +526,7 @@ FOR EACH ROW EXECUTE PROCEDURE forge_l1_user_txs();
 CREATE TABLE rollup_vars (
     eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,
     fee_add_token BYTEA NOT NULL,
-    forge_l1_timeout BYTEA NOT NULL,
+    forge_l1_timeout BIGINT NOT NULL,
     withdrawal_delay BIGINT NOT NULL,
     buckets BYTEA
 );
