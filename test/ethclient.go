@@ -553,10 +553,17 @@ func (c *Client) CtlRollback() {
 //
 
 // CtlLastBlock returns the last blockNum without checks
-func (c *Client) CtlLastBlock() int64 {
+func (c *Client) CtlLastBlock() *common.Block {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
-	return c.blockNum
+
+	block := c.blocks[c.blockNum]
+	return &common.Block{
+		Num:        c.blockNum,
+		Timestamp:  time.Unix(block.Eth.Time, 0),
+		Hash:       block.Eth.Hash,
+		ParentHash: block.Eth.ParentHash,
+	}
 }
 
 // EthLastBlock returns the last blockNum
@@ -626,7 +633,7 @@ func (c *Client) EthERC20Consts(tokenAddr ethCommon.Address) (*eth.ERC20Consts, 
 // }
 
 // EthBlockByNumber returns the *common.Block for the given block number in a
-// deterministic way.
+// deterministic way.  If number == -1, the latests known block is returned.
 func (c *Client) EthBlockByNumber(ctx context.Context, blockNum int64) (*common.Block, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
@@ -634,12 +641,15 @@ func (c *Client) EthBlockByNumber(ctx context.Context, blockNum int64) (*common.
 	if blockNum > c.blockNum {
 		return nil, ethereum.NotFound
 	}
+	if blockNum == -1 {
+		blockNum = c.blockNum
+	}
 	block := c.blocks[blockNum]
 	return &common.Block{
-		EthBlockNum: blockNum,
-		Timestamp:   time.Unix(block.Eth.Time, 0),
-		Hash:        block.Eth.Hash,
-		ParentHash:  block.Eth.ParentHash,
+		Num:        blockNum,
+		Timestamp:  time.Unix(block.Eth.Time, 0),
+		Hash:       block.Eth.Hash,
+		ParentHash: block.Eth.ParentHash,
 	}, nil
 }
 

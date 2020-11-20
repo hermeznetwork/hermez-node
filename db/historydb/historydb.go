@@ -304,6 +304,15 @@ func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 	return batchNum, row.Scan(&batchNum)
 }
 
+// GetLastL1BatchBlockNum returns the blockNum of the latest forged l1Batch
+func (hdb *HistoryDB) GetLastL1BatchBlockNum() (int64, error) {
+	row := hdb.db.QueryRow(`SELECT eth_block_num FROM batch
+		WHERE forge_l1_txs_num IS NOT NULL
+		ORDER BY batch_num DESC LIMIT 1;`)
+	var blockNum int64
+	return blockNum, row.Scan(&blockNum)
+}
+
 // GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB from forged
 // batches.  If there's no batch in the DB (nil, nil) is returned.
 func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
@@ -1410,7 +1419,7 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		}
 	}
 
-	if err := hdb.updateExitTree(txn, blockData.Block.EthBlockNum,
+	if err := hdb.updateExitTree(txn, blockData.Block.Num,
 		blockData.Rollup.Withdrawals, blockData.WDelayer.Withdrawals); err != nil {
 		return err
 	}

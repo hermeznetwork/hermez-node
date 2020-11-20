@@ -116,9 +116,9 @@ func (a *API) getSlot(c *gin.Context) {
 
 	var slot SlotAPI
 	if err == sql.ErrNoRows {
-		slot = a.newSlotAPI(slotNum, currentBlock.EthBlockNum, nil, auctionVars)
+		slot = a.newSlotAPI(slotNum, currentBlock.Num, nil, auctionVars)
 	} else {
-		slot = a.newSlotAPI(bid.SlotNum, currentBlock.EthBlockNum, &bid, auctionVars)
+		slot = a.newSlotAPI(bid.SlotNum, currentBlock.Num, &bid, auctionVars)
 	}
 
 	// JSON response
@@ -221,7 +221,7 @@ func (a *API) getSlots(c *gin.Context) {
 				retBadReq(err, c)
 				return
 			}
-			currentSlot := a.getCurrentSlot(currentBlock.EthBlockNum)
+			currentSlot := a.getCurrentSlot(currentBlock.Num)
 			auctionVars, err := a.h.GetAuctionVars()
 			if err != nil {
 				retBadReq(err, c)
@@ -268,7 +268,7 @@ func (a *API) getSlots(c *gin.Context) {
 	// Build the slot information with previous bids
 	var slotsBids []SlotAPI
 	if len(bids) > 0 {
-		slotsBids = a.newSlotsAPIFromWinnerBids(fromItem, order, bids, currentBlock.EthBlockNum, auctionVars)
+		slotsBids = a.newSlotsAPIFromWinnerBids(fromItem, order, bids, currentBlock.Num, auctionVars)
 		if err != nil {
 			retBadReq(err, c)
 			return
@@ -296,7 +296,7 @@ func (a *API) getSlots(c *gin.Context) {
 				}
 			}
 			if !found {
-				slots, err = a.addEmptySlot(slots, i, currentBlock.EthBlockNum, auctionVars, fromItem, order)
+				slots, err = a.addEmptySlot(slots, i, currentBlock.Num, auctionVars, fromItem, order)
 				if err != nil {
 					retBadReq(err, c)
 					return

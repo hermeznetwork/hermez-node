@@ -15,7 +15,7 @@ import (
 // Block0 represents Ethereum's genesis block,
 // which is stored by default at HistoryDB
 var Block0 common.Block = common.Block{
-	EthBlockNum: 0,
+	Num: 0,
 	Hash: ethCommon.Hash([32]byte{
 		212, 229, 103, 64, 248, 118, 174, 248,
 		192, 16, 184, 106, 64, 213, 245, 103,
@@ -44,7 +44,7 @@ func GenBlocks(from, to int64) []common.Block {
 	var blocks []common.Block
 	for i := from; i < to; i++ {
 		blocks = append(blocks, common.Block{
-			EthBlockNum: i,
+			Num: i,
 			//nolint:gomnd
 			Timestamp: time.Now().Add(time.Second * 13).UTC(),
 			Hash:      ethCommon.BigToHash(big.NewInt(int64(i))),
@@ -62,7 +62,7 @@ func GenTokens(nTokens int, blocks []common.Block) (tokensToAddInDB []common.Tok
 			Name:        "NAME" + fmt.Sprint(i),
 			Symbol:      fmt.Sprint(i),
 			Decimals:    uint64(i + 1),
-			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
+			EthBlockNum: blocks[i%len(blocks)].Num,
 			EthAddr:     ethCommon.BigToAddress(big.NewInt(int64(i))),
 		}
 		tokensToAddInDB = append(tokensToAddInDB, token)
@@ -87,7 +87,7 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 	for i := 0; i < nBatches; i++ {
 		batch := common.Batch{
 			BatchNum:    common.BatchNum(i + 1),
-			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
+			EthBlockNum: blocks[i%len(blocks)].Num,
 			//nolint:gomnd
 			ForgerAddr:    ethCommon.BigToAddress(big.NewInt(6886723)),
 			CollectedFees: collectedFees,
@@ -161,7 +161,7 @@ func GenL1Txs(
 			TokenID:     token.TokenID,
 			Amount:      amount,
 			LoadAmount:  amount,
-			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
+			EthBlockNum: blocks[i%len(blocks)].Num,
 		}
 		if tx.UserOrigin {
 			n := nextTxsNum
@@ -287,7 +287,7 @@ func GenL2Txs(
 			Amount:      amount,
 			Fee:         fee,
 			Nonce:       common.Nonce(i + 1),
-			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
+			EthBlockNum: blocks[i%len(blocks)].Num,
 			Type:        randomTxType(i),
 		}
 		if i < nUserTxs {
@@ -341,7 +341,7 @@ func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 	coords := []common.Coordinator{}
 	for i := 0; i < nCoords; i++ {
 		coords = append(coords, common.Coordinator{
-			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
+			EthBlockNum: blocks[i%len(blocks)].Num,
 			Forger:      ethCommon.BigToAddress(big.NewInt(int64(i))),
 			Bidder:      ethCommon.BigToAddress(big.NewInt(int64(i))),
 			URL:         "https://foo.bar",
@@ -363,7 +363,7 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 		bids = append(bids, common.Bid{
 			SlotNum:     slotNum,
 			BidValue:    big.NewInt(int64(i)),
-			EthBlockNum: blocks[i%len(blocks)].EthBlockNum,
+			EthBlockNum: blocks[i%len(blocks)].Num,
 			Bidder:      coords[i%len(blocks)].Bidder,
 		})
 	}
@@ -397,13 +397,13 @@ func GenExitTree(n int, batches []common.Batch, accounts []common.Account, block
 			Balance: big.NewInt(int64(i) * 1000),
 		}
 		if i%2 == 0 {
-			instant := int64(blocks[i%len(blocks)].EthBlockNum)
+			instant := int64(blocks[i%len(blocks)].Num)
 			exitTree[i].InstantWithdrawn = &instant
 		} else if i%3 == 0 {
-			delayedReq := int64(blocks[i%len(blocks)].EthBlockNum)
+			delayedReq := int64(blocks[i%len(blocks)].Num)
 			exitTree[i].DelayedWithdrawRequest = &delayedReq
 			if i%9 == 0 {
-				delayed := int64(blocks[i%len(blocks)].EthBlockNum)
+				delayed := int64(blocks[i%len(blocks)].Num)
 				exitTree[i].DelayedWithdrawn = &delayed
 			}
 		}

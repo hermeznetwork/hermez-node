@@ -9,10 +9,10 @@ import (
 
 // Block represents of an Ethereum block
 type Block struct {
-	EthBlockNum int64          `meddler:"eth_block_num"`
-	Timestamp   time.Time      `meddler:"timestamp,utctime"`
-	Hash        ethCommon.Hash `meddler:"hash"`
-	ParentHash  ethCommon.Hash `meddler:"-"`
+	Num        int64          `meddler:"eth_block_num"`
+	Timestamp  time.Time      `meddler:"timestamp,utctime"`
+	Hash       ethCommon.Hash `meddler:"hash"`
+	ParentHash ethCommon.Hash `meddler:"-" json:"-"`
 }
 
 // RollupData contains information returned by the Rollup smart contract
@@ -63,9 +63,10 @@ type WDelayerTransfer struct {
 
 // WDelayerData contains information returned by the WDelayer smart contract
 type WDelayerData struct {
-	Vars             *WDelayerVariables
-	Deposits         []WDelayerTransfer
-	DepositsByTxHash map[ethCommon.Hash]*WDelayerTransfer
+	Vars     *WDelayerVariables
+	Deposits []WDelayerTransfer
+	// We use an array because there can be multiple deposits in a single eth transaction
+	DepositsByTxHash map[ethCommon.Hash][]*WDelayerTransfer
 	Withdrawals      []WDelayerTransfer
 }
 
@@ -74,7 +75,7 @@ func NewWDelayerData() WDelayerData {
 	return WDelayerData{
 		Vars:             nil,
 		Deposits:         make([]WDelayerTransfer, 0),
-		DepositsByTxHash: make(map[ethCommon.Hash]*WDelayerTransfer),
+		DepositsByTxHash: make(map[ethCommon.Hash][]*WDelayerTransfer),
 		Withdrawals:      make([]WDelayerTransfer, 0),
 	}
 }

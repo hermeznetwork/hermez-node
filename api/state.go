@@ -65,13 +65,21 @@ func (a *API) SetAuctionVariables(auctionVariables common.AuctionVariables) {
 
 // Network
 
+// UpdateNetworkInfoBlock update Status.Network block related information
+func (a *API) UpdateNetworkInfoBlock(
+	lastEthBlock, lastSyncBlock common.Block,
+) {
+	a.status.Network.LastSyncBlock = lastSyncBlock.Num
+	a.status.Network.LastEthBlock = lastEthBlock.Num
+}
+
 // UpdateNetworkInfo update Status.Network information
 func (a *API) UpdateNetworkInfo(
 	lastEthBlock, lastSyncBlock common.Block,
 	lastBatchNum common.BatchNum, currentSlot int64,
 ) error {
-	a.status.Network.LastSyncBlock = lastSyncBlock.EthBlockNum
-	a.status.Network.LastEthBlock = lastEthBlock.EthBlockNum
+	a.status.Network.LastSyncBlock = lastSyncBlock.Num
+	a.status.Network.LastEthBlock = lastEthBlock.Num
 	lastBatch, err := a.h.GetBatchAPI(lastBatchNum)
 	if err != nil {
 		return err
@@ -106,8 +114,8 @@ func (a *API) GetNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 				SlotNum:       i,
 				FromBlock:     fromBlock,
 				ToBlock:       toBlock,
-				FromTimestamp: lastBlock.Timestamp.Add(time.Second * time.Duration(secondsPerBlock*(fromBlock-lastBlock.EthBlockNum))),
-				ToTimestamp:   lastBlock.Timestamp.Add(time.Second * time.Duration(secondsPerBlock*(toBlock-lastBlock.EthBlockNum))),
+				FromTimestamp: lastBlock.Timestamp.Add(time.Second * time.Duration(secondsPerBlock*(fromBlock-lastBlock.Num))),
+				ToTimestamp:   lastBlock.Timestamp.Add(time.Second * time.Duration(secondsPerBlock*(toBlock-lastBlock.Num))),
 			},
 		}
 		foundBid := false

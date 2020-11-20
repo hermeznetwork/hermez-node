@@ -51,7 +51,7 @@ func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 	hdb := historydb.NewHistoryDB(db)
 	test.WipeDB(hdb.DB())
 	assert.Nil(t, hdb.AddBlock(&common.Block{
-		EthBlockNum: 1,
+		Num: 1,
 	}))
 	assert.Nil(t, hdb.AddTokens(tokens))
 }

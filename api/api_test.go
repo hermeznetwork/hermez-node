@@ -412,7 +412,7 @@ func TestMain(m *testing.M) {
 		bids:             testBids,
 		slots: api.genTestSlots(
 			20,
-			commonBlocks[len(commonBlocks)-1].EthBlockNum,
+			commonBlocks[len(commonBlocks)-1].Num,
 			testBids,
 			auctionVars,
 		),
@@ -611,7 +611,7 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 
 func getTimestamp(blockNum int64, blocks []common.Block) time.Time {
 	for i := 0; i < len(blocks); i++ {
-		if blocks[i].EthBlockNum == blockNum {
+		if blocks[i].Num == blockNum {
 			return blocks[i].Timestamp
 		}
 	}
@@ -647,7 +647,7 @@ func getAccountByIdx(idx common.Idx, accs []common.Account) *common.Account {
 
 func getBlockByNum(ethBlockNum int64, blocks []common.Block) common.Block {
 	for _, b := range blocks {
-		if b.EthBlockNum == ethBlockNum {
+		if b.Num == ethBlockNum {
 			return b
 		}
 	}

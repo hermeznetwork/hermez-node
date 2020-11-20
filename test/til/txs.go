@@ -31,7 +31,7 @@ func newBatchData(batchNum int) common.BatchData {
 func newBlock(blockNum int64) common.BlockData {
 	return common.BlockData{
 		Block: common.Block{
-			EthBlockNum: blockNum,
+			Num: blockNum,
 		},
 		Rollup: common.RollupData{
 			L1UserTxs: []common.L1Tx{},
@@ -711,7 +711,7 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 		block := &blocks[i]
 		for j := range block.Rollup.Batches {
 			batch := &block.Rollup.Batches[j]
-			batch.Batch.EthBlockNum = block.Block.EthBlockNum
+			batch.Batch.EthBlockNum = block.Block.Num
 			// til doesn't fill the batch forger addr
 			batch.Batch.ForgerAddr = cfg.BootCoordAddr
 			if batch.L1Batch {

@@ -181,7 +181,7 @@ func TestGetSlots(t *testing.T) {
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 
-	currentSlot := api.getCurrentSlot(tc.blocks[len(tc.blocks)-1].EthBlockNum)
+	currentSlot := api.getCurrentSlot(tc.blocks[len(tc.blocks)-1].Num)
 	finishedAuctionSlots := []testSlot{}
 	for i := 0; i < len(tc.slots); i++ {
 		finishAuction := currentSlot + int64(tc.auctionVars.ClosedAuctionSlots)

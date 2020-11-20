@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -165,7 +166,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			serverProofs[i] = coordinator.NewServerProof(serverProofCfg.URL)
 		}
 
-		coord = coordinator.NewCoordinator(
+		coord, err = coordinator.NewCoordinator(
 			coordinator.Config{
 				ForgerAddress: coordCfg.ForgerAddress,
 				ConfirmBlocks: coordCfg.ConfirmBlocks,
@@ -178,9 +179,20 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			&scConsts,
 			&initSCVars,
 		)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var nodeAPI *NodeAPI
 	if cfg.API.Address != "" {
+		if cfg.API.UpdateMetricsInterval.Duration == 0 {
+			return nil, fmt.Errorf("invalid cfg.API.UpdateMetricsInterval: %v",
+				cfg.API.UpdateMetricsInterval.Duration)
+		}
+		if cfg.API.UpdateRecommendedFeeInterval.Duration == 0 {
+			return nil, fmt.Errorf("invalid cfg.API.UpdateRecommendedFeeInterval: %v",
+				cfg.API.UpdateRecommendedFeeInterval.Duration)
+		}
 		server := gin.Default()
 		coord := false
 		if mode == ModeCoordinator {
@@ -303,9 +315,11 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 // TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
 // don't have to pass it around.
 func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration) {
-	if blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock); err != nil {
+	blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock)
+	stats := n.sync.Stats()
+	if err != nil {
 		// case: error
-		log.Errorw("Synchronizer.Sync", "error", err)
+		log.Errorw("Synchronizer.Sync", "err", err)
 		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration
 	} else if discarded != nil {
 		// case: reorg
@@ -318,13 +332,13 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 			n.nodeAPI.api.SetRollupVariables(*rollup)
 			n.nodeAPI.api.SetAuctionVariables(*auction)
 			n.nodeAPI.api.SetWDelayerVariables(*wDelayer)
-
-			// TODO: n.nodeAPI.api.UpdateNetworkInfo()
+			n.nodeAPI.api.UpdateNetworkInfoBlock(
+				stats.Eth.LastBlock, stats.Sync.LastBlock,
+			)
 		}
 		return nil, time.Duration(0)
 	} else if blockData != nil {
 		// case: new block
-		stats := n.sync.Stats()
 		if n.mode == ModeCoordinator {
 			if stats.Synced() && (blockData.Rollup.Vars != nil ||
 				blockData.Auction.Vars != nil ||
@@ -350,7 +364,15 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 				n.nodeAPI.api.SetWDelayerVariables(*blockData.WDelayer.Vars)
 			}
 
-			// TODO: n.nodeAPI.api.UpdateNetworkInfo()
+			if stats.Synced() {
+				if err := n.nodeAPI.api.UpdateNetworkInfo(
+					stats.Eth.LastBlock, stats.Sync.LastBlock,
+					common.BatchNum(stats.Eth.LastBatch),
+					stats.Sync.Auction.CurrentSlot.SlotNum,
+				); err != nil {
+					log.Errorw("API.UpdateNetworkInfo", "err", err)
+				}
+			}
 		}
 		return &blockData.Block, time.Duration(0)
 	} else {
@@ -406,6 +428,38 @@ func (n *Node) StartNodeAPI() {
 		}()
 		if err := n.nodeAPI.Run(n.ctx); err != nil {
 			log.Fatalw("NodeAPI.Run", "err", err)
+		}
+	}()
+
+	n.wg.Add(1)
+	go func() {
+		for {
+			select {
+			case <-n.ctx.Done():
+				log.Info("API.UpdateMetrics loop done")
+				n.wg.Done()
+				return
+			case <-time.After(n.cfg.API.UpdateMetricsInterval.Duration):
+				if err := n.nodeAPI.api.UpdateMetrics(); err != nil {
+					log.Errorw("API.UpdateMetrics", "err", err)
+				}
+			}
+		}
+	}()
+
+	n.wg.Add(1)
+	go func() {
+		for {
+			select {
+			case <-n.ctx.Done():
+				log.Info("API.UpdateRecommendedFee loop done")
+				n.wg.Done()
+				return
+			case <-time.After(n.cfg.API.UpdateRecommendedFeeInterval.Duration):
+				if err := n.nodeAPI.api.UpdateRecommendedFee(); err != nil {
+					log.Errorw("API.UpdateRecommendedFee", "err", err)
+				}
+			}
 		}
 	}()
 }
