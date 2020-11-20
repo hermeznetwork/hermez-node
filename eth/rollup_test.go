@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/hex"
@@ -86,6 +87,7 @@ func TestRollupAddToken(t *testing.T) {
 }
 
 func TestRollupForgeBatch(t *testing.T) {
+	chainid, _ := auctionClient.client.Client().ChainID(context.Background())
 	// Register Coordinator
 	forgerAddress := governanceAddressConst
 	_, err := auctionClient.AuctionSetCoordinator(forgerAddress, URL)
@@ -125,7 +127,7 @@ func TestRollupForgeBatch(t *testing.T) {
 		signature = append(signature, r[:]...)
 		signature = append(signature, s[:]...)
 		signature = append(signature, v)
-		l1Tx, err := common.L1CoordinatorTxFromBytes(bytesL1Coordinator)
+		l1Tx, err := common.L1CoordinatorTxFromBytes(bytesL1Coordinator, chainid, rollupClient.address)
 		require.Nil(t, err)
 		args.L1CoordinatorTxs = append(args.L1CoordinatorTxs, *l1Tx)
 		args.L1CoordinatorTxsAuths = append(args.L1CoordinatorTxsAuths, signature)

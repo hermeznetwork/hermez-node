@@ -8,7 +8,7 @@ The first step is to clone the github repository where the contracts are located
 
 While the prepared deployment is not found to master, branch in repository must be changed:
 
-`git checkout feature/ethclient-test-deployment-ganache` (tested with commit `f62c768bd4817921872666b3644403a119e28248`)
+`git checkout feature/newDeploymentScript-ethclient` (tested with commit `af4c93916d6cd93d866c121cc63b6a6794f649b2`)
 
 Now, install the dependencies:
 

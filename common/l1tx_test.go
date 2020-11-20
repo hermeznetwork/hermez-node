@@ -121,6 +121,11 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 }
 
 func TestL1CoordinatorTxByteParsers(t *testing.T) {
+	hermezAddress := ethCommon.HexToAddress("0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe")
+	hermezAddressBytes := ethCommon.LeftPadBytes(hermezAddress.Bytes(), 32)
+	chainID := big.NewInt(1337)
+	chainIDBytes := ethCommon.LeftPadBytes(chainID.Bytes(), 2)
+
 	privateKey, err := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
 	require.Nil(t, err)
 
@@ -139,7 +144,7 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	require.Nil(t, err)
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
-	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n98")
+	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n120")
 	bytesMessage2 := []byte("I authorize this babyjubjub key for hermez rollup account creation")
 
 	babyjub := pk.Compress()
@@ -148,6 +153,8 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	data = append(data, bytesMessage1...)
 	data = append(data, bytesMessage2...)
 	data = append(data, babyjubB[:]...)
+	data = append(data, chainIDBytes...)
+	data = append(data, hermezAddressBytes...)
 	hash := crypto.Keccak256Hash(data)
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	require.Nil(t, err)
@@ -165,7 +172,7 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 
 	bytesCoordinatorL1, err := l1Tx.BytesCoordinatorTx(signature)
 	require.Nil(t, err)
-	l1txDecoded, err := L1CoordinatorTxFromBytes(bytesCoordinatorL1)
+	l1txDecoded, err := L1CoordinatorTxFromBytes(bytesCoordinatorL1, chainID, hermezAddress)
 	require.Nil(t, err)
 	assert.Equal(t, l1Tx, l1txDecoded)
 	bytesCoordinatorL12, err := l1txDecoded.BytesCoordinatorTx(signature)
@@ -173,11 +180,11 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	assert.Equal(t, bytesCoordinatorL1, bytesCoordinatorL12)
 
 	// expect error if length!=68
-	_, err = L1CoordinatorTxFromBytes(bytesCoordinatorL1[:66])
+	_, err = L1CoordinatorTxFromBytes(bytesCoordinatorL1[:66], chainID, hermezAddress)
 	require.NotNil(t, err)
-	_, err = L1CoordinatorTxFromBytes([]byte{})
+	_, err = L1CoordinatorTxFromBytes([]byte{}, chainID, hermezAddress)
 	require.NotNil(t, err)
-	_, err = L1CoordinatorTxFromBytes(nil)
+	_, err = L1CoordinatorTxFromBytes(nil, chainID, hermezAddress)
 	require.NotNil(t, err)
 }
 

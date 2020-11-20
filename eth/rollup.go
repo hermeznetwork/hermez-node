@@ -190,6 +190,7 @@ type RollupInterface interface {
 // RollupClient is the implementation of the interface to the Rollup Smart Contract in ethereum.
 type RollupClient struct {
 	client      *EthereumClient
+	chainID     *big.Int
 	address     ethCommon.Address
 	tokenHEZCfg TokenConfig
 	hermez      *Hermez.Hermez
@@ -211,8 +212,13 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 	if err != nil {
 		return nil, err
 	}
+	chainID, err := client.client.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	return &RollupClient{
 		client:      client,
+		chainID:     chainID,
 		address:     address,
 		tokenHEZCfg: tokenHEZCfg,
 		hermez:      hermez,
@@ -290,8 +296,7 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToke
 			}
 			tokenName := c.tokenHEZCfg.Name
 			tokenAddr := c.tokenHEZCfg.Address
-			chainid, _ := c.client.Client().ChainID(context.Background())
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, feeAddToken, nonce, deadline, tokenName)
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID, feeAddToken, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, feeAddToken, deadline, digest, signature)
 
@@ -387,8 +392,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 			}
 			tokenName := c.tokenHEZCfg.Name
 			tokenAddr := c.tokenHEZCfg.Address
-			chainid, _ := c.client.Client().ChainID(context.Background())
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenName)
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID, amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF),
@@ -601,6 +605,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		return nil, nil, err
 	}
 	txData := tx.Data()
+
 	method, err := c.contractAbi.MethodById(txData[:4])
 	if err != nil {
 		return nil, nil, err
@@ -641,7 +646,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*RollupFo
 		signature = append(signature, r[:]...)
 		signature = append(signature, s[:]...)
 		signature = append(signature, v)
-		l1Tx, err := common.L1CoordinatorTxFromBytes(bytesL1Coordinator)
+		l1Tx, err := common.L1CoordinatorTxFromBytes(bytesL1Coordinator, c.chainID, c.address)
 		if err != nil {
 			return nil, nil, err
 		}
