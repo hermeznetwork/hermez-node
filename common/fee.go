@@ -6,6 +6,16 @@ import (
 	"math/big"
 )
 
+// MaxFeePlan is the maximum value of the FeePlan
+const MaxFeePlan = 256
+
+// FeePlan represents the fee model, a position in the array indicates the
+// percentage of tokens paid in concept of fee for a transaction
+var FeePlan = [MaxFeePlan]float64{}
+
+// FeeFactorLsh60 is the feeFactor << 60
+var FeeFactorLsh60 [256]*big.Int
+
 // RecommendedFee is the recommended fee to pay in USD per transaction set by
 // the coordinator according to the tx type (if the tx requires to create an
 // account and register, only register or he account already esists)
@@ -31,13 +41,6 @@ func (f FeeSelector) Percentage() float64 {
 	}
 }
 
-// MaxFeePlan is the maximum value of the FeePlan
-const MaxFeePlan = 256
-
-// FeePlan represents the fee model, a position in the array indicates the
-// percentage of tokens paid in concept of fee for a transaction
-var FeePlan = [MaxFeePlan]float64{}
-
 // CalcFeeAmount calculates the fee amount in tokens from an amount and
 // feeSelector (fee index).
 func CalcFeeAmount(amount *big.Int, feeSel FeeSelector) (*big.Int, error) {
@@ -54,9 +57,6 @@ func CalcFeeAmount(amount *big.Int, feeSel FeeSelector) (*big.Int, error) {
 func init() {
 	setFeeFactorLsh60(&FeeFactorLsh60)
 }
-
-// FeeFactorLsh60 is the feeFactor << 60
-var FeeFactorLsh60 [256]*big.Int
 
 func setFeeFactorLsh60(feeFactorLsh60 *[256]*big.Int) {
 	feeFactorLsh60[0], _ = new(big.Int).SetString("0", 10)

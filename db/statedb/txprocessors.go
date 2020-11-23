@@ -2,6 +2,7 @@ package statedb
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -72,6 +73,10 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	}
 	defer s.resetZKInputs()
 
+	if len(coordIdxs) >= int(ptc.MaxFeeTx) {
+		return nil, fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)", len(coordIdxs), ptc.MaxFeeTx)
+	}
+
 	s.accumulatedFees = make(map[common.Idx]*big.Int)
 
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
@@ -94,7 +99,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	}
 
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
-	// only needed in memory
+	// is only needed in memory
 	if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 		tmpDir, err := ioutil.TempDir("", "hermez-statedb-exittree")
 		if err != nil {
@@ -122,17 +127,6 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		if err != nil {
 			return nil, err
 		}
-		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
-			if exitIdx != nil && exitTree != nil {
-				exits[s.i] = processedExit{
-					exit:    true,
-					newExit: newExit,
-					idx:     *exitIdx,
-					acc:     *exitAccount,
-				}
-			}
-			s.i++
-		}
 		if s.typ == TypeSynchronizer && createdAccount != nil {
 			createdAccounts = append(createdAccounts, *createdAccount)
 		}
@@ -143,6 +137,22 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 				return nil, err
 			}
 			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
+
+			if s.i < nTx-1 {
+				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
+				s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
+			}
+		}
+		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
+			if exitIdx != nil && exitTree != nil {
+				exits[s.i] = processedExit{
+					exit:    true,
+					newExit: newExit,
+					idx:     *exitIdx,
+					acc:     *exitAccount,
+				}
+			}
+			s.i++
 		}
 	}
 
@@ -164,6 +174,12 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 				return nil, err
 			}
 			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
+
+			if s.i < nTx-1 {
+				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
+				s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
+			}
+			s.i++
 		}
 	}
 
@@ -179,12 +195,24 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	if err != nil {
 		return nil, err
 	}
+	// collectedFees will contain the amount of fee collected for each
+	// TokenID
 	var collectedFees map[common.TokenID]*big.Int
-	if s.typ == TypeSynchronizer {
+	if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 		collectedFees = make(map[common.TokenID]*big.Int)
 		for tokenID := range coordIdxsMap {
 			collectedFees[tokenID] = big.NewInt(0)
 		}
+	}
+
+	if s.zki != nil {
+		// get the feePlanTokens
+		feePlanTokens, err := s.getFeePlanTokens(coordIdxs, l2txs)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		copy(s.zki.FeePlanTokens, feePlanTokens)
 	}
 
 	// Process L2Txs
@@ -192,6 +220,23 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, collectedFees, exitTree, &l2txs[i])
 		if err != nil {
 			return nil, err
+		}
+		if s.zki != nil {
+			l2TxData, err := l2txs[i].L2Tx().Bytes(s.zki.Metadata.NLevels)
+			if err != nil {
+				return nil, err
+			}
+			s.zki.Metadata.L2TxsData = append(s.zki.Metadata.L2TxsData, l2TxData)
+
+			if s.i < nTx-1 {
+				// Intermediate States
+				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
+				s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
+				s.zki.ISAccFeeOut[s.i] = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
+			}
+			if s.i == nTx-1 {
+				s.zki.ISFinalAccFee = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
+			}
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -204,13 +249,11 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			}
 			s.i++
 		}
-		if s.zki != nil {
-			l2TxData, err := l2txs[i].L2Tx().Bytes(s.zki.Metadata.NLevels)
-			if err != nil {
-				return nil, err
-			}
-			s.zki.Metadata.L2TxsData = append(s.zki.Metadata.L2TxsData, l2TxData)
-		}
+	}
+
+	if s.zki != nil {
+		// before computing the Fees txs, set the ISInitStateRootFee
+		s.zki.ISInitStateRootFee = s.mt.Root().BigInt()
 	}
 
 	// distribute the AccumulatedFees from the processed L2Txs into the
@@ -242,6 +285,8 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 
 			// add Coord Idx to ZKInputs.FeeTxsData
 			s.zki.FeeIdxs[iFee] = idx.BigInt()
+
+			s.zki.ISStateRootFee[iFee] = s.mt.Root().BigInt()
 		}
 		iFee++
 	}
@@ -293,6 +338,10 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			}
 			s.zki.OldKey2[i] = p.OldKey.BigInt()
 			s.zki.OldValue2[i] = p.OldValue.BigInt()
+
+			if i < nTx-1 {
+				s.zki.ISExitRoot[i] = exitTree.Root().BigInt()
+			}
 		}
 	}
 	if s.typ == TypeSynchronizer {
@@ -310,16 +359,8 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	// compute last ZKInputs parameters
 	s.zki.GlobalChainID = big.NewInt(0) // TODO, 0: ethereum, this will be get from config file
 	// zki.FeeIdxs = ? // TODO, this will be get from the config file
-	tokenIDs, err := s.getTokenIDsBigInt(l1usertxs, l1coordinatortxs, l2txs)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	s.zki.FeePlanTokens = tokenIDs
 	s.zki.Metadata.NewStateRootRaw = s.mt.Root()
 	s.zki.Metadata.NewExitRootRaw = exitTree.Root()
-
-	// s.zki.ISInitStateRootFee = s.mt.Root().BigInt()
 
 	// return ZKInputs as the BatchBuilder will return it to forge the Batch
 	return &ProcessTxOutput{
@@ -331,15 +372,22 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	}, nil
 }
 
-// getTokenIDsBigInt returns the list of TokenIDs in *big.Int format
-func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []common.L1Tx, l2txs []common.PoolL2Tx) ([]*big.Int, error) {
+// getFeePlanTokens returns an array of *big.Int containing a list of tokenIDs
+// corresponding to the given CoordIdxs and the processed L2Txs
+func (s *StateDB) getFeePlanTokens(coordIdxs []common.Idx, l2txs []common.PoolL2Tx) ([]*big.Int, error) {
+	// get Coordinator TokenIDs corresponding to the Idxs where the Fees
+	// will be sent
+	coordTokenIDs := make(map[common.TokenID]bool)
+	for i := 0; i < len(coordIdxs); i++ {
+		acc, err := s.GetAccount(coordIdxs[i])
+		if err != nil {
+			log.Errorf("could not get account to determine TokenID of CoordIdx %d not found: %s", coordIdxs[i], err.Error())
+			return nil, err
+		}
+		coordTokenIDs[acc.TokenID] = true
+	}
+
 	tokenIDs := make(map[common.TokenID]bool)
-	for i := 0; i < len(l1usertxs); i++ {
-		tokenIDs[l1usertxs[i].TokenID] = true
-	}
-	for i := 0; i < len(l1coordinatortxs); i++ {
-		tokenIDs[l1coordinatortxs[i].TokenID] = true
-	}
 	for i := 0; i < len(l2txs); i++ {
 		// as L2Tx does not have parameter TokenID, get it from the
 		// AccountsDB (in the StateDB)
@@ -348,7 +396,9 @@ func (s *StateDB) getTokenIDsBigInt(l1usertxs, l1coordinatortxs []common.L1Tx, l
 			log.Errorf("could not get account to determine TokenID of L2Tx: FromIdx %d not found: %s", l2txs[i].FromIdx, err.Error())
 			return nil, err
 		}
-		tokenIDs[acc.TokenID] = true
+		if _, ok := coordTokenIDs[acc.TokenID]; ok {
+			tokenIDs[acc.TokenID] = true
+		}
 	}
 	var tBI []*big.Int
 	for t := range tokenIDs {
@@ -368,7 +418,12 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	// ZKInputs
 	if s.zki != nil {
 		// Txs
-		// s.zki.TxCompressedData[s.i] = tx.TxCompressedData() // uncomment once L1Tx.TxCompressedData is ready
+		var err error
+		s.zki.TxCompressedData[s.i], err = tx.TxCompressedData()
+		if err != nil {
+			log.Error(err)
+			return nil, nil, false, nil, err
+		}
 		s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
 		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
 		s.zki.OnChain[s.i] = big.NewInt(1)
@@ -408,11 +463,6 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		// TODO applyCreateAccount will return the created account,
 		// which in the case type==TypeSynchronizer will be added to an
 		// array of created accounts that will be returned
-
-		if s.zki != nil {
-			s.zki.AuxFromIdx[s.i] = s.idx.BigInt() // last s.idx is the one used for creating the new account
-			s.zki.NewAccount[s.i] = big.NewInt(1)
-		}
 	case common.TxTypeDeposit:
 		// update balance of the MT account
 		err := s.applyDeposit(tx, false)
@@ -435,11 +485,6 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, nil, err
-		}
-
-		if s.zki != nil {
-			s.zki.AuxFromIdx[s.i] = s.idx.BigInt() // last s.idx is the one used for creating the new account
-			s.zki.NewAccount[s.i] = big.NewInt(1)
 		}
 	case common.TxTypeForceExit:
 		// execute exit flow
@@ -485,8 +530,14 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 	// ZKInputs
 	if s.zki != nil {
 		// Txs
-		// s.zki.TxCompressedData[s.i] = tx.TxCompressedData() // uncomment once L1Tx.TxCompressedData is ready
-		// s.zki.TxCompressedDataV2[s.i] = tx.TxCompressedDataV2() // uncomment once L2Tx.TxCompressedDataV2 is ready
+		s.zki.TxCompressedData[s.i], err = tx.TxCompressedData()
+		if err != nil {
+			return nil, nil, false, err
+		}
+		s.zki.TxCompressedDataV2[s.i], err = tx.TxCompressedDataV2()
+		if err != nil {
+			return nil, nil, false, err
+		}
 		s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
 		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
 
@@ -587,6 +638,14 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 		s.zki.OldValue1[s.i] = p.OldValue.BigInt()
 
 		s.zki.Metadata.NewLastIdxRaw = s.idx + 1
+
+		s.zki.AuxFromIdx[s.i] = common.Idx(s.idx + 1).BigInt()
+		s.zki.NewAccount[s.i] = big.NewInt(1)
+
+		if s.i < len(s.zki.ISOnChain) { // len(s.zki.ISOnChain) == nTx
+			// intermediate states
+			s.zki.ISOnChain[s.i] = big.NewInt(1)
+		}
 	}
 
 	s.idx = s.idx + 1
@@ -695,7 +754,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 			accumulated := s.accumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
 
-			if s.typ == TypeSynchronizer {
+			if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}
@@ -800,6 +859,12 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		s.zki.OldValue1[s.i] = p.OldValue.BigInt()
 
 		s.zki.Metadata.NewLastIdxRaw = s.idx + 1
+
+		s.zki.AuxFromIdx[s.i] = common.Idx(s.idx + 1).BigInt()
+		s.zki.NewAccount[s.i] = big.NewInt(1)
+
+		// intermediate states
+		s.zki.ISOnChain[s.i] = big.NewInt(1)
 	}
 
 	// update receiver account in localStateDB
@@ -854,7 +919,7 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 			accumulated := s.accumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
 
-			if s.typ == TypeSynchronizer {
+			if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}

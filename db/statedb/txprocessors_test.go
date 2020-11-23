@@ -477,6 +477,80 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	assert.Equal(t, "9827704113668630072730115158977131501210702363656902211840117643154933433410", sdb.mt.Root().BigInt().String())
 }
 
+func TestCircomTest(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
+
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, 8)
+	assert.Nil(t, err)
+
+	// same values than in the js test
+	bjj0, err := common.BJJFromStringWithChecksum("21b0a1688b37f77b1d1d5539ec3b826db5ac78b2513f574a04c50a7d4f8246d7")
+	assert.Nil(t, err)
+	l1Txs := []common.L1Tx{
+		{
+			FromIdx: 0,
+			// LoadAmount:  big.NewInt(10400),
+			LoadAmount:  big.NewInt(16000000),
+			Amount:      big.NewInt(0),
+			TokenID:     1,
+			FromBJJ:     bjj0,
+			FromEthAddr: ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
+			ToIdx:       0,
+			Type:        common.TxTypeCreateAccountDeposit,
+		},
+	}
+	l2Txs := []common.PoolL2Tx{
+		{
+			FromIdx: 256,
+			ToIdx:   256,
+			TokenID: 1,
+			Amount:  big.NewInt(1000),
+			Nonce:   0,
+			Fee:     126,
+			Type:    common.TxTypeTransfer,
+		},
+	}
+
+	ptc := ProcessTxsConfig{
+		NLevels:  8,
+		MaxFeeTx: 2,
+		MaxTx:    5,
+		MaxL1Tx:  2,
+	}
+	ptOut, err := sdb.ProcessTxs(ptc, nil, l1Txs, nil, l2Txs)
+	require.Nil(t, err)
+
+	// check expected account keys values from tx inputs
+	acc, err := sdb.GetAccount(common.Idx(256))
+	require.Nil(t, err)
+	assert.Equal(t, "d746824f7d0ac5044a573f51b278acb56d823bec39551d1d7bf7378b68a1b021", acc.PublicKey.Compress().String())
+	assert.Equal(t, "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf", acc.EthAddr.Hex())
+
+	// check that there no exist more accounts
+	_, err = sdb.GetAccount(common.Idx(257))
+	require.NotNil(t, err)
+	ptOut.ZKInputs.FeeIdxs[0] = common.Idx(256).BigInt()
+
+	s, err := json.Marshal(ptOut.ZKInputs)
+	require.Nil(t, err)
+	debug := false
+	if debug {
+		fmt.Println("\nCopy&Paste into js circom test:\n	let zkInput = JSON.parse(`" + string(s) + "`);")
+
+		h, err := ptOut.ZKInputs.HashGlobalData()
+		require.Nil(t, err)
+		fmt.Printf(`
+		const output={
+			hashGlobalInputs: "%s",
+		};
+		await circuit.assertOut(w, output);
+		`, h.String())
+		fmt.Println("")
+	}
+}
+
 func TestZKInputsHashTestVector0(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
