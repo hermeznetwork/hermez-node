@@ -166,6 +166,7 @@ func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool,
 	}
 
 	slotToForge := a.getSlotNumber(blockNum)
+	// fmt.Printf("DBG canForge slot: %v\n", slotToForge)
 	// Get the relativeBlock to check if the slotDeadline has been exceeded
 	relativeBlock := blockNum - (a.Constants.GenesisBlockNum + (slotToForge * int64(a.Constants.BlocksPerSlot)))
 
@@ -551,15 +552,15 @@ func (c *Client) CtlRollback() {
 // Ethereum
 //
 
-// CtlCurrentBlock returns the current blockNum without checks
-func (c *Client) CtlCurrentBlock() int64 {
+// CtlLastBlock returns the last blockNum without checks
+func (c *Client) CtlLastBlock() int64 {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 	return c.blockNum
 }
 
-// EthCurrentBlock returns the current blockNum
-func (c *Client) EthCurrentBlock() (int64, error) {
+// EthLastBlock returns the last blockNum
+func (c *Client) EthLastBlock() (int64, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 

@@ -26,7 +26,7 @@ type ERC20Consts struct {
 
 // EthereumInterface is the interface to Ethereum
 type EthereumInterface interface {
-	EthCurrentBlock() (int64, error)
+	EthLastBlock() (int64, error)
 	// EthHeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 	EthBlockByNumber(context.Context, int64) (*common.Block, error)
 	EthAddress() (*ethCommon.Address, error)
@@ -241,8 +241,8 @@ func (c *EthereumClient) waitReceipt(ctx context.Context, tx *types.Transaction,
 	return receipt, err
 }
 
-// EthCurrentBlock returns the current block number in the blockchain
-func (c *EthereumClient) EthCurrentBlock() (int64, error) {
+// EthLastBlock returns the last block number in the blockchain
+func (c *EthereumClient) EthLastBlock() (int64, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	header, err := c.client.HeaderByNumber(ctx, nil)

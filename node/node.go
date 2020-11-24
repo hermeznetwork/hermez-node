@@ -2,10 +2,14 @@ package node
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
@@ -39,16 +43,11 @@ const (
 
 // Node is the Hermez Node
 type Node struct {
+	nodeAPI  *NodeAPI
 	debugAPI *debugapi.DebugAPI
 	// Coordinator
-	coord                    *coordinator.Coordinator
-	coordCfg                 *config.Coordinator
-	stopForge                chan bool
-	stopGetProofCallForge    chan bool
-	stopForgeCallConfirm     chan bool
-	stoppedForge             chan bool
-	stoppedGetProofCallForge chan bool
-	stoppedForgeCallConfirm  chan bool
+	coord    *coordinator.Coordinator
+	coordCfg *config.Coordinator
 
 	// Synchronizer
 	sync *synchronizer.Synchronizer
@@ -87,14 +86,18 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	if err != nil {
 		return nil, err
 	}
+	var ethCfg eth.EthereumConfig
+	if mode == ModeCoordinator {
+		ethCfg = eth.EthereumConfig{
+			CallGasLimit:        coordCfg.EthClient.CallGasLimit,
+			DeployGasLimit:      coordCfg.EthClient.DeployGasLimit,
+			GasPriceDiv:         coordCfg.EthClient.GasPriceDiv,
+			ReceiptTimeout:      coordCfg.EthClient.ReceiptTimeout.Duration,
+			IntervalReceiptLoop: coordCfg.EthClient.IntervalReceiptLoop.Duration,
+		}
+	}
 	client, err := eth.NewClient(ethClient, nil, nil, &eth.ClientConfig{
-		Ethereum: eth.EthereumConfig{
-			CallGasLimit:        cfg.EthClient.CallGasLimit,
-			DeployGasLimit:      cfg.EthClient.DeployGasLimit,
-			GasPriceDiv:         cfg.EthClient.GasPriceDiv,
-			ReceiptTimeout:      cfg.EthClient.ReceiptTimeout.Duration,
-			IntervalReceiptLoop: cfg.EthClient.IntervalReceiptLoop.Duration,
-		},
+		Ethereum: ethCfg,
 		Rollup: eth.RollupConfig{
 			Address: cfg.SmartContracts.Rollup,
 		},
@@ -121,10 +124,23 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	if err != nil {
 		return nil, err
 	}
+	varsRollup, varsAuction, varsWDelayer := sync.SCVars()
+	initSCVars := synchronizer.SCVariables{
+		Rollup:   *varsRollup,
+		Auction:  *varsAuction,
+		WDelayer: *varsWDelayer,
+	}
+
+	scConsts := synchronizer.SCConsts{
+		Rollup:   *sync.RollupConstants(),
+		Auction:  *sync.AuctionConstants(),
+		WDelayer: *sync.WDelayerConstants(),
+	}
 
 	var coord *coordinator.Coordinator
+	var l2DB *l2db.L2DB
 	if mode == ModeCoordinator {
-		l2DB := l2db.NewL2DB(
+		l2DB = l2db.NewL2DB(
 			db,
 			coordCfg.L2DB.SafetyPeriod,
 			coordCfg.L2DB.MaxTxs,
@@ -148,16 +164,48 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		for i, serverProofCfg := range coordCfg.ServerProofs {
 			serverProofs[i] = coordinator.NewServerProof(serverProofCfg.URL)
 		}
+
 		coord = coordinator.NewCoordinator(
 			coordinator.Config{
 				ForgerAddress: coordCfg.ForgerAddress,
+				ConfirmBlocks: coordCfg.ConfirmBlocks,
 			},
 			historyDB,
 			txSelector,
 			batchBuilder,
 			serverProofs,
 			client,
+			&scConsts,
+			&initSCVars,
 		)
+	}
+	var nodeAPI *NodeAPI
+	if cfg.API.Address != "" {
+		server := gin.Default()
+		coord := false
+		if mode == ModeCoordinator {
+			coord = coordCfg.API.Coordinator
+		}
+		var err error
+		nodeAPI, err = NewNodeAPI(
+			cfg.API.Address,
+			coord, cfg.API.Explorer,
+			server,
+			historyDB,
+			stateDB,
+			l2DB,
+			&api.Config{
+				RollupConstants:   scConsts.Rollup,
+				AuctionConstants:  scConsts.Auction,
+				WDelayerConstants: scConsts.WDelayer,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		nodeAPI.api.SetRollupVariables(initSCVars.Rollup)
+		nodeAPI.api.SetAuctionVariables(initSCVars.Auction)
+		nodeAPI.api.SetWDelayerVariables(initSCVars.WDelayer)
 	}
 	var debugAPI *debugapi.DebugAPI
 	if cfg.Debug.APIAddress != "" {
@@ -165,6 +213,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{
+		nodeAPI:  nodeAPI,
 		debugAPI: debugAPI,
 		coord:    coord,
 		coordCfg: coordCfg,
@@ -177,85 +226,137 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	}, nil
 }
 
-// StartCoordinator starts the coordinator
-func (n *Node) StartCoordinator() {
-	log.Info("Starting Coordinator...")
-
-	// TODO: Replace stopXXX by context
-	// TODO: Replace stoppedXXX by waitgroup
-
-	n.stopForge = make(chan bool)
-	n.stopGetProofCallForge = make(chan bool)
-	n.stopForgeCallConfirm = make(chan bool)
-
-	n.stoppedForge = make(chan bool, 1)
-	n.stoppedGetProofCallForge = make(chan bool, 1)
-	n.stoppedForgeCallConfirm = make(chan bool, 1)
-
-	queueSize := 1
-	batchCh0 := make(chan *coordinator.BatchInfo, queueSize)
-	batchCh1 := make(chan *coordinator.BatchInfo, queueSize)
-
-	go func() {
-		defer func() { n.stoppedForge <- true }()
-		for {
-			select {
-			case <-n.stopForge:
-				return
-			default:
-				if forge, err := n.coord.ForgeLoopFn(batchCh0, n.stopForge); err == coordinator.ErrStop {
-					return
-				} else if err != nil {
-					log.Errorw("Coordinator.ForgeLoopFn", "error", err)
-				} else if !forge {
-					time.Sleep(n.coordCfg.ForgeLoopInterval.Duration)
-				}
-			}
-		}
-	}()
-	go func() {
-		defer func() { n.stoppedGetProofCallForge <- true }()
-		for {
-			select {
-			case <-n.stopGetProofCallForge:
-				return
-			default:
-				if err := n.coord.GetProofCallForgeLoopFn(
-					batchCh0, batchCh1, n.stopGetProofCallForge); err == coordinator.ErrStop {
-					return
-				} else if err != nil {
-					log.Errorw("Coordinator.GetProofCallForgeLoopFn", "error", err)
-				}
-			}
-		}
-	}()
-	go func() {
-		defer func() { n.stoppedForgeCallConfirm <- true }()
-		for {
-			select {
-			case <-n.stopForgeCallConfirm:
-				return
-			default:
-				if err := n.coord.ForgeCallConfirmLoopFn(
-					batchCh1, n.stopForgeCallConfirm); err == coordinator.ErrStop {
-					return
-				} else if err != nil {
-					log.Errorw("Coordinator.ForgeCallConfirmLoopFn", "error", err)
-				}
-			}
-		}
-	}()
+// NodeAPI holds the node http API
+type NodeAPI struct { //nolint:golint
+	api    *api.API
+	engine *gin.Engine
+	addr   string
 }
 
-// StopCoordinator stops the coordinator
-func (n *Node) StopCoordinator() {
-	log.Info("Stopping Coordinator...")
-	n.stopForge <- true
-	n.stopGetProofCallForge <- true
-	n.stopForgeCallConfirm <- true
-	<-n.stoppedForge
-	<-n.stoppedGetProofCallForge
-	<-n.stoppedForgeCallConfirm
+func handleNoRoute(c *gin.Context) {
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": "404 page not found",
+	})
+}
+
+// NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
+func NewNodeAPI(
+	addr string,
+	coordinatorEndpoints, explorerEndpoints bool,
+	server *gin.Engine,
+	hdb *historydb.HistoryDB,
+	sdb *statedb.StateDB,
+	l2db *l2db.L2DB,
+	config *api.Config,
+) (*NodeAPI, error) {
+	engine := gin.Default()
+	engine.NoRoute(handleNoRoute)
+	engine.Use(cors.Default())
+	_api, err := api.NewAPI(
+		coordinatorEndpoints, explorerEndpoints,
+		engine,
+		hdb,
+		sdb,
+		l2db,
+		config,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &NodeAPI{
+		addr:   addr,
+		api:    _api,
+		engine: engine,
+	}, nil
+}
+
+// Run starts the http server of the NodeAPI.  To stop it, pass a context with
+// cancelation.
+func (a *NodeAPI) Run(ctx context.Context) error {
+	server := &http.Server{
+		Addr:    a.addr,
+		Handler: a.engine,
+		// TODO: Figure out best parameters for production
+		ReadTimeout:    30 * time.Second, //nolint:gomnd
+		WriteTimeout:   30 * time.Second, //nolint:gomnd
+		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
+	}
+	go func() {
+		log.Infof("NodeAPI is ready at %v", a.addr)
+		if err := server.ListenAndServe(); err != nil &&
+			err != http.ErrServerClosed {
+			log.Fatalf("Listen: %s\n", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Info("Stopping NodeAPI...")
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:gomnd
+	defer cancel()
+	if err := server.Shutdown(ctxTimeout); err != nil {
+		return err
+	}
+	log.Info("NodeAPI done")
+	return nil
+}
+
+// TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
+// don't have to pass it around.
+func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration) {
+	if blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock); err != nil {
+		// case: error
+		log.Errorw("Synchronizer.Sync", "error", err)
+		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration
+	} else if discarded != nil {
+		// case: reorg
+		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
+		if n.mode == ModeCoordinator {
+			n.coord.SendMsg(coordinator.MsgSyncReorg{})
+		}
+		if n.nodeAPI != nil {
+			rollup, auction, wDelayer := n.sync.SCVars()
+			n.nodeAPI.api.SetRollupVariables(*rollup)
+			n.nodeAPI.api.SetAuctionVariables(*auction)
+			n.nodeAPI.api.SetWDelayerVariables(*wDelayer)
+
+			// TODO: n.nodeAPI.api.UpdateNetworkInfo()
+		}
+		return nil, time.Duration(0)
+	} else if blockData != nil {
+		// case: new block
+		stats := n.sync.Stats()
+		if n.mode == ModeCoordinator {
+			if stats.Synced() && (blockData.Rollup.Vars != nil ||
+				blockData.Auction.Vars != nil ||
+				blockData.WDelayer.Vars != nil) {
+				n.coord.SendMsg(coordinator.MsgSyncSCVars{
+					Rollup:   blockData.Rollup.Vars,
+					Auction:  blockData.Auction.Vars,
+					WDelayer: blockData.WDelayer.Vars,
+				})
+			}
+			n.coord.SendMsg(coordinator.MsgSyncStats{
+				Stats: *stats,
+			})
+		}
+		if n.nodeAPI != nil {
+			if blockData.Rollup.Vars != nil {
+				n.nodeAPI.api.SetRollupVariables(*blockData.Rollup.Vars)
+			}
+			if blockData.Auction.Vars != nil {
+				n.nodeAPI.api.SetAuctionVariables(*blockData.Auction.Vars)
+			}
+			if blockData.WDelayer.Vars != nil {
+				n.nodeAPI.api.SetWDelayerVariables(*blockData.WDelayer.Vars)
+			}
+
+			// TODO: n.nodeAPI.api.UpdateNetworkInfo()
+		}
+		return &blockData.Block, time.Duration(0)
+	} else {
+		// case: no block
+		return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration
+	}
 }
 
 // StartSynchronizer starts the synchronizer
@@ -263,32 +364,16 @@ func (n *Node) StartSynchronizer() {
 	log.Info("Starting Synchronizer...")
 	n.wg.Add(1)
 	go func() {
-		defer func() {
-			log.Info("Synchronizer routine stopped")
-			n.wg.Done()
-		}()
 		var lastBlock *common.Block
-		d := time.Duration(0)
+		waitDuration := time.Duration(0)
 		for {
 			select {
 			case <-n.ctx.Done():
 				log.Info("Synchronizer done")
+				n.wg.Done()
 				return
-			case <-time.After(d):
-				if blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock); err != nil {
-					log.Errorw("Synchronizer.Sync", "error", err)
-					lastBlock = nil
-					d = n.cfg.Synchronizer.SyncLoopInterval.Duration
-				} else if discarded != nil {
-					log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
-					lastBlock = nil
-					d = time.Duration(0)
-				} else if blockData != nil {
-					lastBlock = &blockData.Block
-					d = time.Duration(0)
-				} else {
-					d = n.cfg.Synchronizer.SyncLoopInterval.Duration
-				}
+			case <-time.After(waitDuration):
+				lastBlock, waitDuration = n.syncLoopFn(lastBlock)
 			}
 		}
 	}()
@@ -310,14 +395,33 @@ func (n *Node) StartDebugAPI() {
 	}()
 }
 
+// StartNodeAPI starts the NodeAPI
+func (n *Node) StartNodeAPI() {
+	log.Info("Starting NodeAPI...")
+	n.wg.Add(1)
+	go func() {
+		defer func() {
+			log.Info("NodeAPI routine stopped")
+			n.wg.Done()
+		}()
+		if err := n.nodeAPI.Run(n.ctx); err != nil {
+			log.Fatalw("NodeAPI.Run", "err", err)
+		}
+	}()
+}
+
 // Start the node
 func (n *Node) Start() {
 	log.Infow("Starting node...", "mode", n.mode)
 	if n.debugAPI != nil {
 		n.StartDebugAPI()
 	}
+	if n.nodeAPI != nil {
+		n.StartNodeAPI()
+	}
 	if n.mode == ModeCoordinator {
-		n.StartCoordinator()
+		log.Info("Starting Coordinator...")
+		n.coord.Start()
 	}
 	n.StartSynchronizer()
 }
@@ -327,7 +431,8 @@ func (n *Node) Stop() {
 	log.Infow("Stopping node...")
 	n.cancel()
 	if n.mode == ModeCoordinator {
-		n.StopCoordinator()
+		log.Info("Stopping Coordinator...")
+		n.coord.Stop()
 	}
 	n.wg.Wait()
 }

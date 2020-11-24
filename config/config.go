@@ -36,6 +36,7 @@ type ServerProof struct {
 type Coordinator struct {
 	ForgerAddress     ethCommon.Address `validate:"required"`
 	ForgeLoopInterval Duration          `validate:"required"`
+	ConfirmBlocks     int64             `validate:"required"`
 	L2DB              struct {
 		SafetyPeriod common.BatchNum `validate:"required"`
 		MaxTxs       uint32          `validate:"required"`
@@ -48,6 +49,16 @@ type Coordinator struct {
 		Path string `validate:"required"`
 	} `validate:"required"`
 	ServerProofs []ServerProof `validate:"required"`
+	EthClient    struct {
+		CallGasLimit        uint64   `validate:"required"`
+		DeployGasLimit      uint64   `validate:"required"`
+		GasPriceDiv         uint64   `validate:"required"`
+		ReceiptTimeout      Duration `validate:"required"`
+		IntervalReceiptLoop Duration `validate:"required"`
+	} `validate:"required"`
+	API struct {
+		Coordinator bool
+	} `validate:"required"`
 }
 
 // Node is the hermez node configuration.
@@ -78,12 +89,9 @@ type Node struct {
 		TokenHEZ     ethCommon.Address `validate:"required"`
 		TokenHEZName string            `validate:"required"`
 	} `validate:"required"`
-	EthClient struct {
-		CallGasLimit        uint64   `validate:"required"`
-		DeployGasLimit      uint64   `validate:"required"`
-		GasPriceDiv         uint64   `validate:"required"`
-		ReceiptTimeout      Duration `validate:"required"`
-		IntervalReceiptLoop Duration `validate:"required"`
+	API struct {
+		Address  string
+		Explorer bool
 	} `validate:"required"`
 	Debug struct {
 		APIAddress string

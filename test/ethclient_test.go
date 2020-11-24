@@ -40,7 +40,7 @@ func TestClientEth(t *testing.T) {
 	var timer timer
 	clientSetup := NewClientSetupExample()
 	c := NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
-	blockNum, err := c.EthCurrentBlock()
+	blockNum, err := c.EthLastBlock()
 	require.Nil(t, err)
 	assert.Equal(t, int64(1), blockNum)
 
@@ -126,7 +126,7 @@ func TestClientAuction(t *testing.T) {
 
 	c.CtlMineBlock()
 
-	blockNum, err := c.EthCurrentBlock()
+	blockNum, err := c.EthLastBlock()
 	require.Nil(t, err)
 
 	auctionEvents, _, err := c.AuctionEventsByBlock(blockNum)
@@ -168,7 +168,7 @@ func TestClientRollup(t *testing.T) {
 	}
 	c.CtlMineBlock()
 
-	blockNum, err := c.EthCurrentBlock()
+	blockNum, err := c.EthLastBlock()
 	require.Nil(t, err)
 	rollupEvents, _, err := c.RollupEventsByBlock(blockNum)
 	require.Nil(t, err)
@@ -189,7 +189,7 @@ func TestClientRollup(t *testing.T) {
 	})
 	c.CtlMineBlock()
 
-	blockNumA, err := c.EthCurrentBlock()
+	blockNumA, err := c.EthLastBlock()
 	require.Nil(t, err)
 	rollupEvents, hashA, err := c.RollupEventsByBlock(blockNumA)
 	require.Nil(t, err)
@@ -202,7 +202,7 @@ func TestClientRollup(t *testing.T) {
 	c.CtlRollback()
 	c.CtlMineBlock()
 
-	blockNumB, err := c.EthCurrentBlock()
+	blockNumB, err := c.EthLastBlock()
 	require.Nil(t, err)
 	rollupEvents, hashB, err := c.RollupEventsByBlock(blockNumA)
 	require.Nil(t, err)
@@ -229,7 +229,7 @@ func TestClientRollup(t *testing.T) {
 
 	// Retrieve ForgeBatchArguments starting from the events
 
-	blockNum, err = c.EthCurrentBlock()
+	blockNum, err = c.EthLastBlock()
 	require.Nil(t, err)
 	rollupEvents, _, err = c.RollupEventsByBlock(blockNum)
 	require.Nil(t, err)

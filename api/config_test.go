@@ -9,22 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getConfigTest() configAPI {
-	var config configAPI
+func getConfigTest() Config {
+	var config Config
 
-	config.RollupConstants.ExchangeMultiplier = common.RollupConstExchangeMultiplier
-	config.RollupConstants.ExitIdx = common.RollupConstExitIDx
-	config.RollupConstants.ReservedIdx = common.RollupConstReservedIDx
-	config.RollupConstants.LimitLoadAmount, _ = new(big.Int).SetString("340282366920938463463374607431768211456", 10)
-	config.RollupConstants.LimitL2TransferAmount, _ = new(big.Int).SetString("6277101735386680763835789423207666416102355444464034512896", 10)
-	config.RollupConstants.LimitTokens = common.RollupConstLimitTokens
-	config.RollupConstants.L1CoordinatorTotalBytes = common.RollupConstL1CoordinatorTotalBytes
-	config.RollupConstants.L1UserTotalBytes = common.RollupConstL1UserTotalBytes
-	config.RollupConstants.MaxL1UserTx = common.RollupConstMaxL1UserTx
-	config.RollupConstants.MaxL1Tx = common.RollupConstMaxL1Tx
-	config.RollupConstants.InputSHAConstantBytes = common.RollupConstInputSHAConstantBytes
-	config.RollupConstants.NumBuckets = common.RollupConstNumBuckets
-	config.RollupConstants.MaxWithdrawalDelay = common.RollupConstMaxWithdrawalDelay
 	var rollupPublicConstants common.RollupConstants
 	rollupPublicConstants.AbsoluteMaxL1L2BatchTimeout = 240
 	rollupPublicConstants.HermezAuctionContract = ethCommon.HexToAddress("0x500D1d6A4c7D8Ae28240b47c8FCde034D827fD5e")
@@ -50,7 +37,7 @@ func getConfigTest() configAPI {
 	wdelayerConstants.MaxEmergencyModeTime = uint64(1000000)
 	wdelayerConstants.MaxWithdrawalDelay = uint64(10000000)
 
-	config.RollupConstants.PublicConstants = rollupPublicConstants
+	config.RollupConstants = rollupPublicConstants
 	config.AuctionConstants = auctionConstants
 	config.WDelayerConstants = wdelayerConstants
 

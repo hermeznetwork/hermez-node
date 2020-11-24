@@ -61,10 +61,6 @@ const (
 	RollupConstReservedIDx = 255
 	// RollupConstExitIDx IDX 1 is reserved for exits
 	RollupConstExitIDx = 1
-	// RollupConstLimitLoadAmount Max load amount allowed (loadAmount: L1 --> L2)
-	RollupConstLimitLoadAmount = (1 << 128)
-	// RollupConstLimitL2TransferAmount Max amount allowed (amount L2 --> L2)
-	RollupConstLimitL2TransferAmount = (1 << 192)
 	// RollupConstLimitTokens Max number of tokens allowed to be registered inside the rollup
 	RollupConstLimitTokens = (1 << 32)
 	// RollupConstL1CoordinatorTotalBytes [4 bytes] token + [32 bytes] babyjub + [65 bytes] compressedSignature
@@ -91,6 +87,11 @@ const (
 )
 
 var (
+	// RollupConstLimitLoadAmount Max load amount allowed (loadAmount: L1 --> L2)
+	RollupConstLimitLoadAmount, _ = new(big.Int).SetString("340282366920938463463374607431768211456", 10)
+	// RollupConstLimitL2TransferAmount Max amount allowed (amount L2 --> L2)
+	RollupConstLimitL2TransferAmount, _ = new(big.Int).SetString("6277101735386680763835789423207666416102355444464034512896", 10)
+
 	// RollupConstEthAddressInternalOnly This ethereum address is used internally for rollup accounts that don't have ethereum address, only Babyjubjub
 	// This non-ethereum accounts can be created by the coordinator and allow users to have a rollup
 	// account without needing an ethereum address

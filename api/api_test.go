@@ -219,7 +219,12 @@ func TestMain(m *testing.M) {
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 
 	// Config (smart contract constants)
-	config = getConfigTest()
+	_config := getConfigTest()
+	config = configAPI{
+		RollupConstants:   *newRollupConstants(_config.RollupConstants),
+		AuctionConstants:  _config.AuctionConstants,
+		WDelayerConstants: _config.WDelayerConstants,
+	}
 
 	// API
 	apiGin := gin.Default()
@@ -230,7 +235,7 @@ func TestMain(m *testing.M) {
 		hdb,
 		sdb,
 		l2DB,
-		&config,
+		&_config,
 	)
 	if err != nil {
 		panic(err)
@@ -295,7 +300,8 @@ func TestMain(m *testing.M) {
 	}
 	for _, block := range blocksData {
 		// Insert block into HistoryDB
-		if err := api.h.AddBlockSCData(&block); err != nil { //nolint:gosec block is used as read only in the function
+		// nolint reason: block is used as read only in the function
+		if err := api.h.AddBlockSCData(&block); err != nil { //nolint:gosec
 			panic(err)
 		}
 		// Extract data

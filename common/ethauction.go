@@ -23,6 +23,28 @@ type AuctionConstants struct {
 	GovernanceAddress ethCommon.Address `json:"governanceAddress"`
 }
 
+// SlotNum returns the slot number of a block number
+func (c *AuctionConstants) SlotNum(blockNum int64) int64 {
+	if blockNum >= c.GenesisBlockNum {
+		return (blockNum - c.GenesisBlockNum) / int64(c.BlocksPerSlot)
+	}
+	return -1
+}
+
+// SlotBlocks returns the first and the last block numbers included in that slot
+func (c *AuctionConstants) SlotBlocks(slotNum int64) (int64, int64) {
+	startBlock := c.GenesisBlockNum + slotNum*int64(c.BlocksPerSlot)
+	endBlock := startBlock + int64(c.BlocksPerSlot) - 1
+	return startBlock, endBlock
+}
+
+// RelativeBlock returns the relative block number within the slot where the
+// block number belongs
+func (c *AuctionConstants) RelativeBlock(blockNum int64) int64 {
+	slotNum := c.SlotNum(blockNum)
+	return blockNum - (c.GenesisBlockNum + (slotNum * int64(c.BlocksPerSlot)))
+}
+
 // AuctionVariables are the variables of the Auction Smart Contract
 type AuctionVariables struct {
 	EthBlockNum int64 `json:"ethereumBlockNum" meddler:"eth_block_num"`
@@ -32,6 +54,8 @@ type AuctionVariables struct {
 	BootCoordinator ethCommon.Address `json:"bootCoordinator" meddler:"boot_coordinator" validate:"required"`
 	// The minimum bid value in a series of 6 slots
 	DefaultSlotSetBid [6]*big.Int `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
+	// SlotNum at which the new default_slot_set_bid applies
+	DefaultSlotSetBidSlotNum int64 `json:"-" meddler:"default_slot_set_bid_slot_num"`
 	// Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
 	ClosedAuctionSlots uint16 `json:"closedAuctionSlots" meddler:"closed_auction_slots" validate:"required"`
 	// Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )
@@ -48,7 +72,7 @@ type AuctionVariables struct {
 func (v *AuctionVariables) Copy() *AuctionVariables {
 	vCpy := *v
 	for i := range v.DefaultSlotSetBid {
-		vCpy.DefaultSlotSetBid[i] = new(big.Int).SetBytes(v.DefaultSlotSetBid[i].Bytes())
+		vCpy.DefaultSlotSetBid[i] = CopyBigInt(v.DefaultSlotSetBid[i])
 	}
 	return &vCpy
 }

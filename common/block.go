@@ -88,28 +88,3 @@ type BlockData struct {
 	// TODO: enable when common.WithdrawalDelayerVars is Merged from Synchronizer PR
 	// WithdrawalDelayerVars *common.WithdrawalDelayerVars
 }
-
-// BatchData contains the information of a Batch
-type BatchData struct {
-	// L1UserTxs that were forged in the batch
-	L1Batch bool // TODO: Remove once Batch.ForgeL1TxsNum is a pointer
-	// L1UserTxs        []common.L1Tx
-	L1CoordinatorTxs []L1Tx
-	L2Txs            []L2Tx
-	CreatedAccounts  []Account
-	ExitTree         []ExitInfo
-	Batch            Batch
-}
-
-// NewBatchData creates an empty BatchData with the slices initialized.
-func NewBatchData() *BatchData {
-	return &BatchData{
-		L1Batch: false,
-		// L1UserTxs:        make([]common.L1Tx, 0),
-		L1CoordinatorTxs: make([]L1Tx, 0),
-		L2Txs:            make([]L2Tx, 0),
-		CreatedAccounts:  make([]Account, 0),
-		ExitTree:         make([]ExitInfo, 0),
-		Batch:            Batch{},
-	}
-}
