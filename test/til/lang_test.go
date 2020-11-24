@@ -117,7 +117,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser := newParser(strings.NewReader(s))
 	_, err := parser.parse()
-	assert.Equal(t, "Line 2: Deposit(1)A:: 10\n, err: strconv.Atoi: parsing \":\": invalid syntax", err.Error())
+	assert.Equal(t, "Line 2: Deposit(1)A:: 10\n, err: Can not parse number for Amount: :", err.Error())
 
 	s = `
 		Type: Blockchain

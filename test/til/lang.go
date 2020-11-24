@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"sort"
 	"strconv"
 
@@ -61,8 +62,8 @@ type instruction struct {
 	literal    string
 	from       string
 	to         string
-	amount     uint64
-	loadAmount uint64
+	amount     *big.Int
+	loadAmount *big.Int
 	fee        uint8
 	tokenID    common.TokenID
 	typ        common.TxType // D: Deposit, T: Transfer, E: ForceExit
@@ -433,30 +434,30 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		// deposit case
 		_, lit = p.scanIgnoreWhitespace()
 		c.literal += lit
-		loadAmount, err := strconv.Atoi(lit)
-		if err != nil {
+		loadAmount, ok := new(big.Int).SetString(lit, 10)
+		if !ok {
 			line, _ := p.s.r.ReadString('\n')
 			c.literal += line
-			return c, err
+			return c, fmt.Errorf("Can not parse number for LoadAmount")
 		}
-		c.loadAmount = uint64(loadAmount)
+		c.loadAmount = loadAmount
 		if err := p.expectChar(c, ","); err != nil {
 			return c, err
 		}
 	}
 	_, lit = p.scanIgnoreWhitespace()
 	c.literal += lit
-	amount, err := strconv.Atoi(lit)
-	if err != nil {
+	amount, ok := new(big.Int).SetString(lit, 10)
+	if !ok {
 		line, _ := p.s.r.ReadString('\n')
 		c.literal += line
-		return c, err
+		return c, fmt.Errorf("Can not parse number for Amount: %s", lit)
 	}
 	if c.typ == common.TxTypeDeposit ||
 		c.typ == common.TxTypeCreateAccountDeposit {
-		c.loadAmount = uint64(amount)
+		c.loadAmount = amount
 	} else {
-		c.amount = uint64(amount)
+		c.amount = amount
 	}
 	if fee {
 		if err := p.expectChar(c, "("); err != nil {
