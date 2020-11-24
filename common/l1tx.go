@@ -286,23 +286,21 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 }
 
 // L1CoordinatorTxFromBytes decodes a L1Tx from []byte
-func L1CoordinatorTxFromBytes(b []byte) (*L1Tx, error) {
+func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommon.Address) (*L1Tx, error) {
 	if len(b) != L1CoordinatorTxBytesLen {
 		return nil, fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d", 101, len(b))
 	}
 
-	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n98")
+	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n120")
 	bytesMessage2 := []byte("I authorize this babyjubjub key for hermez rollup account creation")
 
 	tx := &L1Tx{
 		UserOrigin: false,
 	}
 	var err error
-	// Ethereum adds 27 to v
-	v := b[0] - byte(27) //nolint:gomnd
+	v := b[0]
 	s := b[1:33]
 	r := b[33:65]
-
 	pkCompB := b[65:97]
 	pkCompL := SwapEndianness(pkCompB)
 	var pkComp babyjub.PublicKeyComp
@@ -315,26 +313,37 @@ func L1CoordinatorTxFromBytes(b []byte) (*L1Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	var data []byte
-	data = append(data, bytesMessage1...)
-	data = append(data, bytesMessage2...)
-	data = append(data, pkCompB...)
-	var signature []byte
-	signature = append(signature, r[:]...)
-	signature = append(signature, s[:]...)
-	signature = append(signature, v)
-	hash := crypto.Keccak256(data)
-	pubKeyBytes, err := crypto.Ecrecover(hash, signature)
-	if err != nil {
-		return nil, err
-	}
-	pubKey, err := crypto.UnmarshalPubkey(pubKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-	tx.FromEthAddr = crypto.PubkeyToAddress(*pubKey)
 	tx.Amount = big.NewInt(0)
 	tx.LoadAmount = big.NewInt(0)
+	if int(v) > 0 {
+		// L1CoordinatorTX ETH
+		// Ethereum adds 27 to v
+		v = b[0] - byte(27) //nolint:gomnd
+		chainIDBytes := ethCommon.LeftPadBytes(chainID.Bytes(), 2)
+		hermezAddressBytes := ethCommon.LeftPadBytes(hermezAddress.Bytes(), 32)
+		var data []byte
+		data = append(data, bytesMessage1...)
+		data = append(data, bytesMessage2...)
+		data = append(data, pkCompB...)
+		data = append(data, chainIDBytes[:]...)
+		data = append(data, hermezAddressBytes...)
+		var signature []byte
+		signature = append(signature, r[:]...)
+		signature = append(signature, s[:]...)
+		signature = append(signature, v)
+		hash := crypto.Keccak256(data)
+		pubKeyBytes, err := crypto.Ecrecover(hash, signature)
+		if err != nil {
+			return nil, err
+		}
+		pubKey, err := crypto.UnmarshalPubkey(pubKeyBytes)
+		if err != nil {
+			return nil, err
+		}
+		tx.FromEthAddr = crypto.PubkeyToAddress(*pubKey)
+	} else {
+		// L1Coordinator Babyjub
+		tx.FromEthAddr = RollupConstEthAddressInternalOnly
+	}
 	return tx, nil
 }

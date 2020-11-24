@@ -10,8 +10,8 @@ abigen --abi=HEZ.abi --bin=HEZ.bin --pkg=HEZ --out=HEZ.go
 ```
 You must compile the contracts to get the `.bin` and `.abi` files. The contracts used are in the repo: https://github.com/hermeznetwork/contracts
 
-Branch: `RemoveERC777`
-Specifically they have been processed in the commit with hash: `2a1cfccfba6770c1077ecea983d2c743dc4a1e93`
+Branch: `feature/newDeploymentScript`
+Specifically they have been processed in the commit with hash: `4489f8e7fe4dd17cf22f1e96741b09bdf81946d8`
 
 Versions:
 ```
