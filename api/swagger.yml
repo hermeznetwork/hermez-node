@@ -1,11 +1,14 @@
 openapi: 3.0.0
 info:
   description: |
-    This API server is the layer that allows 3rd party apps and services interfacing with the coordinator to explore, monitor and use the Hermez rollup.
+    This Hermez node API is the layer that allows 3rd party apps and services to interface with the node to use the layer two features of the Hermez rollup.
     Example of these apps are:
     * Wallet: send L2 transactions, check balance, ...
     * Explorer: List transactions, slots, batches, ...
     * Exchange integrations
+
+    Note that some of the interactions with the rollup must be done using the Ethereum network directly.
+    Another way to integrate with the rollup is to [deploy a node](github.com/hermeznetwork/hermez-node/) and connect directly to its PostgreSQL database.
     
     ### Pagination
     
@@ -25,22 +28,35 @@ info:
 
     Since all the items are ordered chronologicaly, there are no safety problems when fetching items in ascending order, except for reorgs (more on this later).
     On the other hand, when iterating in descending order, new items will be added at the beginning. This doesn't cause any safety problem, but to get those new items, it's necessary to start queryng without the `fromItem` set to `pagination.lastItem`.
-    To handle reorgs, the `itemId` can be used since it will change. This is important since other identifiers may be the same but with different content. As an example, if the batch 424 get's reorged, it will be deleted, but eventualy, a new batch 424 will appear with potentialy different content.
+    To handle reorgs, the `itemId` can be used since it will change. This is important since other identifiers may be the same but with different content. As an example, if batch 424 gets reorged, it will be deleted, but eventually, a new batch 424 will appear with potentially different content. However these two batches number 424, will have different `itemId`.
 
     ### Signatures
 
-    The POST endpoint requires to be signed using BabyJubJub or Ethereum keys. TODO: add references to libraries / examples / ...
+    There are two endpoints that require signatures:
+    * POST /account-creation-authorization: signed using an Ethereum key.
+    * POST /transactions-pool: signed using BJJ key.
+
+    More details on how to sign will be provided soon.
+
+    ### Contact
+
+    If you have any doubt or suggestion, please contact us at:
+    * [GitHub](https://github.com/hermeznetwork/hermez-node/)
+    * [Telegram](https://t.me/hermez_network)
+    * [Discord](https://bit.ly/3nohULM)
+    * Email: hello@hermez.network 
+    * [Twitter](https://twitter.com/hermez_network)
+# TODO: add further documentation on how to sign auths and txs
 
   version: "0.0.1"
   title: Hermez Network API
+# TODO: update with support email
 #  termsOfService: 'http://swagger.io/terms/'
-#  contact:
-#    email: apiteam@swagger.io
-#  license:
-#    name: Apache 2.0
-#    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  license:
+    name: license AGPLv3
+    url: 'https://www.gnu.org/licenses/agpl-3.0.html'
 externalDocs:
-  description: Find out more about Hermez.
+  description: Find out more about Hermez network.
   url: 'https://hermez.io'
 servers:
   - description: Hosted mock up
@@ -100,7 +116,7 @@ paths:
         - Account
       summary: Get to know if the coordinator has the ability to create accounts associated to an Ethereum address.
       description: >-
-        True if the coordinator has the required authorization to perform an account creation with the given Ethereum address on behalf of the Ethereum address holder.
+        Returns the authorization to perform an account creation with the given Ethereum address on behalf of the Ethereum address holder.
       operationId: getAccountCreationAuthorization
       parameters:
         - name: hezEthereumAddress
@@ -157,7 +173,7 @@ paths:
         - name: tokenIds
           in: query
           required: false
-          description: Only get accounts of specific tokens.
+          description: Only get accounts of specific tokens. This is represented by a comma separated list of token identifiers.
           schema:
             type: string
             description: Comma separated list of token identifiers.
@@ -471,9 +487,9 @@ paths:
         - Transaction
       summary: Get details and status of transactions that have been forged.
       description: >-
-        Get historical transactions. This endpoint will return all the different types of transactions except for:
-          - Transactions that are still in the transaction pool of any coordinator. These transactions can be fetched using `GET /transactions-pool/{id}`.
-          - L1 transactions sent by users that have not been forged yet. These transactions can be fetched using `GET /transactions-history/{id}`.
+        Get historical transactions. This endpoint will return all the different types of **forged** transactions, this means that:
+          * Transactions that are still in the transaction pool of any coordinator are not included. These transactions can be fetched using `GET /transactions-pool/{id}`.
+          * L1 transactions sent by users that have not been forged yet are not included. These transactions can be fetched using `GET /transactions-history/{id}`.
       operationId: getHistoryTxs
       parameters:
         - name: tokenId
@@ -567,7 +583,7 @@ paths:
         - Transaction
       summary: Get details and status of a historical transaction.
       description: >-
-        Get transaction from the history by its id. This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
+        Get transaction by its id. This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
       operationId: getHistoryTx
       parameters:
         - name: id
@@ -890,8 +906,9 @@ paths:
     get:
       tags:
         - Hermez status
-      summary: Get a list of bids made for a specific slot auction.
-      description: Get a list of bids made for a specific slot auction. Is necessary to add a filter (`slotNum` or `bidderAddr`).
+      summary: Get a list of bids.
+      description: >- 
+        Get a list of bids. It's necessary to provide at least one of the following filters: `slotNum`, `bidderAddr`.
       operationId: getSlotBids
       parameters:
         - name: slotNum
@@ -1304,6 +1321,19 @@ components:
           description: References the `nonce` of the requested transaction.
           example: null
           nullable: true
+      example:
+        id: '0x020000000001000000000006'
+        type: Transfer
+        tokenId: 6
+        fromAccountIndex: hez:DAI:256
+        toAccountIndex: hez:DAI:257
+        toHezEthereumAddress: 
+        toBjj: 
+        amount: '100000000000000'
+        fee: 0
+        nonce: 6
+        signature: 1a79dd5e661d58266901a0de8afb046b466c4c1af937100f627a421771f2911fa3fde8ea2e272b4802a8b1f1229689292acd6f7e8ab4cadc4ab37b6b9e13a101
+      additionalProperties: false
       required:
       - id
       - type
@@ -1432,6 +1462,40 @@ components:
           example: null
         token:
           $ref: '#/components/schemas/Token'
+      example:
+        amount: '100000000000000'
+        batchNum: 
+        fee: 0
+        fromAccountIndex: hez:SCC:256
+        fromBJJ: hez:r_trOasVEk0zNaalOoS9aLedu6mO7jI5XTIPu_zGXoyn
+        fromHezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+        id: '0x020000000001000000000006'
+        nonce: 6
+        requestAmount: 
+        requestFee: 0
+        requestFromAccountIndex: 
+        requestNonce: 0
+        requestToAccountIndex: 
+        requestToBJJ: 
+        requestToHezEthereumAddress: 
+        requestTokenId: 
+        signature: 5ee9c7b5baa243ba282d18596a55cc357b01513eaed75165365f802102cce4a7a1dd35e3ab31cf9039e2b8a9f570d935115be9379a3dd47813dfc014031ab201
+        state: pend
+        timestamp: '2020-11-17T13:58:54.422232Z'
+        toAccountIndex: hez:SCC:257
+        toBjj: hez:r_trOasVEk0zNaalOoS9aLedu6mO7jI5XTIPu_zGXoyn
+        toHezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+        token:
+          USD: 23.74
+          decimals: 7
+          ethereumAddress: '0x0000000000000000000000000000000000000006'
+          ethereumBlockNum: 2
+          fiatUpdate: 
+          id: 6
+          itemId: 7
+          name: Some Cool Coin
+          symbol: 'SCC'
+        type: Transfer
       required:
         - id
         - type
@@ -1565,6 +1629,10 @@ components:
           $ref: '#/components/schemas/BJJ'
         signature:
           $ref: '#/components/schemas/ETHSignature'
+      example:
+        hezEthereumAddress: hez:0xb5270eB4ae11c6fAAff6F5fa0A5202B8d963634C
+        bjj: hez:hg2Ydsb8O66H-steBR3cnHl944ua7E-PkTJ_SbPBBg5r
+        signature: '0xb7cf237c4a2ff3d4df57752e7b9deb236fa384f03a79d39acf17ec5f8d12a3cf00b017c2466611310cb2bacac68460e96778278646842c6d2bcb79979271c28501'
       required:
       - hezEthereumAddress
       - bjj
@@ -1581,6 +1649,12 @@ components:
           $ref: '#/components/schemas/BJJ'
         signature:
           $ref: '#/components/schemas/ETHSignature'
+      example:
+        hezEthereumAddress: hez:0x74a549b410d01d9eC56346aE52b8550515B283b2
+        bjj: hez:dEZ-Tj7d5h0TAqbnRTTYURYDEo5KZzB87_2WknUU8gCN
+        signature: '0x8db6db2ad6cbe21297fb8ee01c59b01b52d4df7ea92a0f0dee0be0075a8f224a06b367407c8f402cfe0490c142a1c92da3fc29b51162ae160d35e1577d3071bb01'
+        timestamp: '2020-11-17T13:25:36.784295Z'
+      additionalProperties: false
       required:
       - timestamp
       - hezEthereumAddress
@@ -1713,6 +1787,39 @@ components:
             - historicFeeUSD
             - nonce
           additionalProperties: false
+      example:
+        L1Info:
+          ethereumBlockNum: 1
+          historicLoadAmountUSD: 232.47
+          loadAmount: '261'
+          toForgeL1TransactionsNum: 10
+          userOrigin: true
+        L1orL2: L1
+        L2Info: 
+        amount: '261'
+        batchNum: 1
+        fromAccountIndex: hez:ETH:276
+        fromBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
+        fromHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
+        historicUSD: 3784.19
+        id: '0x00000000000000000a000400'
+        itemId: 2
+        position: 4
+        timestamp: '2020-11-17T14:08:12.197554Z'
+        toAccountIndex: hez:ETH:276
+        toBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
+        toHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
+        token:
+          USD: 234.56
+          decimals: 18
+          ethereumAddress: '0x0000000000000000000000000000000000000000'
+          ethereumBlockNum: 0
+          fiatUpdate: 
+          id: 0
+          itemId: 1
+          name: Ether
+          symbol: ETH
+        type: CreateAccountDeposit
       required:
         - L1orL2
         - id
@@ -1743,6 +1850,71 @@ components:
             $ref: '#/components/schemas/HistoryTransaction'
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
+      example:
+        transactions:
+          - L1Info: 
+            L1orL2: L2
+            L2Info:
+              fee: 44
+              historicFeeUSD: 0.01
+              nonce: 301
+            amount: '301'
+            batchNum: 1
+            fromAccountIndex: hez:SCC:276
+            fromBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
+            fromHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
+            historicUSD: 44.72
+            id: '0x02000000000000000000002c'
+            itemId: 1
+            position: 4
+            timestamp: '2020-11-17T14:08:12.197554Z'
+            toAccountIndex: hez:6:276
+            toBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
+            toHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
+            token:
+              USD: 3478.67
+              decimals: 7
+              ethereumAddress: '0x0000000000000000000000000000000000000006'
+              ethereumBlockNum: 2
+              fiatUpdate: 
+              id: 6
+              itemId: 7
+              name: Some Cool Coin
+              symbol: 'SCC'
+            type: Deposit
+          - L1Info:
+              ethereumBlockNum: 1
+              historicLoadAmountUSD: 269
+              loadAmount: '261'
+              toForgeL1TransactionsNum: 10
+              userOrigin: true
+            L1orL2: L1
+            L2Info: 
+            amount: '261'
+            batchNum: 1
+            fromAccountIndex: hez:ETH:276
+            fromBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
+            fromHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
+            historicUSD: 
+            id: '0x00000000000000000a000400'
+            itemId: 2
+            position: 4
+            timestamp: '2020-11-17T14:08:12.197554Z'
+            toAccountIndex: hez:ETH:276
+            toBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
+            toHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
+            token:
+              USD: 734.21
+              decimals: 18
+              ethereumAddress: '0x0000000000000000000000000000000000000000'
+              ethereumBlockNum: 0
+              fiatUpdate: 
+              id: 0
+              itemId: 1
+              name: Ether
+              symbol: ETH
+            type: CreateAccountDeposit
+        pendingItems: 38
       required:
         - transactions
         - pendingItems
@@ -2162,6 +2334,23 @@ components:
           $ref: '#/components/schemas/HezEthereumAddress'
         token:
           $ref: '#/components/schemas/Token'
+      example:
+        accountIndex: hez:SCC:256
+        balance: '2560000000'
+        bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
+        hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+        itemId: 1
+        nonce: 0
+        token:
+          USD: 3478.93
+          decimals: 7
+          ethereumAddress: '0x0000000000000000000000000000000000000006'
+          ethereumBlockNum: 2
+          fiatUpdate: 
+          id: 6
+          itemId: 7
+          name: Some Cool Coin
+          symbol: 'SCC'
       additionalProperties: false
       required:
         - itemId
@@ -2181,6 +2370,57 @@ components:
             $ref: '#/components/schemas/Account'
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
+      example:
+        accounts:
+        - accountIndex: hez:SCC:256
+          balance: '2560000000'
+          bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
+          hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+          itemId: 1
+          nonce: 0
+          token:
+            USD: 53.92
+            decimals: 7
+            ethereumAddress: '0x0000000000000000000000000000000000000006'
+            ethereumBlockNum: 2
+            fiatUpdate: 
+            id: 6
+            itemId: 7
+            name: Some Cool Coin
+            symbol: 'SCC'
+        - accountIndex: hez:ACC:257
+          balance: '2570000000'
+          bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
+          hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+          itemId: 2
+          nonce: 0
+          token:
+            USD: 8.641969
+            decimals: 8
+            ethereumAddress: '0x0000000000000000000000000000000000000007'
+            ethereumBlockNum: 3
+            fiatUpdate: '2020-11-17T13:28:11.016998Z'
+            id: 7
+            itemId: 8
+            name: Another Cool Coin
+            symbol: 'ACC'
+        - accountIndex: hez:VGC:258
+          balance: '2580000000'
+          bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
+          hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+          itemId: 3
+          nonce: 0
+          token:
+            USD: 2349.12
+            decimals: 9
+            ethereumAddress: '0x0000000000000000000000000000000000000008'
+            ethereumBlockNum: 4
+            fiatUpdate: 
+            id: 8
+            itemId: 9
+            name: Vitalik the Great Coin
+            symbol: 'VGC'
+        pendingItems: 1
       additionalProperties: false
       required:
         - accounts
