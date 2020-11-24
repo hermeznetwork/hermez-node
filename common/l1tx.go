@@ -285,14 +285,18 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 	return tx, nil
 }
 
+func signHash(data []byte) []byte {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	return crypto.Keccak256([]byte(msg))
+}
+
 // L1CoordinatorTxFromBytes decodes a L1Tx from []byte
 func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommon.Address) (*L1Tx, error) {
 	if len(b) != L1CoordinatorTxBytesLen {
 		return nil, fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d", 101, len(b))
 	}
 
-	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n120")
-	bytesMessage2 := []byte("I authorize this babyjubjub key for hermez rollup account creation")
+	bytesMessage := []byte("I authorize this babyjubjub key for hermez rollup account creation")
 
 	tx := &L1Tx{
 		UserOrigin: false,
@@ -320,18 +324,16 @@ func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommo
 		// Ethereum adds 27 to v
 		v = b[0] - byte(27) //nolint:gomnd
 		chainIDBytes := ethCommon.LeftPadBytes(chainID.Bytes(), 2)
-		hermezAddressBytes := ethCommon.LeftPadBytes(hermezAddress.Bytes(), 32)
 		var data []byte
-		data = append(data, bytesMessage1...)
-		data = append(data, bytesMessage2...)
+		data = append(data, bytesMessage...)
 		data = append(data, pkCompB...)
 		data = append(data, chainIDBytes[:]...)
-		data = append(data, hermezAddressBytes...)
+		data = append(data, hermezAddress.Bytes()...)
 		var signature []byte
 		signature = append(signature, r[:]...)
 		signature = append(signature, s[:]...)
 		signature = append(signature, v)
-		hash := crypto.Keccak256(data)
+		hash := signHash(data)
 		pubKeyBytes, err := crypto.Ecrecover(hash, signature)
 		if err != nil {
 			return nil, err
