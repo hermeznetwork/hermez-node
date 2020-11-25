@@ -117,7 +117,6 @@ const (
 )
 
 // Tx is a struct used by the TxSelector & BatchBuilder as a generic type generated from L1Tx & PoolL2Tx
-// TODO: this should be changed for "mini Tx"
 type Tx struct {
 	// Generic
 	IsL1        bool      `meddler:"is_l1"`

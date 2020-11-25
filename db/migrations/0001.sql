@@ -149,6 +149,7 @@ CREATE TABLE tx (
     to_eth_addr BYTEA,
     to_bjj BYTEA,
     amount BYTEA NOT NULL,
+    effective_amount BYTEA,
     amount_f NUMERIC NOT NULL,
     token_id INT NOT NULL REFERENCES token (token_id),
     amount_usd NUMERIC, -- Value of the amount in USD at the moment the tx was inserted in the DB
@@ -158,6 +159,7 @@ CREATE TABLE tx (
     to_forge_l1_txs_num BIGINT,
     user_origin BOOLEAN,
     load_amount BYTEA,
+    effective_load_amount BYTEA,
     load_amount_f NUMERIC,
     load_amount_usd NUMERIC,
     -- L2

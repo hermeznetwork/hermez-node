@@ -37,10 +37,14 @@ type L1Tx struct {
 	ToIdx           Idx                `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
 	TokenID         TokenID            `meddler:"token_id"`
 	Amount          *big.Int           `meddler:"amount,bigint"`
-	LoadAmount      *big.Int           `meddler:"load_amount,bigint"`
-	EthBlockNum     int64              `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
-	Type            TxType             `meddler:"type"`
-	BatchNum        *BatchNum          `meddler:"batch_num"`
+	// EffectiveAmount only applies to L1UserTx.
+	EffectiveAmount *big.Int `meddler:"effective_amount,bigintnull"`
+	LoadAmount      *big.Int `meddler:"load_amount,bigint"`
+	// EffectiveLoadAmount only applies to L1UserTx.
+	EffectiveLoadAmount *big.Int  `meddler:"effective_load_amount,bigintnull"`
+	EthBlockNum         int64     `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
+	Type                TxType    `meddler:"type"`
+	BatchNum            *BatchNum `meddler:"batch_num"`
 }
 
 // NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated
@@ -117,7 +121,7 @@ func (tx *L1Tx) CalcTxID() (*TxID, error) {
 
 // Tx returns a *Tx from the L1Tx
 func (tx L1Tx) Tx() Tx {
-	f := new(big.Float).SetInt(tx.Amount)
+	f := new(big.Float).SetInt(tx.EffectiveAmount)
 	amountFloat, _ := f.Float64()
 	userOrigin := new(bool)
 	*userOrigin = tx.UserOrigin
@@ -128,14 +132,14 @@ func (tx L1Tx) Tx() Tx {
 		Position:        tx.Position,
 		FromIdx:         tx.FromIdx,
 		ToIdx:           tx.ToIdx,
-		Amount:          tx.Amount,
+		Amount:          tx.EffectiveAmount,
 		AmountFloat:     amountFloat,
 		TokenID:         tx.TokenID,
 		ToForgeL1TxsNum: tx.ToForgeL1TxsNum,
 		UserOrigin:      userOrigin,
 		FromEthAddr:     tx.FromEthAddr,
 		FromBJJ:         tx.FromBJJ,
-		LoadAmount:      tx.LoadAmount,
+		LoadAmount:      tx.EffectiveLoadAmount,
 		EthBlockNum:     tx.EthBlockNum,
 	}
 	if tx.LoadAmount != nil {
@@ -181,6 +185,34 @@ func (tx L1Tx) TxCompressedData() (*big.Int, error) {
 
 	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
+}
+
+// BytesDataAvailability encodes a L1Tx into []byte for the Data Availability
+func (tx *L1Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
+	idxLen := nLevels / 8 //nolint:gomnd
+
+	b := make([]byte, ((nLevels*2)+16+8)/8) //nolint:gomnd
+
+	fromIdxBytes, err := tx.FromIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[0:idxLen], fromIdxBytes[6-idxLen:])
+	toIdxBytes, err := tx.ToIdx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	copy(b[idxLen:idxLen*2], toIdxBytes[6-idxLen:])
+
+	if tx.EffectiveAmount != nil {
+		amountFloat16, err := NewFloat16(tx.EffectiveAmount)
+		if err != nil {
+			return nil, err
+		}
+		copy(b[idxLen*2:idxLen*2+2], amountFloat16.Bytes())
+	}
+	// fee = 0 (as is L1Tx) b[10:11]
+	return b[:], nil
 }
 
 // BytesGeneric returns the generic representation of a L1Tx. This method is

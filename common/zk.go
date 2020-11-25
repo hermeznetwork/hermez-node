@@ -32,9 +32,10 @@ type ZKMetadata struct {
 	// is constant for all circuits: 64)
 	MaxFeeIdxs uint32
 
-	L1TxsData [][]byte
-	L2TxsData [][]byte
-	ChainID   uint16
+	L1TxsData             [][]byte
+	L1TxsDataAvailability [][]byte
+	L2TxsData             [][]byte
+	ChainID               uint16
 
 	NewLastIdxRaw   Idx
 	NewStateRootRaw *merkletree.Hash
@@ -49,6 +50,8 @@ type ZKInputs struct {
 	// General
 	//
 
+	// CurrentNumBatch is the current batch number processed
+	CurrentNumBatch *big.Int `json:"currentNumBatch"` // uint32
 	// inputs for final `hashGlobalInputs`
 	// OldLastIdx is the last index assigned to an account
 	OldLastIdx *big.Int `json:"oldLastIdx"` // uint64 (max nLevels bits)
@@ -72,6 +75,9 @@ type ZKInputs struct {
 	TxCompressedData []*big.Int `json:"txCompressedData"` // big.Int (max 251 bits), len: [nTx]
 	// TxCompressedDataV2, only used in L2Txs, in L1Txs is set to 0
 	TxCompressedDataV2 []*big.Int `json:"txCompressedDataV2"` // big.Int (max 193 bits), len: [nTx]
+	// MaxNumBatch is the maximum allowed batch number when the transaction
+	// can be processed
+	MaxNumBatch []*big.Int `json:"maxNumBatch"` // uint32
 
 	// FromIdx
 	FromIdx []*big.Int `json:"fromIdx"` // uint64 (max nLevels bits), len: [nTx]
@@ -266,7 +272,7 @@ func (z ZKInputs) MarshalJSON() ([]byte, error) {
 }
 
 // NewZKInputs returns a pointer to an initialized struct of ZKInputs
-func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32) *ZKInputs {
+func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatch *big.Int) *ZKInputs {
 	zki := &ZKInputs{}
 	zki.Metadata.NTx = nTx
 	zki.Metadata.MaxFeeIdxs = maxFeeIdxs
@@ -276,15 +282,17 @@ func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32) *ZKInputs {
 	zki.Metadata.MaxTx = maxTx
 
 	// General
+	zki.CurrentNumBatch = currentNumBatch
 	zki.OldLastIdx = big.NewInt(0)
 	zki.OldStateRoot = big.NewInt(0)
-	zki.GlobalChainID = big.NewInt(0)
+	zki.GlobalChainID = big.NewInt(0) // TODO pass by parameter
 	zki.FeeIdxs = newSlice(maxFeeIdxs)
 	zki.FeePlanTokens = newSlice(maxFeeIdxs)
 
 	// Txs
 	zki.TxCompressedData = newSlice(nTx)
 	zki.TxCompressedDataV2 = newSlice(nTx)
+	zki.MaxNumBatch = newSlice(nTx)
 	zki.FromIdx = newSlice(nTx)
 	zki.AuxFromIdx = newSlice(nTx)
 	zki.ToIdx = newSlice(nTx)
@@ -451,6 +459,12 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	}
 	b = append(b, l1TxsData...)
 
+	var l1TxsDataAvailability []byte
+	for i := 0; i < len(z.Metadata.L1TxsDataAvailability); i++ {
+		l1TxsDataAvailability = append(l1TxsDataAvailability, z.Metadata.L1TxsDataAvailability[i]...)
+	}
+	b = append(b, l1TxsDataAvailability...)
+
 	// [MAX_TX*(2*NLevels + 24) bits] L2TxsData
 	var l2TxsData []byte
 	l2TxDataLen := 2*z.Metadata.NLevels + 24 //nolint:gomnd
@@ -463,9 +477,9 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 		return nil, fmt.Errorf("len(l2TxsData): %d, expected: %d", len(l2TxsData), expectedL2TxsDataLen)
 	}
 
-	l2TxsPadding := make([]byte, (int(z.Metadata.MaxTx)-len(z.Metadata.L2TxsData))*int(l2TxDataLen)/8) //nolint:gomnd
-	b = append(b, l2TxsPadding...)
 	b = append(b, l2TxsData...)
+	l2TxsPadding := make([]byte, (int(z.Metadata.MaxTx)-len(z.Metadata.L1TxsDataAvailability)-len(z.Metadata.L2TxsData))*int(l2TxDataLen)/8) //nolint:gomnd
+	b = append(b, l2TxsPadding...)
 
 	// [NLevels * MAX_TOKENS_FEE bits] feeTxsData
 	for i := 0; i < len(z.FeeIdxs); i++ {
@@ -485,6 +499,12 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	var chainID [2]byte
 	binary.BigEndian.PutUint16(chainID[:], z.Metadata.ChainID)
 	b = append(b, chainID[:]...)
+
+	// [32 bits] currentNumBatch
+	currNumBatchBytes := z.CurrentNumBatch.Bytes()
+	var currNumBatch [4]byte
+	copy(currNumBatch[4-len(currNumBatchBytes):], currNumBatchBytes)
+	b = append(b, currNumBatch[:]...)
 
 	return b, nil
 }

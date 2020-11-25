@@ -207,7 +207,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				toIdxName:   inst.to,
 				L1Tx:        tx,
 			}
-			if err := tc.addToL1Queue(testTx); err != nil {
+			if err := tc.addToL1UserQueue(testTx); err != nil {
 				return nil, err
 			}
 		case common.TxTypeDeposit, common.TxTypeDepositTransfer: // tx source: L1UserTx
@@ -234,7 +234,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				toIdxName:   inst.to,
 				L1Tx:        tx,
 			}
-			if err := tc.addToL1Queue(testTx); err != nil {
+			if err := tc.addToL1UserQueue(testTx); err != nil {
 				return nil, err
 			}
 		case common.TxTypeTransfer: // L2Tx
@@ -274,7 +274,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				toIdxName:   inst.to,
 				L1Tx:        tx,
 			}
-			if err := tc.addToL1Queue(testTx); err != nil {
+			if err := tc.addToL1UserQueue(testTx); err != nil {
 				return nil, err
 			}
 		case common.TxTypeExit: // tx source: L2Tx
@@ -316,7 +316,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				toIdxName:   inst.to,
 				L1Tx:        tx,
 			}
-			if err := tc.addToL1Queue(testTx); err != nil {
+			if err := tc.addToL1UserQueue(testTx); err != nil {
 				return nil, err
 			}
 		case typeNewBatch:
@@ -449,8 +449,8 @@ func (tc *Context) setIdxs() error {
 	return nil
 }
 
-// addToL1Queue adds the L1Tx into the queue that is open and has space
-func (tc *Context) addToL1Queue(tx L1Tx) error {
+// addToL1UserQueue adds the L1UserTx into the queue that is open and has space
+func (tc *Context) addToL1UserQueue(tx L1Tx) error {
 	if len(tc.Queues[tc.openToForge]) >= tc.rollupConstMaxL1UserTx {
 		// if current OpenToForge queue reached its Max, move into a
 		// new queue
@@ -698,6 +698,8 @@ func (tc *Context) FillBlocksL1UserTxsBatchNum(blocks []common.BlockData) {
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].BatchNum
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].EthBlockNum
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].Position
+// - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveAmount
+// - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveLoadAmount
 // - blocks[].Rollup.Batch.L2Txs[].TxID
 // - blocks[].Rollup.Batch.L2Txs[].Position
 // - blocks[].Rollup.Batch.L2Txs[].Nonce
@@ -779,6 +781,8 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 				tx := &batch.L1CoordinatorTxs[k]
 				tx.Position = position
 				position++
+				tx.EffectiveAmount = big.NewInt(0)
+				tx.EffectiveLoadAmount = big.NewInt(0)
 				nTx, err := common.NewL1Tx(tx)
 				if err != nil {
 					return err

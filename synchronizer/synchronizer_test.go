@@ -80,9 +80,14 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	assert.Equal(t, len(block.Rollup.L1UserTxs), len(syncBlock.Rollup.L1UserTxs))
 	dbL1UserTxs, err := s.historyDB.GetAllL1UserTxs()
 	require.Nil(t, err)
-	// Ignore BatchNum in syncBlock.L1UserTxs because this value is set by the HistoryDB
+	// Ignore BatchNum in syncBlock.L1UserTxs because this value is set by
+	// the HistoryDB. Also ignore EffectiveAmount & EffectiveLoadAmount
+	// because this value is set by StateDB.ProcessTxs.
 	for i := range syncBlock.Rollup.L1UserTxs {
 		syncBlock.Rollup.L1UserTxs[i].BatchNum = block.Rollup.L1UserTxs[i].BatchNum
+		syncBlock.Rollup.L1UserTxs[i].EffectiveAmount = block.Rollup.L1UserTxs[i].EffectiveAmount
+		syncBlock.Rollup.L1UserTxs[i].EffectiveLoadAmount =
+			block.Rollup.L1UserTxs[i].EffectiveLoadAmount
 	}
 	assert.Equal(t, block.Rollup.L1UserTxs, syncBlock.Rollup.L1UserTxs)
 	for _, tx := range block.Rollup.L1UserTxs {
@@ -134,6 +139,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 		assert.Equal(t, batch.L2Txs, syncBatch.L2Txs)
 		// In exit tree, we only check AccountIdx and Balance, because
 		// it's what we have precomputed before.
+		require.Equal(t, len(batch.ExitTree), len(syncBatch.ExitTree))
 		for j := range batch.ExitTree {
 			exit := &batch.ExitTree[j]
 			assert.Equal(t, exit.AccountIdx, syncBatch.ExitTree[j].AccountIdx)
@@ -384,6 +390,7 @@ func TestSync(t *testing.T) {
 		> block // blockNum=2
 
 		CreateAccountDepositTransfer(1) E-A: 1000, 200 // Idx=256+7=263
+		ForceTransfer(1) C-B: 80
 		ForceExit(1) A: 100
 		ForceExit(1) B: 80
 		ForceTransfer(1) A-D: 100
@@ -415,7 +422,7 @@ func TestSync(t *testing.T) {
 	// blocks 1 (blockNum=3)
 	i = 1
 	require.Equal(t, 3, int(blocks[i].Block.Num))
-	require.Equal(t, 4, len(blocks[i].Rollup.L1UserTxs))
+	require.Equal(t, 5, len(blocks[i].Rollup.L1UserTxs))
 	require.Equal(t, 2, len(blocks[i].Rollup.Batches))
 	require.Equal(t, 3, len(blocks[i].Rollup.Batches[0].L2Txs))
 

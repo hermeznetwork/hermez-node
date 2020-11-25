@@ -1,6 +1,7 @@
 package statedb
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -93,7 +94,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	exits := make([]processedExit, nTx)
 
 	if s.typ == TypeBatchBuilder {
-		s.zki = common.NewZKInputs(uint32(nTx), ptc.MaxL1Tx, ptc.MaxTx, ptc.MaxFeeTx, ptc.NLevels)
+		s.zki = common.NewZKInputs(uint32(nTx), ptc.MaxL1Tx, ptc.MaxTx, ptc.MaxFeeTx, ptc.NLevels, s.currentBatch.BigInt())
 		s.zki.OldLastIdx = s.idx.BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
 	}
@@ -137,6 +138,12 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 				return nil, err
 			}
 			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
+
+			l1TxDataAvailability, err := l1usertxs[i].BytesDataAvailability(s.zki.Metadata.NLevels)
+			if err != nil {
+				return nil, err
+			}
+			s.zki.Metadata.L1TxsDataAvailability = append(s.zki.Metadata.L1TxsDataAvailability, l1TxDataAvailability)
 
 			if s.i < nTx-1 {
 				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
@@ -222,7 +229,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			return nil, err
 		}
 		if s.zki != nil {
-			l2TxData, err := l2txs[i].L2Tx().Bytes(s.zki.Metadata.NLevels)
+			l2TxData, err := l2txs[i].L2Tx().BytesDataAvailability(s.zki.Metadata.NLevels)
 			if err != nil {
 				return nil, err
 			}
@@ -443,6 +450,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 
 	switch tx.Type {
 	case common.TxTypeForceTransfer:
+		s.computeEffectiveAmounts(tx)
+
 		// go to the MT account of sender and receiver, and update balance
 		// & nonce
 
@@ -454,6 +463,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 			return nil, nil, false, nil, err
 		}
 	case common.TxTypeCreateAccountDeposit:
+		s.computeEffectiveAmounts(tx)
+
 		// add new account to the MT, update balance of the MT account
 		err := s.applyCreateAccount(tx)
 		if err != nil {
@@ -464,6 +475,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		// which in the case type==TypeSynchronizer will be added to an
 		// array of created accounts that will be returned
 	case common.TxTypeDeposit:
+		s.computeEffectiveAmounts(tx)
+
 		// update balance of the MT account
 		err := s.applyDeposit(tx, false)
 		if err != nil {
@@ -471,6 +484,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 			return nil, nil, false, nil, err
 		}
 	case common.TxTypeDepositTransfer:
+		s.computeEffectiveAmounts(tx)
+
 		// update balance in MT account, update balance & nonce of sender
 		// & receiver
 		err := s.applyDeposit(tx, true)
@@ -479,6 +494,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 			return nil, nil, false, nil, err
 		}
 	case common.TxTypeCreateAccountDepositTransfer:
+		s.computeEffectiveAmounts(tx)
+
 		// add new account to the merkletree, update balance in MT account,
 		// update balance & nonce of sender & receiver
 		err := s.applyCreateAccountDepositTransfer(tx)
@@ -487,6 +504,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 			return nil, nil, false, nil, err
 		}
 	case common.TxTypeForceExit:
+		s.computeEffectiveAmounts(tx)
+
 		// execute exit flow
 		// coordIdxsMap is 'nil', as at L1Txs there is no L2 fees
 		exitAccount, newExit, err := s.applyExit(nil, nil, exitTree, tx.Tx())
@@ -520,6 +539,11 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 	var err error
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
 	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
+		if s.typ == TypeSynchronizer {
+			// this should never be reached
+			log.Error("WARNING: In StateDB with Synchronizer mode L2.ToIdx can't be 0")
+			return nil, nil, false, fmt.Errorf("In StateDB with Synchronizer mode L2.ToIdx can't be 0")
+		}
 		// case when tx.Type== common.TxTypeTransferToEthAddr or common.TxTypeTransferToBJJ
 		tx.AuxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ, tx.TokenID)
 		if err != nil {
@@ -612,7 +636,7 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 	account := &common.Account{
 		TokenID:   tx.TokenID,
 		Nonce:     0,
-		Balance:   tx.LoadAmount,
+		Balance:   tx.EffectiveLoadAmount,
 		PublicKey: tx.FromBJJ,
 		EthAddr:   tx.FromEthAddr,
 	}
@@ -628,7 +652,7 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 			s.zki.Sign1[s.i] = big.NewInt(1)
 		}
 		s.zki.Ay1[s.i] = tx.FromBJJ.Y
-		s.zki.Balance1[s.i] = tx.LoadAmount
+		s.zki.Balance1[s.i] = tx.EffectiveLoadAmount
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
 		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(p.Siblings)
 		if p.IsOld0 {
@@ -656,12 +680,12 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 // andTransfer parameter is set to true, the method will also apply the
 // Transfer of the L1Tx/DepositTransfer
 func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
-	// deposit the tx.LoadAmount into the sender account
+	// deposit the tx.EffectiveLoadAmount into the sender account
 	accSender, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
 		return err
 	}
-	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.LoadAmount)
+	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.EffectiveLoadAmount)
 
 	// in case that the tx is a L1Tx>DepositTransfer
 	var accReceiver *common.Account
@@ -671,9 +695,9 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 			return err
 		}
 		// subtract amount to the sender
-		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
+		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
 		// add amount to the receiver
-		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
+		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
 	}
 	// update sender account in localStateDB
 	p, err := s.UpdateAccount(tx.FromIdx, accSender)
@@ -723,7 +747,8 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 // tx.ToIdx==0, then toIdx!=0, and will be used the toIdx parameter as Idx of
 // the receiver. This parameter is used when the tx.ToIdx is not specified and
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
-func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, collectedFees map[common.TokenID]*big.Int,
+func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
+	collectedFees map[common.TokenID]*big.Int,
 	tx common.Tx, auxToIdx common.Idx) error {
 	if auxToIdx == common.Idx(0) {
 		auxToIdx = tx.ToIdx
@@ -824,7 +849,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 	accSender := &common.Account{
 		TokenID:   tx.TokenID,
 		Nonce:     0,
-		Balance:   tx.LoadAmount,
+		Balance:   tx.EffectiveLoadAmount,
 		PublicKey: tx.FromBJJ,
 		EthAddr:   tx.FromEthAddr,
 	}
@@ -833,9 +858,9 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		return err
 	}
 	// subtract amount to the sender
-	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
+	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
 	// add amount to the receiver
-	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
+	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
 
 	// create Account of the Sender
 	p, err := s.CreateAccount(common.Idx(s.idx+1), accSender)
@@ -849,7 +874,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 			s.zki.Sign1[s.i] = big.NewInt(1)
 		}
 		s.zki.Ay1[s.i] = tx.FromBJJ.Y
-		s.zki.Balance1[s.i] = tx.LoadAmount
+		s.zki.Balance1[s.i] = tx.EffectiveLoadAmount
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
 		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(p.Siblings)
 		if p.IsOld0 {
@@ -890,8 +915,9 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 
 // It returns the ExitAccount and a boolean determining if the Exit created a
 // new Leaf in the ExitTree.
-func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collectedFees map[common.TokenID]*big.Int,
-	exitTree *merkletree.MerkleTree, tx common.Tx) (*common.Account, bool, error) {
+func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
+	collectedFees map[common.TokenID]*big.Int, exitTree *merkletree.MerkleTree,
+	tx common.Tx) (*common.Account, bool, error) {
 	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := s.GetAccount(tx.FromIdx)
@@ -969,6 +995,89 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 	exitAccount.Balance = new(big.Int).Add(exitAccount.Balance, tx.Amount)
 	_, err = updateAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
 	return exitAccount, false, err
+}
+
+// computeEffectiveAmounts checks that the L1Tx data is correct
+func (s *StateDB) computeEffectiveAmounts(tx *common.L1Tx) {
+	if !tx.UserOrigin {
+		// case where the L1Tx is generated by the Coordinator
+		tx.EffectiveAmount = big.NewInt(0)
+		tx.EffectiveLoadAmount = big.NewInt(0)
+		return
+	}
+
+	tx.EffectiveAmount = tx.Amount
+	tx.EffectiveLoadAmount = tx.LoadAmount
+	if tx.Type == common.TxTypeCreateAccountDeposit {
+		return
+	}
+
+	if tx.ToIdx >= common.UserThreshold && tx.FromIdx == common.Idx(0) {
+		// CreateAccountDepositTransfer case
+		cmp := tx.LoadAmount.Cmp(tx.Amount)
+		if cmp == -1 { // LoadAmount<Amount
+			tx.EffectiveAmount = big.NewInt(0)
+			return
+		}
+		return
+	}
+
+	accSender, err := s.GetAccount(tx.FromIdx)
+	if err != nil {
+		log.Debugf("EffectiveAmount & EffectiveLoadAmount = 0: can not get account for tx.FromIdx: %d", tx.FromIdx)
+		tx.EffectiveLoadAmount = big.NewInt(0)
+		tx.EffectiveAmount = big.NewInt(0)
+		return
+	}
+
+	// check that tx.TokenID corresponds to the Sender account TokenID
+	if tx.TokenID != accSender.TokenID {
+		log.Debugf("EffectiveAmount & EffectiveLoadAmount = 0: tx.TokenID (%d) !=sender account TokenID (%d)", tx.TokenID, accSender.TokenID)
+		tx.EffectiveLoadAmount = big.NewInt(0)
+		tx.EffectiveAmount = big.NewInt(0)
+		return
+	}
+
+	// check that Sender has enough balance
+	bal := accSender.Balance
+	if tx.LoadAmount != nil {
+		bal = new(big.Int).Add(bal, tx.EffectiveLoadAmount)
+	}
+	cmp := bal.Cmp(tx.Amount)
+	if cmp == -1 {
+		log.Debugf("EffectiveAmount = 0: Not enough funds (%s<%s)", bal.String(), tx.Amount.String())
+		tx.EffectiveAmount = big.NewInt(0)
+		return
+	}
+
+	// check that the tx.FromEthAddr is the same than the EthAddress of the
+	// Sender
+	if !bytes.Equal(tx.FromEthAddr.Bytes(), accSender.EthAddr.Bytes()) {
+		log.Debugf("EffectiveAmount & EffectiveLoadAmount = 0: tx.FromEthAddr (%s) must be the same EthAddr of the sender account by the Idx (%s)", tx.FromEthAddr.Hex(), accSender.EthAddr.Hex())
+		tx.EffectiveLoadAmount = big.NewInt(0)
+		tx.EffectiveAmount = big.NewInt(0)
+		return
+	}
+
+	if tx.ToIdx == common.Idx(1) || tx.ToIdx == common.Idx(0) {
+		// if transfer is Exit type, there are no more checks
+		return
+	}
+
+	// check that TokenID is the same for Sender & Receiver account
+	accReceiver, err := s.GetAccount(tx.ToIdx)
+	if err != nil {
+		log.Debugf("EffectiveAmount & EffectiveLoadAmount = 0: can not get account for tx.ToIdx: %d", tx.ToIdx)
+		tx.EffectiveLoadAmount = big.NewInt(0)
+		tx.EffectiveAmount = big.NewInt(0)
+		return
+	}
+	if accSender.TokenID != accReceiver.TokenID {
+		log.Debugf("EffectiveAmount & EffectiveLoadAmount = 0: sender account TokenID (%d) != receiver account TokenID (%d)", tx.TokenID, accSender.TokenID)
+		tx.EffectiveLoadAmount = big.NewInt(0)
+		tx.EffectiveAmount = big.NewInt(0)
+		return
+	}
 }
 
 // getIdx returns the stored Idx from the localStateDB, which is the last Idx
