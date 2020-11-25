@@ -195,11 +195,11 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				FromBJJ:     tc.Users[inst.from].BJJ.Public(),
 				TokenID:     inst.tokenID,
 				Amount:      big.NewInt(0),
-				LoadAmount:  big.NewInt(int64(inst.loadAmount)),
+				LoadAmount:  inst.loadAmount,
 				Type:        inst.typ,
 			}
 			if inst.typ == common.TxTypeCreateAccountDepositTransfer {
-				tx.Amount = big.NewInt(int64(inst.amount))
+				tx.Amount = inst.amount
 			}
 			testTx := L1Tx{
 				lineNum:     inst.lineNum,
@@ -222,11 +222,11 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 			tx := common.L1Tx{
 				TokenID:    inst.tokenID,
 				Amount:     big.NewInt(0),
-				LoadAmount: big.NewInt(int64(inst.loadAmount)),
+				LoadAmount: inst.loadAmount,
 				Type:       inst.typ,
 			}
 			if inst.typ == common.TxTypeDepositTransfer {
-				tx.Amount = big.NewInt(int64(inst.amount))
+				tx.Amount = inst.amount
 			}
 			testTx := L1Tx{
 				lineNum:     inst.lineNum,
@@ -243,7 +243,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 				return nil, fmt.Errorf("Line %d: %s", inst.lineNum, err.Error())
 			}
 			tx := common.L2Tx{
-				Amount:      big.NewInt(int64(inst.amount)),
+				Amount:      inst.amount,
 				Fee:         common.FeeSelector(inst.fee),
 				Type:        common.TxTypeTransfer,
 				EthBlockNum: tc.blockNum,
@@ -264,7 +264,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 			}
 			tx := common.L1Tx{
 				TokenID:    inst.tokenID,
-				Amount:     big.NewInt(int64(inst.amount)),
+				Amount:     inst.amount,
 				LoadAmount: big.NewInt(0),
 				Type:       common.TxTypeForceTransfer,
 			}
@@ -285,7 +285,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 			tx := common.L2Tx{
 				ToIdx:       common.Idx(1), // as is an Exit
 				Fee:         common.FeeSelector(inst.fee),
-				Amount:      big.NewInt(int64(inst.amount)),
+				Amount:      inst.amount,
 				Type:        common.TxTypeExit,
 				EthBlockNum: tc.blockNum,
 			}
@@ -306,7 +306,7 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 			tx := common.L1Tx{
 				ToIdx:      common.Idx(1), // as is an Exit
 				TokenID:    inst.tokenID,
-				Amount:     big.NewInt(int64(inst.amount)),
+				Amount:     inst.amount,
 				LoadAmount: big.NewInt(0),
 				Type:       common.TxTypeForceExit,
 			}
@@ -547,7 +547,7 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 			tx := common.PoolL2Tx{
 				FromIdx:     tc.Users[inst.from].Accounts[inst.tokenID].Idx,
 				TokenID:     inst.tokenID,
-				Amount:      big.NewInt(int64(inst.amount)),
+				Amount:      inst.amount,
 				Fee:         common.FeeSelector(inst.fee),
 				Nonce:       tc.Users[inst.from].Accounts[inst.tokenID].Nonce,
 				State:       common.PoolL2TxStatePending,
@@ -589,7 +589,7 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 				ToIdx:   common.Idx(1), // as is an Exit
 				Fee:     common.FeeSelector(inst.fee),
 				TokenID: inst.tokenID,
-				Amount:  big.NewInt(int64(inst.amount)),
+				Amount:  inst.amount,
 				Nonce:   tc.Users[inst.from].Accounts[inst.tokenID].Nonce,
 				State:   common.PoolL2TxStatePending,
 				Type:    common.TxTypeExit,
