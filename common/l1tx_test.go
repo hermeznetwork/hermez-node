@@ -138,7 +138,6 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 
 func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	hermezAddress := ethCommon.HexToAddress("0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe")
-	hermezAddressBytes := ethCommon.LeftPadBytes(hermezAddress.Bytes(), 32)
 	chainID := big.NewInt(1337)
 	chainIDBytes := ethCommon.LeftPadBytes(chainID.Bytes(), 2)
 
@@ -170,7 +169,7 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	data = append(data, bytesMessage2...)
 	data = append(data, babyjubB[:]...)
 	data = append(data, chainIDBytes...)
-	data = append(data, hermezAddressBytes...)
+	data = append(data, hermezAddress.Bytes()...)
 	hash := crypto.Keccak256Hash(data)
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	require.Nil(t, err)
