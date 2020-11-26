@@ -124,7 +124,7 @@ func (i *instrument) post(c *astutil.Cursor) bool {
 	node := c.Node()
 	switch n := node.(type) {
 	case *ast.Ident:
-		if strings.HasPrefix(n.Name, "err") {
+		if strings.HasPrefix(strings.ToLower(n.Name), "err") {
 			if isLastResultReturn(c) {
 				wrapErr(c, n)
 				i.updated = true
@@ -171,32 +171,30 @@ func instrumentSrc(filename string, oldSource []byte) ([]byte, error) {
 }
 
 func main() {
-	matches, err := filepath.Glob("../../**/*.go")
-	// matches, err := filepath.Glob("test/*.go")
-	if err != nil {
+	if err := filepath.Walk("../..",
+		func(filename string, info os.FileInfo, err error) error {
+			if strings.HasPrefix(filename, "../../scripts") {
+				return nil
+			}
+			if !strings.HasSuffix(filename, ".go") {
+				return nil
+			}
+			// fmt.Println(filename)
+			oldSource, err := ioutil.ReadFile(filename) //nolint:gosec
+			if err != nil {
+				return fmt.Errorf("couldn't read from %s: %v", filename, err)
+			}
+			newSource, err := instrumentSrc(filename, oldSource)
+			if err != nil {
+				return err
+			}
+			if err := ioutil.WriteFile(filename, newSource, info.Mode()); err != nil {
+				return err
+			}
+			// fmt.Print(string(newSource))
+			return nil
+		},
+	); err != nil {
 		panic(err)
-	}
-	// fmt.Println(matches)
-	for _, filename := range matches {
-		if strings.HasPrefix(filename, "../../scripts") {
-			continue
-		}
-
-		stat, err := os.Stat(filename)
-		if err != nil {
-			panic(err)
-		}
-		oldSource, err := ioutil.ReadFile(filename) //nolint:gosec
-		if err != nil {
-			panic(fmt.Errorf("couldn't read from %s: %v", filename, err))
-		}
-		newSource, err := instrumentSrc(filename, oldSource)
-		if err != nil {
-			panic(err)
-		}
-		if err := ioutil.WriteFile(filename, newSource, stat.Mode()); err != nil {
-			panic(err)
-		}
-		// fmt.Print(string(newSource))
 	}
 }
