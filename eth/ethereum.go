@@ -15,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	HEZ "github.com/hermeznetwork/hermez-node/eth/contracts/tokenHEZ"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/ztrue/tracerr"
 )
 
 // ERC20Consts are the constants defined in a particular ERC20 Token instance
@@ -121,7 +122,7 @@ func (c *EthereumClient) CallAuth(gasLimit uint64,
 
 	gasPrice, err := c.client.SuggestGasPrice(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	inc := new(big.Int).Set(gasPrice)
 	inc.Div(inc, new(big.Int).SetUint64(c.config.GasPriceDiv))
@@ -130,7 +131,7 @@ func (c *EthereumClient) CallAuth(gasLimit uint64,
 
 	auth, err := bind.NewKeyStoreTransactor(c.ks, *c.account)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	auth.Value = big.NewInt(0) // in wei
 	if gasLimit == 0 {
@@ -144,7 +145,7 @@ func (c *EthereumClient) CallAuth(gasLimit uint64,
 	if tx != nil {
 		log.Debugw("Transaction", "tx", tx.Hash().Hex(), "nonce", tx.Nonce())
 	}
-	return tx, err
+	return tx, tracerr.Wrap(err)
 }
 
 // ContractData contains the contract data
@@ -167,20 +168,20 @@ func (c *EthereumClient) Deploy(name string,
 		func(client *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			addr, tx, _, err := fn(client, auth)
 			if err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			contractData.Address = addr
 			return tx, nil
 		},
 	)
 	if err != nil {
-		return contractData, fmt.Errorf(errStrDeploy, name, err)
+		return contractData, tracerr.Wrap(fmt.Errorf(errStrDeploy, name, err))
 	}
 	log.Infow("Waiting receipt", "tx", tx.Hash().Hex(), "contract", name)
 	contractData.Tx = tx
 	receipt, err := c.WaitReceipt(tx)
 	if err != nil {
-		return contractData, fmt.Errorf(errStrWaitReceipt, name, err)
+		return contractData, tracerr.Wrap(fmt.Errorf(errStrWaitReceipt, name, err))
 	}
 	contractData.Receipt = receipt
 	return contractData, nil
@@ -238,7 +239,7 @@ func (c *EthereumClient) waitReceipt(ctx context.Context, tx *types.Transaction,
 	}
 	log.Debugw("Successful transaction", "tx", txHash.Hex())
 
-	return receipt, err
+	return receipt, tracerr.Wrap(err)
 }
 
 // EthLastBlock returns the last block number in the blockchain
@@ -247,7 +248,7 @@ func (c *EthereumClient) EthLastBlock() (int64, error) {
 	defer cancel()
 	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return header.Number.Int64(), nil
 }
@@ -265,7 +266,7 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 	}
 	block, err := c.client.BlockByNumber(ctx, blockNum)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	b := &common.Block{
 		EthBlockNum: block.Number().Int64(),
@@ -282,21 +283,21 @@ func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20C
 	// ERC20, which allows us to access the standard ERC20 constants.
 	instance, err := HEZ.NewHEZ(tokenAddress, c.client)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	name, err := instance.Name(nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	symbol, err := instance.Symbol(nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	decimals, err := instance.Decimals(nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &ERC20Consts{
 		Name:     name,

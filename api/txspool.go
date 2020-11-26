@@ -11,6 +11,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/ztrue/tracerr"
 )
 
 func (a *API) postPoolTx(c *gin.Context) {
@@ -156,21 +157,21 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	// Check type and id
 	_, err := common.NewPoolL2Tx(&poolTx)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// Get public key
 	account, err := a.s.GetAccount(poolTx.FromIdx)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// Validate feeAmount
 	_, err = common.CalcFeeAmount(poolTx.Amount, poolTx.Fee)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// Check signature
 	if !poolTx.VerifySignature(account.PublicKey) {
-		return errors.New("wrong signature")
+		return tracerr.Wrap(errors.New("wrong signature"))
 	}
 	return nil
 }

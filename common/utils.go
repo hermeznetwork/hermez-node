@@ -6,6 +6,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/ztrue/tracerr"
 )
 
 // SwapEndianness swaps the order of the bytes in the slice.
@@ -29,7 +30,7 @@ func EthAddrToBigInt(a ethCommon.Address) *big.Int {
 func BJJFromStringWithChecksum(s string) (*babyjub.PublicKey, error) {
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	pkBytes := SwapEndianness(b)
 	var pkComp babyjub.PublicKeyComp

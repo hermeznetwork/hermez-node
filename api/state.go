@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/ztrue/tracerr"
 )
 
 // Network define status of the network
@@ -74,14 +75,14 @@ func (a *API) UpdateNetworkInfo(
 	a.status.Network.LastEthBlock = lastEthBlock.EthBlockNum
 	lastBatch, err := a.h.GetBatchAPI(lastBatchNum)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	a.status.Network.LastBatch = *lastBatch
 	a.status.Network.CurrentSlot = currentSlot
 	lastClosedSlot := currentSlot + int64(a.status.Auction.ClosedAuctionSlots)
 	nextForgers, err := a.GetNextForgers(lastSyncBlock, currentSlot, lastClosedSlot)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	a.status.Network.NextForgers = nextForgers
 	return nil
@@ -94,7 +95,7 @@ func (a *API) GetNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 	limit := uint(lastClosedSlot - currentSlot + 1)
 	bids, _, err := a.h.GetBestBidsAPI(&currentSlot, &lastClosedSlot, nil, &limit, "ASC")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	nextForgers := []NextForger{}
 	// Create nextForger for each slot
@@ -117,7 +118,7 @@ func (a *API) GetNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 				foundBid = true
 				coordinator, err := a.h.GetCoordinatorAPI(bids[j].Bidder)
 				if err != nil {
-					return nil, err
+					return nil, tracerr.Wrap(err)
 				}
 				nextForger.Coordinator = *coordinator
 				break
@@ -138,7 +139,7 @@ func (a *API) GetNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 func (a *API) UpdateMetrics() error {
 	metrics, err := a.h.GetMetrics(a.status.Network.LastBatch.BatchNum)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	a.status.Metrics = *metrics
 	return nil
@@ -150,7 +151,7 @@ func (a *API) UpdateMetrics() error {
 func (a *API) UpdateRecommendedFee() error {
 	feeExistingAccount, err := a.h.GetAvgTxFee()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	a.status.RecommendedFee.ExistingAccount = feeExistingAccount
 	a.status.RecommendedFee.CreatesAccount = createAccountExtraFeePercentage * feeExistingAccount

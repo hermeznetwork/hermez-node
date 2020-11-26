@@ -15,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/txselector"
+	"github.com/ztrue/tracerr"
 )
 
 var errTODO = fmt.Errorf("TODO")
@@ -163,12 +164,12 @@ func (c *Coordinator) handleMsgSyncStats(stats *synchronizer.Stats) error {
 		err := c.txsel.Reset(c.batchNum)
 		if err != nil {
 			log.Errorw("Coordinator: TxSelector.Reset", "error", err)
-			return err
+			return tracerr.Wrap(err)
 		}
 		err = c.batchBuilder.Reset(c.batchNum, true)
 		if err != nil {
 			log.Errorw("Coordinator: BatchBuilder.Reset", "error", err)
-			return err
+			return tracerr.Wrap(err)
 		}
 		c.forging = true
 		c.PipelineStart()
@@ -242,7 +243,7 @@ func (c *Coordinator) PipelineStart() {
 			default:
 				c.batchNum = c.batchNum + 1
 				batchInfo, err := c.forgeSendServerProof(c.pipelineCtx, c.batchNum)
-				if err == ErrDone {
+				if tracerr.Unwrap(err) == ErrDone {
 					continue
 				}
 				if err != nil {
@@ -264,7 +265,7 @@ func (c *Coordinator) PipelineStart() {
 				return
 			case batchInfo := <-batchChSentServerProof:
 				err := c.waitServerProof(c.pipelineCtx, batchInfo)
-				if err == ErrDone {
+				if tracerr.Unwrap(err) == ErrDone {
 					continue
 				}
 				if err != nil {
@@ -387,7 +388,7 @@ func (c *Coordinator) forgeSendServerProof(ctx context.Context, batchNum common.
 	// remove transactions from the pool that have been there for too long
 	err := c.purgeRemoveByTimeout()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	batchInfo := BatchInfo{BatchNum: batchNum} // to accumulate metadata of the batch
@@ -402,13 +403,13 @@ func (c *Coordinator) forgeSendServerProof(ctx context.Context, batchNum common.
 		var l1UserTxs []common.L1Tx = nil                                                                               // tmp, depends on HistoryDB
 		l1UserTxsExtra, l1OperatorTxs, poolL2Txs, err = c.txsel.GetL1L2TxSelection([]common.Idx{}, batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
 		_, poolL2Txs, err = c.txsel.GetL2TxSelection([]common.Idx{}, batchNum) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		l1UserTxsExtra = nil
 		l1OperatorTxs = nil
@@ -420,7 +421,7 @@ func (c *Coordinator) forgeSendServerProof(ctx context.Context, batchNum common.
 	// all the nonces smaller than the current one)
 	err = c.purgeInvalidDueToL2TxsSelection(poolL2Txs)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	// 3.  Save metadata from TxSelector output for BatchNum
@@ -435,7 +436,7 @@ func (c *Coordinator) forgeSendServerProof(ctx context.Context, batchNum common.
 	}
 	zkInputs, err := c.batchBuilder.BuildBatch([]common.Idx{}, configBatch, l1UserTxsExtra, l1OperatorTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	// 5. Save metadata from BatchBuilder output for BatchNum
@@ -444,7 +445,7 @@ func (c *Coordinator) forgeSendServerProof(ctx context.Context, batchNum common.
 	// 6. Wait for an available server proof blocking call
 	serverProof, err := c.serverProofPool.Get(ctx)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	batchInfo.ServerProof = serverProof
 	defer func() {
@@ -459,7 +460,7 @@ func (c *Coordinator) forgeSendServerProof(ctx context.Context, batchNum common.
 	// save server proof info for batchNum
 	err = batchInfo.ServerProof.CalculateProof(zkInputs)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	return &batchInfo, nil
@@ -469,7 +470,7 @@ func (c *Coordinator) forgeSendServerProof(ctx context.Context, batchNum common.
 func (c *Coordinator) waitServerProof(ctx context.Context, batchInfo *BatchInfo) error {
 	proof, err := batchInfo.ServerProof.GetProof(ctx) // blocking call, until not resolved don't continue. Returns when the proof server has calculated the proof
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	c.serverProofPool.Add(batchInfo.ServerProof)
 	batchInfo.ServerProof = nil

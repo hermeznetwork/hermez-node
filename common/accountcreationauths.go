@@ -6,6 +6,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/ztrue/tracerr"
 )
 
 // AccountCreationAuth authorizations sent by users to the L2DB, to be used for account creations when necessary
@@ -22,7 +23,7 @@ func (a *AccountCreationAuth) HashToSign() ([]byte, error) {
 	const msg = "I authorize this babyjubjub key for hermez rollup account creation"
 	comp, err := a.BJJ.Compress().MarshalText()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// Hash message (msg || compressed-bjj)
 	return ethCrypto.Keccak256Hash([]byte(msg), comp).Bytes(), nil

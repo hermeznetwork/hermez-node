@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/ztrue/tracerr"
 )
 
 const (
@@ -32,7 +33,7 @@ var (
 )
 
 func retSQLErr(err error, c *gin.Context) {
-	if err == sql.ErrNoRows {
+	if tracerr.Unwrap(err) == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, errorMsg{
 			Message: err.Error(),
 		})

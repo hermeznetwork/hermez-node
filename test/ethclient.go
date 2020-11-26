@@ -18,6 +18,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/mitchellh/copystructure"
+	"github.com/ztrue/tracerr"
 )
 
 func init() {
@@ -111,7 +112,7 @@ func (a *AuctionBlock) getSlotSet(slot int64) int64 {
 
 func (a *AuctionBlock) getMinBidBySlot(slot int64) (*big.Int, error) {
 	if slot < a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots) {
-		return nil, errBidClosed
+		return nil, tracerr.Wrap(errBidClosed)
 	}
 
 	slotSet := a.getSlotSet(slot)
@@ -140,9 +141,9 @@ func (a *AuctionBlock) getMinBidBySlot(slot int64) (*big.Int, error) {
 
 func (a *AuctionBlock) forge(forger ethCommon.Address) error {
 	if ok, err := a.canForge(forger, a.Eth.BlockNum); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	} else if !ok {
-		return fmt.Errorf("Can't forge")
+		return tracerr.Wrap(fmt.Errorf("Can't forge"))
 	}
 
 	slotToForge := a.getSlotNumber(a.Eth.BlockNum)
@@ -162,7 +163,7 @@ func (a *AuctionBlock) forge(forger ethCommon.Address) error {
 
 func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool, error) {
 	if blockNum < a.Constants.GenesisBlockNum {
-		return false, fmt.Errorf("Auction has not started yet")
+		return false, tracerr.Wrap(fmt.Errorf("Auction has not started yet"))
 	}
 
 	slotToForge := a.getSlotNumber(blockNum)
@@ -609,7 +610,7 @@ func (c *Client) EthERC20Consts(tokenAddr ethCommon.Address) (*eth.ERC20Consts, 
 	if constants, ok := e.Tokens[tokenAddr]; ok {
 		return &constants, nil
 	}
-	return nil, fmt.Errorf("tokenAddr not found")
+	return nil, tracerr.Wrap(fmt.Errorf("tokenAddr not found"))
 }
 
 // func newHeader(number *big.Int) *types.Header {
@@ -687,7 +688,7 @@ var errTODO = fmt.Errorf("TODO: Not implemented yet")
 // RollupL1UserTxERC20Permit is the interface to call the smart contract function
 func (c *Client) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // RollupL1UserTxERC20ETH sends an L1UserTx to the Rollup.
@@ -706,11 +707,11 @@ func (c *Client) RollupL1UserTxERC20ETH(
 
 	_, err = common.NewFloat16(amount)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	_, err = common.NewFloat16(loadAmount)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	nextBlock := c.nextBlock()
@@ -741,7 +742,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 		UserOrigin:      true,
 	})
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	queue.L1TxQueue = append(queue.L1TxQueue, *l1Tx)
@@ -760,7 +761,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 // RollupRegisterTokensCount is the interface to call the smart contract function
 func (c *Client) RollupRegisterTokensCount() (*big.Int, error) {
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // RollupLastForgedBatch is the interface to call the smart contract function
@@ -776,7 +777,7 @@ func (c *Client) RollupLastForgedBatch() (int64, error) {
 // RollupWithdrawCircuit is the interface to call the smart contract function
 func (c *Client) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error) {
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // RollupWithdrawMerkleProof is the interface to call the smart contract function
@@ -790,10 +791,10 @@ func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenI
 	r := nextBlock.Rollup
 
 	if int(numExitRoot) >= len(r.State.ExitRoots) {
-		return nil, fmt.Errorf("numExitRoot >= len(r.State.ExitRoots)")
+		return nil, tracerr.Wrap(fmt.Errorf("numExitRoot >= len(r.State.ExitRoots)"))
 	}
 	if _, ok := r.State.ExitNullifierMap[numExitRoot][idx]; ok {
-		return nil, fmt.Errorf("exit already withdrawn")
+		return nil, tracerr.Wrap(fmt.Errorf("exit already withdrawn"))
 	}
 	r.State.ExitNullifierMap[numExitRoot][idx] = true
 
@@ -856,10 +857,10 @@ func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs) (tx *types.Tra
 	a := c.nextBlock().Auction
 	ok, err := a.canForge(*c.addr, a.Eth.BlockNum)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("incorrect slot")
+		return nil, tracerr.Wrap(fmt.Errorf("incorrect slot"))
 	}
 
 	// TODO: Verify proof
@@ -867,7 +868,7 @@ func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs) (tx *types.Tra
 	// Auction
 	err = a.forge(*c.addr)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	// TODO: If successful, store the tx in a successful array.
@@ -892,7 +893,7 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 	r := nextBlock.Rollup
 	r.State.StateRoot = args.NewStRoot
 	if args.NewLastIdx < r.State.CurrentIdx {
-		return nil, fmt.Errorf("args.NewLastIdx < r.State.CurrentIdx")
+		return nil, tracerr.Wrap(fmt.Errorf("args.NewLastIdx < r.State.CurrentIdx"))
 	}
 	r.State.CurrentIdx = args.NewLastIdx
 	r.State.ExitNullifierMap[int64(len(r.State.ExitRoots))] = make(map[int64]bool)
@@ -934,10 +935,10 @@ func (c *Client) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big
 	nextBlock := c.nextBlock()
 	r := nextBlock.Rollup
 	if _, ok := r.State.TokenMap[tokenAddress]; ok {
-		return nil, fmt.Errorf("Token %v already registered", tokenAddress)
+		return nil, tracerr.Wrap(fmt.Errorf("Token %v already registered", tokenAddress))
 	}
 	if feeAddToken.Cmp(r.Vars.FeeAddToken) != 0 {
-		return nil, fmt.Errorf("Expected fee: %v but got: %v", r.Vars.FeeAddToken, feeAddToken)
+		return nil, tracerr.Wrap(fmt.Errorf("Expected fee: %v but got: %v", r.Vars.FeeAddToken, feeAddToken))
 	}
 
 	r.State.TokenMap[tokenAddress] = true
@@ -953,7 +954,7 @@ func (c *Client) RollupGetCurrentTokens() (*big.Int, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // RollupUpdateForgeL1L2BatchTimeout is the interface to call the smart contract function
@@ -986,7 +987,7 @@ func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Tra
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // RollupUpdateTokensHEZ is the interface to call the smart contract function
@@ -1020,7 +1021,7 @@ func (c *Client) RollupEventsByBlock(blockNum int64) (*eth.RollupEvents, *ethCom
 
 	block, ok := c.blocks[blockNum]
 	if !ok {
-		return nil, nil, fmt.Errorf("Block %v doesn't exist", blockNum)
+		return nil, nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
 	}
 	return &block.Rollup.Events, &block.Eth.Hash, nil
 }
@@ -1032,7 +1033,7 @@ func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*eth.RollupForg
 
 	batch, ok := c.forgeBatchArgs[ethTxHash]
 	if !ok {
-		return nil, nil, fmt.Errorf("transaction not found")
+		return nil, nil, tracerr.Wrap(fmt.Errorf("transaction not found"))
 	}
 	return &batch.ForgeBatchArgs, &batch.Sender, nil
 }
@@ -1052,7 +1053,7 @@ func (c *Client) AuctionSetSlotDeadline(newDeadline uint8) (tx *types.Transactio
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetSlotDeadline is the interface to call the smart contract function
@@ -1061,7 +1062,7 @@ func (c *Client) AuctionGetSlotDeadline() (uint8, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return 0, errTODO
+	return 0, tracerr.Wrap(errTODO)
 }
 
 // AuctionSetOpenAuctionSlots is the interface to call the smart contract function
@@ -1089,7 +1090,7 @@ func (c *Client) AuctionGetOpenAuctionSlots() (uint16, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return 0, errTODO
+	return 0, tracerr.Wrap(errTODO)
 }
 
 // AuctionSetClosedAuctionSlots is the interface to call the smart contract function
@@ -1103,7 +1104,7 @@ func (c *Client) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint16) (tx 
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetClosedAuctionSlots is the interface to call the smart contract function
@@ -1112,7 +1113,7 @@ func (c *Client) AuctionGetClosedAuctionSlots() (uint16, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return 0, errTODO
+	return 0, tracerr.Wrap(errTODO)
 }
 
 // AuctionSetOutbidding is the interface to call the smart contract function
@@ -1126,7 +1127,7 @@ func (c *Client) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Transacti
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetOutbidding is the interface to call the smart contract function
@@ -1135,7 +1136,7 @@ func (c *Client) AuctionGetOutbidding() (uint16, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return 0, errTODO
+	return 0, tracerr.Wrap(errTODO)
 }
 
 // AuctionSetAllocationRatio is the interface to call the smart contract function
@@ -1149,7 +1150,7 @@ func (c *Client) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) (tx *ty
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetAllocationRatio is the interface to call the smart contract function
@@ -1158,7 +1159,7 @@ func (c *Client) AuctionGetAllocationRatio() ([3]uint16, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return [3]uint16{}, errTODO
+	return [3]uint16{}, tracerr.Wrap(errTODO)
 }
 
 // AuctionSetDonationAddress is the interface to call the smart contract function
@@ -1172,7 +1173,7 @@ func (c *Client) AuctionSetDonationAddress(newDonationAddress ethCommon.Address)
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetDonationAddress is the interface to call the smart contract function
@@ -1181,7 +1182,7 @@ func (c *Client) AuctionGetDonationAddress() (*ethCommon.Address, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionSetBootCoordinator is the interface to call the smart contract function
@@ -1195,7 +1196,7 @@ func (c *Client) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address)
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetBootCoordinator is the interface to call the smart contract function
@@ -1220,7 +1221,7 @@ func (c *Client) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid 
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionSetCoordinator is the interface to call the smart contract function
@@ -1262,7 +1263,7 @@ func (c *Client) AuctionIsRegisteredCoordinator(forgerAddress ethCommon.Address)
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return false, errTODO
+	return false, tracerr.Wrap(errTODO)
 }
 
 // AuctionUpdateCoordinatorInfo is the interface to call the smart contract function
@@ -1276,7 +1277,7 @@ func (c *Client) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address, n
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetSlotNumber is the interface to call the smart contract function
@@ -1295,7 +1296,7 @@ func (c *Client) AuctionGetCurrentSlotNumber() (int64, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return 0, errTODO
+	return 0, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetMinBidBySlot is the interface to call the smart contract function
@@ -1304,7 +1305,7 @@ func (c *Client) AuctionGetMinBidBySlot(slot int64) (*big.Int, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetDefaultSlotSetBid is the interface to call the smart contract function
@@ -1313,7 +1314,7 @@ func (c *Client) AuctionGetDefaultSlotSetBid(slotSet uint8) (*big.Int, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetSlotSet is the interface to call the smart contract function
@@ -1322,7 +1323,7 @@ func (c *Client) AuctionGetSlotSet(slot int64) (*big.Int, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionTokensReceived is the interface to call the smart contract function
@@ -1351,23 +1352,23 @@ func (c *Client) AuctionBid(amount *big.Int, slot int64, bidAmount *big.Int,
 	a := nextBlock.Auction
 
 	if slot < a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots) {
-		return nil, errBidClosed
+		return nil, tracerr.Wrap(errBidClosed)
 	}
 
 	if slot >= a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots)+int64(a.Vars.OpenAuctionSlots) {
-		return nil, errBidNotOpen
+		return nil, tracerr.Wrap(errBidNotOpen)
 	}
 
 	minBid, err := a.getMinBidBySlot(slot)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	if bidAmount.Cmp(minBid) == -1 {
-		return nil, errBidBelowMin
+		return nil, tracerr.Wrap(errBidBelowMin)
 	}
 
 	if _, ok := a.State.Coordinators[*c.addr]; !ok {
-		return nil, errCoordNotReg
+		return nil, tracerr.Wrap(errCoordNotReg)
 	}
 
 	slotState, ok := a.State.Slots[slot]
@@ -1402,7 +1403,7 @@ func (c *Client) AuctionMultiBid(amount *big.Int, startingSlot int64, endingSlot
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionCanForge is the interface to call the smart contract function
@@ -1426,7 +1427,7 @@ func (c *Client) AuctionForge(forger ethCommon.Address) (tx *types.Transaction, 
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionClaimHEZ is the interface to call the smart contract function
@@ -1440,7 +1441,7 @@ func (c *Client) AuctionClaimHEZ() (tx *types.Transaction, err error) {
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionGetClaimableHEZ is the interface to call the smart contract function
@@ -1449,7 +1450,7 @@ func (c *Client) AuctionGetClaimableHEZ(bidder ethCommon.Address) (*big.Int, err
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // AuctionConstants returns the Constants of the Auction Smart Contract
@@ -1467,7 +1468,7 @@ func (c *Client) AuctionEventsByBlock(blockNum int64) (*eth.AuctionEvents, *ethC
 
 	block, ok := c.blocks[blockNum]
 	if !ok {
-		return nil, nil, fmt.Errorf("Block %v doesn't exist", blockNum)
+		return nil, nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
 	}
 	return &block.Auction.Events, &block.Eth.Hash, nil
 }
@@ -1482,7 +1483,7 @@ func (c *Client) WDelayerGetHermezGovernanceDAOAddress() (*ethCommon.Address, er
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerSetHermezGovernanceDAOAddress is the interface to call the smart contract function
@@ -1496,7 +1497,7 @@ func (c *Client) WDelayerSetHermezGovernanceDAOAddress(newAddress ethCommon.Addr
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerGetHermezKeeperAddress is the interface to call the smart contract function
@@ -1505,7 +1506,7 @@ func (c *Client) WDelayerGetHermezKeeperAddress() (*ethCommon.Address, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerSetHermezKeeperAddress is the interface to call the smart contract function
@@ -1519,7 +1520,7 @@ func (c *Client) WDelayerSetHermezKeeperAddress(newAddress ethCommon.Address) (t
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerGetWhiteHackGroupAddress is the interface to call the smart contract function
@@ -1528,7 +1529,7 @@ func (c *Client) WDelayerGetWhiteHackGroupAddress() (*ethCommon.Address, error) 
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerSetWhiteHackGroupAddress is the interface to call the smart contract function
@@ -1542,7 +1543,7 @@ func (c *Client) WDelayerSetWhiteHackGroupAddress(newAddress ethCommon.Address) 
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerIsEmergencyMode is the interface to call the smart contract function
@@ -1551,7 +1552,7 @@ func (c *Client) WDelayerIsEmergencyMode() (bool, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return false, errTODO
+	return false, tracerr.Wrap(errTODO)
 }
 
 // WDelayerGetWithdrawalDelay is the interface to call the smart contract function
@@ -1560,7 +1561,7 @@ func (c *Client) WDelayerGetWithdrawalDelay() (*big.Int, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerGetEmergencyModeStartingTime is the interface to call the smart contract function
@@ -1569,7 +1570,7 @@ func (c *Client) WDelayerGetEmergencyModeStartingTime() (*big.Int, error) {
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerEnableEmergencyMode is the interface to call the smart contract function
@@ -1583,7 +1584,7 @@ func (c *Client) WDelayerEnableEmergencyMode() (tx *types.Transaction, err error
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerChangeWithdrawalDelay is the interface to call the smart contract function
@@ -1611,7 +1612,7 @@ func (c *Client) WDelayerDepositInfo(owner, token ethCommon.Address) (eth.Deposi
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return eth.DepositState{}, errTODO
+	return eth.DepositState{}, tracerr.Wrap(errTODO)
 }
 
 // WDelayerDeposit is the interface to call the smart contract function
@@ -1625,7 +1626,7 @@ func (c *Client) WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerWithdrawal is the interface to call the smart contract function
@@ -1639,7 +1640,7 @@ func (c *Client) WDelayerWithdrawal(owner, token ethCommon.Address) (tx *types.T
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerEscapeHatchWithdrawal is the interface to call the smart contract function
@@ -1653,7 +1654,7 @@ func (c *Client) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amou
 	}
 
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // WDelayerEventsByBlock returns the events in a block that happened in the WDelayer Contract
@@ -1663,7 +1664,7 @@ func (c *Client) WDelayerEventsByBlock(blockNum int64) (*eth.WDelayerEvents, *et
 
 	block, ok := c.blocks[blockNum]
 	if !ok {
-		return nil, nil, fmt.Errorf("Block %v doesn't exist", blockNum)
+		return nil, nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
 	}
 	return &block.WDelayer.Events, &block.Eth.Hash, nil
 }

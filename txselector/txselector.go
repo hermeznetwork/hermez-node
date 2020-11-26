@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/ztrue/tracerr"
 )
 
 // txs implements the interface Sort for an array of Tx
@@ -45,7 +46,7 @@ type TxSelector struct {
 func NewTxSelector(dbpath string, synchronizerStateDB *statedb.StateDB, l2 *l2db.L2DB, maxL1UserTxs, maxL1OperatorTxs, maxTxs uint64) (*TxSelector, error) {
 	localAccountsDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, statedb.TypeTxSelector, 0) // without merkletree
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	return &TxSelector{
@@ -62,7 +63,7 @@ func NewTxSelector(dbpath string, synchronizerStateDB *statedb.StateDB, l2 *l2db
 func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 	err := txsel.localAccountsDB.Reset(batchNum, true)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	return nil
 }
@@ -71,7 +72,7 @@ func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 // for the next batch, from the L2DB pool
 func (txsel *TxSelector) GetL2TxSelection(coordIdxs []common.Idx, batchNum common.BatchNum) ([]common.L1Tx, []common.PoolL2Tx, error) {
 	_, l1CoordinatorTxs, l2Txs, err := txsel.GetL1L2TxSelection(coordIdxs, batchNum, []common.L1Tx{})
-	return l1CoordinatorTxs, l2Txs, err
+	return l1CoordinatorTxs, l2Txs, tracerr.Wrap(err)
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
@@ -84,7 +85,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 	// get pending l2-tx from tx-pool
 	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // (batchID)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, tracerr.Wrap(err)
 	}
 
 	var validTxs txs
@@ -224,11 +225,11 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 	// process the txs in the local AccountsDB
 	_, err = txsel.localAccountsDB.ProcessTxs(ptc, coordIdxs, l1Txs, l1CoordinatorTxs, l2Txs)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, tracerr.Wrap(err)
 	}
 	err = txsel.localAccountsDB.MakeCheckpoint()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, tracerr.Wrap(err)
 	}
 
 	return l1Txs, l1CoordinatorTxs, l2Txs, nil

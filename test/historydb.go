@@ -10,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
+	"github.com/ztrue/tracerr"
 )
 
 // Block0 represents Ethereum's genesis block,
@@ -425,7 +426,7 @@ func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address, accs
 		i++
 		i = i % len(accs)
 		if i == firstI {
-			return &acc, errors.New("Didnt found any account matchinng the criteria")
+			return &acc, tracerr.Wrap(errors.New("Didnt found any account matchinng the criteria"))
 		}
 	}
 }

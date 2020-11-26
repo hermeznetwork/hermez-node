@@ -16,6 +16,7 @@ import (
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ztrue/tracerr"
 )
 
 func TestIdxParser(t *testing.T) {
@@ -45,7 +46,7 @@ func TestIdxParser(t *testing.T) {
 	i = Idx(281474976710656)
 	iBytes, err = i.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrIdxOverflow, err)
+	assert.Equal(t, ErrIdxOverflow, tracerr.Unwrap(err))
 }
 
 func TestNonceParser(t *testing.T) {
@@ -70,7 +71,7 @@ func TestNonceParser(t *testing.T) {
 	n = Nonce(1099511627776)
 	nBytes, err = n.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrNonceOverflow, err)
+	assert.Equal(t, ErrNonceOverflow, tracerr.Unwrap(err))
 }
 
 func TestAccount(t *testing.T) {
@@ -296,14 +297,14 @@ func TestAccountErrNotInFF(t *testing.T) {
 	e = [NLeafElems]*big.Int{z, z, r, r}
 	_, err = AccountFromBigInts(e)
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrNotInFF, err)
+	assert.Equal(t, ErrNotInFF, tracerr.Unwrap(err))
 
 	// Q+1 should give error
 	r = new(big.Int).Add(cryptoConstants.Q, big.NewInt(1))
 	e = [NLeafElems]*big.Int{z, z, r, r}
 	_, err = AccountFromBigInts(e)
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrNotInFF, err)
+	assert.Equal(t, ErrNotInFF, tracerr.Unwrap(err))
 }
 
 func TestAccountErrNumOverflowNonce(t *testing.T) {
@@ -327,7 +328,7 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 	account.Nonce = Nonce(math.Pow(2, 40))
 	b, err := account.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Errorf("%s Nonce", ErrNumOverflow), err)
+	assert.Equal(t, fmt.Errorf("%s Nonce", ErrNumOverflow), tracerr.Unwrap(err))
 
 	_, err = AccountFromBytes(b)
 	assert.Nil(t, err)
@@ -357,7 +358,7 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 	assert.Equal(t, "6277101735386680763835789423207666416102355444464034512896", account.Balance.String())
 	b, err := account.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Errorf("%s Balance", ErrNumOverflow), err)
+	assert.Equal(t, fmt.Errorf("%s Balance", ErrNumOverflow), tracerr.Unwrap(err))
 
 	_, err = AccountFromBytes(b)
 	assert.Nil(t, err)
@@ -365,5 +366,5 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 	b[39] = 1
 	_, err = AccountFromBytes(b)
 	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Errorf("%s Balance", ErrNumOverflow), err)
+	assert.Equal(t, fmt.Errorf("%s Balance", ErrNumOverflow), tracerr.Unwrap(err))
 }

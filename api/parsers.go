@@ -11,6 +11,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/ztrue/tracerr"
 )
 
 const exitIdx = "hez:EXIT:1"
@@ -25,16 +26,16 @@ func parsePagination(c querier) (fromItem *uint, order string, limit *uint, err 
 	// FromItem
 	fromItem, err = parseQueryUint("fromItem", nil, 0, maxUint32, c)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, tracerr.Wrap(err)
 	}
 	// Order
 	order = dfltOrder
 	const orderName = "order"
 	orderStr := c.Query(orderName)
 	if orderStr != "" && !(orderStr == historydb.OrderAsc || historydb.OrderDesc == orderStr) {
-		return nil, "", nil, errors.New(
+		return nil, "", nil, tracerr.Wrap(errors.New(
 			"order must have the value " + historydb.OrderAsc + " or " + historydb.OrderDesc,
-		)
+		))
 	}
 	if orderStr == historydb.OrderAsc {
 		order = historydb.OrderAsc
@@ -46,7 +47,7 @@ func parsePagination(c querier) (fromItem *uint, order string, limit *uint, err 
 	*limit = dfltLimit
 	limit, err = parseQueryUint("limit", limit, 1, maxLimit, c)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, tracerr.Wrap(err)
 	}
 	return fromItem, order, limit, nil
 }
@@ -79,7 +80,7 @@ func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolin
 		*res = false
 		return res, nil
 	}
-	return nil, fmt.Errorf("Invalid %s. Must be eithe true or false", name)
+	return nil, tracerr.Wrap(fmt.Errorf("Invalid %s. Must be eithe true or false", name))
 }
 
 func parseQueryHezEthAddr(c querier) (*ethCommon.Address, error) {
@@ -135,10 +136,10 @@ func parseQueryTxType(c querier) (*common.TxType, error) {
 		ret := common.TxTypeTransferToBJJ
 		return &ret, nil
 	}
-	return nil, fmt.Errorf(
+	return nil, tracerr.Wrap(fmt.Errorf(
 		"invalid %s, %s is not a valid option. Check the valid options in the docmentation",
 		name, typeStr,
-	)
+	))
 }
 
 func parseIdx(c querier) (*common.Idx, error) {
@@ -151,7 +152,7 @@ func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.
 	// TokenID
 	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	var tokenID *common.TokenID
 	if tid != nil {
@@ -161,25 +162,23 @@ func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.
 	// Hez Eth addr
 	addr, err := parseQueryHezEthAddr(c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	// BJJ
 	bjj, err := parseQueryBJJ(c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	if addr != nil && bjj != nil {
-		return nil, nil, nil, nil,
-			errors.New("bjj and hermezEthereumAddress params are incompatible")
+		return nil, nil, nil, nil, tracerr.Wrap(errors.New("bjj and hermezEthereumAddress params are incompatible"))
 	}
 	// Idx
 	idx, err := parseIdx(c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	if idx != nil && (addr != nil || bjj != nil || tokenID != nil) {
-		return nil, nil, nil, nil,
-			errors.New("accountIndex is incompatible with BJJ, hermezEthereumAddress and tokenId")
+		return nil, nil, nil, nil, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hermezEthereumAddress and tokenId"))
 	}
 	return tokenID, addr, bjj, idx, nil
 }
@@ -195,7 +194,7 @@ func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
 		for _, id := range ids {
 			idUint, err := strconv.Atoi(id)
 			if err != nil {
-				return nil, nil, "", err
+				return nil, nil, "", tracerr.Wrap(err)
 			}
 			tokenID := common.TokenID(idUint)
 			tokensIDs = append(tokensIDs, tokenID)
@@ -211,11 +210,11 @@ func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
 func parseBidFilters(c querier) (*int64, *ethCommon.Address, error) {
 	slotNum, err := parseQueryInt64("slotNum", nil, 0, maxInt64, c)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	bidderAddr, err := parseQueryEthAddr("bidderAddr", c)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	return slotNum, bidderAddr, nil
 }
@@ -223,19 +222,19 @@ func parseBidFilters(c querier) (*int64, *ethCommon.Address, error) {
 func parseSlotFilters(c querier) (*int64, *int64, *ethCommon.Address, *bool, error) {
 	minSlotNum, err := parseQueryInt64("minSlotNum", nil, 0, maxInt64, c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	maxSlotNum, err := parseQueryInt64("maxSlotNum", nil, 0, maxInt64, c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	wonByEthereumAddress, err := parseQueryEthAddr("wonByEthereumAddress", c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	finishedAuction, err := parseQueryBool("finishedAuction", nil, c)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	return minSlotNum, maxSlotNum, wonByEthereumAddress, finishedAuction, nil
 }
@@ -250,7 +249,7 @@ func parseAccountFilters(c querier) ([]common.TokenID, *ethCommon.Address, *baby
 		for _, id := range ids {
 			idUint, err := strconv.Atoi(id)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, tracerr.Wrap(err)
 			}
 			tokenID := common.TokenID(idUint)
 			tokenIDs = append(tokenIDs, tokenID)
@@ -259,16 +258,15 @@ func parseAccountFilters(c querier) ([]common.TokenID, *ethCommon.Address, *baby
 	// Hez Eth addr
 	addr, err := parseQueryHezEthAddr(c)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, tracerr.Wrap(err)
 	}
 	// BJJ
 	bjj, err := parseQueryBJJ(c)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, tracerr.Wrap(err)
 	}
 	if addr != nil && bjj != nil {
-		return nil, nil, nil,
-			errors.New("bjj and hermezEthereumAddress params are incompatible")
+		return nil, nil, nil, tracerr.Wrap(errors.New("bjj and hermezEthereumAddress params are incompatible"))
 	}
 
 	return tokenIDs, addr, bjj, nil
@@ -284,11 +282,11 @@ func parseParamTxID(c paramer) (common.TxID, error) {
 	const name = "id"
 	txIDStr := c.Param(name)
 	if txIDStr == "" {
-		return common.TxID{}, fmt.Errorf("%s is required", name)
+		return common.TxID{}, tracerr.Wrap(fmt.Errorf("%s is required", name))
 	}
 	txID, err := common.NewTxIDFromString(txIDStr)
 	if err != nil {
-		return common.TxID{}, fmt.Errorf("invalid %s", name)
+		return common.TxID{}, tracerr.Wrap(fmt.Errorf("invalid %s", name))
 	}
 	return txID, nil
 }
@@ -318,22 +316,22 @@ func stringToIdx(idxStr, name string) (*common.Idx, error) {
 	splitted := strings.Split(idxStr, ":")
 	const expectedLen = 3
 	if len(splitted) != expectedLen || splitted[0] != "hez" {
-		return nil, fmt.Errorf(
-			"invalid %s, must follow this: hez:<tokenSymbol>:index", name)
+		return nil, tracerr.Wrap(fmt.Errorf(
+			"invalid %s, must follow this: hez:<tokenSymbol>:index", name))
 	}
 	// TODO: check that the tokenSymbol match the token related to the account index
 	idxInt, err := strconv.Atoi(splitted[2])
 	idx := common.Idx(idxInt)
-	return &idx, err
+	return &idx, tracerr.Wrap(err)
 }
 
 func stringToUint(uintStr, name string, dflt *uint, min, max uint) (*uint, error) {
 	if uintStr != "" {
 		resInt, err := strconv.Atoi(uintStr)
 		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
-			return nil, fmt.Errorf(
+			return nil, tracerr.Wrap(fmt.Errorf(
 				"Invalid %s. Must be an integer within the range [%d, %d]",
-				name, min, max)
+				name, min, max))
 		}
 		res := uint(resInt)
 		return &res, nil
@@ -345,9 +343,9 @@ func stringToInt64(uintStr, name string, dflt *int64, min, max int64) (*int64, e
 	if uintStr != "" {
 		resInt, err := strconv.Atoi(uintStr)
 		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
-			return nil, fmt.Errorf(
+			return nil, tracerr.Wrap(fmt.Errorf(
 				"Invalid %s. Must be an integer within the range [%d, %d]",
-				name, min, max)
+				name, min, max))
 		}
 		res := int64(resInt)
 		return &res, nil
@@ -361,32 +359,32 @@ func hezStringToEthAddr(addrStr, name string) (*ethCommon.Address, error) {
 	}
 	splitted := strings.Split(addrStr, "hez:")
 	if len(splitted) != 2 || len(splitted[1]) != 42 {
-		return nil, fmt.Errorf(
-			"Invalid %s, must follow this regex: ^hez:0x[a-fA-F0-9]{40}$", name)
+		return nil, tracerr.Wrap(fmt.Errorf(
+			"Invalid %s, must follow this regex: ^hez:0x[a-fA-F0-9]{40}$", name))
 	}
 	var addr ethCommon.Address
 	err := addr.UnmarshalText([]byte(splitted[1]))
-	return &addr, err
+	return &addr, tracerr.Wrap(err)
 }
 
 func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKey, error) {
 	const decodedLen = 33
 	splitted := strings.Split(bjjStr, "hez:")
 	if len(splitted) != 2 || len(splitted[1]) != 44 {
-		return nil, fmt.Errorf(
+		return nil, tracerr.Wrap(fmt.Errorf(
 			"Invalid %s, must follow this regex: ^hez:[A-Za-z0-9+/=]{44}$",
-			name)
+			name))
 	}
 	decoded, err := base64.RawURLEncoding.DecodeString(splitted[1])
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, tracerr.Wrap(fmt.Errorf(
 			"Invalid %s, error decoding base64 string: %s",
-			name, err.Error())
+			name, err.Error()))
 	}
 	if len(decoded) != decodedLen {
-		return nil, fmt.Errorf(
+		return nil, tracerr.Wrap(fmt.Errorf(
 			"invalid %s, error decoding base64 string: unexpected byte array length",
-			name)
+			name))
 	}
 	bjjBytes := [decodedLen - 1]byte{}
 	copy(bjjBytes[:decodedLen-1], decoded[:decodedLen-1])
@@ -395,15 +393,15 @@ func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKey, error) {
 		sum += bjjBytes[i]
 	}
 	if decoded[decodedLen-1] != sum {
-		return nil, fmt.Errorf("invalid %s, checksum failed",
-			name)
+		return nil, tracerr.Wrap(fmt.Errorf("invalid %s, checksum failed",
+			name))
 	}
 	bjjComp := babyjub.PublicKeyComp(bjjBytes)
 	bjj, err := bjjComp.Decompress()
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, tracerr.Wrap(fmt.Errorf(
 			"invalid %s, error decompressing public key: %s",
-			name, err.Error())
+			name, err.Error()))
 	}
 	return bjj, nil
 }
@@ -427,7 +425,7 @@ func parseParamEthAddr(name string, c paramer) (*ethCommon.Address, error) {
 func parseEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 	var addr ethCommon.Address
 	err := addr.UnmarshalText([]byte(ethAddrStr))
-	return &addr, err
+	return &addr, tracerr.Wrap(err)
 }
 
 func parseParamHezEthAddr(c paramer) (*ethCommon.Address, error) {

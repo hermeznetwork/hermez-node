@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/ztrue/tracerr"
 )
 
 func (a *API) getBatches(c *gin.Context) {
@@ -110,7 +111,7 @@ func (a *API) getFullBatch(c *gin.Context) {
 	txs, _, err := a.h.GetHistoryTxs(
 		nil, nil, nil, nil, batchNum, nil, nil, &maxTxsPerBatch, historydb.OrderAsc,
 	)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		retSQLErr(err, c)
 		return
 	}

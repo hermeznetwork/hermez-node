@@ -11,6 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
+	"github.com/ztrue/tracerr"
 )
 
 // InitSQLDB runs migrations and registers meddlers
@@ -29,7 +30,7 @@ func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 	)
 	db, err := sqlx.Connect("postgres", psqlconn)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// Run DB migrations
 	migrations := &migrate.PackrMigrationSource{
@@ -37,7 +38,7 @@ func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 	}
 	nMigrations, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	log.Info("successfully ran ", nMigrations, " migrations")
 	return db, nil
@@ -64,7 +65,7 @@ func BulkInsert(db meddler.DB, q string, args interface{}) error {
 		arg := arrayValue.Index(i).Addr().Interface()
 		elemArglist, err := meddler.Default.Values(arg, true)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		arglist = append(arglist, elemArglist...)
 		value := "("
@@ -76,7 +77,7 @@ func BulkInsert(db meddler.DB, q string, args interface{}) error {
 	}
 	stmt := fmt.Sprintf(q, strings.Join(valueStrings, ","))
 	_, err := db.Exec(stmt, arglist...)
-	return err
+	return tracerr.Wrap(err)
 }
 
 // BigIntMeddler encodes or decodes the field value to or from JSON
@@ -92,7 +93,7 @@ func (b BigIntMeddler) PreRead(fieldAddr interface{}) (scanTarget interface{}, e
 func (b BigIntMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
 	ptr := scanTarget.(*string)
 	if ptr == nil {
-		return fmt.Errorf("BigIntMeddler.PostRead: nil pointer")
+		return tracerr.Wrap(fmt.Errorf("BigIntMeddler.PostRead: nil pointer"))
 	}
 	field := fieldPtr.(**big.Int)
 	*field = new(big.Int).SetBytes([]byte(*ptr))
@@ -126,7 +127,7 @@ func (b BigIntNullMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
 	// not null
 	ptr := (*ptrPtr).([]byte)
 	if ptr == nil {
-		return fmt.Errorf("BigIntMeddler.PostRead: nil pointer")
+		return tracerr.Wrap(fmt.Errorf("BigIntMeddler.PostRead: nil pointer"))
 	}
 	*field = new(big.Int).SetBytes(ptr)
 	return nil

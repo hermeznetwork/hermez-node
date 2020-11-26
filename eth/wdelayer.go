@@ -16,6 +16,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	WithdrawalDelayer "github.com/hermeznetwork/hermez-node/eth/contracts/withdrawdelayer"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/ztrue/tracerr"
 )
 
 // DepositState is the state of Deposit
@@ -140,11 +141,11 @@ type WDelayerClient struct {
 func NewWDelayerClient(client *EthereumClient, address ethCommon.Address) (*WDelayerClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(WithdrawalDelayer.WithdrawalDelayerABI)))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	wdelayer, err := WithdrawalDelayer.NewWithdrawalDelayer(address, client.Client())
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WDelayerClient{
 		client:      client,
@@ -159,9 +160,9 @@ func (c *WDelayerClient) WDelayerGetHermezGovernanceDAOAddress() (hermezGovernan
 	var _hermezGovernanceDAOAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_hermezGovernanceDAOAddress, err = c.wdelayer.GetHermezGovernanceDAOAddress(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &_hermezGovernanceDAOAddress, nil
 }
@@ -174,7 +175,7 @@ func (c *WDelayerClient) WDelayerSetHermezGovernanceDAOAddress(newAddress ethCom
 			return c.wdelayer.SetHermezGovernanceDAOAddress(auth, newAddress)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting hermezGovernanceDAOAddress: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting hermezGovernanceDAOAddress: %w", err))
 	}
 	return tx, nil
 }
@@ -184,9 +185,9 @@ func (c *WDelayerClient) WDelayerGetHermezKeeperAddress() (hermezKeeperAddress *
 	var _hermezKeeperAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_hermezKeeperAddress, err = c.wdelayer.GetHermezKeeperAddress(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &_hermezKeeperAddress, nil
 }
@@ -199,7 +200,7 @@ func (c *WDelayerClient) WDelayerSetHermezKeeperAddress(newAddress ethCommon.Add
 			return c.wdelayer.SetHermezKeeperAddress(auth, newAddress)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting hermezKeeperAddress: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting hermezKeeperAddress: %w", err))
 	}
 	return tx, nil
 }
@@ -209,9 +210,9 @@ func (c *WDelayerClient) WDelayerGetWhiteHackGroupAddress() (whiteHackGroupAddre
 	var _whiteHackGroupAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_whiteHackGroupAddress, err = c.wdelayer.GetWhiteHackGroupAddress(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &_whiteHackGroupAddress, nil
 }
@@ -224,7 +225,7 @@ func (c *WDelayerClient) WDelayerSetWhiteHackGroupAddress(newAddress ethCommon.A
 			return c.wdelayer.SetWhiteHackGroupAddress(auth, newAddress)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting whiteHackGroupAddress: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting whiteHackGroupAddress: %w", err))
 	}
 	return tx, nil
 }
@@ -233,9 +234,9 @@ func (c *WDelayerClient) WDelayerSetWhiteHackGroupAddress(newAddress ethCommon.A
 func (c *WDelayerClient) WDelayerIsEmergencyMode() (ermergencyMode bool, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		ermergencyMode, err = c.wdelayer.IsEmergencyMode(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return false, err
+		return false, tracerr.Wrap(err)
 	}
 	return ermergencyMode, nil
 }
@@ -244,9 +245,9 @@ func (c *WDelayerClient) WDelayerIsEmergencyMode() (ermergencyMode bool, err err
 func (c *WDelayerClient) WDelayerGetWithdrawalDelay() (withdrawalDelay *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		withdrawalDelay, err = c.wdelayer.GetWithdrawalDelay(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return withdrawalDelay, nil
 }
@@ -255,9 +256,9 @@ func (c *WDelayerClient) WDelayerGetWithdrawalDelay() (withdrawalDelay *big.Int,
 func (c *WDelayerClient) WDelayerGetEmergencyModeStartingTime() (emergencyModeStartingTime *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		emergencyModeStartingTime, err = c.wdelayer.GetEmergencyModeStartingTime(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return emergencyModeStartingTime, nil
 }
@@ -270,7 +271,7 @@ func (c *WDelayerClient) WDelayerEnableEmergencyMode() (tx *types.Transaction, e
 			return c.wdelayer.EnableEmergencyMode(auth)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting enable emergency mode: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting enable emergency mode: %w", err))
 	}
 	return tx, nil
 }
@@ -283,7 +284,7 @@ func (c *WDelayerClient) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64
 			return c.wdelayer.ChangeWithdrawalDelay(auth, newWithdrawalDelay)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting withdrawal delay: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting withdrawal delay: %w", err))
 	}
 	return tx, nil
 }
@@ -294,9 +295,9 @@ func (c *WDelayerClient) WDelayerDepositInfo(owner, token ethCommon.Address) (de
 		amount, depositTimestamp, err := c.wdelayer.DepositInfo(nil, owner, token)
 		depositInfo.Amount = amount
 		depositInfo.DepositTimestamp = depositTimestamp
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return depositInfo, err
+		return depositInfo, tracerr.Wrap(err)
 	}
 	return depositInfo, nil
 }
@@ -309,7 +310,7 @@ func (c *WDelayerClient) WDelayerDeposit(owner, token ethCommon.Address, amount 
 			return c.wdelayer.Deposit(auth, owner, token, amount)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed deposit: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed deposit: %w", err))
 	}
 	return tx, nil
 }
@@ -322,7 +323,7 @@ func (c *WDelayerClient) WDelayerWithdrawal(owner, token ethCommon.Address) (tx 
 			return c.wdelayer.Withdrawal(auth, owner, token)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed withdrawal: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed withdrawal: %w", err))
 	}
 	return tx, nil
 }
@@ -335,7 +336,7 @@ func (c *WDelayerClient) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Addre
 			return c.wdelayer.EscapeHatchWithdrawal(auth, to, token, amount)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed escapeHatchWithdrawal: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed escapeHatchWithdrawal: %w", err))
 	}
 	return tx, nil
 }
@@ -346,19 +347,19 @@ func (c *WDelayerClient) WDelayerConstants() (constants *common.WDelayerConstant
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		constants.MaxWithdrawalDelay, err = c.wdelayer.MAXWITHDRAWALDELAY(nil)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		constants.MaxEmergencyModeTime, err = c.wdelayer.MAXEMERGENCYMODETIME(nil)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		constants.HermezRollup, err = c.wdelayer.HermezRollupAddress(nil)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return constants, err
+		return constants, tracerr.Wrap(err)
 	}
 	return constants, nil
 }
@@ -393,7 +394,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 
 	logs, err := c.client.client.FilterLogs(context.Background(), query)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	if len(logs) > 0 {
 		blockHash = &logs[0].BlockHash
@@ -408,7 +409,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var deposit WDelayerEventDeposit
 			err := c.contractAbi.Unpack(&deposit, "Deposit", vLog.Data)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			deposit.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			deposit.Token = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -419,7 +420,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var withdraw WDelayerEventWithdraw
 			err := c.contractAbi.Unpack(&withdraw, "Withdraw", vLog.Data)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			withdraw.Token = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			withdraw.Owner = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -433,7 +434,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var withdrawalDelay WDelayerEventNewWithdrawalDelay
 			err := c.contractAbi.Unpack(&withdrawalDelay, "NewWithdrawalDelay", vLog.Data)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			wdelayerEvents.NewWithdrawalDelay = append(wdelayerEvents.NewWithdrawalDelay, withdrawalDelay)
 
@@ -441,7 +442,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var escapeHatchWithdrawal WDelayerEventEscapeHatchWithdrawal
 			err := c.contractAbi.Unpack(&escapeHatchWithdrawal, "EscapeHatchWithdrawal", vLog.Data)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			escapeHatchWithdrawal.Who = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			escapeHatchWithdrawal.To = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -452,7 +453,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var keeperAddress WDelayerEventNewHermezKeeperAddress
 			err := c.contractAbi.Unpack(&keeperAddress, "NewHermezKeeperAddress", vLog.Data)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			wdelayerEvents.NewHermezKeeperAddress = append(wdelayerEvents.NewHermezKeeperAddress, keeperAddress)
 
@@ -460,7 +461,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var whiteHackGroupAddress WDelayerEventNewWhiteHackGroupAddress
 			err := c.contractAbi.Unpack(&whiteHackGroupAddress, "NewWhiteHackGroupAddress", vLog.Data)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			wdelayerEvents.NewWhiteHackGroupAddress = append(wdelayerEvents.NewWhiteHackGroupAddress, whiteHackGroupAddress)
 
@@ -468,7 +469,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var governanceDAOAddress WDelayerEventNewHermezGovernanceDAOAddress
 			err := c.contractAbi.Unpack(&governanceDAOAddress, "NewHermezGovernanceDAOAddress", vLog.Data)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			wdelayerEvents.NewHermezGovernanceDAOAddress = append(wdelayerEvents.NewHermezGovernanceDAOAddress, governanceDAOAddress)
 		}

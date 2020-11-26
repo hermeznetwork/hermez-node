@@ -8,6 +8,7 @@ import (
 	"github.com/dghubble/sling"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/ztrue/tracerr"
 )
 
 const (
@@ -66,7 +67,7 @@ func (p *PriceUpdater) UpdatePrices() {
 func (p *PriceUpdater) UpdateTokenList() error {
 	tokenSymbols, err := p.db.GetTokenSymbols()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	p.tokenSymbols = tokenSymbols
 	return nil

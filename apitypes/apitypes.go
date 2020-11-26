@@ -14,6 +14,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/ztrue/tracerr"
 )
 
 // BigIntStr is used to scan/value *big.Int directly into strings from/to sql DBs.
@@ -35,7 +36,7 @@ func NewBigIntStr(bigInt *big.Int) *BigIntStr {
 func (b *BigIntStr) Scan(src interface{}) error {
 	srcBytes, ok := src.([]byte)
 	if !ok {
-		return fmt.Errorf("can't scan %T into apitypes.BigIntStr", src)
+		return tracerr.Wrap(fmt.Errorf("can't scan %T into apitypes.BigIntStr", src))
 	}
 	// bytes to *big.Int
 	bigInt := new(big.Int).SetBytes(srcBytes)
@@ -53,7 +54,7 @@ func (b BigIntStr) Value() (driver.Value, error) {
 	// string to *big.Int
 	bigInt, ok := new(big.Int).SetString(string(b), 10)
 	if !ok || bigInt == nil {
-		return nil, errors.New("invalid representation of a *big.Int")
+		return nil, tracerr.Wrap(errors.New("invalid representation of a *big.Int"))
 	}
 	// *big.Int to bytes
 	return bigInt.Bytes(), nil
@@ -66,7 +67,7 @@ type StrBigInt big.Int
 func (s *StrBigInt) UnmarshalText(text []byte) error {
 	bi, ok := (*big.Int)(s).SetString(string(text), 10)
 	if !ok {
-		return fmt.Errorf("could not unmarshal %s into a StrBigInt", text)
+		return tracerr.Wrap(fmt.Errorf("could not unmarshal %s into a StrBigInt", text))
 	}
 	*s = StrBigInt(*bi)
 	return nil
@@ -79,7 +80,7 @@ type CollectedFees map[common.TokenID]BigIntStr
 func (c *CollectedFees) UnmarshalJSON(text []byte) error {
 	bigIntMap := make(map[common.TokenID]*big.Int)
 	if err := json.Unmarshal(text, &bigIntMap); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	*c = CollectedFees(make(map[common.TokenID]BigIntStr))
 	for k, v := range bigIntMap {
@@ -110,7 +111,7 @@ func (a HezEthAddr) ToEthAddr() (ethCommon.Address, error) {
 func (a *HezEthAddr) Scan(src interface{}) error {
 	ethAddr := &ethCommon.Address{}
 	if err := ethAddr.Scan(src); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if ethAddr == nil {
 		return nil
@@ -123,7 +124,7 @@ func (a *HezEthAddr) Scan(src interface{}) error {
 func (a HezEthAddr) Value() (driver.Value, error) {
 	ethAddr, err := a.ToEthAddr()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return ethAddr.Value()
 }
@@ -136,7 +137,7 @@ func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
 	withoutHez := strings.TrimPrefix(string(text), "hez:")
 	var addr ethCommon.Address
 	if err := addr.UnmarshalText([]byte(withoutHez)); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	*s = StrHezEthAddr(addr)
 	return nil
@@ -180,7 +181,7 @@ func hezStrToBJJ(s string) (*babyjub.PublicKey, error) {
 		sum += bjjBytes[i]
 	}
 	if decoded[decodedLen-1] != sum {
-		return nil, errors.New("checksum verification failed")
+		return nil, tracerr.Wrap(errors.New("checksum verification failed"))
 	}
 	bjjComp := babyjub.PublicKeyComp(bjjBytes)
 	return bjjComp.Decompress()
@@ -195,7 +196,7 @@ func (b HezBJJ) ToBJJ() (*babyjub.PublicKey, error) {
 func (b *HezBJJ) Scan(src interface{}) error {
 	bjj := &babyjub.PublicKey{}
 	if err := bjj.Scan(src); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if bjj == nil {
 		return nil
@@ -208,7 +209,7 @@ func (b *HezBJJ) Scan(src interface{}) error {
 func (b HezBJJ) Value() (driver.Value, error) {
 	bjj, err := b.ToBJJ()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return bjj.Value()
 }
@@ -220,7 +221,7 @@ type StrHezBJJ babyjub.PublicKey
 func (s *StrHezBJJ) UnmarshalText(text []byte) error {
 	bjj, err := hezStrToBJJ(string(text))
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	*s = StrHezBJJ(*bjj)
 	return nil
@@ -239,11 +240,11 @@ func (s *StrHezIdx) UnmarshalText(text []byte) error {
 	splitted := strings.Split(withoutHez, ":")
 	const expectedLen = 2
 	if len(splitted) != expectedLen {
-		return fmt.Errorf("can not unmarshal %s into StrHezIdx", text)
+		return tracerr.Wrap(fmt.Errorf("can not unmarshal %s into StrHezIdx", text))
 	}
 	idxInt, err := strconv.Atoi(splitted[1])
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	*s = StrHezIdx(common.Idx(idxInt))
 	return nil
@@ -274,7 +275,7 @@ func (e *EthSignature) Scan(src interface{}) error {
 		return nil
 	} else {
 		// unexpected src
-		return fmt.Errorf("can't scan %T into apitypes.EthSignature", src)
+		return tracerr.Wrap(fmt.Errorf("can't scan %T into apitypes.EthSignature", src))
 	}
 }
 
@@ -289,7 +290,7 @@ func (e *EthSignature) UnmarshalText(text []byte) error {
 	without0x := strings.TrimPrefix(string(text), "0x")
 	signature, err := hex.DecodeString(without0x)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	*e = EthSignature([]byte(signature))
 	return nil

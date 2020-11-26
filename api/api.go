@@ -8,6 +8,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/ztrue/tracerr"
 )
 
 // TODO: Add correct values to constants
@@ -47,10 +48,10 @@ func NewAPI(
 	// Check input
 	// TODO: is stateDB only needed for explorer endpoints or for both?
 	if coordinatorEndpoints && l2db == nil {
-		return nil, errors.New("cannot serve Coordinator endpoints without L2DB")
+		return nil, tracerr.Wrap(errors.New("cannot serve Coordinator endpoints without L2DB"))
 	}
 	if explorerEndpoints && hdb == nil {
-		return nil, errors.New("cannot serve Explorer endpoints without HistoryDB")
+		return nil, tracerr.Wrap(errors.New("cannot serve Explorer endpoints without HistoryDB"))
 	}
 
 	a := &API{
