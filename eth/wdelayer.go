@@ -402,7 +402,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 	for _, vLog := range logs {
 		if vLog.BlockHash != *blockHash {
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
-			return nil, nil, ErrBlockHashMismatchEvent
+			return nil, nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
 		switch vLog.Topics[0] {
 		case logWDelayerDeposit:

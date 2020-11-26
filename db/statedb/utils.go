@@ -10,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
+	"github.com/ztrue/tracerr"
 )
 
 func concatEthAddrTokenID(addr ethCommon.Address, tokenID common.TokenID) []byte {
@@ -46,7 +47,7 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 	}
 
 	if pk == nil {
-		return fmt.Errorf("BabyJubJub pk not defined")
+		return tracerr.Wrap(fmt.Errorf("BabyJubJub pk not defined"))
 	}
 
 	// store idx for EthAddr & BJJ assuming that EthAddr & BJJ still don't
@@ -55,28 +56,28 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 	// (smaller)
 	tx, err := s.db.NewTx()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	idxBytes, err := idx.Bytes()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// store Addr&BJJ-idx
 	k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 	err = tx.Put(append(PrefixKeyAddrBJJ, k...), idxBytes[:])
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 
 	// store Addr-idx
 	k = concatEthAddrTokenID(addr, tokenID)
 	err = tx.Put(append(PrefixKeyAddr, k...), idxBytes[:])
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	err = tx.Commit()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	return nil
 }
@@ -88,11 +89,11 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID
 	k := concatEthAddrTokenID(addr, tokenID)
 	b, err := s.db.Get(append(PrefixKeyAddr, k...))
 	if err != nil {
-		return common.Idx(0), fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d", ErrToIdxNotFound, addr.Hex(), tokenID)
+		return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d", ErrToIdxNotFound, addr.Hex(), tokenID))
 	}
 	idx, err := common.IdxFromBytes(b)
 	if err != nil {
-		return common.Idx(0), fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d", err, addr.Hex(), tokenID)
+		return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d", err, addr.Hex(), tokenID))
 	}
 	return idx, nil
 }
@@ -112,16 +113,16 @@ func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk *babyjub.PublicK
 		k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 		b, err := s.db.Get(append(PrefixKeyAddrBJJ, k...))
 		if err != nil {
-			return common.Idx(0), fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrToIdxNotFound, addr.Hex(), pk, tokenID)
+			return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrToIdxNotFound, addr.Hex(), pk, tokenID))
 		}
 		idx, err := common.IdxFromBytes(b)
 		if err != nil {
-			return common.Idx(0), fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", err, addr.Hex(), pk, tokenID)
+			return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", err, addr.Hex(), pk, tokenID))
 		}
 		return idx, nil
 	}
 	// rest of cases (included case ToEthAddr==0) are not possible
-	return common.Idx(0), fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrGetIdxNoCase, addr.Hex(), pk, tokenID)
+	return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrGetIdxNoCase, addr.Hex(), pk, tokenID))
 }
 
 func (s *StateDB) getTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]common.Idx, error) {
@@ -129,7 +130,7 @@ func (s *StateDB) getTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]com
 	for i := 0; i < len(idxs); i++ {
 		a, err := s.GetAccount(idxs[i])
 		if err != nil {
-			return nil, fmt.Errorf("getTokenIDsFromIdxs error on GetAccount with Idx==%d: %s", idxs[i], err.Error())
+			return nil, tracerr.Wrap(fmt.Errorf("getTokenIDsFromIdxs error on GetAccount with Idx==%d: %s", idxs[i], err.Error()))
 		}
 		m[a.TokenID] = idxs[i]
 	}

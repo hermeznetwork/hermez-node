@@ -52,7 +52,7 @@ func (idx Idx) String() string {
 // Bytes returns a byte array representing the Idx
 func (idx Idx) Bytes() ([6]byte, error) {
 	if idx > maxIdxValue {
-		return [6]byte{}, ErrIdxOverflow
+		return [6]byte{}, tracerr.Wrap(ErrIdxOverflow)
 	}
 	var idxBytes [8]byte
 	binary.BigEndian.PutUint64(idxBytes[:], uint64(idx))
@@ -80,7 +80,7 @@ func IdxFromBytes(b []byte) (Idx, error) {
 // IdxFromBigInt converts a *big.Int to Idx type
 func IdxFromBigInt(b *big.Int) (Idx, error) {
 	if b.Int64() > maxIdxValue {
-		return 0, ErrNumOverflow
+		return 0, tracerr.Wrap(ErrNumOverflow)
 	}
 	return Idx(uint64(b.Int64())), nil
 }
@@ -91,7 +91,7 @@ type Nonce uint64
 // Bytes returns a byte array of length 5 representing the Nonce
 func (n Nonce) Bytes() ([5]byte, error) {
 	if n > maxNonceValue {
-		return [5]byte{}, ErrNonceOverflow
+		return [5]byte{}, tracerr.Wrap(ErrNonceOverflow)
 	}
 	var nonceBytes [8]byte
 	binary.BigEndian.PutUint64(nonceBytes[:], uint64(n))
@@ -202,7 +202,7 @@ func (a *Account) HashValue() (*big.Int, error) {
 // AccountFromBigInts returns a Account from a [5]*big.Int
 func AccountFromBigInts(e [NLeafElems]*big.Int) (*Account, error) {
 	if !cryptoUtils.CheckBigIntArrayInField(e[:]) {
-		return nil, ErrNotInFF
+		return nil, tracerr.Wrap(ErrNotInFF)
 	}
 	e0B := e[0].Bytes()
 	e1B := e[1].Bytes()
@@ -242,10 +242,10 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 	ethAddr := ethCommon.BytesToAddress(b[108:128])
 
 	if !cryptoUtils.CheckBigIntInField(balance) {
-		return nil, ErrNotInFF
+		return nil, tracerr.Wrap(ErrNotInFF)
 	}
 	if !cryptoUtils.CheckBigIntInField(ay) {
-		return nil, ErrNotInFF
+		return nil, tracerr.Wrap(ErrNotInFF)
 	}
 
 	a := Account{

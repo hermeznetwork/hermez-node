@@ -39,5 +39,3 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.29.1
 	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 )
-
-// replace github.com/russross/meddler => /home/dev/git/iden3/hermez/meddler

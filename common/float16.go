@@ -8,6 +8,7 @@ package common
 import (
 	"encoding/binary"
 	"errors"
+	"github.com/ztrue/tracerr"
 	"math/big"
 )
 
@@ -112,7 +113,7 @@ func NewFloat16(f *big.Int) (Float16, error) {
 	if res.BigInt().Cmp(f) == 0 {
 		return res, nil
 	}
-	return res, ErrRoundingLoss
+	return res, tracerr.Wrap(ErrRoundingLoss)
 }
 
 // NewFloat16Floor encodes a big.Int integer as a Float16, rounding down in

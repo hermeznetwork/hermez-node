@@ -8,6 +8,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/jmoiron/sqlx"
+	"github.com/ztrue/tracerr"
 
 	//nolint:errcheck // driver for postgres DB
 	_ "github.com/lib/pq"
@@ -51,7 +52,7 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 		VALUES ($1, $2, $3);`,
 		auth.EthAddr, auth.BJJ, auth.Signature,
 	)
-	return err
+	return tracerr.Wrap(err)
 }
 
 // GetAccountCreationAuth returns an account creation authorization from the DB
@@ -170,7 +171,7 @@ func (l2db *L2DB) GetPendingTxs() ([]common.PoolL2Tx, error) {
 		selectPoolTxCommon+"WHERE state = $1",
 		common.PoolL2TxStatePending,
 	)
-	return db.SlicePtrsToSlice(txs).([]common.PoolL2Tx), err
+	return db.SlicePtrsToSlice(txs).([]common.PoolL2Tx), tracerr.Wrap(err)
 }
 
 // StartForging updates the state of the transactions that will begin the forging process.
@@ -186,11 +187,11 @@ func (l2db *L2DB) StartForging(txIDs []common.TxID, batchNum common.BatchNum) er
 		txIDs,
 	)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	query = l2db.db.Rebind(query)
 	_, err = l2db.db.Exec(query, args...)
-	return err
+	return tracerr.Wrap(err)
 }
 
 // DoneForging updates the state of the transactions that have been forged
@@ -206,11 +207,11 @@ func (l2db *L2DB) DoneForging(txIDs []common.TxID, batchNum common.BatchNum) err
 		txIDs,
 	)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	query = l2db.db.Rebind(query)
 	_, err = l2db.db.Exec(query, args...)
-	return err
+	return tracerr.Wrap(err)
 }
 
 // InvalidateTxs updates the state of the transactions that are invalid.
@@ -225,11 +226,11 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 		txIDs,
 	)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	query = l2db.db.Rebind(query)
 	_, err = l2db.db.Exec(query, args...)
-	return err
+	return tracerr.Wrap(err)
 }
 
 // CheckNonces invalidate txs with nonces that are smaller or equal than their respective accounts nonces.
@@ -237,7 +238,7 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.BatchNum) (err error) {
 	txn, err := l2db.db.Beginx()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	defer func() {
 		// Rollback the transaction if there was an error.
@@ -257,7 +258,7 @@ func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.
 			updatedAccounts[i].Nonce,
 		)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 	}
 	return txn.Commit()
@@ -274,7 +275,7 @@ func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 		common.PoolL2TxStateInvalid,
 		lastValidBatch,
 	)
-	return err
+	return tracerr.Wrap(err)
 }
 
 // Purge deletes transactions that have been forged or marked as invalid for longer than the safety period
@@ -282,7 +283,7 @@ func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 	txn, err := l2db.db.Beginx()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	defer func() {
 		// Rollback the transaction if there was an error.
@@ -298,7 +299,7 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 		time.Unix(now-int64(l2db.ttl.Seconds()), 0),
 	)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// Delete txs that have been marked as forged / invalid after the safety period
 	_, err = txn.Exec(
@@ -309,7 +310,7 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 		common.PoolL2TxStateInvalid,
 	)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	return txn.Commit()
 }

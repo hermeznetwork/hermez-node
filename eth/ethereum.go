@@ -106,7 +106,7 @@ func (c *EthereumClient) Account() *accounts.Account {
 // EthAddress returns the ethereum address of the account loaded into the EthereumClient
 func (c *EthereumClient) EthAddress() (*ethCommon.Address, error) {
 	if c.account == nil {
-		return nil, ErrAccountNil
+		return nil, tracerr.Wrap(ErrAccountNil)
 	}
 	return &c.account.Address, nil
 }
@@ -117,7 +117,7 @@ func (c *EthereumClient) EthAddress() (*ethCommon.Address, error) {
 func (c *EthereumClient) CallAuth(gasLimit uint64,
 	fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
 	if c.account == nil {
-		return nil, ErrAccountNil
+		return nil, tracerr.Wrap(ErrAccountNil)
 	}
 
 	gasPrice, err := c.client.SuggestGasPrice(context.Background())
@@ -230,12 +230,12 @@ func (c *EthereumClient) waitReceipt(ctx context.Context, tx *types.Transaction,
 
 	if receipt != nil && receipt.Status == types.ReceiptStatusFailed {
 		log.Errorw("Failed transaction", "tx", txHash.Hex())
-		return receipt, ErrReceiptStatusFailed
+		return receipt, tracerr.Wrap(ErrReceiptStatusFailed)
 	}
 
 	if receipt == nil {
 		log.Debugw("Pendingtransaction / Wait receipt timeout", "tx", txHash.Hex(), "lasterr", err)
-		return receipt, ErrReceiptNotReceived
+		return receipt, tracerr.Wrap(ErrReceiptNotReceived)
 	}
 	log.Debugw("Successful transaction", "tx", txHash.Hex())
 

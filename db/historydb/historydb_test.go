@@ -16,6 +16,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ztrue/tracerr"
 )
 
 var historyDB *HistoryDB
@@ -674,7 +675,7 @@ func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *co
 func TestSetInitialSCVars(t *testing.T) {
 	test.WipeDB(historyDB.DB())
 	_, _, _, err := historyDB.GetSCVars()
-	assert.Equal(t, sql.ErrNoRows, err)
+	assert.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))
 	rollup, auction, wDelayer := exampleInitSCVars()
 	err = historyDB.SetInitialSCVars(rollup, auction, wDelayer)
 	require.Nil(t, err)
@@ -853,7 +854,7 @@ func TestGetBestBidCoordinator(t *testing.T) {
 	require.Equal(t, coords[1].URL, forger10.URL)
 
 	_, err = historyDB.GetBestBidCoordinator(11)
-	require.Equal(t, sql.ErrNoRows, err)
+	require.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them

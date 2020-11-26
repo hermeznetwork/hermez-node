@@ -11,6 +11,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
+	"github.com/ztrue/tracerr"
 )
 
 func handleNoRoute(c *gin.Context) {
@@ -118,8 +119,7 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 	}
 	go func() {
 		log.Infof("DebugAPI is ready at %v", a.addr)
-		if err := debugAPIServer.ListenAndServe(); err != nil &&
-			err != http.ErrServerClosed {
+		if err := debugAPIServer.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
 			log.Fatalf("Listen: %s\n", err)
 		}
 	}()
@@ -129,7 +129,7 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:gomnd
 	defer cancel()
 	if err := debugAPIServer.Shutdown(ctxTimeout); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	log.Info("DebugAPI done")
 	return nil

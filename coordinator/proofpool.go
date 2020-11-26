@@ -57,7 +57,7 @@ func (p *ServerProofMock) GetProof(ctx context.Context) (*Proof, error) {
 	case <-time.After(200 * time.Millisecond): //nolint:gomnd
 		return &Proof{}, nil
 	case <-ctx.Done():
-		return nil, ErrDone
+		return nil, tracerr.Wrap(ErrDone)
 	}
 }
 
@@ -83,7 +83,7 @@ func (p *ServerProofPool) Get(ctx context.Context) (ServerProofInterface, error)
 	select {
 	case <-ctx.Done():
 		log.Info("ServerProofPool.Get done")
-		return nil, ErrDone
+		return nil, tracerr.Wrap(ErrDone)
 	case serverProof := <-p.pool:
 		return serverProof, nil
 	}

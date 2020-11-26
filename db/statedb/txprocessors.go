@@ -13,6 +13,7 @@ import (
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
 	"github.com/iden3/go-merkletree/db/pebble"
+	"github.com/ztrue/tracerr"
 )
 
 var (
@@ -69,12 +70,12 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	var createdAccounts []common.Account
 
 	if s.zki != nil {
-		return nil, errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty")
+		return nil, tracerr.Wrap(errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty"))
 	}
 	defer s.resetZKInputs()
 
 	if len(coordIdxs) >= int(ptc.MaxFeeTx) {
-		return nil, fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)", len(coordIdxs), ptc.MaxFeeTx)
+		return nil, tracerr.Wrap(fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)", len(coordIdxs), ptc.MaxFeeTx))
 	}
 
 	s.accumulatedFees = make(map[common.Idx]*big.Int)
@@ -103,7 +104,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 		tmpDir, err := ioutil.TempDir("", "hermez-statedb-exittree")
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		defer func() {
 			if err := os.RemoveAll(tmpDir); err != nil {
@@ -112,11 +113,11 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		}()
 		sto, err := pebble.NewPebbleStorage(tmpDir, false)
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		exitTree, err = merkletree.NewMerkleTree(sto, s.mt.MaxLevels())
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 	}
 
@@ -125,7 +126,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		// assumption: l1usertx are sorted by L1Tx.Position
 		exitIdx, exitAccount, newExit, createdAccount, err := s.processL1Tx(exitTree, &l1usertxs[i])
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		if s.typ == TypeSynchronizer && createdAccount != nil {
 			createdAccounts = append(createdAccounts, *createdAccount)
@@ -134,7 +135,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		if s.zki != nil {
 			l1TxData, err := l1usertxs[i].BytesGeneric()
 			if err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
 
@@ -160,7 +161,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	for i := 0; i < len(l1coordinatortxs); i++ {
 		exitIdx, _, _, createdAccount, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		if exitIdx != nil {
 			log.Error("Unexpected Exit in L1CoordinatorTx")
@@ -171,7 +172,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		if s.zki != nil {
 			l1TxData, err := l1coordinatortxs[i].BytesGeneric()
 			if err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
 
@@ -193,7 +194,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	// created in the current batch, at this point the Idx will be created
 	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// collectedFees will contain the amount of fee collected for each
 	// TokenID
@@ -210,7 +211,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		feePlanTokens, err := s.getFeePlanTokens(coordIdxs, l2txs)
 		if err != nil {
 			log.Error(err)
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		copy(s.zki.FeePlanTokens, feePlanTokens)
 	}
@@ -219,12 +220,12 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	for i := 0; i < len(l2txs); i++ {
 		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, collectedFees, exitTree, &l2txs[i])
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		if s.zki != nil {
 			l2TxData, err := l2txs[i].L2Tx().Bytes(s.zki.Metadata.NLevels)
 			if err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			s.zki.Metadata.L2TxsData = append(s.zki.Metadata.L2TxsData, l2TxData)
 
@@ -264,13 +265,13 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		accCoord, err := s.GetAccount(idx)
 		if err != nil {
 			log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
 		pFee, err := s.UpdateAccount(idx, accCoord)
 		if err != nil {
 			log.Error(err)
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		if s.zki != nil {
 			s.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
@@ -308,7 +309,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		// 0. generate MerkleProof
 		p, err := exitTree.GenerateCircomVerifierProof(exitIdx.BigInt(), nil)
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		// 1. generate common.ExitInfo
 		ei := common.ExitInfo{
@@ -382,7 +383,7 @@ func (s *StateDB) getFeePlanTokens(coordIdxs []common.Idx, l2txs []common.PoolL2
 		acc, err := s.GetAccount(coordIdxs[i])
 		if err != nil {
 			log.Errorf("could not get account to determine TokenID of CoordIdx %d not found: %s", coordIdxs[i], err.Error())
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		coordTokenIDs[acc.TokenID] = true
 	}
@@ -394,7 +395,7 @@ func (s *StateDB) getFeePlanTokens(coordIdxs []common.Idx, l2txs []common.PoolL2
 		acc, err := s.GetAccount(l2txs[i].FromIdx)
 		if err != nil {
 			log.Errorf("could not get account to determine TokenID of L2Tx: FromIdx %d not found: %s", l2txs[i].FromIdx, err.Error())
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		if _, ok := coordTokenIDs[acc.TokenID]; ok {
 			tokenIDs[acc.TokenID] = true
@@ -422,7 +423,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		s.zki.TxCompressedData[s.i], err = tx.TxCompressedData()
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 		s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
 		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
@@ -451,14 +452,14 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyTransfer(nil, nil, tx.Tx(), 0)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 	case common.TxTypeCreateAccountDeposit:
 		// add new account to the MT, update balance of the MT account
 		err := s.applyCreateAccount(tx)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 		// TODO applyCreateAccount will return the created account,
 		// which in the case type==TypeSynchronizer will be added to an
@@ -468,7 +469,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyDeposit(tx, false)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 	case common.TxTypeDepositTransfer:
 		// update balance in MT account, update balance & nonce of sender
@@ -476,7 +477,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyDeposit(tx, true)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 	case common.TxTypeCreateAccountDepositTransfer:
 		// add new account to the merkletree, update balance in MT account,
@@ -484,7 +485,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		err := s.applyCreateAccountDepositTransfer(tx)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 	case common.TxTypeForceExit:
 		// execute exit flow
@@ -492,7 +493,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		exitAccount, newExit, err := s.applyExit(nil, nil, exitTree, tx.Tx())
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 		return &tx.FromIdx, exitAccount, newExit, nil, nil
 	default:
@@ -504,7 +505,7 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		createdAccount, err = s.GetAccount(s.idx)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, nil, err
+			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
 	}
 
@@ -523,7 +524,7 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 		// case when tx.Type== common.TxTypeTransferToEthAddr or common.TxTypeTransferToBJJ
 		tx.AuxToIdx, err = s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ, tx.TokenID)
 		if err != nil {
-			return nil, nil, false, err
+			return nil, nil, false, tracerr.Wrap(err)
 		}
 	}
 
@@ -532,11 +533,11 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 		// Txs
 		s.zki.TxCompressedData[s.i], err = tx.TxCompressedData()
 		if err != nil {
-			return nil, nil, false, err
+			return nil, nil, false, tracerr.Wrap(err)
 		}
 		s.zki.TxCompressedDataV2[s.i], err = tx.TxCompressedDataV2()
 		if err != nil {
-			return nil, nil, false, err
+			return nil, nil, false, tracerr.Wrap(err)
 		}
 		s.zki.FromIdx[s.i] = tx.FromIdx.BigInt()
 		s.zki.ToIdx[s.i] = tx.ToIdx.BigInt()
@@ -565,7 +566,7 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 		signature, err := tx.Signature.Decompress()
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, tracerr.Wrap(err)
 		}
 		s.zki.S[s.i] = signature.S
 		s.zki.R8x[s.i] = signature.R8.X
@@ -578,7 +579,7 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 		acc, err := s.GetAccount(tx.FromIdx)
 		if err != nil {
 			log.Errorw("GetAccount", "fromIdx", tx.FromIdx, "err", err)
-			return nil, nil, false, err
+			return nil, nil, false, tracerr.Wrap(err)
 		}
 		tx.Nonce = acc.Nonce + 1
 		tx.TokenID = acc.TokenID
@@ -591,14 +592,14 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 		err = s.applyTransfer(coordIdxsMap, collectedFees, tx.Tx(), tx.AuxToIdx)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, tracerr.Wrap(err)
 		}
 	case common.TxTypeExit:
 		// execute exit flow
 		exitAccount, newExit, err := s.applyExit(coordIdxsMap, collectedFees, exitTree, tx.Tx())
 		if err != nil {
 			log.Error(err)
-			return nil, nil, false, err
+			return nil, nil, false, tracerr.Wrap(err)
 		}
 		return &tx.FromIdx, exitAccount, newExit, nil
 	default:
@@ -619,7 +620,7 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 
 	p, err := s.CreateAccount(common.Idx(s.idx+1), account)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = tx.TokenID.BigInt()
@@ -659,7 +660,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	// deposit the tx.LoadAmount into the sender account
 	accSender, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.LoadAmount)
 
@@ -668,7 +669,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	if transfer {
 		accReceiver, err = s.GetAccount(tx.ToIdx)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		// subtract amount to the sender
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
@@ -678,7 +679,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	// update sender account in localStateDB
 	p, err := s.UpdateAccount(tx.FromIdx, accSender)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = accSender.TokenID.BigInt()
@@ -698,7 +699,7 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		// update receiver account in localStateDB
 		p, err := s.UpdateAccount(tx.ToIdx, accReceiver)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		if s.zki != nil {
 			s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
@@ -732,7 +733,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 	accSender, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
 		log.Error(err)
-		return err
+		return tracerr.Wrap(err)
 	}
 	if !tx.IsL1 {
 		// increment nonce
@@ -741,7 +742,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		// compute fee and subtract it from the accSender
 		fee, err := common.CalcFeeAmount(tx.Amount, *tx.Fee)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
@@ -773,7 +774,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 		accReceiver, err = s.GetAccount(auxToIdx)
 		if err != nil {
 			log.Error(err)
-			return err
+			return tracerr.Wrap(err)
 		}
 	}
 
@@ -784,7 +785,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 	pSender, err := s.UpdateAccount(tx.FromIdx, accSender)
 	if err != nil {
 		log.Error(err)
-		return err
+		return tracerr.Wrap(err)
 	}
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = accSender.TokenID.BigInt()
@@ -801,7 +802,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx, coll
 	// update receiver account in localStateDB
 	pReceiver, err := s.UpdateAccount(auxToIdx, accReceiver)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if s.zki != nil {
 		s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
@@ -830,7 +831,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 	}
 	accReceiver, err := s.GetAccount(tx.ToIdx)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// subtract amount to the sender
 	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
@@ -840,7 +841,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 	// create Account of the Sender
 	p, err := s.CreateAccount(common.Idx(s.idx+1), accSender)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = tx.TokenID.BigInt()
@@ -870,7 +871,7 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 	// update receiver account in localStateDB
 	p, err = s.UpdateAccount(tx.ToIdx, accReceiver)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if s.zki != nil {
 		s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
@@ -896,7 +897,7 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
-		return nil, false, err
+		return nil, false, tracerr.Wrap(err)
 	}
 
 	if !tx.IsL1 {
@@ -906,7 +907,7 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 		// compute fee and subtract it from the accSender
 		fee, err := common.CalcFeeAmount(tx.Amount, *tx.Fee)
 		if err != nil {
-			return nil, false, err
+			return nil, false, tracerr.Wrap(err)
 		}
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
@@ -930,7 +931,7 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 
 	p, err := s.UpdateAccount(tx.FromIdx, acc)
 	if err != nil {
-		return nil, false, err
+		return nil, false, tracerr.Wrap(err)
 	}
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = acc.TokenID.BigInt()
@@ -948,7 +949,7 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 		return nil, false, nil
 	}
 	exitAccount, err := getAccountInTreeDB(exitTree.DB(), tx.FromIdx)
-	if err == db.ErrNotFound {
+	if tracerr.Unwrap(err) == db.ErrNotFound {
 		// 1a. if idx does not exist in exitTree:
 		// add new leaf 'ExitTreeLeaf', where ExitTreeLeaf.Balance = exitAmount (exitAmount=tx.Amount)
 		exitAccount := &common.Account{
@@ -959,27 +960,27 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx, collecte
 			EthAddr:   acc.EthAddr,
 		}
 		_, err = createAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
-		return exitAccount, true, err
+		return exitAccount, true, tracerr.Wrap(err)
 	} else if err != nil {
-		return exitAccount, false, err
+		return exitAccount, false, tracerr.Wrap(err)
 	}
 
 	// 1b. if idx already exist in exitTree:
 	// update account, where account.Balance += exitAmount
 	exitAccount.Balance = new(big.Int).Add(exitAccount.Balance, tx.Amount)
 	_, err = updateAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
-	return exitAccount, false, err
+	return exitAccount, false, tracerr.Wrap(err)
 }
 
 // getIdx returns the stored Idx from the localStateDB, which is the last Idx
 // used for an Account in the localStateDB.
 func (s *StateDB) getIdx() (common.Idx, error) {
 	idxBytes, err := s.DB().Get(keyidx)
-	if err == db.ErrNotFound {
+	if tracerr.Unwrap(err) == db.ErrNotFound {
 		return 0, nil
 	}
 	if err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return common.IdxFromBytes(idxBytes[:])
 }
@@ -988,18 +989,18 @@ func (s *StateDB) getIdx() (common.Idx, error) {
 func (s *StateDB) setIdx(idx common.Idx) error {
 	tx, err := s.DB().NewTx()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	idxBytes, err := idx.Bytes()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	err = tx.Put(keyidx, idxBytes[:])
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if err := tx.Commit(); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	return nil
 }
