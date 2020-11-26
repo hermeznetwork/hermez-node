@@ -29,7 +29,7 @@ func TestPriceUpdater(t *testing.T) {
 	tokens := []common.Token{}
 	tokens = append(tokens, common.Token{
 		TokenID:     1,
-		EthBlockNum: blocks[0].EthBlockNum,
+		EthBlockNum: blocks[0].Num,
 		EthAddr:     ethCommon.BigToAddress(big.NewInt(2)),
 		Name:        "DAI",
 		Symbol:      "DAI",

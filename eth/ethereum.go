@@ -257,10 +257,11 @@ func (c *EthereumClient) EthLastBlock() (int64, error) {
 // 	return c.client.HeaderByNumber(ctx, number)
 // }
 
-// EthBlockByNumber internally calls ethclient.Client BlockByNumber and returns *common.Block
+// EthBlockByNumber internally calls ethclient.Client BlockByNumber and returns
+// *common.Block.  If number == -1, the latests known block is returned.
 func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*common.Block, error) {
 	blockNum := big.NewInt(number)
-	if number == 0 {
+	if number == -1 {
 		blockNum = nil
 	}
 	block, err := c.client.BlockByNumber(ctx, blockNum)
@@ -268,10 +269,10 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 		return nil, err
 	}
 	b := &common.Block{
-		EthBlockNum: block.Number().Int64(),
-		Timestamp:   time.Unix(int64(block.Time()), 0),
-		ParentHash:  block.ParentHash(),
-		Hash:        block.Hash(),
+		Num:        block.Number().Int64(),
+		Timestamp:  time.Unix(int64(block.Time()), 0),
+		ParentHash: block.ParentHash(),
+		Hash:       block.Hash(),
 	}
 	return b, nil
 }

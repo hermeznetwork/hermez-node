@@ -90,8 +90,10 @@ type Node struct {
 		TokenHEZName string            `validate:"required"`
 	} `validate:"required"`
 	API struct {
-		Address  string
-		Explorer bool
+		Address                      string
+		Explorer                     bool
+		UpdateMetricsInterval        Duration
+		UpdateRecommendedFeeInterval Duration
 	} `validate:"required"`
 	Debug struct {
 		APIAddress string

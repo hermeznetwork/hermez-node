@@ -13,7 +13,7 @@ import (
 func AddAditionalInformation(blocks []common.BlockData) {
 	for i := range blocks {
 		blocks[i].Block.Timestamp = time.Now().Add(time.Second * 13).UTC()
-		blocks[i].Block.Hash = ethCommon.BigToHash(big.NewInt(blocks[i].Block.EthBlockNum))
+		blocks[i].Block.Hash = ethCommon.BigToHash(big.NewInt(blocks[i].Block.Num))
 		for j := range blocks[i].Rollup.AddedTokens {
 			blocks[i].Rollup.AddedTokens[j].Name = "NAME" + strconv.Itoa(int(blocks[i].Rollup.AddedTokens[j].TokenID))
 			blocks[i].Rollup.AddedTokens[j].Symbol = strconv.Itoa(int(blocks[i].Rollup.AddedTokens[j].TokenID))

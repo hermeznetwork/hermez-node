@@ -107,7 +107,7 @@ func TestBlocks(t *testing.T) {
 }
 
 func assertEqualBlock(t *testing.T, expected *common.Block, actual *common.Block) {
-	assert.Equal(t, expected.EthBlockNum, actual.EthBlockNum)
+	assert.Equal(t, expected.Num, actual.Num)
 	assert.Equal(t, expected.Hash, actual.Hash)
 	assert.Equal(t, expected.Timestamp.Unix(), actual.Timestamp.Unix())
 }
@@ -150,6 +150,7 @@ func TestBatches(t *testing.T) {
 	batches := []common.Batch{}
 	tokensValue := make(map[common.TokenID]float64)
 	lastL1TxsNum := new(int64)
+	lastL1BatchBlockNum := int64(0)
 	for _, block := range blocks {
 		// Insert block
 		assert.NoError(t, historyDB.AddBlock(&block.Block))
@@ -169,6 +170,7 @@ func TestBatches(t *testing.T) {
 			forgeTxsNum := batch.Batch.ForgeL1TxsNum
 			if forgeTxsNum != nil && (lastL1TxsNum == nil || *lastL1TxsNum < *forgeTxsNum) {
 				*lastL1TxsNum = *forgeTxsNum
+				lastL1BatchBlockNum = batch.Batch.EthBlockNum
 			}
 		}
 	}
@@ -199,6 +201,10 @@ func TestBatches(t *testing.T) {
 	fetchedLastL1TxsNum, err := historyDB.GetLastL1TxsNum()
 	assert.NoError(t, err)
 	assert.Equal(t, lastL1TxsNum, fetchedLastL1TxsNum)
+	// Test GetLastL1BatchBlockNum
+	fetchedLastL1BatchBlockNum, err := historyDB.GetLastL1BatchBlockNum()
+	assert.NoError(t, err)
+	assert.Equal(t, lastL1BatchBlockNum, fetchedLastL1BatchBlockNum)
 }
 
 func TestBids(t *testing.T) {
@@ -735,7 +741,7 @@ func TestUpdateExitTree(t *testing.T) {
 
 	// Add withdraws to the second-to-last block, and insert block into the DB
 	block := &blocks[len(blocks)-2]
-	require.Equal(t, int64(4), block.Block.EthBlockNum)
+	require.Equal(t, int64(4), block.Block.Num)
 	tokenAddr := blocks[0].Rollup.AddedTokens[0].EthAddr
 	// block.WDelayer.Deposits = append(block.WDelayer.Deposits,
 	// 	common.WDelayerTransfer{Owner: tc.UsersByIdx[257].Addr, Token: tokenAddr, Amount: big.NewInt(80)}, // 257
@@ -752,7 +758,7 @@ func TestUpdateExitTree(t *testing.T) {
 	err = historyDB.addBlock(historyDB.db, &block.Block)
 	require.Nil(t, err)
 
-	err = historyDB.updateExitTree(historyDB.db, block.Block.EthBlockNum,
+	err = historyDB.updateExitTree(historyDB.db, block.Block.Num,
 		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
 	require.Nil(t, err)
 
@@ -767,15 +773,15 @@ func TestUpdateExitTree(t *testing.T) {
 	for _, withdraw := range block.Rollup.Withdrawals {
 		assert.Equal(t, withdraw.NumExitRoot, dbExitsByIdx[withdraw.Idx].BatchNum)
 		if withdraw.InstantWithdraw {
-			assert.Equal(t, &block.Block.EthBlockNum, dbExitsByIdx[withdraw.Idx].InstantWithdrawn)
+			assert.Equal(t, &block.Block.Num, dbExitsByIdx[withdraw.Idx].InstantWithdrawn)
 		} else {
-			assert.Equal(t, &block.Block.EthBlockNum, dbExitsByIdx[withdraw.Idx].DelayedWithdrawRequest)
+			assert.Equal(t, &block.Block.Num, dbExitsByIdx[withdraw.Idx].DelayedWithdrawRequest)
 		}
 	}
 
 	// Add delayed withdraw to the last block, and insert block into the DB
 	block = &blocks[len(blocks)-1]
-	require.Equal(t, int64(5), block.Block.EthBlockNum)
+	require.Equal(t, int64(5), block.Block.Num)
 	block.WDelayer.Withdrawals = append(block.WDelayer.Withdrawals,
 		common.WDelayerTransfer{
 			Owner:  tc.UsersByIdx[257].Addr,
@@ -785,7 +791,7 @@ func TestUpdateExitTree(t *testing.T) {
 	err = historyDB.addBlock(historyDB.db, &block.Block)
 	require.Nil(t, err)
 
-	err = historyDB.updateExitTree(historyDB.db, block.Block.EthBlockNum,
+	err = historyDB.updateExitTree(historyDB.db, block.Block.Num,
 		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
 	require.Nil(t, err)
 
@@ -795,7 +801,7 @@ func TestUpdateExitTree(t *testing.T) {
 	for _, dbExit := range dbExits {
 		dbExitsByIdx[dbExit.AccountIdx] = dbExit
 	}
-	require.Equal(t, &block.Block.EthBlockNum, dbExitsByIdx[257].DelayedWithdrawn)
+	require.Equal(t, &block.Block.Num, dbExitsByIdx[257].DelayedWithdrawn)
 }
 
 func TestGetBestBidCoordinator(t *testing.T) {

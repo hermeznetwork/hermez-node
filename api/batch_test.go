@@ -60,7 +60,7 @@ func genTestBatches(
 		block := common.Block{}
 		found := false
 		for _, b := range blocks {
-			if b.EthBlockNum == cBatches[i].EthBlockNum {
+			if b.Num == cBatches[i].EthBlockNum {
 				block = b
 				found = true
 				break

@@ -1,6 +1,8 @@
 [API]
 Address = "localhost:8086"
 Explorer = true
+UpdateMetricsInterval = "10s"
+UpdateRecommendedFeeInterval = "10s"
 
 [Debug]
 APIAddress = "localhost:12345"

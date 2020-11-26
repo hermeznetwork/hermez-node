@@ -10,7 +10,6 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
-	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -21,13 +20,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var deleteme = []string{}
+
+func TestMain(m *testing.M) {
+	exitVal := m.Run()
+	for _, dir := range deleteme {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	}
+	os.Exit(exitVal)
+}
+
 func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBuilder) { // FUTURE once Synchronizer is ready, should return it also
 	nLevels := 32
 
-	synchDBPath, err := ioutil.TempDir("", "tmpSynchDB")
+	syncDBPath, err := ioutil.TempDir("", "tmpSyncDB")
 	require.Nil(t, err)
-	defer assert.Nil(t, os.RemoveAll(synchDBPath))
-	synchSdb, err := statedb.NewStateDB(synchDBPath, statedb.TypeSynchronizer, nLevels)
+	deleteme = append(deleteme, syncDBPath)
+	syncSdb, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, nLevels)
 	assert.Nil(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
@@ -37,14 +48,14 @@ func newTestModules(t *testing.T) (*txselector.TxSelector, *batchbuilder.BatchBu
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.Nil(t, err)
-	defer assert.Nil(t, os.RemoveAll(txselDir))
-	txsel, err := txselector.NewTxSelector(txselDir, synchSdb, l2DB, 10, 10, 10)
+	deleteme = append(deleteme, txselDir)
+	txsel, err := txselector.NewTxSelector(txselDir, syncSdb, l2DB, 10, 10, 10)
 	assert.Nil(t, err)
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.Nil(t, err)
-	defer assert.Nil(t, os.RemoveAll(bbDir))
-	bb, err := batchbuilder.NewBatchBuilder(bbDir, synchSdb, nil, 0, uint64(nLevels))
+	deleteme = append(deleteme, bbDir)
+	bb, err := batchbuilder.NewBatchBuilder(bbDir, syncSdb, nil, 0, uint64(nLevels))
 	assert.Nil(t, err)
 
 	// l1Txs, coordinatorL1Txs, poolL2Txs := test.GenerateTestTxsFromSet(t, test.SetTest0)
@@ -62,57 +73,26 @@ func (t *timer) Time() int64 {
 	return currentTime
 }
 
-var forger ethCommon.Address
-var bidder ethCommon.Address
+var bidder = ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
+var forger = ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 
-func waitForSlot(t *testing.T, coord *Coordinator, c *test.Client, slot int64) {
-	for {
-		blockNum, err := c.EthLastBlock()
-		require.Nil(t, err)
-		nextBlockSlot, err := c.AuctionGetSlotNumber(blockNum + 1)
-		require.Nil(t, err)
-		if nextBlockSlot == slot {
-			break
-		}
-		c.CtlMineBlock()
-		time.Sleep(100 * time.Millisecond)
-		var stats synchronizer.Stats
-		stats.Eth.LastBlock = c.CtlLastBlock()
-		stats.Sync.LastBlock = c.CtlLastBlock()
-		canForge, err := c.AuctionCanForge(forger, blockNum+1)
-		require.Nil(t, err)
-		if canForge {
-			// fmt.Println("DBG canForge")
-			stats.Sync.Auction.CurrentSlot.Forger = forger
-		}
-		coord.SendMsg(MsgSyncStats{
-			Stats: stats,
-		})
-	}
-}
-
-func TestCoordinator(t *testing.T) {
+func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *test.Client, ethClientSetup *test.ClientSetup) *Coordinator {
 	txsel, bb := newTestModules(t)
-	bidder = ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
-	forger = ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+
+	debugBatchPath, err := ioutil.TempDir("", "tmpDebugBatch")
+	require.Nil(t, err)
+	deleteme = append(deleteme, debugBatchPath)
 
 	conf := Config{
-		ForgerAddress: forger,
+		ForgerAddress:          forgerAddr,
+		ConfirmBlocks:          5,
+		L1BatchTimeoutPerc:     0.5,
+		EthClientAttempts:      5,
+		EthClientAttemptsDelay: 100 * time.Millisecond,
+		TxManagerCheckInterval: 500 * time.Millisecond,
+		DebugBatchPath:         debugBatchPath,
 	}
-	hdb := &historydb.HistoryDB{}
 	serverProofs := []ServerProofInterface{&ServerProofMock{}, &ServerProofMock{}}
-
-	var timer timer
-	ethClientSetup := test.NewClientSetupExample()
-	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-
-	// Bid for slot 2 and 4
-	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
-	require.Nil(t, err)
-	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
-	require.Nil(t, err)
-	_, err = ethClient.AuctionBidSimple(4, big.NewInt(9999))
-	require.Nil(t, err)
 
 	scConsts := &synchronizer.SCConsts{
 		Rollup:   *ethClientSetup.RollupConstants,
@@ -124,30 +104,253 @@ func TestCoordinator(t *testing.T) {
 		Auction:  *ethClientSetup.AuctionVariables,
 		WDelayer: *ethClientSetup.WDelayerVariables,
 	}
-	c := NewCoordinator(conf, hdb, txsel, bb, serverProofs, ethClient, scConsts, initSCVars)
-	c.Start()
+	coord, err := NewCoordinator(conf, nil, txsel, bb, serverProofs, ethClient, scConsts, initSCVars)
+	require.Nil(t, err)
+	return coord
+}
+
+func TestCoordinatorFlow(t *testing.T) {
+	if os.Getenv("TEST_COORD_FLOW") == "" {
+		return
+	}
+	ethClientSetup := test.NewClientSetupExample()
+	var timer timer
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+
+	// Bid for slot 2 and 4
+	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
+	require.Nil(t, err)
+	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
+	require.Nil(t, err)
+	_, err = ethClient.AuctionBidSimple(4, big.NewInt(9999))
+	require.Nil(t, err)
+
+	coord.Start()
 	time.Sleep(1 * time.Second)
+
+	waitForSlot := func(slot int64) {
+		for {
+			blockNum, err := ethClient.EthLastBlock()
+			require.Nil(t, err)
+			nextBlockSlot, err := ethClient.AuctionGetSlotNumber(blockNum + 1)
+			require.Nil(t, err)
+			if nextBlockSlot == slot {
+				break
+			}
+			ethClient.CtlMineBlock()
+			time.Sleep(100 * time.Millisecond)
+			var stats synchronizer.Stats
+			stats.Eth.LastBlock = *ethClient.CtlLastBlock()
+			stats.Sync.LastBlock = *ethClient.CtlLastBlock()
+			canForge, err := ethClient.AuctionCanForge(forger, blockNum+1)
+			require.Nil(t, err)
+			if canForge {
+				// fmt.Println("DBG canForge")
+				stats.Sync.Auction.CurrentSlot.Forger = forger
+			}
+			coord.SendMsg(MsgSyncStats{
+				Stats: stats,
+			})
+		}
+	}
 
 	// NOTE: With the current test, the coordinator will enter in forge
 	// time before the bidded slot because no one else is forging in the
 	// other slots before the slot deadline.
 	// simulate forgeSequence time
-	waitForSlot(t, c, ethClient, 2)
+	waitForSlot(2)
 	log.Info("~~~ simulate entering in forge time")
 	time.Sleep(1 * time.Second)
 
 	// simulate going out from forgeSequence
-	waitForSlot(t, c, ethClient, 3)
+	waitForSlot(3)
 	log.Info("~~~ simulate going out from forge time")
 	time.Sleep(1 * time.Second)
 
 	// simulate entering forgeSequence time again
-	waitForSlot(t, c, ethClient, 4)
+	waitForSlot(4)
 	log.Info("~~~ simulate entering in forge time again")
 	time.Sleep(2 * time.Second)
 
 	// simulate stopping forgerLoop by channel
 	log.Info("~~~ simulate stopping forgerLoop by closing coordinator stopch")
-	c.Stop()
+	coord.Stop()
 	time.Sleep(1 * time.Second)
 }
+
+func TestCoordinatorStartStop(t *testing.T) {
+	ethClientSetup := test.NewClientSetupExample()
+	var timer timer
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	coord.Start()
+	coord.Stop()
+}
+
+func TestCoordCanForge(t *testing.T) {
+	ethClientSetup := test.NewClientSetupExample()
+	bootForger := ethClientSetup.AuctionVariables.BootCoordinator
+
+	var timer timer
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
+	require.Nil(t, err)
+	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
+	require.Nil(t, err)
+
+	bootCoord := newTestCoordinator(t, bootForger, ethClient, ethClientSetup)
+
+	assert.Equal(t, forger, coord.cfg.ForgerAddress)
+	assert.Equal(t, bootForger, bootCoord.cfg.ForgerAddress)
+	ethBootCoord, err := ethClient.AuctionGetBootCoordinator()
+	require.Nil(t, err)
+	assert.Equal(t, &bootForger, ethBootCoord)
+
+	var stats synchronizer.Stats
+
+	// Slot 0.  No bid, so the winner is the boot coordinator
+	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.Auction.CurrentSlot.Forger = bootForger
+	assert.Equal(t, false, coord.canForge(&stats))
+	assert.Equal(t, true, bootCoord.canForge(&stats))
+
+	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
+	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+		int64(ethClientSetup.AuctionVariables.SlotDeadline)
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.Auction.CurrentSlot.Forger = bootForger
+	assert.Equal(t, true, coord.canForge(&stats))
+	assert.Equal(t, true, bootCoord.canForge(&stats))
+
+	// Slot 1. coordinator bid, so the winner is the coordinator
+	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+		1*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.Auction.CurrentSlot.Forger = forger
+	assert.Equal(t, true, coord.canForge(&stats))
+	assert.Equal(t, false, bootCoord.canForge(&stats))
+}
+
+func TestCoordHandleMsgSyncStats(t *testing.T) {
+	ethClientSetup := test.NewClientSetupExample()
+	bootForger := ethClientSetup.AuctionVariables.BootCoordinator
+
+	var timer timer
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
+	require.Nil(t, err)
+	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
+	require.Nil(t, err)
+
+	var stats synchronizer.Stats
+
+	// Slot 0.  No bid, so the winner is the boot coordinator
+	// pipelineStarted: false -> false
+	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.Auction.CurrentSlot.Forger = bootForger
+	assert.Equal(t, false, coord.canForge(&stats))
+	require.Nil(t, coord.handleMsgSyncStats(&stats))
+	assert.Nil(t, coord.pipeline)
+
+	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
+	// pipelineStarted: false -> true
+	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+		int64(ethClientSetup.AuctionVariables.SlotDeadline)
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.Auction.CurrentSlot.Forger = bootForger
+	assert.Equal(t, true, coord.canForge(&stats))
+	require.Nil(t, coord.handleMsgSyncStats(&stats))
+	assert.NotNil(t, coord.pipeline)
+
+	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
+	// pipelineStarted: true -> true
+	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+		int64(ethClientSetup.AuctionVariables.SlotDeadline) + 1
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.Auction.CurrentSlot.Forger = bootForger
+	assert.Equal(t, true, coord.canForge(&stats))
+	require.Nil(t, coord.handleMsgSyncStats(&stats))
+	assert.NotNil(t, coord.pipeline)
+
+	// Slot 0. No bid, so the winner is the boot coordinator
+	// pipelineStarted: true -> false
+	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+		1*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.Auction.CurrentSlot.Forger = bootForger
+	assert.Equal(t, false, coord.canForge(&stats))
+	require.Nil(t, coord.handleMsgSyncStats(&stats))
+	assert.Nil(t, coord.pipeline)
+}
+
+func TestPipelineShouldL1L2Batch(t *testing.T) {
+	ethClientSetup := test.NewClientSetupExample()
+
+	var timer timer
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	pipeline := coord.newPipeline()
+	pipeline.vars = coord.vars
+
+	// Check that the parameters are the ones we expect and use in this test
+	require.Equal(t, 0.5, pipeline.cfg.L1BatchTimeoutPerc)
+	require.Equal(t, int64(9), ethClientSetup.RollupVariables.ForgeL1L2BatchTimeout)
+	l1BatchTimeoutPerc := pipeline.cfg.L1BatchTimeoutPerc
+	l1BatchTimeout := ethClientSetup.RollupVariables.ForgeL1L2BatchTimeout
+
+	var stats synchronizer.Stats
+
+	startBlock := int64(100)
+
+	//
+	// No scheduled L1Batch
+	//
+
+	// Last L1Batch was a long time ago
+	stats.Eth.LastBlock.Num = startBlock
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	stats.Sync.LastL1BatchBlock = 0
+	pipeline.stats = stats
+	assert.Equal(t, true, pipeline.shouldL1L2Batch())
+
+	stats.Sync.LastL1BatchBlock = startBlock
+
+	// We are are one block before the timeout range * 0.5
+	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc) - 1
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	pipeline.stats = stats
+	assert.Equal(t, false, pipeline.shouldL1L2Batch())
+
+	// We are are at timeout range * 0.5
+	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc)
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	pipeline.stats = stats
+	assert.Equal(t, true, pipeline.shouldL1L2Batch())
+
+	//
+	// Scheduled L1Batch
+	//
+	pipeline.lastScheduledL1BatchBlockNum = startBlock
+	stats.Sync.LastL1BatchBlock = startBlock - 10
+
+	// We are are one block before the timeout range * 0.5
+	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc) - 1
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	pipeline.stats = stats
+	assert.Equal(t, false, pipeline.shouldL1L2Batch())
+
+	// We are are at timeout range * 0.5
+	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc)
+	stats.Sync.LastBlock = stats.Eth.LastBlock
+	pipeline.stats = stats
+	assert.Equal(t, true, pipeline.shouldL1L2Batch())
+}
+
+// TODO: Test Reorg
+// TODO: Test Pipeline
+// TODO: Test TxMonitor

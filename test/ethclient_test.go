@@ -46,7 +46,7 @@ func TestClientEth(t *testing.T) {
 
 	block, err := c.EthBlockByNumber(context.TODO(), 0)
 	require.Nil(t, err)
-	assert.Equal(t, int64(0), block.EthBlockNum)
+	assert.Equal(t, int64(0), block.Num)
 	assert.Equal(t, time.Unix(0, 0), block.Timestamp)
 	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", block.Hash.Hex())
 
@@ -60,7 +60,7 @@ func TestClientEth(t *testing.T) {
 
 	block, err = c.EthBlockByNumber(context.TODO(), 2)
 	require.Nil(t, err)
-	assert.Equal(t, int64(2), block.EthBlockNum)
+	assert.Equal(t, int64(2), block.Num)
 	assert.Equal(t, time.Unix(2, 0), block.Timestamp)
 
 	// Add a token
