@@ -43,24 +43,33 @@ var bootCoordinator historydb.CoordinatorAPI = historydb.CoordinatorAPI{
 
 func (a *API) getState(c *gin.Context) {
 	// TODO: There are no events for the buckets information, so now this information will be 0
-	c.JSON(http.StatusOK, a.status)
+	a.status.RLock()
+	status := a.status //nolint
+	a.status.RUnlock()
+	c.JSON(http.StatusOK, status) //nolint
 }
 
 // SC Vars
 
 // SetRollupVariables set Status.Rollup variables
 func (a *API) SetRollupVariables(rollupVariables common.RollupVariables) {
+	a.status.Lock()
 	a.status.Rollup = rollupVariables
+	a.status.Unlock()
 }
 
 // SetWDelayerVariables set Status.WithdrawalDelayer variables
 func (a *API) SetWDelayerVariables(wDelayerVariables common.WDelayerVariables) {
+	a.status.Lock()
 	a.status.WithdrawalDelayer = wDelayerVariables
+	a.status.Unlock()
 }
 
 // SetAuctionVariables set Status.Auction variables
 func (a *API) SetAuctionVariables(auctionVariables common.AuctionVariables) {
+	a.status.Lock()
 	a.status.Auction = auctionVariables
+	a.status.Unlock()
 }
 
 // Network
@@ -78,25 +87,27 @@ func (a *API) UpdateNetworkInfo(
 	lastEthBlock, lastSyncBlock common.Block,
 	lastBatchNum common.BatchNum, currentSlot int64,
 ) error {
-	a.status.Network.LastSyncBlock = lastSyncBlock.Num
-	a.status.Network.LastEthBlock = lastEthBlock.Num
 	lastBatch, err := a.h.GetBatchAPI(lastBatchNum)
 	if err != nil {
 		return err
 	}
-	a.status.Network.LastBatch = *lastBatch
-	a.status.Network.CurrentSlot = currentSlot
 	lastClosedSlot := currentSlot + int64(a.status.Auction.ClosedAuctionSlots)
-	nextForgers, err := a.GetNextForgers(lastSyncBlock, currentSlot, lastClosedSlot)
+	nextForgers, err := a.getNextForgers(lastSyncBlock, currentSlot, lastClosedSlot)
 	if err != nil {
 		return err
 	}
+	a.status.Lock()
+	a.status.Network.LastSyncBlock = lastSyncBlock.Num
+	a.status.Network.LastEthBlock = lastEthBlock.Num
+	a.status.Network.LastBatch = *lastBatch
+	a.status.Network.CurrentSlot = currentSlot
 	a.status.Network.NextForgers = nextForgers
+	a.status.Unlock()
 	return nil
 }
 
-// GetNextForgers returns next forgers
-func (a *API) GetNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot int64) ([]NextForger, error) {
+// getNextForgers returns next forgers
+func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot int64) ([]NextForger, error) {
 	secondsPerBlock := int64(15) //nolint:gomnd
 	// currentSlot and lastClosedSlot included
 	limit := uint(lastClosedSlot - currentSlot + 1)
@@ -144,11 +155,16 @@ func (a *API) GetNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 
 // UpdateMetrics update Status.Metrics information
 func (a *API) UpdateMetrics() error {
-	metrics, err := a.h.GetMetrics(a.status.Network.LastBatch.BatchNum)
+	a.status.RLock()
+	batchNum := a.status.Network.LastBatch.BatchNum
+	a.status.RUnlock()
+	metrics, err := a.h.GetMetrics(batchNum)
 	if err != nil {
 		return err
 	}
+	a.status.Lock()
 	a.status.Metrics = *metrics
+	a.status.Unlock()
 	return nil
 }
 
@@ -160,8 +176,10 @@ func (a *API) UpdateRecommendedFee() error {
 	if err != nil {
 		return err
 	}
+	a.status.Lock()
 	a.status.RecommendedFee.ExistingAccount = feeExistingAccount
 	a.status.RecommendedFee.CreatesAccount = createAccountExtraFeePercentage * feeExistingAccount
 	a.status.RecommendedFee.CreatesAccountAndRegister = createAccountInternalExtraFeePercentage * feeExistingAccount
+	a.status.Unlock()
 	return nil
 }

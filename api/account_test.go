@@ -81,7 +81,7 @@ func TestGetAccounts(t *testing.T) {
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Filter by ethAddr
-	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&limit=%d&fromItem=", endpoint, tc.accounts[0].EthAddr, limit)
+	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&limit=%d&fromItem=", endpoint, tc.accounts[3].EthAddr, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -18,6 +19,7 @@ const (
 
 // Status define status of the network
 type Status struct {
+	sync.RWMutex
 	Network           Network                  `json:"network"`
 	Metrics           historydb.Metrics        `json:"metrics"`
 	Rollup            common.RollupVariables   `json:"rollup"`
@@ -60,8 +62,9 @@ func NewAPI(
 			AuctionConstants:  config.AuctionConstants,
 			WDelayerConstants: config.WDelayerConstants,
 		},
-		s:  sdb,
-		l2: l2db,
+		s:      sdb,
+		l2:     l2db,
+		status: Status{},
 	}
 
 	// Add coordinator endpoints

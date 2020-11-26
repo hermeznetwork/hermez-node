@@ -58,8 +58,8 @@ var SetBlockchain = `
 	// close Block:0, Batch:0
 	> batch
 
-	CreateAccountDeposit(0) A: 111111111
-	CreateAccountDeposit(1) C: 222222222
+	CreateAccountDeposit(0) A: 11111111100000000000
+	CreateAccountDeposit(1) C: 22222222200000000000
 	CreateAccountCoordinator(0) C
 
 	// close Block:0, Batch:1
@@ -68,7 +68,7 @@ var SetBlockchain = `
 	//     Coord(0): 0, Coord(1): 0
 	//     C(0): 0
 
-	CreateAccountDeposit(1) A: 333333333
+	CreateAccountDeposit(1) A: 33333333300000000000
 
 	// close Block:0, Batch:2
 	> batchL1
@@ -76,40 +76,40 @@ var SetBlockchain = `
 	// close Block:0, Batch:3
 	> batchL1
 
-	CreateAccountDepositTransfer(0) B-A: 444444444, 1234444444 // to_eth_addr is NULL
+	CreateAccountDepositTransfer(0) B-A: 44444444400000000000, 123444444400000000000
 
 	// close Block:0, Batch:4
 	> batchL1
-	CreateAccountDeposit(0) D: 555555555
+	CreateAccountDeposit(0) D: 55555555500000000000
 
 	// close Block:0, Batch:5
 	> batchL1
 
 	CreateAccountCoordinator(1) B
 
-	Transfer(1) A-B: 111111 (2) // to_eth_addr is NULL
-	Transfer(0) B-C: 222222 (3)
+	Transfer(1) A-B: 11111100000000000 (2)
+	Transfer(0) B-C: 22222200000000000 (3)
 
 	// close Block:0, Batch:6
 	> batchL1 // forge L1User{1}, forge L1Coord{2}, forge L2{2}
 
-	Deposit(0) C: 666666666
-	DepositTransfer(0) C-D: 777777777, 123777777 // to_eth_addr is NULL
+	Deposit(0) C: 66666666600000000000
+	DepositTransfer(0) C-D: 77777777700000000000, 12377777700000000000
 
-	Transfer(0) A-B: 333333 (111)
-	Transfer(0) C-A: 444444 (222)
-	Transfer(1) B-C: 555555 (123)
-	Exit(0) A: 666666 (44)
+	Transfer(0) A-B: 33333300000000000 (111)
+	Transfer(0) C-A: 44444400000000000 (222)
+	Transfer(1) B-C: 55555500000000000 (123)
+	Exit(0) A: 66666600000000000 (44)
 
-	ForceTransfer(0) D-B: 777777 // to_eth_addr is NULL
-	ForceExit(0) B: 888888
+	ForceTransfer(0) D-B: 77777700000000000
+	ForceExit(0) B: 88888800000000000
 
 	// close Block:0, Batch:7
 	> batchL1
 	> block
 
-	Transfer(0) D-A: 999999 (77)
-	Transfer(0) B-D: 123123 (55)
+	Transfer(0) D-A: 99999900000000000 (77)
+	Transfer(0) B-D: 12312300000000000 (55)
 
 	// close Block:1, Batch:0
 	> batchL1
