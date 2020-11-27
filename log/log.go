@@ -2,8 +2,10 @@ package log
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/hermeznetwork/tracerr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -48,7 +50,8 @@ func Init(levelStr, logPath string) {
 			CallerKey:    "caller",
 			EncodeCaller: zapcore.ShortCallerEncoder,
 
-			StacktraceKey: "stacktrace",
+			// StacktraceKey: "stacktrace",
+			StacktraceKey: "",
 			LineEnding:    zapcore.DefaultLineEnding,
 		},
 	}
@@ -65,6 +68,27 @@ func Init(levelStr, logPath string) {
 	log.Infof("log level: %s", level)
 }
 
+func sprintStackTrace(st []tracerr.Frame) string {
+	builder := strings.Builder{}
+	for _, f := range st {
+		builder.WriteString(fmt.Sprintf("\n%s:%d %s()", f.Path, f.Line, f.Func))
+	}
+	builder.WriteString("\n")
+	return builder.String()
+}
+
+// appendStackTraceMaybeArgs will append the stacktrace to the args if one of them
+// is a tracerr.Error
+func appendStackTraceMaybeArgs(args []interface{}) []interface{} {
+	for i := range args {
+		if err, ok := args[i].(tracerr.Error); ok {
+			st := err.StackTrace()
+			return append(args, sprintStackTrace(st))
+		}
+	}
+	return args
+}
+
 // Debug calls log.Debug
 func Debug(args ...interface{}) {
 	log.Debug(args...)
@@ -77,16 +101,19 @@ func Info(args ...interface{}) {
 
 // Warn calls log.Warn
 func Warn(args ...interface{}) {
+	args = appendStackTraceMaybeArgs(args)
 	log.Warn(args...)
 }
 
 // Error calls log.Error
 func Error(args ...interface{}) {
+	args = appendStackTraceMaybeArgs(args)
 	log.Error(args...)
 }
 
 // Fatal calls log.Fatal
 func Fatal(args ...interface{}) {
+	args = appendStackTraceMaybeArgs(args)
 	log.Fatal(args...)
 }
 
@@ -115,6 +142,21 @@ func Errorf(template string, args ...interface{}) {
 	log.Errorf(template, args...)
 }
 
+// appendStackTraceMaybeKV will append the stacktrace to the KV if one of them
+// is a tracerr.Error
+func appendStackTraceMaybeKV(msg string, kv []interface{}) string {
+	for i := range kv {
+		if i%2 == 0 {
+			continue
+		}
+		if err, ok := kv[i].(tracerr.Error); ok {
+			st := err.StackTrace()
+			return fmt.Sprintf("%v: %v%v\n", msg, err, sprintStackTrace(st))
+		}
+	}
+	return msg
+}
+
 // Debugw calls log.Debugw
 func Debugw(template string, kv ...interface{}) {
 	log.Debugw(template, kv...)
@@ -127,15 +169,18 @@ func Infow(template string, kv ...interface{}) {
 
 // Warnw calls log.Warnw
 func Warnw(template string, kv ...interface{}) {
+	template = appendStackTraceMaybeKV(template, kv)
 	log.Warnw(template, kv...)
 }
 
 // Errorw calls log.Errorw
 func Errorw(template string, kv ...interface{}) {
+	template = appendStackTraceMaybeKV(template, kv)
 	log.Errorw(template, kv...)
 }
 
 // Fatalw calls log.Fatalw
 func Fatalw(template string, kv ...interface{}) {
+	template = appendStackTraceMaybeKV(template, kv)
 	log.Fatalw(template, kv...)
 }

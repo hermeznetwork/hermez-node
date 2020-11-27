@@ -8,6 +8,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/config"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/node"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/urfave/cli/v2"
 )
 
@@ -151,7 +152,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("\nError: %v\n", tracerr.Sprint(err))
 		os.Exit(1)
 	}
 }
