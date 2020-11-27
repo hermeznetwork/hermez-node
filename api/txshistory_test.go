@@ -255,7 +255,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		}
 	}
 	// Get all (no filters)
-	limit := 8
+	limit := 20
 	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)

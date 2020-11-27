@@ -93,7 +93,8 @@ func TestGetTokens(t *testing.T) {
 	// Get by name
 	fetchedTokens = []historydb.TokenWithUSD{}
 	limit = 5
-	stringName := tc.tokens[8].Name[4:5]
+	tokenNameLen := len(tc.tokens[8].Name)
+	stringName := tc.tokens[8].Name[tokenNameLen-1:]
 	path = fmt.Sprintf(
 		"%s?name=%s&limit=%d&fromItem=",
 		endpoint, stringName, limit,

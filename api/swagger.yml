@@ -1852,69 +1852,161 @@ components:
           $ref: '#/components/schemas/PendingItems'
       example:
         transactions:
-          - L1Info: 
-            L1orL2: L2
-            L2Info:
-              fee: 44
-              historicFeeUSD: 0.01
-              nonce: 301
-            amount: '301'
-            batchNum: 1
-            fromAccountIndex: hez:SCC:276
-            fromBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
-            fromHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
-            historicUSD: 44.72
-            id: '0x02000000000000000000002c'
-            itemId: 1
-            position: 4
-            timestamp: '2020-11-17T14:08:12.197554Z'
-            toAccountIndex: hez:6:276
-            toBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
-            toHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
-            token:
-              USD: 3478.67
-              decimals: 7
-              ethereumAddress: '0x0000000000000000000000000000000000000006'
-              ethereumBlockNum: 2
-              fiatUpdate: 
-              id: 6
-              itemId: 7
-              name: Some Cool Coin
-              symbol: 'SCC'
-            type: Deposit
           - L1Info:
-              ethereumBlockNum: 1
-              historicLoadAmountUSD: 269
-              loadAmount: '261'
-              toForgeL1TransactionsNum: 10
+              ethereumBlockNum: 3
+              historicLoadAmountUSD: 
+              loadAmount: '0'
+              toForgeL1TransactionsNum: 7
               userOrigin: true
             L1orL2: L1
             L2Info: 
-            amount: '261'
-            batchNum: 1
-            fromAccountIndex: hez:ETH:276
-            fromBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
-            fromHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
-            historicUSD: 
-            id: '0x00000000000000000a000400'
-            itemId: 2
-            position: 4
-            timestamp: '2020-11-17T14:08:12.197554Z'
-            toAccountIndex: hez:ETH:276
-            toBJJ: hez:p_OohTzjzZnD3Sw93HQlK13DSxfD6lyvbfhh2kBsV6Z4
-            toHezEthereumAddress: hez:0x0000000000000000000000000000000000000114
+            amount: '88888800000000000'
+            batchNum: 9
+            fromAccountIndex: hez:ETH:262
+            fromBJJ: hez:Mj_xDCjfN-y3h_4hbhEdtkqnz6LFF1Cf4AV_8IoQswwh
+            fromHezEthereumAddress: hez:0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF
+            historicUSD: 44.4444
+            id: '0x000000000000000007000300'
+            itemId: 28
+            position: 3
+            timestamp: '2020-11-26T09:18:40.004749Z'
+            toAccountIndex: hez:EXIT:1
+            toBJJ: 
+            toHezEthereumAddress: 
             token:
-              USD: 734.21
+              USD: 500
               decimals: 18
               ethereumAddress: '0x0000000000000000000000000000000000000000'
               ethereumBlockNum: 0
-              fiatUpdate: 
+              fiatUpdate: '2020-11-26T09:18:27.034866Z'
               id: 0
               itemId: 1
               name: Ether
               symbol: ETH
+            type: ForceExit
+          - L1Info: 
+            L1orL2: L2
+            L2Info:
+              fee: 123
+              historicFeeUSD: 2.15037380962404
+              nonce: 1
+            amount: '55555500000000000'
+            batchNum: 8
+            fromAccountIndex: hez:TKN1:264
+            fromBJJ: hez:Mj_xDCjfN-y3h_4hbhEdtkqnz6LFF1Cf4AV_8IoQswwh
+            fromHezEthereumAddress: hez:0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF
+            historicUSD: 23.4999765
+            id: '0x020000000001080000000001'
+            itemId: 19
+            position: 2
+            timestamp: '2020-11-26T09:18:40.004749Z'
+            toAccountIndex: hez:TKN1:260
+            toBJJ: hez:81h61cx0FKR1RXcLbHW8cZMPY8SR6yKU3ei4pmcLjpaQ
+            toHezEthereumAddress: hez:0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69
+            token:
+              USD: 423
+              decimals: 18
+              ethereumAddress: '0x0000000000000000000000000000000000000064'
+              ethereumBlockNum: 2
+              fiatUpdate: '2020-11-26T09:18:27.04357Z'
+              id: 1
+              itemId: 2
+              name: Test Token 1
+              symbol: TKN1
+            type: Transfer
+          - L1Info: 
+            L1orL2: L2
+            L2Info:
+              fee: 44
+              historicFeeUSD: 0.1973587359744
+              nonce: 2
+            amount: '66666600000000000'
+            batchNum: 8
+            fromAccountIndex: hez:ETH:259
+            fromBJJ: hez:W6x4TZOAZ9mAqdOb3Xm_hKDLspaXfEfMMN4tXOkinS-W
+            fromHezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+            historicUSD: 33.3333
+            id: '0x020000000001030000000002'
+            itemId: 20
+            position: 3
+            timestamp: '2020-11-26T09:18:40.004749Z'
+            toAccountIndex: hez:EXIT:1
+            toBJJ: 
+            toHezEthereumAddress: 
+            token:
+              USD: 500
+              decimals: 18
+              ethereumAddress: '0x0000000000000000000000000000000000000000'
+              ethereumBlockNum: 0
+              fiatUpdate: '2020-11-26T09:18:27.034866Z'
+              id: 0
+              itemId: 1
+              name: Ether
+              symbol: ETH
+            type: Exit
+          - L1Info:
+              ethereumBlockNum: 3
+              historicLoadAmountUSD: 14099.9999859
+              loadAmount: '33333333300000000000'
+              toForgeL1TransactionsNum: 2
+              userOrigin: true
+            L1orL2: L1
+            L2Info: 
+            amount: '0'
+            batchNum: 4
+            fromAccountIndex: hez:TKN1:0
+            fromBJJ: hez:W6x4TZOAZ9mAqdOb3Xm_hKDLspaXfEfMMN4tXOkinS-W
+            fromHezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+            historicUSD: 
+            id: '0x000000000000000002000000'
+            itemId: 9
+            position: 0
+            timestamp: '2020-11-26T09:18:40.004749Z'
+            toAccountIndex: hez:TKN1:0
+            toBJJ: 
+            toHezEthereumAddress: 
+            token:
+              USD: 423
+              decimals: 18
+              ethereumAddress: '0x0000000000000000000000000000000000000064'
+              ethereumBlockNum: 2
+              fiatUpdate: '2020-11-26T09:18:27.04357Z'
+              id: 1
+              itemId: 2
+              name: Test Token 1
+              symbol: TKN1
             type: CreateAccountDeposit
-        pendingItems: 38
+          - L1Info: 
+            L1orL2: L2
+            L2Info:
+              fee: 2
+              historicFeeUSD: 3.87833366166246e-17
+              nonce: 1
+            amount: '11111100000000000'
+            batchNum: 7
+            fromAccountIndex: hez:TKN1:261
+            fromBJJ: hez:W6x4TZOAZ9mAqdOb3Xm_hKDLspaXfEfMMN4tXOkinS-W
+            fromHezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+            historicUSD: 4.6999953
+            id: '0x020000000001050000000001'
+            itemId: 15
+            position: 2
+            timestamp: '2020-11-26T09:18:40.004749Z'
+            toAccountIndex: hez:TKN1:264
+            toBJJ: hez:Mj_xDCjfN-y3h_4hbhEdtkqnz6LFF1Cf4AV_8IoQswwh
+            toHezEthereumAddress: hez:0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF
+            token:
+              USD: 423
+              decimals: 18
+              ethereumAddress: '0x0000000000000000000000000000000000000064'
+              ethereumBlockNum: 2
+              fiatUpdate: '2020-11-26T09:18:27.04357Z'
+              id: 1
+              itemId: 2
+              name: Test Token 1
+              symbol: TKN1
+            type: Transfer
+        pendingItems: 23
       required:
         - transactions
         - pendingItems
@@ -2335,22 +2427,37 @@ components:
         token:
           $ref: '#/components/schemas/Token'
       example:
-        accountIndex: hez:SCC:256
-        balance: '2560000000'
-        bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
-        hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
-        itemId: 1
-        nonce: 0
-        token:
-          USD: 3478.93
-          decimals: 7
-          ethereumAddress: '0x0000000000000000000000000000000000000006'
-          ethereumBlockNum: 2
-          fiatUpdate: 
-          id: 6
-          itemId: 7
-          name: Some Cool Coin
-          symbol: 'SCC'
+        exits:
+        - accountIndex: hez:ETH:259
+          balance: '66666600000000000'
+          batchNum: 8
+          delayedWithdrawRequest: 
+          delayedWithdrawn: 
+          instantWithdrawn: 
+          itemId: 1
+          merkleProof:
+            Fnc: 0
+            IsOld0: true
+            Key: '256'
+            OldKey: '256'
+            OldValue: '256'
+            Root: '256'
+            Siblings:
+            - '0'
+            - '1'
+            - '2'
+            Value: '256'
+          token:
+            USD: 500
+            decimals: 18
+            ethereumAddress: '0x0000000000000000000000000000000000000000'
+            ethereumBlockNum: 0
+            fiatUpdate: '2020-11-26T09:57:29.110879Z'
+            id: 0
+            itemId: 1
+            name: Ether
+            symbol: ETH
+        pendingItems: 0
       additionalProperties: false
       required:
         - itemId
@@ -2372,55 +2479,39 @@ components:
           $ref: '#/components/schemas/PendingItems'
       example:
         accounts:
-        - accountIndex: hez:SCC:256
-          balance: '2560000000'
-          bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
-          hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
-          itemId: 1
+        - accountIndex: hez:ETH:259
+          balance: '2590000000'
+          bjj: hez:W6x4TZOAZ9mAqdOb3Xm_hKDLspaXfEfMMN4tXOkinS-W
+          hezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+          itemId: 4
           nonce: 0
           token:
-            USD: 53.92
-            decimals: 7
-            ethereumAddress: '0x0000000000000000000000000000000000000006'
+            USD: 500
+            decimals: 18
+            ethereumAddress: '0x0000000000000000000000000000000000000000'
+            ethereumBlockNum: 0
+            fiatUpdate: '2020-11-26T09:53:47.444444Z'
+            id: 0
+            itemId: 1
+            name: Ether
+            symbol: ETH
+        - accountIndex: hez:TKN1:261
+          balance: '2610000000'
+          bjj: hez:W6x4TZOAZ9mAqdOb3Xm_hKDLspaXfEfMMN4tXOkinS-W
+          hezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+          itemId: 6
+          nonce: 0
+          token:
+            USD: 423
+            decimals: 18
+            ethereumAddress: '0x0000000000000000000000000000000000000064'
             ethereumBlockNum: 2
-            fiatUpdate: 
-            id: 6
-            itemId: 7
-            name: Some Cool Coin
-            symbol: 'SCC'
-        - accountIndex: hez:ACC:257
-          balance: '2570000000'
-          bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
-          hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
-          itemId: 2
-          nonce: 0
-          token:
-            USD: 8.641969
-            decimals: 8
-            ethereumAddress: '0x0000000000000000000000000000000000000007'
-            ethereumBlockNum: 3
-            fiatUpdate: '2020-11-17T13:28:11.016998Z'
-            id: 7
-            itemId: 8
-            name: Another Cool Coin
-            symbol: 'ACC'
-        - accountIndex: hez:VGC:258
-          balance: '2580000000'
-          bjj: hez:m9UXbJElX5OzHMM0IxgD3Qzhx2RJw18o-tiw8s1lnwx4
-          hezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
-          itemId: 3
-          nonce: 0
-          token:
-            USD: 2349.12
-            decimals: 9
-            ethereumAddress: '0x0000000000000000000000000000000000000008'
-            ethereumBlockNum: 4
-            fiatUpdate: 
-            id: 8
-            itemId: 9
-            name: Vitalik the Great Coin
-            symbol: 'VGC'
-        pendingItems: 1
+            fiatUpdate: '2020-11-26T09:53:47.456619Z'
+            id: 1
+            itemId: 2
+            name: Test Token 1
+            symbol: TKN1
+        pendingItems: 0
       additionalProperties: false
       required:
         - accounts

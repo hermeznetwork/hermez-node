@@ -15,9 +15,9 @@ func AddAditionalInformation(blocks []common.BlockData) {
 		blocks[i].Block.Timestamp = time.Now().Add(time.Second * 13).UTC()
 		blocks[i].Block.Hash = ethCommon.BigToHash(big.NewInt(blocks[i].Block.Num))
 		for j := range blocks[i].Rollup.AddedTokens {
-			blocks[i].Rollup.AddedTokens[j].Name = "NAME" + strconv.Itoa(int(blocks[i].Rollup.AddedTokens[j].TokenID))
-			blocks[i].Rollup.AddedTokens[j].Symbol = strconv.Itoa(int(blocks[i].Rollup.AddedTokens[j].TokenID))
-			blocks[i].Rollup.AddedTokens[j].Decimals = uint64(blocks[i].Rollup.AddedTokens[j].TokenID + 1)
+			blocks[i].Rollup.AddedTokens[j].Name = "Test Token " + strconv.Itoa(int(blocks[i].Rollup.AddedTokens[j].TokenID))
+			blocks[i].Rollup.AddedTokens[j].Symbol = "TKN" + strconv.Itoa(int(blocks[i].Rollup.AddedTokens[j].TokenID))
+			blocks[i].Rollup.AddedTokens[j].Decimals = 18
 		}
 		for x := range blocks[i].Rollup.Batches {
 			for q := range blocks[i].Rollup.Batches[x].CreatedAccounts {

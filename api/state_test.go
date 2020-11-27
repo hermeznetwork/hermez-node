@@ -58,7 +58,7 @@ func TestNextForgers(t *testing.T) {
 	lastBlock := tc.blocks[len(tc.blocks)-1]
 	for i := int64(0); i < tc.slots[len(tc.slots)-1].SlotNum; i++ {
 		lastClosedSlot := i + int64(api.status.Auction.ClosedAuctionSlots)
-		nextForgers, err := api.GetNextForgers(tc.blocks[len(tc.blocks)-1], i, lastClosedSlot)
+		nextForgers, err := api.getNextForgers(tc.blocks[len(tc.blocks)-1], i, lastClosedSlot)
 		assert.NoError(t, err)
 		for j := i; j <= lastClosedSlot; j++ {
 			for q := range nextForgers {
