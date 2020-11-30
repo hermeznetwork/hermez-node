@@ -261,7 +261,7 @@ func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.
 			return tracerr.Wrap(err)
 		}
 	}
-	return txn.Commit()
+	return tracerr.Wrap(txn.Commit())
 }
 
 // Reorg updates the state of txs that were updated in a batch that has been discarted due to a blockchain reorg.
@@ -312,5 +312,5 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	return txn.Commit()
+	return tracerr.Wrap(txn.Commit())
 }

@@ -53,9 +53,9 @@ func BatchNumFromBytes(b []byte) (BatchNum, error) {
 
 // BatchData contains the information of a Batch
 type BatchData struct {
-	// L1UserTxs that were forged in the batch
 	L1Batch bool // TODO: Remove once Batch.ForgeL1TxsNum is a pointer
-	// L1UserTxs        []common.L1Tx
+	// L1UserTxs that were forged in the batch
+	L1UserTxs        []L1Tx
 	L1CoordinatorTxs []L1Tx
 	L2Txs            []L2Tx
 	CreatedAccounts  []Account

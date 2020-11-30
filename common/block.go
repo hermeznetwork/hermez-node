@@ -86,6 +86,4 @@ type BlockData struct {
 	Rollup   RollupData
 	Auction  AuctionData
 	WDelayer WDelayerData
-	// TODO: enable when common.WithdrawalDelayerVars is Merged from Synchronizer PR
-	// WithdrawalDelayerVars *common.WithdrawalDelayerVars
 }

@@ -567,7 +567,7 @@ func (hdb *HistoryDB) updateExitTree(d sqlx.Ext, blockNum int64,
 	}
 	// In VALUES we set an initial row of NULLs to set the types of each
 	// variable passed as argument
-	query := `
+	const query string = `
 		UPDATE exit_tree e SET
 			instant_withdrawn = d.instant_withdrawn,
 			delayed_withdraw_request = CASE
@@ -1290,7 +1290,50 @@ func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 		return tracerr.Wrap(err)
 	}
 
-	return txn.Commit()
+	return tracerr.Wrap(txn.Commit())
+}
+
+// setL1UserTxEffectiveAmounts sets the EffectiveAmount and EffectiveLoadAmount
+// of the given l1UserTxs (with an UPDATE)
+func (hdb *HistoryDB) setL1UserTxEffectiveAmounts(d sqlx.Ext, txs []common.L1Tx) error {
+	type txUpdate struct {
+		ID                  common.TxID `db:"id"`
+		NullifiedAmount     bool        `db:"nullified_amount"`
+		NullifiedLoadAmount bool        `db:"nullified_load_amount"`
+	}
+	txUpdates := make([]txUpdate, len(txs))
+	equal := func(a *big.Int, b *big.Int) bool {
+		return a.Cmp(b) == 0
+	}
+	for i := range txs {
+		txUpdates[i] = txUpdate{
+			ID:                  txs[i].TxID,
+			NullifiedAmount:     !equal(txs[i].Amount, txs[i].EffectiveAmount),
+			NullifiedLoadAmount: !equal(txs[i].LoadAmount, txs[i].EffectiveLoadAmount),
+		}
+	}
+	const query string = `
+		UPDATE tx SET
+			effective_amount = CASE
+				WHEN tx_update.nullified_amount THEN '\x'
+				ELSE tx.amount
+			END,
+			effective_load_amount = CASE
+				WHEN tx_update.nullified_load_amount THEN '\x'
+				ELSE tx.load_amount
+			END
+		FROM (VALUES
+			(NULL::::BYTEA, NULL::::BOOL, NULL::::BOOL),
+			(:id, :nullified_amount, :nullified_load_amount)
+		) as tx_update (id, nullified_amount, nullified_load_amount)
+		WHERE tx.id = tx_update.id
+	`
+	if len(txs) > 0 {
+		if _, err := sqlx.NamedQuery(d, query, txUpdates); err != nil {
+			return tracerr.Wrap(err)
+		}
+	}
+	return nil
 }
 
 // AddBlockSCData stores all the information of a block retrieved by the
@@ -1364,6 +1407,15 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	// Add Batches
 	for i := range blockData.Rollup.Batches {
 		batch := &blockData.Rollup.Batches[i]
+
+		// Set the EffectiveAmount and EffectiveLoadAmount of all the
+		// L1UserTxs that have been forged in this batch
+		if len(batch.L1UserTxs) > 0 {
+			if err = hdb.setL1UserTxEffectiveAmounts(txn, batch.L1UserTxs); err != nil {
+				return tracerr.Wrap(err)
+			}
+		}
+
 		// Add Batch: this will trigger an update on the DB
 		// that will set the batch num of forged L1 txs in this batch
 		if err = hdb.addBatch(txn, &batch.Batch); err != nil {
@@ -1432,7 +1484,7 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		return tracerr.Wrap(err)
 	}
 
-	return txn.Commit()
+	return tracerr.Wrap(txn.Commit())
 }
 
 // GetCoordinatorAPI returns a coordinator by its bidderAddr

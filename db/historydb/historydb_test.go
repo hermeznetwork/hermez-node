@@ -692,6 +692,72 @@ func TestSetInitialSCVars(t *testing.T) {
 	require.Equal(t, wDelayer, dbWDelayer)
 }
 
+func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+
+	set := `
+		Type: Blockchain
+
+		AddToken(1)
+
+		CreateAccountDeposit(1) A: 2000
+		CreateAccountDeposit(1) B: 500
+		CreateAccountDeposit(1) C: 500
+
+		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs{*}
+		> block // blockNum=2
+
+		> batchL1 // forge defined L1UserTxs{*}
+		> block // blockNum=3
+	`
+
+	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		CoordUser:     "A",
+	}
+	blocks, err := tc.GenerateBlocks(set)
+	require.Nil(t, err)
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	assert.Nil(t, err)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	require.Nil(t, err)
+
+	// Add only first block so that the L1UserTxs are not marked as forged
+	for i := range blocks[:1] {
+		err = historyDB.AddBlockSCData(&blocks[i])
+		require.Nil(t, err)
+	}
+
+	// Set the Effective{Amount,LoadAmount} of the L1UserTxs that are forged in the second block
+	l1Txs := blocks[1].Rollup.Batches[0].L1UserTxs
+	require.Equal(t, 3, len(l1Txs))
+	// Change some values to test all cases
+	l1Txs[1].EffectiveAmount = big.NewInt(0)
+	l1Txs[2].EffectiveLoadAmount = big.NewInt(0)
+	l1Txs[2].EffectiveAmount = big.NewInt(0)
+	err = historyDB.setL1UserTxEffectiveAmounts(historyDB.db, l1Txs)
+	require.NoError(t, err)
+
+	dbL1Txs, err := historyDB.GetAllL1UserTxs()
+	require.NoError(t, err)
+	for _, tx := range dbL1Txs {
+		assert.NotNil(t, tx.EffectiveAmount)
+		assert.NotNil(t, tx.EffectiveLoadAmount)
+		switch tx.TxID {
+		case l1Txs[0].TxID:
+			assert.Equal(t, l1Txs[0].LoadAmount, tx.EffectiveLoadAmount)
+			assert.Equal(t, l1Txs[0].Amount, tx.EffectiveAmount)
+		case l1Txs[1].TxID:
+			assert.Equal(t, l1Txs[1].LoadAmount, tx.EffectiveLoadAmount)
+			assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
+		case l1Txs[2].TxID:
+			assert.Equal(t, big.NewInt(0), tx.EffectiveLoadAmount)
+			assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
+		}
+	}
+}
+
 func TestUpdateExitTree(t *testing.T) {
 	test.WipeDB(historyDB.DB())
 
