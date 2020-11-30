@@ -333,3 +333,23 @@ PoolTransferToEthAddr(1) A-B: 100 (126)
 //     D(0): 360
 //     F(0): 100
 `
+
+// SetPoolL2MinimumFlow1 contains the same transactions than the
+// SetPoolL2MinimumFlow0, but simulating coming from the smart contract
+// (always with the parameter ToIdx filled)
+var SetPoolL2MinimumFlow1 = `
+Type: PoolL2
+
+PoolTransfer(0) A-B: 100 (126)
+PoolTransfer(0) D-F: 100 (126)
+PoolExit(0) A: 100 (126)
+PoolTransfer(1) A-B: 100 (126)
+
+// Expected balances:
+//     Coord(0): 105, Coord(1): 40
+//     A(0): 510, A(1): 170
+//     B(0): 480, B(1): 190
+//     C(0): 845, C(1): 100
+//     D(0): 360
+//     F(0): 100
+`

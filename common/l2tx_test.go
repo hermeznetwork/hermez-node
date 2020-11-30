@@ -32,7 +32,7 @@ func TestL2TxByteParsers(t *testing.T) {
 	}
 	// Data from the compatibility test
 	expected := "00000101000001002b16c9"
-	encodedData, err := l2Tx.Bytes(32)
+	encodedData, err := l2Tx.BytesDataAvailability(32)
 	require.Nil(t, err)
 	assert.Equal(t, expected, hex.EncodeToString(encodedData))
 

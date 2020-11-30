@@ -103,8 +103,8 @@ func L2TxsToPoolL2Txs(txs []L2Tx) []PoolL2Tx {
 	return r
 }
 
-// Bytes encodes a L2Tx into []byte
-func (tx L2Tx) Bytes(nLevels uint32) ([]byte, error) {
+// BytesDataAvailability encodes a L2Tx into []byte for the Data Availability
+func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 
 	b := make([]byte, ((nLevels*2)+16+8)/8) //nolint:gomnd

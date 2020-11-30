@@ -36,6 +36,11 @@ func (bn BatchNum) Bytes() []byte {
 	return batchNumBytes[:]
 }
 
+// BigInt returns a *big.Int representing the BatchNum
+func (bn BatchNum) BigInt() *big.Int {
+	return big.NewInt(int64(bn))
+}
+
 // BatchNumFromBytes returns BatchNum from a []byte
 func BatchNumFromBytes(b []byte) (BatchNum, error) {
 	if len(b) != batchNumBytesLen {

@@ -783,24 +783,26 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 		loadAmountFloat, _ := laf.Float64()
 		txs = append(txs, txWrite{
 			// Generic
-			IsL1:        true,
-			TxID:        l1txs[i].TxID,
-			Type:        l1txs[i].Type,
-			Position:    l1txs[i].Position,
-			FromIdx:     &l1txs[i].FromIdx,
-			ToIdx:       l1txs[i].ToIdx,
-			Amount:      l1txs[i].Amount,
-			AmountFloat: amountFloat,
-			TokenID:     l1txs[i].TokenID,
-			BatchNum:    l1txs[i].BatchNum,
-			EthBlockNum: l1txs[i].EthBlockNum,
+			IsL1:            true,
+			TxID:            l1txs[i].TxID,
+			Type:            l1txs[i].Type,
+			Position:        l1txs[i].Position,
+			FromIdx:         &l1txs[i].FromIdx,
+			ToIdx:           l1txs[i].ToIdx,
+			Amount:          l1txs[i].Amount,
+			EffectiveAmount: l1txs[i].EffectiveAmount,
+			AmountFloat:     amountFloat,
+			TokenID:         l1txs[i].TokenID,
+			BatchNum:        l1txs[i].BatchNum,
+			EthBlockNum:     l1txs[i].EthBlockNum,
 			// L1
-			ToForgeL1TxsNum: l1txs[i].ToForgeL1TxsNum,
-			UserOrigin:      &l1txs[i].UserOrigin,
-			FromEthAddr:     &l1txs[i].FromEthAddr,
-			FromBJJ:         l1txs[i].FromBJJ,
-			LoadAmount:      l1txs[i].LoadAmount,
-			LoadAmountFloat: &loadAmountFloat,
+			ToForgeL1TxsNum:     l1txs[i].ToForgeL1TxsNum,
+			UserOrigin:          &l1txs[i].UserOrigin,
+			FromEthAddr:         &l1txs[i].FromEthAddr,
+			FromBJJ:             l1txs[i].FromBJJ,
+			LoadAmount:          l1txs[i].LoadAmount,
+			EffectiveLoadAmount: l1txs[i].EffectiveLoadAmount,
+			LoadAmountFloat:     &loadAmountFloat,
 		})
 	}
 	return hdb.addTxs(d, txs)
@@ -846,6 +848,7 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			from_idx,
 			to_idx,
 			amount,
+			effective_amount,
 			amount_f,
 			token_id,
 			batch_num,
@@ -855,6 +858,7 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			from_eth_addr,
 			from_bjj,
 			load_amount,
+			effective_load_amount,
 			load_amount_f,
 			fee,
 			nonce
@@ -1162,8 +1166,9 @@ func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 	err := meddler.QueryAll(
 		hdb.db, &txs,
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
-		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id, tx.amount,
-		tx.load_amount, tx.eth_block_num, tx.type, tx.batch_num
+		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
+		tx.amount, tx.effective_amount, tx.load_amount, tx.effective_load_amount,
+		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE;`,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), err
@@ -1175,8 +1180,9 @@ func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
 	err := meddler.QueryAll(
 		hdb.db, &txs,
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
-		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id, tx.amount,
-		tx.load_amount, tx.eth_block_num, tx.type, tx.batch_num
+		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
+		tx.amount, tx.effective_amount, tx.load_amount, tx.effective_load_amount,
+		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE is_l1 = TRUE AND user_origin = FALSE;`,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), err
@@ -1201,8 +1207,9 @@ func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error)
 	err := meddler.QueryAll(
 		hdb.db, &txs,
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
-		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id, tx.amount,
-		tx.load_amount, tx.eth_block_num, tx.type, tx.batch_num
+		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
+		tx.amount, tx.effective_amount, tx.load_amount, tx.effective_load_amount,
+		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE to_forge_l1_txs_num = $1 AND is_l1 = TRUE AND user_origin = TRUE;`,
 		toForgeL1TxsNum,
 	)

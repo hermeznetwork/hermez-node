@@ -65,6 +65,28 @@ func TestL1TxCompressedData(t *testing.T) {
 	assert.Equal(t, "050004000000000003000000000002000100000000", hex.EncodeToString(txCompressedData.Bytes()))
 }
 
+func TestBytesDataAvailability(t *testing.T) {
+	tx := L1Tx{
+		FromIdx: 2,
+		ToIdx:   3,
+		Amount:  big.NewInt(4),
+		TokenID: 5,
+	}
+	txCompressedData, err := tx.BytesDataAvailability(32)
+	assert.Nil(t, err)
+	assert.Equal(t, "0000000200000003000000", hex.EncodeToString(txCompressedData))
+
+	tx = L1Tx{
+		FromIdx:         2,
+		ToIdx:           3,
+		EffectiveAmount: big.NewInt(4),
+		TokenID:         5,
+	}
+	txCompressedData, err = tx.BytesDataAvailability(32)
+	assert.Nil(t, err)
+	assert.Equal(t, "0000000200000003000400", hex.EncodeToString(txCompressedData))
+}
+
 func TestL1userTxByteParsers(t *testing.T) {
 	var pkComp babyjub.PublicKeyComp
 	pkCompL := []byte("0x56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c")
