@@ -58,44 +58,37 @@ type WDelayerEventEscapeHatchWithdrawal struct {
 	Amount *big.Int
 }
 
-// WDelayerEventNewHermezKeeperAddress an event of the WithdrawalDelayer Smart Contract
-type WDelayerEventNewHermezKeeperAddress struct {
-	NewHermezKeeperAddress ethCommon.Address
+// WDelayerEventNewEmergencyCouncil an event of the WithdrawalDelayer Smart Contract
+type WDelayerEventNewEmergencyCouncil struct {
+	NewEmergencyCouncil ethCommon.Address
 }
 
-// WDelayerEventNewWhiteHackGroupAddress an event of the WithdrawalDelayer Smart Contract
-type WDelayerEventNewWhiteHackGroupAddress struct {
-	NewWhiteHackGroupAddress ethCommon.Address
-}
-
-// WDelayerEventNewHermezGovernanceDAOAddress an event of the WithdrawalDelayer Smart Contract
-type WDelayerEventNewHermezGovernanceDAOAddress struct {
-	NewHermezGovernanceDAOAddress ethCommon.Address
+// WDelayerEventNewHermezGovernanceAddress an event of the WithdrawalDelayer Smart Contract
+type WDelayerEventNewHermezGovernanceAddress struct {
+	NewHermezGovernanceAddress ethCommon.Address
 }
 
 // WDelayerEvents is the lis of events in a block of the WithdrawalDelayer Smart Contract
 type WDelayerEvents struct {
-	Deposit                       []WDelayerEventDeposit
-	Withdraw                      []WDelayerEventWithdraw
-	EmergencyModeEnabled          []WDelayerEventEmergencyModeEnabled
-	NewWithdrawalDelay            []WDelayerEventNewWithdrawalDelay
-	EscapeHatchWithdrawal         []WDelayerEventEscapeHatchWithdrawal
-	NewHermezKeeperAddress        []WDelayerEventNewHermezKeeperAddress
-	NewWhiteHackGroupAddress      []WDelayerEventNewWhiteHackGroupAddress
-	NewHermezGovernanceDAOAddress []WDelayerEventNewHermezGovernanceDAOAddress
+	Deposit                    []WDelayerEventDeposit
+	Withdraw                   []WDelayerEventWithdraw
+	EmergencyModeEnabled       []WDelayerEventEmergencyModeEnabled
+	NewWithdrawalDelay         []WDelayerEventNewWithdrawalDelay
+	EscapeHatchWithdrawal      []WDelayerEventEscapeHatchWithdrawal
+	NewEmergencyCouncil        []WDelayerEventNewEmergencyCouncil
+	NewHermezGovernanceAddress []WDelayerEventNewHermezGovernanceAddress
 }
 
 // NewWDelayerEvents creates an empty WDelayerEvents with the slices initialized.
 func NewWDelayerEvents() WDelayerEvents {
 	return WDelayerEvents{
-		Deposit:                       make([]WDelayerEventDeposit, 0),
-		Withdraw:                      make([]WDelayerEventWithdraw, 0),
-		EmergencyModeEnabled:          make([]WDelayerEventEmergencyModeEnabled, 0),
-		NewWithdrawalDelay:            make([]WDelayerEventNewWithdrawalDelay, 0),
-		EscapeHatchWithdrawal:         make([]WDelayerEventEscapeHatchWithdrawal, 0),
-		NewHermezKeeperAddress:        make([]WDelayerEventNewHermezKeeperAddress, 0),
-		NewWhiteHackGroupAddress:      make([]WDelayerEventNewWhiteHackGroupAddress, 0),
-		NewHermezGovernanceDAOAddress: make([]WDelayerEventNewHermezGovernanceDAOAddress, 0),
+		Deposit:                    make([]WDelayerEventDeposit, 0),
+		Withdraw:                   make([]WDelayerEventWithdraw, 0),
+		EmergencyModeEnabled:       make([]WDelayerEventEmergencyModeEnabled, 0),
+		NewWithdrawalDelay:         make([]WDelayerEventNewWithdrawalDelay, 0),
+		EscapeHatchWithdrawal:      make([]WDelayerEventEscapeHatchWithdrawal, 0),
+		NewEmergencyCouncil:        make([]WDelayerEventNewEmergencyCouncil, 0),
+		NewHermezGovernanceAddress: make([]WDelayerEventNewHermezGovernanceAddress, 0),
 	}
 }
 
@@ -105,12 +98,12 @@ type WDelayerInterface interface {
 	// Smart Contract Methods
 	//
 
-	WDelayerGetHermezGovernanceDAOAddress() (*ethCommon.Address, error)
-	WDelayerSetHermezGovernanceDAOAddress(newAddress ethCommon.Address) (*types.Transaction, error)
-	WDelayerGetHermezKeeperAddress() (*ethCommon.Address, error)
-	WDelayerSetHermezKeeperAddress(newAddress ethCommon.Address) (*types.Transaction, error)
-	WDelayerGetWhiteHackGroupAddress() (*ethCommon.Address, error)
-	WDelayerSetWhiteHackGroupAddress(newAddress ethCommon.Address) (*types.Transaction, error)
+	WDelayerGetHermezGovernanceAddress() (*ethCommon.Address, error)
+	WDelayerTransferGovernance(newAddress ethCommon.Address) (*types.Transaction, error)
+	WDelayerClaimGovernance() (*types.Transaction, error)
+	WDelayerGetEmergencyCouncil() (*ethCommon.Address, error)
+	WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (*types.Transaction, error)
+	WDelayerClaimEmergencyCouncil() (*types.Transaction, error)
 	WDelayerIsEmergencyMode() (bool, error)
 	WDelayerGetWithdrawalDelay() (*big.Int, error)
 	WDelayerGetEmergencyModeStartingTime() (*big.Int, error)
@@ -155,77 +148,78 @@ func NewWDelayerClient(client *EthereumClient, address ethCommon.Address) (*WDel
 	}, nil
 }
 
-// WDelayerGetHermezGovernanceDAOAddress is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetHermezGovernanceDAOAddress() (hermezGovernanceDAOAddress *ethCommon.Address, err error) {
-	var _hermezGovernanceDAOAddress ethCommon.Address
+// WDelayerGetHermezGovernanceAddress is the interface to call the smart contract function
+func (c *WDelayerClient) WDelayerGetHermezGovernanceAddress() (hermezGovernanceAddress *ethCommon.Address, err error) {
+	var _hermezGovernanceAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_hermezGovernanceDAOAddress, err = c.wdelayer.GetHermezGovernanceDAOAddress(nil)
+		_hermezGovernanceAddress, err = c.wdelayer.GetHermezGovernanceAddress(nil)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	return &_hermezGovernanceDAOAddress, nil
+	return &_hermezGovernanceAddress, nil
 }
 
-// WDelayerSetHermezGovernanceDAOAddress is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerSetHermezGovernanceDAOAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+// WDelayerTransferGovernance is the interface to call the smart contract function
+func (c *WDelayerClient) WDelayerTransferGovernance(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			return c.wdelayer.SetHermezGovernanceDAOAddress(auth, newAddress)
+			return c.wdelayer.TransferGovernance(auth, newAddress)
 		},
 	); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("Failed setting hermezGovernanceDAOAddress: %w", err))
+		return nil, tracerr.Wrap(fmt.Errorf("Failed transfer hermezGovernanceAddress: %w", err))
 	}
 	return tx, nil
 }
 
-// WDelayerGetHermezKeeperAddress is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetHermezKeeperAddress() (hermezKeeperAddress *ethCommon.Address, err error) {
-	var _hermezKeeperAddress ethCommon.Address
-	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_hermezKeeperAddress, err = c.wdelayer.GetHermezKeeperAddress(nil)
-		return tracerr.Wrap(err)
-	}); err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	return &_hermezKeeperAddress, nil
-}
-
-// WDelayerSetHermezKeeperAddress is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerSetHermezKeeperAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+// WDelayerClaimGovernance is the interface to call the smart contract function
+func (c *WDelayerClient) WDelayerClaimGovernance() (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			return c.wdelayer.SetHermezKeeperAddress(auth, newAddress)
+			return c.wdelayer.ClaimGovernance(auth)
 		},
 	); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("Failed setting hermezKeeperAddress: %w", err))
+		return nil, tracerr.Wrap(fmt.Errorf("Failed claim hermezGovernanceAddress: %w", err))
 	}
 	return tx, nil
 }
 
-// WDelayerGetWhiteHackGroupAddress is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetWhiteHackGroupAddress() (whiteHackGroupAddress *ethCommon.Address, err error) {
-	var _whiteHackGroupAddress ethCommon.Address
+// WDelayerGetEmergencyCouncil is the interface to call the smart contract function
+func (c *WDelayerClient) WDelayerGetEmergencyCouncil() (emergencyCouncilAddress *ethCommon.Address, err error) {
+	var _emergencyCouncilAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_whiteHackGroupAddress, err = c.wdelayer.GetWhiteHackGroupAddress(nil)
+		_emergencyCouncilAddress, err = c.wdelayer.GetEmergencyCouncil(nil)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	return &_whiteHackGroupAddress, nil
+	return &_emergencyCouncilAddress, nil
 }
 
-// WDelayerSetWhiteHackGroupAddress is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerSetWhiteHackGroupAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+// WDelayerTransferEmergencyCouncil is the interface to call the smart contract function
+func (c *WDelayerClient) WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			return c.wdelayer.SetWhiteHackGroupAddress(auth, newAddress)
+			return c.wdelayer.TransferEmergencyCouncil(auth, newAddress)
 		},
 	); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("Failed setting whiteHackGroupAddress: %w", err))
+		return nil, tracerr.Wrap(fmt.Errorf("Failed transfer EmergencyCouncil: %w", err))
+	}
+	return tx, nil
+}
+
+// WDelayerClaimEmergencyCouncil is the interface to call the smart contract function
+func (c *WDelayerClient) WDelayerClaimEmergencyCouncil() (tx *types.Transaction, err error) {
+	if tx, err = c.client.CallAuth(
+		0,
+		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			return c.wdelayer.ClaimEmergencyCouncil(auth)
+		},
+	); err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("Failed claim EmergencyCouncil: %w", err))
 	}
 	return tx, nil
 }
@@ -365,14 +359,13 @@ func (c *WDelayerClient) WDelayerConstants() (constants *common.WDelayerConstant
 }
 
 var (
-	logWDelayerDeposit                       = crypto.Keccak256Hash([]byte("Deposit(address,address,uint192,uint64)"))
-	logWDelayerWithdraw                      = crypto.Keccak256Hash([]byte("Withdraw(address,address,uint192)"))
-	logWDelayerEmergencyModeEnabled          = crypto.Keccak256Hash([]byte("EmergencyModeEnabled()"))
-	logWDelayerNewWithdrawalDelay            = crypto.Keccak256Hash([]byte("NewWithdrawalDelay(uint64)"))
-	logWDelayerEscapeHatchWithdrawal         = crypto.Keccak256Hash([]byte("EscapeHatchWithdrawal(address,address,address,uint256)"))
-	logWDelayerNewHermezKeeperAddress        = crypto.Keccak256Hash([]byte("NewHermezKeeperAddress(address)"))
-	logWDelayerNewWhiteHackGroupAddress      = crypto.Keccak256Hash([]byte("NewWhiteHackGroupAddress(address)"))
-	logWDelayerNewHermezGovernanceDAOAddress = crypto.Keccak256Hash([]byte("NewHermezGovernanceDAOAddress(address)"))
+	logWDelayerDeposit                    = crypto.Keccak256Hash([]byte("Deposit(address,address,uint192,uint64)"))
+	logWDelayerWithdraw                   = crypto.Keccak256Hash([]byte("Withdraw(address,address,uint192)"))
+	logWDelayerEmergencyModeEnabled       = crypto.Keccak256Hash([]byte("EmergencyModeEnabled()"))
+	logWDelayerNewWithdrawalDelay         = crypto.Keccak256Hash([]byte("NewWithdrawalDelay(uint64)"))
+	logWDelayerEscapeHatchWithdrawal      = crypto.Keccak256Hash([]byte("EscapeHatchWithdrawal(address,address,address,uint256)"))
+	logWDelayerNewEmergencyCouncil        = crypto.Keccak256Hash([]byte("NewEmergencyCouncil(address)"))
+	logWDelayerNewHermezGovernanceAddress = crypto.Keccak256Hash([]byte("NewHermezGovernanceAddress(address)"))
 )
 
 // WDelayerEventsByBlock returns the events in a block that happened in the
@@ -449,29 +442,21 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			escapeHatchWithdrawal.Token = ethCommon.BytesToAddress(vLog.Topics[3].Bytes())
 			wdelayerEvents.EscapeHatchWithdrawal = append(wdelayerEvents.EscapeHatchWithdrawal, escapeHatchWithdrawal)
 
-		case logWDelayerNewHermezKeeperAddress:
-			var keeperAddress WDelayerEventNewHermezKeeperAddress
-			err := c.contractAbi.Unpack(&keeperAddress, "NewHermezKeeperAddress", vLog.Data)
+		case logWDelayerNewEmergencyCouncil:
+			var emergencyCouncil WDelayerEventNewEmergencyCouncil
+			err := c.contractAbi.Unpack(&emergencyCouncil, "NewEmergencyCouncil", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
-			wdelayerEvents.NewHermezKeeperAddress = append(wdelayerEvents.NewHermezKeeperAddress, keeperAddress)
+			wdelayerEvents.NewEmergencyCouncil = append(wdelayerEvents.NewEmergencyCouncil, emergencyCouncil)
 
-		case logWDelayerNewWhiteHackGroupAddress:
-			var whiteHackGroupAddress WDelayerEventNewWhiteHackGroupAddress
-			err := c.contractAbi.Unpack(&whiteHackGroupAddress, "NewWhiteHackGroupAddress", vLog.Data)
+		case logWDelayerNewHermezGovernanceAddress:
+			var governanceAddress WDelayerEventNewHermezGovernanceAddress
+			err := c.contractAbi.Unpack(&governanceAddress, "NewHermezGovernanceAddress", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
-			wdelayerEvents.NewWhiteHackGroupAddress = append(wdelayerEvents.NewWhiteHackGroupAddress, whiteHackGroupAddress)
-
-		case logWDelayerNewHermezGovernanceDAOAddress:
-			var governanceDAOAddress WDelayerEventNewHermezGovernanceDAOAddress
-			err := c.contractAbi.Unpack(&governanceDAOAddress, "NewHermezGovernanceDAOAddress", vLog.Data)
-			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
-			}
-			wdelayerEvents.NewHermezGovernanceDAOAddress = append(wdelayerEvents.NewHermezGovernanceDAOAddress, governanceDAOAddress)
+			wdelayerEvents.NewHermezGovernanceAddress = append(wdelayerEvents.NewHermezGovernanceAddress, governanceAddress)
 		}
 	}
 	return &wdelayerEvents, blockHash, nil

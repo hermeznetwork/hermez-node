@@ -134,8 +134,8 @@ func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	return b[:], nil
 }
 
-// L2TxFromBytes decodes a L1Tx from []byte
-func L2TxFromBytes(b []byte, nLevels int) (*L2Tx, error) {
+// L2TxFromBytesDataAvailability decodes a L2Tx from []byte (Data Availability)
+func L2TxFromBytesDataAvailability(b []byte, nLevels int) (*L2Tx, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 	tx := &L2Tx{}
 	var err error

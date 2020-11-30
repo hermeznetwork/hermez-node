@@ -217,6 +217,29 @@ func (tx *L1Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	return b[:], nil
 }
 
+// L1TxFromDataAvailability decodes a L1Tx from []byte (Data Availability)
+func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
+	idxLen := nLevels / 8 //nolint:gomnd
+
+	fromIdxBytes := b[0:idxLen]
+	toIdxBytes := b[idxLen : idxLen*2]
+	amountBytes := b[idxLen*2 : idxLen*2+2]
+
+	l1tx := L1Tx{}
+	fromIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(fromIdxBytes, 6))
+	if err != nil {
+		return nil, err
+	}
+	l1tx.FromIdx = fromIdx
+	toIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(toIdxBytes, 6))
+	if err != nil {
+		return nil, err
+	}
+	l1tx.ToIdx = toIdx
+	l1tx.EffectiveAmount = Float16FromBytes(amountBytes).BigInt()
+	return &l1tx, nil
+}
+
 // BytesGeneric returns the generic representation of a L1Tx. This method is
 // used to compute the []byte representation of a L1UserTx, and also to compute
 // the L1TxData for the ZKInputs (at the HashGlobalInputs), using this method

@@ -15,8 +15,7 @@ func getConfigTest() Config {
 	var rollupPublicConstants common.RollupConstants
 	rollupPublicConstants.AbsoluteMaxL1L2BatchTimeout = 240
 	rollupPublicConstants.HermezAuctionContract = ethCommon.HexToAddress("0x500D1d6A4c7D8Ae28240b47c8FCde034D827fD5e")
-	rollupPublicConstants.HermezGovernanceDAOAddress = ethCommon.HexToAddress("0xeAD9C93b79Ae7C1591b1FB5323BD777E86e150d4")
-	rollupPublicConstants.SafetyAddress = ethCommon.HexToAddress("0xE5904695748fe4A84b40b3fc79De2277660BD1D3")
+	rollupPublicConstants.HermezGovernanceAddress = ethCommon.HexToAddress("0xeAD9C93b79Ae7C1591b1FB5323BD777E86e150d4")
 	rollupPublicConstants.TokenHEZ = ethCommon.HexToAddress("0xf784709d2317D872237C4bC22f867d1BAe2913AB")
 	rollupPublicConstants.WithdrawDelayerContract = ethCommon.HexToAddress("0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe")
 	var verifier common.RollupVerifierStruct

@@ -11,7 +11,7 @@ abigen --abi=HEZ.abi --bin=HEZ.bin --pkg=HEZ --out=HEZ.go
 You must compile the contracts to get the `.bin` and `.abi` files. The contracts used are in the repo: https://github.com/hermeznetwork/contracts
 
 Branch: `feature/newDeploymentScript`
-Specifically they have been processed in the commit with hash: `4489f8e7fe4dd17cf22f1e96741b09bdf81946d8`
+Specifically they have been processed in the commit with hash: `254dc035142c56553d6d4ee9b2ea9d97259357c2`
 
 Versions:
 ```

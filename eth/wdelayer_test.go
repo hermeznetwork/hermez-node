@@ -12,8 +12,6 @@ import (
 var wdelayerClient *WDelayerClient
 var wdelayerClientTest *WDelayerClient
 
-// var wdelayerClientKep *WDelayerClient
-
 var initWithdrawalDelay = big.NewInt(60)
 var newWithdrawalDelay = big.NewInt(79)
 var maxEmergencyModeTime = time.Hour * 24 * 7 * 26
@@ -27,78 +25,59 @@ func TestWDelayerConstants(t *testing.T) {
 	assert.Equal(t, hermezRollupTestAddressConst, wDelayerConstants.HermezRollup)
 }
 
-func TestWDelayerGetHermezGovernanceDAOAddress(t *testing.T) {
-	governanceAddress, err := wdelayerClientTest.WDelayerGetHermezGovernanceDAOAddress()
+func TestWDelayerGetHermezGovernanceAddress(t *testing.T) {
+	governanceAddress, err := wdelayerClientTest.WDelayerGetHermezGovernanceAddress()
 	require.Nil(t, err)
-	assert.Equal(t, &hermezGovernanceDAOAddressConst, governanceAddress)
+	assert.Equal(t, &governanceAddressConst, governanceAddress)
 }
 
-func TestWDelayerSetHermezGovernanceDAOAddress(t *testing.T) {
-	wdelayerClientGov, err := NewWDelayerClient(ethereumClientGovDAO, wdelayerTestAddressConst)
+func TestWDelayerSetHermezGovernanceAddress(t *testing.T) {
+	wdelayerClientAux, err := NewWDelayerClient(ethereumClientAux, wdelayerTestAddressConst)
 	require.Nil(t, err)
-	_, err = wdelayerClientGov.WDelayerSetHermezGovernanceDAOAddress(auxAddressConst)
+	_, err = wdelayerClientTest.WDelayerTransferGovernance(auxAddressConst)
 	require.Nil(t, err)
-	auxAddress, err := wdelayerClientTest.WDelayerGetHermezGovernanceDAOAddress()
+	_, err = wdelayerClientAux.WDelayerClaimGovernance()
+	require.Nil(t, err)
+	auxAddress, err := wdelayerClientTest.WDelayerGetHermezGovernanceAddress()
 	require.Nil(t, err)
 	assert.Equal(t, &auxAddressConst, auxAddress)
 	currentBlockNum, err := wdelayerClientTest.client.EthLastBlock()
 	require.Nil(t, err)
 	wdelayerEvents, _, err := wdelayerClientTest.WDelayerEventsByBlock(currentBlockNum)
 	require.Nil(t, err)
-	assert.Equal(t, auxAddressConst, wdelayerEvents.NewHermezGovernanceDAOAddress[0].NewHermezGovernanceDAOAddress)
+	assert.Equal(t, auxAddressConst, wdelayerEvents.NewHermezGovernanceAddress[0].NewHermezGovernanceAddress)
+	_, err = wdelayerClientAux.WDelayerTransferGovernance(governanceAddressConst)
+	require.Nil(t, err)
+	_, err = wdelayerClientTest.WDelayerClaimGovernance()
+	require.Nil(t, err)
+}
+
+func TestWDelayerGetEmergencyCouncil(t *testing.T) {
+	emergencyCouncil, err := wdelayerClientTest.WDelayerGetEmergencyCouncil()
+	require.Nil(t, err)
+	assert.Equal(t, &emergencyCouncilAddressConst, emergencyCouncil)
+}
+
+func TestWDelayerSetEmergencyCouncil(t *testing.T) {
+	wdelayerClientEmergencyCouncil, err := NewWDelayerClient(ethereumClientEmergencyCouncil, wdelayerTestAddressConst)
+	require.Nil(t, err)
 	wdelayerClientAux, err := NewWDelayerClient(ethereumClientAux, wdelayerTestAddressConst)
 	require.Nil(t, err)
-	_, err = wdelayerClientAux.WDelayerSetHermezGovernanceDAOAddress(hermezGovernanceDAOAddressConst)
+	_, err = wdelayerClientEmergencyCouncil.WDelayerTransferEmergencyCouncil(auxAddressConst)
 	require.Nil(t, err)
-}
-
-func TestWDelayerGetHermezKeeperAddress(t *testing.T) {
-	keeperAddress, err := wdelayerClientTest.WDelayerGetHermezKeeperAddress()
+	_, err = wdelayerClientAux.WDelayerClaimEmergencyCouncil()
 	require.Nil(t, err)
-	assert.Equal(t, &hermezKeeperAddressConst, keeperAddress)
-}
-
-func TestWDelayerSetHermezKeeperAddress(t *testing.T) {
-	wdelayerClientKep, err := NewWDelayerClient(ethereumClientKep, wdelayerTestAddressConst)
-	require.Nil(t, err)
-	_, err = wdelayerClientKep.WDelayerSetHermezKeeperAddress(auxAddressConst)
-	require.Nil(t, err)
-	auxAddress, err := wdelayerClientTest.WDelayerGetHermezKeeperAddress()
+	auxAddress, err := wdelayerClientTest.WDelayerGetEmergencyCouncil()
 	require.Nil(t, err)
 	assert.Equal(t, &auxAddressConst, auxAddress)
 	currentBlockNum, err := wdelayerClientTest.client.EthLastBlock()
 	require.Nil(t, err)
 	wdelayerEvents, _, err := wdelayerClientTest.WDelayerEventsByBlock(currentBlockNum)
 	require.Nil(t, err)
-	assert.Equal(t, auxAddressConst, wdelayerEvents.NewHermezKeeperAddress[0].NewHermezKeeperAddress)
-	wdelayerClientAux, err := NewWDelayerClient(ethereumClientAux, wdelayerTestAddressConst)
+	assert.Equal(t, auxAddressConst, wdelayerEvents.NewEmergencyCouncil[0].NewEmergencyCouncil)
+	_, err = wdelayerClientAux.WDelayerTransferEmergencyCouncil(emergencyCouncilAddressConst)
 	require.Nil(t, err)
-	_, err = wdelayerClientAux.WDelayerSetHermezKeeperAddress(hermezKeeperAddressConst)
-	require.Nil(t, err)
-}
-
-func TestWDelayerGetWhiteHackGroupAddress(t *testing.T) {
-	whiteHackGroupAddress, err := wdelayerClientTest.WDelayerGetWhiteHackGroupAddress()
-	require.Nil(t, err)
-	assert.Equal(t, &whiteHackGroupAddressConst, whiteHackGroupAddress)
-}
-
-func TestWDelayerSetWhiteHackGroupAddress(t *testing.T) {
-	wdelayerClientWhite, err := NewWDelayerClient(ethereumClientWhite, wdelayerTestAddressConst)
-	require.Nil(t, err)
-	_, err = wdelayerClientWhite.WDelayerSetWhiteHackGroupAddress(auxAddressConst)
-	require.Nil(t, err)
-	auxAddress, err := wdelayerClientTest.WDelayerGetWhiteHackGroupAddress()
-	require.Nil(t, err)
-	assert.Equal(t, &auxAddressConst, auxAddress)
-	currentBlockNum, err := wdelayerClientTest.client.EthLastBlock()
-	require.Nil(t, err)
-	wdelayerEvents, _, err := wdelayerClientTest.WDelayerEventsByBlock(currentBlockNum)
-	require.Nil(t, err)
-	assert.Equal(t, auxAddressConst, wdelayerEvents.NewWhiteHackGroupAddress[0].NewWhiteHackGroupAddress)
-	wdelayerClientAux, err := NewWDelayerClient(ethereumClientAux, wdelayerTestAddressConst)
-	require.Nil(t, err)
-	_, err = wdelayerClientAux.WDelayerSetWhiteHackGroupAddress(whiteHackGroupAddressConst)
+	_, err = wdelayerClientEmergencyCouncil.WDelayerClaimEmergencyCouncil()
 	require.Nil(t, err)
 }
 
@@ -115,9 +94,7 @@ func TestWDelayerGetWithdrawalDelay(t *testing.T) {
 }
 
 func TestWDelayerChangeWithdrawalDelay(t *testing.T) {
-	wdelayerClientKep, err := NewWDelayerClient(ethereumClientKep, wdelayerTestAddressConst)
-	require.Nil(t, err)
-	_, err = wdelayerClientKep.WDelayerChangeWithdrawalDelay(newWithdrawalDelay.Uint64())
+	_, err := wdelayerClientTest.WDelayerChangeWithdrawalDelay(newWithdrawalDelay.Uint64())
 	require.Nil(t, err)
 	withdrawalDelay, err := wdelayerClientTest.WDelayerGetWithdrawalDelay()
 	require.Nil(t, err)
@@ -188,9 +165,7 @@ func TestWDelayerSecondDeposit(t *testing.T) {
 }
 
 func TestWDelayerEnableEmergencyMode(t *testing.T) {
-	wdelayerClientKep, err := NewWDelayerClient(ethereumClientKep, wdelayerTestAddressConst)
-	require.Nil(t, err)
-	_, err = wdelayerClientKep.WDelayerEnableEmergencyMode()
+	_, err := wdelayerClientTest.WDelayerEnableEmergencyMode()
 	require.Nil(t, err)
 	emergencyMode, err := wdelayerClientTest.WDelayerIsEmergencyMode()
 	require.Nil(t, err)
@@ -216,13 +191,13 @@ func TestWDelayerGetEmergencyModeStartingTime(t *testing.T) {
 func TestWDelayerEscapeHatchWithdrawal(t *testing.T) {
 	amount := new(big.Int)
 	amount.SetString("10000000000000000", 10)
-	wdelayerClientWhite, err := NewWDelayerClient(ethereumClientWhite, wdelayerTestAddressConst)
+	wdelayerClientEmergencyCouncil, err := NewWDelayerClient(ethereumClientEmergencyCouncil, wdelayerTestAddressConst)
 	require.Nil(t, err)
-	_, err = wdelayerClientWhite.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHEZAddressConst, amount)
+	_, err = wdelayerClientEmergencyCouncil.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHEZAddressConst, amount)
 	require.Contains(t, err.Error(), "NO_MAX_EMERGENCY_MODE_TIME")
 	seconds := maxEmergencyModeTime.Seconds()
 	addTime(seconds, ethClientDialURL)
-	_, err = wdelayerClientWhite.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHEZAddressConst, amount)
+	_, err = wdelayerClientEmergencyCouncil.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHEZAddressConst, amount)
 	require.Nil(t, err)
 	currentBlockNum, err := wdelayerClientTest.client.EthLastBlock()
 	require.Nil(t, err)
@@ -230,6 +205,6 @@ func TestWDelayerEscapeHatchWithdrawal(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, tokenHEZAddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].Token)
 	assert.Equal(t, governanceAddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].To)
-	assert.Equal(t, whiteHackGroupAddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].Who)
+	assert.Equal(t, emergencyCouncilAddressConst, wdelayerEvents.EscapeHatchWithdrawal[0].Who)
 	assert.Equal(t, amount, wdelayerEvents.EscapeHatchWithdrawal[0].Amount)
 }

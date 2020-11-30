@@ -36,7 +36,7 @@ func TestL2TxByteParsers(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, expected, hex.EncodeToString(encodedData))
 
-	decodedData, err := L2TxFromBytes(encodedData, 32)
+	decodedData, err := L2TxFromBytesDataAvailability(encodedData, 32)
 	require.Nil(t, err)
 	assert.Equal(t, l2Tx, decodedData)
 }

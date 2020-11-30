@@ -292,11 +292,10 @@ func NewClientSetupExample() *ClientSetup {
 				NLevels: 32,
 			},
 		},
-		TokenHEZ:                   tokenHEZ,
-		HermezGovernanceDAOAddress: governanceAddress,
-		SafetyAddress:              ethCommon.HexToAddress("0x84d8B79E84fe87B14ad61A554e740f6736bF4c20"),
-		HermezAuctionContract:      ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
-		WithdrawDelayerContract:    ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
+		TokenHEZ:                tokenHEZ,
+		HermezGovernanceAddress: governanceAddress,
+		HermezAuctionContract:   ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
+		WithdrawDelayerContract: ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
 	}
 	rollupVariables := &common.RollupVariables{
 		FeeAddToken:           big.NewInt(11),
@@ -329,12 +328,11 @@ func NewClientSetupExample() *ClientSetup {
 		HermezRollup:         auctionConstants.HermezRollup,
 	}
 	wDelayerVariables := &common.WDelayerVariables{
-		HermezGovernanceDAOAddress: ethCommon.HexToAddress("0xcfD0d163AE6432a72682323E2C3A5a69e6B37D12"),
-		WhiteHackGroupAddress:      ethCommon.HexToAddress("0x2730700932a4FDB97B9268A3Ca29f97Ea5fd7EA0"),
-		HermezKeeperAddress:        ethCommon.HexToAddress("0x92aAD86176dC0f0046FE85Ed5dA008a828bE3868"),
-		WithdrawalDelay:            60,
-		EmergencyModeStartingTime:  0,
-		EmergencyMode:              false,
+		HermezGovernanceAddress:   ethCommon.HexToAddress("0xcfD0d163AE6432a72682323E2C3A5a69e6B37D12"),
+		EmergencyCouncilAddress:   ethCommon.HexToAddress("0x2730700932a4FDB97B9268A3Ca29f97Ea5fd7EA0"),
+		WithdrawalDelay:           60,
+		EmergencyModeStartingTime: 0,
+		EmergencyMode:             false,
 	}
 	return &ClientSetup{
 		RollupConstants:   rollupConstants,
@@ -1061,7 +1059,7 @@ func (c *Client) RollupEventsByBlock(blockNum int64) (*eth.RollupEvents, *ethCom
 }
 
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the Rollup Smart Contract in the given transaction
-func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
+func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, numL1TxUser uint16) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -1220,7 +1218,7 @@ func (c *Client) AuctionGetDonationAddress() (*ethCommon.Address, error) {
 }
 
 // AuctionSetBootCoordinator is the interface to call the smart contract function
-func (c *Client) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address, newBootCoordinatorURL string) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1511,8 +1509,8 @@ func (c *Client) AuctionEventsByBlock(blockNum int64) (*eth.AuctionEvents, *ethC
 // WDelayer
 //
 
-// WDelayerGetHermezGovernanceDAOAddress is the interface to call the smart contract function
-func (c *Client) WDelayerGetHermezGovernanceDAOAddress() (*ethCommon.Address, error) {
+// WDelayerGetHermezGovernanceAddress is the interface to call the smart contract function
+func (c *Client) WDelayerGetHermezGovernanceAddress() (*ethCommon.Address, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -1520,8 +1518,8 @@ func (c *Client) WDelayerGetHermezGovernanceDAOAddress() (*ethCommon.Address, er
 	return nil, tracerr.Wrap(errTODO)
 }
 
-// WDelayerSetHermezGovernanceDAOAddress is the interface to call the smart contract function
-func (c *Client) WDelayerSetHermezGovernanceDAOAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+// WDelayerSetHermezGovernanceAddress is the interface to call the smart contract function
+func (c *Client) WDelayerSetHermezGovernanceAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()

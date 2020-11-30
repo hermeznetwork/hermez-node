@@ -32,10 +32,11 @@ type SlotState struct {
 // NewSlotState returns an empty SlotState
 func NewSlotState() *SlotState {
 	return &SlotState{
-		Bidder:       ethCommon.Address{},
-		Fulfilled:    false,
-		BidAmount:    big.NewInt(0),
-		ClosedMinBid: big.NewInt(0),
+		Bidder:           ethCommon.Address{},
+		Fulfilled:        false,
+		ForgerCommitment: false,
+		BidAmount:        big.NewInt(0),
+		ClosedMinBid:     big.NewInt(0),
 	}
 }
 
@@ -84,7 +85,8 @@ type AuctionEventNewDonationAddress struct {
 
 // AuctionEventNewBootCoordinator is an event of the Auction Smart Contract
 type AuctionEventNewBootCoordinator struct {
-	NewBootCoordinator ethCommon.Address
+	NewBootCoordinator    ethCommon.Address
+	NewBootCoordinatorURL string
 }
 
 // AuctionEventNewOpenAuctionSlots is an event of the Auction Smart Contract
@@ -187,7 +189,7 @@ type AuctionInterface interface {
 	AuctionGetAllocationRatio() ([3]uint16, error)
 	AuctionSetDonationAddress(newDonationAddress ethCommon.Address) (*types.Transaction, error)
 	AuctionGetDonationAddress() (*ethCommon.Address, error)
-	AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address) (*types.Transaction, error)
+	AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address, newBootCoordinatorURL string) (*types.Transaction, error)
 	AuctionGetBootCoordinator() (*ethCommon.Address, error)
 	AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid *big.Int) (*types.Transaction, error)
 
@@ -408,11 +410,11 @@ func (c *AuctionClient) AuctionGetDonationAddress() (donationAddress *ethCommon.
 }
 
 // AuctionSetBootCoordinator is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address, newBootCoordinatorURL string) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			return c.auction.SetBootCoordinator(auth, newBootCoordinator)
+			return c.auction.SetBootCoordinator(auth, newBootCoordinator, newBootCoordinatorURL)
 		},
 	); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("Failed setting bootCoordinator: %w", err))
@@ -642,6 +644,10 @@ func (c *AuctionClient) AuctionConstants() (auctionConstants *common.AuctionCons
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
+		auctionConstants.GovernanceAddress, err = c.auction.GovernanceAddress(nil)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
 		auctionConstants.TokenHEZ, err = c.auction.TokenHEZ(nil)
 		return tracerr.Wrap(err)
 	}); err != nil {
@@ -703,7 +709,7 @@ var (
 	logAuctionNewClosedAuctionSlots = crypto.Keccak256Hash([]byte("NewClosedAuctionSlots(uint16)"))
 	logAuctionNewOutbidding         = crypto.Keccak256Hash([]byte("NewOutbidding(uint16)"))
 	logAuctionNewDonationAddress    = crypto.Keccak256Hash([]byte("NewDonationAddress(address)"))
-	logAuctionNewBootCoordinator    = crypto.Keccak256Hash([]byte("NewBootCoordinator(address)"))
+	logAuctionNewBootCoordinator    = crypto.Keccak256Hash([]byte("NewBootCoordinator(address,string)"))
 	logAuctionNewOpenAuctionSlots   = crypto.Keccak256Hash([]byte("NewOpenAuctionSlots(uint16)"))
 	logAuctionNewAllocationRatio    = crypto.Keccak256Hash([]byte("NewAllocationRatio(uint16[3])"))
 	logAuctionSetCoordinator        = crypto.Keccak256Hash([]byte("SetCoordinator(address,address,string)"))
@@ -780,6 +786,9 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			auctionEvents.NewDonationAddress = append(auctionEvents.NewDonationAddress, newDonationAddress)
 		case logAuctionNewBootCoordinator:
 			var newBootCoordinator AuctionEventNewBootCoordinator
+			if err := c.contractAbi.Unpack(&newBootCoordinator, "NewBootCoordinator", vLog.Data); err != nil {
+				return nil, nil, tracerr.Wrap(err)
+			}
 			newBootCoordinator.NewBootCoordinator = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.NewBootCoordinator = append(auctionEvents.NewBootCoordinator, newBootCoordinator)
 		case logAuctionNewOpenAuctionSlots:

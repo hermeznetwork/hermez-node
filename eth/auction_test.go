@@ -38,6 +38,7 @@ func TestAuctionConstants(t *testing.T) {
 	assert.Equal(t, auctionConstants.HermezRollup, hermezRollupTestAddressConst)
 	assert.Equal(t, auctionConstants.InitialMinimalBidding, INITMINBID)
 	assert.Equal(t, auctionConstants.TokenHEZ, tokenHEZAddressConst)
+	assert.Equal(t, auctionConstants.GovernanceAddress, governanceAddressConst)
 }
 
 func TestAuctionVariables(t *testing.T) {
@@ -199,8 +200,10 @@ func TestAuctionSetDonationAddress(t *testing.T) {
 
 func TestAuctionSetBootCoordinator(t *testing.T) {
 	newBootCoordinator := governanceAddressConst
+	bootCoordinatorURL := "https://boot.coordinator2.io"
+	newBootCoordinatorURL := "https://boot.coordinator2.io"
 
-	_, err := auctionClientTest.AuctionSetBootCoordinator(newBootCoordinator)
+	_, err := auctionClientTest.AuctionSetBootCoordinator(newBootCoordinator, newBootCoordinatorURL)
 	require.Nil(t, err)
 	bootCoordinator, err := auctionClientTest.AuctionGetBootCoordinator()
 	require.Nil(t, err)
@@ -210,7 +213,8 @@ func TestAuctionSetBootCoordinator(t *testing.T) {
 	auctionEvents, _, err := auctionClientTest.AuctionEventsByBlock(currentBlockNum)
 	require.Nil(t, err)
 	assert.Equal(t, newBootCoordinator, auctionEvents.NewBootCoordinator[0].NewBootCoordinator)
-	_, err = auctionClientTest.AuctionSetBootCoordinator(bootCoordinatorAddressConst)
+	assert.Equal(t, newBootCoordinatorURL, auctionEvents.NewBootCoordinator[0].NewBootCoordinatorURL)
+	_, err = auctionClientTest.AuctionSetBootCoordinator(bootCoordinatorAddressConst, bootCoordinatorURL)
 	require.Nil(t, err)
 }
 
