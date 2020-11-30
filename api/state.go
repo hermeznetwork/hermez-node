@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // Network define status of the network
@@ -89,12 +90,12 @@ func (a *API) UpdateNetworkInfo(
 ) error {
 	lastBatch, err := a.h.GetBatchAPI(lastBatchNum)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	lastClosedSlot := currentSlot + int64(a.status.Auction.ClosedAuctionSlots)
 	nextForgers, err := a.getNextForgers(lastSyncBlock, currentSlot, lastClosedSlot)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	a.status.Lock()
 	a.status.Network.LastSyncBlock = lastSyncBlock.Num
@@ -113,7 +114,7 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 	limit := uint(lastClosedSlot - currentSlot + 1)
 	bids, _, err := a.h.GetBestBidsAPI(&currentSlot, &lastClosedSlot, nil, &limit, "ASC")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	nextForgers := []NextForger{}
 	// Create nextForger for each slot
@@ -136,7 +137,7 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 				foundBid = true
 				coordinator, err := a.h.GetCoordinatorAPI(bids[j].Bidder)
 				if err != nil {
-					return nil, err
+					return nil, tracerr.Wrap(err)
 				}
 				nextForger.Coordinator = *coordinator
 				break
@@ -160,7 +161,7 @@ func (a *API) UpdateMetrics() error {
 	a.status.RUnlock()
 	metrics, err := a.h.GetMetrics(batchNum)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	a.status.Lock()
 	a.status.Metrics = *metrics
@@ -174,7 +175,7 @@ func (a *API) UpdateMetrics() error {
 func (a *API) UpdateRecommendedFee() error {
 	feeExistingAccount, err := a.h.GetAvgTxFee()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	a.status.Lock()
 	a.status.RecommendedFee.ExistingAccount = feeExistingAccount

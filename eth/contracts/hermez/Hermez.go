@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -36,12 +37,12 @@ var HermezBin = "0x608060405234801561001057600080fd5b506158f6806100206000396000f
 func DeployHermez(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Hermez, error) {
 	parsed, err := abi.JSON(strings.NewReader(HermezABI))
 	if err != nil {
-		return common.Address{}, nil, nil, err
+		return common.Address{}, nil, nil, tracerr.Wrap(err)
 	}
 
 	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(HermezBin), backend)
 	if err != nil {
-		return common.Address{}, nil, nil, err
+		return common.Address{}, nil, nil, tracerr.Wrap(err)
 	}
 	return address, tx, &Hermez{HermezCaller: HermezCaller{contract: contract}, HermezTransactor: HermezTransactor{contract: contract}, HermezFilterer: HermezFilterer{contract: contract}}, nil
 }
@@ -109,7 +110,7 @@ type HermezTransactorRaw struct {
 func NewHermez(address common.Address, backend bind.ContractBackend) (*Hermez, error) {
 	contract, err := bindHermez(address, backend, backend, backend)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &Hermez{HermezCaller: HermezCaller{contract: contract}, HermezTransactor: HermezTransactor{contract: contract}, HermezFilterer: HermezFilterer{contract: contract}}, nil
 }
@@ -118,7 +119,7 @@ func NewHermez(address common.Address, backend bind.ContractBackend) (*Hermez, e
 func NewHermezCaller(address common.Address, caller bind.ContractCaller) (*HermezCaller, error) {
 	contract, err := bindHermez(address, caller, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezCaller{contract: contract}, nil
 }
@@ -127,7 +128,7 @@ func NewHermezCaller(address common.Address, caller bind.ContractCaller) (*Herme
 func NewHermezTransactor(address common.Address, transactor bind.ContractTransactor) (*HermezTransactor, error) {
 	contract, err := bindHermez(address, nil, transactor, nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezTransactor{contract: contract}, nil
 }
@@ -136,7 +137,7 @@ func NewHermezTransactor(address common.Address, transactor bind.ContractTransac
 func NewHermezFilterer(address common.Address, filterer bind.ContractFilterer) (*HermezFilterer, error) {
 	contract, err := bindHermez(address, nil, nil, filterer)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezFilterer{contract: contract}, nil
 }
@@ -145,7 +146,7 @@ func NewHermezFilterer(address common.Address, filterer bind.ContractFilterer) (
 func bindHermez(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(HermezABI))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
@@ -197,7 +198,7 @@ func (_Hermez *HermezCaller) ABSOLUTEMAXL1L2BATCHTIMEOUT(opts *bind.CallOpts) (u
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "ABSOLUTE_MAX_L1L2BATCHTIMEOUT")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // ABSOLUTEMAXL1L2BATCHTIMEOUT is a free data retrieval call binding the contract method 0x95a09f2a.
@@ -233,7 +234,7 @@ func (_Hermez *HermezCaller) Buckets(opts *bind.CallOpts, arg0 *big.Int) (struct
 	})
 	out := ret
 	err := _Hermez.contract.Call(opts, out, "buckets", arg0)
-	return *ret, err
+	return *ret, tracerr.Wrap(err)
 }
 
 // Buckets is a free data retrieval call binding the contract method 0x9b51fb0d.
@@ -271,7 +272,7 @@ func (_Hermez *HermezCaller) ExitNullifierMap(opts *bind.CallOpts, arg0 uint64, 
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "exitNullifierMap", arg0, arg1)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // ExitNullifierMap is a free data retrieval call binding the contract method 0xe9b5269c.
@@ -297,7 +298,7 @@ func (_Hermez *HermezCaller) ExitRootsMap(opts *bind.CallOpts, arg0 uint64) (*bi
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "exitRootsMap", arg0)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // ExitRootsMap is a free data retrieval call binding the contract method 0x506d5463.
@@ -323,7 +324,7 @@ func (_Hermez *HermezCaller) FeeAddToken(opts *bind.CallOpts) (*big.Int, error) 
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "feeAddToken")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // FeeAddToken is a free data retrieval call binding the contract method 0xbded9bb8.
@@ -349,7 +350,7 @@ func (_Hermez *HermezCaller) ForgeL1L2BatchTimeout(opts *bind.CallOpts) (uint8, 
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "forgeL1L2BatchTimeout")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // ForgeL1L2BatchTimeout is a free data retrieval call binding the contract method 0xa3275838.
@@ -375,7 +376,7 @@ func (_Hermez *HermezCaller) HermezAuctionContract(opts *bind.CallOpts) (common.
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "hermezAuctionContract")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // HermezAuctionContract is a free data retrieval call binding the contract method 0x2bd83626.
@@ -401,7 +402,7 @@ func (_Hermez *HermezCaller) HermezGovernanceDAOAddress(opts *bind.CallOpts) (co
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "hermezGovernanceDAOAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // HermezGovernanceDAOAddress is a free data retrieval call binding the contract method 0xdd46bf84.
@@ -427,7 +428,7 @@ func (_Hermez *HermezCaller) InstantWithdrawalViewer(opts *bind.CallOpts, tokenA
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "instantWithdrawalViewer", tokenAddress, amount)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // InstantWithdrawalViewer is a free data retrieval call binding the contract method 0x375110aa.
@@ -453,7 +454,7 @@ func (_Hermez *HermezCaller) LastForgedBatch(opts *bind.CallOpts) (uint64, error
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "lastForgedBatch")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // LastForgedBatch is a free data retrieval call binding the contract method 0x44e0b2ce.
@@ -479,7 +480,7 @@ func (_Hermez *HermezCaller) LastIdx(opts *bind.CallOpts) (*big.Int, error) {
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "lastIdx")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // LastIdx is a free data retrieval call binding the contract method 0xd486645c.
@@ -505,7 +506,7 @@ func (_Hermez *HermezCaller) LastL1L2Batch(opts *bind.CallOpts) (uint64, error) 
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "lastL1L2Batch")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // LastL1L2Batch is a free data retrieval call binding the contract method 0x84ef9ed4.
@@ -531,7 +532,7 @@ func (_Hermez *HermezCaller) MapL1TxQueue(opts *bind.CallOpts, arg0 uint64) ([]b
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "mapL1TxQueue", arg0)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // MapL1TxQueue is a free data retrieval call binding the contract method 0xe796fcf3.
@@ -557,7 +558,7 @@ func (_Hermez *HermezCaller) NextL1FillingQueue(opts *bind.CallOpts) (uint64, er
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "nextL1FillingQueue")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // NextL1FillingQueue is a free data retrieval call binding the contract method 0x0ee8e52b.
@@ -583,7 +584,7 @@ func (_Hermez *HermezCaller) NextL1ToForgeQueue(opts *bind.CallOpts) (uint64, er
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "nextL1ToForgeQueue")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // NextL1ToForgeQueue is a free data retrieval call binding the contract method 0xd0f32e67.
@@ -609,7 +610,7 @@ func (_Hermez *HermezCaller) RegisterTokensCount(opts *bind.CallOpts) (*big.Int,
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "registerTokensCount")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // RegisterTokensCount is a free data retrieval call binding the contract method 0x9f34e9a3.
@@ -641,7 +642,7 @@ func (_Hermez *HermezCaller) RollupVerifiers(opts *bind.CallOpts, arg0 *big.Int)
 	})
 	out := ret
 	err := _Hermez.contract.Call(opts, out, "rollupVerifiers", arg0)
-	return *ret, err
+	return *ret, tracerr.Wrap(err)
 }
 
 // RollupVerifiers is a free data retrieval call binding the contract method 0x38330200.
@@ -675,7 +676,7 @@ func (_Hermez *HermezCaller) SafetyAddress(opts *bind.CallOpts) (common.Address,
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "safetyAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // SafetyAddress is a free data retrieval call binding the contract method 0xe56e27ae.
@@ -701,7 +702,7 @@ func (_Hermez *HermezCaller) StateRootMap(opts *bind.CallOpts, arg0 uint64) (*bi
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "stateRootMap", arg0)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // StateRootMap is a free data retrieval call binding the contract method 0x86c6acc1.
@@ -727,7 +728,7 @@ func (_Hermez *HermezCaller) TokenExchange(opts *bind.CallOpts, arg0 common.Addr
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "tokenExchange", arg0)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // TokenExchange is a free data retrieval call binding the contract method 0x0dd94b96.
@@ -753,7 +754,7 @@ func (_Hermez *HermezCaller) TokenHEZ(opts *bind.CallOpts) (common.Address, erro
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "tokenHEZ")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // TokenHEZ is a free data retrieval call binding the contract method 0x79a135e3.
@@ -779,7 +780,7 @@ func (_Hermez *HermezCaller) TokenList(opts *bind.CallOpts, arg0 *big.Int) (comm
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "tokenList", arg0)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // TokenList is a free data retrieval call binding the contract method 0x9ead7222.
@@ -805,7 +806,7 @@ func (_Hermez *HermezCaller) TokenMap(opts *bind.CallOpts, arg0 common.Address) 
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "tokenMap", arg0)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // TokenMap is a free data retrieval call binding the contract method 0x004aca6e.
@@ -831,7 +832,7 @@ func (_Hermez *HermezCaller) WithdrawDelayerContract(opts *bind.CallOpts) (commo
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "withdrawDelayerContract")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // WithdrawDelayerContract is a free data retrieval call binding the contract method 0x1b0a8223.
@@ -857,7 +858,7 @@ func (_Hermez *HermezCaller) WithdrawVerifier(opts *bind.CallOpts) (common.Addre
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "withdrawVerifier")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // WithdrawVerifier is a free data retrieval call binding the contract method 0x864eb164.
@@ -883,7 +884,7 @@ func (_Hermez *HermezCaller) WithdrawalDelay(opts *bind.CallOpts) (uint64, error
 	)
 	out := ret0
 	err := _Hermez.contract.Call(opts, out, "withdrawalDelay")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // WithdrawalDelay is a free data retrieval call binding the contract method 0xa7ab6961.
@@ -1238,7 +1239,7 @@ func (_Hermez *HermezFilterer) FilterAddToken(opts *bind.FilterOpts, tokenAddres
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "AddToken", tokenAddressRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAddTokenIterator{contract: _Hermez.contract, event: "AddToken", logs: logs, sub: sub}, nil
 }
@@ -1255,7 +1256,7 @@ func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "AddToken", tokenAddressRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1265,19 +1266,19 @@ func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAddToken)
 				if err := _Hermez.contract.UnpackLog(event, "AddToken", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1291,7 +1292,7 @@ func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *
 func (_Hermez *HermezFilterer) ParseAddToken(log types.Log) (*HermezAddToken, error) {
 	event := new(HermezAddToken)
 	if err := _Hermez.contract.UnpackLog(event, "AddToken", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1381,7 +1382,7 @@ func (_Hermez *HermezFilterer) FilterForgeBatch(opts *bind.FilterOpts, batchNum 
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "ForgeBatch", batchNumRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezForgeBatchIterator{contract: _Hermez.contract, event: "ForgeBatch", logs: logs, sub: sub}, nil
 }
@@ -1398,7 +1399,7 @@ func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<-
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "ForgeBatch", batchNumRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1408,19 +1409,19 @@ func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<-
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezForgeBatch)
 				if err := _Hermez.contract.UnpackLog(event, "ForgeBatch", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1434,7 +1435,7 @@ func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<-
 func (_Hermez *HermezFilterer) ParseForgeBatch(log types.Log) (*HermezForgeBatch, error) {
 	event := new(HermezForgeBatch)
 	if err := _Hermez.contract.UnpackLog(event, "ForgeBatch", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1530,7 +1531,7 @@ func (_Hermez *HermezFilterer) FilterL1UserTxEvent(opts *bind.FilterOpts, queueI
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "L1UserTxEvent", queueIndexRule, positionRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezL1UserTxEventIterator{contract: _Hermez.contract, event: "L1UserTxEvent", logs: logs, sub: sub}, nil
 }
@@ -1551,7 +1552,7 @@ func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink cha
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "L1UserTxEvent", queueIndexRule, positionRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1561,19 +1562,19 @@ func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink cha
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezL1UserTxEvent)
 				if err := _Hermez.contract.UnpackLog(event, "L1UserTxEvent", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1587,7 +1588,7 @@ func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink cha
 func (_Hermez *HermezFilterer) ParseL1UserTxEvent(log types.Log) (*HermezL1UserTxEvent, error) {
 	event := new(HermezL1UserTxEvent)
 	if err := _Hermez.contract.UnpackLog(event, "L1UserTxEvent", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1671,7 +1672,7 @@ func (_Hermez *HermezFilterer) FilterSafeMode(opts *bind.FilterOpts) (*HermezSaf
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "SafeMode")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezSafeModeIterator{contract: _Hermez.contract, event: "SafeMode", logs: logs, sub: sub}, nil
 }
@@ -1683,7 +1684,7 @@ func (_Hermez *HermezFilterer) WatchSafeMode(opts *bind.WatchOpts, sink chan<- *
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "SafeMode")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1693,19 +1694,19 @@ func (_Hermez *HermezFilterer) WatchSafeMode(opts *bind.WatchOpts, sink chan<- *
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezSafeMode)
 				if err := _Hermez.contract.UnpackLog(event, "SafeMode", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1719,7 +1720,7 @@ func (_Hermez *HermezFilterer) WatchSafeMode(opts *bind.WatchOpts, sink chan<- *
 func (_Hermez *HermezFilterer) ParseSafeMode(log types.Log) (*HermezSafeMode, error) {
 	event := new(HermezSafeMode)
 	if err := _Hermez.contract.UnpackLog(event, "SafeMode", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1815,7 +1816,7 @@ func (_Hermez *HermezFilterer) FilterUpdateBucketWithdraw(opts *bind.FilterOpts,
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateBucketWithdraw", numBucketRule, blockStampRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezUpdateBucketWithdrawIterator{contract: _Hermez.contract, event: "UpdateBucketWithdraw", logs: logs, sub: sub}, nil
 }
@@ -1836,7 +1837,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketWithdraw(opts *bind.WatchOpts, s
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateBucketWithdraw", numBucketRule, blockStampRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1846,19 +1847,19 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketWithdraw(opts *bind.WatchOpts, s
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateBucketWithdraw)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateBucketWithdraw", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1872,7 +1873,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketWithdraw(opts *bind.WatchOpts, s
 func (_Hermez *HermezFilterer) ParseUpdateBucketWithdraw(log types.Log) (*HermezUpdateBucketWithdraw, error) {
 	event := new(HermezUpdateBucketWithdraw)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateBucketWithdraw", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1957,7 +1958,7 @@ func (_Hermez *HermezFilterer) FilterUpdateBucketsParameters(opts *bind.FilterOp
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateBucketsParameters")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezUpdateBucketsParametersIterator{contract: _Hermez.contract, event: "UpdateBucketsParameters", logs: logs, sub: sub}, nil
 }
@@ -1969,7 +1970,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateBucketsParameters")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1979,19 +1980,19 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateBucketsParameters)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateBucketsParameters", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2005,7 +2006,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts
 func (_Hermez *HermezFilterer) ParseUpdateBucketsParameters(log types.Log) (*HermezUpdateBucketsParameters, error) {
 	event := new(HermezUpdateBucketsParameters)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateBucketsParameters", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2090,7 +2091,7 @@ func (_Hermez *HermezFilterer) FilterUpdateFeeAddToken(opts *bind.FilterOpts) (*
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateFeeAddToken")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezUpdateFeeAddTokenIterator{contract: _Hermez.contract, event: "UpdateFeeAddToken", logs: logs, sub: sub}, nil
 }
@@ -2102,7 +2103,7 @@ func (_Hermez *HermezFilterer) WatchUpdateFeeAddToken(opts *bind.WatchOpts, sink
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateFeeAddToken")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2112,19 +2113,19 @@ func (_Hermez *HermezFilterer) WatchUpdateFeeAddToken(opts *bind.WatchOpts, sink
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateFeeAddToken)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateFeeAddToken", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2138,7 +2139,7 @@ func (_Hermez *HermezFilterer) WatchUpdateFeeAddToken(opts *bind.WatchOpts, sink
 func (_Hermez *HermezFilterer) ParseUpdateFeeAddToken(log types.Log) (*HermezUpdateFeeAddToken, error) {
 	event := new(HermezUpdateFeeAddToken)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateFeeAddToken", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2223,7 +2224,7 @@ func (_Hermez *HermezFilterer) FilterUpdateForgeL1L2BatchTimeout(opts *bind.Filt
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateForgeL1L2BatchTimeout")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezUpdateForgeL1L2BatchTimeoutIterator{contract: _Hermez.contract, event: "UpdateForgeL1L2BatchTimeout", logs: logs, sub: sub}, nil
 }
@@ -2235,7 +2236,7 @@ func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.Watch
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateForgeL1L2BatchTimeout")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2245,19 +2246,19 @@ func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.Watch
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateForgeL1L2BatchTimeout)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateForgeL1L2BatchTimeout", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2271,7 +2272,7 @@ func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.Watch
 func (_Hermez *HermezFilterer) ParseUpdateForgeL1L2BatchTimeout(log types.Log) (*HermezUpdateForgeL1L2BatchTimeout, error) {
 	event := new(HermezUpdateForgeL1L2BatchTimeout)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateForgeL1L2BatchTimeout", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2357,7 +2358,7 @@ func (_Hermez *HermezFilterer) FilterUpdateTokenExchange(opts *bind.FilterOpts) 
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateTokenExchange")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezUpdateTokenExchangeIterator{contract: _Hermez.contract, event: "UpdateTokenExchange", logs: logs, sub: sub}, nil
 }
@@ -2369,7 +2370,7 @@ func (_Hermez *HermezFilterer) WatchUpdateTokenExchange(opts *bind.WatchOpts, si
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateTokenExchange")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2379,19 +2380,19 @@ func (_Hermez *HermezFilterer) WatchUpdateTokenExchange(opts *bind.WatchOpts, si
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateTokenExchange)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateTokenExchange", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2405,7 +2406,7 @@ func (_Hermez *HermezFilterer) WatchUpdateTokenExchange(opts *bind.WatchOpts, si
 func (_Hermez *HermezFilterer) ParseUpdateTokenExchange(log types.Log) (*HermezUpdateTokenExchange, error) {
 	event := new(HermezUpdateTokenExchange)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateTokenExchange", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2490,7 +2491,7 @@ func (_Hermez *HermezFilterer) FilterUpdateWithdrawalDelay(opts *bind.FilterOpts
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateWithdrawalDelay")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezUpdateWithdrawalDelayIterator{contract: _Hermez.contract, event: "UpdateWithdrawalDelay", logs: logs, sub: sub}, nil
 }
@@ -2502,7 +2503,7 @@ func (_Hermez *HermezFilterer) WatchUpdateWithdrawalDelay(opts *bind.WatchOpts, 
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateWithdrawalDelay")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2512,19 +2513,19 @@ func (_Hermez *HermezFilterer) WatchUpdateWithdrawalDelay(opts *bind.WatchOpts, 
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateWithdrawalDelay)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateWithdrawalDelay", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2538,7 +2539,7 @@ func (_Hermez *HermezFilterer) WatchUpdateWithdrawalDelay(opts *bind.WatchOpts, 
 func (_Hermez *HermezFilterer) ParseUpdateWithdrawalDelay(log types.Log) (*HermezUpdateWithdrawalDelay, error) {
 	event := new(HermezUpdateWithdrawalDelay)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateWithdrawalDelay", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2638,7 +2639,7 @@ func (_Hermez *HermezFilterer) FilterWithdrawEvent(opts *bind.FilterOpts, idx []
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "WithdrawEvent", idxRule, numExitRootRule, instantWithdrawRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezWithdrawEventIterator{contract: _Hermez.contract, event: "WithdrawEvent", logs: logs, sub: sub}, nil
 }
@@ -2663,7 +2664,7 @@ func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink cha
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "WithdrawEvent", idxRule, numExitRootRule, instantWithdrawRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2673,19 +2674,19 @@ func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink cha
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezWithdrawEvent)
 				if err := _Hermez.contract.UnpackLog(event, "WithdrawEvent", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2699,7 +2700,7 @@ func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink cha
 func (_Hermez *HermezFilterer) ParseWithdrawEvent(log types.Log) (*HermezWithdrawEvent, error) {
 	event := new(HermezWithdrawEvent)
 	if err := _Hermez.contract.UnpackLog(event, "WithdrawEvent", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }

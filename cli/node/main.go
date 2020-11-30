@@ -24,20 +24,20 @@ func cmdInit(c *cli.Context) error {
 	log.Info("Init")
 	cfg, err := parseCli(c)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	fmt.Println("TODO", cfg)
-	return err
+	return tracerr.Wrap(err)
 }
 
 func cmdRun(c *cli.Context) error {
 	cfg, err := parseCli(c)
 	if err != nil {
-		return fmt.Errorf("error parsing flags and config: %w", err)
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
 	node, err := node.NewNode(cfg.mode, cfg.node, cfg.coord)
 	if err != nil {
-		return fmt.Errorf("error starting node: %w", err)
+		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
 	}
 	node.Start()
 
@@ -72,7 +72,7 @@ func parseCli(c *cli.Context) (*Config, error) {
 		if err := cli.ShowAppHelp(c); err != nil {
 			panic(err)
 		}
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return cfg, nil
 }
@@ -86,27 +86,27 @@ func getConfig(c *cli.Context) (*Config, error) {
 	case modeCoord:
 		cfg.mode = node.ModeCoordinator
 	default:
-		return nil, fmt.Errorf("invalid mode \"%v\"", mode)
+		return nil, tracerr.Wrap(fmt.Errorf("invalid mode \"%v\"", mode))
 	}
 
 	if cfg.mode == node.ModeCoordinator {
 		coordCfgPath := c.String(flagCoordCfg)
 		if coordCfgPath == "" {
-			return nil, fmt.Errorf("required flag \"%v\" not set", flagCoordCfg)
+			return nil, tracerr.Wrap(fmt.Errorf("required flag \"%v\" not set", flagCoordCfg))
 		}
 		coordCfg, err := config.LoadCoordinator(coordCfgPath)
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		cfg.coord = coordCfg
 	}
 	nodeCfgPath := c.String(flagCfg)
 	if nodeCfgPath == "" {
-		return nil, fmt.Errorf("required flag \"%v\" not set", flagCfg)
+		return nil, tracerr.Wrap(fmt.Errorf("required flag \"%v\" not set", flagCfg))
 	}
 	nodeCfg, err := config.LoadNode(nodeCfgPath)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// nodeCfg.Synchronizer.InitialVariables.WDelayer.HermezRollupAddress = nodeCfg.SmartContracts.Rollup
 	cfg.node = nodeCfg

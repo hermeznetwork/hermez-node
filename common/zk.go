@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/tracerr"
 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 	"github.com/iden3/go-merkletree"
 	"github.com/mitchellh/mapstructure"
@@ -258,11 +259,11 @@ func (z ZKInputs) MarshalJSON() ([]byte, error) {
 		Result:  &m,
 	})
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	err = dec.Decode(z)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	for k, v := range m {
@@ -398,13 +399,13 @@ func newSlice(n uint32) []*big.Int {
 func (z ZKInputs) HashGlobalData() (*big.Int, error) {
 	b, err := z.ToHashGlobalData()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	h := sha256.New()
 	_, err = h.Write(b)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	r := new(big.Int).SetBytes(h.Sum(nil))
@@ -427,7 +428,7 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	newLastIdx := make([]byte, bytesMaxLevels)
 	newLastIdxBytes, err := z.Metadata.NewLastIdxRaw.Bytes()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	copy(newLastIdx, newLastIdxBytes[len(newLastIdxBytes)-bytesMaxLevels:])
 	b = append(b, newLastIdx...)
@@ -474,7 +475,7 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 		l2TxsData = append(l2TxsData, z.Metadata.L2TxsData[i]...)
 	}
 	if len(l2TxsData) > int(expectedL2TxsDataLen) {
-		return nil, fmt.Errorf("len(l2TxsData): %d, expected: %d", len(l2TxsData), expectedL2TxsDataLen)
+		return nil, tracerr.Wrap(fmt.Errorf("len(l2TxsData): %d, expected: %d", len(l2TxsData), expectedL2TxsDataLen))
 	}
 
 	b = append(b, l2TxsData...)

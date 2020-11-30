@@ -24,6 +24,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test/debugapi"
 	"github.com/hermeznetwork/hermez-node/txselector"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -73,19 +74,19 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		cfg.PostgreSQL.Name,
 	)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	historyDB := historydb.NewHistoryDB(db)
 
 	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	ethClient, err := ethclient.Dial(cfg.Web3.URL)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	var ethCfg eth.EthereumConfig
 	if mode == ModeCoordinator {
@@ -114,7 +115,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB, synchronizer.Config{
@@ -123,7 +124,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		StatsRefreshPeriod: cfg.Synchronizer.StatsRefreshPeriod.Duration,
 	})
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	varsRollup, varsAuction, varsWDelayer := sync.SCVars()
 	initSCVars := synchronizer.SCVariables{
@@ -150,16 +151,16 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		// TODO: Get (maxL1UserTxs, maxL1OperatorTxs, maxTxs) from the smart contract
 		txSelector, err := txselector.NewTxSelector(coordCfg.TxSelector.Path, stateDB, l2DB, 10, 10, 10)
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		// TODO: Get (configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) from smart contract
 		nLevels := uint64(32) //nolint:gomnd
 		batchBuilder, err := batchbuilder.NewBatchBuilder(coordCfg.BatchBuilder.Path, stateDB, nil, 0, nLevels)
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		serverProofs := make([]coordinator.ServerProofInterface, len(coordCfg.ServerProofs))
 		for i, serverProofCfg := range coordCfg.ServerProofs {
@@ -180,18 +181,18 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			&initSCVars,
 		)
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 	}
 	var nodeAPI *NodeAPI
 	if cfg.API.Address != "" {
 		if cfg.API.UpdateMetricsInterval.Duration == 0 {
-			return nil, fmt.Errorf("invalid cfg.API.UpdateMetricsInterval: %v",
-				cfg.API.UpdateMetricsInterval.Duration)
+			return nil, tracerr.Wrap(fmt.Errorf("invalid cfg.API.UpdateMetricsInterval: %v",
+				cfg.API.UpdateMetricsInterval.Duration))
 		}
 		if cfg.API.UpdateRecommendedFeeInterval.Duration == 0 {
-			return nil, fmt.Errorf("invalid cfg.API.UpdateRecommendedFeeInterval: %v",
-				cfg.API.UpdateRecommendedFeeInterval.Duration)
+			return nil, tracerr.Wrap(fmt.Errorf("invalid cfg.API.UpdateRecommendedFeeInterval: %v",
+				cfg.API.UpdateRecommendedFeeInterval.Duration))
 		}
 		server := gin.Default()
 		coord := false
@@ -213,7 +214,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			},
 		)
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		nodeAPI.api.SetRollupVariables(initSCVars.Rollup)
 		nodeAPI.api.SetAuctionVariables(initSCVars.Auction)
@@ -273,7 +274,7 @@ func NewNodeAPI(
 		config,
 	)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &NodeAPI{
 		addr:   addr,
@@ -295,8 +296,7 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 	}
 	go func() {
 		log.Infof("NodeAPI is ready at %v", a.addr)
-		if err := server.ListenAndServe(); err != nil &&
-			err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
 			log.Fatalf("Listen: %s\n", err)
 		}
 	}()
@@ -306,7 +306,7 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:gomnd
 	defer cancel()
 	if err := server.Shutdown(ctxTimeout); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	log.Info("NodeAPI done")
 	return nil

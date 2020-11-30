@@ -25,6 +25,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // Pendinger is an interface that allows getting last returned item ID and PendingItems to be used for building fromItem
@@ -243,8 +244,7 @@ func TestMain(m *testing.M) {
 	// Start server
 	server := &http.Server{Addr: apiPort, Handler: apiGin}
 	go func() {
-		if err := server.ListenAndServe(); err != nil &&
-			err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
 			panic(err)
 		}
 	}()
@@ -471,7 +471,7 @@ func doGoodReqPaginated(
 			"GET", iterPath+"&order="+order, nil,
 			iterStruct,
 		); err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		appendIter(iterStruct)
 		// Keep iterating?
@@ -505,14 +505,14 @@ func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{})
 	client := &http.Client{}
 	httpReq, err := http.NewRequest(method, path, reqBody)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if reqBody != nil {
 		httpReq.Header.Add("Content-Type", "application/json")
 	}
 	route, pathParams, err := tc.router.FindRoute(httpReq.Method, httpReq.URL)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// Validate request against swagger spec
 	requestValidationInput := &swagger.RequestValidationInput{
@@ -521,24 +521,24 @@ func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{})
 		Route:      route,
 	}
 	if err := swagger.ValidateRequest(ctx, requestValidationInput); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// Do API call
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if resp.Body == nil && returnStruct != nil {
-		return errors.New("Nil body")
+		return tracerr.Wrap(errors.New("Nil body"))
 	}
 	//nolint
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("%d response. Body: %s", resp.StatusCode, string(body))
+		return tracerr.Wrap(fmt.Errorf("%d response. Body: %s", resp.StatusCode, string(body)))
 	}
 	if returnStruct == nil {
 		return nil
@@ -547,7 +547,7 @@ func doGoodReq(method, path string, reqBody io.Reader, returnStruct interface{})
 	if err := json.Unmarshal(body, returnStruct); err != nil {
 		log.Error("invalid json: " + string(body))
 		log.Error(err)
-		return err
+		return tracerr.Wrap(err)
 	}
 	// log.Info(string(body))
 	// Validate response against swagger spec
@@ -566,7 +566,7 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 	httpReq, _ := http.NewRequest(method, path, reqBody)
 	route, pathParams, err := tc.router.FindRoute(httpReq.Method, httpReq.URL)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	// Validate request against swagger spec
 	requestValidationInput := &swagger.RequestValidationInput{
@@ -576,26 +576,26 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 	}
 	if err := swagger.ValidateRequest(ctx, requestValidationInput); err != nil {
 		if expectedResponseCode != 400 {
-			return err
+			return tracerr.Wrap(err)
 		}
 		log.Warn("The request does not match the API spec")
 	}
 	// Do API call
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if resp.Body == nil {
-		return errors.New("Nil body")
+		return tracerr.Wrap(errors.New("Nil body"))
 	}
 	//nolint
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if resp.StatusCode != expectedResponseCode {
-		return fmt.Errorf("Unexpected response code: %d. Body: %s", resp.StatusCode, string(body))
+		return tracerr.Wrap(fmt.Errorf("Unexpected response code: %d. Body: %s", resp.StatusCode, string(body)))
 	}
 	// Validate response against swagger spec
 	responseValidationInput := &swagger.ResponseValidationInput{

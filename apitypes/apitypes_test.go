@@ -12,7 +12,9 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	_ "github.com/mattn/go-sqlite3" //nolint sqlite driver
+
+	// nolint sqlite driver
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/russross/meddler"
 	"github.com/stretchr/testify/assert"
 )

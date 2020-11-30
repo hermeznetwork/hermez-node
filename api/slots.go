@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // SlotAPI is a repesentation of a slot information
@@ -109,13 +110,13 @@ func (a *API) getSlot(c *gin.Context) {
 
 	slotNum := int64(*slotNumUint)
 	bid, err := a.h.GetBestBidAPI(&slotNum)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		retSQLErr(err, c)
 		return
 	}
 
 	var slot SlotAPI
-	if err == sql.ErrNoRows {
+	if tracerr.Unwrap(err) == sql.ErrNoRows {
 		slot = a.newSlotAPI(slotNum, currentBlock.Num, nil, auctionVars)
 	} else {
 		slot = a.newSlotAPI(bid.SlotNum, currentBlock.Num, &bid, auctionVars)
@@ -252,14 +253,14 @@ func (a *API) getSlots(c *gin.Context) {
 		slotMinLim, slotMaxLim, pendingItems = getLimits(*minSlotNum, *maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
 		bids, _, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, nil, order)
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
 		}
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
 		bids, pendingItems, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
 		}

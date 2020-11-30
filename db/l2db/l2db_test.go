@@ -14,6 +14,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,12 +70,12 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 	}
 	blocks, err := tc.GenerateBlocks(setBlockchain)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	tokens = make(map[common.TokenID]historydb.TokenWithUSD)
 	tokensValue = make(map[common.TokenID]float64)
@@ -85,7 +86,7 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 	for i := range blocks[:len(blocks)-1] {
 		err = historyDB.AddBlockSCData(&blocks[i])
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		for _, batch := range blocks[i].Rollup.Batches {
 			for _, account := range batch.CreatedAccounts {
@@ -110,7 +111,7 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 		tokenSymbol := ""
 		err := historyDB.UpdateTokenValue(tokenSymbol, value)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 	}
 	return nil
@@ -135,7 +136,7 @@ func generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 		`
 	poolL2Txs, err := tc.GeneratePoolL2Txs(setPool)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return poolL2Txs, nil
 }

@@ -17,6 +17,7 @@ import (
 	HermezAuctionProtocol "github.com/hermeznetwork/hermez-node/eth/contracts/auction"
 	HEZ "github.com/hermeznetwork/hermez-node/eth/contracts/tokenHEZ"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // SlotState is the state of a slot
@@ -238,15 +239,15 @@ type AuctionClient struct {
 func NewAuctionClient(client *EthereumClient, address ethCommon.Address, tokenHEZCfg TokenConfig) (*AuctionClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(HermezAuctionProtocol.HermezAuctionProtocolABI)))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	auction, err := HermezAuctionProtocol.NewHermezAuctionProtocol(address, client.Client())
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	tokenHEZ, err := HEZ.NewHEZ(tokenHEZCfg.Address, client.Client())
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &AuctionClient{
 		client:      client,
@@ -268,7 +269,7 @@ func (c *AuctionClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transa
 			return c.auction.SetSlotDeadline(auth, newDeadline)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting slotDeadline: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting slotDeadline: %w", err))
 	}
 	return tx, nil
 }
@@ -277,9 +278,9 @@ func (c *AuctionClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transa
 func (c *AuctionClient) AuctionGetSlotDeadline() (slotDeadline uint8, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotDeadline, err = c.auction.GetSlotDeadline(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return slotDeadline, nil
 }
@@ -292,7 +293,7 @@ func (c *AuctionClient) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (
 			return c.auction.SetOpenAuctionSlots(auth, newOpenAuctionSlots)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting openAuctionSlots: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting openAuctionSlots: %w", err))
 	}
 	return tx, nil
 }
@@ -301,9 +302,9 @@ func (c *AuctionClient) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (
 func (c *AuctionClient) AuctionGetOpenAuctionSlots() (openAuctionSlots uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		openAuctionSlots, err = c.auction.GetOpenAuctionSlots(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return openAuctionSlots, nil
 }
@@ -316,7 +317,7 @@ func (c *AuctionClient) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint1
 			return c.auction.SetClosedAuctionSlots(auth, newClosedAuctionSlots)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting closedAuctionSlots: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting closedAuctionSlots: %w", err))
 	}
 	return tx, nil
 }
@@ -325,9 +326,9 @@ func (c *AuctionClient) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint1
 func (c *AuctionClient) AuctionGetClosedAuctionSlots() (closedAuctionSlots uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		closedAuctionSlots, err = c.auction.GetClosedAuctionSlots(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return closedAuctionSlots, nil
 }
@@ -340,7 +341,7 @@ func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Tr
 			return c.auction.SetOutbidding(auth, newOutbidding)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting setOutbidding: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting setOutbidding: %w", err))
 	}
 	return tx, nil
 }
@@ -349,9 +350,9 @@ func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Tr
 func (c *AuctionClient) AuctionGetOutbidding() (outbidding uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		outbidding, err = c.auction.GetOutbidding(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return outbidding, nil
 }
@@ -364,7 +365,7 @@ func (c *AuctionClient) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) 
 			return c.auction.SetAllocationRatio(auth, newAllocationRatio)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting allocationRatio: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting allocationRatio: %w", err))
 	}
 	return tx, nil
 }
@@ -373,9 +374,9 @@ func (c *AuctionClient) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) 
 func (c *AuctionClient) AuctionGetAllocationRatio() (allocationRation [3]uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		allocationRation, err = c.auction.GetAllocationRatio(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return [3]uint16{}, err
+		return [3]uint16{}, tracerr.Wrap(err)
 	}
 	return allocationRation, nil
 }
@@ -388,7 +389,7 @@ func (c *AuctionClient) AuctionSetDonationAddress(newDonationAddress ethCommon.A
 			return c.auction.SetDonationAddress(auth, newDonationAddress)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting donationAddress: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting donationAddress: %w", err))
 	}
 	return tx, nil
 }
@@ -398,9 +399,9 @@ func (c *AuctionClient) AuctionGetDonationAddress() (donationAddress *ethCommon.
 	var _donationAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_donationAddress, err = c.auction.GetDonationAddress(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &_donationAddress, nil
 }
@@ -413,7 +414,7 @@ func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.A
 			return c.auction.SetBootCoordinator(auth, newBootCoordinator)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed setting bootCoordinator: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed setting bootCoordinator: %w", err))
 	}
 	return tx, nil
 }
@@ -423,9 +424,9 @@ func (c *AuctionClient) AuctionGetBootCoordinator() (bootCoordinator *ethCommon.
 	var _bootCoordinator ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_bootCoordinator, err = c.auction.GetBootCoordinator(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &_bootCoordinator, nil
 }
@@ -439,7 +440,7 @@ func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitial
 			return c.auction.ChangeDefaultSlotSetBid(auth, slotSetToSend, newInitialMinBid)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed changing slotSet Bid: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed changing slotSet Bid: %w", err))
 	}
 	return tx, nil
 }
@@ -448,9 +449,9 @@ func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitial
 func (c *AuctionClient) AuctionGetClaimableHEZ(claimAddress ethCommon.Address) (claimableHEZ *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		claimableHEZ, err = c.auction.GetClaimableHEZ(nil, claimAddress)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return claimableHEZ, nil
 }
@@ -463,7 +464,7 @@ func (c *AuctionClient) AuctionSetCoordinator(forger ethCommon.Address, coordina
 			return c.auction.SetCoordinator(auth, forger, coordinatorURL)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed set coordinator: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed set coordinator: %w", err))
 	}
 	return tx, nil
 }
@@ -473,9 +474,9 @@ func (c *AuctionClient) AuctionGetCurrentSlotNumber() (currentSlotNumber int64, 
 	var _currentSlotNumber *big.Int
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_currentSlotNumber, err = c.auction.GetCurrentSlotNumber(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return _currentSlotNumber.Int64(), nil
 }
@@ -485,9 +486,9 @@ func (c *AuctionClient) AuctionGetMinBidBySlot(slot int64) (minBid *big.Int, err
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotToSend := big.NewInt(slot)
 		minBid, err = c.auction.GetMinBidBySlot(nil, slotToSend)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return big.NewInt(0), err
+		return big.NewInt(0), tracerr.Wrap(err)
 	}
 	return minBid, nil
 }
@@ -497,9 +498,9 @@ func (c *AuctionClient) AuctionGetSlotSet(slot int64) (slotSet *big.Int, err err
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotToSend := big.NewInt(slot)
 		slotSet, err = c.auction.GetSlotSet(nil, slotToSend)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return big.NewInt(0), err
+		return big.NewInt(0), tracerr.Wrap(err)
 	}
 	return slotSet, nil
 }
@@ -508,9 +509,9 @@ func (c *AuctionClient) AuctionGetSlotSet(slot int64) (slotSet *big.Int, err err
 func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (minBidSlotSet *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		minBidSlotSet, err = c.auction.GetDefaultSlotSetBid(nil, slotSet)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return big.NewInt(0), err
+		return big.NewInt(0), tracerr.Wrap(err)
 	}
 	return minBidSlotSet, nil
 }
@@ -520,9 +521,9 @@ func (c *AuctionClient) AuctionGetSlotNumber(blockNum int64) (slot int64, err er
 	var _slot *big.Int
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_slot, err = c.auction.GetSlotNumber(nil, big.NewInt(blockNum))
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return 0, err
+		return 0, tracerr.Wrap(err)
 	}
 	return _slot.Int64(), nil
 }
@@ -536,7 +537,7 @@ func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.I
 			spender := c.address
 			nonce, err := c.tokenHEZ.Nonces(nil, owner)
 			if err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			tokenName := c.tokenHEZCfg.Name
 			tokenAddr := c.tokenHEZCfg.Address
@@ -548,7 +549,7 @@ func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.I
 			return c.auction.ProcessBid(auth, amount, _slot, bidAmount, permit)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed bid: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed bid: %w", err))
 	}
 	return tx, nil
 }
@@ -563,7 +564,7 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 			spender := c.address
 			nonce, err := c.tokenHEZ.Nonces(nil, owner)
 			if err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			tokenName := c.tokenHEZCfg.Name
 			tokenAddr := c.tokenHEZCfg.Address
@@ -577,7 +578,7 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 			return c.auction.ProcessMultiBid(auth, amount, _startingSlot, _endingSlot, slotSets, maxBid, minBid, permit)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed multibid: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed multibid: %w", err))
 	}
 	return tx, nil
 }
@@ -586,9 +587,9 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNum int64) (canForge bool, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		canForge, err = c.auction.CanForge(nil, forger, big.NewInt(blockNum))
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return false, err
+		return false, tracerr.Wrap(err)
 	}
 	return canForge, nil
 }
@@ -601,7 +602,7 @@ func (c *AuctionClient) AuctionClaimHEZ() (tx *types.Transaction, err error) {
 			return c.auction.ClaimHEZ(auth)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed claim HEZ: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed claim HEZ: %w", err))
 	}
 	return tx, nil
 }
@@ -614,7 +615,7 @@ func (c *AuctionClient) AuctionForge(forger ethCommon.Address) (tx *types.Transa
 			return c.auction.Forge(auth, forger)
 		},
 	); err != nil {
-		return nil, fmt.Errorf("Failed forge: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("Failed forge: %w", err))
 	}
 	return tx, nil
 }
@@ -625,25 +626,25 @@ func (c *AuctionClient) AuctionConstants() (auctionConstants *common.AuctionCons
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auctionConstants.BlocksPerSlot, err = c.auction.BLOCKSPERSLOT(nil)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		genesisBlock, err := c.auction.GenesisBlock(nil)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		auctionConstants.GenesisBlockNum = genesisBlock.Int64()
 		auctionConstants.HermezRollup, err = c.auction.HermezRollup(nil)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		auctionConstants.InitialMinimalBidding, err = c.auction.INITIALMINIMALBIDDING(nil)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		auctionConstants.TokenHEZ, err = c.auction.TokenHEZ(nil)
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return auctionConstants, nil
 }
@@ -654,43 +655,43 @@ func (c *AuctionClient) AuctionVariables() (auctionVariables *common.AuctionVari
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auctionVariables.AllocationRatio, err = c.AuctionGetAllocationRatio()
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		bootCoordinator, err := c.AuctionGetBootCoordinator()
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		auctionVariables.BootCoordinator = *bootCoordinator
 		auctionVariables.ClosedAuctionSlots, err = c.AuctionGetClosedAuctionSlots()
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		var defaultSlotSetBid [6]*big.Int
 		for i := uint8(0); i < 6; i++ {
 			bid, err := c.AuctionGetDefaultSlotSetBid(i)
 			if err != nil {
-				return err
+				return tracerr.Wrap(err)
 			}
 			defaultSlotSetBid[i] = bid
 		}
 		auctionVariables.DefaultSlotSetBid = defaultSlotSetBid
 		donationAddress, err := c.AuctionGetDonationAddress()
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		auctionVariables.DonationAddress = *donationAddress
 		auctionVariables.OpenAuctionSlots, err = c.AuctionGetOpenAuctionSlots()
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		auctionVariables.Outbidding, err = c.AuctionGetOutbidding()
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		auctionVariables.SlotDeadline, err = c.AuctionGetSlotDeadline()
-		return err
+		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return auctionVariables, nil
 }
@@ -729,7 +730,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 
 	logs, err := c.client.client.FilterLogs(context.TODO(), query)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	if len(logs) > 0 {
 		blockHash = &logs[0].BlockHash
@@ -737,7 +738,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 	for _, vLog := range logs {
 		if vLog.BlockHash != *blockHash {
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
-			return nil, nil, ErrBlockHashMismatchEvent
+			return nil, nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
 		switch vLog.Topics[0] {
 		case logAuctionNewBid:
@@ -748,7 +749,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			}
 			var newBid AuctionEventNewBid
 			if err := c.contractAbi.Unpack(&auxNewBid, "NewBid", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			newBid.BidAmount = auxNewBid.BidAmount
 			newBid.Slot = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
@@ -757,19 +758,19 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionNewSlotDeadline:
 			var newSlotDeadline AuctionEventNewSlotDeadline
 			if err := c.contractAbi.Unpack(&newSlotDeadline, "NewSlotDeadline", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewSlotDeadline = append(auctionEvents.NewSlotDeadline, newSlotDeadline)
 		case logAuctionNewClosedAuctionSlots:
 			var newClosedAuctionSlots AuctionEventNewClosedAuctionSlots
 			if err := c.contractAbi.Unpack(&newClosedAuctionSlots, "NewClosedAuctionSlots", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewClosedAuctionSlots = append(auctionEvents.NewClosedAuctionSlots, newClosedAuctionSlots)
 		case logAuctionNewOutbidding:
 			var newOutbidding AuctionEventNewOutbidding
 			if err := c.contractAbi.Unpack(&newOutbidding, "NewOutbidding", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewOutbidding = append(auctionEvents.NewOutbidding, newOutbidding)
 		case logAuctionNewDonationAddress:
@@ -783,19 +784,19 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionNewOpenAuctionSlots:
 			var newOpenAuctionSlots AuctionEventNewOpenAuctionSlots
 			if err := c.contractAbi.Unpack(&newOpenAuctionSlots, "NewOpenAuctionSlots", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewOpenAuctionSlots = append(auctionEvents.NewOpenAuctionSlots, newOpenAuctionSlots)
 		case logAuctionNewAllocationRatio:
 			var newAllocationRatio AuctionEventNewAllocationRatio
 			if err := c.contractAbi.Unpack(&newAllocationRatio, "NewAllocationRatio", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewAllocationRatio = append(auctionEvents.NewAllocationRatio, newAllocationRatio)
 		case logAuctionSetCoordinator:
 			var setCoordinator AuctionEventSetCoordinator
 			if err := c.contractAbi.Unpack(&setCoordinator, "SetCoordinator", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			setCoordinator.BidderAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			setCoordinator.ForgerAddress = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -803,7 +804,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionNewForgeAllocated:
 			var newForgeAllocated AuctionEventNewForgeAllocated
 			if err := c.contractAbi.Unpack(&newForgeAllocated, "NewForgeAllocated", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			newForgeAllocated.Bidder = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			newForgeAllocated.Forger = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -816,7 +817,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			}
 			var newDefaultSlotSetBid AuctionEventNewDefaultSlotSetBid
 			if err := c.contractAbi.Unpack(&auxNewDefaultSlotSetBid, "NewDefaultSlotSetBid", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			newDefaultSlotSetBid.NewInitialMinBid = auxNewDefaultSlotSetBid.NewInitialMinBid
 			newDefaultSlotSetBid.SlotSet = auxNewDefaultSlotSetBid.SlotSet.Int64()
@@ -829,7 +830,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionHEZClaimed:
 			var HEZClaimed AuctionEventHEZClaimed
 			if err := c.contractAbi.Unpack(&HEZClaimed, "HEZClaimed", vLog.Data); err != nil {
-				return nil, nil, err
+				return nil, nil, tracerr.Wrap(err)
 			}
 			HEZClaimed.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.HEZClaimed = append(auctionEvents.HEZClaimed, HEZClaimed)

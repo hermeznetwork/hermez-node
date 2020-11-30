@@ -6,6 +6,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // ServerProofInterface is the interface to a ServerProof that calculates zk proofs
@@ -30,13 +31,13 @@ func NewServerProof(URL string) *ServerProof {
 // Proof
 func (p *ServerProof) CalculateProof(zkInputs *common.ZKInputs) error {
 	log.Error("TODO")
-	return errTODO
+	return tracerr.Wrap(errTODO)
 }
 
 // GetProof retreives the Proof from the ServerProof
 func (p *ServerProof) GetProof(ctx context.Context) (*Proof, error) {
 	log.Error("TODO")
-	return nil, errTODO
+	return nil, tracerr.Wrap(errTODO)
 }
 
 // ServerProofMock is a mock ServerProof to be used in tests.  It doesn't calculate anything
@@ -56,7 +57,7 @@ func (p *ServerProofMock) GetProof(ctx context.Context) (*Proof, error) {
 	case <-time.After(200 * time.Millisecond): //nolint:gomnd
 		return &Proof{}, nil
 	case <-ctx.Done():
-		return nil, ErrDone
+		return nil, tracerr.Wrap(ErrDone)
 	}
 }
 
@@ -82,7 +83,7 @@ func (p *ServerProofPool) Get(ctx context.Context) (ServerProofInterface, error)
 	select {
 	case <-ctx.Done():
 		log.Info("ServerProofPool.Get done")
-		return nil, ErrDone
+		return nil, tracerr.Wrap(ErrDone)
 	case serverProof := <-p.pool:
 		return serverProof, nil
 	}

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -40,10 +41,10 @@ type TxID [TxIDLen]byte
 func (txid *TxID) Scan(src interface{}) error {
 	srcB, ok := src.([]byte)
 	if !ok {
-		return fmt.Errorf("can't scan %T into TxID", src)
+		return tracerr.Wrap(fmt.Errorf("can't scan %T into TxID", src))
 	}
 	if len(srcB) != TxIDLen {
-		return fmt.Errorf("can't scan []byte of len %d into TxID, need %d", len(srcB), TxIDLen)
+		return tracerr.Wrap(fmt.Errorf("can't scan []byte of len %d into TxID, need %d", len(srcB), TxIDLen))
 	}
 	copy(txid[:], srcB)
 	return nil
@@ -65,10 +66,10 @@ func NewTxIDFromString(idStr string) (TxID, error) {
 	idStr = strings.TrimPrefix(idStr, "0x")
 	decoded, err := hex.DecodeString(idStr)
 	if err != nil {
-		return TxID{}, err
+		return TxID{}, tracerr.Wrap(err)
 	}
 	if len(decoded) != TxIDLen {
-		return txid, errors.New("Invalid idStr")
+		return txid, tracerr.Wrap(errors.New("Invalid idStr"))
 	}
 	copy(txid[:], decoded)
 	return txid, nil
@@ -84,7 +85,7 @@ func (txid *TxID) UnmarshalText(data []byte) error {
 	idStr := string(data)
 	id, err := NewTxIDFromString(idStr)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	*txid = id
 	return nil

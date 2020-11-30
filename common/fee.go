@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+
+	"github.com/hermeznetwork/tracerr"
 )
 
 // MaxFeePlan is the maximum value of the FeePlan
@@ -49,7 +51,7 @@ func CalcFeeAmount(amount *big.Int, feeSel FeeSelector) (*big.Int, error) {
 		feeAmount.Rsh(feeAmount, 60)
 	}
 	if feeAmount.BitLen() > 128 { //nolint:gomnd
-		return nil, fmt.Errorf("FeeAmount overflow (feeAmount doesn't fit in 128 bits)")
+		return nil, tracerr.Wrap(fmt.Errorf("FeeAmount overflow (feeAmount doesn't fit in 128 bits)"))
 	}
 	return feeAmount, nil
 }

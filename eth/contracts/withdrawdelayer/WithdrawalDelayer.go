@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -36,12 +37,12 @@ var WithdrawalDelayerBin = "0x608060405234801561001057600080fd5b50611be680610020
 func DeployWithdrawalDelayer(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *WithdrawalDelayer, error) {
 	parsed, err := abi.JSON(strings.NewReader(WithdrawalDelayerABI))
 	if err != nil {
-		return common.Address{}, nil, nil, err
+		return common.Address{}, nil, nil, tracerr.Wrap(err)
 	}
 
 	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(WithdrawalDelayerBin), backend)
 	if err != nil {
-		return common.Address{}, nil, nil, err
+		return common.Address{}, nil, nil, tracerr.Wrap(err)
 	}
 	return address, tx, &WithdrawalDelayer{WithdrawalDelayerCaller: WithdrawalDelayerCaller{contract: contract}, WithdrawalDelayerTransactor: WithdrawalDelayerTransactor{contract: contract}, WithdrawalDelayerFilterer: WithdrawalDelayerFilterer{contract: contract}}, nil
 }
@@ -109,7 +110,7 @@ type WithdrawalDelayerTransactorRaw struct {
 func NewWithdrawalDelayer(address common.Address, backend bind.ContractBackend) (*WithdrawalDelayer, error) {
 	contract, err := bindWithdrawalDelayer(address, backend, backend, backend)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayer{WithdrawalDelayerCaller: WithdrawalDelayerCaller{contract: contract}, WithdrawalDelayerTransactor: WithdrawalDelayerTransactor{contract: contract}, WithdrawalDelayerFilterer: WithdrawalDelayerFilterer{contract: contract}}, nil
 }
@@ -118,7 +119,7 @@ func NewWithdrawalDelayer(address common.Address, backend bind.ContractBackend) 
 func NewWithdrawalDelayerCaller(address common.Address, caller bind.ContractCaller) (*WithdrawalDelayerCaller, error) {
 	contract, err := bindWithdrawalDelayer(address, caller, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerCaller{contract: contract}, nil
 }
@@ -127,7 +128,7 @@ func NewWithdrawalDelayerCaller(address common.Address, caller bind.ContractCall
 func NewWithdrawalDelayerTransactor(address common.Address, transactor bind.ContractTransactor) (*WithdrawalDelayerTransactor, error) {
 	contract, err := bindWithdrawalDelayer(address, nil, transactor, nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerTransactor{contract: contract}, nil
 }
@@ -136,7 +137,7 @@ func NewWithdrawalDelayerTransactor(address common.Address, transactor bind.Cont
 func NewWithdrawalDelayerFilterer(address common.Address, filterer bind.ContractFilterer) (*WithdrawalDelayerFilterer, error) {
 	contract, err := bindWithdrawalDelayer(address, nil, nil, filterer)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerFilterer{contract: contract}, nil
 }
@@ -145,7 +146,7 @@ func NewWithdrawalDelayerFilterer(address common.Address, filterer bind.Contract
 func bindWithdrawalDelayer(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(WithdrawalDelayerABI))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
@@ -197,7 +198,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) MAXEMERGENCYMODETIME(opts *bi
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "MAX_EMERGENCY_MODE_TIME")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // MAXEMERGENCYMODETIME is a free data retrieval call binding the contract method 0xb4b8e39d.
@@ -223,7 +224,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) MAXWITHDRAWALDELAY(opts *bind
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "MAX_WITHDRAWAL_DELAY")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // MAXWITHDRAWALDELAY is a free data retrieval call binding the contract method 0xa238f9df.
@@ -253,7 +254,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) DepositInfo(opts *bind.CallOp
 		ret1,
 	}
 	err := _WithdrawalDelayer.contract.Call(opts, out, "depositInfo", _owner, _token)
-	return *ret0, *ret1, err
+	return *ret0, *ret1, tracerr.Wrap(err)
 }
 
 // DepositInfo is a free data retrieval call binding the contract method 0x493b0170.
@@ -283,7 +284,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) Deposits(opts *bind.CallOpts,
 	})
 	out := ret
 	err := _WithdrawalDelayer.contract.Call(opts, out, "deposits", arg0)
-	return *ret, err
+	return *ret, tracerr.Wrap(err)
 }
 
 // Deposits is a free data retrieval call binding the contract method 0x3d4dff7b.
@@ -315,7 +316,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) GetEmergencyModeStartingTime(
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "getEmergencyModeStartingTime")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetEmergencyModeStartingTime is a free data retrieval call binding the contract method 0x668cdd67.
@@ -341,7 +342,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) GetHermezGovernanceDAOAddress
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "getHermezGovernanceDAOAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetHermezGovernanceDAOAddress is a free data retrieval call binding the contract method 0x580fc611.
@@ -367,7 +368,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) GetHermezKeeperAddress(opts *
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "getHermezKeeperAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetHermezKeeperAddress is a free data retrieval call binding the contract method 0x305887f9.
@@ -393,7 +394,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) GetWhiteHackGroupAddress(opts
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "getWhiteHackGroupAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetWhiteHackGroupAddress is a free data retrieval call binding the contract method 0xae7efbbd.
@@ -419,7 +420,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) GetWithdrawalDelay(opts *bind
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "getWithdrawalDelay")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetWithdrawalDelay is a free data retrieval call binding the contract method 0x03160940.
@@ -445,7 +446,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) HermezRollupAddress(opts *bin
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "hermezRollupAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // HermezRollupAddress is a free data retrieval call binding the contract method 0x0fd266d7.
@@ -471,7 +472,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerCaller) IsEmergencyMode(opts *bind.Ca
 	)
 	out := ret0
 	err := _WithdrawalDelayer.contract.Call(opts, out, "isEmergencyMode")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // IsEmergencyMode is a free data retrieval call binding the contract method 0x20a194b8.
@@ -769,7 +770,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterDeposit(opts *bind.Fi
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "Deposit", ownerRule, tokenRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerDepositIterator{contract: _WithdrawalDelayer.contract, event: "Deposit", logs: logs, sub: sub}, nil
 }
@@ -790,7 +791,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchDeposit(opts *bind.Wat
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "Deposit", ownerRule, tokenRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -800,19 +801,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchDeposit(opts *bind.Wat
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerDeposit)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "Deposit", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -826,7 +827,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchDeposit(opts *bind.Wat
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseDeposit(log types.Log) (*WithdrawalDelayerDeposit, error) {
 	event := new(WithdrawalDelayerDeposit)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "Deposit", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -910,7 +911,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterEmergencyModeEnabled(
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "EmergencyModeEnabled")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerEmergencyModeEnabledIterator{contract: _WithdrawalDelayer.contract, event: "EmergencyModeEnabled", logs: logs, sub: sub}, nil
 }
@@ -922,7 +923,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchEmergencyModeEnabled(o
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "EmergencyModeEnabled")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -932,19 +933,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchEmergencyModeEnabled(o
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerEmergencyModeEnabled)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "EmergencyModeEnabled", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -958,7 +959,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchEmergencyModeEnabled(o
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseEmergencyModeEnabled(log types.Log) (*WithdrawalDelayerEmergencyModeEnabled, error) {
 	event := new(WithdrawalDelayerEmergencyModeEnabled)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "EmergencyModeEnabled", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1059,7 +1060,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterEscapeHatchWithdrawal
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "EscapeHatchWithdrawal", whoRule, toRule, tokenRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerEscapeHatchWithdrawalIterator{contract: _WithdrawalDelayer.contract, event: "EscapeHatchWithdrawal", logs: logs, sub: sub}, nil
 }
@@ -1084,7 +1085,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchEscapeHatchWithdrawal(
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "EscapeHatchWithdrawal", whoRule, toRule, tokenRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1094,19 +1095,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchEscapeHatchWithdrawal(
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerEscapeHatchWithdrawal)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "EscapeHatchWithdrawal", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1120,7 +1121,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchEscapeHatchWithdrawal(
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseEscapeHatchWithdrawal(log types.Log) (*WithdrawalDelayerEscapeHatchWithdrawal, error) {
 	event := new(WithdrawalDelayerEscapeHatchWithdrawal)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "EscapeHatchWithdrawal", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1205,7 +1206,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterNewHermezGovernanceDA
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "NewHermezGovernanceDAOAddress")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerNewHermezGovernanceDAOAddressIterator{contract: _WithdrawalDelayer.contract, event: "NewHermezGovernanceDAOAddress", logs: logs, sub: sub}, nil
 }
@@ -1217,7 +1218,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewHermezGovernanceDAO
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "NewHermezGovernanceDAOAddress")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1227,19 +1228,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewHermezGovernanceDAO
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerNewHermezGovernanceDAOAddress)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewHermezGovernanceDAOAddress", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1253,7 +1254,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewHermezGovernanceDAO
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseNewHermezGovernanceDAOAddress(log types.Log) (*WithdrawalDelayerNewHermezGovernanceDAOAddress, error) {
 	event := new(WithdrawalDelayerNewHermezGovernanceDAOAddress)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewHermezGovernanceDAOAddress", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1338,7 +1339,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterNewHermezKeeperAddres
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "NewHermezKeeperAddress")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerNewHermezKeeperAddressIterator{contract: _WithdrawalDelayer.contract, event: "NewHermezKeeperAddress", logs: logs, sub: sub}, nil
 }
@@ -1350,7 +1351,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewHermezKeeperAddress
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "NewHermezKeeperAddress")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1360,19 +1361,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewHermezKeeperAddress
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerNewHermezKeeperAddress)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewHermezKeeperAddress", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1386,7 +1387,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewHermezKeeperAddress
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseNewHermezKeeperAddress(log types.Log) (*WithdrawalDelayerNewHermezKeeperAddress, error) {
 	event := new(WithdrawalDelayerNewHermezKeeperAddress)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewHermezKeeperAddress", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1471,7 +1472,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterNewWhiteHackGroupAddr
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "NewWhiteHackGroupAddress")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerNewWhiteHackGroupAddressIterator{contract: _WithdrawalDelayer.contract, event: "NewWhiteHackGroupAddress", logs: logs, sub: sub}, nil
 }
@@ -1483,7 +1484,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewWhiteHackGroupAddre
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "NewWhiteHackGroupAddress")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1493,19 +1494,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewWhiteHackGroupAddre
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerNewWhiteHackGroupAddress)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewWhiteHackGroupAddress", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1519,7 +1520,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewWhiteHackGroupAddre
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseNewWhiteHackGroupAddress(log types.Log) (*WithdrawalDelayerNewWhiteHackGroupAddress, error) {
 	event := new(WithdrawalDelayerNewWhiteHackGroupAddress)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewWhiteHackGroupAddress", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1604,7 +1605,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterNewWithdrawalDelay(op
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "NewWithdrawalDelay")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerNewWithdrawalDelayIterator{contract: _WithdrawalDelayer.contract, event: "NewWithdrawalDelay", logs: logs, sub: sub}, nil
 }
@@ -1616,7 +1617,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewWithdrawalDelay(opt
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "NewWithdrawalDelay")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1626,19 +1627,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewWithdrawalDelay(opt
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerNewWithdrawalDelay)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewWithdrawalDelay", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1652,7 +1653,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchNewWithdrawalDelay(opt
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseNewWithdrawalDelay(log types.Log) (*WithdrawalDelayerNewWithdrawalDelay, error) {
 	event := new(WithdrawalDelayerNewWithdrawalDelay)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "NewWithdrawalDelay", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1748,7 +1749,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) FilterWithdraw(opts *bind.F
 
 	logs, sub, err := _WithdrawalDelayer.contract.FilterLogs(opts, "Withdraw", tokenRule, ownerRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &WithdrawalDelayerWithdrawIterator{contract: _WithdrawalDelayer.contract, event: "Withdraw", logs: logs, sub: sub}, nil
 }
@@ -1769,7 +1770,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchWithdraw(opts *bind.Wa
 
 	logs, sub, err := _WithdrawalDelayer.contract.WatchLogs(opts, "Withdraw", tokenRule, ownerRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1779,19 +1780,19 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchWithdraw(opts *bind.Wa
 				// New log arrived, parse the event and forward to the user
 				event := new(WithdrawalDelayerWithdraw)
 				if err := _WithdrawalDelayer.contract.UnpackLog(event, "Withdraw", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1805,7 +1806,7 @@ func (_WithdrawalDelayer *WithdrawalDelayerFilterer) WatchWithdraw(opts *bind.Wa
 func (_WithdrawalDelayer *WithdrawalDelayerFilterer) ParseWithdraw(log types.Log) (*WithdrawalDelayerWithdraw, error) {
 	event := new(WithdrawalDelayerWithdraw)
 	if err := _WithdrawalDelayer.contract.UnpackLog(event, "Withdraw", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }

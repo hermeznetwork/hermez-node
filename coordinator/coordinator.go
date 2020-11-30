@@ -15,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/txselector"
+	"github.com/hermeznetwork/tracerr"
 )
 
 var errTODO = fmt.Errorf("TODO")
@@ -93,12 +94,12 @@ func NewCoordinator(cfg Config,
 ) (*Coordinator, error) {
 	// nolint reason: hardcoded `1.0`, by design the percentage can't be over 100%
 	if cfg.L1BatchTimeoutPerc >= 1.0 { //nolint:gomnd
-		return nil, fmt.Errorf("invalid value for Config.L1BatchTimeoutPerc (%v >= 1.0)",
-			cfg.L1BatchTimeoutPerc)
+		return nil, tracerr.Wrap(fmt.Errorf("invalid value for Config.L1BatchTimeoutPerc (%v >= 1.0)",
+			cfg.L1BatchTimeoutPerc))
 	}
 	if cfg.EthClientAttempts < 1 {
-		return nil, fmt.Errorf("invalid value for Config.EthClientAttempts (%v < 1)",
-			cfg.EthClientAttempts)
+		return nil, tracerr.Wrap(fmt.Errorf("invalid value for Config.EthClientAttempts (%v < 1)",
+			cfg.EthClientAttempts))
 	}
 
 	txManager := NewTxManager(&cfg, ethClient)
@@ -192,7 +193,7 @@ func (c *Coordinator) handleMsgSyncStats(stats *synchronizer.Stats) error {
 			batchNum := common.BatchNum(stats.Sync.LastBatch)
 			c.pipeline = c.newPipeline()
 			if err := c.pipeline.Start(batchNum, stats, &c.vars); err != nil {
-				return err
+				return tracerr.Wrap(err)
 			}
 		}
 	} else {
@@ -318,12 +319,12 @@ func (t *TxManager) rollupForgeBatch(ctx context.Context, batchInfo *BatchInfo) 
 		}
 		select {
 		case <-ctx.Done():
-			return ErrDone
+			return tracerr.Wrap(ErrDone)
 		case <-time.After(t.cfg.EthClientAttemptsDelay):
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("reached max attempts for ethClient.RollupForgeBatch: %w", err)
+		return tracerr.Wrap(fmt.Errorf("reached max attempts for ethClient.RollupForgeBatch: %w", err))
 	}
 	batchInfo.EthTx = ethTx
 	t.cfg.debugBatchStore(batchInfo)
@@ -344,12 +345,12 @@ func (t *TxManager) ethTransactionReceipt(ctx context.Context, batchInfo *BatchI
 		}
 		select {
 		case <-ctx.Done():
-			return ErrDone
+			return tracerr.Wrap(ErrDone)
 		case <-time.After(t.cfg.EthClientAttemptsDelay):
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("reached max attempts for ethClient.EthTransactionReceipt: %w", err)
+		return tracerr.Wrap(fmt.Errorf("reached max attempts for ethClient.EthTransactionReceipt: %w", err))
 	}
 	batchInfo.Receipt = receipt
 	t.cfg.debugBatchStore(batchInfo)
@@ -361,7 +362,7 @@ func (t *TxManager) handleReceipt(batchInfo *BatchInfo) (*int64, error) {
 	if receipt != nil {
 		if receipt.Status == types.ReceiptStatusFailed {
 			log.Errorw("TxManager receipt status is failed", "receipt", receipt)
-			return nil, fmt.Errorf("ethereum transaction receipt statis is failed")
+			return nil, tracerr.Wrap(fmt.Errorf("ethereum transaction receipt statis is failed"))
 		} else if receipt.Status == types.ReceiptStatusSuccessful {
 			confirm := t.lastBlock - receipt.BlockNumber.Int64()
 			return &confirm, nil
@@ -384,7 +385,7 @@ func (t *TxManager) Run(ctx context.Context) {
 		case lastBlock := <-t.lastBlockCh:
 			t.lastBlock = lastBlock
 		case batchInfo := <-t.batchCh:
-			if err := t.rollupForgeBatch(ctx, batchInfo); err == ErrDone {
+			if err := t.rollupForgeBatch(ctx, batchInfo); tracerr.Unwrap(err) == ErrDone {
 				continue
 			} else if err != nil {
 				// TODO: Reset pipeline
@@ -399,7 +400,7 @@ func (t *TxManager) Run(ctx context.Context) {
 			}
 			batchInfo := t.queue[next]
 			err := t.ethTransactionReceipt(ctx, batchInfo)
-			if err == ErrDone {
+			if tracerr.Unwrap(err) == ErrDone {
 				continue
 			} else if err != nil { //nolint:staticcheck
 				// We can't get the receipt for the
@@ -504,12 +505,12 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 	err := p.txSelector.Reset(p.batchNum)
 	if err != nil {
 		log.Errorw("Pipeline: TxSelector.Reset", "error", err)
-		return err
+		return tracerr.Wrap(err)
 	}
 	err = p.batchBuilder.Reset(p.batchNum, true)
 	if err != nil {
 		log.Errorw("Pipeline: BatchBuilder.Reset", "error", err)
-		return err
+		return tracerr.Wrap(err)
 	}
 
 	queueSize := 1
@@ -528,7 +529,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 			default:
 				p.batchNum = p.batchNum + 1
 				batchInfo, err := p.forgeSendServerProof(p.ctx, p.batchNum)
-				if err == ErrDone {
+				if tracerr.Unwrap(err) == ErrDone {
 					continue
 				}
 				if err != nil {
@@ -550,7 +551,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				return
 			case batchInfo := <-batchChSentServerProof:
 				err := p.waitServerProof(p.ctx, batchInfo)
-				if err == ErrDone {
+				if tracerr.Unwrap(err) == ErrDone {
 					continue
 				}
 				if err != nil {
@@ -582,7 +583,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 	// remove transactions from the pool that have been there for too long
 	err := p.purgeRemoveByTimeout()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	batchInfo := BatchInfo{BatchNum: batchNum} // to accumulate metadata of the batch
@@ -598,13 +599,13 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 		var l1UserTxs []common.L1Tx = nil                                                                                    // tmp, depends on HistoryDB
 		l1UserTxsExtra, l1OperatorTxs, poolL2Txs, err = p.txSelector.GetL1L2TxSelection([]common.Idx{}, batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
 		_, poolL2Txs, err = p.txSelector.GetL2TxSelection([]common.Idx{}, batchNum) // TODO once feesInfo is added to method return, add the var
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		l1UserTxsExtra = nil
 		l1OperatorTxs = nil
@@ -616,7 +617,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 	// all the nonces smaller than the current one)
 	err = p.purgeInvalidDueToL2TxsSelection(poolL2Txs)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	// 3.  Save metadata from TxSelector output for BatchNum
@@ -631,7 +632,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 	}
 	zkInputs, err := p.batchBuilder.BuildBatch([]common.Idx{}, configBatch, l1UserTxsExtra, l1OperatorTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	// 5. Save metadata from BatchBuilder output for BatchNum
@@ -641,7 +642,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 	// 6. Wait for an available server proof blocking call
 	serverProof, err := p.serverProofPool.Get(ctx)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	batchInfo.ServerProof = serverProof
 	defer func() {
@@ -657,7 +658,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 	// save server proof info for batchNum
 	err = batchInfo.ServerProof.CalculateProof(zkInputs)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	return &batchInfo, nil
@@ -667,7 +668,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) error {
 	proof, err := batchInfo.ServerProof.GetProof(ctx) // blocking call, until not resolved don't continue. Returns when the proof server has calculated the proof
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	p.serverProofPool.Add(batchInfo.ServerProof)
 	batchInfo.ServerProof = nil

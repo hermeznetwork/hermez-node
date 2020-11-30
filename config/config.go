@@ -9,6 +9,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
+	"github.com/hermeznetwork/tracerr"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -21,7 +22,7 @@ type Duration struct {
 func (d *Duration) UnmarshalText(data []byte) error {
 	duration, err := time.ParseDuration(string(data))
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	d.Duration = duration
 	return nil
@@ -104,15 +105,15 @@ type Node struct {
 func Load(path string, cfg interface{}) error {
 	bs, err := ioutil.ReadFile(path) //nolint:gosec
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	cfgToml := string(bs)
 	if _, err := toml.Decode(cfgToml, cfg); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	validate := validator.New()
 	if err := validate.Struct(cfg); err != nil {
-		return fmt.Errorf("error validating configuration file: %w", err)
+		return tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
 	return nil
 }
@@ -121,7 +122,7 @@ func Load(path string, cfg interface{}) error {
 func LoadCoordinator(path string) (*Coordinator, error) {
 	var cfg Coordinator
 	if err := Load(path, &cfg); err != nil {
-		return nil, fmt.Errorf("error loading coordinator configuration file: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("error loading coordinator configuration file: %w", err))
 	}
 	return &cfg, nil
 }
@@ -130,7 +131,7 @@ func LoadCoordinator(path string) (*Coordinator, error) {
 func LoadNode(path string) (*Node, error) {
 	var cfg Node
 	if err := Load(path, &cfg); err != nil {
-		return nil, fmt.Errorf("error loading node configuration file: %w", err)
+		return nil, tracerr.Wrap(fmt.Errorf("error loading node configuration file: %w", err))
 	}
 	return &cfg, nil
 }
