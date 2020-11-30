@@ -3,6 +3,8 @@ package common
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/hermeznetwork/tracerr"
 )
 
 // L2Tx is a struct that represents an already forged L2 tx
@@ -30,12 +32,12 @@ func NewL2Tx(l2Tx *L2Tx) (*L2Tx, error) {
 	} else if l2Tx.ToIdx >= IdxUserThreshold {
 		txType = TxTypeTransfer
 	} else {
-		return l2Tx, fmt.Errorf("Can not determine type of L2Tx, invalid ToIdx value: %d", l2Tx.ToIdx)
+		return l2Tx, tracerr.Wrap(fmt.Errorf("Can not determine type of L2Tx, invalid ToIdx value: %d", l2Tx.ToIdx))
 	}
 
 	// if TxType!=l2Tx.TxType return error
 	if l2Tx.Type != "" && l2Tx.Type != txType {
-		return l2Tx, fmt.Errorf("L2Tx.Type: %s, should be: %s", l2Tx.Type, txType)
+		return l2Tx, tracerr.Wrap(fmt.Errorf("L2Tx.Type: %s, should be: %s", l2Tx.Type, txType))
 	}
 	l2Tx.Type = txType
 
@@ -43,12 +45,12 @@ func NewL2Tx(l2Tx *L2Tx) (*L2Tx, error) {
 	txid[0] = TxIDPrefixL2Tx
 	fromIdxBytes, err := l2Tx.FromIdx.Bytes()
 	if err != nil {
-		return l2Tx, err
+		return l2Tx, tracerr.Wrap(err)
 	}
 	copy(txid[1:7], fromIdxBytes[:])
 	nonceBytes, err := l2Tx.Nonce.Bytes()
 	if err != nil {
-		return l2Tx, err
+		return l2Tx, tracerr.Wrap(err)
 	}
 	copy(txid[7:12], nonceBytes[:])
 	l2Tx.TxID = TxID(txid)
@@ -111,19 +113,19 @@ func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	copy(b[0:idxLen], fromIdxBytes[6-idxLen:]) // [6-idxLen:] as is BigEndian
 
 	toIdxBytes, err := tx.ToIdx.Bytes()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	copy(b[idxLen:idxLen*2], toIdxBytes[6-idxLen:])
 
 	amountFloat16, err := NewFloat16(tx.Amount)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	copy(b[idxLen*2:idxLen*2+2], amountFloat16.Bytes())
@@ -142,14 +144,14 @@ func L2TxFromBytes(b []byte, nLevels int) (*L2Tx, error) {
 	copy(paddedFromIdxBytes[6-idxLen:], b[0:idxLen])
 	tx.FromIdx, err = IdxFromBytes(paddedFromIdxBytes[:])
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	var paddedToIdxBytes [6]byte
 	copy(paddedToIdxBytes[6-idxLen:6], b[idxLen:idxLen*2])
 	tx.ToIdx, err = IdxFromBytes(paddedToIdxBytes[:])
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	tx.Amount = Float16FromBytes(b[idxLen*2 : idxLen*2+2]).BigInt()

@@ -7,6 +7,7 @@ import (
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hermeznetwork/tracerr"
 )
 
 var errTODO = fmt.Errorf("TODO: Not implemented yet")
@@ -67,15 +68,15 @@ func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeyst
 	ethereumClient := NewEthereumClient(client, account, ks, &cfg.Ethereum)
 	auctionClient, err := NewAuctionClient(ethereumClient, cfg.Auction.Address, cfg.Auction.TokenHEZ)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	rollupClient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address, cfg.Auction.TokenHEZ)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	wDelayerClient, err := NewWDelayerClient(ethereumClient, cfg.WDelayer.Address)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &Client{
 		EthereumClient: *ethereumClient,

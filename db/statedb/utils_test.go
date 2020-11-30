@@ -9,6 +9,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -84,7 +85,7 @@ func TestGetIdx(t *testing.T) {
 	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2, tokenID0)
 	assert.NotNil(t, err)
 	expectedErr := fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrToIdxNotFound, addr2.Hex(), pk2, tokenID0)
-	assert.Equal(t, expectedErr, err)
+	assert.Equal(t, expectedErr, tracerr.Unwrap(err))
 	assert.Equal(t, common.Idx(0), idxR)
 	// expect error when trying to get Idx by addr with not used TokenID
 	_, err = sdb.GetIdxByEthAddr(addr, tokenID1)

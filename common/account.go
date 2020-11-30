@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
@@ -51,7 +52,7 @@ func (idx Idx) String() string {
 // Bytes returns a byte array representing the Idx
 func (idx Idx) Bytes() ([6]byte, error) {
 	if idx > maxIdxValue {
-		return [6]byte{}, ErrIdxOverflow
+		return [6]byte{}, tracerr.Wrap(ErrIdxOverflow)
 	}
 	var idxBytes [8]byte
 	binary.BigEndian.PutUint64(idxBytes[:], uint64(idx))
@@ -68,7 +69,7 @@ func (idx Idx) BigInt() *big.Int {
 // IdxFromBytes returns Idx from a byte array
 func IdxFromBytes(b []byte) (Idx, error) {
 	if len(b) != IdxBytesLen {
-		return 0, fmt.Errorf("can not parse Idx, bytes len %d, expected %d", len(b), IdxBytesLen)
+		return 0, tracerr.Wrap(fmt.Errorf("can not parse Idx, bytes len %d, expected %d", len(b), IdxBytesLen))
 	}
 	var idxBytes [8]byte
 	copy(idxBytes[2:], b[:])
@@ -79,7 +80,7 @@ func IdxFromBytes(b []byte) (Idx, error) {
 // IdxFromBigInt converts a *big.Int to Idx type
 func IdxFromBigInt(b *big.Int) (Idx, error) {
 	if b.Int64() > maxIdxValue {
-		return 0, ErrNumOverflow
+		return 0, tracerr.Wrap(ErrNumOverflow)
 	}
 	return Idx(uint64(b.Int64())), nil
 }
@@ -90,7 +91,7 @@ type Nonce uint64
 // Bytes returns a byte array of length 5 representing the Nonce
 func (n Nonce) Bytes() ([5]byte, error) {
 	if n > maxNonceValue {
-		return [5]byte{}, ErrNonceOverflow
+		return [5]byte{}, tracerr.Wrap(ErrNonceOverflow)
 	}
 	var nonceBytes [8]byte
 	binary.BigEndian.PutUint64(nonceBytes[:], uint64(n))
@@ -143,22 +144,22 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	var b [32 * NLeafElems]byte
 
 	if a.Nonce > maxNonceValue {
-		return b, fmt.Errorf("%s Nonce", ErrNumOverflow)
+		return b, tracerr.Wrap(fmt.Errorf("%s Nonce", ErrNumOverflow))
 	}
 	if len(a.Balance.Bytes()) > maxBalanceBytes {
-		return b, fmt.Errorf("%s Balance", ErrNumOverflow)
+		return b, tracerr.Wrap(fmt.Errorf("%s Balance", ErrNumOverflow))
 	}
 
 	nonceBytes, err := a.Nonce.Bytes()
 	if err != nil {
-		return b, err
+		return b, tracerr.Wrap(err)
 	}
 
 	copy(b[28:32], a.TokenID.Bytes())
 	copy(b[23:28], nonceBytes[:])
 
 	if a.PublicKey == nil {
-		return b, fmt.Errorf("Account.PublicKey can not be nil")
+		return b, tracerr.Wrap(fmt.Errorf("Account.PublicKey can not be nil"))
 	}
 	if babyjub.PointCoordSign(a.PublicKey.X) {
 		b[22] = 1
@@ -178,7 +179,7 @@ func (a *Account) BigInts() ([NLeafElems]*big.Int, error) {
 
 	b, err := a.Bytes()
 	if err != nil {
-		return e, err
+		return e, tracerr.Wrap(err)
 	}
 
 	e[0] = new(big.Int).SetBytes(b[0:32])
@@ -193,7 +194,7 @@ func (a *Account) BigInts() ([NLeafElems]*big.Int, error) {
 func (a *Account) HashValue() (*big.Int, error) {
 	bi, err := a.BigInts()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return poseidon.Hash(bi[:])
 }
@@ -201,7 +202,7 @@ func (a *Account) HashValue() (*big.Int, error) {
 // AccountFromBigInts returns a Account from a [5]*big.Int
 func AccountFromBigInts(e [NLeafElems]*big.Int) (*Account, error) {
 	if !cryptoUtils.CheckBigIntArrayInField(e[:]) {
-		return nil, ErrNotInFF
+		return nil, tracerr.Wrap(ErrNotInFF)
 	}
 	e0B := e[0].Bytes()
 	e1B := e[1].Bytes()
@@ -220,7 +221,7 @@ func AccountFromBigInts(e [NLeafElems]*big.Int) (*Account, error) {
 func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 	tokenID, err := TokenIDFromBytes(b[28:32])
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	var nonceBytes5 [5]byte
 	copy(nonceBytes5[:], b[23:28])
@@ -230,21 +231,21 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 	balance := new(big.Int).SetBytes(b[40:64])
 	// Balance is max of 192 bits (24 bytes)
 	if !bytes.Equal(b[32:40], []byte{0, 0, 0, 0, 0, 0, 0, 0}) {
-		return nil, fmt.Errorf("%s Balance", ErrNumOverflow)
+		return nil, tracerr.Wrap(fmt.Errorf("%s Balance", ErrNumOverflow))
 	}
 	ay := new(big.Int).SetBytes(b[64:96])
 	pkPoint, err := babyjub.PointFromSignAndY(sign, ay)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	publicKey := babyjub.PublicKey(*pkPoint)
 	ethAddr := ethCommon.BytesToAddress(b[108:128])
 
 	if !cryptoUtils.CheckBigIntInField(balance) {
-		return nil, ErrNotInFF
+		return nil, tracerr.Wrap(ErrNotInFF)
 	}
 	if !cryptoUtils.CheckBigIntInField(ay) {
-		return nil, ErrNotInFF
+		return nil, tracerr.Wrap(ErrNotInFF)
 	}
 
 	a := Account{

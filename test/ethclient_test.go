@@ -12,6 +12,7 @@ import (
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -95,20 +96,20 @@ func TestClientAuction(t *testing.T) {
 	// Check several cases in which bid doesn't succed, and also do 2 successful bids.
 
 	_, err := c.AuctionBidSimple(0, big.NewInt(1))
-	assert.Equal(t, errBidClosed, err)
+	assert.Equal(t, errBidClosed, tracerr.Unwrap(err))
 
 	_, err = c.AuctionBidSimple(4322, big.NewInt(1))
-	assert.Equal(t, errBidNotOpen, err)
+	assert.Equal(t, errBidNotOpen, tracerr.Unwrap(err))
 
 	// 101 % 6 = 5;  defaultSlotSetBid[5] = 1500;  1500 + 10% = 1650
 	_, err = c.AuctionBidSimple(101, big.NewInt(1650))
-	assert.Equal(t, errCoordNotReg, err)
+	assert.Equal(t, errCoordNotReg, tracerr.Unwrap(err))
 
 	_, err = c.AuctionSetCoordinator(addrForge, "https://foo.bar")
 	assert.Nil(t, err)
 
 	_, err = c.AuctionBidSimple(3, big.NewInt(1))
-	assert.Equal(t, errBidBelowMin, err)
+	assert.Equal(t, errBidBelowMin, tracerr.Unwrap(err))
 
 	_, err = c.AuctionBidSimple(3, big.NewInt(1650))
 	assert.Nil(t, err)
@@ -118,7 +119,7 @@ func TestClientAuction(t *testing.T) {
 	assert.Nil(t, err)
 
 	_, err = c.AuctionBidSimple(3, big.NewInt(16))
-	assert.Equal(t, errBidBelowMin, err)
+	assert.Equal(t, errBidBelowMin, tracerr.Unwrap(err))
 
 	// 1650 + 10% = 1815
 	_, err = c.AuctionBidSimple(3, big.NewInt(1815))

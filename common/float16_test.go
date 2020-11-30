@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hermeznetwork/tracerr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,25 +66,25 @@ func TestConversionLosses(t *testing.T) {
 
 	a = big.NewInt(1024)
 	b, err = NewFloat16(a)
-	assert.Equal(t, ErrRoundingLoss, err)
+	assert.Equal(t, ErrRoundingLoss, tracerr.Unwrap(err))
 	c = b.BigInt()
 	assert.NotEqual(t, c, a)
 
 	a = big.NewInt(32767)
 	b, err = NewFloat16(a)
-	assert.Equal(t, ErrRoundingLoss, err)
+	assert.Equal(t, ErrRoundingLoss, tracerr.Unwrap(err))
 	c = b.BigInt()
 	assert.NotEqual(t, c, a)
 
 	a = big.NewInt(32768)
 	b, err = NewFloat16(a)
-	assert.Equal(t, ErrRoundingLoss, err)
+	assert.Equal(t, ErrRoundingLoss, tracerr.Unwrap(err))
 	c = b.BigInt()
 	assert.NotEqual(t, c, a)
 
 	a = big.NewInt(65536000)
 	b, err = NewFloat16(a)
-	assert.Equal(t, ErrRoundingLoss, err)
+	assert.Equal(t, ErrRoundingLoss, tracerr.Unwrap(err))
 	c = b.BigInt()
 	assert.NotEqual(t, c, a)
 }

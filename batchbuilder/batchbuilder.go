@@ -4,6 +4,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // ConfigCircuit contains the circuit configuration
@@ -30,7 +31,7 @@ type ConfigBatch struct {
 func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) (*BatchBuilder, error) {
 	localStateDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, statedb.TypeBatchBuilder, int(nLevels))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	bb := BatchBuilder{
@@ -39,7 +40,7 @@ func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, config
 	}
 
 	err = bb.Reset(batchNum, true)
-	return &bb, err
+	return &bb, tracerr.Wrap(err)
 }
 
 // Reset tells the BatchBuilder to reset it's internal state to the required
@@ -61,8 +62,8 @@ func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBa
 	}
 	ptOut, err := bb.localStateDB.ProcessTxs(ptc, coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	err = bb.localStateDB.MakeCheckpoint()
-	return ptOut.ZKInputs, err
+	return ptOut.ZKInputs, tracerr.Wrap(err)
 }

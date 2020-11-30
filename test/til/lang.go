@@ -11,6 +11,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/tracerr"
 )
 
 var eof = rune(0)
@@ -272,7 +273,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	c := &instruction{}
 	tok, lit := p.scanIgnoreWhitespace()
 	if tok == EOF {
-		return nil, errof
+		return nil, tracerr.Wrap(errof)
 	}
 	c.literal += lit
 	if lit == "/" {
@@ -280,7 +281,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		return nil, commentLine
 	} else if lit == ">" {
 		if setType == setTypePoolL2 {
-			return c, fmt.Errorf("Unexpected '>' at PoolL2Txs set")
+			return c, tracerr.Wrap(fmt.Errorf("Unexpected '>' at PoolL2Txs set"))
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		if lit == "batch" {
@@ -293,11 +294,11 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 			_, _ = p.s.r.ReadString('\n')
 			return &instruction{typ: typeNewBlock}, newEventLine
 		} else {
-			return c, fmt.Errorf("Unexpected '> %s', expected '> batch' or '> block'", lit)
+			return c, tracerr.Wrap(fmt.Errorf("Unexpected '> %s', expected '> batch' or '> block'", lit))
 		}
 	} else if lit == "Type" {
 		if err := p.expectChar(c, ":"); err != nil {
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		if lit == "Blockchain" {
@@ -305,11 +306,11 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		} else if lit == "PoolL2" {
 			return &instruction{typ: "PoolL2"}, setTypeLine
 		} else {
-			return c, fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", lit)
+			return c, tracerr.Wrap(fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", lit))
 		}
 	} else if lit == "AddToken" {
 		if err := p.expectChar(c, "("); err != nil {
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		c.literal += lit
@@ -317,11 +318,11 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		if err != nil {
 			line, _ := p.s.r.ReadString('\n')
 			c.literal += line
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 		c.tokenID = common.TokenID(tidI)
 		if err := p.expectChar(c, ")"); err != nil {
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 		c.typ = typeAddToken
 		line, _ := p.s.r.ReadString('\n')
@@ -330,7 +331,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	}
 
 	if setType == "" {
-		return c, fmt.Errorf("Set type not defined")
+		return c, tracerr.Wrap(fmt.Errorf("Set type not defined"))
 	}
 	transferring := false
 	fee := false
@@ -363,7 +364,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		case "ForceExit":
 			c.typ = common.TxTypeForceExit
 		default:
-			return c, fmt.Errorf("Unexpected Blockchain tx type: %s", lit)
+			return c, tracerr.Wrap(fmt.Errorf("Unexpected Blockchain tx type: %s", lit))
 		}
 	} else if setType == setTypePoolL2 {
 		switch lit {
@@ -383,14 +384,14 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 			c.typ = common.TxTypeExit
 			fee = true
 		default:
-			return c, fmt.Errorf("Unexpected PoolL2 tx type: %s", lit)
+			return c, tracerr.Wrap(fmt.Errorf("Unexpected PoolL2 tx type: %s", lit))
 		}
 	} else {
-		return c, fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", setType)
+		return c, tracerr.Wrap(fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", setType))
 	}
 
 	if err := p.expectChar(c, "("); err != nil {
-		return c, err
+		return c, tracerr.Wrap(err)
 	}
 	_, lit = p.scanIgnoreWhitespace()
 	c.literal += lit
@@ -398,11 +399,11 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	if err != nil {
 		line, _ := p.s.r.ReadString('\n')
 		c.literal += line
-		return c, err
+		return c, tracerr.Wrap(err)
 	}
 	c.tokenID = common.TokenID(tidI)
 	if err := p.expectChar(c, ")"); err != nil {
-		return c, err
+		return c, tracerr.Wrap(err)
 	}
 	_, lit = p.scanIgnoreWhitespace()
 	c.literal += lit
@@ -416,7 +417,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	c.literal += lit
 	if transferring {
 		if lit != "-" {
-			return c, fmt.Errorf("Expected '-', found '%s'", lit)
+			return c, tracerr.Wrap(fmt.Errorf("Expected '-', found '%s'", lit))
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		c.literal += lit
@@ -427,7 +428,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	if lit != ":" {
 		line, _ := p.s.r.ReadString('\n')
 		c.literal += line
-		return c, fmt.Errorf("Expected ':', found '%s'", lit)
+		return c, tracerr.Wrap(fmt.Errorf("Expected ':', found '%s'", lit))
 	}
 	if c.typ == common.TxTypeDepositTransfer ||
 		c.typ == common.TxTypeCreateAccountDepositTransfer {
@@ -438,11 +439,11 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		if !ok {
 			line, _ := p.s.r.ReadString('\n')
 			c.literal += line
-			return c, fmt.Errorf("Can not parse number for LoadAmount")
+			return c, tracerr.Wrap(fmt.Errorf("Can not parse number for LoadAmount"))
 		}
 		c.loadAmount = loadAmount
 		if err := p.expectChar(c, ","); err != nil {
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 	}
 	_, lit = p.scanIgnoreWhitespace()
@@ -451,7 +452,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	if !ok {
 		line, _ := p.s.r.ReadString('\n')
 		c.literal += line
-		return c, fmt.Errorf("Can not parse number for Amount: %s", lit)
+		return c, tracerr.Wrap(fmt.Errorf("Can not parse number for Amount: %s", lit))
 	}
 	if c.typ == common.TxTypeDeposit ||
 		c.typ == common.TxTypeCreateAccountDeposit {
@@ -461,7 +462,7 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	}
 	if fee {
 		if err := p.expectChar(c, "("); err != nil {
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		c.literal += lit
@@ -469,22 +470,22 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		if err != nil {
 			line, _ := p.s.r.ReadString('\n')
 			c.literal += line
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 		if fee > common.MaxFeePlan-1 {
 			line, _ := p.s.r.ReadString('\n')
 			c.literal += line
-			return c, fmt.Errorf("Fee %d can not be bigger than 255", fee)
+			return c, tracerr.Wrap(fmt.Errorf("Fee %d can not be bigger than 255", fee))
 		}
 		c.fee = uint8(fee)
 
 		if err := p.expectChar(c, ")"); err != nil {
-			return c, err
+			return c, tracerr.Wrap(err)
 		}
 	}
 
 	if tok == EOF {
-		return nil, errof
+		return nil, tracerr.Wrap(errof)
 	}
 	return c, nil
 }
@@ -495,7 +496,7 @@ func (p *parser) expectChar(c *instruction, ch string) error {
 	if lit != ch {
 		line, _ := p.s.r.ReadString('\n')
 		c.literal += line
-		return fmt.Errorf("Expected '%s', found '%s'", ch, lit)
+		return tracerr.Wrap(fmt.Errorf("Expected '%s', found '%s'", ch, lit))
 	}
 	return nil
 }
@@ -512,12 +513,12 @@ func (p *parser) parse() (*parsedSet, error) {
 	for {
 		i++
 		instruction, err := p.parseLine(ps.typ)
-		if err == errof {
+		if tracerr.Unwrap(err) == errof {
 			break
 		}
-		if err == setTypeLine {
+		if tracerr.Unwrap(err) == setTypeLine {
 			if ps.typ != "" {
-				return ps, fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.typ, ps.typ)
+				return ps, tracerr.Wrap(fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.typ, ps.typ))
 			}
 			if instruction.typ == "PoolL2" {
 				ps.typ = setTypePoolL2
@@ -528,22 +529,22 @@ func (p *parser) parse() (*parsedSet, error) {
 			}
 			continue
 		}
-		if err == commentLine {
+		if tracerr.Unwrap(err) == commentLine {
 			continue
 		}
 		instruction.lineNum = i
-		if err == newEventLine {
+		if tracerr.Unwrap(err) == newEventLine {
 			if instruction.typ == typeAddToken && instruction.tokenID == common.TokenID(0) {
-				return ps, fmt.Errorf("Line %d: AddToken can not register TokenID 0", i)
+				return ps, tracerr.Wrap(fmt.Errorf("Line %d: AddToken can not register TokenID 0", i))
 			}
 			ps.instructions = append(ps.instructions, *instruction)
 			continue
 		}
 		if err != nil {
-			return ps, fmt.Errorf("Line %d: %s, err: %s", i, instruction.literal, err.Error())
+			return ps, tracerr.Wrap(fmt.Errorf("Line %d: %s, err: %s", i, instruction.literal, err.Error()))
 		}
 		if ps.typ == "" {
-			return ps, fmt.Errorf("Line %d: Set type not defined", i)
+			return ps, tracerr.Wrap(fmt.Errorf("Line %d: Set type not defined", i))
 		}
 		ps.instructions = append(ps.instructions, *instruction)
 		users[instruction.from] = true

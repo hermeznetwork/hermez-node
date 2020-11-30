@@ -12,6 +12,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree/db"
 	"github.com/stretchr/testify/assert"
@@ -69,7 +70,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	assert.Nil(t, err)
 	v, err = sdb.db.Get(k0)
 	assert.NotNil(t, err)
-	assert.Equal(t, db.ErrNotFound, err)
+	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 	assert.Nil(t, v)
 
 	// store the same data from the beginning that has ben lost since last NewStateDB
@@ -116,7 +117,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	v, err = sdb.db.Get(k1)
 	assert.NotNil(t, err)
-	assert.Equal(t, db.ErrNotFound, err)
+	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 	assert.Nil(t, v)
 }
 
@@ -138,7 +139,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 	unexistingAccount := common.Idx(1)
 	_, err = sdb.GetAccount(unexistingAccount)
 	assert.NotNil(t, err)
-	assert.Equal(t, db.ErrNotFound, err)
+	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
@@ -159,7 +160,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrAccountAlreadyExists, err)
+	assert.Equal(t, ErrAccountAlreadyExists, tracerr.Unwrap(err))
 
 	// update accounts
 	for i := 0; i < len(accounts); i++ {
@@ -171,7 +172,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 
 	_, err = sdb.MTGetProof(common.Idx(1))
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrStateDBWithoutMT, err)
+	assert.Equal(t, ErrStateDBWithoutMT, tracerr.Unwrap(err))
 }
 
 func TestStateDBWithMT(t *testing.T) {
@@ -191,7 +192,7 @@ func TestStateDBWithMT(t *testing.T) {
 	// get non-existing account, expecting an error
 	_, err = sdb.GetAccount(common.Idx(1))
 	assert.NotNil(t, err)
-	assert.Equal(t, db.ErrNotFound, err)
+	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
@@ -210,7 +211,7 @@ func TestStateDBWithMT(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrAccountAlreadyExists, err)
+	assert.Equal(t, ErrAccountAlreadyExists, tracerr.Unwrap(err))
 
 	_, err = sdb.MTGetProof(common.Idx(256))
 	assert.Nil(t, err)

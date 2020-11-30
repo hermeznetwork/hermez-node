@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // Proof TBD this type will be received from the proof server
@@ -46,7 +47,7 @@ type BatchInfo struct {
 func (b *BatchInfo) DebugStore(storePath string) error {
 	batchJSON, err := json.Marshal(b)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	oldStateRoot := "null"
 	if b.ZKInputs != nil && b.ZKInputs.OldStateRoot != nil {

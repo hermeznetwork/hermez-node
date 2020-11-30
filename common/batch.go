@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/tracerr"
 )
 
 const batchNumBytesLen = 8
@@ -44,7 +45,7 @@ func (bn BatchNum) BigInt() *big.Int {
 // BatchNumFromBytes returns BatchNum from a []byte
 func BatchNumFromBytes(b []byte) (BatchNum, error) {
 	if len(b) != batchNumBytesLen {
-		return 0, fmt.Errorf("can not parse BatchNumFromBytes, bytes len %d, expected %d", len(b), batchNumBytesLen)
+		return 0, tracerr.Wrap(fmt.Errorf("can not parse BatchNumFromBytes, bytes len %d, expected %d", len(b), batchNumBytesLen))
 	}
 	batchNum := binary.BigEndian.Uint64(b[:batchNumBytesLen])
 	return BatchNum(batchNum), nil
