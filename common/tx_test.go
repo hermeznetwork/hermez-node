@@ -3,10 +3,20 @@ package common
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/binary"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSignatureConstant(t *testing.T) {
+	signatureConstant := uint32(3322668559)
+	var signatureConstantBytes [4]byte
+	binary.BigEndian.PutUint32(signatureConstantBytes[:], signatureConstant)
+	assert.Equal(t, SignatureConstantBytes, signatureConstantBytes[:])
+	assert.Equal(t, "c60be60f", hex.EncodeToString(SignatureConstantBytes))
+}
 
 func TestTxIDScannerValue(t *testing.T) {
 	txid0 := &TxID{}

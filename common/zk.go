@@ -58,14 +58,16 @@ type ZKInputs struct {
 	OldLastIdx *big.Int `json:"oldLastIdx"` // uint64 (max nLevels bits)
 	// OldStateRoot is the current state merkle tree root
 	OldStateRoot *big.Int `json:"oldStateRoot"` // Hash
-	// GlobalChainID is the blockchain ID (0 for Ethereum mainnet). This value can be get from the smart contract.
+	// GlobalChainID is the blockchain ID (0 for Ethereum mainnet). This
+	// value can be get from the smart contract.
 	GlobalChainID *big.Int `json:"globalChainID"` // uint16
-	// FeeIdxs is an array of merkle tree indexes where the coordinator will receive the accumulated fees
+	// FeeIdxs is an array of merkle tree indexes where the coordinator
+	// will receive the accumulated fees
 	FeeIdxs []*big.Int `json:"feeIdxs"` // uint64 (max nLevels bits), len: [maxFeeIdxs]
 
 	// accumulate fees
 	// FeePlanTokens contains all the tokenIDs for which the fees are being accumulated
-	FeePlanTokens []*big.Int `json:"feePlanTokens"` // uint32 (max 32 bits), len: [maxFeeIdxs]
+	FeePlanTokens []*big.Int `json:"feePlanTokens"` // uint32 (max nLevels bits), len: [maxFeeIdxs]
 
 	//
 	// Txs (L1&L2)
@@ -87,7 +89,9 @@ type ZKInputs struct {
 
 	// ToIdx
 	ToIdx []*big.Int `json:"toIdx"` // uint64 (max nLevels bits), len: [nTx]
-	// AuxToIdx is the Idx of the Tx that has 'toIdx==0', is the coordinator who will find which Idx corresponds to the 'toBJJAy' or 'toEthAddr'
+	// AuxToIdx is the Idx of the Tx that has 'toIdx==0', is the
+	// coordinator who will find which Idx corresponds to the 'toBJJAy' or
+	// 'toEthAddr'
 	AuxToIdx []*big.Int `json:"auxToIdx"` // uint64 (max nLevels bits), len: [nTx]
 	// ToBJJAy
 	ToBJJAy []*big.Int `json:"toBjjAy"` // big.Int, len: [nTx]
@@ -136,7 +140,9 @@ type ZKInputs struct {
 	// State MerkleTree Leafs transitions
 	//
 
-	// state 1, value of the sender (from) account leaf
+	// state 1, value of the sender (from) account leaf. The values at the
+	// moment pre-smtprocessor of the update (before updating the Sender
+	// leaf).
 	TokenID1  []*big.Int   `json:"tokenID1"`  // uint32, len: [nTx]
 	Nonce1    []*big.Int   `json:"nonce1"`    // uint64 (max 40 bits), len: [nTx]
 	Sign1     []*big.Int   `json:"sign1"`     // bool, len: [nTx]

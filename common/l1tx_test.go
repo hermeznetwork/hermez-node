@@ -60,9 +60,9 @@ func TestL1TxCompressedData(t *testing.T) {
 	assert.Nil(t, err)
 
 	// test vector value generated from javascript implementation
-	expectedStr := "7307597389635308713748674793997299267460566876160"
+	expectedStr := "7307597389635308713748674793997299267459594577423"
 	assert.Equal(t, expectedStr, txCompressedData.String())
-	assert.Equal(t, "050004000000000003000000000002000100000000", hex.EncodeToString(txCompressedData.Bytes()))
+	assert.Equal(t, "0500040000000000030000000000020000c60be60f", hex.EncodeToString(txCompressedData.Bytes()))
 }
 
 func TestBytesDataAvailability(t *testing.T) {
