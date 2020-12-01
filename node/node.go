@@ -21,6 +21,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test/debugapi"
 	"github.com/hermeznetwork/hermez-node/txselector"
@@ -162,9 +163,9 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		serverProofs := make([]coordinator.ServerProofInterface, len(coordCfg.ServerProofs))
+		serverProofs := make([]prover.Client, len(coordCfg.ServerProofs))
 		for i, serverProofCfg := range coordCfg.ServerProofs {
-			serverProofs[i] = coordinator.NewServerProof(serverProofCfg.URL)
+			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL)
 		}
 
 		coord, err = coordinator.NewCoordinator(
@@ -173,6 +174,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 				ConfirmBlocks: coordCfg.ConfirmBlocks,
 			},
 			historyDB,
+			l2DB,
 			txSelector,
 			batchBuilder,
 			serverProofs,

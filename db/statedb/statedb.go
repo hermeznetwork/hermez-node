@@ -541,7 +541,8 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 		// use checkpoint from SynchronizerStateDB
 		if _, err := os.Stat(synchronizerCheckpointPath); os.IsNotExist(err) {
 			// if synchronizerStateDB does not have checkpoint at batchNum, return err
-			return tracerr.Wrap(fmt.Errorf("Checkpoint not exist in Synchronizer"))
+			return tracerr.Wrap(fmt.Errorf("Checkpoint \"%v\" not exist in Synchronizer",
+				synchronizerCheckpointPath))
 		}
 
 		if err := l.db.Pebble().Close(); err != nil {
@@ -576,11 +577,13 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 			return tracerr.Wrap(err)
 		}
 		// open the MT for the current s.db
-		mt, err := merkletree.NewMerkleTree(l.db.WithPrefix(PrefixKeyMT), l.mt.MaxLevels())
-		if err != nil {
-			return tracerr.Wrap(err)
+		if l.mt != nil {
+			mt, err := merkletree.NewMerkleTree(l.db.WithPrefix(PrefixKeyMT), l.mt.MaxLevels())
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+			l.mt = mt
 		}
-		l.mt = mt
 
 		return nil
 	}

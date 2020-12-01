@@ -57,8 +57,9 @@ type Stats struct {
 		LastBatch int64
 		// LastL1BatchBlock is the last ethereum block in which an
 		// l1Batch was forged
-		LastL1BatchBlock int64
-		Auction          struct {
+		LastL1BatchBlock  int64
+		LastForgeL1TxsNum int64
+		Auction           struct {
 			CurrentSlot common.Slot
 		}
 	}
@@ -97,7 +98,8 @@ func (s *StatsHolder) UpdateCurrentSlot(slot common.Slot) {
 }
 
 // UpdateSync updates the synchronizer stats
-func (s *StatsHolder) UpdateSync(lastBlock *common.Block, lastBatch *common.BatchNum, lastL1BatchBlock *int64) {
+func (s *StatsHolder) UpdateSync(lastBlock *common.Block, lastBatch *common.BatchNum,
+	lastL1BatchBlock *int64, lastForgeL1TxsNum *int64) {
 	now := time.Now()
 	s.rw.Lock()
 	s.Sync.LastBlock = *lastBlock
@@ -106,6 +108,7 @@ func (s *StatsHolder) UpdateSync(lastBlock *common.Block, lastBatch *common.Batc
 	}
 	if lastL1BatchBlock != nil {
 		s.Sync.LastL1BatchBlock = *lastL1BatchBlock
+		s.Sync.LastForgeL1TxsNum = *lastForgeL1TxsNum
 	}
 	s.Sync.Updated = now
 	s.rw.Unlock()
@@ -506,16 +509,18 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 
 	batchesLen := len(rollupData.Batches)
 	if batchesLen == 0 {
-		s.stats.UpdateSync(ethBlock, nil, nil)
+		s.stats.UpdateSync(ethBlock, nil, nil, nil)
 	} else {
 		var lastL1BatchBlock *int64
+		var lastForgeL1TxsNum *int64
 		for _, batchData := range rollupData.Batches {
 			if batchData.L1Batch {
 				lastL1BatchBlock = &batchData.Batch.EthBlockNum
+				lastForgeL1TxsNum = batchData.Batch.ForgeL1TxsNum
 			}
 		}
 		s.stats.UpdateSync(ethBlock,
-			&rollupData.Batches[batchesLen-1].Batch.BatchNum, lastL1BatchBlock)
+			&rollupData.Batches[batchesLen-1].Batch.BatchNum, lastL1BatchBlock, lastForgeL1TxsNum)
 	}
 	if err := s.updateCurrentSlotIfSync(len(rollupData.Batches)); err != nil {
 		return nil, nil, tracerr.Wrap(err)
@@ -616,13 +621,23 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 		lastL1BatchBlockNum = 0
 	}
 
+	lastForgeL1TxsNum, err := s.historyDB.GetLastL1TxsNum()
+	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+		log.Errorw("historyDB.GetLastL1BatchBlockNum", "err", err)
+		return tracerr.Wrap(err)
+	}
+	if tracerr.Unwrap(err) == sql.ErrNoRows || lastForgeL1TxsNum == nil {
+		n := int64(-1)
+		lastForgeL1TxsNum = &n
+	}
+
 	err = s.stateDB.Reset(batchNum)
 	if err != nil {
 		log.Errorw("stateDB.Reset", "err", err)
 		return tracerr.Wrap(err)
 	}
 
-	s.stats.UpdateSync(block, &batchNum, &lastL1BatchBlockNum) // TODO
+	s.stats.UpdateSync(block, &batchNum, &lastL1BatchBlockNum, lastForgeL1TxsNum)
 
 	if err := s.updateCurrentSlotIfSync(-1); err != nil {
 		return tracerr.Wrap(err)

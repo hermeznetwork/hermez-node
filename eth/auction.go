@@ -22,10 +22,11 @@ import (
 
 // SlotState is the state of a slot
 type SlotState struct {
-	Bidder       ethCommon.Address
-	Fulfilled    bool
-	BidAmount    *big.Int
-	ClosedMinBid *big.Int
+	Bidder           ethCommon.Address
+	ForgerCommitment bool
+	Fulfilled        bool
+	BidAmount        *big.Int
+	ClosedMinBid     *big.Int
 }
 
 // NewSlotState returns an empty SlotState

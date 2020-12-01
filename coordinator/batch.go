@@ -9,12 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/tracerr"
 )
-
-// Proof TBD this type will be received from the proof server
-type Proof struct {
-}
 
 // TxStatus is used to mark the status of an ethereum transaction
 type TxStatus string
@@ -29,11 +26,11 @@ const (
 // BatchInfo contans the Batch information
 type BatchInfo struct {
 	BatchNum       common.BatchNum
-	ServerProof    ServerProofInterface
+	ServerProof    prover.Client
 	ZKInputs       *common.ZKInputs
-	Proof          *Proof
+	Proof          *prover.Proof
 	L1UserTxsExtra []common.L1Tx
-	L1OperatorTxs  []common.L1Tx
+	L1CoordTxs     []common.L1Tx
 	L2Txs          []common.PoolL2Tx
 	ForgeBatchArgs *eth.RollupForgeBatchArgs
 	// FeesInfo
