@@ -1,0 +1,40 @@
+version: "3.3"  
+services:
+  hermez-db-test:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "hermez"
+      POSTGRES_DB: "hermez"
+      POSTGRES_PASSWORD: "hermez"
+  ganache:
+    image: trufflesuite/ganache-cli:latest
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./ganache_data:/ganache_data
+    entrypoint:
+      - npx
+      - ganache-cli
+      - --mnemonic
+      - 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus'
+      - --networkId
+      - '5777'
+      - --hostname
+      - '0.0.0.0'
+      - --debug
+      - --deterministic
+      - -l
+      - '12500000'
+      - --allowUnlimitedContractSize      
+      - --chainId
+      - '1337'
+  hermez-node:
+    image: hermeznet/hermez-node:latest
+    ports:
+      - "8000:8000"
+    depends_on:
+      - hermez-db-test
+      - ganache
+    restart: on-failure

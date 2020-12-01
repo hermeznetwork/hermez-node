@@ -10,7 +10,6 @@ require (
 	github.com/getkin/kin-openapi v0.22.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.5.0
-	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e
 	github.com/iden3/go-merkletree v0.0.0-20201103115630-ad30c8309b44
