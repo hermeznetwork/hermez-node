@@ -271,6 +271,67 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	require.NotNil(t, err)
 }
 
+func TestGeneratePoolL2TxsFromInstructions(t *testing.T) {
+	// Generate necessary L1 data
+	set := `
+		Type: Blockchain
+		AddToken(1)
+	
+		CreateAccountCoordinator(1) A
+		CreateAccountDeposit(1) B: 7
+		> batchL1
+		> batchL1
+	`
+	tc := NewContext(common.RollupConstMaxL1UserTx)
+	_, err := tc.GenerateBlocks(set)
+	require.Nil(t, err)
+
+	// Generate Pool txs using instructions
+	instructionSet := []Instruction{}
+	i := 0
+	a := big.NewInt(3)
+	instructionSet = append(instructionSet, Instruction{
+		LineNum: i,
+		// Literal: "PoolTransferToEthAddr(1) B-A: 3 (1)",
+		Typ:     common.TxTypeTransferToEthAddr,
+		From:    "B",
+		To:      "A",
+		TokenID: 1,
+		Amount:  a,
+		Fee:     1,
+	})
+	i++
+	instructionSet = append(instructionSet, Instruction{
+		LineNum: i,
+		// Literal: "PoolTransferToBJJ(1) B-A: 3 (1)",
+		Typ:     common.TxTypeTransferToBJJ,
+		From:    "B",
+		To:      "A",
+		TokenID: 1,
+		Amount:  a,
+		Fee:     1,
+	})
+	txsFromInstructions, err := tc.GeneratePoolL2TxsFromInstructions(instructionSet)
+	require.Nil(t, err)
+	// Generate Pool txs using string
+	tc = NewContext(common.RollupConstMaxL1UserTx)
+	_, err = tc.GenerateBlocks(set)
+	require.Nil(t, err)
+	stringSet := `
+		Type: PoolL2
+		PoolTransferToEthAddr(1) B-A: 3 (1)
+		PoolTransferToBJJ(1) B-A: 3 (1)
+	`
+	txsFromString, err := tc.GeneratePoolL2Txs(stringSet)
+	require.Nil(t, err)
+	// Compare generated txs from instructions and string
+	// timestamps will be different
+	for i := 0; i < len(txsFromString); i++ {
+		txsFromInstructions[i].Timestamp = txsFromString[i].Timestamp
+	}
+	assert.Equal(t, txsFromString, txsFromInstructions)
+}
+
 func TestGenerateErrors(t *testing.T) {
 	// unregistered token
 	set := `Type: Blockchain
@@ -358,4 +419,150 @@ func TestGenerateErrors(t *testing.T) {
 	assert.Equal(t, common.Idx(256), tc.Users["A"].Accounts[common.TokenID(1)].Idx)
 	assert.Equal(t, common.Nonce(1), tc.Users["B"].Accounts[common.TokenID(1)].Nonce)
 	assert.Equal(t, common.Idx(257), tc.Users["B"].Accounts[common.TokenID(1)].Idx)
+}
+
+func TestGenerateFromInstructions(t *testing.T) {
+	// Generate block from instructions
+	setInst := []Instruction{}
+	i := 0
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "AddToken(1)",
+		Typ:     TypeAddToken,
+		TokenID: 1,
+	})
+	i++
+	la := big.NewInt(10)
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "CreateAccountDeposit(1) A: 10",
+		Typ:        common.TxTypeCreateAccountDeposit,
+		From:       "A",
+		TokenID:    1,
+		LoadAmount: la,
+	})
+	i++
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "> batchL1",
+		Typ: TypeNewBatchL1,
+	})
+	i++
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "CreateAccountCoordinator(1) B",
+		Typ:     TxTypeCreateAccountDepositCoordinator,
+		From:    "B",
+		TokenID: 1,
+	})
+	i++
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "> batchL1",
+		Typ: TypeNewBatchL1,
+	})
+	i++
+	a := big.NewInt(6)
+	setInst = append(setInst, Instruction{
+		LineNum: i, // 5
+		// Literal: "Transfer(1) A-B: 6 (1)",
+		Typ:     common.TxTypeTransfer,
+		From:    "A",
+		To:      "B",
+		TokenID: 1,
+		Amount:  a,
+		Fee:     1,
+	})
+	i++
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "Transfer(1) A-B: 6 (1)",
+		Typ:     common.TxTypeTransfer,
+		From:    "A",
+		To:      "B",
+		TokenID: 1,
+		Amount:  a,
+		Fee:     1,
+	})
+	i++
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "Transfer(1) B-A: 6 (1)",
+		Typ:     common.TxTypeTransfer,
+		From:    "B",
+		To:      "A",
+		TokenID: 1,
+		Amount:  a,
+		Fee:     1,
+	})
+	i++
+	a = big.NewInt(3)
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "Exit(1) A: 3 (1)",
+		Typ:     common.TxTypeExit,
+		From:    "A",
+		TokenID: 1,
+		Amount:  a,
+		Fee:     1,
+	})
+	i++
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "> batch",
+		Typ: TypeNewBatch,
+	})
+	setInst = append(setInst, Instruction{
+		LineNum: i,
+		// Literal: "> block",
+		Typ: TypeNewBlock,
+	})
+
+	tc := NewContext(common.RollupConstMaxL1UserTx)
+	blockFromInstructions, err := tc.GenerateBlocksFromInstructions(setInst)
+	assert.NoError(t, err)
+	require.Nil(t, err)
+
+	// Generate block from string
+	setString := `
+		Type: Blockchain
+		AddToken(1)
+		CreateAccountDeposit(1) A: 10
+		> batchL1
+		CreateAccountCoordinator(1) B
+		> batchL1
+		Transfer(1) A-B: 6 (1)
+		Transfer(1) A-B: 6 (1) // on purpose this is moving more money that what it has in the account, Til should not fail
+		Transfer(1) B-A: 6 (1)
+		Exit(1) A: 3 (1)
+		> batch
+		> block
+	`
+	tc = NewContext(common.RollupConstMaxL1UserTx)
+	blockFromString, err := tc.GenerateBlocks(setString)
+	require.Nil(t, err)
+
+	// Generated data should be equivalent, except for Eth Addrs and BJJs
+	for i, strBatch := range blockFromString[0].Rollup.Batches {
+		// instBatch := blockFromInstructions[0].Rollup.Batches[i]
+		for j := 0; j < len(strBatch.L1CoordinatorTxs); j++ {
+			blockFromInstructions[0].Rollup.Batches[i].L1CoordinatorTxs[j].FromEthAddr =
+				blockFromString[0].Rollup.Batches[i].L1CoordinatorTxs[j].FromEthAddr
+			blockFromInstructions[0].Rollup.Batches[i].L1CoordinatorTxs[j].FromBJJ =
+				blockFromString[0].Rollup.Batches[i].L1CoordinatorTxs[j].FromBJJ
+		}
+		for j := 0; j < len(strBatch.L1UserTxs); j++ {
+			blockFromInstructions[0].Rollup.Batches[i].L1UserTxs[j].FromEthAddr =
+				blockFromString[0].Rollup.Batches[i].L1UserTxs[j].FromEthAddr
+			blockFromInstructions[0].Rollup.Batches[i].L1UserTxs[j].FromBJJ =
+				blockFromString[0].Rollup.Batches[i].L1UserTxs[j].FromBJJ
+		}
+	}
+	for i := 0; i < len(blockFromString[0].Rollup.L1UserTxs); i++ {
+		blockFromInstructions[0].Rollup.L1UserTxs[i].FromEthAddr =
+			blockFromString[0].Rollup.L1UserTxs[i].FromEthAddr
+		blockFromInstructions[0].Rollup.L1UserTxs[i].FromBJJ =
+			blockFromString[0].Rollup.L1UserTxs[i].FromBJJ
+	}
+	assert.Equal(t, blockFromString, blockFromInstructions)
 }

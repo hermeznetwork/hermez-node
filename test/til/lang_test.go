@@ -69,8 +69,8 @@ func TestParseBlockchainTxs(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, txTypeCreateAccountDepositCoordinator, instructions.instructions[7].typ)
-	assert.Equal(t, typeNewBatch, instructions.instructions[11].typ)
+	assert.Equal(t, TxTypeCreateAccountDepositCoordinator, instructions.instructions[7].Typ)
+	assert.Equal(t, TypeNewBatch, instructions.instructions[11].Typ)
 	assert.Equal(t, "Deposit(1)User0:20", instructions.instructions[16].raw())
 	assert.Equal(t, "Type: DepositTransfer, From: A, To: B, LoadAmount: 15, Amount: 10, Fee: 0, TokenID: 1\n", instructions.instructions[13].String())
 	assert.Equal(t, "Type: Transfer, From: User1, To: User0, Amount: 15, Fee: 1, TokenID: 3\n", instructions.instructions[19].String())
