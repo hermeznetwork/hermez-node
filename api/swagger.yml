@@ -60,7 +60,7 @@ externalDocs:
   url: 'https://hermez.io'
 servers:
   - description: Hosted mock up
-    url: http://167.71.59.190:4010
+    url: https://apimock.hermez.network
   - description: Localhost mock Up
     url: http://localhost:4010
 tags:
