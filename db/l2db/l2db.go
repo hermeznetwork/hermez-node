@@ -1,6 +1,7 @@
 package l2db
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -242,38 +243,52 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 	return tracerr.Wrap(err)
 }
 
-// CheckNonces invalidate txs with nonces that are smaller or equal than their respective accounts nonces.
-// The state of the affected txs will be changed from Pending -> Invalid
-func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.BatchNum) (err error) {
+// GetPendingUniqueFromIdxs returns from all the pending transactions, the set
+// of unique FromIdx
+func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
+	var idxs []common.Idx
+	rows, err := l2db.db.Query(`SELECT DISTINCT from_idx FROM tx_pool
+		WHERE state = $1;`, common.PoolL2TxStatePending)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	var idx common.Idx
+	for rows.Next() {
+		err = rows.Scan(&idx)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		idxs = append(idxs, idx)
+	}
+	return idxs, nil
+}
+
+var checkNoncesQuery = fmt.Sprintf(`
+		UPDATE tx_pool SET
+			state = '%s',
+			batch_num = %%d
+		FROM (VALUES
+			(NULL::::BIGINT, NULL::::BIGINT),
+			(:idx, :nonce)
+		) as updated_acc (idx, nonce)
+		WHERE tx_pool.from_idx = updated_acc.idx AND tx_pool.nonce <= updated_acc.nonce;
+	`, common.PoolL2TxStateInvalid)
+
+// CheckNonces invalidate txs with nonces that are smaller or equal than their
+// respective accounts nonces.  The state of the affected txs will be changed
+// from Pending to Invalid
+func (l2db *L2DB) CheckNonces(updatedAccounts []common.IdxNonce, batchNum common.BatchNum) (err error) {
 	if len(updatedAccounts) == 0 {
 		return nil
 	}
-	txn, err := l2db.db.Beginx()
-	if err != nil {
+	// Fill the batch_num in the query with Sprintf because we are using a
+	// named query which works with slices, and doens't handle an extra
+	// individual argument.
+	query := fmt.Sprintf(checkNoncesQuery, batchNum)
+	if _, err := sqlx.NamedQuery(l2db.db, query, updatedAccounts); err != nil {
 		return tracerr.Wrap(err)
 	}
-	defer func() {
-		// Rollback the transaction if there was an error.
-		if err != nil {
-			db.Rollback(txn)
-		}
-	}()
-	for i := 0; i < len(updatedAccounts); i++ {
-		_, err = txn.Exec(
-			`UPDATE tx_pool
-			SET state = $1, batch_num = $2
-			WHERE state = $3 AND from_idx = $4 AND nonce <= $5;`,
-			common.PoolL2TxStateInvalid,
-			batchNum,
-			common.PoolL2TxStatePending,
-			updatedAccounts[i].Idx,
-			updatedAccounts[i].Nonce,
-		)
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-	}
-	return tracerr.Wrap(txn.Commit())
+	return nil
 }
 
 // Reorg updates the state of txs that were updated in a batch that has been discarted due to a blockchain reorg.

@@ -58,6 +58,11 @@ func NewTxSelector(dbpath string, synchronizerStateDB *statedb.StateDB, l2 *l2db
 	}, nil
 }
 
+// LocalAccountsDB returns the LocalStateDB of the TxSelector
+func (txsel *TxSelector) LocalAccountsDB() *statedb.LocalStateDB {
+	return txsel.localAccountsDB
+}
+
 // Reset tells the TxSelector to get it's internal AccountsDB
 // from the required `batchNum`
 func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {

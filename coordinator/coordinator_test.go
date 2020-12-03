@@ -79,28 +79,29 @@ func newTestModules(t *testing.T) (*historydb.HistoryDB, *l2db.L2DB,
 
 	var err error
 	syncDBPath, err = ioutil.TempDir("", "tmpSyncDB")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
 	syncSdb, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, nLevels)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
-	require.Nil(t, err)
+	require.NoError(t, err)
+	test.WipeDB(db)
 	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
 	historyDB := historydb.NewHistoryDB(db)
 
 	txSelDBPath, err = ioutil.TempDir("", "tmpTxSelDB")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	deleteme = append(deleteme, txSelDBPath)
 	txsel, err := txselector.NewTxSelector(txSelDBPath, syncSdb, l2DB, 10, 10, 10)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	batchBuilderDBPath, err = ioutil.TempDir("", "tmpBatchBuilderDB")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	deleteme = append(deleteme, batchBuilderDBPath)
 	bb, err := batchbuilder.NewBatchBuilder(batchBuilderDBPath, syncSdb, nil, 0, uint64(nLevels))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// l1Txs, coordinatorL1Txs, poolL2Txs := test.GenerateTestTxsFromSet(t, test.SetTest0)
 
@@ -124,7 +125,7 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 	historyDB, l2DB, txsel, bb := newTestModules(t)
 
 	debugBatchPath, err := ioutil.TempDir("", "tmpDebugBatch")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	deleteme = append(deleteme, debugBatchPath)
 
 	conf := Config{
@@ -150,7 +151,7 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 	}
 	coord, err := NewCoordinator(conf, historyDB, l2DB, txsel, bb, serverProofs,
 		ethClient, scConsts, initSCVars)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	return coord
 }
 
@@ -165,11 +166,11 @@ func TestCoordinatorFlow(t *testing.T) {
 
 	// Bid for slot 2 and 4
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
-	require.Nil(t, err)
+	require.NoError(t, err)
 	_, err = ethClient.AuctionBidSimple(4, big.NewInt(9999))
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	coord.Start()
 	time.Sleep(1 * time.Second)
@@ -177,9 +178,9 @@ func TestCoordinatorFlow(t *testing.T) {
 	waitForSlot := func(slot int64) {
 		for {
 			blockNum, err := ethClient.EthLastBlock()
-			require.Nil(t, err)
+			require.NoError(t, err)
 			nextBlockSlot, err := ethClient.AuctionGetSlotNumber(blockNum + 1)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			if nextBlockSlot == slot {
 				break
 			}
@@ -191,7 +192,7 @@ func TestCoordinatorFlow(t *testing.T) {
 			stats.Eth.LastBatch = ethClient.CtlLastForgedBatch()
 			stats.Sync.LastBatch = stats.Eth.LastBatch
 			canForge, err := ethClient.AuctionCanForge(forger, blockNum+1)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			if canForge {
 				// fmt.Println("DBG canForge")
 				stats.Sync.Auction.CurrentSlot.Forger = forger
@@ -207,7 +208,7 @@ func TestCoordinatorFlow(t *testing.T) {
 					require.NoError(t, err)
 				}
 			}
-			coord.SendMsg(MsgSyncStats{
+			coord.SendMsg(MsgSyncBlock{
 				Stats: stats,
 			})
 		}
@@ -254,16 +255,16 @@ func TestCoordCanForge(t *testing.T) {
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	bootCoord := newTestCoordinator(t, bootForger, ethClient, ethClientSetup)
 
 	assert.Equal(t, forger, coord.cfg.ForgerAddress)
 	assert.Equal(t, bootForger, bootCoord.cfg.ForgerAddress)
 	ethBootCoord, err := ethClient.AuctionGetBootCoordinator()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &bootForger, ethBootCoord)
 
 	var stats synchronizer.Stats
@@ -300,11 +301,12 @@ func TestCoordHandleMsgSyncStats(t *testing.T) {
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
-	require.Nil(t, err)
+	require.NoError(t, err)
 
-	var stats synchronizer.Stats
+	var msg MsgSyncBlock
+	stats := &msg.Stats
 	ctx := context.Background()
 
 	// Slot 0.  No bid, so the winner is the boot coordinator
@@ -312,8 +314,8 @@ func TestCoordHandleMsgSyncStats(t *testing.T) {
 	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, false, coord.canForge(&stats))
-	require.Nil(t, coord.handleMsgSyncStats(ctx, &stats))
+	assert.Equal(t, false, coord.canForge(stats))
+	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.Nil(t, coord.pipeline)
 
 	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
@@ -322,8 +324,8 @@ func TestCoordHandleMsgSyncStats(t *testing.T) {
 		int64(ethClientSetup.AuctionVariables.SlotDeadline)
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, true, coord.canForge(&stats))
-	require.Nil(t, coord.handleMsgSyncStats(ctx, &stats))
+	assert.Equal(t, true, coord.canForge(stats))
+	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.NotNil(t, coord.pipeline)
 
 	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
@@ -332,8 +334,8 @@ func TestCoordHandleMsgSyncStats(t *testing.T) {
 		int64(ethClientSetup.AuctionVariables.SlotDeadline) + 1
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, true, coord.canForge(&stats))
-	require.Nil(t, coord.handleMsgSyncStats(ctx, &stats))
+	assert.Equal(t, true, coord.canForge(stats))
+	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.NotNil(t, coord.pipeline)
 
 	// Slot 0. No bid, so the winner is the boot coordinator
@@ -342,8 +344,8 @@ func TestCoordHandleMsgSyncStats(t *testing.T) {
 		1*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, false, coord.canForge(&stats))
-	require.Nil(t, coord.handleMsgSyncStats(ctx, &stats))
+	assert.Equal(t, false, coord.canForge(stats))
+	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.Nil(t, coord.pipeline)
 }
 

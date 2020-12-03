@@ -170,8 +170,19 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 
 		coord, err = coordinator.NewCoordinator(
 			coordinator.Config{
-				ForgerAddress: coordCfg.ForgerAddress,
-				ConfirmBlocks: coordCfg.ConfirmBlocks,
+				ForgerAddress:          coordCfg.ForgerAddress,
+				ConfirmBlocks:          coordCfg.ConfirmBlocks,
+				L1BatchTimeoutPerc:     coordCfg.L1BatchTimeoutPerc,
+				EthClientAttempts:      coordCfg.EthClient.Attempts,
+				EthClientAttemptsDelay: coordCfg.EthClient.AttemptsDelay.Duration,
+				TxManagerCheckInterval: coordCfg.EthClient.IntervalCheckLoop.Duration,
+				DebugBatchPath:         coordCfg.Debug.BatchPath,
+				Purger: coordinator.PurgerCfg{
+					PurgeBatchDelay:      coordCfg.L2DB.PurgeBatchDelay,
+					InvalidateBatchDelay: coordCfg.L2DB.InvalidateBatchDelay,
+					PurgeBlockDelay:      coordCfg.L2DB.PurgeBlockDelay,
+					InvalidateBlockDelay: coordCfg.L2DB.InvalidateBlockDelay,
+				},
 			},
 			historyDB,
 			l2DB,
@@ -327,7 +338,9 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
 		if n.mode == ModeCoordinator {
-			n.coord.SendMsg(coordinator.MsgSyncReorg{})
+			n.coord.SendMsg(coordinator.MsgSyncReorg{
+				Stats: *stats,
+			})
 		}
 		if n.nodeAPI != nil {
 			rollup, auction, wDelayer := n.sync.SCVars()
@@ -351,8 +364,9 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 					WDelayer: blockData.WDelayer.Vars,
 				})
 			}
-			n.coord.SendMsg(coordinator.MsgSyncStats{
-				Stats: *stats,
+			n.coord.SendMsg(coordinator.MsgSyncBlock{
+				Stats:   *stats,
+				Batches: blockData.Rollup.Batches,
 			})
 		}
 		if n.nodeAPI != nil {
