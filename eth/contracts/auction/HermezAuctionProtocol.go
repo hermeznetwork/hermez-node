@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/hermeznetwork/tracerr"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -36,12 +37,12 @@ var HermezAuctionProtocolBin = "0x608060405234801561001057600080fd5b506143a48061
 func DeployHermezAuctionProtocol(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *HermezAuctionProtocol, error) {
 	parsed, err := abi.JSON(strings.NewReader(HermezAuctionProtocolABI))
 	if err != nil {
-		return common.Address{}, nil, nil, err
+		return common.Address{}, nil, nil, tracerr.Wrap(err)
 	}
 
 	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(HermezAuctionProtocolBin), backend)
 	if err != nil {
-		return common.Address{}, nil, nil, err
+		return common.Address{}, nil, nil, tracerr.Wrap(err)
 	}
 	return address, tx, &HermezAuctionProtocol{HermezAuctionProtocolCaller: HermezAuctionProtocolCaller{contract: contract}, HermezAuctionProtocolTransactor: HermezAuctionProtocolTransactor{contract: contract}, HermezAuctionProtocolFilterer: HermezAuctionProtocolFilterer{contract: contract}}, nil
 }
@@ -109,7 +110,7 @@ type HermezAuctionProtocolTransactorRaw struct {
 func NewHermezAuctionProtocol(address common.Address, backend bind.ContractBackend) (*HermezAuctionProtocol, error) {
 	contract, err := bindHermezAuctionProtocol(address, backend, backend, backend)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocol{HermezAuctionProtocolCaller: HermezAuctionProtocolCaller{contract: contract}, HermezAuctionProtocolTransactor: HermezAuctionProtocolTransactor{contract: contract}, HermezAuctionProtocolFilterer: HermezAuctionProtocolFilterer{contract: contract}}, nil
 }
@@ -118,7 +119,7 @@ func NewHermezAuctionProtocol(address common.Address, backend bind.ContractBacke
 func NewHermezAuctionProtocolCaller(address common.Address, caller bind.ContractCaller) (*HermezAuctionProtocolCaller, error) {
 	contract, err := bindHermezAuctionProtocol(address, caller, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolCaller{contract: contract}, nil
 }
@@ -127,7 +128,7 @@ func NewHermezAuctionProtocolCaller(address common.Address, caller bind.Contract
 func NewHermezAuctionProtocolTransactor(address common.Address, transactor bind.ContractTransactor) (*HermezAuctionProtocolTransactor, error) {
 	contract, err := bindHermezAuctionProtocol(address, nil, transactor, nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolTransactor{contract: contract}, nil
 }
@@ -136,7 +137,7 @@ func NewHermezAuctionProtocolTransactor(address common.Address, transactor bind.
 func NewHermezAuctionProtocolFilterer(address common.Address, filterer bind.ContractFilterer) (*HermezAuctionProtocolFilterer, error) {
 	contract, err := bindHermezAuctionProtocol(address, nil, nil, filterer)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolFilterer{contract: contract}, nil
 }
@@ -145,7 +146,7 @@ func NewHermezAuctionProtocolFilterer(address common.Address, filterer bind.Cont
 func bindHermezAuctionProtocol(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(HermezAuctionProtocolABI))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
@@ -197,7 +198,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) BLOCKSPERSLOT(opts *b
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "BLOCKS_PER_SLOT")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // BLOCKSPERSLOT is a free data retrieval call binding the contract method 0x2243de47.
@@ -223,7 +224,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) INITIALMINIMALBIDDING
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "INITIAL_MINIMAL_BIDDING")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // INITIALMINIMALBIDDING is a free data retrieval call binding the contract method 0xe6065914.
@@ -249,7 +250,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) BootCoordinatorURL(op
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "bootCoordinatorURL")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // BootCoordinatorURL is a free data retrieval call binding the contract method 0x72ca58a3.
@@ -275,7 +276,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) CanForge(opts *bind.C
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "canForge", forger, blockNumber)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // CanForge is a free data retrieval call binding the contract method 0x83b1f6a0.
@@ -305,7 +306,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) Coordinators(opts *bi
 	})
 	out := ret
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "coordinators", arg0)
-	return *ret, err
+	return *ret, tracerr.Wrap(err)
 }
 
 // Coordinators is a free data retrieval call binding the contract method 0xa48af096.
@@ -337,7 +338,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GenesisBlock(opts *bi
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "genesisBlock")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GenesisBlock is a free data retrieval call binding the contract method 0x4cdc9c63.
@@ -363,7 +364,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetAllocationRatio(op
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getAllocationRatio")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetAllocationRatio is a free data retrieval call binding the contract method 0xec29159b.
@@ -389,7 +390,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetBootCoordinator(op
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getBootCoordinator")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetBootCoordinator is a free data retrieval call binding the contract method 0xb5f7f2f0.
@@ -415,7 +416,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetClaimableHEZ(opts 
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getClaimableHEZ", bidder)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetClaimableHEZ is a free data retrieval call binding the contract method 0x5cca4903.
@@ -441,7 +442,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetClosedAuctionSlots
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getClosedAuctionSlots")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetClosedAuctionSlots is a free data retrieval call binding the contract method 0x4da9639d.
@@ -467,7 +468,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetCurrentSlotNumber(
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getCurrentSlotNumber")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetCurrentSlotNumber is a free data retrieval call binding the contract method 0x0c4da4f6.
@@ -493,7 +494,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetDefaultSlotSetBid(
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getDefaultSlotSetBid", slotSet)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetDefaultSlotSetBid is a free data retrieval call binding the contract method 0x564e6a71.
@@ -519,7 +520,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetDonationAddress(op
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getDonationAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetDonationAddress is a free data retrieval call binding the contract method 0x54c03ab7.
@@ -545,7 +546,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetMinBidBySlot(opts 
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getMinBidBySlot", slot)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetMinBidBySlot is a free data retrieval call binding the contract method 0x37d1bd0b.
@@ -571,7 +572,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetOpenAuctionSlots(o
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getOpenAuctionSlots")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetOpenAuctionSlots is a free data retrieval call binding the contract method 0xac4b9012.
@@ -597,7 +598,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetOutbidding(opts *b
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getOutbidding")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetOutbidding is a free data retrieval call binding the contract method 0x55b442e6.
@@ -623,7 +624,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetSlotDeadline(opts 
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getSlotDeadline")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetSlotDeadline is a free data retrieval call binding the contract method 0x13de9af2.
@@ -649,7 +650,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetSlotNumber(opts *b
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getSlotNumber", blockNumber)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetSlotNumber is a free data retrieval call binding the contract method 0xb3dc7bb1.
@@ -675,7 +676,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GetSlotSet(opts *bind
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "getSlotSet", slot)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GetSlotSet is a free data retrieval call binding the contract method 0xac5f658b.
@@ -701,7 +702,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) GovernanceAddress(opt
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "governanceAddress")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // GovernanceAddress is a free data retrieval call binding the contract method 0x795053d3.
@@ -727,7 +728,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) HermezRollup(opts *bi
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "hermezRollup")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // HermezRollup is a free data retrieval call binding the contract method 0xaebd6d98.
@@ -753,7 +754,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) PendingBalances(opts 
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "pendingBalances", arg0)
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // PendingBalances is a free data retrieval call binding the contract method 0xecdae41b.
@@ -789,7 +790,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) Slots(opts *bind.Call
 	})
 	out := ret
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "slots", arg0)
-	return *ret, err
+	return *ret, tracerr.Wrap(err)
 }
 
 // Slots is a free data retrieval call binding the contract method 0xbc415567.
@@ -827,7 +828,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) TokenHEZ(opts *bind.C
 	)
 	out := ret0
 	err := _HermezAuctionProtocol.contract.Call(opts, out, "tokenHEZ")
-	return *ret0, err
+	return *ret0, tracerr.Wrap(err)
 }
 
 // TokenHEZ is a free data retrieval call binding the contract method 0x79a135e3.
@@ -1245,7 +1246,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterHEZClaimed(op
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "HEZClaimed", ownerRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolHEZClaimedIterator{contract: _HermezAuctionProtocol.contract, event: "HEZClaimed", logs: logs, sub: sub}, nil
 }
@@ -1262,7 +1263,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchHEZClaimed(opt
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "HEZClaimed", ownerRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1272,19 +1273,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchHEZClaimed(opt
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolHEZClaimed)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "HEZClaimed", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1298,7 +1299,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchHEZClaimed(opt
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseHEZClaimed(log types.Log) (*HermezAuctionProtocolHEZClaimed, error) {
 	event := new(HermezAuctionProtocolHEZClaimed)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "HEZClaimed", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1383,7 +1384,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewAllocation
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewAllocationRatio")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewAllocationRatioIterator{contract: _HermezAuctionProtocol.contract, event: "NewAllocationRatio", logs: logs, sub: sub}, nil
 }
@@ -1395,7 +1396,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewAllocationR
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewAllocationRatio")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1405,19 +1406,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewAllocationR
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewAllocationRatio)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewAllocationRatio", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1431,7 +1432,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewAllocationR
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewAllocationRatio(log types.Log) (*HermezAuctionProtocolNewAllocationRatio, error) {
 	event := new(HermezAuctionProtocolNewAllocationRatio)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewAllocationRatio", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1528,7 +1529,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewBid(opts *
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewBid", slotRule, bidderRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewBidIterator{contract: _HermezAuctionProtocol.contract, event: "NewBid", logs: logs, sub: sub}, nil
 }
@@ -1550,7 +1551,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewBid(opts *b
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewBid", slotRule, bidderRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1560,19 +1561,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewBid(opts *b
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewBid)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewBid", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1586,7 +1587,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewBid(opts *b
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewBid(log types.Log) (*HermezAuctionProtocolNewBid, error) {
 	event := new(HermezAuctionProtocolNewBid)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewBid", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1677,7 +1678,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewBootCoordi
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewBootCoordinator", newBootCoordinatorRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewBootCoordinatorIterator{contract: _HermezAuctionProtocol.contract, event: "NewBootCoordinator", logs: logs, sub: sub}, nil
 }
@@ -1694,7 +1695,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewBootCoordin
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewBootCoordinator", newBootCoordinatorRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1704,19 +1705,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewBootCoordin
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewBootCoordinator)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewBootCoordinator", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1730,7 +1731,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewBootCoordin
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewBootCoordinator(log types.Log) (*HermezAuctionProtocolNewBootCoordinator, error) {
 	event := new(HermezAuctionProtocolNewBootCoordinator)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewBootCoordinator", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1815,7 +1816,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewClosedAuct
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewClosedAuctionSlots")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewClosedAuctionSlotsIterator{contract: _HermezAuctionProtocol.contract, event: "NewClosedAuctionSlots", logs: logs, sub: sub}, nil
 }
@@ -1827,7 +1828,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewClosedAucti
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewClosedAuctionSlots")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1837,19 +1838,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewClosedAucti
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewClosedAuctionSlots)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewClosedAuctionSlots", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1863,7 +1864,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewClosedAucti
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewClosedAuctionSlots(log types.Log) (*HermezAuctionProtocolNewClosedAuctionSlots, error) {
 	event := new(HermezAuctionProtocolNewClosedAuctionSlots)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewClosedAuctionSlots", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -1949,7 +1950,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewDefaultSlo
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewDefaultSlotSetBid")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewDefaultSlotSetBidIterator{contract: _HermezAuctionProtocol.contract, event: "NewDefaultSlotSetBid", logs: logs, sub: sub}, nil
 }
@@ -1961,7 +1962,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewDefaultSlot
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewDefaultSlotSetBid")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1971,19 +1972,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewDefaultSlot
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewDefaultSlotSetBid)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewDefaultSlotSetBid", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -1997,7 +1998,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewDefaultSlot
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewDefaultSlotSetBid(log types.Log) (*HermezAuctionProtocolNewDefaultSlotSetBid, error) {
 	event := new(HermezAuctionProtocolNewDefaultSlotSetBid)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewDefaultSlotSetBid", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2087,7 +2088,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewDonationAd
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewDonationAddress", newDonationAddressRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewDonationAddressIterator{contract: _HermezAuctionProtocol.contract, event: "NewDonationAddress", logs: logs, sub: sub}, nil
 }
@@ -2104,7 +2105,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewDonationAdd
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewDonationAddress", newDonationAddressRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2114,19 +2115,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewDonationAdd
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewDonationAddress)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewDonationAddress", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2140,7 +2141,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewDonationAdd
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewDonationAddress(log types.Log) (*HermezAuctionProtocolNewDonationAddress, error) {
 	event := new(HermezAuctionProtocolNewDonationAddress)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewDonationAddress", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2235,7 +2236,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewForge(opts
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewForge", forgerRule, slotToForgeRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewForgeIterator{contract: _HermezAuctionProtocol.contract, event: "NewForge", logs: logs, sub: sub}, nil
 }
@@ -2256,7 +2257,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewForge(opts 
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewForge", forgerRule, slotToForgeRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2266,19 +2267,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewForge(opts 
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewForge)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewForge", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2292,7 +2293,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewForge(opts 
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewForge(log types.Log) (*HermezAuctionProtocolNewForge, error) {
 	event := new(HermezAuctionProtocolNewForge)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewForge", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2395,7 +2396,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewForgeAlloc
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewForgeAllocated", bidderRule, forgerRule, slotToForgeRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewForgeAllocatedIterator{contract: _HermezAuctionProtocol.contract, event: "NewForgeAllocated", logs: logs, sub: sub}, nil
 }
@@ -2420,7 +2421,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewForgeAlloca
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewForgeAllocated", bidderRule, forgerRule, slotToForgeRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2430,19 +2431,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewForgeAlloca
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewForgeAllocated)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewForgeAllocated", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2456,7 +2457,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewForgeAlloca
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewForgeAllocated(log types.Log) (*HermezAuctionProtocolNewForgeAllocated, error) {
 	event := new(HermezAuctionProtocolNewForgeAllocated)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewForgeAllocated", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2541,7 +2542,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewOpenAuctio
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewOpenAuctionSlots")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewOpenAuctionSlotsIterator{contract: _HermezAuctionProtocol.contract, event: "NewOpenAuctionSlots", logs: logs, sub: sub}, nil
 }
@@ -2553,7 +2554,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewOpenAuction
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewOpenAuctionSlots")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2563,19 +2564,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewOpenAuction
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewOpenAuctionSlots)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewOpenAuctionSlots", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2589,7 +2590,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewOpenAuction
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewOpenAuctionSlots(log types.Log) (*HermezAuctionProtocolNewOpenAuctionSlots, error) {
 	event := new(HermezAuctionProtocolNewOpenAuctionSlots)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewOpenAuctionSlots", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2674,7 +2675,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewOutbidding
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewOutbidding")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewOutbiddingIterator{contract: _HermezAuctionProtocol.contract, event: "NewOutbidding", logs: logs, sub: sub}, nil
 }
@@ -2686,7 +2687,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewOutbidding(
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewOutbidding")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2696,19 +2697,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewOutbidding(
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewOutbidding)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewOutbidding", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2722,7 +2723,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewOutbidding(
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewOutbidding(log types.Log) (*HermezAuctionProtocolNewOutbidding, error) {
 	event := new(HermezAuctionProtocolNewOutbidding)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewOutbidding", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2807,7 +2808,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterNewSlotDeadli
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "NewSlotDeadline")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolNewSlotDeadlineIterator{contract: _HermezAuctionProtocol.contract, event: "NewSlotDeadline", logs: logs, sub: sub}, nil
 }
@@ -2819,7 +2820,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewSlotDeadlin
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "NewSlotDeadline")
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2829,19 +2830,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewSlotDeadlin
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolNewSlotDeadline)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewSlotDeadline", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -2855,7 +2856,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchNewSlotDeadlin
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseNewSlotDeadline(log types.Log) (*HermezAuctionProtocolNewSlotDeadline, error) {
 	event := new(HermezAuctionProtocolNewSlotDeadline)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "NewSlotDeadline", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }
@@ -2951,7 +2952,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) FilterSetCoordinato
 
 	logs, sub, err := _HermezAuctionProtocol.contract.FilterLogs(opts, "SetCoordinator", bidderRule, forgerRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return &HermezAuctionProtocolSetCoordinatorIterator{contract: _HermezAuctionProtocol.contract, event: "SetCoordinator", logs: logs, sub: sub}, nil
 }
@@ -2972,7 +2973,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchSetCoordinator
 
 	logs, sub, err := _HermezAuctionProtocol.contract.WatchLogs(opts, "SetCoordinator", bidderRule, forgerRule)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2982,19 +2983,19 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchSetCoordinator
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAuctionProtocolSetCoordinator)
 				if err := _HermezAuctionProtocol.contract.UnpackLog(event, "SetCoordinator", log); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return err
+					return tracerr.Wrap(err)
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return err
+				return tracerr.Wrap(err)
 			case <-quit:
 				return nil
 			}
@@ -3008,7 +3009,7 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) WatchSetCoordinator
 func (_HermezAuctionProtocol *HermezAuctionProtocolFilterer) ParseSetCoordinator(log types.Log) (*HermezAuctionProtocolSetCoordinator, error) {
 	event := new(HermezAuctionProtocolSetCoordinator)
 	if err := _HermezAuctionProtocol.contract.UnpackLog(event, "SetCoordinator", log); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return event, nil
 }

@@ -251,6 +251,7 @@ type RollupClient struct {
 	hermez      *Hermez.Hermez
 	tokenHEZ    *HEZ.HEZ
 	contractAbi abi.ABI
+	opts        *bind.CallOpts
 }
 
 // NewRollupClient creates a new RollupClient
@@ -279,6 +280,7 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 		hermez:      hermez,
 		tokenHEZ:    tokenHEZ,
 		contractAbi: contractAbi,
+		opts:        newCallOpts(),
 	}, nil
 }
 
@@ -364,7 +366,7 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToke
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			owner := c.client.account.Address
 			spender := c.address
-			nonce, err := c.tokenHEZ.Nonces(nil, owner)
+			nonce, err := c.tokenHEZ.Nonces(c.opts, owner)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
@@ -470,7 +472,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 			}
 			owner := c.client.account.Address
 			spender := c.address
-			nonce, err := c.tokenHEZ.Nonces(nil, owner)
+			nonce, err := c.tokenHEZ.Nonces(c.opts, owner)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
@@ -491,7 +493,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 // RollupRegisterTokensCount is the interface to call the smart contract function
 func (c *RollupClient) RollupRegisterTokensCount() (registerTokensCount *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		registerTokensCount, err = c.hermez.RegisterTokensCount(nil)
+		registerTokensCount, err = c.hermez.RegisterTokensCount(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -502,7 +504,7 @@ func (c *RollupClient) RollupRegisterTokensCount() (registerTokensCount *big.Int
 // RollupLastForgedBatch is the interface to call the smart contract function
 func (c *RollupClient) RollupLastForgedBatch() (lastForgedBatch int64, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_lastForgedBatch, err := c.hermez.LastForgedBatch(nil)
+		_lastForgedBatch, err := c.hermez.LastForgedBatch(c.opts)
 		lastForgedBatch = int64(_lastForgedBatch)
 		return tracerr.Wrap(err)
 	}); err != nil {
@@ -601,7 +603,7 @@ func (c *RollupClient) RollupSafeMode() (tx *types.Transaction, err error) {
 // RollupInstantWithdrawalViewer is the interface to call the smart contract function
 func (c *RollupClient) RollupInstantWithdrawalViewer(tokenAddress ethCommon.Address, amount *big.Int) (instantAllowed bool, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		instantAllowed, err = c.hermez.InstantWithdrawalViewer(nil, tokenAddress, amount)
+		instantAllowed, err = c.hermez.InstantWithdrawalViewer(c.opts, tokenAddress, amount)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return false, tracerr.Wrap(err)
@@ -613,18 +615,18 @@ func (c *RollupClient) RollupInstantWithdrawalViewer(tokenAddress ethCommon.Addr
 func (c *RollupClient) RollupConstants() (rollupConstants *common.RollupConstants, err error) {
 	rollupConstants = new(common.RollupConstants)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		absoluteMaxL1L2BatchTimeout, err := c.hermez.ABSOLUTEMAXL1L2BATCHTIMEOUT(nil)
+		absoluteMaxL1L2BatchTimeout, err := c.hermez.ABSOLUTEMAXL1L2BATCHTIMEOUT(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
 		rollupConstants.AbsoluteMaxL1L2BatchTimeout = int64(absoluteMaxL1L2BatchTimeout)
-		rollupConstants.TokenHEZ, err = c.hermez.TokenHEZ(nil)
+		rollupConstants.TokenHEZ, err = c.hermez.TokenHEZ(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
 		for i := int64(0); i < int64(common.LenVerifiers); i++ {
 			var newRollupVerifier common.RollupVerifierStruct
-			rollupVerifier, err := c.hermez.RollupVerifiers(nil, big.NewInt(i))
+			rollupVerifier, err := c.hermez.RollupVerifiers(c.opts, big.NewInt(i))
 			if err != nil {
 				return tracerr.Wrap(err)
 			}
@@ -632,15 +634,15 @@ func (c *RollupClient) RollupConstants() (rollupConstants *common.RollupConstant
 			newRollupVerifier.NLevels = rollupVerifier.NLevels.Int64()
 			rollupConstants.Verifiers = append(rollupConstants.Verifiers, newRollupVerifier)
 		}
-		rollupConstants.HermezAuctionContract, err = c.hermez.HermezAuctionContract(nil)
+		rollupConstants.HermezAuctionContract, err = c.hermez.HermezAuctionContract(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		rollupConstants.HermezGovernanceAddress, err = c.hermez.HermezGovernanceAddress(nil)
+		rollupConstants.HermezGovernanceAddress, err = c.hermez.HermezGovernanceAddress(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		rollupConstants.WithdrawDelayerContract, err = c.hermez.WithdrawDelayerContract(nil)
+		rollupConstants.WithdrawDelayerContract, err = c.hermez.WithdrawDelayerContract(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
