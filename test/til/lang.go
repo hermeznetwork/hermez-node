@@ -23,30 +23,32 @@ var setTypeLine = fmt.Errorf("setTypeLine")          //nolint:golint
 // setType defines the type of the set
 type setType string
 
-// setTypeBlockchain defines the type 'Blockchain' of the set
-var setTypeBlockchain = setType("Blockchain")
+// SetTypeBlockchain defines the type 'Blockchain' of the set
+var SetTypeBlockchain = setType("Blockchain")
 
-// setTypePoolL2 defines the type 'PoolL2' of the set
-var setTypePoolL2 = setType("PoolL2")
+// SetTypePoolL2 defines the type 'PoolL2' of the set
+var SetTypePoolL2 = setType("PoolL2")
 
-// typeNewBatch is used for testing purposes only, and represents the
+// TypeNewBatch is used for testing purposes only, and represents the
 // common.TxType of a new batch
-var typeNewBatch common.TxType = "InstrTypeNewBatch"
+var TypeNewBatch common.TxType = "InstrTypeNewBatch"
 
-// typeNewBatchL1 is used for testing purposes only, and represents the
+// TypeNewBatchL1 is used for testing purposes only, and represents the
 // common.TxType of a new batch
-var typeNewBatchL1 common.TxType = "InstrTypeNewBatchL1"
+var TypeNewBatchL1 common.TxType = "InstrTypeNewBatchL1"
 
-// typeNewBlock is used for testing purposes only, and represents the
+// TypeNewBlock is used for testing purposes only, and represents the
 // common.TxType of a new ethereum block
-var typeNewBlock common.TxType = "InstrTypeNewBlock"
+var TypeNewBlock common.TxType = "InstrTypeNewBlock"
 
-// typeAddToken is used for testing purposes only, and represents the
+// TypeAddToken is used for testing purposes only, and represents the
 // common.TxType of a new Token regsitration
 // It has 'nolint:gosec' as the string 'Token' triggers gosec as a potential leaked Token (which is not the case)
-var typeAddToken common.TxType = "InstrTypeAddToken" //nolint:gosec
+var TypeAddToken common.TxType = "InstrTypeAddToken" //nolint:gosec
 
-var txTypeCreateAccountDepositCoordinator common.TxType = "TypeCreateAccountDepositCoordinator"
+// TxTypeCreateAccountDepositCoordinator  is used for testing purposes only, and represents the
+// common.TxType of a create acount deposit made by the coordinator
+var TxTypeCreateAccountDepositCoordinator common.TxType = "TypeCreateAccountDepositCoordinator"
 
 //nolint
 const (
@@ -57,75 +59,75 @@ const (
 	IDENT // val
 )
 
-// instruction is the data structure that represents one line of code
-type instruction struct {
-	lineNum    int
-	literal    string
-	from       string
-	to         string
-	amount     *big.Int
-	loadAmount *big.Int
-	fee        uint8
-	tokenID    common.TokenID
-	typ        common.TxType // D: Deposit, T: Transfer, E: ForceExit
+// Instruction is the data structure that represents one line of code
+type Instruction struct {
+	LineNum    int
+	Literal    string
+	From       string
+	To         string
+	Amount     *big.Int
+	LoadAmount *big.Int
+	Fee        uint8
+	TokenID    common.TokenID
+	Typ        common.TxType // D: Deposit, T: Transfer, E: ForceExit
 }
 
 // parsedSet contains the full Set of Instructions representing a full code
 type parsedSet struct {
 	typ          setType
-	instructions []instruction
+	instructions []Instruction
 	users        []string
 }
 
-func (i instruction) String() string {
+func (i Instruction) String() string {
 	buf := bytes.NewBufferString("")
-	fmt.Fprintf(buf, "Type: %s, ", i.typ)
-	fmt.Fprintf(buf, "From: %s, ", i.from)
-	if i.typ == common.TxTypeTransfer ||
-		i.typ == common.TxTypeDepositTransfer ||
-		i.typ == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "To: %s, ", i.to)
+	fmt.Fprintf(buf, "Type: %s, ", i.Typ)
+	fmt.Fprintf(buf, "From: %s, ", i.From)
+	if i.Typ == common.TxTypeTransfer ||
+		i.Typ == common.TxTypeDepositTransfer ||
+		i.Typ == common.TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "To: %s, ", i.To)
 	}
 
-	if i.typ == common.TxTypeDeposit ||
-		i.typ == common.TxTypeDepositTransfer ||
-		i.typ == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "LoadAmount: %d, ", i.loadAmount)
+	if i.Typ == common.TxTypeDeposit ||
+		i.Typ == common.TxTypeDepositTransfer ||
+		i.Typ == common.TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "LoadAmount: %d, ", i.LoadAmount)
 	}
-	if i.typ != common.TxTypeDeposit {
-		fmt.Fprintf(buf, "Amount: %d, ", i.amount)
+	if i.Typ != common.TxTypeDeposit {
+		fmt.Fprintf(buf, "Amount: %d, ", i.Amount)
 	}
-	if i.typ == common.TxTypeTransfer ||
-		i.typ == common.TxTypeDepositTransfer ||
-		i.typ == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "Fee: %d, ", i.fee)
+	if i.Typ == common.TxTypeTransfer ||
+		i.Typ == common.TxTypeDepositTransfer ||
+		i.Typ == common.TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "Fee: %d, ", i.Fee)
 	}
-	fmt.Fprintf(buf, "TokenID: %d\n", i.tokenID)
+	fmt.Fprintf(buf, "TokenID: %d\n", i.TokenID)
 	return buf.String()
 }
 
 // Raw returns a string with the raw representation of the Instruction
-func (i instruction) raw() string {
+func (i Instruction) raw() string {
 	buf := bytes.NewBufferString("")
-	fmt.Fprintf(buf, "%s", i.typ)
-	fmt.Fprintf(buf, "(%d)", i.tokenID)
-	fmt.Fprintf(buf, "%s", i.from)
-	if i.typ == common.TxTypeTransfer ||
-		i.typ == common.TxTypeDepositTransfer ||
-		i.typ == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "-%s", i.to)
+	fmt.Fprintf(buf, "%s", i.Typ)
+	fmt.Fprintf(buf, "(%d)", i.TokenID)
+	fmt.Fprintf(buf, "%s", i.From)
+	if i.Typ == common.TxTypeTransfer ||
+		i.Typ == common.TxTypeDepositTransfer ||
+		i.Typ == common.TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "-%s", i.To)
 	}
 	fmt.Fprintf(buf, ":")
-	if i.typ == common.TxTypeDeposit ||
-		i.typ == common.TxTypeDepositTransfer ||
-		i.typ == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "%d", i.loadAmount)
+	if i.Typ == common.TxTypeDeposit ||
+		i.Typ == common.TxTypeDepositTransfer ||
+		i.Typ == common.TxTypeCreateAccountDepositTransfer {
+		fmt.Fprintf(buf, "%d", i.LoadAmount)
 	}
-	if i.typ != common.TxTypeDeposit {
-		fmt.Fprintf(buf, "%d", i.amount)
+	if i.Typ != common.TxTypeDeposit {
+		fmt.Fprintf(buf, "%d", i.Amount)
 	}
-	if i.typ == common.TxTypeTransfer {
-		fmt.Fprintf(buf, "(%d)", i.fee)
+	if i.Typ == common.TxTypeTransfer {
+		fmt.Fprintf(buf, "(%d)", i.Fee)
 	}
 	return buf.String()
 }
@@ -269,30 +271,30 @@ func (p *parser) scanIgnoreWhitespace() (tok token, lit string) {
 }
 
 // parseLine parses the current line
-func (p *parser) parseLine(setType setType) (*instruction, error) {
-	c := &instruction{}
+func (p *parser) parseLine(setType setType) (*Instruction, error) {
+	c := &Instruction{}
 	tok, lit := p.scanIgnoreWhitespace()
 	if tok == EOF {
 		return nil, tracerr.Wrap(errof)
 	}
-	c.literal += lit
+	c.Literal += lit
 	if lit == "/" {
 		_, _ = p.s.r.ReadString('\n')
 		return nil, commentLine
 	} else if lit == ">" {
-		if setType == setTypePoolL2 {
+		if setType == SetTypePoolL2 {
 			return c, tracerr.Wrap(fmt.Errorf("Unexpected '>' at PoolL2Txs set"))
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		if lit == "batch" {
 			_, _ = p.s.r.ReadString('\n')
-			return &instruction{typ: typeNewBatch}, newEventLine
+			return &Instruction{Typ: TypeNewBatch}, newEventLine
 		} else if lit == "batchL1" {
 			_, _ = p.s.r.ReadString('\n')
-			return &instruction{typ: typeNewBatchL1}, newEventLine
+			return &Instruction{Typ: TypeNewBatchL1}, newEventLine
 		} else if lit == "block" {
 			_, _ = p.s.r.ReadString('\n')
-			return &instruction{typ: typeNewBlock}, newEventLine
+			return &Instruction{Typ: TypeNewBlock}, newEventLine
 		} else {
 			return c, tracerr.Wrap(fmt.Errorf("Unexpected '> %s', expected '> batch' or '> block'", lit))
 		}
@@ -302,9 +304,9 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		}
 		_, lit = p.scanIgnoreWhitespace()
 		if lit == "Blockchain" {
-			return &instruction{typ: "Blockchain"}, setTypeLine
+			return &Instruction{Typ: "Blockchain"}, setTypeLine
 		} else if lit == "PoolL2" {
-			return &instruction{typ: "PoolL2"}, setTypeLine
+			return &Instruction{Typ: "PoolL2"}, setTypeLine
 		} else {
 			return c, tracerr.Wrap(fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", lit))
 		}
@@ -313,20 +315,20 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 			return c, tracerr.Wrap(err)
 		}
 		_, lit = p.scanIgnoreWhitespace()
-		c.literal += lit
+		c.Literal += lit
 		tidI, err := strconv.Atoi(lit)
 		if err != nil {
 			line, _ := p.s.r.ReadString('\n')
-			c.literal += line
+			c.Literal += line
 			return c, tracerr.Wrap(err)
 		}
-		c.tokenID = common.TokenID(tidI)
+		c.TokenID = common.TokenID(tidI)
 		if err := p.expectChar(c, ")"); err != nil {
 			return c, tracerr.Wrap(err)
 		}
-		c.typ = typeAddToken
+		c.Typ = TypeAddToken
 		line, _ := p.s.r.ReadString('\n')
-		c.literal += line
+		c.Literal += line
 		return c, newEventLine
 	}
 
@@ -336,52 +338,52 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	transferring := false
 	fee := false
 
-	if setType == setTypeBlockchain {
+	if setType == SetTypeBlockchain {
 		switch lit {
 		case "Deposit":
-			c.typ = common.TxTypeDeposit
+			c.Typ = common.TxTypeDeposit
 		case "Exit":
-			c.typ = common.TxTypeExit
+			c.Typ = common.TxTypeExit
 			fee = true
 		case "Transfer":
-			c.typ = common.TxTypeTransfer
+			c.Typ = common.TxTypeTransfer
 			transferring = true
 			fee = true
 		case "CreateAccountDeposit":
-			c.typ = common.TxTypeCreateAccountDeposit
+			c.Typ = common.TxTypeCreateAccountDeposit
 		case "CreateAccountDepositTransfer":
-			c.typ = common.TxTypeCreateAccountDepositTransfer
+			c.Typ = common.TxTypeCreateAccountDepositTransfer
 			transferring = true
 		case "CreateAccountCoordinator":
-			c.typ = txTypeCreateAccountDepositCoordinator
+			c.Typ = TxTypeCreateAccountDepositCoordinator
 			// transferring is false, as the Coordinator tx transfer will be 0
 		case "DepositTransfer":
-			c.typ = common.TxTypeDepositTransfer
+			c.Typ = common.TxTypeDepositTransfer
 			transferring = true
 		case "ForceTransfer":
-			c.typ = common.TxTypeForceTransfer
+			c.Typ = common.TxTypeForceTransfer
 			transferring = true
 		case "ForceExit":
-			c.typ = common.TxTypeForceExit
+			c.Typ = common.TxTypeForceExit
 		default:
 			return c, tracerr.Wrap(fmt.Errorf("Unexpected Blockchain tx type: %s", lit))
 		}
-	} else if setType == setTypePoolL2 {
+	} else if setType == SetTypePoolL2 {
 		switch lit {
 		case "PoolTransfer":
-			c.typ = common.TxTypeTransfer
+			c.Typ = common.TxTypeTransfer
 			transferring = true
 			fee = true
 		case "PoolTransferToEthAddr":
-			c.typ = common.TxTypeTransferToEthAddr
+			c.Typ = common.TxTypeTransferToEthAddr
 			transferring = true
 			fee = true
 		case "PoolTransferToBJJ":
-			c.typ = common.TxTypeTransferToBJJ
+			c.Typ = common.TxTypeTransferToBJJ
 			transferring = true
 			fee = true
 		case "PoolExit":
-			c.typ = common.TxTypeExit
+			c.Typ = common.TxTypeExit
 			fee = true
 		default:
 			return c, tracerr.Wrap(fmt.Errorf("Unexpected PoolL2 tx type: %s", lit))
@@ -394,90 +396,90 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 		return c, tracerr.Wrap(err)
 	}
 	_, lit = p.scanIgnoreWhitespace()
-	c.literal += lit
+	c.Literal += lit
 	tidI, err := strconv.Atoi(lit)
 	if err != nil {
 		line, _ := p.s.r.ReadString('\n')
-		c.literal += line
+		c.Literal += line
 		return c, tracerr.Wrap(err)
 	}
-	c.tokenID = common.TokenID(tidI)
+	c.TokenID = common.TokenID(tidI)
 	if err := p.expectChar(c, ")"); err != nil {
 		return c, tracerr.Wrap(err)
 	}
 	_, lit = p.scanIgnoreWhitespace()
-	c.literal += lit
-	c.from = lit
-	if c.typ == txTypeCreateAccountDepositCoordinator {
+	c.Literal += lit
+	c.From = lit
+	if c.Typ == TxTypeCreateAccountDepositCoordinator {
 		line, _ := p.s.r.ReadString('\n')
-		c.literal += line
+		c.Literal += line
 		return c, nil
 	}
 	_, lit = p.scanIgnoreWhitespace()
-	c.literal += lit
+	c.Literal += lit
 	if transferring {
 		if lit != "-" {
 			return c, tracerr.Wrap(fmt.Errorf("Expected '-', found '%s'", lit))
 		}
 		_, lit = p.scanIgnoreWhitespace()
-		c.literal += lit
-		c.to = lit
+		c.Literal += lit
+		c.To = lit
 		_, lit = p.scanIgnoreWhitespace()
-		c.literal += lit
+		c.Literal += lit
 	}
 	if lit != ":" {
 		line, _ := p.s.r.ReadString('\n')
-		c.literal += line
+		c.Literal += line
 		return c, tracerr.Wrap(fmt.Errorf("Expected ':', found '%s'", lit))
 	}
-	if c.typ == common.TxTypeDepositTransfer ||
-		c.typ == common.TxTypeCreateAccountDepositTransfer {
+	if c.Typ == common.TxTypeDepositTransfer ||
+		c.Typ == common.TxTypeCreateAccountDepositTransfer {
 		// deposit case
 		_, lit = p.scanIgnoreWhitespace()
-		c.literal += lit
+		c.Literal += lit
 		loadAmount, ok := new(big.Int).SetString(lit, 10)
 		if !ok {
 			line, _ := p.s.r.ReadString('\n')
-			c.literal += line
+			c.Literal += line
 			return c, tracerr.Wrap(fmt.Errorf("Can not parse number for LoadAmount"))
 		}
-		c.loadAmount = loadAmount
+		c.LoadAmount = loadAmount
 		if err := p.expectChar(c, ","); err != nil {
 			return c, tracerr.Wrap(err)
 		}
 	}
 	_, lit = p.scanIgnoreWhitespace()
-	c.literal += lit
+	c.Literal += lit
 	amount, ok := new(big.Int).SetString(lit, 10)
 	if !ok {
 		line, _ := p.s.r.ReadString('\n')
-		c.literal += line
+		c.Literal += line
 		return c, tracerr.Wrap(fmt.Errorf("Can not parse number for Amount: %s", lit))
 	}
-	if c.typ == common.TxTypeDeposit ||
-		c.typ == common.TxTypeCreateAccountDeposit {
-		c.loadAmount = amount
+	if c.Typ == common.TxTypeDeposit ||
+		c.Typ == common.TxTypeCreateAccountDeposit {
+		c.LoadAmount = amount
 	} else {
-		c.amount = amount
+		c.Amount = amount
 	}
 	if fee {
 		if err := p.expectChar(c, "("); err != nil {
 			return c, tracerr.Wrap(err)
 		}
 		_, lit = p.scanIgnoreWhitespace()
-		c.literal += lit
+		c.Literal += lit
 		fee, err := strconv.Atoi(lit)
 		if err != nil {
 			line, _ := p.s.r.ReadString('\n')
-			c.literal += line
+			c.Literal += line
 			return c, tracerr.Wrap(err)
 		}
 		if fee > common.MaxFeePlan-1 {
 			line, _ := p.s.r.ReadString('\n')
-			c.literal += line
+			c.Literal += line
 			return c, tracerr.Wrap(fmt.Errorf("Fee %d can not be bigger than 255", fee))
 		}
-		c.fee = uint8(fee)
+		c.Fee = uint8(fee)
 
 		if err := p.expectChar(c, ")"); err != nil {
 			return c, tracerr.Wrap(err)
@@ -490,12 +492,12 @@ func (p *parser) parseLine(setType setType) (*instruction, error) {
 	return c, nil
 }
 
-func (p *parser) expectChar(c *instruction, ch string) error {
+func (p *parser) expectChar(c *Instruction, ch string) error {
 	_, lit := p.scanIgnoreWhitespace()
-	c.literal += lit
+	c.Literal += lit
 	if lit != ch {
 		line, _ := p.s.r.ReadString('\n')
-		c.literal += line
+		c.Literal += line
 		return tracerr.Wrap(fmt.Errorf("Expected '%s', found '%s'", ch, lit))
 	}
 	return nil
@@ -518,38 +520,38 @@ func (p *parser) parse() (*parsedSet, error) {
 		}
 		if tracerr.Unwrap(err) == setTypeLine {
 			if ps.typ != "" {
-				return ps, tracerr.Wrap(fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.typ, ps.typ))
+				return ps, tracerr.Wrap(fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.Typ, ps.typ))
 			}
-			if instruction.typ == "PoolL2" {
-				ps.typ = setTypePoolL2
-			} else if instruction.typ == "Blockchain" {
-				ps.typ = setTypeBlockchain
+			if instruction.Typ == "PoolL2" {
+				ps.typ = SetTypePoolL2
+			} else if instruction.Typ == "Blockchain" {
+				ps.typ = SetTypeBlockchain
 			} else {
-				log.Fatalf("Line %d: Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", i, instruction.typ)
+				log.Fatalf("Line %d: Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", i, instruction.Typ)
 			}
 			continue
 		}
 		if tracerr.Unwrap(err) == commentLine {
 			continue
 		}
-		instruction.lineNum = i
+		instruction.LineNum = i
 		if tracerr.Unwrap(err) == newEventLine {
-			if instruction.typ == typeAddToken && instruction.tokenID == common.TokenID(0) {
+			if instruction.Typ == TypeAddToken && instruction.TokenID == common.TokenID(0) {
 				return ps, tracerr.Wrap(fmt.Errorf("Line %d: AddToken can not register TokenID 0", i))
 			}
 			ps.instructions = append(ps.instructions, *instruction)
 			continue
 		}
 		if err != nil {
-			return ps, tracerr.Wrap(fmt.Errorf("Line %d: %s, err: %s", i, instruction.literal, err.Error()))
+			return ps, tracerr.Wrap(fmt.Errorf("Line %d: %s, err: %s", i, instruction.Literal, err.Error()))
 		}
 		if ps.typ == "" {
 			return ps, tracerr.Wrap(fmt.Errorf("Line %d: Set type not defined", i))
 		}
 		ps.instructions = append(ps.instructions, *instruction)
-		users[instruction.from] = true
-		if instruction.typ == common.TxTypeTransfer || instruction.typ == common.TxTypeTransferToEthAddr || instruction.typ == common.TxTypeTransferToBJJ { // type: Transfer
-			users[instruction.to] = true
+		users[instruction.From] = true
+		if instruction.Typ == common.TxTypeTransfer || instruction.Typ == common.TxTypeTransferToEthAddr || instruction.Typ == common.TxTypeTransferToBJJ { // type: Transfer
+			users[instruction.To] = true
 		}
 	}
 	for u := range users {
