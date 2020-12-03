@@ -13,8 +13,8 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/hermeznetwork/tracerr v0.3.1-0.20201126162137-de9930d0cf29
-	github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e
-	github.com/iden3/go-merkletree v0.0.0-20201103115630-ad30c8309b44
+	github.com/iden3/go-iden3-crypto v0.0.6-0.20201203095229-821a601d2002
+	github.com/iden3/go-merkletree v0.0.0-20201203095330-4a8397a45644
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0
@@ -38,5 +38,3 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.29.1
 	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 )
-
-// replace github.com/russross/meddler => /home/dev/git/iden3/hermez/meddler

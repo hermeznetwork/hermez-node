@@ -92,10 +92,18 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			CollectedFees:      nil,
 		}, nil
 	}
+
+	if nTx > int(ptc.MaxTx) {
+		return nil, tracerr.Wrap(fmt.Errorf("L1UserTx + L1CoordinatorTx + L2Tx (%d) can not be bigger than MaxTx (%d)", nTx, ptc.MaxTx))
+	}
+	if len(l1usertxs)+len(l1coordinatortxs) > int(ptc.MaxL1Tx) {
+		return nil, tracerr.Wrap(fmt.Errorf("L1UserTx + L1CoordinatorTx (%d) can not be bigger than MaxL1Tx (%d)", len(l1usertxs)+len(l1coordinatortxs), ptc.MaxTx))
+	}
+
 	exits := make([]processedExit, nTx)
 
 	if s.typ == TypeBatchBuilder {
-		s.zki = common.NewZKInputs(uint32(nTx), ptc.MaxL1Tx, ptc.MaxTx, ptc.MaxFeeTx, ptc.NLevels, s.currentBatch.BigInt())
+		s.zki = common.NewZKInputs(ptc.MaxTx, ptc.MaxL1Tx, ptc.MaxTx, ptc.MaxFeeTx, ptc.NLevels, s.currentBatch.BigInt())
 		s.zki.OldLastIdx = s.idx.BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
 	}
@@ -146,10 +154,8 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			}
 			s.zki.Metadata.L1TxsDataAvailability = append(s.zki.Metadata.L1TxsDataAvailability, l1TxDataAvailability)
 
-			if s.i < nTx-1 {
-				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
-				s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
-			}
+			s.zki.ISOutIdx[s.i] = s.idx.BigInt()
+			s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -183,10 +189,8 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			}
 			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
 
-			if s.i < nTx-1 {
-				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
-				s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
-			}
+			s.zki.ISOutIdx[s.i] = s.idx.BigInt()
+			s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
 			s.i++
 		}
 	}
@@ -260,6 +264,15 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	}
 
 	if s.zki != nil {
+		for i := s.i - 1; i < int(ptc.MaxTx); i++ {
+			if i < int(ptc.MaxTx)-1 {
+				s.zki.ISOutIdx[i] = s.idx.BigInt()
+				s.zki.ISStateRoot[i] = s.mt.Root().BigInt()
+			}
+			if i >= s.i {
+				s.zki.TxCompressedData[i] = new(big.Int).SetBytes(common.SignatureConstantBytes)
+			}
+		}
 		// before computing the Fees txs, set the ISInitStateRootFee
 		s.zki.ISInitStateRootFee = s.mt.Root().BigInt()
 	}
@@ -297,6 +310,11 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			s.zki.ISStateRootFee[iFee] = s.mt.Root().BigInt()
 		}
 		iFee++
+	}
+	if s.zki != nil {
+		for i := len(s.accumulatedFees); i < int(ptc.MaxFeeTx)-1; i++ {
+			s.zki.ISStateRootFee[i] = s.mt.Root().BigInt()
+		}
 	}
 
 	if s.typ == TypeTxSelector {
@@ -437,7 +455,11 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		s.zki.OnChain[s.i] = big.NewInt(1)
 
 		// L1Txs
-		s.zki.LoadAmountF[s.i] = tx.LoadAmount
+		loadAmountF16, err := common.NewFloat16(tx.LoadAmount)
+		if err != nil {
+			return nil, nil, false, nil, tracerr.Wrap(err)
+		}
+		s.zki.LoadAmountF[s.i] = big.NewInt(int64(loadAmountF16))
 		s.zki.FromEthAddr[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
 		if tx.FromBJJ != nil {
 			s.zki.FromBJJCompressed[s.i] = BJJCompressedTo256BigInts(tx.FromBJJ.Compress())
@@ -587,6 +609,7 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 		// s.zki.RqTxCompressedDataV2[s.i] = // TODO
 		// s.zki.RqToEthAddr[s.i] = common.EthAddrToBigInt(tx.RqToEthAddr) // TODO
 		// s.zki.RqToBJJAy[s.i] = tx.ToBJJ.Y // TODO
+
 		signature, err := tx.Signature.Decompress()
 		if err != nil {
 			log.Error(err)
@@ -760,6 +783,18 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		log.Error(err)
 		return tracerr.Wrap(err)
 	}
+
+	if s.zki != nil {
+		// Set the State1 before updating the Sender leaf
+		s.zki.TokenID1[s.i] = accSender.TokenID.BigInt()
+		s.zki.Nonce1[s.i] = accSender.Nonce.BigInt()
+		if babyjub.PointCoordSign(accSender.PublicKey.X) {
+			s.zki.Sign1[s.i] = big.NewInt(1)
+		}
+		s.zki.Ay1[s.i] = accSender.PublicKey.Y
+		s.zki.Balance1[s.i] = accSender.Balance
+		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(accSender.EthAddr)
+	}
 	if !tx.IsL1 {
 		// increment nonce
 		accSender.Nonce++
@@ -772,10 +807,11 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
 
-		accCoord, err := s.GetAccount(coordIdxsMap[accSender.TokenID])
-		if err != nil {
-			log.Debugw("No coord Idx to receive fee", "tx", tx)
-		} else {
+		if _, ok := coordIdxsMap[accSender.TokenID]; ok {
+			accCoord, err := s.GetAccount(coordIdxsMap[accSender.TokenID])
+			if err != nil {
+				return tracerr.Wrap(fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d", accSender.TokenID, coordIdxsMap[accSender.TokenID]))
+			}
 			// accumulate the fee for the Coord account
 			accumulated := s.accumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
@@ -784,9 +820,21 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}
+		} else {
+			log.Debugw("No coord Idx to receive fee", "tx", tx)
 		}
 	} else {
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
+	}
+
+	// update sender account in localStateDB
+	pSender, err := s.UpdateAccount(tx.FromIdx, accSender)
+	if err != nil {
+		log.Error(err)
+		return tracerr.Wrap(err)
+	}
+	if s.zki != nil {
+		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(pSender.Siblings)
 	}
 
 	var accReceiver *common.Account
@@ -802,34 +850,8 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 			return tracerr.Wrap(err)
 		}
 	}
-
-	// add amount-feeAmount to the receiver
-	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
-
-	// update sender account in localStateDB
-	pSender, err := s.UpdateAccount(tx.FromIdx, accSender)
-	if err != nil {
-		log.Error(err)
-		return tracerr.Wrap(err)
-	}
 	if s.zki != nil {
-		s.zki.TokenID1[s.i] = accSender.TokenID.BigInt()
-		s.zki.Nonce1[s.i] = accSender.Nonce.BigInt()
-		if babyjub.PointCoordSign(accSender.PublicKey.X) {
-			s.zki.Sign1[s.i] = big.NewInt(1)
-		}
-		s.zki.Ay1[s.i] = accSender.PublicKey.Y
-		s.zki.Balance1[s.i] = accSender.Balance
-		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(accSender.EthAddr)
-		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(pSender.Siblings)
-	}
-
-	// update receiver account in localStateDB
-	pReceiver, err := s.UpdateAccount(auxToIdx, accReceiver)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	if s.zki != nil {
+		// Set the State2 before updating the Receiver leaf
 		s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
 		s.zki.Nonce2[s.i] = accReceiver.Nonce.BigInt()
 		if babyjub.PointCoordSign(accReceiver.PublicKey.X) {
@@ -838,6 +860,17 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		s.zki.Ay2[s.i] = accReceiver.PublicKey.Y
 		s.zki.Balance2[s.i] = accReceiver.Balance
 		s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(accReceiver.EthAddr)
+	}
+
+	// add amount-feeAmount to the receiver
+	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
+
+	// update receiver account in localStateDB
+	pReceiver, err := s.UpdateAccount(auxToIdx, accReceiver)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if s.zki != nil {
 		s.zki.Siblings2[s.i] = siblingsToZKInputFormat(pReceiver.Siblings)
 	}
 
@@ -938,10 +971,11 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
 
-		accCoord, err := s.GetAccount(coordIdxsMap[acc.TokenID])
-		if err != nil {
-			log.Debugw("No coord Idx to receive fee", "tx", tx)
-		} else {
+		if _, ok := coordIdxsMap[acc.TokenID]; ok {
+			accCoord, err := s.GetAccount(coordIdxsMap[acc.TokenID])
+			if err != nil {
+				return nil, false, tracerr.Wrap(fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d", acc.TokenID, coordIdxsMap[acc.TokenID]))
+			}
 			// accumulate the fee for the Coord account
 			accumulated := s.accumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
@@ -950,6 +984,8 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}
+		} else {
+			log.Debugw("No coord Idx to receive fee", "tx", tx)
 		}
 	} else {
 		acc.Balance = new(big.Int).Sub(acc.Balance, tx.Amount)

@@ -42,12 +42,14 @@ var TypeNewBatchL1 common.TxType = "InstrTypeNewBatchL1"
 var TypeNewBlock common.TxType = "InstrTypeNewBlock"
 
 // TypeAddToken is used for testing purposes only, and represents the
-// common.TxType of a new Token regsitration
-// It has 'nolint:gosec' as the string 'Token' triggers gosec as a potential leaked Token (which is not the case)
+// common.TxType of a new Token regsitration.
+// It has 'nolint:gosec' as the string 'Token' triggers gosec as a potential
+// leaked Token (which is not the case).
 var TypeAddToken common.TxType = "InstrTypeAddToken" //nolint:gosec
 
-// TxTypeCreateAccountDepositCoordinator  is used for testing purposes only, and represents the
-// common.TxType of a create acount deposit made by the coordinator
+// TxTypeCreateAccountDepositCoordinator  is used for testing purposes only,
+// and represents the common.TxType of a create acount deposit made by the
+// coordinator
 var TxTypeCreateAccountDepositCoordinator common.TxType = "TypeCreateAccountDepositCoordinator"
 
 //nolint

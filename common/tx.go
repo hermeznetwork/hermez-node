@@ -34,6 +34,13 @@ const (
 	TxIDLen = 12
 )
 
+var (
+	// SignatureConstantBytes contains the SignatureConstant in byte array
+	// format, which is equivalent to 3322668559 as uint32 in byte array in
+	// big endian representation.
+	SignatureConstantBytes = []byte{198, 11, 230, 15}
+)
+
 // TxID is the identifier of a Hermez network transaction
 type TxID [TxIDLen]byte
 

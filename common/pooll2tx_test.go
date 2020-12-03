@@ -38,9 +38,9 @@ func TestTxCompressedData(t *testing.T) {
 	txCompressedData, err := tx.TxCompressedData()
 	assert.Nil(t, err)
 	// test vector value generated from javascript implementation
-	expectedStr := "1766847064778421992193717128424891165872736891548909569553540449389241871"
+	expectedStr := "1766847064778421992193717128424891165872736891548909569553540445094274575"
 	assert.Equal(t, expectedStr, txCompressedData.String())
-	assert.Equal(t, "010000000000060000000500040000000000030000000000020001c60be60f", hex.EncodeToString(txCompressedData.Bytes()))
+	assert.Equal(t, "010000000000060000000500040000000000030000000000020000c60be60f", hex.EncodeToString(txCompressedData.Bytes()))
 	tx = PoolL2Tx{
 		RqFromIdx: 7,
 		RqToIdx:   8,
@@ -112,18 +112,16 @@ func TestHashToSign(t *testing.T) {
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.Nil(t, err)
 	tx := PoolL2Tx{
-		FromIdx:     2,
-		ToIdx:       3,
-		Amount:      big.NewInt(4),
-		TokenID:     5,
-		Nonce:       6,
-		ToBJJ:       sk.Public(),
-		RqToEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
-		RqToBJJ:     sk.Public(),
+		FromIdx:   2,
+		ToIdx:     3,
+		Amount:    big.NewInt(4),
+		TokenID:   5,
+		Nonce:     6,
+		ToEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 	toSign, err := tx.HashToSign()
 	assert.Nil(t, err)
-	assert.Equal(t, "13412877307445712067533842795279849753265998687662992184595695642580679868064", toSign.String())
+	assert.Equal(t, "1469900657138253851938022936440971384682713995864967090251961124784132925291", toSign.String())
 }
 
 func TestVerifyTxSignature(t *testing.T) {
@@ -142,7 +140,7 @@ func TestVerifyTxSignature(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign()
 	assert.Nil(t, err)
-	assert.Equal(t, "13412877307445712067533842795279849753265998687662992184595695642580679868064", toSign.String())
+	assert.Equal(t, "18645218094210271622244722988708640202588315450486586312909439859037906375295", toSign.String())
 
 	sig := sk.SignPoseidon(toSign)
 	tx.Signature = sig.Compress()
