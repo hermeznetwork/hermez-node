@@ -966,9 +966,10 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	// Get Coordinators
 	for _, evtSetCoordinator := range auctionEvents.SetCoordinator {
 		coordinator := common.Coordinator{
-			Bidder: evtSetCoordinator.BidderAddress,
-			Forger: evtSetCoordinator.ForgerAddress,
-			URL:    evtSetCoordinator.CoordinatorURL,
+			Bidder:      evtSetCoordinator.BidderAddress,
+			Forger:      evtSetCoordinator.ForgerAddress,
+			URL:         evtSetCoordinator.CoordinatorURL,
+			EthBlockNum: blockNum,
 		}
 		auctionData.Coordinators = append(auctionData.Coordinators, coordinator)
 	}
