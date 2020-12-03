@@ -58,6 +58,8 @@ type AuctionVariables struct {
 	DonationAddress ethCommon.Address `json:"donationAddress" meddler:"donation_address" validate:"required"`
 	// Boot Coordinator Address
 	BootCoordinator ethCommon.Address `json:"bootCoordinator" meddler:"boot_coordinator" validate:"required"`
+	// Boot Coordinator URL
+	BootCoordinatorURL string `json:"bootCoordinatorUrl" meddler:"boot_coordinator_url" validate:"required"`
 	// The minimum bid value in a series of 6 slots
 	DefaultSlotSetBid [6]*big.Int `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
 	// SlotNum at which the new default_slot_set_bid applies

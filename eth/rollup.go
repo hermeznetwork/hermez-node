@@ -59,7 +59,7 @@ type RollupEventL1UserTx struct {
 }
 
 // RollupEventL1UserTxAux is an event of the Rollup Smart Contract
-type RollupEventL1UserTxAux struct {
+type rollupEventL1UserTxAux struct {
 	ToForgeL1TxsNum uint64 // QueueIndex       *big.Int
 	Position        uint8  // TransactionIndex *big.Int
 	L1UserTx        []byte
@@ -97,10 +97,16 @@ type RollupEventWithdraw struct {
 	TxHash          ethCommon.Hash // Hash of the transaction that generated this event
 }
 
-// RollupEventUpdateBucketWithdraw is an event of the Rollup Smart Contract
-type RollupEventUpdateBucketWithdraw struct {
+type rollupEventUpdateBucketWithdrawAux struct {
 	NumBucket   uint8
 	BlockStamp  *big.Int
+	Withdrawals *big.Int
+}
+
+// RollupEventUpdateBucketWithdraw is an event of the Rollup Smart Contract
+type RollupEventUpdateBucketWithdraw struct {
+	NumBucket   int
+	BlockStamp  int64 // blockNum
 	Withdrawals *big.Int
 }
 
@@ -109,9 +115,22 @@ type RollupEventUpdateWithdrawalDelay struct {
 	NewWithdrawalDelay uint64
 }
 
+// RollupUpdateBucketsParameters are the bucket parameters used in an update
+type RollupUpdateBucketsParameters struct {
+	CeilUSD             *big.Int
+	Withdrawals         *big.Int
+	BlockWithdrawalRate *big.Int
+	MaxWithdrawals      *big.Int
+}
+
+type rollupEventUpdateBucketsParametersAux struct {
+	ArrayBuckets [common.RollupConstNumBuckets][4]*big.Int
+}
+
 // RollupEventUpdateBucketsParameters is an event of the Rollup Smart Contract
 type RollupEventUpdateBucketsParameters struct {
-	ArrayBuckets [common.RollupConstNumBuckets][4]*big.Int
+	// ArrayBuckets [common.RollupConstNumBuckets][4]*big.Int
+	ArrayBuckets [common.RollupConstNumBuckets]RollupUpdateBucketsParameters
 }
 
 // RollupEventUpdateTokenExchange is an event of the Rollup Smart Contract
@@ -170,7 +189,7 @@ type RollupForgeBatchArgs struct {
 }
 
 // RollupForgeBatchArgsAux are the arguments to the ForgeBatch function in the Rollup Smart Contract
-type RollupForgeBatchArgsAux struct {
+type rollupForgeBatchArgsAux struct {
 	NewLastIdx             *big.Int
 	NewStRoot              *big.Int
 	NewExitRoot            *big.Int
@@ -519,11 +538,20 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *typ
 }
 
 // RollupUpdateBucketsParameters is the interface to call the smart contract function
-func (c *RollupClient) RollupUpdateBucketsParameters(arrayBuckets [common.RollupConstNumBuckets][4]*big.Int) (tx *types.Transaction, err error) {
+func (c *RollupClient) RollupUpdateBucketsParameters(
+	arrayBuckets [common.RollupConstNumBuckets]RollupUpdateBucketsParameters,
+) (tx *types.Transaction, err error) {
+	params := [common.RollupConstNumBuckets][4]*big.Int{}
+	for i, bucket := range arrayBuckets {
+		params[i][0] = bucket.CeilUSD
+		params[i][1] = bucket.Withdrawals
+		params[i][2] = bucket.BlockWithdrawalRate
+		params[i][3] = bucket.MaxWithdrawals
+	}
 	if tx, err = c.client.CallAuth(
-		12500000,
+		12500000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			return c.hermez.UpdateBucketsParameters(auth, arrayBuckets)
+			return c.hermez.UpdateBucketsParameters(auth, params)
 		},
 	); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("Failed update Buckets Parameters: %w", err))
@@ -545,11 +573,11 @@ func (c *RollupClient) RollupUpdateTokenExchange(addressArray []ethCommon.Addres
 }
 
 // RollupUpdateWithdrawalDelay is the interface to call the smart contract function
-func (c *RollupClient) RollupUpdateWithdrawalDelay(newWithdrawalDelay uint64) (tx *types.Transaction, err error) {
+func (c *RollupClient) RollupUpdateWithdrawalDelay(newWithdrawalDelay int64) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			return c.hermez.UpdateWithdrawalDelay(auth, newWithdrawalDelay)
+			return c.hermez.UpdateWithdrawalDelay(auth, uint64(newWithdrawalDelay))
 		},
 	); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("Failed update WithdrawalDelay: %w", err))
@@ -662,7 +690,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 		}
 		switch vLog.Topics[0] {
 		case logHermezL1UserTxEvent:
-			var L1UserTxAux RollupEventL1UserTxAux
+			var L1UserTxAux rollupEventL1UserTxAux
 			var L1UserTx RollupEventL1UserTx
 			err := c.contractAbi.Unpack(&L1UserTxAux, "L1UserTxEvent", vLog.Data)
 			if err != nil {
@@ -726,13 +754,15 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			withdraw.TxHash = vLog.TxHash
 			rollupEvents.Withdraw = append(rollupEvents.Withdraw, withdraw)
 		case logHermezUpdateBucketWithdraw:
+			var updateBucketWithdrawAux rollupEventUpdateBucketWithdrawAux
 			var updateBucketWithdraw RollupEventUpdateBucketWithdraw
-			err := c.contractAbi.Unpack(&updateBucketWithdraw, "UpdateBucketWithdraw", vLog.Data)
+			err := c.contractAbi.Unpack(&updateBucketWithdrawAux, "UpdateBucketWithdraw", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
-			updateBucketWithdraw.NumBucket = uint8(new(big.Int).SetBytes(vLog.Topics[1][:]).Int64())
-			updateBucketWithdraw.BlockStamp = new(big.Int).SetBytes(vLog.Topics[2][:])
+			updateBucketWithdraw.Withdrawals = updateBucketWithdrawAux.Withdrawals
+			updateBucketWithdraw.NumBucket = int(new(big.Int).SetBytes(vLog.Topics[1][:]).Int64())
+			updateBucketWithdraw.BlockStamp = new(big.Int).SetBytes(vLog.Topics[2][:]).Int64()
 			rollupEvents.UpdateBucketWithdraw = append(rollupEvents.UpdateBucketWithdraw, updateBucketWithdraw)
 
 		case logHermezUpdateWithdrawalDelay:
@@ -743,10 +773,17 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 			}
 			rollupEvents.UpdateWithdrawalDelay = append(rollupEvents.UpdateWithdrawalDelay, withdrawalDelay)
 		case logHermezUpdateBucketsParameters:
+			var bucketsParametersAux rollupEventUpdateBucketsParametersAux
 			var bucketsParameters RollupEventUpdateBucketsParameters
-			err := c.contractAbi.Unpack(&bucketsParameters, "UpdateBucketsParameters", vLog.Data)
+			err := c.contractAbi.Unpack(&bucketsParametersAux, "UpdateBucketsParameters", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
+			}
+			for i, bucket := range bucketsParametersAux.ArrayBuckets {
+				bucketsParameters.ArrayBuckets[i].CeilUSD = bucket[0]
+				bucketsParameters.ArrayBuckets[i].Withdrawals = bucket[1]
+				bucketsParameters.ArrayBuckets[i].BlockWithdrawalRate = bucket[2]
+				bucketsParameters.ArrayBuckets[i].MaxWithdrawals = bucket[3]
 			}
 			rollupEvents.UpdateBucketsParameters = append(rollupEvents.UpdateBucketsParameters, bucketsParameters)
 		case logHermezUpdateTokenExchange:
@@ -766,7 +803,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the
 // Rollup Smart Contract in the given transaction, and the sender address.
-func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, numL1TxUser uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error) {
+func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, l1UserTxsLen uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error) {
 	tx, _, err := c.client.client.TransactionByHash(context.Background(), ethTxHash)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
@@ -785,7 +822,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, numL1TxUse
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
-	var aux RollupForgeBatchArgsAux
+	var aux rollupForgeBatchArgsAux
 	if err := method.Inputs.Unpack(&aux, txData[4:]); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
@@ -809,15 +846,15 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, numL1TxUse
 	}
 	nLevels := rollupConsts.Verifiers[rollupForgeBatchArgs.VerifierIdx].NLevels
 	lenL1L2TxsBytes := int((nLevels/8)*2 + 2 + 1)
-	numBytesL1TxUser := int(numL1TxUser) * lenL1L2TxsBytes
+	numBytesL1TxUser := int(l1UserTxsLen) * lenL1L2TxsBytes
 	numTxsL1Coord := len(aux.EncodedL1CoordinatorTx) / common.L1CoordinatorTxBytesLen
 	numBytesL1TxCoord := numTxsL1Coord * lenL1L2TxsBytes
 	numBeginL2Tx := numBytesL1TxCoord + numBytesL1TxUser
 	l1UserTxsData := []byte{}
-	if numL1TxUser > 0 {
+	if l1UserTxsLen > 0 {
 		l1UserTxsData = aux.L1L2TxsData[:numBytesL1TxUser]
 	}
-	for i := 0; i < int(numL1TxUser); i++ {
+	for i := 0; i < int(l1UserTxsLen); i++ {
 		l1Tx, err := common.L1TxFromDataAvailability(l1UserTxsData[i*lenL1L2TxsBytes:(i+1)*lenL1L2TxsBytes], uint32(nLevels))
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)

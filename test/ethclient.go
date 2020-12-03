@@ -311,8 +311,9 @@ func NewClientSetupExample() *ClientSetup {
 		HermezRollup:          ethCommon.HexToAddress("0x474B6e29852257491cf283EfB1A9C61eBFe48369"),
 	}
 	auctionVariables := &common.AuctionVariables{
-		DonationAddress: ethCommon.HexToAddress("0x61Ed87CF0A1496b49A420DA6D84B58196b98f2e7"),
-		BootCoordinator: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		DonationAddress:    ethCommon.HexToAddress("0x61Ed87CF0A1496b49A420DA6D84B58196b98f2e7"),
+		BootCoordinator:    ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		BootCoordinatorURL: "https://boot.coordinator.com",
 		DefaultSlotSetBid: [6]*big.Int{
 			big.NewInt(1000), big.NewInt(1100), big.NewInt(1200),
 			big.NewInt(1300), big.NewInt(1400), big.NewInt(1500)},
@@ -940,8 +941,9 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 	ethTx := r.addTransaction(c.newTransaction("forgebatch", args))
 	c.forgeBatchArgsPending[ethTx.Hash()] = &batch{*args, *c.addr}
 	r.Events.ForgeBatch = append(r.Events.ForgeBatch, eth.RollupEventForgeBatch{
-		BatchNum:  int64(len(r.State.ExitRoots)) - 1,
-		EthTxHash: ethTx.Hash(),
+		BatchNum:     int64(len(r.State.ExitRoots)) - 1,
+		EthTxHash:    ethTx.Hash(),
+		L1UserTxsLen: uint16(len(args.L1UserTxs)),
 	})
 
 	return ethTx, nil
@@ -1059,7 +1061,7 @@ func (c *Client) RollupEventsByBlock(blockNum int64) (*eth.RollupEvents, *ethCom
 }
 
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the Rollup Smart Contract in the given transaction
-func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, numL1TxUser uint16) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
+func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, l1UserTxsLen uint16) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -1518,8 +1520,8 @@ func (c *Client) WDelayerGetHermezGovernanceAddress() (*ethCommon.Address, error
 	return nil, tracerr.Wrap(errTODO)
 }
 
-// WDelayerSetHermezGovernanceAddress is the interface to call the smart contract function
-func (c *Client) WDelayerSetHermezGovernanceAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+// WDelayerTransferGovernance is the interface to call the smart contract function
+func (c *Client) WDelayerTransferGovernance(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1532,17 +1534,8 @@ func (c *Client) WDelayerSetHermezGovernanceAddress(newAddress ethCommon.Address
 	return nil, tracerr.Wrap(errTODO)
 }
 
-// WDelayerGetHermezKeeperAddress is the interface to call the smart contract function
-func (c *Client) WDelayerGetHermezKeeperAddress() (*ethCommon.Address, error) {
-	c.rw.RLock()
-	defer c.rw.RUnlock()
-
-	log.Error("TODO")
-	return nil, tracerr.Wrap(errTODO)
-}
-
-// WDelayerSetHermezKeeperAddress is the interface to call the smart contract function
-func (c *Client) WDelayerSetHermezKeeperAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+// WDelayerClaimGovernance is the interface to call the smart contract function
+func (c *Client) WDelayerClaimGovernance() (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1555,8 +1548,8 @@ func (c *Client) WDelayerSetHermezKeeperAddress(newAddress ethCommon.Address) (t
 	return nil, tracerr.Wrap(errTODO)
 }
 
-// WDelayerGetWhiteHackGroupAddress is the interface to call the smart contract function
-func (c *Client) WDelayerGetWhiteHackGroupAddress() (*ethCommon.Address, error) {
+// WDelayerGetEmergencyCouncil is the interface to call the smart contract function
+func (c *Client) WDelayerGetEmergencyCouncil() (*ethCommon.Address, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -1564,8 +1557,22 @@ func (c *Client) WDelayerGetWhiteHackGroupAddress() (*ethCommon.Address, error) 
 	return nil, tracerr.Wrap(errTODO)
 }
 
-// WDelayerSetWhiteHackGroupAddress is the interface to call the smart contract function
-func (c *Client) WDelayerSetWhiteHackGroupAddress(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+// WDelayerTransferEmergencyCouncil is the interface to call the smart contract function
+func (c *Client) WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	cpy := c.nextBlock().copy()
+	defer func() { c.revertIfErr(err, cpy) }()
+	if c.addr == nil {
+		return nil, tracerr.Wrap(eth.ErrAccountNil)
+	}
+
+	log.Error("TODO")
+	return nil, tracerr.Wrap(errTODO)
+}
+
+// WDelayerClaimEmergencyCouncil is the interface to call the smart contract function
+func (c *Client) WDelayerClaimEmergencyCouncil() (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()

@@ -96,6 +96,7 @@ func TestL1TxFromDataAvailability(t *testing.T) {
 	txCompressedData, err := tx.BytesDataAvailability(32)
 	assert.Nil(t, err)
 	l1tx, err := L1TxFromDataAvailability(txCompressedData, 32)
+	require.NoError(t, err)
 	assert.Equal(t, tx.FromIdx, l1tx.FromIdx)
 	assert.Equal(t, tx.ToIdx, l1tx.ToIdx)
 
@@ -107,6 +108,7 @@ func TestL1TxFromDataAvailability(t *testing.T) {
 	txCompressedData, err = tx.BytesDataAvailability(32)
 	assert.Nil(t, err)
 	l1tx, err = L1TxFromDataAvailability(txCompressedData, 32)
+	require.NoError(t, err)
 	assert.Equal(t, tx.FromIdx, l1tx.FromIdx)
 	assert.Equal(t, tx.ToIdx, l1tx.ToIdx)
 	assert.Equal(t, tx.EffectiveAmount, l1tx.EffectiveAmount)

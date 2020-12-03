@@ -736,7 +736,8 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		position := 0
 
 		// Get the input for each Tx
-		forgeBatchArgs, sender, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash)
+		forgeBatchArgs, sender, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash,
+			evtForgeBatch.L1UserTxsLen)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -1074,16 +1075,12 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 		s.vars.WDelayer.WithdrawalDelay = evt.WithdrawalDelay
 		varsUpdate = true
 	}
-	for _, evt := range wDelayerEvents.NewHermezKeeperAddress {
-		s.vars.WDelayer.HermezKeeperAddress = evt.NewHermezKeeperAddress
+	for _, evt := range wDelayerEvents.NewEmergencyCouncil {
+		s.vars.WDelayer.EmergencyCouncilAddress = evt.NewEmergencyCouncil
 		varsUpdate = true
 	}
-	for _, evt := range wDelayerEvents.NewWhiteHackGroupAddress {
-		s.vars.WDelayer.WhiteHackGroupAddress = evt.NewWhiteHackGroupAddress
-		varsUpdate = true
-	}
-	for _, evt := range wDelayerEvents.NewHermezGovernanceDAOAddress {
-		s.vars.WDelayer.HermezGovernanceDAOAddress = evt.NewHermezGovernanceDAOAddress
+	for _, evt := range wDelayerEvents.NewHermezGovernanceAddress {
+		s.vars.WDelayer.HermezGovernanceAddress = evt.NewHermezGovernanceAddress
 		varsUpdate = true
 	}
 
