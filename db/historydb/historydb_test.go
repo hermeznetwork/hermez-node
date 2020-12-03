@@ -598,7 +598,7 @@ func TestExitTree(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestGetL1UserTxs(t *testing.T) {
+func TestGetUnforgedL1UserTxs(t *testing.T) {
 	test.WipeDB(historyDB.DB())
 
 	set := `
@@ -629,13 +629,13 @@ func TestGetL1UserTxs(t *testing.T) {
 		require.Nil(t, err)
 	}
 
-	l1UserTxs, err := historyDB.GetL1UserTxs(toForgeL1TxsNum)
+	l1UserTxs, err := historyDB.GetUnforgedL1UserTxs(toForgeL1TxsNum)
 	require.Nil(t, err)
 	assert.Equal(t, 5, len(l1UserTxs))
 	assert.Equal(t, blocks[0].Rollup.L1UserTxs, l1UserTxs)
 
 	// No l1UserTxs for this toForgeL1TxsNum
-	l1UserTxs, err = historyDB.GetL1UserTxs(2)
+	l1UserTxs, err = historyDB.GetUnforgedL1UserTxs(2)
 	require.Nil(t, err)
 	assert.Equal(t, 0, len(l1UserTxs))
 }
@@ -728,6 +728,13 @@ func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
 		err = historyDB.AddBlockSCData(&blocks[i])
 		require.Nil(t, err)
 	}
+	// Add second batch to trigger the update of the batch_num,
+	// while avoiding the implicit call of setL1UserTxEffectiveAmounts
+	err = historyDB.addBlock(historyDB.db, &blocks[1].Block)
+	assert.NoError(t, err)
+	err = historyDB.addBatch(historyDB.db, &blocks[1].Rollup.Batches[0].Batch)
+	assert.NoError(t, err)
+	require.Nil(t, err)
 
 	// Set the Effective{Amount,LoadAmount} of the L1UserTxs that are forged in the second block
 	l1Txs := blocks[1].Rollup.Batches[0].L1UserTxs
@@ -741,7 +748,8 @@ func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
 
 	dbL1Txs, err := historyDB.GetAllL1UserTxs()
 	require.NoError(t, err)
-	for _, tx := range dbL1Txs {
+	for i, tx := range dbL1Txs {
+		log.Infof("%d %v %v", i, tx.EffectiveAmount, tx.EffectiveLoadAmount)
 		assert.NotNil(t, tx.EffectiveAmount)
 		assert.NotNil(t, tx.EffectiveLoadAmount)
 		switch tx.TxID {

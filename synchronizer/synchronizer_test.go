@@ -101,6 +101,8 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 				break
 			}
 		}
+		tx.EffectiveAmount = tx.Amount
+		tx.EffectiveLoadAmount = tx.LoadAmount
 		assert.Equal(t, &tx, dbTx) //nolint:gosec
 	}
 
@@ -457,7 +459,6 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, int64(2), stats.Sync.LastBlock.Num)
 
 	checkSyncBlock(t, s, 2, &blocks[0], syncBlock)
-
 	// Block 3
 
 	syncBlock, discards, err = s.Sync2(ctx, nil)

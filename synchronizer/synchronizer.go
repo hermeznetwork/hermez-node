@@ -750,7 +750,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			// that stateDB can process them.
 
 			// First try to find them in HistoryDB.
-			l1UserTxs, err = s.historyDB.GetL1UserTxs(nextForgeL1TxsNum)
+			l1UserTxs, err = s.historyDB.GetUnforgedL1UserTxs(nextForgeL1TxsNum)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}

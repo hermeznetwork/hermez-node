@@ -795,7 +795,7 @@ paths:
           description: Only include slots with `slotNum >= minSlotNum`. By default, `minSlotNum = 0`.
           schema:
             $ref: '#/components/schemas/SlotNum'
-        - name: maxSlothNum
+        - name: maxSlotNum
           in: query
           required: false
           description: Only include slots with `slotNum <= maxSlotNum`.
