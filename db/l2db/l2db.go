@@ -177,6 +177,9 @@ func (l2db *L2DB) GetPendingTxs() ([]common.PoolL2Tx, error) {
 // StartForging updates the state of the transactions that will begin the forging process.
 // The state of the txs referenced by txIDs will be changed from Pending -> Forging
 func (l2db *L2DB) StartForging(txIDs []common.TxID, batchNum common.BatchNum) error {
+	if len(txIDs) == 0 {
+		return nil
+	}
 	query, args, err := sqlx.In(
 		`UPDATE tx_pool
 		SET state = ?, batch_num = ?
@@ -197,6 +200,9 @@ func (l2db *L2DB) StartForging(txIDs []common.TxID, batchNum common.BatchNum) er
 // DoneForging updates the state of the transactions that have been forged
 // so the state of the txs referenced by txIDs will be changed from Forging -> Forged
 func (l2db *L2DB) DoneForging(txIDs []common.TxID, batchNum common.BatchNum) error {
+	if len(txIDs) == 0 {
+		return nil
+	}
 	query, args, err := sqlx.In(
 		`UPDATE tx_pool
 		SET state = ?, batch_num = ?
@@ -217,6 +223,9 @@ func (l2db *L2DB) DoneForging(txIDs []common.TxID, batchNum common.BatchNum) err
 // InvalidateTxs updates the state of the transactions that are invalid.
 // The state of the txs referenced by txIDs will be changed from * -> Invalid
 func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) error {
+	if len(txIDs) == 0 {
+		return nil
+	}
 	query, args, err := sqlx.In(
 		`UPDATE tx_pool
 		SET state = ?, batch_num = ?
@@ -236,6 +245,9 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 // CheckNonces invalidate txs with nonces that are smaller or equal than their respective accounts nonces.
 // The state of the affected txs will be changed from Pending -> Invalid
 func (l2db *L2DB) CheckNonces(updatedAccounts []common.Account, batchNum common.BatchNum) (err error) {
+	if len(updatedAccounts) == 0 {
+		return nil
+	}
 	txn, err := l2db.db.Beginx()
 	if err != nil {
 		return tracerr.Wrap(err)

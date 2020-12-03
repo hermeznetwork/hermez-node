@@ -152,6 +152,17 @@ func (a *AuctionBlock) forge(forger ethCommon.Address) error {
 		slotState = eth.NewSlotState()
 		a.State.Slots[slotToForge] = slotState
 	}
+
+	if !slotState.ForgerCommitment {
+		// Get the relativeBlock to check if the slotDeadline has been exceeded
+		relativeBlock := a.Eth.BlockNum - (a.Constants.GenesisBlockNum +
+			(slotToForge * int64(a.Constants.BlocksPerSlot)))
+
+		if relativeBlock < int64(a.Vars.SlotDeadline) {
+			slotState.ForgerCommitment = true
+		}
+	}
+
 	slotState.Fulfilled = true
 
 	a.Events.NewForge = append(a.Events.NewForge, eth.AuctionEventNewForge{
@@ -185,10 +196,9 @@ func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool,
 		minBid = slotState.ClosedMinBid
 	}
 
-	if !slotState.Fulfilled && (relativeBlock >= int64(a.Vars.SlotDeadline)) {
+	if !slotState.ForgerCommitment && (relativeBlock >= int64(a.Vars.SlotDeadline)) {
 		// if the relative block has exceeded the slotDeadline and no batch has been forged, anyone can forge
 		return true, nil
-		// TODO, find the forger set by the Bidder
 	} else if coord, ok := a.State.Coordinators[slotState.Bidder]; ok &&
 		coord.Forger == forger && slotState.BidAmount.Cmp(minBid) >= 0 {
 		// if forger bidAmount has exceeded the minBid it can forge
@@ -208,6 +218,7 @@ type EthereumBlock struct {
 	Hash       ethCommon.Hash
 	ParentHash ethCommon.Hash
 	Tokens     map[ethCommon.Address]eth.ERC20Consts
+	Nonce      uint64
 	// state      ethState
 }
 
@@ -567,6 +578,16 @@ func (c *Client) CtlLastBlock() *common.Block {
 	}
 }
 
+// CtlLastForgedBatch returns the last batchNum without checks
+func (c *Client) CtlLastForgedBatch() int64 {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	currentBlock := c.currentBlock()
+	e := currentBlock.Rollup
+	return int64(len(e.State.ExitRoots)) - 1
+}
+
 // EthLastBlock returns the last blockNum
 func (c *Client) EthLastBlock() (int64, error) {
 	c.rw.RLock()
@@ -759,7 +780,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 	r.Events.L1UserTx = append(r.Events.L1UserTx, eth.RollupEventL1UserTx{
 		L1UserTx: *l1Tx,
 	})
-	return r.addTransaction(newTransaction("l1UserTxERC20ETH", l1Tx)), nil
+	return r.addTransaction(c.newTransaction("l1UserTxERC20ETH", l1Tx)), nil
 }
 
 // RollupL1UserTxERC777 is the interface to call the smart contract function
@@ -817,7 +838,7 @@ func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenI
 		Siblings        []*big.Int
 		InstantWithdraw bool
 	}
-	tx = r.addTransaction(newTransaction("withdrawMerkleProof", data{
+	tx = r.addTransaction(c.newTransaction("withdrawMerkleProof", data{
 		BabyPubKey:      babyPubKey,
 		TokenID:         tokenID,
 		NumExitRoot:     numExitRoot,
@@ -845,12 +866,15 @@ type transactionData struct {
 	Value interface{}
 }
 
-func newTransaction(name string, value interface{}) *types.Transaction {
+func (c *Client) newTransaction(name string, value interface{}) *types.Transaction {
+	eth := c.nextBlock().Eth
+	nonce := eth.Nonce
+	eth.Nonce++
 	data, err := json.Marshal(transactionData{name, value})
 	if err != nil {
 		panic(err)
 	}
-	return types.NewTransaction(0, ethCommon.Address{}, nil, 0, nil,
+	return types.NewTransaction(nonce, ethCommon.Address{}, nil, 0, nil,
 		data)
 }
 
@@ -870,7 +894,7 @@ func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs) (tx *types.Tra
 		return nil, tracerr.Wrap(err)
 	}
 	if !ok {
-		return nil, tracerr.Wrap(fmt.Errorf("incorrect slot"))
+		return nil, tracerr.Wrap(fmt.Errorf(common.AuctionErrMsgCannotForge))
 	}
 
 	// TODO: Verify proof
@@ -915,7 +939,7 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 			r.State.MapL1TxQueue[r.State.LastToForgeL1TxsNum] = eth.NewQueueStruct()
 		}
 	}
-	ethTx := r.addTransaction(newTransaction("forgebatch", args))
+	ethTx := r.addTransaction(c.newTransaction("forgebatch", args))
 	c.forgeBatchArgsPending[ethTx.Hash()] = &batch{*args, *c.addr}
 	r.Events.ForgeBatch = append(r.Events.ForgeBatch, eth.RollupEventForgeBatch{
 		BatchNum:  int64(len(r.State.ExitRoots)) - 1,
@@ -955,7 +979,7 @@ func (c *Client) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big
 	r.State.TokenList = append(r.State.TokenList, tokenAddress)
 	r.Events.AddToken = append(r.Events.AddToken, eth.RollupEventAddToken{TokenAddress: tokenAddress,
 		TokenID: uint32(len(r.State.TokenList) - 1)})
-	return r.addTransaction(newTransaction("addtoken", tokenAddress)), nil
+	return r.addTransaction(c.newTransaction("addtoken", tokenAddress)), nil
 }
 
 // RollupGetCurrentTokens is the interface to call the smart contract function
@@ -983,7 +1007,7 @@ func (c *Client) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (tx 
 	r.Events.UpdateForgeL1L2BatchTimeout = append(r.Events.UpdateForgeL1L2BatchTimeout,
 		eth.RollupEventUpdateForgeL1L2BatchTimeout{NewForgeL1L2BatchTimeout: newForgeL1Timeout})
 
-	return r.addTransaction(newTransaction("updateForgeL1L2BatchTimeout", newForgeL1Timeout)), nil
+	return r.addTransaction(c.newTransaction("updateForgeL1L2BatchTimeout", newForgeL1Timeout)), nil
 }
 
 // RollupUpdateFeeAddToken is the interface to call the smart contract function
@@ -1091,7 +1115,7 @@ func (c *Client) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (tx *typ
 	a.Events.NewOpenAuctionSlots = append(a.Events.NewOpenAuctionSlots,
 		eth.AuctionEventNewOpenAuctionSlots{NewOpenAuctionSlots: newOpenAuctionSlots})
 
-	return a.addTransaction(newTransaction("setOpenAuctionSlots", newOpenAuctionSlots)), nil
+	return a.addTransaction(c.newTransaction("setOpenAuctionSlots", newOpenAuctionSlots)), nil
 }
 
 // AuctionGetOpenAuctionSlots is the interface to call the smart contract function
@@ -1264,7 +1288,7 @@ func (c *Client) AuctionSetCoordinator(forger ethCommon.Address, URL string) (tx
 		ForgerAddress ethCommon.Address
 		URL           string
 	}
-	return a.addTransaction(newTransaction("registercoordinator", data{*c.addr, forger, URL})), nil
+	return a.addTransaction(c.newTransaction("registercoordinator", data{*c.addr, forger, URL})), nil
 }
 
 // AuctionIsRegisteredCoordinator is the interface to call the smart contract function
@@ -1397,7 +1421,7 @@ func (c *Client) AuctionBid(amount *big.Int, slot int64, bidAmount *big.Int,
 		BidAmount *big.Int
 		Bidder    ethCommon.Address
 	}
-	return a.addTransaction(newTransaction("bid", data{slot, bidAmount, *c.addr})), nil
+	return a.addTransaction(c.newTransaction("bid", data{slot, bidAmount, *c.addr})), nil
 }
 
 // AuctionMultiBid is the interface to call the smart contract function.  This
@@ -1613,7 +1637,7 @@ func (c *Client) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (tx *t
 	w.Events.NewWithdrawalDelay = append(w.Events.NewWithdrawalDelay,
 		eth.WDelayerEventNewWithdrawalDelay{WithdrawalDelay: newWithdrawalDelay})
 
-	return w.addTransaction(newTransaction("changeWithdrawalDelay", newWithdrawalDelay)), nil
+	return w.addTransaction(c.newTransaction("changeWithdrawalDelay", newWithdrawalDelay)), nil
 }
 
 // WDelayerDepositInfo is the interface to call the smart contract function

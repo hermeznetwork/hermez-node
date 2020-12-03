@@ -6,6 +6,12 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
+const (
+	// AuctionErrMsgCannotForge is the message returned in forge with the
+	// address cannot forge
+	AuctionErrMsgCannotForge = "HermezAuctionProtocol::forge: CANNOT_FORGE"
+)
+
 // AuctionConstants are the constants of the Rollup Smart Contract
 type AuctionConstants struct {
 	// Blocks per slot
