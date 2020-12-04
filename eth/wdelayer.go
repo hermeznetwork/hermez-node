@@ -128,6 +128,7 @@ type WDelayerClient struct {
 	address     ethCommon.Address
 	wdelayer    *WithdrawalDelayer.WithdrawalDelayer
 	contractAbi abi.ABI
+	opts        *bind.CallOpts
 }
 
 // NewWDelayerClient creates a new WDelayerClient
@@ -145,6 +146,7 @@ func NewWDelayerClient(client *EthereumClient, address ethCommon.Address) (*WDel
 		address:     address,
 		wdelayer:    wdelayer,
 		contractAbi: contractAbi,
+		opts:        newCallOpts(),
 	}, nil
 }
 
@@ -152,7 +154,7 @@ func NewWDelayerClient(client *EthereumClient, address ethCommon.Address) (*WDel
 func (c *WDelayerClient) WDelayerGetHermezGovernanceAddress() (hermezGovernanceAddress *ethCommon.Address, err error) {
 	var _hermezGovernanceAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_hermezGovernanceAddress, err = c.wdelayer.GetHermezGovernanceAddress(nil)
+		_hermezGovernanceAddress, err = c.wdelayer.GetHermezGovernanceAddress(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -190,7 +192,7 @@ func (c *WDelayerClient) WDelayerClaimGovernance() (tx *types.Transaction, err e
 func (c *WDelayerClient) WDelayerGetEmergencyCouncil() (emergencyCouncilAddress *ethCommon.Address, err error) {
 	var _emergencyCouncilAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_emergencyCouncilAddress, err = c.wdelayer.GetEmergencyCouncil(nil)
+		_emergencyCouncilAddress, err = c.wdelayer.GetEmergencyCouncil(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -227,7 +229,7 @@ func (c *WDelayerClient) WDelayerClaimEmergencyCouncil() (tx *types.Transaction,
 // WDelayerIsEmergencyMode is the interface to call the smart contract function
 func (c *WDelayerClient) WDelayerIsEmergencyMode() (ermergencyMode bool, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		ermergencyMode, err = c.wdelayer.IsEmergencyMode(nil)
+		ermergencyMode, err = c.wdelayer.IsEmergencyMode(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return false, tracerr.Wrap(err)
@@ -238,7 +240,7 @@ func (c *WDelayerClient) WDelayerIsEmergencyMode() (ermergencyMode bool, err err
 // WDelayerGetWithdrawalDelay is the interface to call the smart contract function
 func (c *WDelayerClient) WDelayerGetWithdrawalDelay() (withdrawalDelay *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		withdrawalDelay, err = c.wdelayer.GetWithdrawalDelay(nil)
+		withdrawalDelay, err = c.wdelayer.GetWithdrawalDelay(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -249,7 +251,7 @@ func (c *WDelayerClient) WDelayerGetWithdrawalDelay() (withdrawalDelay *big.Int,
 // WDelayerGetEmergencyModeStartingTime is the interface to call the smart contract function
 func (c *WDelayerClient) WDelayerGetEmergencyModeStartingTime() (emergencyModeStartingTime *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		emergencyModeStartingTime, err = c.wdelayer.GetEmergencyModeStartingTime(nil)
+		emergencyModeStartingTime, err = c.wdelayer.GetEmergencyModeStartingTime(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -286,7 +288,7 @@ func (c *WDelayerClient) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64
 // WDelayerDepositInfo is the interface to call the smart contract function
 func (c *WDelayerClient) WDelayerDepositInfo(owner, token ethCommon.Address) (depositInfo DepositState, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		amount, depositTimestamp, err := c.wdelayer.DepositInfo(nil, owner, token)
+		amount, depositTimestamp, err := c.wdelayer.DepositInfo(c.opts, owner, token)
 		depositInfo.Amount = amount
 		depositInfo.DepositTimestamp = depositTimestamp
 		return tracerr.Wrap(err)
@@ -339,15 +341,15 @@ func (c *WDelayerClient) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Addre
 func (c *WDelayerClient) WDelayerConstants() (constants *common.WDelayerConstants, err error) {
 	constants = new(common.WDelayerConstants)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		constants.MaxWithdrawalDelay, err = c.wdelayer.MAXWITHDRAWALDELAY(nil)
+		constants.MaxWithdrawalDelay, err = c.wdelayer.MAXWITHDRAWALDELAY(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		constants.MaxEmergencyModeTime, err = c.wdelayer.MAXEMERGENCYMODETIME(nil)
+		constants.MaxEmergencyModeTime, err = c.wdelayer.MAXEMERGENCYMODETIME(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		constants.HermezRollup, err = c.wdelayer.HermezRollupAddress(nil)
+		constants.HermezRollup, err = c.wdelayer.HermezRollupAddress(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}

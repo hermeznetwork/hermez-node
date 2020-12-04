@@ -236,6 +236,7 @@ type AuctionClient struct {
 	auction     *HermezAuctionProtocol.HermezAuctionProtocol
 	tokenHEZ    *HEZ.HEZ
 	contractAbi abi.ABI
+	opts        *bind.CallOpts
 }
 
 // NewAuctionClient creates a new AuctionClient.  `tokenAddress` is the address of the HEZ tokens.
@@ -259,6 +260,7 @@ func NewAuctionClient(client *EthereumClient, address ethCommon.Address, tokenHE
 		auction:     auction,
 		tokenHEZ:    tokenHEZ,
 		contractAbi: contractAbi,
+		opts:        newCallOpts(),
 	}, nil
 }
 
@@ -280,7 +282,7 @@ func (c *AuctionClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transa
 // AuctionGetSlotDeadline is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetSlotDeadline() (slotDeadline uint8, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		slotDeadline, err = c.auction.GetSlotDeadline(nil)
+		slotDeadline, err = c.auction.GetSlotDeadline(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return 0, tracerr.Wrap(err)
@@ -304,7 +306,7 @@ func (c *AuctionClient) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (
 // AuctionGetOpenAuctionSlots is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetOpenAuctionSlots() (openAuctionSlots uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		openAuctionSlots, err = c.auction.GetOpenAuctionSlots(nil)
+		openAuctionSlots, err = c.auction.GetOpenAuctionSlots(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return 0, tracerr.Wrap(err)
@@ -328,7 +330,7 @@ func (c *AuctionClient) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint1
 // AuctionGetClosedAuctionSlots is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetClosedAuctionSlots() (closedAuctionSlots uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		closedAuctionSlots, err = c.auction.GetClosedAuctionSlots(nil)
+		closedAuctionSlots, err = c.auction.GetClosedAuctionSlots(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return 0, tracerr.Wrap(err)
@@ -352,7 +354,7 @@ func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Tr
 // AuctionGetOutbidding is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetOutbidding() (outbidding uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		outbidding, err = c.auction.GetOutbidding(nil)
+		outbidding, err = c.auction.GetOutbidding(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return 0, tracerr.Wrap(err)
@@ -376,7 +378,7 @@ func (c *AuctionClient) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) 
 // AuctionGetAllocationRatio is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetAllocationRatio() (allocationRation [3]uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		allocationRation, err = c.auction.GetAllocationRatio(nil)
+		allocationRation, err = c.auction.GetAllocationRatio(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return [3]uint16{}, tracerr.Wrap(err)
@@ -401,7 +403,7 @@ func (c *AuctionClient) AuctionSetDonationAddress(newDonationAddress ethCommon.A
 func (c *AuctionClient) AuctionGetDonationAddress() (donationAddress *ethCommon.Address, err error) {
 	var _donationAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_donationAddress, err = c.auction.GetDonationAddress(nil)
+		_donationAddress, err = c.auction.GetDonationAddress(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -426,7 +428,7 @@ func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.A
 func (c *AuctionClient) AuctionGetBootCoordinator() (bootCoordinator *ethCommon.Address, err error) {
 	var _bootCoordinator ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_bootCoordinator, err = c.auction.GetBootCoordinator(nil)
+		_bootCoordinator, err = c.auction.GetBootCoordinator(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -451,7 +453,7 @@ func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitial
 // AuctionGetClaimableHEZ is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetClaimableHEZ(claimAddress ethCommon.Address) (claimableHEZ *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		claimableHEZ, err = c.auction.GetClaimableHEZ(nil, claimAddress)
+		claimableHEZ, err = c.auction.GetClaimableHEZ(c.opts, claimAddress)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -476,7 +478,7 @@ func (c *AuctionClient) AuctionSetCoordinator(forger ethCommon.Address, coordina
 func (c *AuctionClient) AuctionGetCurrentSlotNumber() (currentSlotNumber int64, err error) {
 	var _currentSlotNumber *big.Int
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_currentSlotNumber, err = c.auction.GetCurrentSlotNumber(nil)
+		_currentSlotNumber, err = c.auction.GetCurrentSlotNumber(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return 0, tracerr.Wrap(err)
@@ -488,7 +490,7 @@ func (c *AuctionClient) AuctionGetCurrentSlotNumber() (currentSlotNumber int64, 
 func (c *AuctionClient) AuctionGetMinBidBySlot(slot int64) (minBid *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotToSend := big.NewInt(slot)
-		minBid, err = c.auction.GetMinBidBySlot(nil, slotToSend)
+		minBid, err = c.auction.GetMinBidBySlot(c.opts, slotToSend)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return big.NewInt(0), tracerr.Wrap(err)
@@ -500,7 +502,7 @@ func (c *AuctionClient) AuctionGetMinBidBySlot(slot int64) (minBid *big.Int, err
 func (c *AuctionClient) AuctionGetSlotSet(slot int64) (slotSet *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotToSend := big.NewInt(slot)
-		slotSet, err = c.auction.GetSlotSet(nil, slotToSend)
+		slotSet, err = c.auction.GetSlotSet(c.opts, slotToSend)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return big.NewInt(0), tracerr.Wrap(err)
@@ -511,7 +513,7 @@ func (c *AuctionClient) AuctionGetSlotSet(slot int64) (slotSet *big.Int, err err
 // AuctionGetDefaultSlotSetBid is the interface to call the smart contract function
 func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (minBidSlotSet *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		minBidSlotSet, err = c.auction.GetDefaultSlotSetBid(nil, slotSet)
+		minBidSlotSet, err = c.auction.GetDefaultSlotSetBid(c.opts, slotSet)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return big.NewInt(0), tracerr.Wrap(err)
@@ -523,7 +525,7 @@ func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (minBidSlotSe
 func (c *AuctionClient) AuctionGetSlotNumber(blockNum int64) (slot int64, err error) {
 	var _slot *big.Int
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		_slot, err = c.auction.GetSlotNumber(nil, big.NewInt(blockNum))
+		_slot, err = c.auction.GetSlotNumber(c.opts, big.NewInt(blockNum))
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return 0, tracerr.Wrap(err)
@@ -538,7 +540,7 @@ func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.I
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			owner := c.client.account.Address
 			spender := c.address
-			nonce, err := c.tokenHEZ.Nonces(nil, owner)
+			nonce, err := c.tokenHEZ.Nonces(c.opts, owner)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
@@ -565,7 +567,7 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			owner := c.client.account.Address
 			spender := c.address
-			nonce, err := c.tokenHEZ.Nonces(nil, owner)
+			nonce, err := c.tokenHEZ.Nonces(c.opts, owner)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
@@ -589,7 +591,7 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 // AuctionCanForge is the interface to call the smart contract function
 func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNum int64) (canForge bool, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		canForge, err = c.auction.CanForge(nil, forger, big.NewInt(blockNum))
+		canForge, err = c.auction.CanForge(c.opts, forger, big.NewInt(blockNum))
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return false, tracerr.Wrap(err)
@@ -627,28 +629,28 @@ func (c *AuctionClient) AuctionForge(forger ethCommon.Address) (tx *types.Transa
 func (c *AuctionClient) AuctionConstants() (auctionConstants *common.AuctionConstants, err error) {
 	auctionConstants = new(common.AuctionConstants)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		auctionConstants.BlocksPerSlot, err = c.auction.BLOCKSPERSLOT(nil)
+		auctionConstants.BlocksPerSlot, err = c.auction.BLOCKSPERSLOT(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		genesisBlock, err := c.auction.GenesisBlock(nil)
+		genesisBlock, err := c.auction.GenesisBlock(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
 		auctionConstants.GenesisBlockNum = genesisBlock.Int64()
-		auctionConstants.HermezRollup, err = c.auction.HermezRollup(nil)
+		auctionConstants.HermezRollup, err = c.auction.HermezRollup(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		auctionConstants.InitialMinimalBidding, err = c.auction.INITIALMINIMALBIDDING(nil)
+		auctionConstants.InitialMinimalBidding, err = c.auction.INITIALMINIMALBIDDING(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		auctionConstants.GovernanceAddress, err = c.auction.GovernanceAddress(nil)
+		auctionConstants.GovernanceAddress, err = c.auction.GovernanceAddress(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		auctionConstants.TokenHEZ, err = c.auction.TokenHEZ(nil)
+		auctionConstants.TokenHEZ, err = c.auction.TokenHEZ(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -669,7 +671,7 @@ func (c *AuctionClient) AuctionVariables() (auctionVariables *common.AuctionVari
 			return tracerr.Wrap(err)
 		}
 		auctionVariables.BootCoordinator = *bootCoordinator
-		auctionVariables.BootCoordinatorURL, err = c.auction.BootCoordinatorURL(nil)
+		auctionVariables.BootCoordinatorURL, err = c.auction.BootCoordinatorURL(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}

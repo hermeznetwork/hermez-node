@@ -76,6 +76,7 @@ type EthereumClient struct {
 	ks             *ethKeystore.KeyStore
 	ReceiptTimeout time.Duration
 	config         *EthereumConfig
+	opts           *bind.CallOpts
 }
 
 // NewEthereumClient creates a EthereumClient instance.  The account is not mandatory (it can
@@ -90,7 +91,14 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account, ks *
 			IntervalReceiptLoop: defaultIntervalReceiptLoop,
 		}
 	}
-	return &EthereumClient{client: client, account: account, ks: ks, ReceiptTimeout: config.ReceiptTimeout * time.Second, config: config}
+	return &EthereumClient{
+		client:         client,
+		account:        account,
+		ks:             ks,
+		ReceiptTimeout: config.ReceiptTimeout * time.Second,
+		config:         config,
+		opts:           newCallOpts(),
+	}
 }
 
 // BalanceAt retieves information about the default account
@@ -286,17 +294,17 @@ func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20C
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	name, err := instance.Name(nil)
+	name, err := instance.Name(c.opts)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 
-	symbol, err := instance.Symbol(nil)
+	symbol, err := instance.Symbol(c.opts)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 
-	decimals, err := instance.Decimals(nil)
+	decimals, err := instance.Decimals(c.opts)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -310,4 +318,13 @@ func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20C
 // Client returns the internal ethclient.Client
 func (c *EthereumClient) Client() *ethclient.Client {
 	return c.client
+}
+
+// newCallOpts returns a CallOpts to be used in ethereum calls with a non-zero
+// From address.  This is a workaround for a bug in ethereumjs-vm that shows up
+// in ganache: https://github.com/hermeznetwork/hermez-node/issues/317
+func newCallOpts() *bind.CallOpts {
+	return &bind.CallOpts{
+		From: ethCommon.HexToAddress("0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"),
+	}
 }
