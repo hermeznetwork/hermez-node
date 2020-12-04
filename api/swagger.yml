@@ -60,7 +60,7 @@ externalDocs:
   url: 'https://hermez.io'
 servers:
   - description: Hosted mock up
-    url: http://167.71.59.190:4010
+    url: https://apimock.hermez.network
   - description: Localhost mock Up
     url: http://localhost:4010
 tags:
@@ -795,7 +795,7 @@ paths:
           description: Only include slots with `slotNum >= minSlotNum`. By default, `minSlotNum = 0`.
           schema:
             $ref: '#/components/schemas/SlotNum'
-        - name: maxSlothNum
+        - name: maxSlotNum
           in: query
           required: false
           description: Only include slots with `slotNum <= maxSlotNum`.

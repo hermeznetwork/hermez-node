@@ -694,7 +694,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 		p.lastScheduledL1BatchBlockNum = p.stats.Eth.LastBlock.Num
 		// 2a: L1+L2 txs
 		p.lastForgeL1TxsNum++
-		l1UserTxs, err := p.historyDB.GetL1UserTxs(p.lastForgeL1TxsNum)
+		l1UserTxs, err := p.historyDB.GetUnforgedL1UserTxs(p.lastForgeL1TxsNum)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}

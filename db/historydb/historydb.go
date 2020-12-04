@@ -770,11 +770,13 @@ func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 // AddL1Txs inserts L1 txs to the DB. USD and LoadAmountUSD will be set automatically before storing the tx.
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
+// EffectiveAmount and EffectiveLoadAmount are seted with default values by the DB.
 func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error { return hdb.addL1Txs(hdb.db, l1txs) }
 
 // addL1Txs inserts L1 txs to the DB. USD and LoadAmountUSD will be set automatically before storing the tx.
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
+// EffectiveAmount and EffectiveLoadAmount are seted with default values by the DB.
 func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 	txs := []txWrite{}
 	for i := 0; i < len(l1txs); i++ {
@@ -784,26 +786,24 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 		loadAmountFloat, _ := laf.Float64()
 		txs = append(txs, txWrite{
 			// Generic
-			IsL1:            true,
-			TxID:            l1txs[i].TxID,
-			Type:            l1txs[i].Type,
-			Position:        l1txs[i].Position,
-			FromIdx:         &l1txs[i].FromIdx,
-			ToIdx:           l1txs[i].ToIdx,
-			Amount:          l1txs[i].Amount,
-			EffectiveAmount: l1txs[i].EffectiveAmount,
-			AmountFloat:     amountFloat,
-			TokenID:         l1txs[i].TokenID,
-			BatchNum:        l1txs[i].BatchNum,
-			EthBlockNum:     l1txs[i].EthBlockNum,
+			IsL1:        true,
+			TxID:        l1txs[i].TxID,
+			Type:        l1txs[i].Type,
+			Position:    l1txs[i].Position,
+			FromIdx:     &l1txs[i].FromIdx,
+			ToIdx:       l1txs[i].ToIdx,
+			Amount:      l1txs[i].Amount,
+			AmountFloat: amountFloat,
+			TokenID:     l1txs[i].TokenID,
+			BatchNum:    l1txs[i].BatchNum,
+			EthBlockNum: l1txs[i].EthBlockNum,
 			// L1
-			ToForgeL1TxsNum:     l1txs[i].ToForgeL1TxsNum,
-			UserOrigin:          &l1txs[i].UserOrigin,
-			FromEthAddr:         &l1txs[i].FromEthAddr,
-			FromBJJ:             l1txs[i].FromBJJ,
-			LoadAmount:          l1txs[i].LoadAmount,
-			EffectiveLoadAmount: l1txs[i].EffectiveLoadAmount,
-			LoadAmountFloat:     &loadAmountFloat,
+			ToForgeL1TxsNum: l1txs[i].ToForgeL1TxsNum,
+			UserOrigin:      &l1txs[i].UserOrigin,
+			FromEthAddr:     &l1txs[i].FromEthAddr,
+			FromBJJ:         l1txs[i].FromBJJ,
+			LoadAmount:      l1txs[i].LoadAmount,
+			LoadAmountFloat: &loadAmountFloat,
 		})
 	}
 	return hdb.addTxs(d, txs)
@@ -849,7 +849,6 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			from_idx,
 			to_idx,
 			amount,
-			effective_amount,
 			amount_f,
 			token_id,
 			batch_num,
@@ -859,7 +858,6 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			from_eth_addr,
 			from_bjj,
 			load_amount,
-			effective_load_amount,
 			load_amount_f,
 			fee,
 			nonce
@@ -881,6 +879,7 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 
 // GetHistoryTx returns a tx from the DB given a TxID
 func (hdb *HistoryDB) GetHistoryTx(txID common.TxID) (*TxAPI, error) {
+	// TODO: add success flags for L1s
 	tx := &TxAPI{}
 	err := meddler.QueryRow(
 		hdb.db, tx, `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
@@ -906,6 +905,7 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
 	fromItem, limit *uint, order string,
 ) ([]TxAPI, uint64, error) {
+	// TODO: add success flags for L1s
 	if ethAddr != nil && bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
 	}
@@ -1165,10 +1165,11 @@ func (hdb *HistoryDB) GetExitsAPI(
 func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 	var txs []*common.L1Tx
 	err := meddler.QueryAll(
-		hdb.db, &txs,
+		hdb.db, &txs, // Note that '\x' gets parsed as a big.Int with value = 0
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
-		tx.amount, tx.effective_amount, tx.load_amount, tx.effective_load_amount,
+		tx.amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.amount_success THEN tx.amount ELSE '\x' END) AS effective_amount,
+		tx.load_amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.load_amount_success THEN tx.load_amount ELSE '\x' END) AS effective_load_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE;`,
 	)
@@ -1178,11 +1179,14 @@ func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 // GetAllL1CoordinatorTxs returns all L1CoordinatorTxs from the DB
 func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
 	var txs []*common.L1Tx
+	// Since the query specifies that only coordinator txs are returned, it's safe to assume
+	// that returned txs will always have effective amounts
 	err := meddler.QueryAll(
 		hdb.db, &txs,
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
-		tx.amount, tx.effective_amount, tx.load_amount, tx.effective_load_amount,
+		tx.amount, tx.amount AS effective_amount,
+		tx.load_amount, tx.load_amount AS effective_load_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE is_l1 = TRUE AND user_origin = FALSE;`,
 	)
@@ -1202,16 +1206,17 @@ func (hdb *HistoryDB) GetAllL2Txs() ([]common.L2Tx, error) {
 	return db.SlicePtrsToSlice(txs).([]common.L2Tx), tracerr.Wrap(err)
 }
 
-// GetL1UserTxs gets L1 User Txs to be forged in the L1Batch with toForgeL1TxsNum.
-func (hdb *HistoryDB) GetL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error) {
+// GetUnforgedL1UserTxs gets L1 User Txs to be forged in the L1Batch with toForgeL1TxsNum.
+func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error) {
 	var txs []*common.L1Tx
 	err := meddler.QueryAll(
-		hdb.db, &txs,
+		hdb.db, &txs, // only L1 user txs can have batch_num set to null
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
-		tx.amount, tx.effective_amount, tx.load_amount, tx.effective_load_amount,
+		tx.amount, NULL AS effective_amount,
+		tx.load_amount, NULL AS effective_load_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
-		FROM tx WHERE to_forge_l1_txs_num = $1 AND is_l1 = TRUE AND user_origin = TRUE;`,
+		FROM tx WHERE batch_num IS NULL AND to_forge_l1_txs_num = $1;`,
 		toForgeL1TxsNum,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), tracerr.Wrap(err)
@@ -1296,39 +1301,40 @@ func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 // setL1UserTxEffectiveAmounts sets the EffectiveAmount and EffectiveLoadAmount
 // of the given l1UserTxs (with an UPDATE)
 func (hdb *HistoryDB) setL1UserTxEffectiveAmounts(d sqlx.Ext, txs []common.L1Tx) error {
+	// Effective amounts are stored as success flags in the DB, with true value by default
+	// to reduce the amount of updates. Therefore, only amounts that became uneffective should be
+	// updated to become false
 	type txUpdate struct {
-		ID                  common.TxID `db:"id"`
-		NullifiedAmount     bool        `db:"nullified_amount"`
-		NullifiedLoadAmount bool        `db:"nullified_load_amount"`
+		ID                common.TxID `db:"id"`
+		AmountSuccess     bool        `db:"amount_success"`
+		LoadAmountSuccess bool        `db:"load_amount_success"`
 	}
-	txUpdates := make([]txUpdate, len(txs))
+	txUpdates := []txUpdate{}
 	equal := func(a *big.Int, b *big.Int) bool {
 		return a.Cmp(b) == 0
 	}
 	for i := range txs {
-		txUpdates[i] = txUpdate{
-			ID:                  txs[i].TxID,
-			NullifiedAmount:     !equal(txs[i].Amount, txs[i].EffectiveAmount),
-			NullifiedLoadAmount: !equal(txs[i].LoadAmount, txs[i].EffectiveLoadAmount),
+		amountSuccess := equal(txs[i].Amount, txs[i].EffectiveAmount)
+		loadAmountSuccess := equal(txs[i].LoadAmount, txs[i].EffectiveLoadAmount)
+		if !amountSuccess || !loadAmountSuccess {
+			txUpdates = append(txUpdates, txUpdate{
+				ID:                txs[i].TxID,
+				AmountSuccess:     amountSuccess,
+				LoadAmountSuccess: loadAmountSuccess,
+			})
 		}
 	}
 	const query string = `
 		UPDATE tx SET
-			effective_amount = CASE
-				WHEN tx_update.nullified_amount THEN '\x'
-				ELSE tx.amount
-			END,
-			effective_load_amount = CASE
-				WHEN tx_update.nullified_load_amount THEN '\x'
-				ELSE tx.load_amount
-			END
+			amount_success = tx_update.amount_success,
+			load_amount_success = tx_update.load_amount_success
 		FROM (VALUES
 			(NULL::::BYTEA, NULL::::BOOL, NULL::::BOOL),
-			(:id, :nullified_amount, :nullified_load_amount)
-		) as tx_update (id, nullified_amount, nullified_load_amount)
+			(:id, :amount_success, :load_amount_success)
+		) as tx_update (id, amount_success, load_amount_success)
 		WHERE tx.id = tx_update.id
 	`
-	if len(txs) > 0 {
+	if len(txUpdates) > 0 {
 		if _, err := sqlx.NamedQuery(d, query, txUpdates); err != nil {
 			return tracerr.Wrap(err)
 		}

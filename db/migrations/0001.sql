@@ -135,6 +135,15 @@ FOR EACH ROW EXECUTE PROCEDURE set_token_usd_update();
 
 CREATE SEQUENCE tx_item_id;
 
+-- important note about "amount_success" and "load_amount_success" (only relevant to L1 user txs):
+-- The behaviour should be:
+-- When tx is not forged: amount_success = false, load_amount_success = false
+-- When tx is forged: 
+--      amount_success = false if the "effective amount" is 0, else true
+--      load_amount_success = false if the "effective load amount" is 0, else true
+--
+-- However, in order to reduce the amount of updates, by default amount_success and load_amount_success will be set to true (when tx is unforged)
+-- whne they should be false. This can be worked around at a query level by checking if "batch_num IS NULL" (which indicates that the tx is unforged).
 CREATE TABLE tx (
     -- Generic TX
     item_id INTEGER PRIMARY KEY DEFAULT nextval('tx_item_id'),
@@ -149,7 +158,7 @@ CREATE TABLE tx (
     to_eth_addr BYTEA,
     to_bjj BYTEA,
     amount BYTEA NOT NULL,
-    effective_amount BYTEA,
+    amount_success BOOLEAN NOT NULL DEFAULT true,
     amount_f NUMERIC NOT NULL,
     token_id INT NOT NULL REFERENCES token (token_id),
     amount_usd NUMERIC, -- Value of the amount in USD at the moment the tx was inserted in the DB
@@ -159,7 +168,7 @@ CREATE TABLE tx (
     to_forge_l1_txs_num BIGINT,
     user_origin BOOLEAN,
     load_amount BYTEA,
-    effective_load_amount BYTEA,
+    load_amount_success BOOLEAN NOT NULL DEFAULT true,
     load_amount_f NUMERIC,
     load_amount_usd NUMERIC,
     -- L2
