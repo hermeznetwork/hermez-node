@@ -12,7 +12,7 @@ CREATE TABLE coordinator (
     bidder_addr BYTEA NOT NULL,
     forger_addr BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    url VARCHAR(200) NOT NULL
+    url BYTEA NOT NULL
 );
 
 CREATE TABLE batch (

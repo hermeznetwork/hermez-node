@@ -369,6 +369,7 @@ func TestMain(m *testing.M) {
 		Outbidding:         uint16(1),
 		SlotDeadline:       uint8(20),
 		BootCoordinator:    ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+		BootCoordinatorURL: "https://boot.coordinator.io",
 		ClosedAuctionSlots: uint16(2),
 		OpenAuctionSlots:   uint16(5),
 	}

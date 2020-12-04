@@ -669,6 +669,10 @@ func (c *AuctionClient) AuctionVariables() (auctionVariables *common.AuctionVari
 			return tracerr.Wrap(err)
 		}
 		auctionVariables.BootCoordinator = *bootCoordinator
+		auctionVariables.BootCoordinatorURL, err = c.auction.BootCoordinatorURL(nil)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
 		auctionVariables.ClosedAuctionSlots, err = c.AuctionGetClosedAuctionSlots()
 		if err != nil {
 			return tracerr.Wrap(err)
