@@ -33,8 +33,8 @@ type PoolL2Tx struct {
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
-	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
-	RqToIdx           Idx                `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
+	RqToIdx           Idx                `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
 	RqToEthAddr       ethCommon.Address  `meddler:"rq_to_eth_addr,zeroisnull"`
 	RqToBJJ           *babyjub.PublicKey `meddler:"rq_to_bjj"` // TODO: stop using json, use scanner/valuer
 	RqTokenID         TokenID            `meddler:"rq_token_id,zeroisnull"`

@@ -32,7 +32,7 @@ type L1Tx struct {
 	ToForgeL1TxsNum *int64             `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
 	Position        int                `meddler:"position"`
 	UserOrigin      bool               `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx         Idx                `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.LoadAmount (deposit)
+	FromIdx         Idx                `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
 	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr,zeroisnull"`
 	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj,zeroisnull"`
 	ToIdx           Idx                `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
@@ -40,12 +40,12 @@ type L1Tx struct {
 	Amount          *big.Int           `meddler:"amount,bigint"`
 	// EffectiveAmount only applies to L1UserTx.
 	EffectiveAmount *big.Int `meddler:"effective_amount,bigintnull"`
-	LoadAmount      *big.Int `meddler:"load_amount,bigint"`
-	// EffectiveLoadAmount only applies to L1UserTx.
-	EffectiveLoadAmount *big.Int  `meddler:"effective_load_amount,bigintnull"`
-	EthBlockNum         int64     `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
-	Type                TxType    `meddler:"type"`
-	BatchNum            *BatchNum `meddler:"batch_num"`
+	DepositAmount   *big.Int `meddler:"deposit_amount,bigint"`
+	// EffectiveDepositAmount only applies to L1UserTx.
+	EffectiveDepositAmount *big.Int  `meddler:"effective_deposit_amount,bigintnull"`
+	EthBlockNum            int64     `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
+	Type                   TxType    `meddler:"type"`
+	BatchNum               *BatchNum `meddler:"batch_num"`
 }
 
 // NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated
@@ -67,7 +67,7 @@ func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
 		} else if l1Tx.ToIdx == Idx(1) {
 			txType = TxTypeForceExit
 		} else if l1Tx.ToIdx >= IdxUserThreshold {
-			if l1Tx.LoadAmount.Int64() == int64(0) {
+			if l1Tx.DepositAmount.Int64() == int64(0) {
 				txType = TxTypeForceTransfer
 			} else {
 				txType = TxTypeDepositTransfer
@@ -140,13 +140,13 @@ func (tx L1Tx) Tx() Tx {
 		UserOrigin:      userOrigin,
 		FromEthAddr:     tx.FromEthAddr,
 		FromBJJ:         tx.FromBJJ,
-		LoadAmount:      tx.EffectiveLoadAmount,
+		DepositAmount:   tx.EffectiveDepositAmount,
 		EthBlockNum:     tx.EthBlockNum,
 	}
-	if tx.LoadAmount != nil {
-		lf := new(big.Float).SetInt(tx.LoadAmount)
-		loadAmountFloat, _ := lf.Float64()
-		genericTx.LoadAmountFloat = &loadAmountFloat
+	if tx.DepositAmount != nil {
+		lf := new(big.Float).SetInt(tx.DepositAmount)
+		depositAmountFloat, _ := lf.Float64()
+		genericTx.DepositAmountFloat = &depositAmountFloat
 	}
 	return genericTx
 }
@@ -257,11 +257,11 @@ func (tx *L1Tx) BytesGeneric() ([]byte, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	copy(b[52:58], fromIdxBytes[:])
-	loadAmountFloat16, err := NewFloat16(tx.LoadAmount)
+	depositAmountFloat16, err := NewFloat16(tx.DepositAmount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[58:60], loadAmountFloat16.Bytes())
+	copy(b[58:60], depositAmountFloat16.Bytes())
 	amountFloat16, err := NewFloat16(tx.Amount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -328,7 +328,7 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	tx.FromIdx = fromIdx
-	tx.LoadAmount = Float16FromBytes(b[58:60]).BigInt()
+	tx.DepositAmount = Float16FromBytes(b[58:60]).BigInt()
 	tx.Amount = Float16FromBytes(b[60:62]).BigInt()
 	tx.TokenID, err = TokenIDFromBytes(b[62:66])
 	if err != nil {
@@ -375,7 +375,7 @@ func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommo
 		return nil, tracerr.Wrap(err)
 	}
 	tx.Amount = big.NewInt(0)
-	tx.LoadAmount = big.NewInt(0)
+	tx.DepositAmount = big.NewInt(0)
 	if int(v) > 0 {
 		// L1CoordinatorTX ETH
 		// Ethereum adds 27 to v

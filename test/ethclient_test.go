@@ -156,14 +156,14 @@ func TestClientRollup(t *testing.T) {
 	for i := 0; i < N; i++ {
 		keys[i] = genKeys(int64(i))
 		tx := common.L1Tx{
-			FromIdx:     0,
-			FromEthAddr: keys[i].Addr,
-			FromBJJ:     keys[i].BJJPublicKey,
-			TokenID:     common.TokenID(0),
-			Amount:      big.NewInt(0),
-			LoadAmount:  big.NewInt(10 + int64(i)),
+			FromIdx:       0,
+			FromEthAddr:   keys[i].Addr,
+			FromBJJ:       keys[i].BJJPublicKey,
+			TokenID:       common.TokenID(0),
+			Amount:        big.NewInt(0),
+			DepositAmount: big.NewInt(10 + int64(i)),
 		}
-		_, err := c.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.LoadAmount,
+		_, err := c.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.DepositAmount,
 			tx.Amount, uint32(tx.TokenID), int64(tx.ToIdx))
 		require.Nil(t, err)
 	}

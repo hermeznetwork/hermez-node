@@ -160,13 +160,13 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 				}
 				// create L1CoordinatorTx for the accountCreation
 				l1CoordinatorTx := common.L1Tx{
-					Position:    positionL1,
-					UserOrigin:  false,
-					FromEthAddr: accAuth.EthAddr,
-					FromBJJ:     accAuth.BJJ,
-					TokenID:     l2TxsRaw[i].TokenID,
-					LoadAmount:  big.NewInt(0),
-					Type:        common.TxTypeCreateAccountDeposit,
+					Position:      positionL1,
+					UserOrigin:    false,
+					FromEthAddr:   accAuth.EthAddr,
+					FromBJJ:       accAuth.BJJ,
+					TokenID:       l2TxsRaw[i].TokenID,
+					DepositAmount: big.NewInt(0),
+					Type:          common.TxTypeCreateAccountDeposit,
 				}
 				positionL1++
 				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
@@ -185,13 +185,13 @@ func (txsel *TxSelector) GetL1L2TxSelection(coordIdxs []common.Idx, batchNum com
 				// L1Authorization, as ToEthAddr==0xff
 				// create L1CoordinatorTx for the accountCreation
 				l1CoordinatorTx := common.L1Tx{
-					Position:    positionL1,
-					UserOrigin:  false,
-					FromEthAddr: l2TxsRaw[i].ToEthAddr,
-					FromBJJ:     l2TxsRaw[i].ToBJJ,
-					TokenID:     l2TxsRaw[i].TokenID,
-					LoadAmount:  big.NewInt(0),
-					Type:        common.TxTypeCreateAccountDeposit,
+					Position:      positionL1,
+					UserOrigin:    false,
+					FromEthAddr:   l2TxsRaw[i].ToEthAddr,
+					FromBJJ:       l2TxsRaw[i].ToBJJ,
+					TokenID:       l2TxsRaw[i].TokenID,
+					DepositAmount: big.NewInt(0),
+					Type:          common.TxTypeCreateAccountDeposit,
 				}
 				positionL1++
 				l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)

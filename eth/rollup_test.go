@@ -267,18 +267,18 @@ func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
 	fromIdxInt64 := int64(0)
 	toIdxInt64 := int64(0)
 	tokenIDUint32 := uint32(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:    key.BJJPublicKey,
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDUint32),
-		Amount:     big.NewInt(0),
+		FromBJJ:       key.BJJPublicKey,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDUint32),
+		Amount:        big.NewInt(0),
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
+	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -287,7 +287,7 @@ func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.FromBJJ, rollupEvents.L1UserTx[0].L1UserTx.FromBJJ)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -299,18 +299,18 @@ func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
 	key := genKeysBjj(1)
 	fromIdxInt64 := int64(0)
 	toIdxInt64 := int64(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:    key.BJJPublicKey,
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenHEZID),
-		Amount:     big.NewInt(0),
+		FromBJJ:       key.BJJPublicKey,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenHEZID),
+		Amount:        big.NewInt(0),
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
+	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -319,7 +319,7 @@ func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.FromBJJ, rollupEvents.L1UserTx[0].L1UserTx.FromBJJ)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux2.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -331,18 +331,18 @@ func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
 	key := genKeysBjj(3)
 	fromIdxInt64 := int64(0)
 	toIdxInt64 := int64(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:    key.BJJPublicKey,
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDERC777),
-		Amount:     big.NewInt(0),
+		FromBJJ:       key.BJJPublicKey,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDERC777),
+		Amount:        big.NewInt(0),
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
+	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -351,7 +351,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.FromBJJ, rollupEvents.L1UserTx[0].L1UserTx.FromBJJ)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -363,18 +363,18 @@ func TestRollupL1UserTxETHDeposit(t *testing.T) {
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(0)
 	tokenIDUint32 := uint32(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:    nil,
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDUint32),
-		Amount:     big.NewInt(0),
+		FromBJJ:       nil,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDUint32),
+		Amount:        big.NewInt(0),
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
+	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -382,7 +382,7 @@ func TestRollupL1UserTxETHDeposit(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -393,18 +393,18 @@ func TestRollupL1UserTxERC20Deposit(t *testing.T) {
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:    nil,
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenHEZID),
-		Amount:     big.NewInt(0),
+		FromBJJ:       nil,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenHEZID),
+		Amount:        big.NewInt(0),
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
+	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -412,7 +412,7 @@ func TestRollupL1UserTxERC20Deposit(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux2.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -423,17 +423,17 @@ func TestRollupL1UserTxERC20PermitDeposit(t *testing.T) {
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDERC777),
-		Amount:     big.NewInt(0),
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDERC777),
+		Amount:        big.NewInt(0),
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
+	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -441,7 +441,7 @@ func TestRollupL1UserTxERC20PermitDeposit(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -453,18 +453,18 @@ func TestRollupL1UserTxETHDepositTransfer(t *testing.T) {
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(257)
 	tokenIDUint32 := uint32(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("100000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDUint32),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDUint32),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
+	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -472,7 +472,7 @@ func TestRollupL1UserTxETHDepositTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -483,18 +483,18 @@ func TestRollupL1UserTxERC20DepositTransfer(t *testing.T) {
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(258)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("100000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenHEZID),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenHEZID),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
+	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -502,7 +502,7 @@ func TestRollupL1UserTxERC20DepositTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux2.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -513,18 +513,18 @@ func TestRollupL1UserTxERC20PermitDepositTransfer(t *testing.T) {
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(259)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("100000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDERC777),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDERC777),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
+	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -532,7 +532,7 @@ func TestRollupL1UserTxERC20PermitDepositTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -544,18 +544,18 @@ func TestRollupL1UserTxETHCreateAccountDepositTransfer(t *testing.T) {
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(257)
 	tokenIDUint32 := uint32(0)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("20000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDUint32),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDUint32),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
+	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -563,7 +563,7 @@ func TestRollupL1UserTxETHCreateAccountDepositTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -574,18 +574,18 @@ func TestRollupL1UserTxERC20CreateAccountDepositTransfer(t *testing.T) {
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(258)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("30000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenHEZID),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenHEZID),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
+	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -593,7 +593,7 @@ func TestRollupL1UserTxERC20CreateAccountDepositTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux2.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -604,18 +604,18 @@ func TestRollupL1UserTxERC20PermitCreateAccountDepositTransfer(t *testing.T) {
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(259)
-	loadAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("40000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: loadAmount,
-		TokenID:    common.TokenID(tokenIDERC777),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: depositAmount,
+		TokenID:       common.TokenID(tokenIDERC777),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
+	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -623,7 +623,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDepositTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -637,15 +637,15 @@ func TestRollupL1UserTxETHForceTransfer(t *testing.T) {
 	tokenIDUint32 := uint32(0)
 	amount, _ := new(big.Int).SetString("20000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: big.NewInt(0),
-		TokenID:    common.TokenID(tokenIDUint32),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: big.NewInt(0),
+		TokenID:       common.TokenID(tokenIDUint32),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
+	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -653,7 +653,7 @@ func TestRollupL1UserTxETHForceTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -666,15 +666,15 @@ func TestRollupL1UserTxERC20ForceTransfer(t *testing.T) {
 	toIdxInt64 := int64(258)
 	amount, _ := new(big.Int).SetString("10000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: big.NewInt(0),
-		TokenID:    common.TokenID(tokenHEZID),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: big.NewInt(0),
+		TokenID:       common.TokenID(tokenHEZID),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
+	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -682,7 +682,7 @@ func TestRollupL1UserTxERC20ForceTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux2.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -695,15 +695,15 @@ func TestRollupL1UserTxERC20PermitForceTransfer(t *testing.T) {
 	toIdxInt64 := int64(260)
 	amount, _ := new(big.Int).SetString("30000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: big.NewInt(0),
-		TokenID:    common.TokenID(tokenIDERC777),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: big.NewInt(0),
+		TokenID:       common.TokenID(tokenIDERC777),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
+	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -711,7 +711,7 @@ func TestRollupL1UserTxERC20PermitForceTransfer(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -725,15 +725,15 @@ func TestRollupL1UserTxETHForceExit(t *testing.T) {
 	tokenIDUint32 := uint32(0)
 	amount, _ := new(big.Int).SetString("10000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: big.NewInt(0),
-		TokenID:    common.TokenID(tokenIDUint32),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: big.NewInt(0),
+		TokenID:       common.TokenID(tokenIDUint32),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
+	_, err = rollupClientAux.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -741,7 +741,7 @@ func TestRollupL1UserTxETHForceExit(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -754,15 +754,15 @@ func TestRollupL1UserTxERC20ForceExit(t *testing.T) {
 	toIdxInt64 := int64(1)
 	amount, _ := new(big.Int).SetString("20000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: big.NewInt(0),
-		TokenID:    common.TokenID(tokenHEZID),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: big.NewInt(0),
+		TokenID:       common.TokenID(tokenHEZID),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
+	_, err = rollupClientAux2.RollupL1UserTxERC20ETH(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -770,7 +770,7 @@ func TestRollupL1UserTxERC20ForceExit(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux2.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
@@ -785,15 +785,15 @@ func TestRollupL1UserTxERC20PermitForceExit(t *testing.T) {
 	*fromIdx = 0
 	amount, _ := new(big.Int).SetString("30000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:    common.Idx(fromIdxInt64),
-		ToIdx:      common.Idx(toIdxInt64),
-		LoadAmount: big.NewInt(0),
-		TokenID:    common.TokenID(tokenIDERC777),
-		Amount:     amount,
+		FromIdx:       common.Idx(fromIdxInt64),
+		ToIdx:         common.Idx(toIdxInt64),
+		DepositAmount: big.NewInt(0),
+		TokenID:       common.TokenID(tokenIDERC777),
+		Amount:        amount,
 	}
 	L1UserTxs = append(L1UserTxs, l1Tx)
 
-	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.LoadAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
+	_, err = rollupClientAux.RollupL1UserTxERC20Permit(l1Tx.FromBJJ, fromIdxInt64, l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
@@ -801,7 +801,7 @@ func TestRollupL1UserTxERC20PermitForceExit(t *testing.T) {
 	rollupEvents, _, err := rollupClient.RollupEventsByBlock(currentBlockNum)
 	require.NoError(t, err)
 	assert.Equal(t, l1Tx.ToIdx, rollupEvents.L1UserTx[0].L1UserTx.ToIdx)
-	assert.Equal(t, l1Tx.LoadAmount, rollupEvents.L1UserTx[0].L1UserTx.LoadAmount)
+	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
 	assert.Equal(t, rollupClientAux.client.account.Address, rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)

@@ -18,11 +18,11 @@ import (
 )
 
 type testL1Info struct {
-	ToForgeL1TxsNum       *int64   `json:"toForgeL1TransactionsNum"`
-	UserOrigin            bool     `json:"userOrigin"`
-	LoadAmount            string   `json:"loadAmount"`
-	HistoricLoadAmountUSD *float64 `json:"historicLoadAmountUSD"`
-	EthBlockNum           int64    `json:"ethereumBlockNum"`
+	ToForgeL1TxsNum          *int64   `json:"toForgeL1TransactionsNum"`
+	UserOrigin               bool     `json:"userOrigin"`
+	DepositAmount            string   `json:"depositAmount"`
+	HistoricDepositAmountUSD *float64 `json:"historicDepositAmountUSD"`
+	EthBlockNum              int64    `json:"ethereumBlockNum"`
 }
 
 type testL2Info struct {
@@ -125,7 +125,7 @@ func genTestTxs(
 			L1Info: &testL1Info{
 				ToForgeL1TxsNum: l1.ToForgeL1TxsNum,
 				UserOrigin:      l1.UserOrigin,
-				LoadAmount:      l1.LoadAmount.String(),
+				DepositAmount:   l1.DepositAmount.String(),
 				EthBlockNum:     l1.EthBlockNum,
 			},
 			Token: token,
@@ -160,11 +160,11 @@ func genTestTxs(
 			if usd != 0 {
 				tx.HistoricUSD = &usd
 			}
-			laf := new(big.Float).SetInt(l1.LoadAmount)
-			loadAmountFloat, _ := laf.Float64()
-			loadUSD := *token.USD * loadAmountFloat / math.Pow(10, float64(token.Decimals))
-			if loadAmountFloat != 0 {
-				tx.L1Info.HistoricLoadAmountUSD = &loadUSD
+			laf := new(big.Float).SetInt(l1.DepositAmount)
+			depositAmountFloat, _ := laf.Float64()
+			loadUSD := *token.USD * depositAmountFloat / math.Pow(10, float64(token.Decimals))
+			if depositAmountFloat != 0 {
+				tx.L1Info.HistoricDepositAmountUSD = &loadUSD
 			}
 		}
 		txs = append(txs, tx)
@@ -474,7 +474,7 @@ func assertTxs(t *testing.T, expected, actual []testTx) {
 		if expected[i].L2Info != nil {
 			test.AssertUSD(t, expected[i].L2Info.HistoricFeeUSD, actual[i].L2Info.HistoricFeeUSD)
 		} else {
-			test.AssertUSD(t, expected[i].L1Info.HistoricLoadAmountUSD, actual[i].L1Info.HistoricLoadAmountUSD)
+			test.AssertUSD(t, expected[i].L1Info.HistoricDepositAmountUSD, actual[i].L1Info.HistoricDepositAmountUSD)
 		}
 		assert.Equal(t, expected[i], actual[i])
 	}

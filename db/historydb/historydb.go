@@ -767,23 +767,23 @@ func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 	return db.SlicePtrsToSlice(accs).([]common.Account), tracerr.Wrap(err)
 }
 
-// AddL1Txs inserts L1 txs to the DB. USD and LoadAmountUSD will be set automatically before storing the tx.
+// AddL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
-// EffectiveAmount and EffectiveLoadAmount are seted with default values by the DB.
+// EffectiveAmount and EffectiveDepositAmount are seted with default values by the DB.
 func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error { return hdb.addL1Txs(hdb.db, l1txs) }
 
-// addL1Txs inserts L1 txs to the DB. USD and LoadAmountUSD will be set automatically before storing the tx.
+// addL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
-// EffectiveAmount and EffectiveLoadAmount are seted with default values by the DB.
+// EffectiveAmount and EffectiveDepositAmount are seted with default values by the DB.
 func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 	txs := []txWrite{}
 	for i := 0; i < len(l1txs); i++ {
 		af := new(big.Float).SetInt(l1txs[i].Amount)
 		amountFloat, _ := af.Float64()
-		laf := new(big.Float).SetInt(l1txs[i].LoadAmount)
-		loadAmountFloat, _ := laf.Float64()
+		laf := new(big.Float).SetInt(l1txs[i].DepositAmount)
+		depositAmountFloat, _ := laf.Float64()
 		txs = append(txs, txWrite{
 			// Generic
 			IsL1:        true,
@@ -798,12 +798,12 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 			BatchNum:    l1txs[i].BatchNum,
 			EthBlockNum: l1txs[i].EthBlockNum,
 			// L1
-			ToForgeL1TxsNum: l1txs[i].ToForgeL1TxsNum,
-			UserOrigin:      &l1txs[i].UserOrigin,
-			FromEthAddr:     &l1txs[i].FromEthAddr,
-			FromBJJ:         l1txs[i].FromBJJ,
-			LoadAmount:      l1txs[i].LoadAmount,
-			LoadAmountFloat: &loadAmountFloat,
+			ToForgeL1TxsNum:    l1txs[i].ToForgeL1TxsNum,
+			UserOrigin:         &l1txs[i].UserOrigin,
+			FromEthAddr:        &l1txs[i].FromEthAddr,
+			FromBJJ:            l1txs[i].FromBJJ,
+			DepositAmount:      l1txs[i].DepositAmount,
+			DepositAmountFloat: &depositAmountFloat,
 		})
 	}
 	return hdb.addTxs(d, txs)
@@ -857,8 +857,8 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			user_origin,
 			from_eth_addr,
 			from_bjj,
-			load_amount,
-			load_amount_f,
+			deposit_amount,
+			deposit_amount_f,
 			fee,
 			nonce
 		) VALUES %s;`,
@@ -887,7 +887,7 @@ func (hdb *HistoryDB) GetHistoryTx(txID common.TxID) (*TxAPI, error) {
 		hez_idx(tx.to_idx, token.symbol) AS to_idx, tx.to_eth_addr, tx.to_bjj,
 		tx.amount, tx.token_id, tx.amount_usd, 
 		tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
-		tx.load_amount, tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
+		tx.deposit_amount, tx.deposit_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
 		token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 		token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
 		token.usd_update, block.timestamp
@@ -916,7 +916,7 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	hez_idx(tx.to_idx, token.symbol) AS to_idx, tx.to_eth_addr, tx.to_bjj,
 	tx.amount, tx.token_id, tx.amount_usd, 
 	tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
-	tx.load_amount, tx.load_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
+	tx.deposit_amount, tx.deposit_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
 	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
 	token.usd_update, block.timestamp, count(*) OVER() AS total_items 
@@ -1169,7 +1169,7 @@ func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.amount_success THEN tx.amount ELSE '\x' END) AS effective_amount,
-		tx.load_amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.load_amount_success THEN tx.load_amount ELSE '\x' END) AS effective_load_amount,
+		tx.deposit_amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.deposit_amount_success THEN tx.deposit_amount ELSE '\x' END) AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE;`,
 	)
@@ -1186,7 +1186,7 @@ func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, tx.amount AS effective_amount,
-		tx.load_amount, tx.load_amount AS effective_load_amount,
+		tx.deposit_amount, tx.deposit_amount AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE is_l1 = TRUE AND user_origin = FALSE;`,
 	)
@@ -1214,7 +1214,7 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, NULL AS effective_amount,
-		tx.load_amount, NULL AS effective_load_amount,
+		tx.deposit_amount, NULL AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE batch_num IS NULL AND to_forge_l1_txs_num = $1;`,
 		toForgeL1TxsNum,
@@ -1298,16 +1298,16 @@ func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 	return tracerr.Wrap(txn.Commit())
 }
 
-// setL1UserTxEffectiveAmounts sets the EffectiveAmount and EffectiveLoadAmount
+// setL1UserTxEffectiveAmounts sets the EffectiveAmount and EffectiveDepositAmount
 // of the given l1UserTxs (with an UPDATE)
 func (hdb *HistoryDB) setL1UserTxEffectiveAmounts(d sqlx.Ext, txs []common.L1Tx) error {
 	// Effective amounts are stored as success flags in the DB, with true value by default
 	// to reduce the amount of updates. Therefore, only amounts that became uneffective should be
 	// updated to become false
 	type txUpdate struct {
-		ID                common.TxID `db:"id"`
-		AmountSuccess     bool        `db:"amount_success"`
-		LoadAmountSuccess bool        `db:"load_amount_success"`
+		ID                   common.TxID `db:"id"`
+		AmountSuccess        bool        `db:"amount_success"`
+		DepositAmountSuccess bool        `db:"deposit_amount_success"`
 	}
 	txUpdates := []txUpdate{}
 	equal := func(a *big.Int, b *big.Int) bool {
@@ -1315,23 +1315,23 @@ func (hdb *HistoryDB) setL1UserTxEffectiveAmounts(d sqlx.Ext, txs []common.L1Tx)
 	}
 	for i := range txs {
 		amountSuccess := equal(txs[i].Amount, txs[i].EffectiveAmount)
-		loadAmountSuccess := equal(txs[i].LoadAmount, txs[i].EffectiveLoadAmount)
-		if !amountSuccess || !loadAmountSuccess {
+		depositAmountSuccess := equal(txs[i].DepositAmount, txs[i].EffectiveDepositAmount)
+		if !amountSuccess || !depositAmountSuccess {
 			txUpdates = append(txUpdates, txUpdate{
-				ID:                txs[i].TxID,
-				AmountSuccess:     amountSuccess,
-				LoadAmountSuccess: loadAmountSuccess,
+				ID:                   txs[i].TxID,
+				AmountSuccess:        amountSuccess,
+				DepositAmountSuccess: depositAmountSuccess,
 			})
 		}
 	}
 	const query string = `
 		UPDATE tx SET
 			amount_success = tx_update.amount_success,
-			load_amount_success = tx_update.load_amount_success
+			deposit_amount_success = tx_update.deposit_amount_success
 		FROM (VALUES
 			(NULL::::BYTEA, NULL::::BOOL, NULL::::BOOL),
-			(:id, :amount_success, :load_amount_success)
-		) as tx_update (id, amount_success, load_amount_success)
+			(:id, :amount_success, :deposit_amount_success)
+		) as tx_update (id, amount_success, deposit_amount_success)
 		WHERE tx.id = tx_update.id
 	`
 	if len(txUpdates) > 0 {
@@ -1414,7 +1414,7 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	for i := range blockData.Rollup.Batches {
 		batch := &blockData.Rollup.Batches[i]
 
-		// Set the EffectiveAmount and EffectiveLoadAmount of all the
+		// Set the EffectiveAmount and EffectiveDepositAmount of all the
 		// L1UserTxs that have been forged in this batch
 		if len(batch.L1UserTxs) > 0 {
 			if err = hdb.setL1UserTxEffectiveAmounts(txn, batch.L1UserTxs); err != nil {

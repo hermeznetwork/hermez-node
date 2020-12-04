@@ -1745,12 +1745,12 @@ components:
             userOrigin:
               type: boolean
               description: True if the transaction was sent by a user. False if it was sent by a coordinator.
-            loadAmount:
+            depositAmount:
               allOf:
                 - $ref: '#/components/schemas/BigInt'
                 - description: Tokens transfered from L1 to L2.
                 - example: "4900000000000000000"
-            historicLoadAmountUSD:
+            historicDepositAmountUSD:
               type: number
               description: Load amount in USD, at the moment the transaction was made.
               example: 3.897
@@ -1763,8 +1763,8 @@ components:
           required:
             - toForgeL1TransactionsNum
             - userOrigin
-            - loadAmount
-            - historicLoadAmountUSD
+            - depositAmount
+            - historicDepositAmountUSD
             - ethereumBlockNum
           additionalProperties: false
         L2Info:
@@ -1790,8 +1790,8 @@ components:
       example:
         L1Info:
           ethereumBlockNum: 1
-          historicLoadAmountUSD: 232.47
-          loadAmount: '261'
+          historicDepositAmountUSD: 232.47
+          depositAmount: '261'
           toForgeL1TransactionsNum: 10
           userOrigin: true
         L1orL2: L1
@@ -1854,8 +1854,8 @@ components:
         transactions:
           - L1Info:
               ethereumBlockNum: 3
-              historicLoadAmountUSD: 
-              loadAmount: '0'
+              historicDepositAmountUSD: 
+              depositAmount: '0'
               toForgeL1TransactionsNum: 7
               userOrigin: true
             L1orL2: L1
@@ -1946,8 +1946,8 @@ components:
             type: Exit
           - L1Info:
               ethereumBlockNum: 3
-              historicLoadAmountUSD: 14099.9999859
-              loadAmount: '33333333300000000000'
+              historicDepositAmountUSD: 14099.9999859
+              depositAmount: '33333333300000000000'
               toForgeL1TransactionsNum: 2
               userOrigin: true
             L1orL2: L1
@@ -2480,7 +2480,7 @@ components:
       example:
         accounts:
         - accountIndex: hez:ETH:259
-          balance: '2590000000'
+          balance: '2590000000000000000'
           bjj: hez:W6x4TZOAZ9mAqdOb3Xm_hKDLspaXfEfMMN4tXOkinS-W
           hezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
           itemId: 4
@@ -2954,7 +2954,7 @@ components:
               type: integer
               description: Account index used to indicate that a transaction is an `exit` or `force exit`.
               example: 1
-            limitLoadAmount:
+            limitDepositAmount:
               type: integer
               description: Maximum load amount (L1 to L2) allowed.
               example: 321
@@ -2972,7 +2972,7 @@ components:
               example: 101
             l1UserTotalBytes:
               type: integer
-              description: Number of bytes that a L1 user transaction has ([20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx + [2 bytes] loadAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx).
+              description: Number of bytes that a L1 user transaction has ([20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx + [2 bytes] depositAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx).
               example: 72
             maxL1UserTx:
               type: integer
@@ -3002,7 +3002,7 @@ components:
             - publicConstants
             - reservedIdx
             - exitIdx
-            - limitLoadAmount
+            - limitDepositAmount
             - limitL2TransferAmount
             - limitTokens
             - l1CoordinatorTotalBytes

@@ -716,7 +716,7 @@ var errTODO = fmt.Errorf("TODO: Not implemented yet")
 // }
 
 // RollupL1UserTxERC20Permit is the interface to call the smart contract function
-func (c *Client) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
 	log.Error("TODO")
 	return nil, tracerr.Wrap(errTODO)
 }
@@ -725,7 +725,7 @@ func (c *Client) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx i
 func (c *Client) RollupL1UserTxERC20ETH(
 	fromBJJ *babyjub.PublicKey,
 	fromIdx int64,
-	loadAmount *big.Int,
+	depositAmount *big.Int,
 	amount *big.Int,
 	tokenID uint32,
 	toIdx int64,
@@ -739,7 +739,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	_, err = common.NewFloat16(loadAmount)
+	_, err = common.NewFloat16(depositAmount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -764,7 +764,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 		FromEthAddr:     *c.addr,
 		FromBJJ:         fromBJJ,
 		Amount:          amount,
-		LoadAmount:      loadAmount,
+		DepositAmount:   depositAmount,
 		TokenID:         common.TokenID(tokenID),
 		ToIdx:           common.Idx(toIdx),
 		ToForgeL1TxsNum: &toForgeL1TxsNum,
@@ -783,7 +783,7 @@ func (c *Client) RollupL1UserTxERC20ETH(
 }
 
 // RollupL1UserTxERC777 is the interface to call the smart contract function
-// func (c *Client) RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
+// func (c *Client) RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
 // 	log.Error("TODO")
 // 	return nil, errTODO
 // }
