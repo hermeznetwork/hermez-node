@@ -64,21 +64,12 @@ var (
 
 	bootCoordinatorAccount      *accounts.Account
 	bootCoordinatorAddressConst ethCommon.Address
-
-	safetyAccount      *accounts.Account
-	safetyAddressConst ethCommon.Address
 )
 
 // Ethereum Accounts
 var (
-	hermezGovernanceDAOAccount      *accounts.Account
-	hermezGovernanceDAOAddressConst ethCommon.Address
-
-	whiteHackGroupAccount      *accounts.Account
-	whiteHackGroupAddressConst ethCommon.Address
-
-	hermezKeeperAccount      *accounts.Account
-	hermezKeeperAddressConst ethCommon.Address
+	emergencyCouncilAccount      *accounts.Account
+	emergencyCouncilAddressConst ethCommon.Address
 
 	governanceAccount      *accounts.Account
 	governanceAddressConst ethCommon.Address
@@ -94,14 +85,12 @@ var (
 )
 
 var (
-	ks                   *keystore.KeyStore
-	ethClient            *ethclient.Client
-	ethereumClientWhite  *EthereumClient
-	ethereumClientKep    *EthereumClient
-	ethereumClientGovDAO *EthereumClient
-	ethereumClientAux    *EthereumClient
-	ethereumClientAux2   *EthereumClient
-	ethereumClientHermez *EthereumClient
+	ks                             *keystore.KeyStore
+	ethClient                      *ethclient.Client
+	ethereumClientEmergencyCouncil *EthereumClient
+	ethereumClientAux              *EthereumClient
+	ethereumClientAux2             *EthereumClient
+	ethereumClientHermez           *EthereumClient
 )
 
 func getEnvVariables() {
@@ -163,14 +152,11 @@ func TestMain(m *testing.M) {
 		// into the keystore
 		bootCoordinatorAccount, bootCoordinatorAddressConst = genAcc(w, ks, 0)
 		governanceAccount, governanceAddressConst = genAcc(w, ks, 1)
-		safetyAccount, safetyAddressConst = genAcc(w, ks, 2)
-		hermezKeeperAccount, hermezKeeperAddressConst = genAcc(w, ks, 6)
-		hermezGovernanceDAOAccount, hermezGovernanceDAOAddressConst = genAcc(w, ks, 7)
-		whiteHackGroupAccount, whiteHackGroupAddressConst = genAcc(w, ks, 8)
-		donationAccount, donationAddressConst = genAcc(w, ks, 9)
-		aux2Account, aux2AddressConst = genAcc(w, ks, 11)
-		hermezRollupTestAccount, hermezRollupTestAddressConst = genAcc(w, ks, 12)
-		auxAccount, auxAddressConst = genAcc(w, ks, 13)
+		emergencyCouncilAccount, emergencyCouncilAddressConst = genAcc(w, ks, 2)
+		donationAccount, donationAddressConst = genAcc(w, ks, 3)
+		hermezRollupTestAccount, hermezRollupTestAddressConst = genAcc(w, ks, 4)
+		auxAccount, auxAddressConst = genAcc(w, ks, 5)
+		aux2Account, aux2AddressConst = genAcc(w, ks, 6)
 
 		ethClient, err = ethclient.Dial(ethClientDialURL)
 		if err != nil {
@@ -200,9 +186,7 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 
-		ethereumClientKep = NewEthereumClient(ethClient, hermezKeeperAccount, ks, nil)
-		ethereumClientWhite = NewEthereumClient(ethClient, whiteHackGroupAccount, ks, nil)
-		ethereumClientGovDAO = NewEthereumClient(ethClient, hermezGovernanceDAOAccount, ks, nil)
+		ethereumClientEmergencyCouncil = NewEthereumClient(ethClient, emergencyCouncilAccount, ks, nil)
 		ethereumClientAux = NewEthereumClient(ethClient, auxAccount, ks, nil)
 		ethereumClientAux2 = NewEthereumClient(ethClient, aux2Account, ks, nil)
 		ethereumClientHermez = NewEthereumClient(ethClient, hermezRollupTestAccount, ks, nil)

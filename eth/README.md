@@ -8,7 +8,7 @@ The first step is to clone the github repository where the contracts are located
 
 While the prepared deployment is not found to master, branch in repository must be changed:
 
-`git checkout feature/newDeploymentScript-ethclient` (tested with commit `af4c93916d6cd93d866c121cc63b6a6794f649b2`)
+`git checkout feature/newDeploymentScript-eth` (tested with commit `6335252b073dc59afafc45040dae8630c72ecdf3`)
 
 Now, install the dependencies:
 
@@ -27,7 +27,7 @@ Now, in a terminal start a local blockchain with ganache:
 ```
 Once ganache is ready, in another terminal run the deployment in the local ganache network:
 ```
-npx buidler run --network ganache test-deployment.js
+npx buidler run --network localhostMnemonic test-deployment.js
 ```
 
 An output file necessary for the next step is obtained: `deploy-output`.
@@ -42,13 +42,13 @@ They must be taken from the output file of the previous step.
 They can be provided by file called `.env`:
 
 ```
-GENESIS_BLOCK=97
-AUCTION="0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F"
-AUCTION_TEST="0x56D4563E85477AC8Aa6a3b980b831DDb18a826ec"
-TOKENHEZ="0x2b7dEe2CF60484325716A1c6A193519c8c3b19F3"
-HERMEZ="0x6F4e99522F4eB37e0B73D0C0373147893EF12fD5"
-WDELAYER="0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
-WDELAYER_TEST="0xdc05EFc3029024068FCc86f05323411f14D69280"
+GENESIS_BLOCK=98
+AUCTION="0x317113D2593e3efF1FfAE0ba2fF7A61861Df7ae5"
+AUCTION_TEST="0x2b7dEe2CF60484325716A1c6A193519c8c3b19F3"
+TOKENHEZ="0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
+HERMEZ="0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
+WDELAYER="0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F"
+WDELAYER_TEST="0xc8F466fFeF9E9788fb363c2F4fBDdF2cAe477805"
 ```
 
 > An example is found in `hermez-node/eth/.env.example`
@@ -59,4 +59,4 @@ And then run test from `hermez-node/eth/`:
 
 Or they can be provided as a parameter in the command that runs the test:
 
-`INTEGRATION=1 GENESIS_BLOCK=97 AUCTION="0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F" AUCTION_TEST="0x56D4563E85477AC8Aa6a3b980b831DDb18a826ec" TOKENHEZ="0x2b7dEe2CF60484325716A1c6A193519c8c3b19F3" HERMEZ="0x6F4e99522F4eB37e0B73D0C0373147893EF12fD5" WDELAYER="0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77" WDELAYER_TEST="0xdc05EFc3029024068FCc86f05323411f14D69280" go test`
+`INTEGRATION=1 GENESIS_BLOCK=98 AUCTION="0x317113D2593e3efF1FfAE0ba2fF7A61861Df7ae5" AUCTION_TEST="0x2b7dEe2CF60484325716A1c6A193519c8c3b19F3" TOKENHEZ="0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77" HERMEZ="0x8EEaea23686c319133a7cC110b840d1591d9AeE0" WDELAYER="0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F" WDELAYER_TEST="0xc8F466fFeF9E9788fb363c2F4fBDdF2cAe477805" go test`

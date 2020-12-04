@@ -25,7 +25,6 @@ type AuctionConstants struct {
 	// HermezRollup smartcontract address
 	HermezRollup ethCommon.Address `json:"hermezRollup"`
 	// Hermez Governanze Token smartcontract address who controls some parameters and collects HEZ fee
-	// Only for test
 	GovernanceAddress ethCommon.Address `json:"governanceAddress"`
 }
 
@@ -54,10 +53,12 @@ func (c *AuctionConstants) RelativeBlock(blockNum int64) int64 {
 // AuctionVariables are the variables of the Auction Smart Contract
 type AuctionVariables struct {
 	EthBlockNum int64 `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	// Boot Coordinator Address
+	// Donation Address
 	DonationAddress ethCommon.Address `json:"donationAddress" meddler:"donation_address" validate:"required"`
 	// Boot Coordinator Address
 	BootCoordinator ethCommon.Address `json:"bootCoordinator" meddler:"boot_coordinator" validate:"required"`
+	// Boot Coordinator URL
+	BootCoordinatorURL string `json:"bootCoordinatorUrl" meddler:"boot_coordinator_url" validate:"required"`
 	// The minimum bid value in a series of 6 slots
 	DefaultSlotSetBid [6]*big.Int `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
 	// SlotNum at which the new default_slot_set_bid applies

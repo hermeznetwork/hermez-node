@@ -34,8 +34,8 @@ import (
 // WithdrawDelayerVars contains the Withdrawal Delayer smart contract variables
 // type WithdrawDelayerVars struct {
 // 	HermezRollupAddress        eth.Address
-// 	HermezGovernanceDAOAddress eth.Address
-// 	WhiteHackGroupAddress      eth.Address
+// 	HermezGovernanceAddress eth.Address
+// 	EmergencyCouncilAddress      eth.Address
 // 	WithdrawalDelay            uint
 // 	EmergencyModeStartingTime  time.Time
 // 	EmergencyModeEnabled       bool
@@ -142,8 +142,7 @@ type RollupConstants struct {
 	TokenHEZ                    ethCommon.Address      `json:"tokenHEZ"`
 	Verifiers                   []RollupVerifierStruct `json:"verifiers"`
 	HermezAuctionContract       ethCommon.Address      `json:"hermezAuctionContract"`
-	HermezGovernanceDAOAddress  ethCommon.Address      `json:"hermezGovernanceDAOAddress"`
-	SafetyAddress               ethCommon.Address      `json:"safetyAddress"`
+	HermezGovernanceAddress     ethCommon.Address      `json:"hermezGovernanceAddress"`
 	WithdrawDelayerContract     ethCommon.Address      `json:"withdrawDelayerContract"`
 }
 

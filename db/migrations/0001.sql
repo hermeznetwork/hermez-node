@@ -12,7 +12,7 @@ CREATE TABLE coordinator (
     bidder_addr BYTEA NOT NULL,
     forger_addr BYTEA NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    url VARCHAR(200) NOT NULL
+    url BYTEA NOT NULL
 );
 
 CREATE TABLE batch (
@@ -537,6 +537,7 @@ CREATE TABLE auction_vars (
     eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,
     donation_address BYTEA NOT NULL,
     boot_coordinator BYTEA NOT NULL,
+    boot_coordinator_url BYTEA NOT NULL,
     default_slot_set_bid BYTEA NOT NULL,
     default_slot_set_bid_slot_num BIGINT NOT NULL, -- slot_num after which the new default_slot_set_bid applies
     closed_auction_slots INT NOT NULL,
@@ -548,9 +549,8 @@ CREATE TABLE auction_vars (
 
 CREATE TABLE wdelayer_vars (
     eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    govdao_address BYTEA NOT NULL,
-    whg_address BYTEA NOT NULL,
-    keeper_address BYTEA NOT NULL,
+    gov_address BYTEA NOT NULL,
+    emg_address BYTEA NOT NULL,
     withdrawal_delay BIGINT NOT NULL,
     emergency_start_time BIGINT NOT NULL,
     emergency_mode BOOLEAN NOT NULL

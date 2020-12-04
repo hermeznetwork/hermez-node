@@ -235,7 +235,8 @@ func TestClientRollup(t *testing.T) {
 	rollupEvents, _, err = c.RollupEventsByBlock(blockNum)
 	require.Nil(t, err)
 
-	rollupForgeBatchArgs1, sender, err := c.RollupForgeBatchArgs(rollupEvents.ForgeBatch[0].EthTxHash)
+	rollupForgeBatchArgs1, sender, err := c.RollupForgeBatchArgs(rollupEvents.ForgeBatch[0].EthTxHash,
+		rollupEvents.ForgeBatch[0].L1UserTxsLen)
 	require.Nil(t, err)
 	assert.Equal(t, *c.addr, *sender)
 	assert.Equal(t, rollupForgeBatchArgs0, rollupForgeBatchArgs1)

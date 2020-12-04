@@ -654,6 +654,7 @@ func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *co
 		0,
 		ethCommon.BigToAddress(big.NewInt(2)),
 		ethCommon.BigToAddress(big.NewInt(3)),
+		"https://boot.coord.com",
 		[6]*big.Int{
 			big.NewInt(1), big.NewInt(2), big.NewInt(3),
 			big.NewInt(4), big.NewInt(5), big.NewInt(6),
@@ -670,7 +671,6 @@ func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *co
 		0,
 		ethCommon.BigToAddress(big.NewInt(2)),
 		ethCommon.BigToAddress(big.NewInt(3)),
-		ethCommon.BigToAddress(big.NewInt(4)),
 		13,
 		14,
 		false,

@@ -2697,6 +2697,10 @@ components:
             - $ref: '#/components/schemas/EthereumAddress'
             - description: Ethereum address of the boot coordinator.
             - example: "0x997dc4262BCDbf85190C01c996b4C06a461d2430"
+        bootCoordinatorUrl:
+          type: string
+          description: Boot Coordinator URL
+          example: "https://boot.coordinator.io"
         slotDeadline:
           type: integer
           description: Number of blocks after the beginning of a slot after which any coordinator can forge if the winner has not forged any batch in that slot.
@@ -2733,6 +2737,7 @@ components:
       required:
         - ethereumBlockNum
         - bootCoordinator
+        - bootCoordinatorUrl
         - slotDeadline
         - closedAuctionSlots
         - openAuctionSlots
@@ -2804,20 +2809,15 @@ components:
       properties:
         ethereumBlockNum:
           $ref: '#/components/schemas/EthBlockNum'
-        hermezGovernanceDAOAddress:
+        hermezGovernanceAddress:
           allOf:
             - $ref: '#/components/schemas/EthereumAddress'
-            - description: Ethereum address of the governance DAO.
+            - description: Ethereum address of the governance.
             - example: "0x667dc4262BCDbf85190C01c996b4C06a461d2430"
-        whiteHackGroupAddress:
+        emergencyCouncilAddress:
           allOf:
             - $ref: '#/components/schemas/EthereumAddress'
             - description: Ethereum Address that can claim the funds in an emergency when the maximum emergency mode time is exceeded.
-            - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
-        hermezKeeperAddress:
-          allOf:
-            - $ref: '#/components/schemas/EthereumAddress'
-            - description: Ethereum Address that can enable emergency mode and modify the delay to make a withdrawal.
             - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
         withdrawalDelay:
           allOf:
@@ -2835,9 +2835,8 @@ components:
       additionalProperties: false
       required: 
         - ethereumBlockNum
-        - hermezGovernanceDAOAddress
-        - whiteHackGroupAddress
-        - hermezKeeperAddress
+        - hermezGovernanceAddress
+        - emergencyCouncilAddress
         - withdrawalDelay
         - emergencyModeStartingTime
         - emergencyMode
@@ -2925,16 +2924,11 @@ components:
                     - $ref: '#/components/schemas/EthereumAddress'
                     - description: Ethereum address of the auction smart contract.
                     - example: "0x111dc4262BCDbf85190C01c996b4C06a461d2430"
-                hermezGovernanceDAOAddress:
+                hermezGovernanceAddress:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
-                    - description: Ethereum address of the governanceDAO.
+                    - description: Ethereum address of the governance.
                     - example: "0x222dc4262BCDbf85190C01c996b4C06a461d2430"
-                safetyAddress:
-                  allOf:
-                    - $ref: '#/components/schemas/EthereumAddress'
-                    - description: Ethereum address of the safety.
-                    - example: "0x333dc4262BCDbf85190C01c996b4C06a461d2430"
                 withdrawDelayerContract:
                   allOf:
                     - $ref: '#/components/schemas/EthereumAddress'
@@ -2945,8 +2939,7 @@ components:
                 - absoluteMaxL1L2BatchTimeout
                 - verifiers
                 - hermezAuctionContract
-                - hermezGovernanceDAOAddress
-                - safetyAddress
+                - hermezGovernanceAddress
                 - withdrawDelayerContract
               additionalProperties: false
             maxFeeIdxCoordinator:
