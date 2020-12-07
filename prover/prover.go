@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -13,18 +14,21 @@ import (
 
 	"github.com/dghubble/sling"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
 // Proof TBD this type will be received from the proof server
 type Proof struct {
+	PiA      []string   `json:"pi_a"`
+	PiB      [][]string `json:"pi_b"`
+	PiC      []string   `json:"pi_c"`
+	Protocol string     `json:"protocol"`
 }
 
 // Client is the interface to a ServerProof that calculates zk proofs
 type Client interface {
 	// Non-blocking
-	CalculateProof(zkInputs *common.ZKInputs) error
+	CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error
 	// Blocking
 	GetProof(ctx context.Context) (*Proof, error)
 	// Non-Blocking
@@ -105,23 +109,22 @@ const (
 	GET apiMethod = "GET"
 	// POST is an HTTP POST with maybe JSON body
 	POST apiMethod = "POST"
-	// POSTFILE is an HTTP POST with a form file
-	POSTFILE apiMethod = "POSTFILE"
 )
 
 // ProofServerClient contains the data related to a ProofServerClient
 type ProofServerClient struct {
-	URL    string
-	client *sling.Sling
+	URL      string
+	client   *sling.Sling
+	timeCons time.Duration
 }
 
 // NewProofServerClient creates a new ServerProof
-func NewProofServerClient(URL string) *ProofServerClient {
+func NewProofServerClient(URL string, timeCons time.Duration) *ProofServerClient {
 	if URL[len(URL)-1] != '/' {
 		URL += "/"
 	}
 	client := sling.New().Base(URL)
-	return &ProofServerClient{URL: URL, client: client}
+	return &ProofServerClient{URL: URL, client: client, timeCons: timeCons}
 }
 
 //nolint:unused
@@ -170,15 +173,6 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 		req, err = p.client.New().Get(path).Request()
 	case POST:
 		req, err = p.client.New().Post(path).BodyJSON(body).Request()
-	case POSTFILE:
-		provider, err := newFormFileProvider(body)
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-		req, err = p.client.New().Post(path).BodyProvider(provider).Request()
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
 	default:
 		return tracerr.Wrap(fmt.Errorf("invalid http method: %v", method))
 	}
@@ -215,7 +209,7 @@ func (p *ProofServerClient) apiCancel(ctx context.Context) error {
 
 //nolint:unused
 func (p *ProofServerClient) apiInput(ctx context.Context, zkInputs *common.ZKInputs) error {
-	if err := p.apiRequest(ctx, POSTFILE, "/input", zkInputs, nil); err != nil {
+	if err := p.apiRequest(ctx, POST, "/input", zkInputs, nil); err != nil {
 		return tracerr.Wrap(err)
 	}
 	return nil
@@ -223,28 +217,70 @@ func (p *ProofServerClient) apiInput(ctx context.Context, zkInputs *common.ZKInp
 
 // CalculateProof sends the *common.ZKInputs to the ServerProof to compute the
 // Proof
-func (p *ProofServerClient) CalculateProof(zkInputs *common.ZKInputs) error {
-	log.Error("TODO")
-	return tracerr.Wrap(common.ErrTODO)
+func (p *ProofServerClient) CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error {
+	err := p.apiInput(ctx, zkInputs)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	return nil
 }
 
 // GetProof retreives the Proof from the ServerProof, blocking until the proof
 // is ready.
 func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, error) {
-	log.Error("TODO")
-	return nil, tracerr.Wrap(common.ErrTODO)
+	status, err := p.apiStatus(ctx)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if status.Status == StatusCodeSuccess {
+		var proof Proof
+		err := json.Unmarshal([]byte(status.Proof), &proof)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		return &proof, nil
+	} else {
+		return nil, errors.New("State is not Success")
+	}
 }
 
 // Cancel cancels any current proof computation
 func (p *ProofServerClient) Cancel(ctx context.Context) error {
-	log.Error("TODO")
-	return tracerr.Wrap(common.ErrTODO)
+	err := p.apiCancel(ctx)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	return nil
 }
 
 // WaitReady waits until the serverProof is ready
 func (p *ProofServerClient) WaitReady(ctx context.Context) error {
-	log.Error("TODO")
-	return tracerr.Wrap(common.ErrTODO)
+	status, err := p.apiStatus(ctx)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if !status.Status.IsInitialized() {
+		err := errors.New("Proof Server is not initialized")
+		return err
+	} else {
+		if status.Status.IsReady() {
+			return nil
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return tracerr.Wrap(common.ErrDone)
+			case <-time.After(p.timeCons):
+				status, err := p.apiStatus(ctx)
+				if err != nil {
+					return tracerr.Wrap(err)
+				}
+				if status.Status.IsReady() {
+					return nil
+				}
+			}
+		}
+	}
 }
 
 // MockClient is a mock ServerProof to be used in tests.  It doesn't calculate anything
