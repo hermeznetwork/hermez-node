@@ -203,7 +203,8 @@ type ZKInputs struct {
 	// account creation type.
 	ISOutIdx []*big.Int `json:"imOutIdx"` // uint64 (max nLevels bits), len: [nTx - 1]
 	// rollup-tx
-	// ISStateRoot root at the moment of the Tx (once processed), the state root value once the Tx is processed into the state tree
+	// ISStateRoot root at the moment of the Tx (once processed), the state
+	// root value once the Tx is processed into the state tree
 	ISStateRoot []*big.Int `json:"imStateRoot"` // Hash, len: [nTx - 1]
 	// ISExitTree root at the moment (once processed) of the Tx the value
 	// once the Tx is processed into the exit tree
@@ -211,10 +212,12 @@ type ZKInputs struct {
 	// ISAccFeeOut accumulated fees once the Tx is processed.  Contains the
 	// array of FeeAccount Balances at each moment of each Tx processed.
 	ISAccFeeOut [][]*big.Int `json:"imAccFeeOut"` // big.Int, len: [nTx - 1][maxFeeIdxs]
-	// fee-tx
-	// ISStateRootFee root at the moment of the Tx (once processed), the state root value once the Tx is processed into the state tree
+	// fee-tx:
+	// ISStateRootFee root at the moment of the Tx (once processed), the
+	// state root value once the Tx is processed into the state tree
 	ISStateRootFee []*big.Int `json:"imStateRootFee"` // Hash, len: [maxFeeIdxs - 1]
-	// ISInitStateRootFee state root once all L1-L2 tx are processed (before computing the fees-tx)
+	// ISInitStateRootFee state root once all L1-L2 tx are processed
+	// (before computing the fees-tx)
 	ISInitStateRootFee *big.Int `json:"imInitStateRootFee"` // Hash
 	// ISFinalAccFee final accumulated fees (before computing the fees-tx).
 	// Contains the final values of the ISAccFeeOut parameter
@@ -283,8 +286,8 @@ func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatc
 	zki := &ZKInputs{}
 	zki.Metadata.NTx = nTx
 	zki.Metadata.MaxFeeIdxs = maxFeeIdxs
-	zki.Metadata.NLevels = nLevels
 	zki.Metadata.MaxLevels = uint32(48) //nolint:gomnd
+	zki.Metadata.NLevels = nLevels
 	zki.Metadata.MaxL1Tx = maxL1Tx
 	zki.Metadata.MaxTx = maxTx
 
@@ -424,6 +427,7 @@ func (z ZKInputs) HashGlobalData() (*big.Int, error) {
 func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	var b []byte
 	bytesMaxLevels := int(z.Metadata.MaxLevels / 8) //nolint:gomnd
+	bytesNLevels := int(z.Metadata.NLevels / 8)     //nolint:gomnd
 
 	// [MAX_NLEVELS bits] oldLastIdx
 	oldLastIdx := make([]byte, bytesMaxLevels)
@@ -490,16 +494,10 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 
 	// [NLevels * MAX_TOKENS_FEE bits] feeTxsData
 	for i := 0; i < len(z.FeeIdxs); i++ {
-		var r []byte
-
-		padding := make([]byte, bytesMaxLevels/4) //nolint:gomnd
-		r = append(r, padding...)
-
-		feeIdx := make([]byte, bytesMaxLevels/2) //nolint:gomnd
+		feeIdx := make([]byte, bytesNLevels) //nolint:gomnd
 		feeIdxBytes := z.FeeIdxs[i].Bytes()
 		copy(feeIdx[len(feeIdx)-len(feeIdxBytes):], feeIdxBytes[:])
-		r = append(r, feeIdx...)
-		b = append(b, r...)
+		b = append(b, feeIdx...)
 	}
 
 	// [16 bits] chainID

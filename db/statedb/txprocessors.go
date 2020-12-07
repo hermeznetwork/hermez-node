@@ -287,12 +287,6 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
 			return nil, tracerr.Wrap(err)
 		}
-		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
-		pFee, err := s.UpdateAccount(idx, accCoord)
-		if err != nil {
-			log.Error(err)
-			return nil, tracerr.Wrap(err)
-		}
 		if s.zki != nil {
 			s.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
 			s.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
@@ -302,11 +296,18 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			s.zki.Ay3[iFee] = accCoord.PublicKey.Y
 			s.zki.Balance3[iFee] = accCoord.Balance
 			s.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
-			s.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
 
 			// add Coord Idx to ZKInputs.FeeTxsData
 			s.zki.FeeIdxs[iFee] = idx.BigInt()
-
+		}
+		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
+		pFee, err := s.UpdateAccount(idx, accCoord)
+		if err != nil {
+			log.Error(err)
+			return nil, tracerr.Wrap(err)
+		}
+		if s.zki != nil {
+			s.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
 			s.zki.ISStateRootFee[iFee] = s.mt.Root().BigInt()
 		}
 		iFee++
