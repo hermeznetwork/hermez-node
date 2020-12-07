@@ -517,16 +517,16 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, true, dbL1Txs[9].UserOrigin)
 
 	// Load Amount
-	assert.Equal(t, big.NewInt(10), dbL1Txs[0].LoadAmount)
-	assert.Equal(t, big.NewInt(10), dbL1Txs[1].LoadAmount)
-	assert.Equal(t, big.NewInt(20), dbL1Txs[2].LoadAmount)
-	assert.Equal(t, big.NewInt(10), dbL1Txs[3].LoadAmount)
-	assert.Equal(t, big.NewInt(10), dbL1Txs[4].LoadAmount)
-	assert.Equal(t, big.NewInt(10), dbL1Txs[5].LoadAmount)
-	assert.Equal(t, big.NewInt(0), dbL1Txs[6].LoadAmount)
-	assert.Equal(t, big.NewInt(0), dbL1Txs[7].LoadAmount)
-	assert.Equal(t, big.NewInt(10), dbL1Txs[8].LoadAmount)
-	assert.Equal(t, big.NewInt(10), dbL1Txs[9].LoadAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[0].DepositAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[1].DepositAmount)
+	assert.Equal(t, big.NewInt(20), dbL1Txs[2].DepositAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[3].DepositAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[4].DepositAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[5].DepositAmount)
+	assert.Equal(t, big.NewInt(0), dbL1Txs[6].DepositAmount)
+	assert.Equal(t, big.NewInt(0), dbL1Txs[7].DepositAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[8].DepositAmount)
+	assert.Equal(t, big.NewInt(10), dbL1Txs[9].DepositAmount)
 
 	// Check saved txID's batch_num is not nil
 	assert.Equal(t, txID, dbL1Txs[len(dbL1Txs)-2].TxID)
@@ -736,12 +736,12 @@ func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
 	assert.NoError(t, err)
 	require.Nil(t, err)
 
-	// Set the Effective{Amount,LoadAmount} of the L1UserTxs that are forged in the second block
+	// Set the Effective{Amount,DepositAmount} of the L1UserTxs that are forged in the second block
 	l1Txs := blocks[1].Rollup.Batches[0].L1UserTxs
 	require.Equal(t, 3, len(l1Txs))
 	// Change some values to test all cases
 	l1Txs[1].EffectiveAmount = big.NewInt(0)
-	l1Txs[2].EffectiveLoadAmount = big.NewInt(0)
+	l1Txs[2].EffectiveDepositAmount = big.NewInt(0)
 	l1Txs[2].EffectiveAmount = big.NewInt(0)
 	err = historyDB.setL1UserTxEffectiveAmounts(historyDB.db, l1Txs)
 	require.NoError(t, err)
@@ -749,18 +749,18 @@ func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
 	dbL1Txs, err := historyDB.GetAllL1UserTxs()
 	require.NoError(t, err)
 	for i, tx := range dbL1Txs {
-		log.Infof("%d %v %v", i, tx.EffectiveAmount, tx.EffectiveLoadAmount)
+		log.Infof("%d %v %v", i, tx.EffectiveAmount, tx.EffectiveDepositAmount)
 		assert.NotNil(t, tx.EffectiveAmount)
-		assert.NotNil(t, tx.EffectiveLoadAmount)
+		assert.NotNil(t, tx.EffectiveDepositAmount)
 		switch tx.TxID {
 		case l1Txs[0].TxID:
-			assert.Equal(t, l1Txs[0].LoadAmount, tx.EffectiveLoadAmount)
+			assert.Equal(t, l1Txs[0].DepositAmount, tx.EffectiveDepositAmount)
 			assert.Equal(t, l1Txs[0].Amount, tx.EffectiveAmount)
 		case l1Txs[1].TxID:
-			assert.Equal(t, l1Txs[1].LoadAmount, tx.EffectiveLoadAmount)
+			assert.Equal(t, l1Txs[1].DepositAmount, tx.EffectiveDepositAmount)
 			assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 		case l1Txs[2].TxID:
-			assert.Equal(t, big.NewInt(0), tx.EffectiveLoadAmount)
+			assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 			assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 		}
 	}

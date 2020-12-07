@@ -66,7 +66,7 @@ const (
 	// RollupConstL1CoordinatorTotalBytes [4 bytes] token + [32 bytes] babyjub + [65 bytes] compressedSignature
 	RollupConstL1CoordinatorTotalBytes = 101
 	// RollupConstL1UserTotalBytes [20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx +
-	// [2 bytes] loadAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx
+	// [2 bytes] depositAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx
 	RollupConstL1UserTotalBytes = 72
 	// RollupConstMaxL1UserTx Maximum L1-user transactions allowed to be queued in a batch
 	RollupConstMaxL1UserTx = 128
@@ -87,8 +87,8 @@ const (
 )
 
 var (
-	// RollupConstLimitLoadAmount Max load amount allowed (loadAmount: L1 --> L2)
-	RollupConstLimitLoadAmount, _ = new(big.Int).SetString("340282366920938463463374607431768211456", 10)
+	// RollupConstLimitDepositAmount Max load amount allowed (depositAmount: L1 --> L2)
+	RollupConstLimitDepositAmount, _ = new(big.Int).SetString("340282366920938463463374607431768211456", 10)
 	// RollupConstLimitL2TransferAmount Max amount allowed (amount L2 --> L2)
 	RollupConstLimitL2TransferAmount, _ = new(big.Int).SetString("6277101735386680763835789423207666416102355444464034512896", 10)
 

@@ -199,12 +199,12 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
 			tx := common.L1Tx{
-				FromEthAddr: tc.Users[inst.From].Addr,
-				FromBJJ:     tc.Users[inst.From].BJJ.Public(),
-				TokenID:     inst.TokenID,
-				Amount:      big.NewInt(0),
-				LoadAmount:  big.NewInt(0),
-				Type:        common.TxTypeCreateAccountDeposit, // as TxTypeCreateAccountDepositCoordinator is not valid oustide Til package
+				FromEthAddr:   tc.Users[inst.From].Addr,
+				FromBJJ:       tc.Users[inst.From].BJJ.Public(),
+				TokenID:       inst.TokenID,
+				Amount:        big.NewInt(0),
+				DepositAmount: big.NewInt(0),
+				Type:          common.TxTypeCreateAccountDeposit, // as TxTypeCreateAccountDepositCoordinator is not valid oustide Til package
 			}
 			testTx := L1Tx{
 				lineNum:     inst.LineNum,
@@ -219,12 +219,12 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
 			tx := common.L1Tx{
-				FromEthAddr: tc.Users[inst.From].Addr,
-				FromBJJ:     tc.Users[inst.From].BJJ.Public(),
-				TokenID:     inst.TokenID,
-				Amount:      big.NewInt(0),
-				LoadAmount:  inst.LoadAmount,
-				Type:        inst.Typ,
+				FromEthAddr:   tc.Users[inst.From].Addr,
+				FromBJJ:       tc.Users[inst.From].BJJ.Public(),
+				TokenID:       inst.TokenID,
+				Amount:        big.NewInt(0),
+				DepositAmount: inst.DepositAmount,
+				Type:          inst.Typ,
 			}
 			if inst.Typ == common.TxTypeCreateAccountDepositTransfer {
 				tx.Amount = inst.Amount
@@ -248,10 +248,10 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
 			tx := common.L1Tx{
-				TokenID:    inst.TokenID,
-				Amount:     big.NewInt(0),
-				LoadAmount: inst.LoadAmount,
-				Type:       inst.Typ,
+				TokenID:       inst.TokenID,
+				Amount:        big.NewInt(0),
+				DepositAmount: inst.DepositAmount,
+				Type:          inst.Typ,
 			}
 			if inst.Typ == common.TxTypeDepositTransfer {
 				tx.Amount = inst.Amount
@@ -291,10 +291,10 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
 			tx := common.L1Tx{
-				TokenID:    inst.TokenID,
-				Amount:     inst.Amount,
-				LoadAmount: big.NewInt(0),
-				Type:       common.TxTypeForceTransfer,
+				TokenID:       inst.TokenID,
+				Amount:        inst.Amount,
+				DepositAmount: big.NewInt(0),
+				Type:          common.TxTypeForceTransfer,
 			}
 			testTx := L1Tx{
 				lineNum:     inst.LineNum,
@@ -332,11 +332,11 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
 			tx := common.L1Tx{
-				ToIdx:      common.Idx(1), // as is an Exit
-				TokenID:    inst.TokenID,
-				Amount:     inst.Amount,
-				LoadAmount: big.NewInt(0),
-				Type:       common.TxTypeForceExit,
+				ToIdx:         common.Idx(1), // as is an Exit
+				TokenID:       inst.TokenID,
+				Amount:        inst.Amount,
+				DepositAmount: big.NewInt(0),
+				Type:          common.TxTypeForceExit,
 			}
 			testTx := L1Tx{
 				lineNum:     inst.LineNum,
@@ -747,7 +747,7 @@ func (tc *Context) FillBlocksL1UserTxsBatchNum(blocks []common.BlockData) {
 
 // FillBlocksForgedL1UserTxs fills the L1UserTxs of a batch with the L1UserTxs
 // that are forged in that batch.  It always sets `EffectiveAmount` = `Amount`
-// and `EffectiveLoadAmount` = `LoadAmount`.
+// and `EffectiveDepositAmount` = `DepositAmount`.
 func (tc *Context) FillBlocksForgedL1UserTxs(blocks []common.BlockData) error {
 	for i := range blocks {
 		block := &blocks[i]
@@ -761,7 +761,7 @@ func (tc *Context) FillBlocksForgedL1UserTxs(blocks []common.BlockData) error {
 					tx := &batch.L1UserTxs[k]
 					*tx = queue[k].L1Tx
 					tx.EffectiveAmount = tx.Amount
-					tx.EffectiveLoadAmount = tx.LoadAmount
+					tx.EffectiveDepositAmount = tx.DepositAmount
 					tx.BatchNum = &batchNum
 					_tx, err := common.NewL1Tx(tx)
 					if err != nil {
@@ -786,7 +786,7 @@ func (tc *Context) FillBlocksForgedL1UserTxs(blocks []common.BlockData) error {
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].EthBlockNum
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].Position
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveAmount
-// - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveLoadAmount
+// - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveDepositAmount
 // - blocks[].Rollup.Batch.L2Txs[].TxID
 // - blocks[].Rollup.Batch.L2Txs[].Position
 // - blocks[].Rollup.Batch.L2Txs[].Nonce
@@ -869,7 +869,7 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 				tx.Position = position
 				position++
 				tx.EffectiveAmount = big.NewInt(0)
-				tx.EffectiveLoadAmount = big.NewInt(0)
+				tx.EffectiveDepositAmount = big.NewInt(0)
 				nTx, err := common.NewL1Tx(tx)
 				if err != nil {
 					return tracerr.Wrap(err)

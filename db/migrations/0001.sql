@@ -135,14 +135,14 @@ FOR EACH ROW EXECUTE PROCEDURE set_token_usd_update();
 
 CREATE SEQUENCE tx_item_id;
 
--- important note about "amount_success" and "load_amount_success" (only relevant to L1 user txs):
+-- important note about "amount_success" and "deposit_amount_success" (only relevant to L1 user txs):
 -- The behaviour should be:
--- When tx is not forged: amount_success = false, load_amount_success = false
+-- When tx is not forged: amount_success = false, deposit_amount_success = false
 -- When tx is forged: 
 --      amount_success = false if the "effective amount" is 0, else true
---      load_amount_success = false if the "effective load amount" is 0, else true
+--      deposit_amount_success = false if the "effective load amount" is 0, else true
 --
--- However, in order to reduce the amount of updates, by default amount_success and load_amount_success will be set to true (when tx is unforged)
+-- However, in order to reduce the amount of updates, by default amount_success and deposit_amount_success will be set to true (when tx is unforged)
 -- whne they should be false. This can be worked around at a query level by checking if "batch_num IS NULL" (which indicates that the tx is unforged).
 CREATE TABLE tx (
     -- Generic TX
@@ -167,10 +167,10 @@ CREATE TABLE tx (
     -- L1
     to_forge_l1_txs_num BIGINT,
     user_origin BOOLEAN,
-    load_amount BYTEA,
-    load_amount_success BOOLEAN NOT NULL DEFAULT true,
-    load_amount_f NUMERIC,
-    load_amount_usd NUMERIC,
+    deposit_amount BYTEA,
+    deposit_amount_success BOOLEAN NOT NULL DEFAULT true,
+    deposit_amount_f NUMERIC,
+    deposit_amount_usd NUMERIC,
     -- L2
     fee INT,
     fee_usd NUMERIC,
@@ -463,8 +463,8 @@ BEGIN
         IF NEW.user_origin IS NULL OR
         NEW.from_eth_addr IS NULL OR
         NEW.from_bjj IS NULL OR
-        NEW.load_amount IS NULL OR
-        NEW.load_amount_f IS NULL OR
+        NEW.deposit_amount IS NULL OR
+        NEW.deposit_amount_f IS NULL OR
         (NOT NEW.user_origin AND NEW.batch_num IS NULL)  THEN -- If is Coordinator L1, must include batch_num
             RAISE EXCEPTION 'Invalid L1 tx: %', NEW;
         END IF;
@@ -493,8 +493,8 @@ BEGIN
                     NEW."fee_usd" = (SELECT NEW."amount_usd" * fee_percentage(NEW.fee::NUMERIC));
                 END IF;
             END IF;
-            IF NEW."is_l1" AND NEW."load_amount_f" > 0.0 THEN
-                NEW."load_amount_usd" = (SELECT _value * NEW.load_amount_f);
+            IF NEW."is_l1" AND NEW."deposit_amount_f" > 0.0 THEN
+                NEW."deposit_amount_usd" = (SELECT _value * NEW.deposit_amount_f);
             END IF;
         END IF;
     END IF;

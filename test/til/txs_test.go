@@ -141,7 +141,7 @@ func TestGenerateBlocks(t *testing.T) {
 	tc.checkL2TxParams(t, blocks[1].Rollup.Batches[0].L2Txs[1], common.TxTypeTransfer, 1, "A", "B", big.NewInt(1), common.BatchNum(6))
 }
 
-func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxType, tokenID common.TokenID, from, to string, loadAmount, amount *big.Int) {
+func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxType, tokenID common.TokenID, from, to string, depositAmount, amount *big.Int) {
 	assert.Equal(t, typ, tx.Type)
 	if tx.FromIdx != common.Idx(0) {
 		assert.Equal(t, tc.Users[from].Accounts[tokenID].Idx, tx.FromIdx)
@@ -151,8 +151,8 @@ func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxTy
 	if tx.ToIdx != common.Idx(0) {
 		assert.Equal(t, tc.Users[to].Accounts[tokenID].Idx, tx.ToIdx)
 	}
-	if loadAmount != nil {
-		assert.Equal(t, loadAmount, tx.LoadAmount)
+	if depositAmount != nil {
+		assert.Equal(t, depositAmount, tx.DepositAmount)
 	}
 	if amount != nil {
 		assert.Equal(t, amount, tx.Amount)
@@ -432,14 +432,14 @@ func TestGenerateFromInstructions(t *testing.T) {
 		TokenID: 1,
 	})
 	i++
-	la := big.NewInt(10)
+	da := big.NewInt(10)
 	setInst = append(setInst, Instruction{
 		LineNum: i,
 		// Literal: "CreateAccountDeposit(1) A: 10",
-		Typ:        common.TxTypeCreateAccountDeposit,
-		From:       "A",
-		TokenID:    1,
-		LoadAmount: la,
+		Typ:           common.TxTypeCreateAccountDeposit,
+		From:          "A",
+		TokenID:       1,
+		DepositAmount: da,
 	})
 	i++
 	setInst = append(setInst, Instruction{

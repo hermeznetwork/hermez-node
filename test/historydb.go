@@ -157,12 +157,12 @@ func GenL1Txs(
 		token := tokens[i%len(tokens)]
 		amount := big.NewInt(int64(i + 1))
 		tx := common.L1Tx{
-			Position:    i - fromIdx,
-			UserOrigin:  i%2 == 0,
-			TokenID:     token.TokenID,
-			Amount:      amount,
-			LoadAmount:  amount,
-			EthBlockNum: blocks[i%len(blocks)].Num,
+			Position:      i - fromIdx,
+			UserOrigin:    i%2 == 0,
+			TokenID:       token.TokenID,
+			Amount:        amount,
+			DepositAmount: amount,
+			EthBlockNum:   blocks[i%len(blocks)].Num,
 		}
 		if tx.UserOrigin {
 			n := nextTxsNum

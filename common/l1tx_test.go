@@ -24,7 +24,7 @@ func TestNewL1UserTx(t *testing.T) {
 		ToIdx:           301,
 		TokenID:         5,
 		Amount:          big.NewInt(1),
-		LoadAmount:      big.NewInt(2),
+		DepositAmount:   big.NewInt(2),
 		FromIdx:         Idx(300),
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
@@ -35,14 +35,14 @@ func TestNewL1UserTx(t *testing.T) {
 func TestNewL1CoordinatorTx(t *testing.T) {
 	batchNum := BatchNum(51966)
 	l1Tx := &L1Tx{
-		Position:   88,
-		UserOrigin: false,
-		ToIdx:      301,
-		TokenID:    5,
-		Amount:     big.NewInt(1),
-		LoadAmount: big.NewInt(2),
-		FromIdx:    Idx(300),
-		BatchNum:   &batchNum,
+		Position:      88,
+		UserOrigin:    false,
+		ToIdx:         301,
+		TokenID:       5,
+		Amount:        big.NewInt(1),
+		DepositAmount: big.NewInt(2),
+		FromIdx:       Idx(300),
+		BatchNum:      &batchNum,
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.Nil(t, err)
@@ -124,14 +124,14 @@ func TestL1userTxByteParsers(t *testing.T) {
 	require.Nil(t, err)
 
 	l1Tx := &L1Tx{
-		UserOrigin:  true,
-		ToIdx:       3,
-		TokenID:     5,
-		Amount:      big.NewInt(1),
-		LoadAmount:  big.NewInt(2),
-		FromIdx:     2,
-		FromBJJ:     pk,
-		FromEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+		UserOrigin:    true,
+		ToIdx:         3,
+		TokenID:       5,
+		Amount:        big.NewInt(1),
+		DepositAmount: big.NewInt(2),
+		FromIdx:       2,
+		FromBJJ:       pk,
+		FromEthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 
 	encodedData, err := l1Tx.BytesUser()
@@ -164,17 +164,17 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 	pk, err := pkComp.Decompress()
 	require.Nil(t, err)
 
-	loadAmount := new(big.Int)
-	loadAmount.SetString("100000000000000000000", 10)
+	depositAmount := new(big.Int)
+	depositAmount.SetString("100000000000000000000", 10)
 	l1Tx := &L1Tx{
-		ToIdx:       87865485,
-		TokenID:     2098076,
-		Amount:      big.NewInt(2400000000000000000),
-		LoadAmount:  loadAmount,
-		FromIdx:     Idx(29767899),
-		FromBJJ:     pk,
-		FromEthAddr: ethCommon.HexToAddress("0x85dab5b9e2e361d0c208d77be90efcc0439b0a53"),
-		UserOrigin:  true,
+		ToIdx:         87865485,
+		TokenID:       2098076,
+		Amount:        big.NewInt(2400000000000000000),
+		DepositAmount: depositAmount,
+		FromIdx:       Idx(29767899),
+		FromBJJ:       pk,
+		FromEthAddr:   ethCommon.HexToAddress("0x85dab5b9e2e361d0c208d77be90efcc0439b0a53"),
+		UserOrigin:    true,
 	}
 
 	expected, err := utils.HexDecode("85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a000001c638db8be880f00020039c0000053cb88d")
@@ -227,11 +227,11 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	signature[64] = byte(v + 27)
 
 	l1Tx := &L1Tx{
-		TokenID:     231,
-		FromBJJ:     pk,
-		FromEthAddr: fromEthAddr,
-		Amount:      big.NewInt(0),
-		LoadAmount:  big.NewInt(0),
+		TokenID:       231,
+		FromBJJ:       pk,
+		FromEthAddr:   fromEthAddr,
+		Amount:        big.NewInt(0),
+		DepositAmount: big.NewInt(0),
 	}
 
 	bytesCoordinatorL1, err := l1Tx.BytesCoordinatorTx(signature)

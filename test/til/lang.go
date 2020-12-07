@@ -63,15 +63,15 @@ const (
 
 // Instruction is the data structure that represents one line of code
 type Instruction struct {
-	LineNum    int
-	Literal    string
-	From       string
-	To         string
-	Amount     *big.Int
-	LoadAmount *big.Int
-	Fee        uint8
-	TokenID    common.TokenID
-	Typ        common.TxType // D: Deposit, T: Transfer, E: ForceExit
+	LineNum       int
+	Literal       string
+	From          string
+	To            string
+	Amount        *big.Int
+	DepositAmount *big.Int
+	Fee           uint8
+	TokenID       common.TokenID
+	Typ           common.TxType // D: Deposit, T: Transfer, E: ForceExit
 }
 
 // parsedSet contains the full Set of Instructions representing a full code
@@ -94,7 +94,7 @@ func (i Instruction) String() string {
 	if i.Typ == common.TxTypeDeposit ||
 		i.Typ == common.TxTypeDepositTransfer ||
 		i.Typ == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "LoadAmount: %d, ", i.LoadAmount)
+		fmt.Fprintf(buf, "DepositAmount: %d, ", i.DepositAmount)
 	}
 	if i.Typ != common.TxTypeDeposit {
 		fmt.Fprintf(buf, "Amount: %d, ", i.Amount)
@@ -123,7 +123,7 @@ func (i Instruction) raw() string {
 	if i.Typ == common.TxTypeDeposit ||
 		i.Typ == common.TxTypeDepositTransfer ||
 		i.Typ == common.TxTypeCreateAccountDepositTransfer {
-		fmt.Fprintf(buf, "%d", i.LoadAmount)
+		fmt.Fprintf(buf, "%d", i.DepositAmount)
 	}
 	if i.Typ != common.TxTypeDeposit {
 		fmt.Fprintf(buf, "%d", i.Amount)
@@ -439,13 +439,13 @@ func (p *parser) parseLine(setType setType) (*Instruction, error) {
 		// deposit case
 		_, lit = p.scanIgnoreWhitespace()
 		c.Literal += lit
-		loadAmount, ok := new(big.Int).SetString(lit, 10)
+		depositAmount, ok := new(big.Int).SetString(lit, 10)
 		if !ok {
 			line, _ := p.s.r.ReadString('\n')
 			c.Literal += line
-			return c, tracerr.Wrap(fmt.Errorf("Can not parse number for LoadAmount"))
+			return c, tracerr.Wrap(fmt.Errorf("Can not parse number for DepositAmount"))
 		}
-		c.LoadAmount = loadAmount
+		c.DepositAmount = depositAmount
 		if err := p.expectChar(c, ","); err != nil {
 			return c, tracerr.Wrap(err)
 		}
@@ -460,7 +460,7 @@ func (p *parser) parseLine(setType setType) (*Instruction, error) {
 	}
 	if c.Typ == common.TxTypeDeposit ||
 		c.Typ == common.TxTypeCreateAccountDeposit {
-		c.LoadAmount = amount
+		c.DepositAmount = amount
 	} else {
 		c.Amount = amount
 	}

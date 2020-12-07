@@ -81,13 +81,13 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	dbL1UserTxs, err := s.historyDB.GetAllL1UserTxs()
 	require.Nil(t, err)
 	// Ignore BatchNum in syncBlock.L1UserTxs because this value is set by
-	// the HistoryDB. Also ignore EffectiveAmount & EffectiveLoadAmount
+	// the HistoryDB. Also ignore EffectiveAmount & EffectiveDepositAmount
 	// because this value is set by StateDB.ProcessTxs.
 	for i := range syncBlock.Rollup.L1UserTxs {
 		syncBlock.Rollup.L1UserTxs[i].BatchNum = block.Rollup.L1UserTxs[i].BatchNum
 		syncBlock.Rollup.L1UserTxs[i].EffectiveAmount = block.Rollup.L1UserTxs[i].EffectiveAmount
-		syncBlock.Rollup.L1UserTxs[i].EffectiveLoadAmount =
-			block.Rollup.L1UserTxs[i].EffectiveLoadAmount
+		syncBlock.Rollup.L1UserTxs[i].EffectiveDepositAmount =
+			block.Rollup.L1UserTxs[i].EffectiveDepositAmount
 	}
 	assert.Equal(t, block.Rollup.L1UserTxs, syncBlock.Rollup.L1UserTxs)
 	for _, tx := range block.Rollup.L1UserTxs {
@@ -102,7 +102,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 			}
 		}
 		tx.EffectiveAmount = tx.Amount
-		tx.EffectiveLoadAmount = tx.LoadAmount
+		tx.EffectiveDepositAmount = tx.DepositAmount
 		assert.Equal(t, &tx, dbTx) //nolint:gosec
 	}
 
@@ -255,7 +255,7 @@ func ethAddBlocks(t *testing.T, blocks []common.BlockData,
 		}
 		for _, tx := range block.Rollup.L1UserTxs {
 			client.CtlSetAddr(tx.FromEthAddr)
-			_, err := client.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.LoadAmount, tx.Amount,
+			_, err := client.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.DepositAmount, tx.Amount,
 				uint32(tx.TokenID), int64(tx.ToIdx))
 			require.Nil(t, err)
 		}

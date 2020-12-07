@@ -106,8 +106,8 @@ type ZKInputs struct {
 	//
 	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new account (fromIdx==0)
 	NewAccount []*big.Int `json:"newAccount"` // bool, len: [nTx]
-	// LoadAmountF encoded as float16
-	LoadAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [nTx]
+	// DepositAmountF encoded as float16
+	DepositAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [nTx]
 	// FromEthAddr
 	FromEthAddr []*big.Int `json:"fromEthAddr"` // ethCommon.Address, len: [nTx]
 	// FromBJJCompressed boolean encoded where each value is a *big.Int
@@ -310,7 +310,7 @@ func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatc
 	zki.NewAccount = newSlice(nTx)
 
 	// L1
-	zki.LoadAmountF = newSlice(nTx)
+	zki.DepositAmountF = newSlice(nTx)
 	zki.FromEthAddr = newSlice(nTx)
 	zki.FromBJJCompressed = make([][256]*big.Int, nTx)
 	for i := 0; i < len(zki.FromBJJCompressed); i++ {

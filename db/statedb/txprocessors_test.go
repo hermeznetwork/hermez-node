@@ -58,80 +58,80 @@ func TestCheckL1TxInvalidData(t *testing.T) {
 	require.Nil(t, err)
 
 	tx := common.L1Tx{
-		FromIdx:     256,
-		ToIdx:       257,
-		Amount:      big.NewInt(10),
-		LoadAmount:  big.NewInt(0),
-		FromEthAddr: tc.Users["A"].Addr,
-		UserOrigin:  true,
+		FromIdx:       256,
+		ToIdx:         257,
+		Amount:        big.NewInt(10),
+		DepositAmount: big.NewInt(0),
+		FromEthAddr:   tc.Users["A"].Addr,
+		UserOrigin:    true,
 	}
 	sdb.computeEffectiveAmounts(&tx)
-	assert.Equal(t, big.NewInt(0), tx.EffectiveLoadAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(10), tx.EffectiveAmount)
 
 	// expect error due not enough funds
 	tx = common.L1Tx{
-		FromIdx:     256,
-		ToIdx:       257,
-		Amount:      big.NewInt(11),
-		LoadAmount:  big.NewInt(0),
-		FromEthAddr: tc.Users["A"].Addr,
-		UserOrigin:  true,
+		FromIdx:       256,
+		ToIdx:         257,
+		Amount:        big.NewInt(11),
+		DepositAmount: big.NewInt(0),
+		FromEthAddr:   tc.Users["A"].Addr,
+		UserOrigin:    true,
 	}
 	sdb.computeEffectiveAmounts(&tx)
-	assert.Equal(t, big.NewInt(0), tx.EffectiveLoadAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
 	// expect no-error due not enough funds in a
 	// CreateAccountDepositTransfer transction
 	tx = common.L1Tx{
-		FromIdx:    0,
-		ToIdx:      257,
-		Amount:     big.NewInt(10),
-		LoadAmount: big.NewInt(10),
-		UserOrigin: true,
+		FromIdx:       0,
+		ToIdx:         257,
+		Amount:        big.NewInt(10),
+		DepositAmount: big.NewInt(10),
+		UserOrigin:    true,
 	}
 	sdb.computeEffectiveAmounts(&tx)
-	assert.Equal(t, big.NewInt(10), tx.EffectiveLoadAmount)
+	assert.Equal(t, big.NewInt(10), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(10), tx.EffectiveAmount)
 
 	// expect error due not enough funds in a CreateAccountDepositTransfer
 	// transction
 	tx = common.L1Tx{
-		FromIdx:    0,
-		ToIdx:      257,
-		Amount:     big.NewInt(11),
-		LoadAmount: big.NewInt(10),
-		UserOrigin: true,
+		FromIdx:       0,
+		ToIdx:         257,
+		Amount:        big.NewInt(11),
+		DepositAmount: big.NewInt(10),
+		UserOrigin:    true,
 	}
 	sdb.computeEffectiveAmounts(&tx)
-	assert.Equal(t, big.NewInt(10), tx.EffectiveLoadAmount)
+	assert.Equal(t, big.NewInt(10), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
 	// expect error due not same TokenID
 	tx = common.L1Tx{
-		FromIdx:     256,
-		ToIdx:       258,
-		Amount:      big.NewInt(5),
-		LoadAmount:  big.NewInt(0),
-		FromEthAddr: tc.Users["A"].Addr,
-		UserOrigin:  true,
+		FromIdx:       256,
+		ToIdx:         258,
+		Amount:        big.NewInt(5),
+		DepositAmount: big.NewInt(0),
+		FromEthAddr:   tc.Users["A"].Addr,
+		UserOrigin:    true,
 	}
 	sdb.computeEffectiveAmounts(&tx)
-	assert.Equal(t, big.NewInt(0), tx.EffectiveLoadAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
 	// expect error due not same EthAddr
 	tx = common.L1Tx{
-		FromIdx:     256,
-		ToIdx:       257,
-		Amount:      big.NewInt(8),
-		LoadAmount:  big.NewInt(0),
-		FromEthAddr: tc.Users["B"].Addr,
-		UserOrigin:  true,
+		FromIdx:       256,
+		ToIdx:         257,
+		Amount:        big.NewInt(8),
+		DepositAmount: big.NewInt(0),
+		FromEthAddr:   tc.Users["B"].Addr,
+		UserOrigin:    true,
 	}
 	sdb.computeEffectiveAmounts(&tx)
-	assert.Equal(t, big.NewInt(0), tx.EffectiveLoadAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 }
 
@@ -555,15 +555,15 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	assert.Nil(t, err)
 	l1Txs := []common.L1Tx{
 		{
-			FromIdx:     0,
-			LoadAmount:  big.NewInt(16000000),
-			Amount:      big.NewInt(0),
-			TokenID:     1,
-			FromBJJ:     bjj0,
-			FromEthAddr: ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
-			ToIdx:       0,
-			Type:        common.TxTypeCreateAccountDeposit,
-			UserOrigin:  true,
+			FromIdx:       0,
+			DepositAmount: big.NewInt(16000000),
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       bjj0,
+			FromEthAddr:   ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
 		},
 	}
 	l2Txs := []common.PoolL2Tx{
@@ -611,15 +611,15 @@ func TestCircomTest(t *testing.T) {
 
 	l1Txs := []common.L1Tx{
 		{
-			FromIdx:     0,
-			LoadAmount:  big.NewInt(16000000),
-			Amount:      big.NewInt(0),
-			TokenID:     1,
-			FromBJJ:     bjj0,
-			FromEthAddr: ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
-			ToIdx:       0,
-			Type:        common.TxTypeCreateAccountDeposit,
-			UserOrigin:  true,
+			FromIdx:       0,
+			DepositAmount: big.NewInt(16000000),
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       bjj0,
+			FromEthAddr:   ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
 		},
 	}
 	l2Txs := []common.PoolL2Tx{
@@ -700,15 +700,15 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 	assert.Nil(t, err)
 	l1Txs := []common.L1Tx{
 		{
-			FromIdx:     0,
-			LoadAmount:  big.NewInt(16000000),
-			Amount:      big.NewInt(0),
-			TokenID:     1,
-			FromBJJ:     bjj0,
-			FromEthAddr: ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
-			ToIdx:       0,
-			Type:        common.TxTypeCreateAccountDeposit,
-			UserOrigin:  true,
+			FromIdx:       0,
+			DepositAmount: big.NewInt(16000000),
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       bjj0,
+			FromEthAddr:   ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
 		},
 	}
 	l2Txs := []common.PoolL2Tx{
@@ -778,26 +778,26 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	l1Txs := []common.L1Tx{
 		{
 			FromIdx: 0,
-			// LoadAmount:  big.NewInt(10400),
-			LoadAmount:  big.NewInt(16000000),
-			Amount:      big.NewInt(0),
-			TokenID:     1,
-			FromBJJ:     bjj0,
-			FromEthAddr: ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
-			ToIdx:       0,
-			Type:        common.TxTypeCreateAccountDeposit,
-			UserOrigin:  true,
+			// DepositAmount:  big.NewInt(10400),
+			DepositAmount: big.NewInt(16000000),
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       bjj0,
+			FromEthAddr:   ethCommon.HexToAddress("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"),
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
 		},
 		{
-			FromIdx:     0,
-			LoadAmount:  big.NewInt(16000000),
-			Amount:      big.NewInt(0),
-			TokenID:     1,
-			FromBJJ:     bjj1,
-			FromEthAddr: ethCommon.HexToAddress("0x2b5ad5c4795c026514f8317c7a215e218dccd6cf"),
-			ToIdx:       0,
-			Type:        common.TxTypeCreateAccountDeposit,
-			UserOrigin:  true,
+			FromIdx:       0,
+			DepositAmount: big.NewInt(16000000),
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       bjj1,
+			FromEthAddr:   ethCommon.HexToAddress("0x2b5ad5c4795c026514f8317c7a215e218dccd6cf"),
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
 		},
 	}
 	l2Txs := []common.PoolL2Tx{

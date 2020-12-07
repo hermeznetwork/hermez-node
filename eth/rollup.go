@@ -218,8 +218,8 @@ type RollupInterface interface {
 	RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (*types.Transaction, error)
 	RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error)
 
-	RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error)
-	RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error)
+	RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error)
+	RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error)
 
 	// Governance Public Functions
 	RollupUpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout int64) (*types.Transaction, error)
@@ -409,7 +409,7 @@ func (c *RollupClient) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB 
 }
 
 // RollupL1UserTxERC20ETH is the interface to call the smart contract function
-func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (tx *types.Transaction, err error) {
+func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -423,7 +423,7 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 			}
 			fromIdxBig := big.NewInt(fromIdx)
 			toIdxBig := big.NewInt(toIdx)
-			loadAmountF, err := common.NewFloat16(loadAmount)
+			depositAmountF, err := common.NewFloat16(depositAmount)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
@@ -432,10 +432,10 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 				return nil, tracerr.Wrap(err)
 			}
 			if tokenID == 0 {
-				auth.Value = loadAmount
+				auth.Value = depositAmount
 			}
 			var permit []byte
-			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF),
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(depositAmountF),
 				uint16(amountF), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
@@ -445,7 +445,7 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ *babyjub.PublicKey, fromId
 }
 
 // RollupL1UserTxERC20Permit is the interface to call the smart contract function
-func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, loadAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
+func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -459,7 +459,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 			}
 			fromIdxBig := big.NewInt(fromIdx)
 			toIdxBig := big.NewInt(toIdx)
-			loadAmountF, err := common.NewFloat16(loadAmount)
+			depositAmountF, err := common.NewFloat16(depositAmount)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
@@ -468,7 +468,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 				return nil, tracerr.Wrap(err)
 			}
 			if tokenID == 0 {
-				auth.Value = loadAmount
+				auth.Value = depositAmount
 			}
 			owner := c.client.account.Address
 			spender := c.address
@@ -481,7 +481,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fro
 			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID, amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
-			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(loadAmountF),
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(depositAmountF),
 				uint16(amountF), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
