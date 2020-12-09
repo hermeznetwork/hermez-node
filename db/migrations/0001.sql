@@ -536,7 +536,32 @@ CREATE TABLE rollup_vars (
     fee_add_token BYTEA NOT NULL,
     forge_l1_timeout BIGINT NOT NULL,
     withdrawal_delay BIGINT NOT NULL,
-    buckets BYTEA
+    buckets BYTEA NOT NULL,
+    safe_mode BOOLEAN NOT NULL
+);
+
+CREATE TABLE bucket_update (
+    item_id SERIAL PRIMARY KEY,
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    num_bucket BIGINT NOT NULL,
+    block_stamp BIGINT NOT NULL,
+    withdrawals BYTEA NOT NULL
+);
+
+CREATE TABLE token_exchange (
+    item_id SERIAL PRIMARY KEY,
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    eth_addr BYTEA NOT NULL,
+    value_usd BIGINT NOT NULL
+);
+
+CREATE TABLE escape_hatch_withdrawal (
+    item_id SERIAL PRIMARY KEY,
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    who_addr BYTEA NOT NULL,
+    to_addr BYTEA NOT NULL,
+    token_addr BYTEA NOT NULL,
+    amount BYTEA NOT NULL
 );
 
 CREATE TABLE auction_vars (
@@ -635,6 +660,9 @@ DROP TABLE account_creation_auth;
 DROP TABLE tx_pool;
 DROP TABLE auction_vars;
 DROP TABLE rollup_vars;
+DROP TABLE escape_hatch_withdrawal;
+DROP TABLE bucket_update;
+DROP TABLE token_exchange;
 DROP TABLE wdelayer_vars;
 DROP TABLE tx;
 DROP TABLE exit_tree;

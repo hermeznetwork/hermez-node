@@ -123,8 +123,10 @@ func (a *AuctionBlock) getMinBidBySlot(slot int64) (*big.Int, error) {
 		slotState = eth.NewSlotState()
 		a.State.Slots[slot] = slotState
 	}
-	// If the bidAmount for a slot is 0 it means that it has not yet been bid, so the midBid will be the minimum
-	// bid for the slot time plus the outbidding set, otherwise it will be the bidAmount plus the outbidding
+	// If the bidAmount for a slot is 0 it means that it has not yet been
+	// bid, so the midBid will be the minimum bid for the slot time plus
+	// the outbidding set, otherwise it will be the bidAmount plus the
+	// outbidding
 	if slotState.BidAmount.Cmp(big.NewInt(0)) == 0 {
 		prevBid = a.Vars.DefaultSlotSetBid[slotSet]
 	} else {
@@ -157,7 +159,6 @@ func (a *AuctionBlock) forge(forger ethCommon.Address) error {
 		// Get the relativeBlock to check if the slotDeadline has been exceeded
 		relativeBlock := a.Eth.BlockNum - (a.Constants.GenesisBlockNum +
 			(slotToForge * int64(a.Constants.BlocksPerSlot)))
-
 		if relativeBlock < int64(a.Vars.SlotDeadline) {
 			slotState.ForgerCommitment = true
 		}
@@ -182,8 +183,9 @@ func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool,
 	// Get the relativeBlock to check if the slotDeadline has been exceeded
 	relativeBlock := blockNum - (a.Constants.GenesisBlockNum + (slotToForge * int64(a.Constants.BlocksPerSlot)))
 
-	// If the closedMinBid is 0 it means that we have to take as minBid the one that is set for this slot set,
-	// otherwise the one that has been saved will be used
+	// If the closedMinBid is 0 it means that we have to take as minBid the
+	// one that is set for this slot set, otherwise the one that has been
+	// saved will be used
 	var minBid *big.Int
 	slotState, ok := a.State.Slots[slotToForge]
 	if !ok {
@@ -197,14 +199,16 @@ func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool,
 	}
 
 	if !slotState.ForgerCommitment && (relativeBlock >= int64(a.Vars.SlotDeadline)) {
-		// if the relative block has exceeded the slotDeadline and no batch has been forged, anyone can forge
+		// if the relative block has exceeded the slotDeadline and no
+		// batch has been forged, anyone can forge
 		return true, nil
 	} else if coord, ok := a.State.Coordinators[slotState.Bidder]; ok &&
 		coord.Forger == forger && slotState.BidAmount.Cmp(minBid) >= 0 {
 		// if forger bidAmount has exceeded the minBid it can forge
 		return true, nil
 	} else if a.Vars.BootCoordinator == forger && slotState.BidAmount.Cmp(minBid) == -1 {
-		// if it's the boot coordinator and it has not been bid or the bid is below the minimum it can forge
+		// if it's the boot coordinator and it has not been bid or the
+		// bid is below the minimum it can forge
 		return true, nil
 	} else {
 		return false, nil

@@ -244,17 +244,17 @@ func (c *Coordinator) handleMsgSyncBlock(ctx context.Context, msg *MsgSyncBlock)
 		// }
 		if c.purger.CanInvalidate(stats.Sync.LastBlock.Num, stats.Sync.LastBatch) {
 			if err := c.txSelector.Reset(common.BatchNum(stats.Sync.LastBatch)); err != nil {
-				return err
+				return tracerr.Wrap(err)
 			}
 		}
 		_, err := c.purger.InvalidateMaybe(c.l2DB, c.txSelector.LocalAccountsDB(),
 			stats.Sync.LastBlock.Num, stats.Sync.LastBatch)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 		_, err = c.purger.PurgeMaybe(c.l2DB, stats.Sync.LastBlock.Num, stats.Sync.LastBatch)
 		if err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 	}
 	return nil
@@ -723,7 +723,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 	_, err := p.purger.InvalidateMaybe(p.l2DB, p.txSelector.LocalAccountsDB(),
 		p.stats.Sync.LastBlock.Num, int64(batchNum))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	_, err = p.purger.PurgeMaybe(p.l2DB, p.stats.Sync.LastBlock.Num, int64(batchNum))
 	if err != nil {

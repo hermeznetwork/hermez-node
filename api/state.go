@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -13,11 +14,11 @@ import (
 
 // Network define status of the network
 type Network struct {
-	LastEthBlock  int64              `json:"lastEthereumBlock"`
-	LastSyncBlock int64              `json:"lastSynchedBlock"`
-	LastBatch     historydb.BatchAPI `json:"lastBatch"`
-	CurrentSlot   int64              `json:"currentSlot"`
-	NextForgers   []NextForger       `json:"nextForgers"`
+	LastEthBlock  int64               `json:"lastEthereumBlock"`
+	LastSyncBlock int64               `json:"lastSynchedBlock"`
+	LastBatch     *historydb.BatchAPI `json:"lastBatch"`
+	CurrentSlot   int64               `json:"currentSlot"`
+	NextForgers   []NextForger        `json:"nextForgers"`
 }
 
 // NextForger  is a representation of the information of a coordinator and the period will forge
@@ -89,18 +90,22 @@ func (a *API) UpdateNetworkInfo(
 	lastBatchNum common.BatchNum, currentSlot int64,
 ) error {
 	lastBatch, err := a.h.GetBatchAPI(lastBatchNum)
-	if err != nil {
+	if tracerr.Unwrap(err) == sql.ErrNoRows {
+		lastBatch = nil
+	} else if err != nil {
 		return tracerr.Wrap(err)
 	}
 	lastClosedSlot := currentSlot + int64(a.status.Auction.ClosedAuctionSlots)
 	nextForgers, err := a.getNextForgers(lastSyncBlock, currentSlot, lastClosedSlot)
-	if err != nil {
+	if tracerr.Unwrap(err) == sql.ErrNoRows {
+		nextForgers = nil
+	} else if err != nil {
 		return tracerr.Wrap(err)
 	}
 	a.status.Lock()
 	a.status.Network.LastSyncBlock = lastSyncBlock.Num
 	a.status.Network.LastEthBlock = lastEthBlock.Num
-	a.status.Network.LastBatch = *lastBatch
+	a.status.Network.LastBatch = lastBatch
 	a.status.Network.CurrentSlot = currentSlot
 	a.status.Network.NextForgers = nextForgers
 	a.status.Unlock()
@@ -157,6 +162,10 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 // UpdateMetrics update Status.Metrics information
 func (a *API) UpdateMetrics() error {
 	a.status.RLock()
+	if a.status.Network.LastBatch == nil {
+		a.status.RUnlock()
+		return nil
+	}
 	batchNum := a.status.Network.LastBatch.BatchNum
 	a.status.RUnlock()
 	metrics, err := a.h.GetMetrics(batchNum)

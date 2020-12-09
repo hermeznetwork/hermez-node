@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -168,8 +169,14 @@ func SlicePtrsToSlice(slice interface{}) interface{} {
 
 // Rollback an sql transaction, and log the error if it's not nil
 func Rollback(txn *sqlx.Tx) {
-	err := txn.Rollback()
-	if err != nil {
+	if err := txn.Rollback(); err != nil {
 		log.Errorw("Rollback", "err", err)
+	}
+}
+
+// RowsClose close the rows of an sql query, and log the errir if it's not nil
+func RowsClose(rows *sql.Rows) {
+	if err := rows.Close(); err != nil {
+		log.Errorw("rows.Close", "err", err)
 	}
 }

@@ -47,16 +47,16 @@ func (hdb *HistoryDB) DB() *sqlx.DB {
 // AddBlock insert a block into the DB
 func (hdb *HistoryDB) AddBlock(block *common.Block) error { return hdb.addBlock(hdb.db, block) }
 func (hdb *HistoryDB) addBlock(d meddler.DB, block *common.Block) error {
-	return meddler.Insert(d, "block", block)
+	return tracerr.Wrap(meddler.Insert(d, "block", block))
 }
 
 // AddBlocks inserts blocks into the DB
 func (hdb *HistoryDB) AddBlocks(blocks []common.Block) error {
-	return hdb.addBlocks(hdb.db, blocks)
+	return tracerr.Wrap(hdb.addBlocks(hdb.db, blocks))
 }
 
 func (hdb *HistoryDB) addBlocks(d meddler.DB, blocks []common.Block) error {
-	return db.BulkInsert(
+	return tracerr.Wrap(db.BulkInsert(
 		d,
 		`INSERT INTO block (
 			eth_block_num,
@@ -64,7 +64,7 @@ func (hdb *HistoryDB) addBlocks(d meddler.DB, blocks []common.Block) error {
 			hash
 		) VALUES %s;`,
 		blocks[:],
-	)
+	))
 }
 
 // GetBlock retrieve a block from the DB, given a block number
@@ -125,7 +125,7 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 	var tokenPrices []*tokenPrice
 	if len(tokenIDs) > 0 {
 		query, args, err := sqlx.In(
-			"SELECT token_id, usd, decimals FROM token WHERE token_id IN (?)",
+			"SELECT token_id, usd, decimals FROM token WHERE token_id IN (?);",
 			tokenIDs,
 		)
 		if err != nil {
@@ -150,12 +150,12 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 	}
 	batch.TotalFeesUSD = &total
 	// Insert to DB
-	return meddler.Insert(d, "batch", batch)
+	return tracerr.Wrap(meddler.Insert(d, "batch", batch))
 }
 
 // AddBatches insert Bids into the DB
 func (hdb *HistoryDB) AddBatches(batches []common.Batch) error {
-	return hdb.addBatches(hdb.db, batches)
+	return tracerr.Wrap(hdb.addBatches(hdb.db, batches))
 }
 func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 	for i := 0; i < len(batches); i++ {
@@ -169,12 +169,12 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 // GetBatchAPI return the batch with the given batchNum
 func (hdb *HistoryDB) GetBatchAPI(batchNum common.BatchNum) (*BatchAPI, error) {
 	batch := &BatchAPI{}
-	return batch, meddler.QueryRow(
+	return batch, tracerr.Wrap(meddler.QueryRow(
 		hdb.db, batch,
 		`SELECT batch.*, block.timestamp, block.hash
 	 	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
 	 	WHERE batch_num = $1;`, batchNum,
-	)
+	))
 }
 
 // GetBatchesAPI return the batches applying the given filters
@@ -295,14 +295,14 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, erro
 func (hdb *HistoryDB) GetBatchesLen(slotNum int64) (int, error) {
 	row := hdb.db.QueryRow("SELECT COUNT(*) FROM batch WHERE slot_num = $1;", slotNum)
 	var batchesLen int
-	return batchesLen, row.Scan(&batchesLen)
+	return batchesLen, tracerr.Wrap(row.Scan(&batchesLen))
 }
 
 // GetLastBatchNum returns the BatchNum of the latest forged batch
 func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 	row := hdb.db.QueryRow("SELECT batch_num FROM batch ORDER BY batch_num DESC LIMIT 1;")
 	var batchNum common.BatchNum
-	return batchNum, row.Scan(&batchNum)
+	return batchNum, tracerr.Wrap(row.Scan(&batchNum))
 }
 
 // GetLastL1BatchBlockNum returns the blockNum of the latest forged l1Batch
@@ -311,7 +311,7 @@ func (hdb *HistoryDB) GetLastL1BatchBlockNum() (int64, error) {
 		WHERE forge_l1_txs_num IS NOT NULL
 		ORDER BY batch_num DESC LIMIT 1;`)
 	var blockNum int64
-	return blockNum, row.Scan(&blockNum)
+	return blockNum, tracerr.Wrap(row.Scan(&blockNum))
 }
 
 // GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB from forged
@@ -319,7 +319,7 @@ func (hdb *HistoryDB) GetLastL1BatchBlockNum() (int64, error) {
 func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
 	row := hdb.db.QueryRow("SELECT MAX(forge_l1_txs_num) FROM batch;")
 	lastL1TxsNum := new(int64)
-	return lastL1TxsNum, row.Scan(&lastL1TxsNum)
+	return lastL1TxsNum, tracerr.Wrap(row.Scan(&lastL1TxsNum))
 }
 
 // Reorg deletes all the information that was added into the DB after the
@@ -338,12 +338,15 @@ func (hdb *HistoryDB) Reorg(lastValidBlock int64) error {
 // AddBids insert Bids into the DB
 func (hdb *HistoryDB) AddBids(bids []common.Bid) error { return hdb.addBids(hdb.db, bids) }
 func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
+	if len(bids) == 0 {
+		return nil
+	}
 	// TODO: check the coordinator info
-	return db.BulkInsert(
+	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO bid (slot_num, bid_value, eth_block_num, bidder_addr) VALUES %s;",
 		bids[:],
-	)
+	))
 }
 
 // GetAllBids retrieve all bids from the DB
@@ -508,31 +511,40 @@ func (hdb *HistoryDB) GetBidsAPI(
 
 // AddCoordinators insert Coordinators into the DB
 func (hdb *HistoryDB) AddCoordinators(coordinators []common.Coordinator) error {
-	return hdb.addCoordinators(hdb.db, coordinators)
+	return tracerr.Wrap(hdb.addCoordinators(hdb.db, coordinators))
 }
 func (hdb *HistoryDB) addCoordinators(d meddler.DB, coordinators []common.Coordinator) error {
-	return db.BulkInsert(
+	if len(coordinators) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO coordinator (bidder_addr, forger_addr, eth_block_num, url) VALUES %s;",
 		coordinators[:],
-	)
+	))
 }
 
 // AddExitTree insert Exit tree into the DB
 func (hdb *HistoryDB) AddExitTree(exitTree []common.ExitInfo) error {
-	return hdb.addExitTree(hdb.db, exitTree)
+	return tracerr.Wrap(hdb.addExitTree(hdb.db, exitTree))
 }
 func (hdb *HistoryDB) addExitTree(d meddler.DB, exitTree []common.ExitInfo) error {
-	return db.BulkInsert(
+	if len(exitTree) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO exit_tree (batch_num, account_idx, merkle_proof, balance, "+
 			"instant_withdrawn, delayed_withdraw_request, delayed_withdrawn) VALUES %s;",
 		exitTree[:],
-	)
+	))
 }
 
 func (hdb *HistoryDB) updateExitTree(d sqlx.Ext, blockNum int64,
 	rollupWithdrawals []common.WithdrawInfo, wDelayerWithdrawals []common.WDelayerTransfer) error {
+	if len(rollupWithdrawals) == 0 && len(wDelayerWithdrawals) == 0 {
+		return nil
+	}
 	type withdrawal struct {
 		BatchNum               int64              `db:"batch_num"`
 		AccountIdx             int64              `db:"account_idx"`
@@ -589,10 +601,10 @@ func (hdb *HistoryDB) updateExitTree(d sqlx.Ext, blockNum int64,
 		) as d (batch_num, account_idx, instant_withdrawn, delayed_withdraw_request, delayed_withdrawn, owner, token)
 		WHERE
 			(d.batch_num IS NOT NULL AND e.batch_num = d.batch_num AND e.account_idx = d.account_idx) OR
-			(d.delayed_withdrawn IS NOT NULL AND e.delayed_withdrawn IS NULL AND e.owner = d.owner AND e.token = d.token)
+			(d.delayed_withdrawn IS NOT NULL AND e.delayed_withdrawn IS NULL AND e.owner = d.owner AND e.token = d.token);
 		`
 	if len(withdrawals) > 0 {
-		if _, err := sqlx.NamedQuery(d, query, withdrawals); err != nil {
+		if _, err := sqlx.NamedExec(d, query, withdrawals); err != nil {
 			return tracerr.Wrap(err)
 		}
 	}
@@ -602,13 +614,16 @@ func (hdb *HistoryDB) updateExitTree(d sqlx.Ext, blockNum int64,
 
 // AddToken insert a token into the DB
 func (hdb *HistoryDB) AddToken(token *common.Token) error {
-	return meddler.Insert(hdb.db, "token", token)
+	return tracerr.Wrap(meddler.Insert(hdb.db, "token", token))
 }
 
 // AddTokens insert tokens into the DB
 func (hdb *HistoryDB) AddTokens(tokens []common.Token) error { return hdb.addTokens(hdb.db, tokens) }
 func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
-	return db.BulkInsert(
+	if len(tokens) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
 		d,
 		`INSERT INTO token (
 			token_id,
@@ -619,7 +634,7 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 			decimals
 		) VALUES %s;`,
 		tokens[:],
-	)
+	))
 }
 
 // UpdateTokenValue updates the USD value of a token
@@ -728,6 +743,7 @@ func (hdb *HistoryDB) GetTokenSymbols() ([]string, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+	defer db.RowsClose(rows)
 	sym := new(string)
 	for rows.Next() {
 		err = rows.Scan(sym)
@@ -741,10 +757,13 @@ func (hdb *HistoryDB) GetTokenSymbols() ([]string, error) {
 
 // AddAccounts insert accounts into the DB
 func (hdb *HistoryDB) AddAccounts(accounts []common.Account) error {
-	return hdb.addAccounts(hdb.db, accounts)
+	return tracerr.Wrap(hdb.addAccounts(hdb.db, accounts))
 }
 func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error {
-	return db.BulkInsert(
+	if len(accounts) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
 		d,
 		`INSERT INTO account (
 			idx,
@@ -754,7 +773,7 @@ func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error
 			eth_addr
 		) VALUES %s;`,
 		accounts[:],
-	)
+	))
 }
 
 // GetAllAccounts returns a list of accounts from the DB
@@ -771,7 +790,9 @@ func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
 // EffectiveAmount and EffectiveDepositAmount are seted with default values by the DB.
-func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error { return hdb.addL1Txs(hdb.db, l1txs) }
+func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error {
+	return tracerr.Wrap(hdb.addL1Txs(hdb.db, l1txs))
+}
 
 // addL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
@@ -806,11 +827,13 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 			DepositAmountFloat: &depositAmountFloat,
 		})
 	}
-	return hdb.addTxs(d, txs)
+	return tracerr.Wrap(hdb.addTxs(d, txs))
 }
 
 // AddL2Txs inserts L2 txs to the DB. TokenID, USD and FeeUSD will be set automatically before storing the tx.
-func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error { return hdb.addL2Txs(hdb.db, l2txs) }
+func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error {
+	return tracerr.Wrap(hdb.addL2Txs(hdb.db, l2txs))
+}
 
 // addL2Txs inserts L2 txs to the DB. TokenID, USD and FeeUSD will be set automatically before storing the tx.
 func (hdb *HistoryDB) addL2Txs(d meddler.DB, l2txs []common.L2Tx) error {
@@ -835,11 +858,14 @@ func (hdb *HistoryDB) addL2Txs(d meddler.DB, l2txs []common.L2Tx) error {
 			Nonce: &l2txs[i].Nonce,
 		})
 	}
-	return hdb.addTxs(d, txs)
+	return tracerr.Wrap(hdb.addTxs(d, txs))
 }
 
 func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
-	return db.BulkInsert(
+	if len(txs) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
 		d,
 		`INSERT INTO tx (
 			is_l1,
@@ -863,7 +889,7 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			nonce
 		) VALUES %s;`,
 		txs[:],
-	)
+	))
 }
 
 // // GetTxs returns a list of txs from the DB
@@ -1232,7 +1258,7 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {
 	row := hdb.db.QueryRow("SELECT MAX(position) FROM tx WHERE to_forge_l1_txs_num = $1;", toForgeL1TxsNum)
 	var lastL1TxsPosition int
-	return lastL1TxsPosition, row.Scan(&lastL1TxsPosition)
+	return lastL1TxsPosition, tracerr.Wrap(row.Scan(&lastL1TxsPosition))
 }
 
 // GetSCVars returns the rollup, auction and wdelayer smart contracts variables at their last update.
@@ -1257,15 +1283,95 @@ func (hdb *HistoryDB) GetSCVars() (*common.RollupVariables, *common.AuctionVaria
 }
 
 func (hdb *HistoryDB) setRollupVars(d meddler.DB, rollup *common.RollupVariables) error {
-	return meddler.Insert(d, "rollup_vars", rollup)
+	return tracerr.Wrap(meddler.Insert(d, "rollup_vars", rollup))
 }
 
 func (hdb *HistoryDB) setAuctionVars(d meddler.DB, auction *common.AuctionVariables) error {
-	return meddler.Insert(d, "auction_vars", auction)
+	return tracerr.Wrap(meddler.Insert(d, "auction_vars", auction))
 }
 
 func (hdb *HistoryDB) setWDelayerVars(d meddler.DB, wDelayer *common.WDelayerVariables) error {
-	return meddler.Insert(d, "wdelayer_vars", wDelayer)
+	return tracerr.Wrap(meddler.Insert(d, "wdelayer_vars", wDelayer))
+}
+
+func (hdb *HistoryDB) addBucketUpdates(d meddler.DB, bucketUpdates []common.BucketUpdate) error {
+	if len(bucketUpdates) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
+		d,
+		`INSERT INTO bucket_update (
+		 	eth_block_num,
+		 	num_bucket,
+		 	block_stamp,
+		 	withdrawals
+		) VALUES %s;`,
+		bucketUpdates[:],
+	))
+}
+
+// GetAllBucketUpdates retrieves all the bucket updates
+func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
+	var bucketUpdates []*common.BucketUpdate
+	err := meddler.QueryAll(
+		hdb.db, &bucketUpdates,
+		"SELECT * FROM bucket_update;",
+	)
+	return db.SlicePtrsToSlice(bucketUpdates).([]common.BucketUpdate), tracerr.Wrap(err)
+}
+
+func (hdb *HistoryDB) addTokenExchanges(d meddler.DB, tokenExchanges []common.TokenExchange) error {
+	if len(tokenExchanges) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
+		d,
+		`INSERT INTO token_exchange (
+			eth_block_num,
+    			eth_addr,
+    			value_usd
+		) VALUES %s;`,
+		tokenExchanges[:],
+	))
+}
+
+// GetAllTokenExchanges retrieves all the token exchanges
+func (hdb *HistoryDB) GetAllTokenExchanges() ([]common.TokenExchange, error) {
+	var tokenExchanges []*common.TokenExchange
+	err := meddler.QueryAll(
+		hdb.db, &tokenExchanges,
+		"SELECT * FROM token_exchange;",
+	)
+	return db.SlicePtrsToSlice(tokenExchanges).([]common.TokenExchange), tracerr.Wrap(err)
+}
+
+func (hdb *HistoryDB) addEscapeHatchWithdrawals(d meddler.DB,
+	escapeHatchWithdrawals []common.WDelayerEscapeHatchWithdrawal) error {
+	if len(escapeHatchWithdrawals) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
+		d,
+		`INSERT INTO escape_hatch_withdrawal (
+			eth_block_num,
+			who_addr,
+			to_addr,
+			token_addr,
+			amount
+		) VALUES %s;`,
+		escapeHatchWithdrawals[:],
+	))
+}
+
+// GetAllEscapeHatchWithdrawals retrieves all the escape hatch withdrawals
+func (hdb *HistoryDB) GetAllEscapeHatchWithdrawals() ([]common.WDelayerEscapeHatchWithdrawal, error) {
+	var escapeHatchWithdrawals []*common.WDelayerEscapeHatchWithdrawal
+	err := meddler.QueryAll(
+		hdb.db, &escapeHatchWithdrawals,
+		"SELECT * FROM escape_hatch_withdrawal;",
+	)
+	return db.SlicePtrsToSlice(escapeHatchWithdrawals).([]common.WDelayerEscapeHatchWithdrawal),
+		tracerr.Wrap(err)
 }
 
 // SetInitialSCVars sets the initial state of rollup, auction, wdelayer smart
@@ -1305,6 +1411,9 @@ func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 // setL1UserTxEffectiveAmounts sets the EffectiveAmount and EffectiveDepositAmount
 // of the given l1UserTxs (with an UPDATE)
 func (hdb *HistoryDB) setL1UserTxEffectiveAmounts(d sqlx.Ext, txs []common.L1Tx) error {
+	if len(txs) == 0 {
+		return nil
+	}
 	// Effective amounts are stored as success flags in the DB, with true value by default
 	// to reduce the amount of updates. Therefore, only amounts that became uneffective should be
 	// updated to become false
@@ -1336,10 +1445,10 @@ func (hdb *HistoryDB) setL1UserTxEffectiveAmounts(d sqlx.Ext, txs []common.L1Tx)
 			(NULL::::BYTEA, NULL::::BOOL, NULL::::BOOL),
 			(:id, :amount_success, :deposit_amount_success)
 		) as tx_update (id, amount_success, deposit_amount_success)
-		WHERE tx.id = tx_update.id
+		WHERE tx.id = tx_update.id;
 	`
 	if len(txUpdates) > 0 {
-		if _, err := sqlx.NamedQuery(d, query, txUpdates); err != nil {
+		if _, err := sqlx.NamedExec(d, query, txUpdates); err != nil {
 			return tracerr.Wrap(err)
 		}
 	}
@@ -1367,24 +1476,18 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	}
 
 	// Add Coordinators
-	if len(blockData.Auction.Coordinators) > 0 {
-		if err := hdb.addCoordinators(txn, blockData.Auction.Coordinators); err != nil {
-			return tracerr.Wrap(err)
-		}
+	if err := hdb.addCoordinators(txn, blockData.Auction.Coordinators); err != nil {
+		return tracerr.Wrap(err)
 	}
 
 	// Add Bids
-	if len(blockData.Auction.Bids) > 0 {
-		if err := hdb.addBids(txn, blockData.Auction.Bids); err != nil {
-			return tracerr.Wrap(err)
-		}
+	if err := hdb.addBids(txn, blockData.Auction.Bids); err != nil {
+		return tracerr.Wrap(err)
 	}
 
 	// Add Tokens
-	if len(blockData.Rollup.AddedTokens) > 0 {
-		if err := hdb.addTokens(txn, blockData.Rollup.AddedTokens); err != nil {
-			return tracerr.Wrap(err)
-		}
+	if err := hdb.addTokens(txn, blockData.Rollup.AddedTokens); err != nil {
+		return tracerr.Wrap(err)
 	}
 
 	// Prepare user L1 txs to be added.
@@ -1420,10 +1523,8 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 
 		// Set the EffectiveAmount and EffectiveDepositAmount of all the
 		// L1UserTxs that have been forged in this batch
-		if len(batch.L1UserTxs) > 0 {
-			if err = hdb.setL1UserTxEffectiveAmounts(txn, batch.L1UserTxs); err != nil {
-				return tracerr.Wrap(err)
-			}
+		if err = hdb.setL1UserTxEffectiveAmounts(txn, batch.L1UserTxs); err != nil {
+			return tracerr.Wrap(err)
 		}
 
 		// Add Batch: this will trigger an update on the DB
@@ -1433,24 +1534,18 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		}
 
 		// Add accounts
-		if len(batch.CreatedAccounts) > 0 {
-			if err := hdb.addAccounts(txn, batch.CreatedAccounts); err != nil {
-				return tracerr.Wrap(err)
-			}
+		if err := hdb.addAccounts(txn, batch.CreatedAccounts); err != nil {
+			return tracerr.Wrap(err)
 		}
 
 		// Add forged l1 coordinator Txs
-		if len(batch.L1CoordinatorTxs) > 0 {
-			if err := hdb.addL1Txs(txn, batch.L1CoordinatorTxs); err != nil {
-				return tracerr.Wrap(err)
-			}
+		if err := hdb.addL1Txs(txn, batch.L1CoordinatorTxs); err != nil {
+			return tracerr.Wrap(err)
 		}
 
 		// Add l2 Txs
-		if len(batch.L2Txs) > 0 {
-			if err := hdb.addL2Txs(txn, batch.L2Txs); err != nil {
-				return tracerr.Wrap(err)
-			}
+		if err := hdb.addL2Txs(txn, batch.L2Txs); err != nil {
+			return tracerr.Wrap(err)
 		}
 
 		// Add user L1 txs that will be forged in next batch
@@ -1461,10 +1556,8 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		}
 
 		// Add exit tree
-		if len(batch.ExitTree) > 0 {
-			if err := hdb.addExitTree(txn, batch.ExitTree); err != nil {
-				return tracerr.Wrap(err)
-			}
+		if err := hdb.addExitTree(txn, batch.ExitTree); err != nil {
+			return tracerr.Wrap(err)
 		}
 	}
 	// Add user L1 txs that won't be forged in this block
@@ -1473,6 +1566,8 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 			return tracerr.Wrap(err)
 		}
 	}
+
+	// Set SC Vars if there was an update
 	if blockData.Rollup.Vars != nil {
 		if err := hdb.setRollupVars(txn, blockData.Rollup.Vars); err != nil {
 			return tracerr.Wrap(err)
@@ -1489,8 +1584,25 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 		}
 	}
 
+	// Update withdrawals in exit tree table
 	if err := hdb.updateExitTree(txn, blockData.Block.Num,
 		blockData.Rollup.Withdrawals, blockData.WDelayer.Withdrawals); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	// Add Escape Hatch Withdrawals
+	if err := hdb.addEscapeHatchWithdrawals(txn,
+		blockData.WDelayer.EscapeHatchWithdrawals); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	// Add Buckets withdrawals updates
+	if err := hdb.addBucketUpdates(txn, blockData.Rollup.UpdateBucketWithdraw); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	// Add Token exchange updates
+	if err := hdb.addTokenExchanges(txn, blockData.Rollup.TokenExchanges); err != nil {
 		return tracerr.Wrap(err)
 	}
 
@@ -1544,7 +1656,7 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(fromItem, limit *uint, order string) ([
 
 // AddAuctionVars insert auction vars into the DB
 func (hdb *HistoryDB) AddAuctionVars(auctionVars *common.AuctionVariables) error {
-	return meddler.Insert(hdb.db, "auction_vars", auctionVars)
+	return tracerr.Wrap(meddler.Insert(hdb.db, "auction_vars", auctionVars))
 }
 
 // GetAuctionVars returns auction variables

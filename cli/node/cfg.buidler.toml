@@ -25,20 +25,21 @@ SyncLoopInterval = "1s"
 StatsRefreshPeriod = "1s"
 
     [Synchronizer.StartBlockNum]
-    Rollup = 1
-    Auction = 1
-    WDelayer = 1
+    Rollup = 6
+    Auction = 3
+    WDelayer = 7
 
 [SmartContracts]
-Rollup   = "0x6F4e99522F4eB37e0B73D0C0373147893EF12fD5"
-Auction  = "0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F"
-WDelayer = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
-TokenHEZ = "0x2b7dEe2CF60484325716A1c6A193519c8c3b19F3"
+Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
+Auction  = "0x317113D2593e3efF1FfAE0ba2fF7A61861Df7ae5"
+WDelayer = "0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F"
+TokenHEZ = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
 TokenHEZName = "Hermez Network Token"
 
     [Synchronizer.InitialVariables.Auction]
     DonationAddress = "0x0000000000000000000000000000000000000001"
     BootCoordinator = "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7"
+    BootCoordinatorURL = "https://boot.coordinator.io"
     DefaultSlotSetBid = [
         "10000000000000000000",
         "10000000000000000000",
@@ -47,6 +48,7 @@ TokenHEZName = "Hermez Network Token"
         "10000000000000000000",
         "10000000000000000000",
     ]
+    DefaultSlotSetBidSlotNum = 0
     ClosedAuctionSlots = 2
     OpenAuctionSlots = 4320
     AllocationRatio = [4000, 4000, 2000]
@@ -55,9 +57,8 @@ TokenHEZName = "Hermez Network Token"
 
     [Synchronizer.InitialVariables.WDelayer]
 	# HermezRollupAddress        =
-	HermezGovernanceDAOAddress = "0x0000000000000000000000000000000000000001"
-	WhiteHackGroupAddress      = "0x0000000000000000000000000000000000000001"
-	HermezKeeperAddress        = "0x0000000000000000000000000000000000000001"
+	HermezGovernanceAddress    = "0x0000000000000000000000000000000000000001"
+	EmergencyCouncilAddress    = "0x0000000000000000000000000000000000000001"
 	WithdrawalDelay            = 60
 	EmergencyModeStartingTime  = 0
 	EmergencyMode              = false
@@ -66,33 +67,29 @@ TokenHEZName = "Hermez Network Token"
     FeeAddToken = "10"
     ForgeL1L2BatchTimeout = 10
     WithdrawalDelay = 1209600 # 60 * 60 * 24 * 7 * 2
-        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        # CeilUSD             = 0
-        # BlockStamp          = 0
-        # Withdrawals         = 0
-        # BlockWithdrawalRate = 0
-        # MaxWithdrawals      = 0
-        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        # CeilUSD             = 0
-        # BlockStamp          = 0
-        # Withdrawals         = 0
-        # BlockWithdrawalRate = 0
-        # MaxWithdrawals      = 0
-        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        # CeilUSD             = 0
-        # BlockStamp          = 0
-        # Withdrawals         = 0
-        # BlockWithdrawalRate = 0
-        # MaxWithdrawals      = 0
-        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        # CeilUSD             = 0
-        # BlockStamp          = 0
-        # Withdrawals         = 0
-        # BlockWithdrawalRate = 0
-        # MaxWithdrawals      = 0
-        # [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        # CeilUSD             = 0
-        # BlockStamp          = 0
-        # Withdrawals         = 0
-        # BlockWithdrawalRate = 0
-        # MaxWithdrawals      = 0
+    SafeMode = false
+        [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        CeilUSD             = 0
+        Withdrawals         = 0
+        BlockWithdrawalRate = 0
+        MaxWithdrawals      = 0
+        [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        CeilUSD             = 0
+        Withdrawals         = 0
+        BlockWithdrawalRate = 0
+        MaxWithdrawals      = 0
+        [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        CeilUSD             = 0
+        Withdrawals         = 0
+        BlockWithdrawalRate = 0
+        MaxWithdrawals      = 0
+        [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        CeilUSD             = 0
+        Withdrawals         = 0
+        BlockWithdrawalRate = 0
+        MaxWithdrawals      = 0
+        [[Synchronizer.InitialVariables.Rollup.Buckets]]
+        CeilUSD             = 0
+        Withdrawals         = 0
+        BlockWithdrawalRate = 0
+        MaxWithdrawals      = 0
