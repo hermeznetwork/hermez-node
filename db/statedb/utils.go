@@ -170,7 +170,7 @@ func formatAccumulatedFees(collectedFees map[common.TokenID]*big.Int, orderToken
 	for i := 0; i < len(orderTokenIDs); i++ {
 		tokenID := common.TokenIDFromBigInt(orderTokenIDs[i])
 		if _, ok := collectedFees[tokenID]; ok {
-			accFeeOut[i] = collectedFees[tokenID]
+			accFeeOut[i] = new(big.Int).Set(collectedFees[tokenID])
 		} else {
 			accFeeOut[i] = big.NewInt(0)
 		}

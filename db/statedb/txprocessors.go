@@ -240,8 +240,8 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			}
 			s.zki.Metadata.L2TxsData = append(s.zki.Metadata.L2TxsData, l2TxData)
 
+			// Intermediate States
 			if s.i < nTx-1 {
-				// Intermediate States
 				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
 				s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
 				s.zki.ISAccFeeOut[s.i] = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
@@ -268,6 +268,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			if i < int(ptc.MaxTx)-1 {
 				s.zki.ISOutIdx[i] = s.idx.BigInt()
 				s.zki.ISStateRoot[i] = s.mt.Root().BigInt()
+				s.zki.ISAccFeeOut[i] = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
 			}
 			if i >= s.i {
 				s.zki.TxCompressedData[i] = new(big.Int).SetBytes(common.SignatureConstantBytes)
