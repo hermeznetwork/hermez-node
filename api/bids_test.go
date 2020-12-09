@@ -76,7 +76,7 @@ func TestGetBids(t *testing.T) {
 	// bidderAddress
 	fetchedBids = []testBid{}
 	bidderAddress := tc.bids[3].Bidder
-	path := fmt.Sprintf("%s?bidderAddr=%s&limit=%d&fromItem=", endpoint, bidderAddress.String(), limit)
+	path := fmt.Sprintf("%s?bidderAddr=%s&limit=%d", endpoint, bidderAddress.String(), limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	bidderAddrBids := []testBid{}
@@ -90,7 +90,7 @@ func TestGetBids(t *testing.T) {
 	// slotNum
 	fetchedBids = []testBid{}
 	slotNum := tc.bids[3].SlotNum
-	path = fmt.Sprintf("%s?slotNum=%d&limit=%d&fromItem=", endpoint, slotNum, limit)
+	path = fmt.Sprintf("%s?slotNum=%d&limit=%d", endpoint, slotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	slotNumBids := []testBid{}
@@ -103,7 +103,7 @@ func TestGetBids(t *testing.T) {
 
 	// slotNum, in reverse order
 	fetchedBids = []testBid{}
-	path = fmt.Sprintf("%s?slotNum=%d&limit=%d&fromItem=", endpoint, slotNum, limit)
+	path = fmt.Sprintf("%s?slotNum=%d&limit=%d", endpoint, slotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flippedBids := []testBid{}
@@ -116,7 +116,7 @@ func TestGetBids(t *testing.T) {
 	fetchedBids = []testBid{}
 	bidderAddress = tc.bids[1].Bidder
 	slotNum = tc.bids[1].SlotNum
-	path = fmt.Sprintf("%s?bidderAddr=%s&slotNum=%d&limit=%d&fromItem=", endpoint, bidderAddress.String(), slotNum, limit)
+	path = fmt.Sprintf("%s?bidderAddr=%s&slotNum=%d&limit=%d", endpoint, bidderAddress.String(), slotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	slotNumBidderAddrBids := []testBid{}
@@ -129,7 +129,7 @@ func TestGetBids(t *testing.T) {
 
 	// 400
 	// No filters
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
 	// Invalid slotNum

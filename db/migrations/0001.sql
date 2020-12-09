@@ -85,9 +85,6 @@ CREATE FUNCTION hez_idx(BIGINT, VARCHAR)
 AS 
 $BODY$
 BEGIN
-    IF $1 = 1 THEN
-        RETURN 'hez:EXIT:1';
-    END IF;
     RETURN 'hez:' || $2 || ':' || $1;
 END;
 $BODY$

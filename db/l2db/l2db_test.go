@@ -170,7 +170,7 @@ func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
 	token := tokens[expected.TokenID]
 	// If the token has value in USD setted
 	if token.USDUpdate != nil {
-		assert.Equal(t, token.USDUpdate.Unix(), actual.AbsoluteFeeUpdate.Unix())
+		assert.Less(t, token.USDUpdate.Unix()-3, actual.AbsoluteFeeUpdate.Unix())
 		expected.AbsoluteFeeUpdate = actual.AbsoluteFeeUpdate
 		// Set expected fee
 		f := new(big.Float).SetInt(expected.Amount)

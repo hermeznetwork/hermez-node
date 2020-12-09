@@ -122,7 +122,7 @@ func TestGetSlots(t *testing.T) {
 	// All slots with maxSlotNum filter
 	maxSlotNum := tc.slots[len(tc.slots)-1].SlotNum + 5
 	limit := 1
-	path := fmt.Sprintf("%s?maxSlotNum=%d&limit=%d&fromItem=", endpoint, maxSlotNum, limit)
+	path := fmt.Sprintf("%s?maxSlotNum=%d&limit=%d", endpoint, maxSlotNum, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 	allSlots := tc.slots
@@ -135,7 +135,7 @@ func TestGetSlots(t *testing.T) {
 	// All slots with maxSlotNum filter, in reverse order
 	fetchedSlots = []testSlot{}
 	limit = 3
-	path = fmt.Sprintf("%s?maxSlotNum=%d&limit=%d&fromItem=", endpoint, maxSlotNum, limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&limit=%d", endpoint, maxSlotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 
@@ -149,7 +149,7 @@ func TestGetSlots(t *testing.T) {
 	fetchedSlots = []testSlot{}
 	limit = 1
 	bidderAddr := tc.coordinators[2].Bidder
-	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d&fromItem=", endpoint, maxSlotNum, bidderAddr.String(), limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d", endpoint, maxSlotNum, bidderAddr.String(), limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 	bidderAddressSlots := []testSlot{}
@@ -165,7 +165,7 @@ func TestGetSlots(t *testing.T) {
 	// maxSlotNum & wonByEthereumAddress, in reverse order
 	fetchedSlots = []testSlot{}
 	limit = 1
-	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d&fromItem=", endpoint, maxSlotNum, bidderAddr.String(), limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d", endpoint, maxSlotNum, bidderAddr.String(), limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flippedBidderAddressSlots := []testSlot{}
@@ -177,7 +177,7 @@ func TestGetSlots(t *testing.T) {
 	// finishedAuction
 	fetchedSlots = []testSlot{}
 	limit = 15
-	path = fmt.Sprintf("%s?finishedAuction=%t&limit=%d&fromItem=", endpoint, true, limit)
+	path = fmt.Sprintf("%s?finishedAuction=%t&limit=%d", endpoint, true, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 
@@ -198,7 +198,7 @@ func TestGetSlots(t *testing.T) {
 	minSlotNum := tc.slots[3].SlotNum
 	maxSlotNum = tc.slots[len(tc.slots)-1].SlotNum - 1
 	fetchedSlots = []testSlot{}
-	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d&fromItem=", endpoint, maxSlotNum, minSlotNum, limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d", endpoint, maxSlotNum, minSlotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 	minMaxBatchNumSlots := []testSlot{}
@@ -214,7 +214,7 @@ func TestGetSlots(t *testing.T) {
 	minSlotNum = tc.slots[0].SlotNum
 	maxSlotNum = tc.slots[0].SlotNum
 	fetchedSlots = []testSlot{}
-	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d&fromItem=", endpoint, maxSlotNum, minSlotNum, limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d", endpoint, maxSlotNum, minSlotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 	minMaxBatchNumSlots = []testSlot{}
@@ -230,7 +230,7 @@ func TestGetSlots(t *testing.T) {
 	minSlotNum = tc.slots[len(tc.slots)-1].SlotNum + 1
 	maxSlotNum = tc.slots[len(tc.slots)-1].SlotNum + 5
 	fetchedSlots = []testSlot{}
-	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d&fromItem=", endpoint, maxSlotNum, minSlotNum, limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d", endpoint, maxSlotNum, minSlotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 	emptySlots := []testSlot{}
@@ -246,7 +246,7 @@ func TestGetSlots(t *testing.T) {
 	minSlotNum = tc.slots[len(tc.slots)-1].SlotNum + 1
 	maxSlotNum = tc.slots[len(tc.slots)-1].SlotNum + 5
 	fetchedSlots = []testSlot{}
-	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d&fromItem=", endpoint, maxSlotNum, minSlotNum, limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d", endpoint, maxSlotNum, minSlotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flippedEmptySlots := []testSlot{}
@@ -259,7 +259,7 @@ func TestGetSlots(t *testing.T) {
 
 	// 400
 	// No filters
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
 	// Invalid maxSlotNum
@@ -273,12 +273,12 @@ func TestGetSlots(t *testing.T) {
 	// Invalid minSlotNum / maxSlotNum (minSlotNum > maxSlotNum)
 	maxSlotNum = tc.slots[1].SlotNum
 	minSlotNum = tc.slots[4].SlotNum
-	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d&fromItem=", endpoint, maxSlotNum, minSlotNum, limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&minSlotNum=%d&limit=%d", endpoint, maxSlotNum, minSlotNum, limit)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
 	// 404
 	maxSlotNum = tc.slots[1].SlotNum
-	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d&fromItem=", endpoint, maxSlotNum, tc.coordinators[3].Bidder.String(), limit)
+	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d", endpoint, maxSlotNum, tc.coordinators[3].Bidder.String(), limit)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }

@@ -100,7 +100,7 @@ func TestGetExits(t *testing.T) {
 	}
 	// Get all (no filters)
 	limit := 8
-	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertExitAPIs(t, tc.exits, fetchedExits)
@@ -124,7 +124,7 @@ func TestGetExits(t *testing.T) {
 		}
 	}
 	path = fmt.Sprintf(
-		"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
+		"%s?hermezEthereumAddress=%s&limit=%d",
 		endpoint, account.EthAddr, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -144,7 +144,7 @@ func TestGetExits(t *testing.T) {
 	fetchedExits = []testExit{}
 	limit = 6
 	path = fmt.Sprintf(
-		"%s?BJJ=%s&limit=%d&fromItem=",
+		"%s?BJJ=%s&limit=%d",
 		endpoint, account.PublicKey, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -155,7 +155,7 @@ func TestGetExits(t *testing.T) {
 	limit = 5
 	tokenID := tc.exits[0].Token.TokenID
 	path = fmt.Sprintf(
-		"%s?tokenId=%d&limit=%d&fromItem=",
+		"%s?tokenId=%d&limit=%d",
 		endpoint, tokenID, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -172,7 +172,7 @@ func TestGetExits(t *testing.T) {
 	limit = 4
 	idx := tc.exits[0].AccountIdx
 	path = fmt.Sprintf(
-		"%s?accountIndex=%s&limit=%d&fromItem=",
+		"%s?accountIndex=%s&limit=%d",
 		endpoint, idx, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -189,7 +189,7 @@ func TestGetExits(t *testing.T) {
 	limit = 3
 	batchNum := tc.exits[0].BatchNum
 	path = fmt.Sprintf(
-		"%s?batchNum=%d&limit=%d&fromItem=",
+		"%s?batchNum=%d&limit=%d",
 		endpoint, batchNum, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -205,7 +205,7 @@ func TestGetExits(t *testing.T) {
 	fetchedExits = []testExit{}
 	limit = 7
 	path = fmt.Sprintf(
-		"%s?&onlyPendingWithdraws=%t&limit=%d&fromItem=",
+		"%s?&onlyPendingWithdraws=%t&limit=%d",
 		endpoint, true, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -221,7 +221,7 @@ func TestGetExits(t *testing.T) {
 	fetchedExits = []testExit{}
 	limit = 1
 	path = fmt.Sprintf(
-		"%s?batchNum=%d&tokeId=%d&limit=%d&fromItem=",
+		"%s?batchNum=%d&tokeId=%d&limit=%d",
 		endpoint, batchNum, tokenID, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -238,7 +238,7 @@ func TestGetExits(t *testing.T) {
 	// All, in reverse order
 	fetchedExits = []testExit{}
 	limit = 5
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertExitAPIs(t, flipedExits, fetchedExits)
@@ -256,7 +256,7 @@ func TestGetExits(t *testing.T) {
 	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?limit=1000&fromItem=999999", endpoint)
+	path = fmt.Sprintf("%s?fromItem=1000999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
