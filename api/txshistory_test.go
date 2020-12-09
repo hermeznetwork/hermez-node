@@ -21,6 +21,8 @@ type testL1Info struct {
 	ToForgeL1TxsNum          *int64   `json:"toForgeL1TransactionsNum"`
 	UserOrigin               bool     `json:"userOrigin"`
 	DepositAmount            string   `json:"depositAmount"`
+	AmountSuccess            bool     `json:"amountSuccess"`
+	DepositAmountSuccess     bool     `json:"depositAmountSuccess"`
 	HistoricDepositAmountUSD *float64 `json:"historicDepositAmountUSD"`
 	EthBlockNum              int64    `json:"ethereumBlockNum"`
 }
@@ -123,10 +125,12 @@ func genTestTxs(
 			BatchNum:    l1.BatchNum,
 			Timestamp:   getTimestamp(l1.EthBlockNum, blocks),
 			L1Info: &testL1Info{
-				ToForgeL1TxsNum: l1.ToForgeL1TxsNum,
-				UserOrigin:      l1.UserOrigin,
-				DepositAmount:   l1.DepositAmount.String(),
-				EthBlockNum:     l1.EthBlockNum,
+				ToForgeL1TxsNum:      l1.ToForgeL1TxsNum,
+				UserOrigin:           l1.UserOrigin,
+				DepositAmount:        l1.DepositAmount.String(),
+				AmountSuccess:        true,
+				DepositAmountSuccess: true,
+				EthBlockNum:          l1.EthBlockNum,
 			},
 			Token: token,
 		}

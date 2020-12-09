@@ -36,6 +36,8 @@ type TxAPI struct {
 	UserOrigin               *bool               `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
 	DepositAmount            *apitypes.BigIntStr `meddler:"deposit_amount"`
 	HistoricDepositAmountUSD *float64            `meddler:"deposit_amount_usd"`
+	AmountSuccess            bool                `meddler:"amount_success"`
+	DepositAmountSuccess     bool                `meddler:"deposit_amount_success"`
 	// L2
 	Fee            *common.FeeSelector `meddler:"fee"`
 	HistoricFeeUSD *float64            `meddler:"fee_usd"`
@@ -90,10 +92,18 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 	}
 	if tx.IsL1 {
 		jsonTx["L1orL2"] = "L1"
+		amountSuccess := tx.AmountSuccess
+		depositAmountSuccess := tx.DepositAmountSuccess
+		if tx.BatchNum == nil {
+			amountSuccess = false
+			depositAmountSuccess = false
+		}
 		jsonTx["L1Info"] = map[string]interface{}{
 			"toForgeL1TransactionsNum": tx.ToForgeL1TxsNum,
 			"userOrigin":               tx.UserOrigin,
 			"depositAmount":            tx.DepositAmount,
+			"amountSuccess":            amountSuccess,
+			"depositAmountSuccess":     depositAmountSuccess,
 			"historicDepositAmountUSD": tx.HistoricDepositAmountUSD,
 			"ethereumBlockNum":         tx.EthBlockNum,
 		}
