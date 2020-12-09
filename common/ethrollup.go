@@ -87,7 +87,7 @@ const (
 )
 
 var (
-	// RollupConstLimitDepositAmount Max load amount allowed (depositAmount: L1 --> L2)
+	// RollupConstLimitDepositAmount Max deposit amount allowed (depositAmount: L1 --> L2)
 	RollupConstLimitDepositAmount, _ = new(big.Int).SetString("340282366920938463463374607431768211456", 10)
 	// RollupConstLimitL2TransferAmount Max amount allowed (amount L2 --> L2)
 	RollupConstLimitL2TransferAmount, _ = new(big.Int).SetString("6277101735386680763835789423207666416102355444464034512896", 10)

@@ -166,9 +166,9 @@ func genTestTxs(
 			}
 			laf := new(big.Float).SetInt(l1.DepositAmount)
 			depositAmountFloat, _ := laf.Float64()
-			loadUSD := *token.USD * depositAmountFloat / math.Pow(10, float64(token.Decimals))
+			depositUSD := *token.USD * depositAmountFloat / math.Pow(10, float64(token.Decimals))
 			if depositAmountFloat != 0 {
-				tx.L1Info.HistoricDepositAmountUSD = &loadUSD
+				tx.L1Info.HistoricDepositAmountUSD = &depositUSD
 			}
 		}
 		txs = append(txs, tx)

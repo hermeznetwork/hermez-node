@@ -137,7 +137,7 @@ CREATE SEQUENCE tx_item_id;
 -- When tx is not forged: amount_success = false, deposit_amount_success = false
 -- When tx is forged: 
 --      amount_success = false if the "effective amount" is 0, else true
---      deposit_amount_success = false if the "effective load amount" is 0, else true
+--      deposit_amount_success = false if the "effective deposit amount" is 0, else true
 --
 -- However, in order to reduce the amount of updates, by default amount_success and deposit_amount_success will be set to true (when tx is unforged)
 -- whne they should be false. This can be worked around at a query level by checking if "batch_num IS NULL" (which indicates that the tx is unforged).
