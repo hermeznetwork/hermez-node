@@ -43,8 +43,9 @@ type Coordinator struct {
 	ConfirmBlocks int64 `validate:"required"`
 	// L1BatchTimeoutPerc is the portion of the range before the L1Batch
 	// timeout that will trigger a schedule to forge an L1Batch
-	L1BatchTimeoutPerc float64 `validate:"required"`
-	L2DB               struct {
+	ProofServerPollInterval Duration `validate:"required"`
+	L1BatchTimeoutPerc      float64  `validate:"required"`
+	L2DB                    struct {
 		SafetyPeriod common.BatchNum `validate:"required"`
 		MaxTxs       uint32          `validate:"required"`
 		TTL          Duration        `validate:"required"`
@@ -69,10 +70,10 @@ type Coordinator struct {
 		DeployGasLimit      uint64   `validate:"required"`
 		GasPriceDiv         uint64   `validate:"required"`
 		ReceiptTimeout      Duration `validate:"required"`
-		IntervalReceiptLoop Duration `validate:"required"`
-		// IntervalCheckLoop is the waiting interval between receipt
+		ReceiptLoopInterval Duration `validate:"required"`
+		// CheckLoopInterval is the waiting interval between receipt
 		// checks of ethereum transactions in the TxManager
-		IntervalCheckLoop Duration `validate:"required"`
+		CheckLoopInterval Duration `validate:"required"`
 		// Attempts is the number of attempts to do an eth client RPC
 		// call before giving up
 		Attempts int `validate:"required"`

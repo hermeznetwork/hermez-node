@@ -47,8 +47,7 @@ func testAPIStatus(t *testing.T) {
 }
 
 func testCalculateProof(t *testing.T) {
-	var zkInputs *common.ZKInputs
-	zkInputs = common.NewZKInputs(100, 16, 512, 24, 32, big.NewInt(1))
+	zkInputs := common.NewZKInputs(100, 16, 512, 24, 32, big.NewInt(1))
 	err := proofServerClient.CalculateProof(context.Background(), zkInputs)
 	require.NoError(t, err)
 }
@@ -64,8 +63,7 @@ func testGetProof(t *testing.T) {
 }
 
 func testCancel(t *testing.T) {
-	var zkInputs *common.ZKInputs
-	zkInputs = common.NewZKInputs(100, 16, 512, 24, 32, big.NewInt(1))
+	zkInputs := common.NewZKInputs(100, 16, 512, 24, 32, big.NewInt(1))
 	err := proofServerClient.CalculateProof(context.Background(), zkInputs)
 	require.NoError(t, err)
 	// TODO: remove sleep when the server has been reviewed

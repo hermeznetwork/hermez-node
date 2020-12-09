@@ -133,7 +133,7 @@ type formFileProvider struct {
 	body   []byte
 }
 
-//nolint:unused
+//nolint:unused,deadcode
 func newFormFileProvider(payload interface{}) (*formFileProvider, error) {
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
@@ -239,9 +239,8 @@ func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, error) {
 			return nil, tracerr.Wrap(err)
 		}
 		return &proof, nil
-	} else {
-		return nil, errors.New("State is not Success")
 	}
+	return nil, errors.New("State is not Success")
 }
 
 // Cancel cancels any current proof computation
@@ -262,22 +261,21 @@ func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 	if !status.Status.IsInitialized() {
 		err := errors.New("Proof Server is not initialized")
 		return err
-	} else {
-		if status.Status.IsReady() {
-			return nil
-		}
-		for {
-			select {
-			case <-ctx.Done():
-				return tracerr.Wrap(common.ErrDone)
-			case <-time.After(p.timeCons):
-				status, err := p.apiStatus(ctx)
-				if err != nil {
-					return tracerr.Wrap(err)
-				}
-				if status.Status.IsReady() {
-					return nil
-				}
+	}
+	if status.Status.IsReady() {
+		return nil
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return tracerr.Wrap(common.ErrDone)
+		case <-time.After(p.timeCons):
+			status, err := p.apiStatus(ctx)
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+			if status.Status.IsReady() {
+				return nil
 			}
 		}
 	}
@@ -289,7 +287,7 @@ type MockClient struct {
 
 // CalculateProof sends the *common.ZKInputs to the ServerProof to compute the
 // Proof
-func (p *MockClient) CalculateProof(zkInputs *common.ZKInputs) error {
+func (p *MockClient) CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error {
 	return nil
 }
 

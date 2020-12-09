@@ -807,7 +807,7 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 
 	// 7. Call the selected idle server proof with BatchBuilder output,
 	// save server proof info for batchNum
-	err = batchInfo.ServerProof.CalculateProof(zkInputs)
+	err = batchInfo.ServerProof.CalculateProof(ctx, zkInputs)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
