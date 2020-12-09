@@ -257,3 +257,9 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 	}
 	return &a, nil
 }
+
+// IdxNonce is a pair of Idx and Nonce representing an account
+type IdxNonce struct {
+	Idx   Idx   `db:"idx"`
+	Nonce Nonce `db:"nonce"`
+}

@@ -334,12 +334,13 @@ func TestCheckNonces(t *testing.T) {
 	poolL2Txs, err := generatePoolL2Txs()
 	assert.NoError(t, err)
 	// Update Accounts currentNonce
-	var updateAccounts []common.Account
+	var updateAccounts []common.IdxNonce
 	const currentNonce = common.Nonce(1)
 	for i := range accs {
-		account := accs[i]
-		account.Nonce = common.Nonce(currentNonce)
-		updateAccounts = append(updateAccounts, account)
+		updateAccounts = append(updateAccounts, common.IdxNonce{
+			Idx:   accs[i].Idx,
+			Nonce: common.Nonce(currentNonce),
+		})
 	}
 	// Add txs to DB
 	var invalidTxIDs []common.TxID

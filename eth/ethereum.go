@@ -65,8 +65,8 @@ type EthereumConfig struct {
 	CallGasLimit        uint64
 	DeployGasLimit      uint64
 	GasPriceDiv         uint64
-	ReceiptTimeout      time.Duration // in seconds
-	IntervalReceiptLoop time.Duration // in milliseconds
+	ReceiptTimeout      time.Duration
+	IntervalReceiptLoop time.Duration
 }
 
 // EthereumClient is an ethereum client to call Smart Contract methods and check blockchain information.

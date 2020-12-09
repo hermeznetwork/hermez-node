@@ -303,7 +303,7 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 		return tracerr.Wrap(err)
 	}
 	// idx is obtained from the statedb reset
-	s.idx, err = s.getIdx()
+	s.idx, err = s.GetIdx()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}

@@ -45,6 +45,7 @@ type Config struct {
 	// DebugBatchPath if set, specifies the path where batchInfo is stored
 	// in JSON in every step/update of the pipeline
 	DebugBatchPath string
+	Purger         PurgerCfg
 }
 
 func (c *Config) debugBatchStore(batchInfo *BatchInfo) {
@@ -79,6 +80,7 @@ type Coordinator struct {
 
 	pipeline *Pipeline
 
+	purger    *Purger
 	txManager *TxManager
 }
 
@@ -103,6 +105,14 @@ func NewCoordinator(cfg Config,
 			cfg.EthClientAttempts))
 	}
 
+	purger := Purger{
+		cfg:                 cfg.Purger,
+		lastPurgeBlock:      0,
+		lastPurgeBatch:      0,
+		lastInvalidateBlock: 0,
+		lastInvalidateBatch: 0,
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	c := Coordinator{
 		pipelineBatchNum: -1,
@@ -117,6 +127,8 @@ func NewCoordinator(cfg Config,
 		txSelector:   txSelector,
 		batchBuilder: batchBuilder,
 
+		purger: &purger,
+
 		// ethClient: ethClient,
 
 		msgCh: make(chan interface{}),
@@ -130,16 +142,18 @@ func NewCoordinator(cfg Config,
 }
 
 func (c *Coordinator) newPipeline(ctx context.Context) (*Pipeline, error) {
-	return NewPipeline(ctx, c.cfg, c.historyDB, c.l2DB,
-		c.txSelector, c.batchBuilder, c.txManager, c.provers, &c.consts)
+	return NewPipeline(ctx, c.cfg, c.historyDB, c.l2DB, c.txSelector,
+		c.batchBuilder, c.purger, c.txManager, c.provers, &c.consts)
 }
 
-// MsgSyncStats indicates an update to the Synchronizer stats
-type MsgSyncStats struct {
-	Stats synchronizer.Stats
+// MsgSyncBlock indicates an update to the Synchronizer stats
+type MsgSyncBlock struct {
+	Stats   synchronizer.Stats
+	Batches []common.BatchData
 }
 
 // MsgSyncSCVars indicates an update to Smart Contract Vars
+// TODO: Move this to MsgSyncBlock and remove MsgSyncSCVars
 type MsgSyncSCVars struct {
 	Rollup   *common.RollupVariables
 	Auction  *common.AuctionVariables
@@ -186,7 +200,9 @@ func (c *Coordinator) canForge(stats *synchronizer.Stats) bool {
 	return false
 }
 
-func (c *Coordinator) handleMsgSyncStats(ctx context.Context, stats *synchronizer.Stats) error {
+func (c *Coordinator) handleMsgSyncBlock(ctx context.Context, msg *MsgSyncBlock) error {
+	stats := &msg.Stats
+	// batches := msg.Batches
 	if !stats.Synced() {
 		return nil
 	}
@@ -216,6 +232,29 @@ func (c *Coordinator) handleMsgSyncStats(ctx context.Context, stats *synchronize
 			log.Infow("Coordinator: forging state end", "block", stats.Eth.LastBlock.Num)
 			c.pipeline.Stop(c.ctx)
 			c.pipeline = nil
+		}
+	}
+	if c.pipeline == nil {
+		// Mark invalid in Pool due to forged L2Txs
+		// for _, batch := range batches {
+		// 	if err := poolMarkInvalidOldNoncesFromL2Txs(c.l2DB,
+		// 		idxsNonceFromL2Txs(batch.L2Txs), batch.Batch.BatchNum); err != nil {
+		// 		return err
+		// 	}
+		// }
+		if c.purger.CanInvalidate(stats.Sync.LastBlock.Num, stats.Sync.LastBatch) {
+			if err := c.txSelector.Reset(common.BatchNum(stats.Sync.LastBatch)); err != nil {
+				return err
+			}
+		}
+		_, err := c.purger.InvalidateMaybe(c.l2DB, c.txSelector.LocalAccountsDB(),
+			stats.Sync.LastBlock.Num, stats.Sync.LastBatch)
+		if err != nil {
+			return err
+		}
+		_, err = c.purger.PurgeMaybe(c.l2DB, stats.Sync.LastBlock.Num, stats.Sync.LastBatch)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -254,12 +293,11 @@ func (c *Coordinator) Start() {
 				return
 			case msg := <-c.msgCh:
 				switch msg := msg.(type) {
-				case MsgSyncStats:
-					stats := msg.Stats
-					if err := c.handleMsgSyncStats(c.ctx, &stats); common.IsErrDone(err) {
+				case MsgSyncBlock:
+					if err := c.handleMsgSyncBlock(c.ctx, &msg); common.IsErrDone(err) {
 						continue
 					} else if err != nil {
-						log.Errorw("Coordinator.handleMsgSyncStats error", "err", err)
+						log.Errorw("Coordinator.handleMsgSyncBlock error", "err", err)
 						continue
 					}
 				case MsgSyncReorg:
@@ -522,6 +560,7 @@ type Pipeline struct {
 	l2DB         *l2db.L2DB
 	txSelector   *txselector.TxSelector
 	batchBuilder *batchbuilder.BatchBuilder
+	purger       *Purger
 
 	stats   synchronizer.Stats
 	statsCh chan synchronizer.Stats
@@ -538,6 +577,7 @@ func NewPipeline(ctx context.Context,
 	l2DB *l2db.L2DB,
 	txSelector *txselector.TxSelector,
 	batchBuilder *batchbuilder.BatchBuilder,
+	purger *Purger,
 	txManager *TxManager,
 	provers []prover.Client,
 	scConsts *synchronizer.SCConsts,
@@ -563,6 +603,7 @@ func NewPipeline(ctx context.Context,
 		batchBuilder: batchBuilder,
 		provers:      provers,
 		proversPool:  proversPool,
+		purger:       purger,
 		txManager:    txManager,
 		consts:       *scConsts,
 		statsCh:      make(chan synchronizer.Stats, queueLen),
@@ -679,7 +720,12 @@ func l2TxsIDs(txs []common.PoolL2Tx) []common.TxID {
 // circuit inputs to the proof server.
 func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.BatchNum) (*BatchInfo, error) {
 	// remove transactions from the pool that have been there for too long
-	err := p.l2DB.Purge(common.BatchNum(p.stats.Sync.LastBatch))
+	_, err := p.purger.InvalidateMaybe(p.l2DB, p.txSelector.LocalAccountsDB(),
+		p.stats.Sync.LastBlock.Num, int64(batchNum))
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.purger.PurgeMaybe(p.l2DB, p.stats.Sync.LastBlock.Num, int64(batchNum))
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -721,11 +767,11 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 		return nil, tracerr.Wrap(err)
 	}
 
-	// Run purger to invalidate transactions that become invalid beause of
+	// Invalidate transactions that become invalid beause of
 	// the poolL2Txs selected.  Will mark as invalid the txs that have a
 	// (fromIdx, nonce) which already appears in the selected txs (includes
 	// all the nonces smaller than the current one)
-	err = p.purgeInvalidDueToL2TxsSelection(poolL2Txs)
+	err = poolMarkInvalidOldNoncesFromL2Txs(p.l2DB, idxsNonceFromPoolL2Txs(poolL2Txs), batchInfo.BatchNum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -782,10 +828,6 @@ func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) er
 	batchInfo.TxStatus = TxStatusPending
 	p.cfg.debugBatchStore(batchInfo)
 	return nil
-}
-
-func (p *Pipeline) purgeInvalidDueToL2TxsSelection(l2Txs []common.PoolL2Tx) error {
-	return nil // TODO
 }
 
 func (p *Pipeline) shouldL1L2Batch() bool {

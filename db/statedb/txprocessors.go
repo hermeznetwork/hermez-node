@@ -1118,9 +1118,9 @@ func (s *StateDB) computeEffectiveAmounts(tx *common.L1Tx) {
 	}
 }
 
-// getIdx returns the stored Idx from the localStateDB, which is the last Idx
+// GetIdx returns the stored Idx from the localStateDB, which is the last Idx
 // used for an Account in the localStateDB.
-func (s *StateDB) getIdx() (common.Idx, error) {
+func (s *StateDB) GetIdx() (common.Idx, error) {
 	idxBytes, err := s.DB().Get(keyidx)
 	if tracerr.Unwrap(err) == db.ErrNotFound {
 		return 0, nil

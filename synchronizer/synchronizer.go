@@ -801,11 +801,16 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			MaxTx:    512,
 			MaxL1Tx:  64,
 		}
-		processTxsOut, err := s.stateDB.ProcessTxs(ptc, forgeBatchArgs.FeeIdxCoordinator, l1UserTxs,
-			batchData.L1CoordinatorTxs, poolL2Txs)
+		processTxsOut, err := s.stateDB.ProcessTxs(ptc, forgeBatchArgs.FeeIdxCoordinator,
+			l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		// Set the BatchNum in the forged L1UserTxs
+		for i := range l1UserTxs {
+			l1UserTxs[i].BatchNum = &batchNum
+		}
+		batchData.L1UserTxs = l1UserTxs
 
 		// Set batchNum in exits
 		for i := range processTxsOut.ExitInfos {

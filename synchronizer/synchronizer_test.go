@@ -76,7 +76,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 		assert.Equal(t, tokenCpy, dbToken)
 	}
 
-	// Check L1UserTxs
+	// Check submitted L1UserTxs
 	assert.Equal(t, len(block.Rollup.L1UserTxs), len(syncBlock.Rollup.L1UserTxs))
 	dbL1UserTxs, err := s.historyDB.GetAllL1UserTxs()
 	require.Nil(t, err)
@@ -85,9 +85,8 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	// because this value is set by StateDB.ProcessTxs.
 	for i := range syncBlock.Rollup.L1UserTxs {
 		syncBlock.Rollup.L1UserTxs[i].BatchNum = block.Rollup.L1UserTxs[i].BatchNum
-		syncBlock.Rollup.L1UserTxs[i].EffectiveAmount = block.Rollup.L1UserTxs[i].EffectiveAmount
-		syncBlock.Rollup.L1UserTxs[i].EffectiveDepositAmount =
-			block.Rollup.L1UserTxs[i].EffectiveDepositAmount
+		assert.Nil(t, syncBlock.Rollup.L1UserTxs[i].EffectiveDepositAmount)
+		assert.Nil(t, syncBlock.Rollup.L1UserTxs[i].EffectiveAmount)
 	}
 	assert.Equal(t, block.Rollup.L1UserTxs, syncBlock.Rollup.L1UserTxs)
 	for _, tx := range block.Rollup.L1UserTxs {
@@ -101,8 +100,13 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 				break
 			}
 		}
-		tx.EffectiveAmount = tx.Amount
-		tx.EffectiveDepositAmount = tx.DepositAmount
+		// If the tx has been forged in this block, this will be
+		// reflected in the DB, and so the Effective values will be
+		// already set
+		if dbTx.BatchNum != nil {
+			tx.EffectiveAmount = tx.Amount
+			tx.EffectiveDepositAmount = tx.DepositAmount
+		}
 		assert.Equal(t, &tx, dbTx) //nolint:gosec
 	}
 
@@ -137,6 +141,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 		batch.Batch.NumAccounts = len(batch.CreatedAccounts)
 
 		// Test field by field to facilitate debugging of errors
+		assert.Equal(t, batch.L1UserTxs, syncBatch.L1UserTxs)
 		assert.Equal(t, batch.L1CoordinatorTxs, syncBatch.L1CoordinatorTxs)
 		assert.Equal(t, batch.L2Txs, syncBatch.L2Txs)
 		// In exit tree, we only check AccountIdx and Balance, because
@@ -151,6 +156,26 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 		assert.Equal(t, batch.Batch, syncBatch.Batch)
 		assert.Equal(t, batch, syncBatch)
 		assert.Equal(t, &batch.Batch, dbBatch) //nolint:gosec
+
+		// Check forged L1UserTxs from DB, and check effective values
+		// in sync output
+		for j, tx := range batch.L1UserTxs {
+			var dbTx *common.L1Tx
+			// Find tx in DB output
+			for _, _dbTx := range dbL1UserTxs {
+				if *tx.BatchNum == *_dbTx.BatchNum &&
+					tx.Position == _dbTx.Position {
+					dbTx = new(common.L1Tx)
+					*dbTx = _dbTx
+					break
+				}
+			}
+			assert.Equal(t, &tx, dbTx) //nolint:gosec
+
+			syncTx := &syncBlock.Rollup.Batches[i].L1UserTxs[j]
+			assert.Equal(t, syncTx.DepositAmount, syncTx.EffectiveDepositAmount)
+			assert.Equal(t, syncTx.Amount, syncTx.EffectiveAmount)
+		}
 
 		// Check L1CoordinatorTxs from DB
 		for _, tx := range batch.L1CoordinatorTxs {
@@ -295,7 +320,7 @@ func TestSync(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	stateDB, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Init History DB
 	pass := os.Getenv("POSTGRES_PASS")
@@ -432,8 +457,10 @@ func TestSync(t *testing.T) {
 	ethAddTokens(blocks, client)
 
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tc.FillBlocksL1UserTxsBatchNum(blocks)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	assert.NoError(t, err)
 
 	// Add block data to the smart contracts
 	ethAddBlocks(t, blocks, client, clientSetup)
@@ -459,6 +486,7 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, int64(2), stats.Sync.LastBlock.Num)
 
 	checkSyncBlock(t, s, 2, &blocks[0], syncBlock)
+
 	// Block 3
 
 	syncBlock, discards, err = s.Sync2(ctx, nil)
@@ -606,7 +634,7 @@ func TestSync(t *testing.T) {
 	ethAddTokens(blocks, client)
 
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tc.FillBlocksL1UserTxsBatchNum(blocks)
 
 	// Add block data to the smart contracts
