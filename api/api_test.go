@@ -191,7 +191,7 @@ func TestMain(m *testing.M) {
 	// Swagger
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// HistoryDB
-	pass := "yourpasswordhere" // os.Getenv("POSTGRES_PASS")
+	pass := os.Getenv("POSTGRES_PASS")
 
 	database, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
