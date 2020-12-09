@@ -54,7 +54,7 @@ func TestGetTokens(t *testing.T) {
 	}
 	// Get all (no filters)
 	limit := 8
-	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertTokensAPIs(t, tc.tokens, fetchedTokens)
@@ -64,7 +64,7 @@ func TestGetTokens(t *testing.T) {
 	limit = 7
 	stringIds := strconv.Itoa(int(tc.tokens[2].TokenID)) + "," + strconv.Itoa(int(tc.tokens[5].TokenID)) + "," + strconv.Itoa(int(tc.tokens[6].TokenID))
 	path = fmt.Sprintf(
-		"%s?ids=%s&limit=%d&fromItem=",
+		"%s?ids=%s&limit=%d",
 		endpoint, stringIds, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
@@ -80,7 +80,7 @@ func TestGetTokens(t *testing.T) {
 	limit = 7
 	stringSymbols := tc.tokens[1].Symbol + "," + tc.tokens[3].Symbol
 	path = fmt.Sprintf(
-		"%s?symbols=%s&limit=%d&fromItem=",
+		"%s?symbols=%s&limit=%d",
 		endpoint, stringSymbols, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
@@ -96,7 +96,7 @@ func TestGetTokens(t *testing.T) {
 	tokenNameLen := len(tc.tokens[8].Name)
 	stringName := tc.tokens[8].Name[tokenNameLen-1:]
 	path = fmt.Sprintf(
-		"%s?name=%s&limit=%d&fromItem=",
+		"%s?name=%s&limit=%d",
 		endpoint, stringName, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
@@ -111,7 +111,7 @@ func TestGetTokens(t *testing.T) {
 	stringSymbols = tc.tokens[2].Symbol + "," + tc.tokens[6].Symbol
 	stringIds = strconv.Itoa(int(tc.tokens[2].TokenID)) + "," + strconv.Itoa(int(tc.tokens[5].TokenID)) + "," + strconv.Itoa(int(tc.tokens[6].TokenID))
 	path = fmt.Sprintf(
-		"%s?symbols=%s&ids=%s&limit=%d&fromItem=",
+		"%s?symbols=%s&ids=%s&limit=%d",
 		endpoint, stringSymbols, stringIds, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
@@ -125,7 +125,7 @@ func TestGetTokens(t *testing.T) {
 	// All, in reverse order
 	fetchedTokens = []historydb.TokenWithUSD{}
 	limit = 5
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 	flipedTokens := []historydb.TokenWithUSD{}

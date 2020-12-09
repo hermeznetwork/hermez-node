@@ -191,7 +191,7 @@ func TestMain(m *testing.M) {
 	// Swagger
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// HistoryDB
-	pass := os.Getenv("POSTGRES_PASS")
+	pass := "yourpasswordhere" // os.Getenv("POSTGRES_PASS")
 
 	database, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	if err != nil {
@@ -456,15 +456,8 @@ func doGoodReqPaginated(
 	for {
 		// Calculate fromItem
 		iterPath := path
-		if firstIte {
-			if order == historydb.OrderDesc {
-				// Fetch first item in reverse order
-				iterPath += "99999" // Asumption that for testing there won't be any itemID > 99999
-			} else {
-				iterPath += "0"
-			}
-		} else {
-			iterPath += strconv.Itoa(int(next))
+		if !firstIte {
+			iterPath += "&fromItem=" + strconv.Itoa(int(next))
 		}
 		// Call API to get this iteration items
 		iterStruct = iterStruct.New()

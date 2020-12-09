@@ -256,7 +256,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	}
 	// Get all (no filters)
 	limit := 20
-	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertTxs(t, tc.txs, fetchedTxs)
@@ -265,7 +265,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs = []testTx{}
 	limit = 7
 	path = fmt.Sprintf(
-		"%s?hermezEthereumAddress=%s&limit=%d&fromItem=",
+		"%s?hermezEthereumAddress=%s&limit=%d",
 		endpoint, account.EthAddr, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
@@ -287,7 +287,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs = []testTx{}
 	limit = 6
 	path = fmt.Sprintf(
-		"%s?BJJ=%s&limit=%d&fromItem=",
+		"%s?BJJ=%s&limit=%d",
 		endpoint, account.PublicKey, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
@@ -298,7 +298,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	limit = 5
 	tokenID := tc.txs[0].Token.TokenID
 	path = fmt.Sprintf(
-		"%s?tokenId=%d&limit=%d&fromItem=",
+		"%s?tokenId=%d&limit=%d",
 		endpoint, tokenID, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
@@ -317,7 +317,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	idx, err := stringToIdx(idxStr, "")
 	assert.NoError(t, err)
 	path = fmt.Sprintf(
-		"%s?accountIndex=%s&limit=%d&fromItem=",
+		"%s?accountIndex=%s&limit=%d",
 		endpoint, idxStr, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
@@ -345,7 +345,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	limit = 3
 	batchNum := tc.txs[0].BatchNum
 	path = fmt.Sprintf(
-		"%s?batchNum=%d&limit=%d&fromItem=",
+		"%s?batchNum=%d&limit=%d",
 		endpoint, *batchNum, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
@@ -374,7 +374,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		fetchedTxs = []testTx{}
 		limit = 2
 		path = fmt.Sprintf(
-			"%s?type=%s&limit=%d&fromItem=",
+			"%s?type=%s&limit=%d",
 			endpoint, txType, limit,
 		)
 		err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
@@ -391,7 +391,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs = []testTx{}
 	limit = 1
 	path = fmt.Sprintf(
-		"%s?batchNum=%d&tokenId=%d&limit=%d&fromItem=",
+		"%s?batchNum=%d&tokenId=%d&limit=%d",
 		endpoint, *batchNum, tokenID, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
@@ -408,7 +408,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// All, in reverse order
 	fetchedTxs = []testTx{}
 	limit = 5
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flipedTxs := []testTx{}
@@ -430,7 +430,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?limit=1000&fromItem=999999", endpoint)
+	path = fmt.Sprintf("%s?fromItem=1000999999", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }

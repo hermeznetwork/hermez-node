@@ -65,11 +65,11 @@ func (a *API) newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []his
 		slotNum := bids[i].SlotNum
 		slot := a.newSlotAPI(slotNum, currentBlockNum, &bids[i], auctionVars)
 		if order == historydb.OrderAsc {
-			if slot.ItemID >= uint64(*fromItem) {
+			if fromItem == nil || slot.ItemID >= uint64(*fromItem) {
 				slots = append(slots, slot)
 			}
 		} else {
-			if slot.ItemID <= uint64(*fromItem) {
+			if fromItem == nil || slot.ItemID <= uint64(*fromItem) {
 				slots = append(slots, slot)
 			}
 		}
@@ -80,11 +80,11 @@ func (a *API) newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []his
 func (a *API) addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64, auctionVars *common.AuctionVariables, fromItem *uint, order string) ([]SlotAPI, error) {
 	emptySlot := a.newSlotAPI(slotNum, currentBlockNum, nil, auctionVars)
 	if order == historydb.OrderAsc {
-		if emptySlot.ItemID >= uint64(*fromItem) {
+		if fromItem == nil || emptySlot.ItemID >= uint64(*fromItem) {
 			slots = append(slots, emptySlot)
 		}
 	} else {
-		if emptySlot.ItemID <= uint64(*fromItem) {
+		if fromItem == nil || emptySlot.ItemID <= uint64(*fromItem) {
 			slots = append([]SlotAPI{emptySlot}, slots...)
 		}
 	}
@@ -175,6 +175,9 @@ func getLimitsWithAddr(minSlotNum, maxSlotNum *int64, fromItem, limit *uint, ord
 				maxLim = *maxSlotNum
 			}
 		}
+	} else {
+		maxLim = *maxSlotNum
+		minLim = *minSlotNum
 	}
 	return minLim, maxLim
 }
@@ -285,11 +288,11 @@ func (a *API) getSlots(c *gin.Context) {
 				if slotsBids[j].SlotNum == i {
 					found = true
 					if order == historydb.OrderAsc {
-						if slotsBids[j].ItemID >= uint64(*fromItem) {
+						if fromItem == nil || slotsBids[j].ItemID >= uint64(*fromItem) {
 							slots = append(slots, slotsBids[j])
 						}
 					} else {
-						if slotsBids[j].ItemID <= uint64(*fromItem) {
+						if fromItem == nil || slotsBids[j].ItemID <= uint64(*fromItem) {
 							slots = append([]SlotAPI{slotsBids[j]}, slots...)
 						}
 					}

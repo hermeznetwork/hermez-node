@@ -74,40 +74,40 @@ func TestGetAccounts(t *testing.T) {
 	stringIds := strconv.Itoa(int(tc.tokens[2].TokenID)) + "," + strconv.Itoa(int(tc.tokens[5].TokenID)) + "," + strconv.Itoa(int(tc.tokens[6].TokenID))
 
 	// Filter by BJJ
-	path := fmt.Sprintf("%s?BJJ=%s&limit=%d&fromItem=", endpoint, tc.accounts[0].PublicKey, limit)
+	path := fmt.Sprintf("%s?BJJ=%s&limit=%d", endpoint, tc.accounts[0].PublicKey, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Filter by ethAddr
-	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&limit=%d&fromItem=", endpoint, tc.accounts[3].EthAddr, limit)
+	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&limit=%d", endpoint, tc.accounts[3].EthAddr, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// both filters (incompatible)
-	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&BJJ=%s&limit=%d&fromItem=", endpoint, tc.accounts[0].EthAddr, tc.accounts[0].PublicKey, limit)
+	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&BJJ=%s&limit=%d", endpoint, tc.accounts[0].EthAddr, tc.accounts[0].PublicKey, limit)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
 	fetchedAccounts = []testAccount{}
 	// Filter by token IDs
-	path = fmt.Sprintf("%s?tokenIds=%s&limit=%d&fromItem=", endpoint, stringIds, limit)
+	path = fmt.Sprintf("%s?tokenIds=%s&limit=%d", endpoint, stringIds, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Token Ids + bjj
-	path = fmt.Sprintf("%s?tokenIds=%s&BJJ=%s&limit=%d&fromItem=", endpoint, stringIds, tc.accounts[10].PublicKey, limit)
+	path = fmt.Sprintf("%s?tokenIds=%s&BJJ=%s&limit=%d", endpoint, stringIds, tc.accounts[10].PublicKey, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// No filters (checks response content)
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Equal(t, len(tc.accounts), len(fetchedAccounts))

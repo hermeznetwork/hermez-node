@@ -53,7 +53,7 @@ func TestGetCoordinators(t *testing.T) {
 
 	// All
 	limit := 5
-	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testCoordinatorsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertCoordinators(t, tc.coordinators, fetchedCoordinators)

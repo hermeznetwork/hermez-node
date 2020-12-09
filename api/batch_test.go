@@ -119,7 +119,7 @@ func TestGetBatches(t *testing.T) {
 	}
 	// Get all (no filters)
 	limit := 3
-	path := fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertBatches(t, tc.batches, fetchedBatches)
@@ -128,7 +128,7 @@ func TestGetBatches(t *testing.T) {
 	fetchedBatches = []testBatch{}
 	limit = 2
 	minBatchNum := tc.batches[len(tc.batches)/2].BatchNum
-	path = fmt.Sprintf("%s?minBatchNum=%d&limit=%d&fromItem=", endpoint, minBatchNum, limit)
+	path = fmt.Sprintf("%s?minBatchNum=%d&limit=%d", endpoint, minBatchNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
 	assert.NoError(t, err)
 	minBatchNumBatches := []testBatch{}
@@ -143,7 +143,7 @@ func TestGetBatches(t *testing.T) {
 	fetchedBatches = []testBatch{}
 	limit = 1
 	maxBatchNum := tc.batches[len(tc.batches)/2].BatchNum
-	path = fmt.Sprintf("%s?maxBatchNum=%d&limit=%d&fromItem=", endpoint, maxBatchNum, limit)
+	path = fmt.Sprintf("%s?maxBatchNum=%d&limit=%d", endpoint, maxBatchNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
 	assert.NoError(t, err)
 	maxBatchNumBatches := []testBatch{}
@@ -158,7 +158,7 @@ func TestGetBatches(t *testing.T) {
 	fetchedBatches = []testBatch{}
 	limit = 5
 	slotNum := tc.batches[len(tc.batches)/2].SlotNum
-	path = fmt.Sprintf("%s?slotNum=%d&limit=%d&fromItem=", endpoint, slotNum, limit)
+	path = fmt.Sprintf("%s?slotNum=%d&limit=%d", endpoint, slotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
 	assert.NoError(t, err)
 	slotNumBatches := []testBatch{}
@@ -173,7 +173,7 @@ func TestGetBatches(t *testing.T) {
 	fetchedBatches = []testBatch{}
 	limit = 10
 	forgerAddr := tc.batches[len(tc.batches)/2].ForgerAddr
-	path = fmt.Sprintf("%s?forgerAddr=%s&limit=%d&fromItem=", endpoint, forgerAddr.String(), limit)
+	path = fmt.Sprintf("%s?forgerAddr=%s&limit=%d", endpoint, forgerAddr.String(), limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
 	assert.NoError(t, err)
 	forgerAddrBatches := []testBatch{}
@@ -187,7 +187,7 @@ func TestGetBatches(t *testing.T) {
 	// All, in reverse order
 	fetchedBatches = []testBatch{}
 	limit = 6
-	path = fmt.Sprintf("%s?limit=%d&fromItem=", endpoint, limit)
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testBatchesResponse{}, appendIter)
 	assert.NoError(t, err)
 	flippedBatches := []testBatch{}
@@ -201,7 +201,7 @@ func TestGetBatches(t *testing.T) {
 	limit = 1
 	maxBatchNum = tc.batches[len(tc.batches)-len(tc.batches)/4].BatchNum
 	minBatchNum = tc.batches[len(tc.batches)/4].BatchNum
-	path = fmt.Sprintf("%s?minBatchNum=%d&maxBatchNum=%d&limit=%d&fromItem=", endpoint, minBatchNum, maxBatchNum, limit)
+	path = fmt.Sprintf("%s?minBatchNum=%d&maxBatchNum=%d&limit=%d", endpoint, minBatchNum, maxBatchNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
 	assert.NoError(t, err)
 	minMaxBatchNumBatches := []testBatch{}
