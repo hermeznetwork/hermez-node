@@ -14,8 +14,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-const exitIdx = "hez:EXIT:1"
-
 // Query parsers
 
 type querier interface {
@@ -453,8 +451,5 @@ func ethAddrToHez(addr ethCommon.Address) string {
 }
 
 func idxToHez(idx common.Idx, tokenSymbol string) string {
-	if idx == 1 {
-		return exitIdx
-	}
 	return "hez:" + tokenSymbol + ":" + strconv.Itoa(int(idx))
 }
