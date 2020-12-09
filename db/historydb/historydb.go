@@ -879,15 +879,17 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 
 // GetHistoryTx returns a tx from the DB given a TxID
 func (hdb *HistoryDB) GetHistoryTx(txID common.TxID) (*TxAPI, error) {
-	// TODO: add success flags for L1s
+	// Warning: amount_success and deposit_amount_success have true as default for
+	// performance reasons. The expected default value is false (when txs are unforged)
+	// this case is handled at the function func (tx TxAPI) MarshalJSON() ([]byte, error)
 	tx := &TxAPI{}
 	err := meddler.QueryRow(
 		hdb.db, tx, `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
 		hez_idx(tx.from_idx, token.symbol) AS from_idx, tx.from_eth_addr, tx.from_bjj,
 		hez_idx(tx.to_idx, token.symbol) AS to_idx, tx.to_eth_addr, tx.to_bjj,
-		tx.amount, tx.token_id, tx.amount_usd, 
+		tx.amount, tx.amount_success, tx.token_id, tx.amount_usd, 
 		tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
-		tx.deposit_amount, tx.deposit_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
+		tx.deposit_amount, tx.deposit_amount_usd, tx.deposit_amount_success, tx.fee, tx.fee_usd, tx.nonce,
 		token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 		token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
 		token.usd_update, block.timestamp
@@ -905,7 +907,9 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
 	fromItem, limit *uint, order string,
 ) ([]TxAPI, uint64, error) {
-	// TODO: add success flags for L1s
+	// Warning: amount_success and deposit_amount_success have true as default for
+	// performance reasons. The expected default value is false (when txs are unforged)
+	// this case is handled at the function func (tx TxAPI) MarshalJSON() ([]byte, error)
 	if ethAddr != nil && bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
 	}
@@ -914,9 +918,9 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	queryStr := `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
 	hez_idx(tx.from_idx, token.symbol) AS from_idx, tx.from_eth_addr, tx.from_bjj,
 	hez_idx(tx.to_idx, token.symbol) AS to_idx, tx.to_eth_addr, tx.to_bjj,
-	tx.amount, tx.token_id, tx.amount_usd, 
+	tx.amount, tx.amount_success, tx.token_id, tx.amount_usd, 
 	tx.batch_num, tx.eth_block_num, tx.to_forge_l1_txs_num, tx.user_origin, 
-	tx.deposit_amount, tx.deposit_amount_usd, tx.fee, tx.fee_usd, tx.nonce,
+	tx.deposit_amount, tx.deposit_amount_usd, tx.deposit_amount_success, tx.fee, tx.fee_usd, tx.nonce,
 	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr, token.name, token.symbol, token.decimals, token.usd,
 	token.usd_update, block.timestamp, count(*) OVER() AS total_items 

@@ -1750,6 +1750,22 @@ components:
                 - $ref: '#/components/schemas/BigInt'
                 - description: Tokens transfered from L1 to L2.
                 - example: "4900000000000000000"
+            amountSuccess:
+              type: boolean
+              description: >-
+                Indicates if the amount specified by the user has been sent propperly. If false, the amount that actualy has been sent is 0.
+                If the transaction hasn't been forged yet (`batchNum == null`), this value will be false, as it's unknown if it has succeed or not.
+                An example were this value could be false: a user send a `DepositTransfer` transaction, but when the tx is forged there are not
+                enougth founds in the account. In this case the transfer part of the transaction won't be effective making the amount have a real value of 0.
+              example: true
+            depositAmountSuccess:
+              type: boolean
+              description: >-
+                Indicates if the deposit amount specified by the user has been sent propperly. If false, the deposit amount that actualy has been sent is 0.
+                If the transaction hasn't been forged yet (`batchNum == null`), this value will be false, as it's unknown if it has succeed or not.
+                An example were this value could be false: a user send a `Deposit` transaction, but when the tx is forged the token id is not registered on the network.
+                In this case transaction won't be effective making the deposit amount have a real value of 0.
+              example: true
             historicDepositAmountUSD:
               type: number
               description: Load amount in USD, at the moment the transaction was made.
@@ -1764,6 +1780,8 @@ components:
             - toForgeL1TransactionsNum
             - userOrigin
             - depositAmount
+            - amountSuccess
+            - depositAmountSuccess
             - historicDepositAmountUSD
             - ethereumBlockNum
           additionalProperties: false
