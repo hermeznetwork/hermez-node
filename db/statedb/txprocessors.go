@@ -706,30 +706,11 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 // andTransfer parameter is set to true, the method will also apply the
 // Transfer of the L1Tx/DepositTransfer
 func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
-	// deposit the tx.EffectiveDepositAmount into the sender account
 	accSender, err := s.GetAccount(tx.FromIdx)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.EffectiveDepositAmount)
 
-	// in case that the tx is a L1Tx>DepositTransfer
-	var accReceiver *common.Account
-	if transfer {
-		accReceiver, err = s.GetAccount(tx.ToIdx)
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-		// subtract amount to the sender
-		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
-		// add amount to the receiver
-		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
-	}
-	// update sender account in localStateDB
-	p, err := s.UpdateAccount(tx.FromIdx, accSender)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = accSender.TokenID.BigInt()
 		s.zki.Nonce1[s.i] = accSender.Nonce.BigInt()
@@ -739,17 +720,35 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		s.zki.Ay1[s.i] = accSender.PublicKey.Y
 		s.zki.Balance1[s.i] = accSender.Balance
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(accSender.EthAddr)
+	}
+
+	// add the deposit to the sender
+	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.EffectiveDepositAmount)
+	// subtract amount to the sender
+	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
+
+	// update sender account in localStateDB
+	p, err := s.UpdateAccount(tx.FromIdx, accSender)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if s.zki != nil {
 		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(p.Siblings)
 		// IsOld0_1, OldKey1, OldValue1 not needed as this is not an insert
 	}
 
-	// this is done after updating Sender Account (depositer)
+	// in case that the tx is a L1Tx>DepositTransfer
+	var accReceiver *common.Account
 	if transfer {
-		// update receiver account in localStateDB
-		p, err := s.UpdateAccount(tx.ToIdx, accReceiver)
-		if err != nil {
-			return tracerr.Wrap(err)
+		if tx.ToIdx == tx.FromIdx {
+			accReceiver = accSender
+		} else {
+			accReceiver, err = s.GetAccount(tx.ToIdx)
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
 		}
+
 		if s.zki != nil {
 			s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
 			s.zki.Nonce2[s.i] = accReceiver.Nonce.BigInt()
@@ -759,6 +758,17 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 			s.zki.Ay2[s.i] = accReceiver.PublicKey.Y
 			s.zki.Balance2[s.i] = accReceiver.Balance
 			s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(accReceiver.EthAddr)
+		}
+
+		// add amount to the receiver
+		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
+
+		// update receiver account in localStateDB
+		p, err := s.UpdateAccount(tx.ToIdx, accReceiver)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		if s.zki != nil {
 			s.zki.Siblings2[s.i] = siblingsToZKInputFormat(p.Siblings)
 			// IsOld0_2, OldKey2, OldValue2 not needed as this is not an insert
 		}
@@ -840,7 +850,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 	}
 
 	var accReceiver *common.Account
-	if tx.FromIdx == auxToIdx {
+	if auxToIdx == tx.FromIdx {
 		// if Sender is the Receiver, reuse 'accSender' pointer,
 		// because in the DB the account for 'auxToIdx' won't be
 		// updated yet
@@ -882,6 +892,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 // applyCreateAccountDepositTransfer, in a single tx, creates a new account,
 // makes a deposit, and performs a transfer to another account
 func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
+	auxFromIdx := common.Idx(s.idx + 1)
 	accSender := &common.Account{
 		TokenID:   tx.TokenID,
 		Nonce:     0,
@@ -889,21 +900,9 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		PublicKey: tx.FromBJJ,
 		EthAddr:   tx.FromEthAddr,
 	}
-	accReceiver, err := s.GetAccount(tx.ToIdx)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	// subtract amount to the sender
-	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
-	// add amount to the receiver
-	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
 
-	// create Account of the Sender
-	p, err := s.CreateAccount(common.Idx(s.idx+1), accSender)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
 	if s.zki != nil {
+		// Set the State1 before updating the Sender leaf
 		s.zki.TokenID1[s.i] = tx.TokenID.BigInt()
 		s.zki.Nonce1[s.i] = big.NewInt(0)
 		if babyjub.PointCoordSign(tx.FromBJJ.X) {
@@ -912,6 +911,17 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		s.zki.Ay1[s.i] = tx.FromBJJ.Y
 		s.zki.Balance1[s.i] = tx.EffectiveDepositAmount
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
+	}
+
+	// subtract amount to the sender
+	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
+
+	// create Account of the Sender
+	p, err := s.CreateAccount(common.Idx(s.idx+1), accSender)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if s.zki != nil {
 		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(p.Siblings)
 		if p.IsOld0 {
 			s.zki.IsOld0_1[s.i] = big.NewInt(1)
@@ -921,19 +931,25 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 
 		s.zki.Metadata.NewLastIdxRaw = s.idx + 1
 
-		s.zki.AuxFromIdx[s.i] = common.Idx(s.idx + 1).BigInt()
+		s.zki.AuxFromIdx[s.i] = auxFromIdx.BigInt()
 		s.zki.NewAccount[s.i] = big.NewInt(1)
 
 		// intermediate states
 		s.zki.ISOnChain[s.i] = big.NewInt(1)
 	}
-
-	// update receiver account in localStateDB
-	p, err = s.UpdateAccount(tx.ToIdx, accReceiver)
-	if err != nil {
-		return tracerr.Wrap(err)
+	var accReceiver *common.Account
+	if tx.ToIdx == auxFromIdx {
+		accReceiver = accSender
+	} else {
+		accReceiver, err = s.GetAccount(tx.ToIdx)
+		if err != nil {
+			log.Error(err)
+			return tracerr.Wrap(err)
+		}
 	}
+
 	if s.zki != nil {
+		// Set the State2 before updating the Receiver leaf
 		s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
 		s.zki.Nonce2[s.i] = accReceiver.Nonce.BigInt()
 		if babyjub.PointCoordSign(accReceiver.PublicKey.X) {
@@ -942,6 +958,17 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		s.zki.Ay2[s.i] = accReceiver.PublicKey.Y
 		s.zki.Balance2[s.i] = accReceiver.Balance
 		s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(accReceiver.EthAddr)
+	}
+
+	// add amount to the receiver
+	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
+
+	// update receiver account in localStateDB
+	p, err = s.UpdateAccount(tx.ToIdx, accReceiver)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if s.zki != nil {
 		s.zki.Siblings2[s.i] = siblingsToZKInputFormat(p.Siblings)
 	}
 
