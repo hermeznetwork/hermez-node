@@ -13,14 +13,14 @@ import (
 )
 
 const apiURL = "http://localhost:3000/api"
-const timeCons = 1 * time.Second
+const pollInterval = 1 * time.Second
 
 var proofServerClient *ProofServerClient
 
 func TestMain(m *testing.M) {
 	exitVal := 0
 	if os.Getenv("INTEGRATION") != "" {
-		proofServerClient = NewProofServerClient(apiURL, timeCons)
+		proofServerClient = NewProofServerClient(apiURL, pollInterval)
 		err := proofServerClient.WaitReady(context.Background())
 		if err != nil {
 			panic(err)
@@ -73,7 +73,7 @@ func testCancel(t *testing.T) {
 	status, err := proofServerClient.apiStatus(context.Background())
 	require.NoError(t, err)
 	for status.Status == StatusCodeBusy {
-		time.Sleep(proofServerClient.timeCons)
+		time.Sleep(proofServerClient.pollInterval)
 		status, err = proofServerClient.apiStatus(context.Background())
 		require.NoError(t, err)
 	}

@@ -36,15 +36,16 @@ type ServerProof struct {
 // Coordinator is the coordinator specific configuration.
 type Coordinator struct {
 	// ForgerAddress is the address under which this coordinator is forging
-	ForgerAddress     ethCommon.Address `validate:"required"`
-	ForgeLoopInterval Duration          `validate:"required"`
+	ForgerAddress ethCommon.Address `validate:"required"`
 	// ConfirmBlocks is the number of confirmation blocks to wait for sent
 	// ethereum transactions before forgetting about them
 	ConfirmBlocks int64 `validate:"required"`
 	// L1BatchTimeoutPerc is the portion of the range before the L1Batch
 	// timeout that will trigger a schedule to forge an L1Batch
+	L1BatchTimeoutPerc float64 `validate:"required"`
+	// ProofServerPollInterval is the waiting interval between polling the
+	// ProofServer while waiting for a particular status
 	ProofServerPollInterval Duration `validate:"required"`
-	L1BatchTimeoutPerc      float64  `validate:"required"`
 	L2DB                    struct {
 		SafetyPeriod common.BatchNum `validate:"required"`
 		MaxTxs       uint32          `validate:"required"`
