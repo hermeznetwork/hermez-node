@@ -1,30 +1,67 @@
 package prover
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"mime/multipart"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/dghubble/sling"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
 // Proof TBD this type will be received from the proof server
 type Proof struct {
+	PiA      [2]*big.Int    `json:"pi_a"`
+	PiB      [3][2]*big.Int `json:"pi_b"`
+	PiC      [2]*big.Int    `json:"pi_c"`
+	Protocol string         `json:"protocol"`
+}
+
+type bigInt big.Int
+
+func (b *bigInt) UnmarshalText(text []byte) error {
+	_, ok := (*big.Int)(b).SetString(string(text), 10)
+	if !ok {
+		return fmt.Errorf("invalid big int: \"%v\"", string(text))
+	}
+	return nil
+}
+
+// UnmarshalJSON unmarshals the proof from a JSON encoded proof with the big
+// ints as strings
+func (p *Proof) UnmarshalJSON(data []byte) error {
+	proof := struct {
+		PiA      [2]*bigInt    `json:"pi_a"`
+		PiB      [3][2]*bigInt `json:"pi_b"`
+		PiC      [2]*bigInt    `json:"pi_c"`
+		Protocol string        `json:"protocol"`
+	}{}
+	if err := json.Unmarshal(data, &proof); err != nil {
+		return err
+	}
+	p.PiA[0] = (*big.Int)(proof.PiA[0])
+	p.PiA[1] = (*big.Int)(proof.PiA[1])
+	p.PiB[0][0] = (*big.Int)(proof.PiB[0][0])
+	p.PiB[0][1] = (*big.Int)(proof.PiB[0][1])
+	p.PiB[1][0] = (*big.Int)(proof.PiB[1][0])
+	p.PiB[1][1] = (*big.Int)(proof.PiB[1][1])
+	p.PiB[2][0] = (*big.Int)(proof.PiB[2][0])
+	p.PiB[2][1] = (*big.Int)(proof.PiB[2][1])
+	p.PiC[0] = (*big.Int)(proof.PiC[0])
+	p.PiC[1] = (*big.Int)(proof.PiC[1])
+	p.Protocol = proof.Protocol
+	return nil
 }
 
 // Client is the interface to a ServerProof that calculates zk proofs
 type Client interface {
 	// Non-blocking
-	CalculateProof(zkInputs *common.ZKInputs) error
+	CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error
 	// Blocking
 	GetProof(ctx context.Context) (*Proof, error)
 	// Non-Blocking
@@ -105,60 +142,24 @@ const (
 	GET apiMethod = "GET"
 	// POST is an HTTP POST with maybe JSON body
 	POST apiMethod = "POST"
-	// POSTFILE is an HTTP POST with a form file
-	POSTFILE apiMethod = "POSTFILE"
 )
 
 // ProofServerClient contains the data related to a ProofServerClient
 type ProofServerClient struct {
-	URL    string
-	client *sling.Sling
+	URL          string
+	client       *sling.Sling
+	pollInterval time.Duration
 }
 
 // NewProofServerClient creates a new ServerProof
-func NewProofServerClient(URL string) *ProofServerClient {
+func NewProofServerClient(URL string, pollInterval time.Duration) *ProofServerClient {
 	if URL[len(URL)-1] != '/' {
 		URL += "/"
 	}
 	client := sling.New().Base(URL)
-	return &ProofServerClient{URL: URL, client: client}
+	return &ProofServerClient{URL: URL, client: client, pollInterval: pollInterval}
 }
 
-//nolint:unused
-type formFileProvider struct {
-	writer *multipart.Writer
-	body   []byte
-}
-
-//nolint:unused
-func newFormFileProvider(payload interface{}) (*formFileProvider, error) {
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", "file.json")
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	if err := json.NewEncoder(part).Encode(payload); err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	if err := writer.Close(); err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	return &formFileProvider{
-		writer: writer,
-		body:   body.Bytes(),
-	}, nil
-}
-
-func (p formFileProvider) ContentType() string {
-	return p.writer.FormDataContentType()
-}
-
-func (p formFileProvider) Body() (io.Reader, error) {
-	return bytes.NewReader(p.body), nil
-}
-
-//nolint:unused
 func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, path string,
 	body interface{}, ret interface{}) error {
 	path = strings.TrimPrefix(path, "/")
@@ -170,15 +171,6 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 		req, err = p.client.New().Get(path).Request()
 	case POST:
 		req, err = p.client.New().Post(path).BodyJSON(body).Request()
-	case POSTFILE:
-		provider, err := newFormFileProvider(body)
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-		req, err = p.client.New().Post(path).BodyProvider(provider).Request()
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
 	default:
 		return tracerr.Wrap(fmt.Errorf("invalid http method: %v", method))
 	}
@@ -196,55 +188,70 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	return nil
 }
 
-//nolint:unused
 func (p *ProofServerClient) apiStatus(ctx context.Context) (*Status, error) {
 	var status Status
-	if err := p.apiRequest(ctx, GET, "/status", nil, &status); err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	return &status, nil
+	return &status, tracerr.Wrap(p.apiRequest(ctx, GET, "/status", nil, &status))
 }
 
-//nolint:unused
 func (p *ProofServerClient) apiCancel(ctx context.Context) error {
-	if err := p.apiRequest(ctx, POST, "/cancel", nil, nil); err != nil {
-		return tracerr.Wrap(err)
-	}
-	return nil
+	return tracerr.Wrap(p.apiRequest(ctx, POST, "/cancel", nil, nil))
 }
 
-//nolint:unused
 func (p *ProofServerClient) apiInput(ctx context.Context, zkInputs *common.ZKInputs) error {
-	if err := p.apiRequest(ctx, POSTFILE, "/input", zkInputs, nil); err != nil {
-		return tracerr.Wrap(err)
-	}
-	return nil
+	return tracerr.Wrap(p.apiRequest(ctx, POST, "/input", zkInputs, nil))
 }
 
 // CalculateProof sends the *common.ZKInputs to the ServerProof to compute the
 // Proof
-func (p *ProofServerClient) CalculateProof(zkInputs *common.ZKInputs) error {
-	log.Error("TODO")
-	return tracerr.Wrap(common.ErrTODO)
+func (p *ProofServerClient) CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error {
+	return tracerr.Wrap(p.apiInput(ctx, zkInputs))
 }
 
 // GetProof retreives the Proof from the ServerProof, blocking until the proof
 // is ready.
 func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, error) {
-	log.Error("TODO")
-	return nil, tracerr.Wrap(common.ErrTODO)
+	if err := p.WaitReady(ctx); err != nil {
+		return nil, err
+	}
+	status, err := p.apiStatus(ctx)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if status.Status == StatusCodeSuccess {
+		var proof Proof
+		err := json.Unmarshal([]byte(status.Proof), &proof)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		return &proof, nil
+	}
+	return nil, fmt.Errorf("status != StatusCodeSuccess, status = %v", status.Status)
 }
 
 // Cancel cancels any current proof computation
 func (p *ProofServerClient) Cancel(ctx context.Context) error {
-	log.Error("TODO")
-	return tracerr.Wrap(common.ErrTODO)
+	return tracerr.Wrap(p.apiCancel(ctx))
 }
 
 // WaitReady waits until the serverProof is ready
 func (p *ProofServerClient) WaitReady(ctx context.Context) error {
-	log.Error("TODO")
-	return tracerr.Wrap(common.ErrTODO)
+	for {
+		status, err := p.apiStatus(ctx)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		if !status.Status.IsInitialized() {
+			return fmt.Errorf("Proof Server is not initialized")
+		}
+		if status.Status.IsReady() {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return tracerr.Wrap(common.ErrDone)
+		case <-time.After(p.pollInterval):
+		}
+	}
 }
 
 // MockClient is a mock ServerProof to be used in tests.  It doesn't calculate anything
@@ -253,7 +260,7 @@ type MockClient struct {
 
 // CalculateProof sends the *common.ZKInputs to the ServerProof to compute the
 // Proof
-func (p *MockClient) CalculateProof(zkInputs *common.ZKInputs) error {
+func (p *MockClient) CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error {
 	return nil
 }
 

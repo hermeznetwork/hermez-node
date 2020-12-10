@@ -36,15 +36,17 @@ type ServerProof struct {
 // Coordinator is the coordinator specific configuration.
 type Coordinator struct {
 	// ForgerAddress is the address under which this coordinator is forging
-	ForgerAddress     ethCommon.Address `validate:"required"`
-	ForgeLoopInterval Duration          `validate:"required"`
+	ForgerAddress ethCommon.Address `validate:"required"`
 	// ConfirmBlocks is the number of confirmation blocks to wait for sent
 	// ethereum transactions before forgetting about them
 	ConfirmBlocks int64 `validate:"required"`
 	// L1BatchTimeoutPerc is the portion of the range before the L1Batch
 	// timeout that will trigger a schedule to forge an L1Batch
 	L1BatchTimeoutPerc float64 `validate:"required"`
-	L2DB               struct {
+	// ProofServerPollInterval is the waiting interval between polling the
+	// ProofServer while waiting for a particular status
+	ProofServerPollInterval Duration `validate:"required"`
+	L2DB                    struct {
 		SafetyPeriod common.BatchNum `validate:"required"`
 		MaxTxs       uint32          `validate:"required"`
 		TTL          Duration        `validate:"required"`
@@ -69,10 +71,10 @@ type Coordinator struct {
 		DeployGasLimit      uint64   `validate:"required"`
 		GasPriceDiv         uint64   `validate:"required"`
 		ReceiptTimeout      Duration `validate:"required"`
-		IntervalReceiptLoop Duration `validate:"required"`
-		// IntervalCheckLoop is the waiting interval between receipt
+		ReceiptLoopInterval Duration `validate:"required"`
+		// CheckLoopInterval is the waiting interval between receipt
 		// checks of ethereum transactions in the TxManager
-		IntervalCheckLoop Duration `validate:"required"`
+		CheckLoopInterval Duration `validate:"required"`
 		// Attempts is the number of attempts to do an eth client RPC
 		// call before giving up
 		Attempts int `validate:"required"`

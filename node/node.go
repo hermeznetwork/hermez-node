@@ -96,7 +96,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			DeployGasLimit:      coordCfg.EthClient.DeployGasLimit,
 			GasPriceDiv:         coordCfg.EthClient.GasPriceDiv,
 			ReceiptTimeout:      coordCfg.EthClient.ReceiptTimeout.Duration,
-			IntervalReceiptLoop: coordCfg.EthClient.IntervalReceiptLoop.Duration,
+			IntervalReceiptLoop: coordCfg.EthClient.ReceiptLoopInterval.Duration,
 		}
 	}
 	client, err := eth.NewClient(ethClient, nil, nil, &eth.ClientConfig{
@@ -165,7 +165,8 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		}
 		serverProofs := make([]prover.Client, len(coordCfg.ServerProofs))
 		for i, serverProofCfg := range coordCfg.ServerProofs {
-			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL)
+			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
+				coordCfg.ProofServerPollInterval.Duration)
 		}
 
 		coord, err = coordinator.NewCoordinator(
@@ -175,7 +176,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 				L1BatchTimeoutPerc:     coordCfg.L1BatchTimeoutPerc,
 				EthClientAttempts:      coordCfg.EthClient.Attempts,
 				EthClientAttemptsDelay: coordCfg.EthClient.AttemptsDelay.Duration,
-				TxManagerCheckInterval: coordCfg.EthClient.IntervalCheckLoop.Duration,
+				TxManagerCheckInterval: coordCfg.EthClient.CheckLoopInterval.Duration,
 				DebugBatchPath:         coordCfg.Debug.BatchPath,
 				Purger: coordinator.PurgerCfg{
 					PurgeBatchDelay:      coordCfg.L2DB.PurgeBatchDelay,
