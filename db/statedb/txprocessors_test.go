@@ -1,6 +1,8 @@
 package statedb
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -522,4 +524,72 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	_, err = sdb.ProcessTxs(ptc, nil, l1Txs, nil, l2Txs)
 	require.Nil(t, err)
 	assert.Equal(t, "9827704113668630072730115158977131501210702363656902211840117643154933433410", sdb.mt.Root().BigInt().String())
+}
+
+func TestCreateAccountDepositMaxValue(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
+
+	nLevels := 16
+
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	assert.Nil(t, err)
+
+	users := generateJsUsers(t)
+
+	daMaxHex, err := hex.DecodeString("FFFF")
+	require.Nil(t, err)
+	daMaxF16 := common.Float16(binary.BigEndian.Uint16(daMaxHex))
+	daMaxBI := daMaxF16.BigInt()
+	assert.Equal(t, "10235000000000000000000000000000000", daMaxBI.String())
+
+	daMax1Hex, err := hex.DecodeString("FFFE")
+	require.Nil(t, err)
+	daMax1F16 := common.Float16(binary.BigEndian.Uint16(daMax1Hex))
+	daMax1BI := daMax1F16.BigInt()
+	assert.Equal(t, "10225000000000000000000000000000000", daMax1BI.String())
+
+	l1Txs := []common.L1Tx{
+		{
+			FromIdx:       0,
+			DepositAmount: daMaxBI,
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       users[0].BJJ.Public(),
+			FromEthAddr:   users[0].Addr,
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
+		},
+		{
+			FromIdx:       0,
+			DepositAmount: daMax1BI,
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       users[1].BJJ.Public(),
+			FromEthAddr:   users[1].Addr,
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
+		},
+	}
+
+	ptc := ProcessTxsConfig{
+		NLevels:  uint32(nLevels),
+		MaxTx:    3,
+		MaxL1Tx:  2,
+		MaxFeeTx: 2,
+	}
+
+	_, err = sdb.ProcessTxs(ptc, nil, l1Txs, nil, nil)
+	require.Nil(t, err)
+
+	// check balances
+	acc, err := sdb.GetAccount(common.Idx(256))
+	require.Nil(t, err)
+	assert.Equal(t, daMaxBI, acc.Balance)
+	acc, err = sdb.GetAccount(common.Idx(257))
+	require.Nil(t, err)
+	assert.Equal(t, daMax1BI, acc.Balance)
 }
