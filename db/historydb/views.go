@@ -120,7 +120,7 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 
 // txWrite is an representatiion that merges common.L1Tx and common.L2Tx
 // in order to perform inserts into tx table
-// EffectiveAmount and LoadEffectiveAmount are not set since they have default values in the DB
+// EffectiveAmount and EffectiveDepositAmount are not set since they have default values in the DB
 type txWrite struct {
 	// Generic
 	IsL1        bool             `meddler:"is_l1"`

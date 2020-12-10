@@ -516,7 +516,7 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, true, dbL1Txs[8].UserOrigin)
 	assert.Equal(t, true, dbL1Txs[9].UserOrigin)
 
-	// Load Amount
+	// Deposit Amount
 	assert.Equal(t, big.NewInt(10), dbL1Txs[0].DepositAmount)
 	assert.Equal(t, big.NewInt(10), dbL1Txs[1].DepositAmount)
 	assert.Equal(t, big.NewInt(20), dbL1Txs[2].DepositAmount)

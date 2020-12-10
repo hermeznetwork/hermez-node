@@ -1768,7 +1768,7 @@ components:
               example: true
             historicDepositAmountUSD:
               type: number
-              description: Load amount in USD, at the moment the transaction was made.
+              description: Deposit amount in USD, at the moment the transaction was made.
               example: 3.897
               nullable: true
             ethereumBlockNum:
@@ -2974,7 +2974,7 @@ components:
               example: 1
             limitDepositAmount:
               type: integer
-              description: Maximum load amount (L1 to L2) allowed.
+              description: Maximum deposit amount (L1 to L2) allowed.
               example: 321
             limitL2TransferAmount:
               type: integer
