@@ -17,18 +17,18 @@ info:
     All the endpoints that return a list of undefined size use pagination. Unless the opposite is explicitly said.
     In order to use pagination, three query parameters are used:
     * `fromItem`: indicates the first item to be returned. In general, this parameter shouldn't be provided in the first call to the endpoint, and use the `itemId` of the last returned item (+/-) 1, if the order is (ascending/descending).
-    * `order`: all paginated items are ordered chronologicaly. However the specific fields to guarantee this order depend on each endpoint. For this purpose, `itemId` is used (itemId follows ascending chronological order except for unforged L1 user transactions). If the parameter is not provided, ascending order will be used by default. 
+    * `order`: all paginated items are ordered chronologically. However, the specific fields to guarantee this order depend on each endpoint. For this purpose, `itemId` is used (itemId follows ascending chronological order except for unforged L1 user transactions). If the parameter is not provided, ascending order will be used by default. 
     * `limit`: maximum amount of items to include in each response. Default is 20, maximum is 2049.
     
     Responses for those endpoints will always include a `pendingItems` property. This property includes the amount of items that are not fetched yet. This can be used to:
     * Calculate the amount of items that match the filters: `totalItems = length(alreadyFetchedItems) + pendingItems`
     * Know when all items have been fetched: `if pendingItems == 0 {/* all items have been fetched */}`
 
-    #### Reorgs and safetyness
+    #### Reorgs and Safety
 
-    Since all the items are ordered chronologicaly, there are no safety problems when fetching items in ascending order, except for reorgs (more on this later).
-    On the other hand, when iterating in descending order, new items will be added at the beginning. This doesn't cause any safety problem, but to get those new items, it's necessary to start queryng without the `fromItem` set to `pagination.lastItem`.
-    To handle reorgs, the `itemId` can be used since it will change. This is important since other identifiers may be the same but with different content. As an example, if batch 424 gets reorged, it will be deleted, but eventually, a new batch 424 will appear with potentially different content. However these two batches number 424, will have different `itemId`.
+    Since all the items are ordered chronologically, there are no safety problems when fetching items in ascending order, except for reorgs (more on this later).
+    On the other hand, when iterating in descending order, new items will be added at the beginning. This doesn't cause any safety problem, but to get those new items, it's necessary to start querying without the `fromItem` set to `pagination.lastItem`.
+    To handle reorgs, the `itemId` can be used since it will change. This is important since other identifiers may be the same but with different content. As an example, if batch 424 gets reorged, it will be deleted, but eventually, a new batch 424 will appear with potentially different content. However, these two batches number 424, will have different `itemId`.
 
     ### Signatures
 
@@ -86,7 +86,7 @@ paths:
         - Account
       summary: Send an authorization that will allow the coordinator to register accounts associated to an Ethereum address on behalf of the user.
       description: >-
-        Send an authorization to create rollup accounts associated to an Ethereum address. Each account creation (an account can only hold a specific token) is effective once the coordinator forges the corresponding L1CoordinatorTx (which is always of type *account creation*).
+        Send an authorization to create rollup accounts associated with an Ethereum address. Each account creation (an account can only hold a specific token) is effective once the coordinator forges the corresponding L1CoordinatorTx (which is always of type *account creation*).
       operationId: postRegister
       requestBody:
         description: Account creation authorization.
@@ -114,7 +114,7 @@ paths:
     get:
       tags:
         - Account
-      summary: Get to know if the coordinator has the ability to create accounts associated to an Ethereum address.
+      summary: Find out if the coordinator has the ability to create accounts associated with an Ethereum address.
       description: >-
         Returns the authorization to perform an account creation with the given Ethereum address on behalf of the Ethereum address holder.
       operationId: getAccountCreationAuthorization
@@ -155,7 +155,7 @@ paths:
       tags:
         - Account
       summary: Get accounts balances and other associated information.
-      description: Get accounts balances and other associated information.
+      description: Get account balances and other associated information.
       operationId: getAccounts
       parameters:
         - name: hezEthereumAddress
@@ -282,7 +282,7 @@ paths:
             $ref: '#/components/schemas/TokenId'
         - name: hezEthereumAddress
           in: query
-          description: Get exits associated to a Ethereum address. Incompatible with query `BJJ` and `accountIndex`.
+          description: Get exits associated to an Ethereum address. Incompatible with query `BJJ` and `accountIndex`.
           required: false
           schema:
             $ref: '#/components/schemas/HezEthereumAddress'
@@ -444,7 +444,7 @@ paths:
         - Transaction
       summary: Get details and status of a transaction that is in the pool.
       description: >-
-        Get transaction from the pool by its id. This endpoint is specially useful for tracking the status of a transaction that may not be forged yet.
+        Get transaction from the pool by its ID. This endpoint is specially useful for tracking the status of a transaction that may not be forged yet.
         Only transactions from the pool will be returned.
         Note that the transaction pool is different for each coordinator and therefore only a coordinator that has received a specific transaction
         will be able to provide information about that transaction.
@@ -501,12 +501,12 @@ paths:
         - name: hezEthereumAddress
           in: query
           required: false
-          description: Only get transactions sent from or to an account associated to an Ethereum address Incompatible with the queries `BJJ` and `accountIndex`.
+          description: Only get transactions sent from or to an account associated with an Ethereum address Incompatible with the queries `BJJ` and `accountIndex`.
           schema:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
           in: query
-          description: Only get transactions associated to a BabyJubJub public key. Incompatible with the queries `hezEthereumAddress` and `accountIndex`.
+          description: Only get transactions associated with a BabyJubJub public key. Incompatible with the queries `hezEthereumAddress` and `accountIndex`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
@@ -583,7 +583,7 @@ paths:
         - Transaction
       summary: Get details and status of a historical transaction.
       description: >-
-        Get transaction by its id. This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
+        Get transaction by its ID. This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
       operationId: getHistoryTx
       parameters:
         - name: id
@@ -1022,8 +1022,8 @@ paths:
     get:
       tags:
         - Hermez status
-      summary: Get information of the supported tokens in the Hermez network.
-      description: Get information of the supported tokens in the Hermez network.
+      summary: Get information of the supported tokens in the Hermez Network.
+      description: Get information of the supported tokens in the Hermez Network.
       operationId: getTokens
       parameters:
         - name: ids
@@ -1101,8 +1101,8 @@ paths:
     get:
       tags:
         - Hermez status
-      summary: Get information of a token supported by Hermez network.
-      description: Get information of a token supported by Hermez network.
+      summary: Get information of a token supported by Hermez Network.
+      description: Get information of a token supported by Hermez Network.
       operationId: getToken
       parameters:
         - name: id
@@ -1253,7 +1253,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez network. If this is provided, toAccountIndex and toBjj must be null."
+          description: "Address of an Etherum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1261,7 +1261,7 @@ components:
           type: string
           description: >-
             BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes.
-            If this is prvided, toAccountIndex must be null and toHezEthereumAddress must be hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.
+            If this is provided, toAccountIndex must be null and toHezEthereumAddress must be hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: null
           nullable: true
@@ -1354,7 +1354,7 @@ components:
           $ref: '#/components/schemas/AccountIndex'
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez network."
+          description: "Address of an Etherum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1373,7 +1373,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez network."
+          description: "Address of an Etherum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: null
           nullable: true
@@ -1405,7 +1405,7 @@ components:
           format: date-time
         batchNum:
           type: integer
-          description: Identifier of a batch. Every new forged batch increments by one the batchNum, starting at 0.
+          description: Identifier of a batch. Every new forged batch increases by one the batchNum, starting at 0.
           minimum: 0
           maximum: 4294967295
           nullable: true
@@ -1426,7 +1426,7 @@ components:
           example: null
         requestToHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez network."
+          description: "Address of an Etherum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           nullable: true
           example: null
@@ -1532,7 +1532,7 @@ components:
       example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     HezEthereumAddress:
       type: string
-      description: "Address of an Etherum account linked to the Hermez network."
+      description: "Address of an Etherum account linked to the Hermez Network."
       pattern: "^hez:0x[a-fA-F0-9]{40}$"
       example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     BJJ:
@@ -1662,7 +1662,7 @@ components:
       - signature
     HistoryTransaction:
       type: object
-      description: Transaction of the Hermez network
+      description: Transaction of the Hermez Network
       properties:
         L1orL2:
           type: string
@@ -1686,7 +1686,7 @@ components:
           nullable: true
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez network."
+          description: "Address of an Etherum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1702,7 +1702,7 @@ components:
             - example: "hez:DAI:672"
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez network."
+          description: "Address of an Etherum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -2265,12 +2265,12 @@ components:
           example: 1.3
         createAccountInternal:
           type: number
-          description: Recommended fee if the destination account of the transaction doesn't exist, but the coordinator has the ability to create a valid account associated to a BJJ public key controlled by the receiver. Note that these kind of accounts are not associated to an Ethereum address and therefore can only operate in L2. 
+          description: Recommended fee if the destination account of the transaction doesn't exist, but the coordinator has the ability to create a valid account associated to a BJJ public key controlled by the receiver. Note that these kind of accounts are not associated with an Ethereum address and therefore can only operate in L2. 
           minimum: 0
           example: 0.5
     Token:
       type: object
-      description: Hermez network compatible and registered token.
+      description: Hermez Network compatible and registered token.
       properties:
         id:
           $ref: '#/components/schemas/TokenId'
@@ -2296,7 +2296,7 @@ components:
         ethereumBlockNum:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Ethereum block number in which the token was added to the Hermez network.
+            - description: Ethereum block number in which the token was added to the Hermez Network.
             - example: 539847538
         USD:
           type: number
@@ -2729,7 +2729,7 @@ components:
           example: 2
         openAuctionSlots:
           type: integer
-          description: How many days in advance are auctions opened.
+          description: Amount of days in advance are auctions opened.
         defaultSlotSetBid:
           type: array
           description: "Initial minimal bid for each auction. Expressed as an array of 6 values. To calculate which value corresponds to each slot: `initialMinimalBidding[slotNum%6]`."
@@ -2747,7 +2747,7 @@ components:
             - example: "0x887dc4262BCDbf85190C01c996b4C06a461d2430"
         allocationRatio:
           type: array
-          description: Percentage in which fees will be splitted between donations, governance and burning. The sum of the tree values should be 100.
+          description: Percentage in which fees will be split between donations, governance, and burning. The sum of the tree values should be 100.
           items:
             type: integer
           example: [80,10,10]
@@ -2771,7 +2771,7 @@ components:
           $ref: '#/components/schemas/EthBlockNum'
         forgeL1L2BatchTimeout:
           type: integer
-          description: Max ethereum blocks after the last L1-L2-batch, when exceeds the timeout only L1-L2-batch are allowed.
+          description: Max Ethereum blocks after the last L1-L2-batch, when exceeds the timeout only L1-L2-batch are allowed.
           example: 5
         feeAddToken:
           type: integer
@@ -2835,12 +2835,12 @@ components:
         emergencyCouncilAddress:
           allOf:
             - $ref: '#/components/schemas/EthereumAddress'
-            - description: Ethereum Address that can claim the funds in an emergency when the maximum emergency mode time is exceeded.
+            - description: Ethereum address that can claim the funds in an emergency when the maximum emergency mode time is exceeded.
             - example: "0x557dc4262BCDbf85190C01c996b4C06a461d2430"
         withdrawalDelay:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: The time that anyone needs to wait until a withdrawal of the funds is allowed, in seconds.
+            - description: The time that everyone needs to wait until a withdrawal of the funds is allowed, in seconds.
             - example: 539573849
         emergencyModeStartingTime:
           type: integer
@@ -2900,7 +2900,7 @@ components:
       example: 15
     Config:
       type: object
-      description: Configuration parameters of the different smart contracts that power the Hermez network.
+      description: Configuration parameters of the different smart contracts that power the Hermez Network.
       properties:
         hermez:
           type: object
