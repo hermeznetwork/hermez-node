@@ -354,11 +354,6 @@ func TestSync(t *testing.T) {
 	//
 	// First Sync from an initial state
 	//
-	var vars struct {
-		Rollup   *common.RollupVariables
-		Auction  *common.AuctionVariables
-		WDelayer *common.WDelayerVariables
-	}
 	stats := s.Stats()
 	assert.Equal(t, false, stats.Synced())
 
@@ -375,7 +370,7 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
 	assert.Equal(t, int64(1), stats.Eth.LastBlock.Num)
 	assert.Equal(t, int64(1), stats.Sync.LastBlock.Num)
-	vars.Rollup, vars.Auction, vars.WDelayer = s.SCVars()
+	vars := s.SCVars()
 	assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
 	assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
 	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
@@ -524,7 +519,7 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
 	assert.Equal(t, int64(4), stats.Eth.LastBlock.Num)
 	assert.Equal(t, int64(4), stats.Sync.LastBlock.Num)
-	vars.Rollup, vars.Auction, vars.WDelayer = s.SCVars()
+	vars = s.SCVars()
 	assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
 	assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
 	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
@@ -575,7 +570,7 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
 	assert.Equal(t, int64(5), stats.Eth.LastBlock.Num)
 	assert.Equal(t, int64(5), stats.Sync.LastBlock.Num)
-	vars.Rollup, vars.Auction, vars.WDelayer = s.SCVars()
+	vars = s.SCVars()
 	assert.NotEqual(t, clientSetup.RollupVariables, vars.Rollup)
 	assert.NotEqual(t, clientSetup.AuctionVariables, vars.Auction)
 	assert.NotEqual(t, clientSetup.WDelayerVariables, vars.WDelayer)
@@ -649,7 +644,7 @@ func TestSync(t *testing.T) {
 	stats = s.Stats()
 	assert.Equal(t, false, stats.Synced())
 	assert.Equal(t, int64(6), stats.Eth.LastBlock.Num)
-	vars.Rollup, vars.Auction, vars.WDelayer = s.SCVars()
+	vars = s.SCVars()
 	assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
 	assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
 	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
@@ -688,7 +683,7 @@ func TestSync(t *testing.T) {
 			assert.Equal(t, false, stats.Synced())
 		}
 
-		vars.Rollup, vars.Auction, vars.WDelayer = s.SCVars()
+		vars = s.SCVars()
 		assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
 		assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
 		assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)

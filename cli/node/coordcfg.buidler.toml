@@ -1,0 +1,40 @@
+ForgerAddress = "0x6BB84Cc84D4A34467aD12a2039A312f7029e2071"
+ConfirmBlocks = 10
+L1BatchTimeoutPerc = 0.6
+ProofServerPollInterval = "1s"
+SyncRetryInterval = "1s"
+
+[L2DB]
+SafetyPeriod = 10
+MaxTxs       = 512
+TTL          = "24h"
+PurgeBatchDelay = 10
+InvalidateBatchDelay = 20
+PurgeBlockDelay = 10
+InvalidateBlockDelay = 20
+
+[TxSelector]
+Path = "/tmp/iden3-test/hermez/txselector"
+
+[BatchBuilder]
+Path = "/tmp/iden3-test/hermez/batchbuilder"
+
+[[ServerProofs]]
+URL = "http://localhost:3000"
+
+[EthClient]
+CallGasLimit        = 300000
+DeployGasLimit      = 1000000
+GasPriceDiv         = 100
+ReceiptTimeout      = "60s"
+ReceiptLoopInterval = "500ms"
+
+CheckLoopInterval = "500ms"
+Attempts = 8
+AttemptsDelay = "200ms"
+
+[API]
+Coordinator = true
+
+[Debug]
+BatchPath = "/tmp/iden3-test/hermez/batchesdebug"

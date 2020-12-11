@@ -67,7 +67,7 @@ type Stats struct {
 
 // Synced returns true if the Synchronizer is up to date with the last ethereum block
 func (s *Stats) Synced() bool {
-	return s.Eth.LastBlock == s.Sync.LastBlock
+	return s.Eth.LastBlock.Num == s.Sync.LastBlock.Num
 }
 
 // TODO(Edu): Consider removing all the mutexes from StatsHolder, make
@@ -185,6 +185,14 @@ type SCVariables struct {
 	WDelayer common.WDelayerVariables `validate:"required"`
 }
 
+// SCVariablesPtr joins all the smart contract variables as pointers in a single
+// struct
+type SCVariablesPtr struct {
+	Rollup   *common.RollupVariables   `validate:"required"`
+	Auction  *common.AuctionVariables  `validate:"required"`
+	WDelayer *common.WDelayerVariables `validate:"required"`
+}
+
 // SCConsts joins all the smart contract constants in a single struct
 type SCConsts struct {
 	Rollup   common.RollupConstants
@@ -221,27 +229,27 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 	stateDB *statedb.StateDB, cfg Config) (*Synchronizer, error) {
 	auctionConstants, err := ethClient.AuctionConstants()
 	if err != nil {
-		log.Errorw("NewSynchronizer ethClient.AuctionConstants()", "err", err)
-		return nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(fmt.Errorf("NewSynchronizer ethClient.AuctionConstants(): %w",
+			err))
 	}
 	rollupConstants, err := ethClient.RollupConstants()
 	if err != nil {
-		log.Errorw("NewSynchronizer ethClient.RollupConstants()", "err", err)
-		return nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(fmt.Errorf("NewSynchronizer ethClient.RollupConstants(): %w",
+			err))
 	}
 	wDelayerConstants, err := ethClient.WDelayerConstants()
 	if err != nil {
-		log.Errorw("NewSynchronizer ethClient.WDelayerConstants()", "err", err)
-		return nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(fmt.Errorf("NewSynchronizer ethClient.WDelayerConstants(): %w",
+			err))
 	}
 
 	// Set startBlockNum to the minimum between Auction, Rollup and
 	// WDelayer StartBlockNum
 	startBlockNum := cfg.StartBlockNum.Auction
-	if startBlockNum < cfg.StartBlockNum.Rollup {
+	if cfg.StartBlockNum.Rollup < startBlockNum {
 		startBlockNum = cfg.StartBlockNum.Rollup
 	}
-	if startBlockNum < cfg.StartBlockNum.WDelayer {
+	if cfg.StartBlockNum.WDelayer < startBlockNum {
 		startBlockNum = cfg.StartBlockNum.WDelayer
 	}
 	stats := NewStatsHolder(startBlockNum, cfg.StatsRefreshPeriod)
@@ -283,8 +291,12 @@ func (s *Synchronizer) WDelayerConstants() *common.WDelayerConstants {
 }
 
 // SCVars returns a copy of the Smart Contract Variables
-func (s *Synchronizer) SCVars() (*common.RollupVariables, *common.AuctionVariables, *common.WDelayerVariables) {
-	return s.vars.Rollup.Copy(), s.vars.Auction.Copy(), s.vars.WDelayer.Copy()
+func (s *Synchronizer) SCVars() SCVariablesPtr {
+	return SCVariablesPtr{
+		Rollup:   s.vars.Rollup.Copy(),
+		Auction:  s.vars.Auction.Copy(),
+		WDelayer: s.vars.WDelayer.Copy(),
+	}
 }
 
 func (s *Synchronizer) updateCurrentSlotIfSync(batchesLen int) error {
@@ -297,17 +309,13 @@ func (s *Synchronizer) updateCurrentSlotIfSync(batchesLen int) error {
 	slotNum := s.consts.Auction.SlotNum(blockNum)
 	if batchesLen == -1 {
 		dbBatchesLen, err := s.historyDB.GetBatchesLen(slotNum)
-		// fmt.Printf("DBG -1 from: %v, to: %v, len: %v\n", from, to, dbBatchesLen)
 		if err != nil {
-			log.Errorw("historyDB.GetBatchesLen", "err", err)
-			return tracerr.Wrap(err)
+			return tracerr.Wrap(fmt.Errorf("historyDB.GetBatchesLen: %w", err))
 		}
 		slot.BatchesLen = dbBatchesLen
 	} else if slotNum > slot.SlotNum {
-		// fmt.Printf("DBG batchesLen Reset len: %v (%v %v)\n", batchesLen, slotNum, slot.SlotNum)
 		slot.BatchesLen = batchesLen
 	} else {
-		// fmt.Printf("DBG batchesLen add len: %v: %v\n", batchesLen, slot.BatchesLen+batchesLen)
 		slot.BatchesLen += batchesLen
 	}
 	slot.SlotNum = slotNum
@@ -321,7 +329,7 @@ func (s *Synchronizer) updateCurrentSlotIfSync(batchesLen int) error {
 		if tracerr.Unwrap(err) == sql.ErrNoRows {
 			slot.BootCoord = true
 			slot.Forger = s.vars.Auction.BootCoordinator
-			slot.URL = "???"
+			slot.URL = s.vars.Auction.BootCoordinatorURL
 		} else if err == nil {
 			slot.BidValue = bidCoord.BidValue
 			slot.DefaultSlotBid = bidCoord.DefaultSlotSetBid[slot.SlotNum%6]
@@ -335,7 +343,7 @@ func (s *Synchronizer) updateCurrentSlotIfSync(batchesLen int) error {
 			} else {
 				slot.BootCoord = true
 				slot.Forger = s.vars.Auction.BootCoordinator
-				slot.URL = "???"
+				slot.URL = s.vars.Auction.BootCoordinatorURL
 			}
 		}
 
@@ -417,6 +425,11 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 	}
 	if lastSavedBlock != nil {
 		nextBlockNum = lastSavedBlock.Num + 1
+		if lastSavedBlock.Num < s.startBlockNum {
+			return nil, nil, tracerr.Wrap(
+				fmt.Errorf("lastSavedBlock (%v) < startBlockNum (%v)",
+					lastSavedBlock.Num, s.startBlockNum))
+		}
 	}
 
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
@@ -554,14 +567,12 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 	for blockNum >= s.startBlockNum {
 		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), blockNum)
 		if err != nil {
-			log.Errorw("ethClient.EthBlockByNumber", "err", err)
-			return 0, tracerr.Wrap(err)
+			return 0, tracerr.Wrap(fmt.Errorf("ethClient.EthBlockByNumber: %w", err))
 		}
 
 		block, err = s.historyDB.GetBlock(blockNum)
 		if err != nil {
-			log.Errorw("historyDB.GetBlock", "err", err)
-			return 0, tracerr.Wrap(err)
+			return 0, tracerr.Wrap(fmt.Errorf("historyDB.GetBlock: %w", err))
 		}
 		if block.Hash == ethBlock.Hash {
 			log.Debugf("Found valid block: %v", blockNum)
@@ -595,8 +606,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 		wDelayer = &s.cfg.InitialVariables.WDelayer
 		log.Info("Setting initial SCVars in HistoryDB")
 		if err = s.historyDB.SetInitialSCVars(rollup, auction, wDelayer); err != nil {
-			log.Errorw("historyDB.SetInitialSCVars", "err", err)
-			return tracerr.Wrap(err)
+			return tracerr.Wrap(fmt.Errorf("historyDB.SetInitialSCVars: %w", err))
 		}
 	}
 	s.vars.Rollup = *rollup
@@ -605,8 +615,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 
 	batchNum, err := s.historyDB.GetLastBatchNum()
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
-		log.Errorw("historyDB.GetLastBatchNum", "err", err)
-		return tracerr.Wrap(err)
+		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastBatchNum: %w", err))
 	}
 	if tracerr.Unwrap(err) == sql.ErrNoRows {
 		batchNum = 0
@@ -614,8 +623,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 
 	lastL1BatchBlockNum, err := s.historyDB.GetLastL1BatchBlockNum()
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
-		log.Errorw("historyDB.GetLastL1BatchBlockNum", "err", err)
-		return tracerr.Wrap(err)
+		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastL1BatchBlockNum: %w", err))
 	}
 	if tracerr.Unwrap(err) == sql.ErrNoRows {
 		lastL1BatchBlockNum = 0
@@ -623,8 +631,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 
 	lastForgeL1TxsNum, err := s.historyDB.GetLastL1TxsNum()
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
-		log.Errorw("historyDB.GetLastL1BatchBlockNum", "err", err)
-		return tracerr.Wrap(err)
+		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastL1BatchBlockNum: %w", err))
 	}
 	if tracerr.Unwrap(err) == sql.ErrNoRows || lastForgeL1TxsNum == nil {
 		n := int64(-1)
@@ -633,8 +640,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 
 	err = s.stateDB.Reset(batchNum)
 	if err != nil {
-		log.Errorw("stateDB.Reset", "err", err)
-		return tracerr.Wrap(err)
+		return tracerr.Wrap(fmt.Errorf("stateDB.Reset: %w", err))
 	}
 
 	s.stats.UpdateSync(block, &batchNum, &lastL1BatchBlockNum, lastForgeL1TxsNum)
@@ -644,51 +650,6 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 	}
 	return nil
 }
-
-// TODO: Figure out who will use the Status output, and only return what's strictly need
-/*
-// Status returns current status values from the Synchronizer
-func (s *Synchronizer) Status() (*common.SyncStatus, error) {
-	// Avoid possible inconsistencies
-	s.mux.Lock()
-	defer s.mux.Unlock()
-
-	var status *common.SyncStatus
-
-	// TODO: Join all queries to the DB into a single transaction so that
-	// we can remove the mutex locking here:
-	// - HistoryDB.GetLastBlock
-	// - HistoryDB.GetLastBatchNum
-	// - HistoryDB.GetCurrentForgerAddr
-	// - HistoryDB.GetNextForgerAddr
-
-	// Get latest block in History DB
-	lastSavedBlock, err := s.historyDB.GetLastBlock()
-	if err != nil {
-		return nil, err
-	}
-	status.CurrentBlock = lastSavedBlock.EthBlockNum
-
-	// Get latest batch in History DB
-	lastSavedBatch, err := s.historyDB.GetLastBatchNum()
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-	status.CurrentBatch = lastSavedBatch
-
-	// Get latest blockNum in blockchain
-	latestBlockNum, err := s.ethClient.EthLastBlock()
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: Get CurrentForgerAddr & NextForgerAddr from the Auction SC / Or from the HistoryDB
-
-	// Check if Synchronizer is synchronized
-	status.Synchronized = status.CurrentBlock == latestBlockNum
-	return status, nil
-}
-*/
 
 // rollupSync retreives all the Rollup Smart Contract Data that happened at
 // ethBlock.blockNum with ethBlock.Hash.
@@ -1130,6 +1091,7 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 
 	for range wDelayerEvents.EmergencyModeEnabled {
 		s.vars.WDelayer.EmergencyMode = true
+		s.vars.WDelayer.EmergencyModeStartingBlock = blockNum
 		varsUpdate = true
 	}
 	for _, evt := range wDelayerEvents.NewWithdrawalDelay {

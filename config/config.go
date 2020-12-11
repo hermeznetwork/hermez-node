@@ -15,7 +15,7 @@ import (
 
 // Duration is a wrapper type that parses time duration from text.
 type Duration struct {
-	time.Duration
+	time.Duration `validate:"required"`
 }
 
 // UnmarshalText unmarshalls time duration from text.
@@ -46,7 +46,10 @@ type Coordinator struct {
 	// ProofServerPollInterval is the waiting interval between polling the
 	// ProofServer while waiting for a particular status
 	ProofServerPollInterval Duration `validate:"required"`
-	L2DB                    struct {
+	// SyncRetryInterval is the waiting interval between calls to the main
+	// handler of a synced block after an error
+	SyncRetryInterval Duration `validate:"required"`
+	L2DB              struct {
 		SafetyPeriod common.BatchNum `validate:"required"`
 		MaxTxs       uint32          `validate:"required"`
 		TTL          Duration        `validate:"required"`

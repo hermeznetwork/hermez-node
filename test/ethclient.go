@@ -333,11 +333,11 @@ func NewClientSetupExample() *ClientSetup {
 		HermezRollup:         auctionConstants.HermezRollup,
 	}
 	wDelayerVariables := &common.WDelayerVariables{
-		HermezGovernanceAddress:   ethCommon.HexToAddress("0xcfD0d163AE6432a72682323E2C3A5a69e6B37D12"),
-		EmergencyCouncilAddress:   ethCommon.HexToAddress("0x2730700932a4FDB97B9268A3Ca29f97Ea5fd7EA0"),
-		WithdrawalDelay:           60,
-		EmergencyModeStartingTime: 0,
-		EmergencyMode:             false,
+		HermezGovernanceAddress:    ethCommon.HexToAddress("0xcfD0d163AE6432a72682323E2C3A5a69e6B37D12"),
+		EmergencyCouncilAddress:    ethCommon.HexToAddress("0x2730700932a4FDB97B9268A3Ca29f97Ea5fd7EA0"),
+		WithdrawalDelay:            60,
+		EmergencyModeStartingBlock: 0,
+		EmergencyMode:              false,
 	}
 	return &ClientSetup{
 		RollupConstants:   rollupConstants,

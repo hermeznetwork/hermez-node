@@ -25,9 +25,9 @@ SyncLoopInterval = "1s"
 StatsRefreshPeriod = "1s"
 
     [Synchronizer.StartBlockNum]
-    Rollup = 6
-    Auction = 3
-    WDelayer = 7
+    Rollup = 19
+    Auction = 17
+    WDelayer = 15
 
 [SmartContracts]
 Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
@@ -56,12 +56,12 @@ TokenHEZName = "Hermez Network Token"
     SlotDeadline = 20
 
     [Synchronizer.InitialVariables.WDelayer]
-	# HermezRollupAddress        =
-	HermezGovernanceAddress    = "0x0000000000000000000000000000000000000001"
-	EmergencyCouncilAddress    = "0x0000000000000000000000000000000000000001"
-	WithdrawalDelay            = 60
-	EmergencyModeStartingTime  = 0
-	EmergencyMode              = false
+    # HermezRollupAddress        =
+    HermezGovernanceAddress    = "0x0000000000000000000000000000000000000001"
+    EmergencyCouncilAddress    = "0x0000000000000000000000000000000000000001"
+    WithdrawalDelay            = 60
+    EmergencyModeStartingTime  = 0
+    EmergencyMode              = false
 
     [Synchronizer.InitialVariables.Rollup]
     FeeAddToken = "10"

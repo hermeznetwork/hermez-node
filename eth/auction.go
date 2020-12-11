@@ -651,7 +651,10 @@ func (c *AuctionClient) AuctionConstants() (auctionConstants *common.AuctionCons
 			return tracerr.Wrap(err)
 		}
 		auctionConstants.TokenHEZ, err = c.auction.TokenHEZ(c.opts)
-		return tracerr.Wrap(err)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		return nil
 	}); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
