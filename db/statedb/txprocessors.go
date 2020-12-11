@@ -156,6 +156,9 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 
 			s.zki.ISOutIdx[s.i] = s.idx.BigInt()
 			s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
+			if exitIdx == nil {
+				s.zki.ISExitRoot[s.i] = exitTree.Root().BigInt()
+			}
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -245,6 +248,9 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 				s.zki.ISOutIdx[s.i] = s.idx.BigInt()
 				s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
 				s.zki.ISAccFeeOut[s.i] = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
+				if exitIdx == nil {
+					s.zki.ISExitRoot[s.i] = exitTree.Root().BigInt()
+				}
 			}
 			if s.i == nTx-1 {
 				s.zki.ISFinalAccFee = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
@@ -269,6 +275,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 				s.zki.ISOutIdx[i] = s.idx.BigInt()
 				s.zki.ISStateRoot[i] = s.mt.Root().BigInt()
 				s.zki.ISAccFeeOut[i] = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
+				s.zki.ISExitRoot[i] = exitTree.Root().BigInt()
 			}
 			if i >= s.i {
 				s.zki.TxCompressedData[i] = new(big.Int).SetBytes(common.SignatureConstantBytes)
@@ -345,33 +352,8 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			Balance:     exitAccount.Balance,
 		}
 		exitInfos = append(exitInfos, ei)
-
-		if s.zki != nil {
-			s.zki.TokenID2[i] = exitAccount.TokenID.BigInt()
-			s.zki.Nonce2[i] = exitAccount.Nonce.BigInt()
-			if babyjub.PointCoordSign(exitAccount.PublicKey.X) {
-				s.zki.Sign2[i] = big.NewInt(1)
-			}
-			s.zki.Ay2[i] = exitAccount.PublicKey.Y
-			s.zki.Balance2[i] = exitAccount.Balance
-			s.zki.EthAddr2[i] = common.EthAddrToBigInt(exitAccount.EthAddr)
-			for j := 0; j < len(p.Siblings); j++ {
-				s.zki.Siblings2[i][j] = p.Siblings[j].BigInt()
-			}
-			if exits[i].newExit {
-				s.zki.NewExit[i] = big.NewInt(1)
-			}
-			if p.IsOld0 {
-				s.zki.IsOld0_2[i] = big.NewInt(1)
-			}
-			s.zki.OldKey2[i] = p.OldKey.BigInt()
-			s.zki.OldValue2[i] = p.OldValue.BigInt()
-
-			if i < nTx-1 {
-				s.zki.ISExitRoot[i] = exitTree.Root().BigInt()
-			}
-		}
 	}
+
 	if s.typ == TypeSynchronizer {
 		// return exitInfos, createdAccounts and collectedFees, so Synchronizer will
 		// be able to store it into HistoryDB for the concrete BatchNum
@@ -987,6 +969,18 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	if err != nil {
 		return nil, false, tracerr.Wrap(err)
 	}
+	if s.zki != nil {
+		s.zki.TokenID1[s.i] = acc.TokenID.BigInt()
+		s.zki.Nonce1[s.i] = acc.Nonce.BigInt()
+		if babyjub.PointCoordSign(acc.PublicKey.X) {
+			s.zki.Sign1[s.i] = big.NewInt(1)
+		}
+		s.zki.Ay1[s.i] = acc.PublicKey.Y
+		s.zki.Balance1[s.i] = acc.Balance
+		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(acc.EthAddr)
+
+		s.zki.NewExit[s.i] = big.NewInt(1)
+	}
 
 	if !tx.IsL1 {
 		// increment nonce
@@ -1025,14 +1019,6 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		return nil, false, tracerr.Wrap(err)
 	}
 	if s.zki != nil {
-		s.zki.TokenID1[s.i] = acc.TokenID.BigInt()
-		s.zki.Nonce1[s.i] = acc.Nonce.BigInt()
-		if babyjub.PointCoordSign(acc.PublicKey.X) {
-			s.zki.Sign1[s.i] = big.NewInt(1)
-		}
-		s.zki.Ay1[s.i] = acc.PublicKey.Y
-		s.zki.Balance1[s.i] = acc.Balance
-		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(acc.EthAddr)
 		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(p.Siblings)
 	}
 
@@ -1045,22 +1031,70 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		// add new leaf 'ExitTreeLeaf', where ExitTreeLeaf.Balance = exitAmount (exitAmount=tx.Amount)
 		exitAccount := &common.Account{
 			TokenID:   acc.TokenID,
-			Nonce:     common.Nonce(1),
+			Nonce:     common.Nonce(0),
 			Balance:   tx.Amount,
 			PublicKey: acc.PublicKey,
 			EthAddr:   acc.EthAddr,
 		}
-		_, err = createAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
-		return exitAccount, true, tracerr.Wrap(err)
+		if s.zki != nil {
+			// Set the State2 before creating the Exit leaf
+			s.zki.TokenID2[s.i] = acc.TokenID.BigInt()
+			s.zki.Nonce2[s.i] = big.NewInt(0)
+			if babyjub.PointCoordSign(acc.PublicKey.X) {
+				s.zki.Sign2[s.i] = big.NewInt(1)
+			}
+			s.zki.Ay2[s.i] = acc.PublicKey.Y
+			s.zki.Balance2[s.i] = tx.Amount
+			s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(acc.EthAddr)
+		}
+		p, err = createAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
+		if err != nil {
+			return nil, false, tracerr.Wrap(err)
+		}
+		if s.zki != nil {
+			s.zki.Siblings2[s.i] = siblingsToZKInputFormat(p.Siblings)
+			if p.IsOld0 {
+				s.zki.IsOld0_2[s.i] = big.NewInt(1)
+			}
+			s.zki.OldKey2[s.i] = p.OldKey.BigInt()
+			s.zki.OldValue2[s.i] = p.OldValue.BigInt()
+			s.zki.ISExitRoot[s.i] = exitTree.Root().BigInt()
+		}
+		return exitAccount, true, nil
 	} else if err != nil {
 		return exitAccount, false, tracerr.Wrap(err)
 	}
 
 	// 1b. if idx already exist in exitTree:
+	if s.zki != nil {
+		// Set the State2 before updating the Exit leaf
+		s.zki.TokenID2[s.i] = acc.TokenID.BigInt()
+		s.zki.Nonce2[s.i] = big.NewInt(0)
+		if babyjub.PointCoordSign(acc.PublicKey.X) {
+			s.zki.Sign2[s.i] = big.NewInt(1)
+		}
+		s.zki.Ay2[s.i] = acc.PublicKey.Y
+		s.zki.Balance2[s.i] = tx.Amount
+		s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(acc.EthAddr)
+	}
+
 	// update account, where account.Balance += exitAmount
 	exitAccount.Balance = new(big.Int).Add(exitAccount.Balance, tx.Amount)
-	_, err = updateAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
-	return exitAccount, false, tracerr.Wrap(err)
+	p, err = updateAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
+	if err != nil {
+		return nil, false, tracerr.Wrap(err)
+	}
+
+	if s.zki != nil {
+		s.zki.Siblings2[s.i] = siblingsToZKInputFormat(p.Siblings)
+		if p.IsOld0 {
+			s.zki.IsOld0_2[s.i] = big.NewInt(1)
+		}
+		s.zki.OldKey2[s.i] = p.OldKey.BigInt()
+		s.zki.OldValue2[s.i] = p.OldValue.BigInt()
+	}
+
+	return exitAccount, false, nil
 }
 
 // computeEffectiveAmounts checks that the L1Tx data is correct
@@ -1139,7 +1173,7 @@ func (s *StateDB) computeEffectiveAmounts(tx *common.L1Tx) {
 		return
 	}
 	if accSender.TokenID != accReceiver.TokenID {
-		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: sender account TokenID (%d) != receiver account TokenID (%d)", tx.TokenID, accSender.TokenID)
+		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: sender account TokenID (%d) != receiver account TokenID (%d)", accSender.TokenID, accReceiver.TokenID)
 		tx.EffectiveDepositAmount = big.NewInt(0)
 		tx.EffectiveAmount = big.NewInt(0)
 		return
