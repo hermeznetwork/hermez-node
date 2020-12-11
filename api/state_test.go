@@ -82,7 +82,7 @@ func TestNextForgers(t *testing.T) {
 func TestUpdateNetworkInfo(t *testing.T) {
 	status := &Network{}
 	assert.Equal(t, status.LastSyncBlock, api.status.Network.LastSyncBlock)
-	assert.Equal(t, status.LastBatch.BatchNum, api.status.Network.LastBatch.BatchNum)
+	assert.Equal(t, status.LastBatch, api.status.Network.LastBatch)
 	assert.Equal(t, status.CurrentSlot, api.status.Network.CurrentSlot)
 	assert.Equal(t, status.NextForgers, api.status.Network.NextForgers)
 	lastBlock := tc.blocks[3]

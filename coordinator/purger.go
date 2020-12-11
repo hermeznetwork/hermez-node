@@ -78,7 +78,7 @@ func (p *Purger) InvalidateMaybe(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 	p.lastInvalidateBatch = batchNum
 	log.Debugw("Purger: invalidating l2txs in pool", "block", blockNum, "batch", batchNum)
 	err := poolMarkInvalidOldNonces(l2DB, stateDB, common.BatchNum(batchNum))
-	return true, err
+	return true, tracerr.Wrap(err)
 }
 
 //nolint:unused,deadcode
@@ -129,20 +129,20 @@ func poolMarkInvalidOldNonces(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 	batchNum common.BatchNum) error {
 	idxs, err := l2DB.GetPendingUniqueFromIdxs()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	idxsNonce := make([]common.IdxNonce, len(idxs))
 	lastIdx, err := stateDB.GetIdx()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	for i, idx := range idxs {
 		acc, err := stateDB.GetAccount(idx)
 		if err != nil {
 			if tracerr.Unwrap(err) != db.ErrNotFound {
-				return err
+				return tracerr.Wrap(err)
 			} else if idx <= lastIdx {
-				return fmt.Errorf("account with idx %v not found: %w", idx, err)
+				return tracerr.Wrap(fmt.Errorf("account with idx %v not found: %w", idx, err))
 			}
 		}
 		idxsNonce[i].Idx = idx

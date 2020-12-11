@@ -313,7 +313,7 @@ func (s *Synchronizer) updateCurrentSlotIfSync(batchesLen int) error {
 	slot.SlotNum = slotNum
 	slot.StartBlock, slot.EndBlock = s.consts.Auction.SlotBlocks(slot.SlotNum)
 	// If Synced, update the current coordinator
-	if s.stats.Synced() {
+	if s.stats.Synced() && blockNum >= s.consts.Auction.GenesisBlockNum {
 		bidCoord, err := s.historyDB.GetBestBidCoordinator(slot.SlotNum)
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			return tracerr.Wrap(err)
@@ -897,29 +897,74 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		rollupData.AddedTokens = append(rollupData.AddedTokens, token)
 	}
 
+	for _, evt := range rollupEvents.UpdateBucketWithdraw {
+		rollupData.UpdateBucketWithdraw = append(rollupData.UpdateBucketWithdraw,
+			common.BucketUpdate{
+				EthBlockNum: blockNum,
+				NumBucket:   evt.NumBucket,
+				BlockStamp:  evt.BlockStamp,
+				Withdrawals: evt.Withdrawals,
+			})
+	}
+
+	for _, evt := range rollupEvents.Withdraw {
+		rollupData.Withdrawals = append(rollupData.Withdrawals, common.WithdrawInfo{
+			Idx:             common.Idx(evt.Idx),
+			NumExitRoot:     common.BatchNum(evt.NumExitRoot),
+			InstantWithdraw: evt.InstantWithdraw,
+			TxHash:          evt.TxHash,
+		})
+	}
+
+	for _, evt := range rollupEvents.UpdateTokenExchange {
+		if len(evt.AddressArray) != len(evt.ValueArray) {
+			return nil, tracerr.Wrap(fmt.Errorf("in RollupEventUpdateTokenExchange "+
+				"len(AddressArray) != len(ValueArray) (%v != %v)",
+				len(evt.AddressArray), len(evt.ValueArray)))
+		}
+		for i := range evt.AddressArray {
+			rollupData.TokenExchanges = append(rollupData.TokenExchanges,
+				common.TokenExchange{
+					EthBlockNum: blockNum,
+					Address:     evt.AddressArray[i],
+					ValueUSD:    int64(evt.ValueArray[i]),
+				})
+		}
+	}
+
 	varsUpdate := false
 
-	for _, evtUpdateForgeL1L2BatchTimeout := range rollupEvents.UpdateForgeL1L2BatchTimeout {
-		s.vars.Rollup.ForgeL1L2BatchTimeout = evtUpdateForgeL1L2BatchTimeout.NewForgeL1L2BatchTimeout
+	for _, evt := range rollupEvents.UpdateForgeL1L2BatchTimeout {
+		s.vars.Rollup.ForgeL1L2BatchTimeout = evt.NewForgeL1L2BatchTimeout
 		varsUpdate = true
 	}
 
-	for _, evtUpdateFeeAddToken := range rollupEvents.UpdateFeeAddToken {
-		s.vars.Rollup.FeeAddToken = evtUpdateFeeAddToken.NewFeeAddToken
+	for _, evt := range rollupEvents.UpdateFeeAddToken {
+		s.vars.Rollup.FeeAddToken = evt.NewFeeAddToken
 		varsUpdate = true
 	}
 
-	// NOTE: WithdrawDelay update doesn't have event, so we can't track changes
+	for _, evt := range rollupEvents.UpdateWithdrawalDelay {
+		s.vars.Rollup.WithdrawalDelay = evt.NewWithdrawalDelay
+		varsUpdate = true
+	}
 
-	// NOTE: Buckets update dones't have event, so we can't track changes
+	// NOTE: We skip the event rollupEvents.SafeMode because the
+	// implementation RollupEventsByBlock already inserts a non-existing
+	// RollupEventUpdateBucketsParameters into UpdateBucketsParameters with
+	// all the bucket values at 0 and SafeMode = true
 
-	for _, evtWithdraw := range rollupEvents.Withdraw {
-		rollupData.Withdrawals = append(rollupData.Withdrawals, common.WithdrawInfo{
-			Idx:             common.Idx(evtWithdraw.Idx),
-			NumExitRoot:     common.BatchNum(evtWithdraw.NumExitRoot),
-			InstantWithdraw: evtWithdraw.InstantWithdraw,
-			TxHash:          evtWithdraw.TxHash,
-		})
+	for _, evt := range rollupEvents.UpdateBucketsParameters {
+		for i, bucket := range evt.ArrayBuckets {
+			s.vars.Rollup.Buckets[i] = common.BucketParams{
+				CeilUSD:             bucket.CeilUSD,
+				Withdrawals:         bucket.Withdrawals,
+				BlockWithdrawalRate: bucket.BlockWithdrawalRate,
+				MaxWithdrawals:      bucket.MaxWithdrawals,
+			}
+		}
+		s.vars.Rollup.SafeMode = evt.SafeMode
+		varsUpdate = true
 	}
 
 	if varsUpdate {
@@ -958,22 +1003,22 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	}
 
 	// Get bids
-	for _, evtNewBid := range auctionEvents.NewBid {
+	for _, evt := range auctionEvents.NewBid {
 		bid := common.Bid{
-			SlotNum:     evtNewBid.Slot,
-			BidValue:    evtNewBid.BidAmount,
-			Bidder:      evtNewBid.Bidder,
+			SlotNum:     evt.Slot,
+			BidValue:    evt.BidAmount,
+			Bidder:      evt.Bidder,
 			EthBlockNum: blockNum,
 		}
 		auctionData.Bids = append(auctionData.Bids, bid)
 	}
 
 	// Get Coordinators
-	for _, evtSetCoordinator := range auctionEvents.SetCoordinator {
+	for _, evt := range auctionEvents.SetCoordinator {
 		coordinator := common.Coordinator{
-			Bidder:      evtSetCoordinator.BidderAddress,
-			Forger:      evtSetCoordinator.ForgerAddress,
-			URL:         evtSetCoordinator.CoordinatorURL,
+			Bidder:      evt.BidderAddress,
+			Forger:      evt.ForgerAddress,
+			URL:         evt.CoordinatorURL,
 			EthBlockNum: blockNum,
 		}
 		auctionData.Coordinators = append(auctionData.Coordinators, coordinator)
@@ -999,6 +1044,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	}
 	for _, evt := range auctionEvents.NewBootCoordinator {
 		s.vars.Auction.BootCoordinator = evt.NewBootCoordinator
+		s.vars.Auction.BootCoordinatorURL = evt.NewBootCoordinatorURL
 		varsUpdate = true
 	}
 	for _, evt := range auctionEvents.NewOpenAuctionSlots {
@@ -1069,10 +1115,19 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 			Amount: evt.Amount,
 		})
 	}
+	for _, evt := range wDelayerEvents.EscapeHatchWithdrawal {
+		wDelayerData.EscapeHatchWithdrawals = append(wDelayerData.EscapeHatchWithdrawals,
+			common.WDelayerEscapeHatchWithdrawal{
+				EthBlockNum: blockNum,
+				Who:         evt.Who,
+				To:          evt.To,
+				TokenAddr:   evt.Token,
+				Amount:      evt.Amount,
+			})
+	}
 
 	varsUpdate := false
 
-	// TODO EscapeHatchWithdrawal
 	for range wDelayerEvents.EmergencyModeEnabled {
 		s.vars.WDelayer.EmergencyMode = true
 		varsUpdate = true

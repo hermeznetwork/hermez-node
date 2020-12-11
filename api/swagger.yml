@@ -2791,10 +2791,6 @@ components:
                 type: integer
                 description: Max USD value
                 example: 1000
-              blockStamp:
-                type: integer
-                description: Last time a withdrawal was added ( or removed if the bucket was full)
-                example: 4475934
               withdrawals:
                 type: integer
                 description: Available withdrawals of the bucket
@@ -2810,7 +2806,6 @@ components:
             additionalProperties: false
             required: 
               - ceilUSD
-              - blockStamp
               - withdrawals
               - blockWithdrawalRate
               - maxWithdrawals

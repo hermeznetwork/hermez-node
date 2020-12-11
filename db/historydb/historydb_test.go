@@ -647,7 +647,8 @@ func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *co
 		big.NewInt(10),
 		12,
 		13,
-		[5]common.Bucket{},
+		[5]common.BucketParams{},
+		false,
 	}
 	//nolint:govet
 	auction := &common.AuctionVariables{
@@ -935,6 +936,87 @@ func TestGetBestBidCoordinator(t *testing.T) {
 
 	_, err = historyDB.GetBestBidCoordinator(11)
 	require.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))
+}
+
+func TestAddBucketUpdates(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	const fromBlock int64 = 1
+	const toBlock int64 = 5 + 1
+	setTestBlocks(fromBlock, toBlock)
+
+	bucketUpdates := []common.BucketUpdate{
+		{
+			EthBlockNum: 4,
+			NumBucket:   0,
+			BlockStamp:  4,
+			Withdrawals: big.NewInt(123),
+		},
+		{
+			EthBlockNum: 5,
+			NumBucket:   2,
+			BlockStamp:  5,
+			Withdrawals: big.NewInt(42),
+		},
+	}
+	err := historyDB.addBucketUpdates(historyDB.db, bucketUpdates)
+	require.NoError(t, err)
+	dbBucketUpdates, err := historyDB.GetAllBucketUpdates()
+	require.NoError(t, err)
+	assert.Equal(t, bucketUpdates, dbBucketUpdates)
+}
+
+func TestAddTokenExchanges(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	const fromBlock int64 = 1
+	const toBlock int64 = 5 + 1
+	setTestBlocks(fromBlock, toBlock)
+
+	tokenExchanges := []common.TokenExchange{
+		{
+			EthBlockNum: 4,
+			Address:     ethCommon.BigToAddress(big.NewInt(111)),
+			ValueUSD:    12345,
+		},
+		{
+			EthBlockNum: 5,
+			Address:     ethCommon.BigToAddress(big.NewInt(222)),
+			ValueUSD:    67890,
+		},
+	}
+	err := historyDB.addTokenExchanges(historyDB.db, tokenExchanges)
+	require.NoError(t, err)
+	dbTokenExchanges, err := historyDB.GetAllTokenExchanges()
+	require.NoError(t, err)
+	assert.Equal(t, tokenExchanges, dbTokenExchanges)
+}
+
+func TestAddEscapeHatchWithdrawals(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	const fromBlock int64 = 1
+	const toBlock int64 = 5 + 1
+	setTestBlocks(fromBlock, toBlock)
+
+	escapeHatchWithdrawals := []common.WDelayerEscapeHatchWithdrawal{
+		{
+			EthBlockNum: 4,
+			Who:         ethCommon.BigToAddress(big.NewInt(111)),
+			To:          ethCommon.BigToAddress(big.NewInt(222)),
+			TokenAddr:   ethCommon.BigToAddress(big.NewInt(333)),
+			Amount:      big.NewInt(10002),
+		},
+		{
+			EthBlockNum: 5,
+			Who:         ethCommon.BigToAddress(big.NewInt(444)),
+			To:          ethCommon.BigToAddress(big.NewInt(555)),
+			TokenAddr:   ethCommon.BigToAddress(big.NewInt(666)),
+			Amount:      big.NewInt(20003),
+		},
+	}
+	err := historyDB.addEscapeHatchWithdrawals(historyDB.db, escapeHatchWithdrawals)
+	require.NoError(t, err)
+	dbEscapeHatchWithdrawals, err := historyDB.GetAllEscapeHatchWithdrawals()
+	require.NoError(t, err)
+	assert.Equal(t, escapeHatchWithdrawals, dbEscapeHatchWithdrawals)
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them

@@ -59,26 +59,26 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 // GetAccountCreationAuth returns an account creation authorization from the DB
 func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.AccountCreationAuth, error) {
 	auth := new(common.AccountCreationAuth)
-	return auth, meddler.QueryRow(
+	return auth, tracerr.Wrap(meddler.QueryRow(
 		l2db.db, auth,
 		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",
 		addr,
-	)
+	))
 }
 
 // GetAccountCreationAuthAPI returns an account creation authorization from the DB
 func (l2db *L2DB) GetAccountCreationAuthAPI(addr ethCommon.Address) (*AccountCreationAuthAPI, error) {
 	auth := new(AccountCreationAuthAPI)
-	return auth, meddler.QueryRow(
+	return auth, tracerr.Wrap(meddler.QueryRow(
 		l2db.db, auth,
 		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",
 		addr,
-	)
+	))
 }
 
 // AddTx inserts a tx to the pool
 func (l2db *L2DB) AddTx(tx *PoolL2TxWrite) error {
-	return meddler.Insert(l2db.db, "tx_pool", tx)
+	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", tx))
 }
 
 // AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
@@ -122,7 +122,7 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	amountF, _ := f.Float64()
 	insertTx.AmountFloat = amountF
 	// insert tx
-	return meddler.Insert(l2db.db, "tx_pool", insertTx)
+	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", insertTx))
 }
 
 // selectPoolTxAPI select part of queries to get PoolL2TxRead
@@ -147,21 +147,21 @@ FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 // GetTx  return the specified Tx in common.PoolL2Tx format
 func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
 	tx := new(common.PoolL2Tx)
-	return tx, meddler.QueryRow(
+	return tx, tracerr.Wrap(meddler.QueryRow(
 		l2db.db, tx,
 		selectPoolTxCommon+"WHERE tx_id = $1;",
 		txID,
-	)
+	))
 }
 
 // GetTxAPI return the specified Tx in PoolTxAPI format
 func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 	tx := new(PoolTxAPI)
-	return tx, meddler.QueryRow(
+	return tx, tracerr.Wrap(meddler.QueryRow(
 		l2db.db, tx,
 		selectPoolTxAPI+"WHERE tx_id = $1;",
 		txID,
-	)
+	))
 }
 
 // GetPendingTxs return all the pending txs of the L2DB, that have a non NULL AbsoluteFee
@@ -252,6 +252,7 @@ func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+	defer db.RowsClose(rows)
 	var idx common.Idx
 	for rows.Next() {
 		err = rows.Scan(&idx)
@@ -285,7 +286,7 @@ func (l2db *L2DB) CheckNonces(updatedAccounts []common.IdxNonce, batchNum common
 	// named query which works with slices, and doens't handle an extra
 	// individual argument.
 	query := fmt.Sprintf(checkNoncesQuery, batchNum)
-	if _, err := sqlx.NamedQuery(l2db.db, query, updatedAccounts); err != nil {
+	if _, err := sqlx.NamedExec(l2db.db, query, updatedAccounts); err != nil {
 		return tracerr.Wrap(err)
 	}
 	return nil

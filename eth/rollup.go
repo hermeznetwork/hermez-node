@@ -131,6 +131,7 @@ type rollupEventUpdateBucketsParametersAux struct {
 type RollupEventUpdateBucketsParameters struct {
 	// ArrayBuckets [common.RollupConstNumBuckets][4]*big.Int
 	ArrayBuckets [common.RollupConstNumBuckets]RollupUpdateBucketsParameters
+	SafeMode     bool
 }
 
 // RollupEventUpdateTokenExchange is an event of the Rollup Smart Contract
@@ -798,6 +799,20 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethC
 		case logHermezSafeMode:
 			var safeMode RollupEventSafeMode
 			rollupEvents.SafeMode = append(rollupEvents.SafeMode, safeMode)
+			// Also add an UpdateBucketsParameter with
+			// SafeMode=true to keep the order between `safeMode`
+			// and `UpdateBucketsParameters`
+			bucketsParameters := RollupEventUpdateBucketsParameters{
+				SafeMode: true,
+			}
+			for i := range bucketsParameters.ArrayBuckets {
+				bucketsParameters.ArrayBuckets[i].CeilUSD = big.NewInt(0)
+				bucketsParameters.ArrayBuckets[i].Withdrawals = big.NewInt(0)
+				bucketsParameters.ArrayBuckets[i].BlockWithdrawalRate = big.NewInt(0)
+				bucketsParameters.ArrayBuckets[i].MaxWithdrawals = big.NewInt(0)
+			}
+			rollupEvents.UpdateBucketsParameters = append(rollupEvents.UpdateBucketsParameters,
+				bucketsParameters)
 		}
 	}
 	return &rollupEvents, blockHash, nil

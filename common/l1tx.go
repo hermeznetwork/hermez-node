@@ -228,12 +228,12 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 	l1tx := L1Tx{}
 	fromIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(fromIdxBytes, 6))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	l1tx.FromIdx = fromIdx
 	toIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(toIdxBytes, 6))
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	l1tx.ToIdx = toIdx
 	l1tx.EffectiveAmount = Float16FromBytes(amountBytes).BigInt()

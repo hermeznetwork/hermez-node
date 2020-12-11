@@ -18,11 +18,13 @@ type Block struct {
 // RollupData contains information returned by the Rollup smart contract
 type RollupData struct {
 	// L1UserTxs that were submitted in the block
-	L1UserTxs   []L1Tx
-	Batches     []BatchData
-	AddedTokens []Token
-	Withdrawals []WithdrawInfo
-	Vars        *RollupVariables
+	L1UserTxs            []L1Tx
+	Batches              []BatchData
+	AddedTokens          []Token
+	Withdrawals          []WithdrawInfo
+	UpdateBucketWithdraw []BucketUpdate
+	TokenExchanges       []TokenExchange
+	Vars                 *RollupVariables
 }
 
 // NewRollupData creates an empty RollupData with the slices initialized.
@@ -66,8 +68,9 @@ type WDelayerData struct {
 	Vars     *WDelayerVariables
 	Deposits []WDelayerTransfer
 	// We use an array because there can be multiple deposits in a single eth transaction
-	DepositsByTxHash map[ethCommon.Hash][]*WDelayerTransfer
-	Withdrawals      []WDelayerTransfer
+	DepositsByTxHash       map[ethCommon.Hash][]*WDelayerTransfer
+	Withdrawals            []WDelayerTransfer
+	EscapeHatchWithdrawals []WDelayerEscapeHatchWithdrawal
 }
 
 // NewWDelayerData creates an empty WDelayerData.

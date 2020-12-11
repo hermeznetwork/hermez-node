@@ -1,6 +1,10 @@
 package common
 
-import ethCommon "github.com/ethereum/go-ethereum/common"
+import (
+	"math/big"
+
+	ethCommon "github.com/ethereum/go-ethereum/common"
+)
 
 // WDelayerConstants are the constants of the Withdrawal Delayer Smart Contract
 type WDelayerConstants struct {
@@ -10,6 +14,16 @@ type WDelayerConstants struct {
 	MaxEmergencyModeTime uint64 `json:"maxEmergencyModeTime"`
 	// HermezRollup smartcontract address
 	HermezRollup ethCommon.Address `json:"hermezRollup"`
+}
+
+// WDelayerEscapeHatchWithdrawal is an escape hatch withdrawal of the
+// Withdrawal Delayer Smart Contract
+type WDelayerEscapeHatchWithdrawal struct {
+	EthBlockNum int64             `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	Who         ethCommon.Address `json:"who" meddler:"who_addr"`
+	To          ethCommon.Address `json:"to" meddler:"to_addr"`
+	TokenAddr   ethCommon.Address `json:"tokenAddr" meddler:"token_addr"`
+	Amount      *big.Int          `json:"amount" meddler:"amount,bigint"`
 }
 
 // WDelayerVariables are the variables of the Withdrawal Delayer Smart Contract

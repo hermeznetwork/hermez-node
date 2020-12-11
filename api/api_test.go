@@ -374,11 +374,21 @@ func TestMain(m *testing.M) {
 		OpenAuctionSlots:   uint16(5),
 	}
 
+	var buckets [common.RollupConstNumBuckets]common.BucketParams
+	for i := range buckets {
+		buckets[i].CeilUSD = big.NewInt(int64(i) * 10)
+		buckets[i].Withdrawals = big.NewInt(int64(i) * 100)
+		buckets[i].BlockWithdrawalRate = big.NewInt(int64(i) * 1000)
+		buckets[i].MaxWithdrawals = big.NewInt(int64(i) * 10000)
+	}
+
 	rollupVars := common.RollupVariables{
 		EthBlockNum:           int64(3),
 		FeeAddToken:           big.NewInt(100),
 		ForgeL1L2BatchTimeout: int64(44),
 		WithdrawalDelay:       uint64(3000),
+		Buckets:               buckets,
+		SafeMode:              false,
 	}
 
 	wdelayerVars := common.WDelayerVariables{
