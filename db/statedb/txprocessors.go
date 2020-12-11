@@ -191,6 +191,11 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 				return nil, tracerr.Wrap(err)
 			}
 			s.zki.Metadata.L1TxsData = append(s.zki.Metadata.L1TxsData, l1TxData)
+			l1TxDataAvailability, err := l1coordinatortxs[i].BytesDataAvailability(s.zki.Metadata.NLevels)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			s.zki.Metadata.L1TxsDataAvailability = append(s.zki.Metadata.L1TxsDataAvailability, l1TxDataAvailability)
 
 			s.zki.ISOutIdx[s.i] = s.idx.BigInt()
 			s.zki.ISStateRoot[s.i] = s.mt.Root().BigInt()
@@ -222,7 +227,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 
 	if s.zki != nil {
 		// get the feePlanTokens
-		feePlanTokens, err := s.getFeePlanTokens(coordIdxs, l2txs)
+		feePlanTokens, err := s.getFeePlanTokens(coordIdxs)
 		if err != nil {
 			log.Error(err)
 			return nil, tracerr.Wrap(err)
@@ -252,9 +257,6 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 					s.zki.ISExitRoot[s.i] = exitTree.Root().BigInt()
 				}
 			}
-			if s.i == nTx-1 {
-				s.zki.ISFinalAccFee = formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
-			}
 		}
 		if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
@@ -281,6 +283,8 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 				s.zki.TxCompressedData[i] = new(big.Int).SetBytes(common.SignatureConstantBytes)
 			}
 		}
+		isFinalAccFee := formatAccumulatedFees(collectedFees, s.zki.FeePlanTokens)
+		copy(s.zki.ISFinalAccFee, isFinalAccFee)
 		// before computing the Fees txs, set the ISInitStateRootFee
 		s.zki.ISInitStateRootFee = s.mt.Root().BigInt()
 	}
@@ -289,40 +293,44 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	// Coordinator Idxs
 	iFee := 0
 	for idx, accumulatedFee := range s.accumulatedFees {
-		// send the fee to the Idx of the Coordinator for the TokenID
-		accCoord, err := s.GetAccount(idx)
-		if err != nil {
-			log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
-			return nil, tracerr.Wrap(err)
-		}
-		if s.zki != nil {
-			s.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
-			s.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
-			if babyjub.PointCoordSign(accCoord.PublicKey.X) {
-				s.zki.Sign3[iFee] = big.NewInt(1)
+		cmp := accumulatedFee.Cmp(big.NewInt(0))
+		if cmp == 1 { // accumulatedFee>0
+			// send the fee to the Idx of the Coordinator for the TokenID
+			accCoord, err := s.GetAccount(idx)
+			if err != nil {
+				log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
+				return nil, tracerr.Wrap(err)
 			}
-			s.zki.Ay3[iFee] = accCoord.PublicKey.Y
-			s.zki.Balance3[iFee] = accCoord.Balance
-			s.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
-
-			// add Coord Idx to ZKInputs.FeeTxsData
-			s.zki.FeeIdxs[iFee] = idx.BigInt()
-		}
-		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
-		pFee, err := s.UpdateAccount(idx, accCoord)
-		if err != nil {
-			log.Error(err)
-			return nil, tracerr.Wrap(err)
-		}
-		if s.zki != nil {
-			s.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
-			s.zki.ISStateRootFee[iFee] = s.mt.Root().BigInt()
+			if s.zki != nil {
+				s.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
+				s.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
+				if babyjub.PointCoordSign(accCoord.PublicKey.X) {
+					s.zki.Sign3[iFee] = big.NewInt(1)
+				}
+				s.zki.Ay3[iFee] = accCoord.PublicKey.Y
+				s.zki.Balance3[iFee] = accCoord.Balance
+				s.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
+			}
+			accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
+			pFee, err := s.UpdateAccount(idx, accCoord)
+			if err != nil {
+				log.Error(err)
+				return nil, tracerr.Wrap(err)
+			}
+			if s.zki != nil {
+				s.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
+				s.zki.ISStateRootFee[iFee] = s.mt.Root().BigInt()
+			}
 		}
 		iFee++
 	}
 	if s.zki != nil {
 		for i := len(s.accumulatedFees); i < int(ptc.MaxFeeTx)-1; i++ {
 			s.zki.ISStateRootFee[i] = s.mt.Root().BigInt()
+		}
+		// add Coord Idx to ZKInputs.FeeTxsData
+		for i := 0; i < len(coordIdxs); i++ {
+			s.zki.FeeIdxs[i] = coordIdxs[i].BigInt()
 		}
 	}
 
@@ -368,7 +376,6 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 
 	// compute last ZKInputs parameters
 	s.zki.GlobalChainID = big.NewInt(0) // TODO, 0: ethereum, this will be get from config file
-	// zki.FeeIdxs = ? // TODO, this will be get from the config file
 	s.zki.Metadata.NewStateRootRaw = s.mt.Root()
 	s.zki.Metadata.NewExitRootRaw = exitTree.Root()
 
@@ -384,35 +391,15 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 
 // getFeePlanTokens returns an array of *big.Int containing a list of tokenIDs
 // corresponding to the given CoordIdxs and the processed L2Txs
-func (s *StateDB) getFeePlanTokens(coordIdxs []common.Idx, l2txs []common.PoolL2Tx) ([]*big.Int, error) {
-	// get Coordinator TokenIDs corresponding to the Idxs where the Fees
-	// will be sent
-	coordTokenIDs := make(map[common.TokenID]bool)
+func (s *StateDB) getFeePlanTokens(coordIdxs []common.Idx) ([]*big.Int, error) {
+	var tBI []*big.Int
 	for i := 0; i < len(coordIdxs); i++ {
 		acc, err := s.GetAccount(coordIdxs[i])
 		if err != nil {
 			log.Errorf("could not get account to determine TokenID of CoordIdx %d not found: %s", coordIdxs[i], err.Error())
 			return nil, tracerr.Wrap(err)
 		}
-		coordTokenIDs[acc.TokenID] = true
-	}
-
-	tokenIDs := make(map[common.TokenID]bool)
-	for i := 0; i < len(l2txs); i++ {
-		// as L2Tx does not have parameter TokenID, get it from the
-		// AccountsDB (in the StateDB)
-		acc, err := s.GetAccount(l2txs[i].FromIdx)
-		if err != nil {
-			log.Errorf("could not get account to determine TokenID of L2Tx: FromIdx %d not found: %s", l2txs[i].FromIdx, err.Error())
-			return nil, tracerr.Wrap(err)
-		}
-		if _, ok := coordTokenIDs[acc.TokenID]; ok {
-			tokenIDs[acc.TokenID] = true
-		}
-	}
-	var tBI []*big.Int
-	for t := range tokenIDs {
-		tBI = append(tBI, t.BigInt())
+		tBI = append(tBI, acc.TokenID.BigInt())
 	}
 	return tBI, nil
 }
