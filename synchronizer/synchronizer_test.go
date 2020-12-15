@@ -485,6 +485,7 @@ func TestSync(t *testing.T) {
 	// Block 3
 
 	syncBlock, discards, err = s.Sync2(ctx, nil)
+	assert.NoError(t, err)
 	require.Nil(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)

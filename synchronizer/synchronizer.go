@@ -752,6 +752,17 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		// Insert all the txs forged in this batch (l1UserTxs,
 		// L1CoordinatorTxs, PoolL2Txs) into stateDB so that they are
 		// processed.
+
+		// Add TxID, TxType, Position, BlockNum and BatchNum to L2 txs
+		for i := range forgeBatchArgs.L2TxsData {
+			nTx, err := common.NewL2Tx(&forgeBatchArgs.L2TxsData[i])
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			forgeBatchArgs.L2TxsData[i] = *nTx
+		}
+
+		// Transform L2 txs to PoolL2Txs
 		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData) // NOTE: This is a big ugly, find a better way
 
 		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
@@ -767,6 +778,22 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+
+		// Transform processed PoolL2 txs to L2 and store in BatchData
+		if poolL2Txs != nil {
+			l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // NOTE: This is a big uggly, find a better way
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			for i := range l2Txs {
+				l2Txs[i].Position = position
+				l2Txs[i].EthBlockNum = blockNum
+				l2Txs[i].BatchNum = batchNum
+				position++
+			}
+			batchData.L2Txs = l2Txs
+		}
+
 		// Set the BatchNum in the forged L1UserTxs
 		for i := range l1UserTxs {
 			l1UserTxs[i].BatchNum = &batchNum
@@ -779,25 +806,6 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			exit.BatchNum = batchNum
 		}
 		batchData.ExitTree = processTxsOut.ExitInfos
-
-		l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // NOTE: This is a big uggly, find a better way
-		if err != nil {
-			return nil, tracerr.Wrap(err)
-		}
-
-		for i := range l2Txs {
-			tx := &l2Txs[i]
-			tx.Position = position
-			tx.EthBlockNum = blockNum
-			tx.BatchNum = batchNum
-			nTx, err := common.NewL2Tx(tx)
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-
-			batchData.L2Txs = append(batchData.L2Txs, *nTx)
-			position++
-		}
 
 		for i := range processTxsOut.CreatedAccounts {
 			createdAccount := &processTxsOut.CreatedAccounts[i]
