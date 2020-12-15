@@ -583,7 +583,7 @@ CREATE TABLE wdelayer_vars (
     gov_address BYTEA NOT NULL,
     emg_address BYTEA NOT NULL,
     withdrawal_delay BIGINT NOT NULL,
-    emergency_start_time BIGINT NOT NULL,
+    emergency_start_block BIGINT NOT NULL,
     emergency_mode BOOLEAN NOT NULL
 );
 

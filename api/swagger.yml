@@ -2837,9 +2837,9 @@ components:
             - $ref: '#/components/schemas/EthBlockNum'
             - description: The time that everyone needs to wait until a withdrawal of the funds is allowed, in seconds.
             - example: 539573849
-        emergencyModeStartingTime:
+        emergencyModeStartingBlock:
           type: integer
-          description: Second (since unix epoch) in which the emergency mode has been activated.
+          description: Block number in which the emergency mode has been activated.
           example: 10
         emergencyMode:
           type: boolean
@@ -2851,7 +2851,7 @@ components:
         - hermezGovernanceAddress
         - emergencyCouncilAddress
         - withdrawalDelay
-        - emergencyModeStartingTime
+        - emergencyModeStartingBlock
         - emergencyMode
     StateMetrics:
       type: object

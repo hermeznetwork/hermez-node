@@ -127,12 +127,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	varsRollup, varsAuction, varsWDelayer := sync.SCVars()
-	initSCVars := synchronizer.SCVariables{
-		Rollup:   *varsRollup,
-		Auction:  *varsAuction,
-		WDelayer: *varsWDelayer,
-	}
+	initSCVars := sync.SCVars()
 
 	scConsts := synchronizer.SCConsts{
 		Rollup:   *sync.RollupConstants(),
@@ -174,6 +169,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 				ForgerAddress:          coordCfg.ForgerAddress,
 				ConfirmBlocks:          coordCfg.ConfirmBlocks,
 				L1BatchTimeoutPerc:     coordCfg.L1BatchTimeoutPerc,
+				SyncRetryInterval:      coordCfg.SyncRetryInterval.Duration,
 				EthClientAttempts:      coordCfg.EthClient.Attempts,
 				EthClientAttemptsDelay: coordCfg.EthClient.AttemptsDelay.Duration,
 				TxManagerCheckInterval: coordCfg.EthClient.CheckLoopInterval.Duration,
@@ -192,7 +188,11 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 			serverProofs,
 			client,
 			&scConsts,
-			&initSCVars,
+			&synchronizer.SCVariables{
+				Rollup:   *initSCVars.Rollup,
+				Auction:  *initSCVars.Auction,
+				WDelayer: *initSCVars.WDelayer,
+			},
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -230,9 +230,9 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		nodeAPI.api.SetRollupVariables(initSCVars.Rollup)
-		nodeAPI.api.SetAuctionVariables(initSCVars.Auction)
-		nodeAPI.api.SetWDelayerVariables(initSCVars.WDelayer)
+		nodeAPI.api.SetRollupVariables(*initSCVars.Rollup)
+		nodeAPI.api.SetAuctionVariables(*initSCVars.Auction)
+		nodeAPI.api.SetWDelayerVariables(*initSCVars.WDelayer)
 	}
 	var debugAPI *debugapi.DebugAPI
 	if cfg.Debug.APIAddress != "" {
@@ -326,6 +326,59 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 	return nil
 }
 
+func (n *Node) handleNewBlock(stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr,
+	batches []common.BatchData) {
+	if n.mode == ModeCoordinator {
+		n.coord.SendMsg(coordinator.MsgSyncBlock{
+			Stats:   *stats,
+			Batches: batches,
+			Vars: synchronizer.SCVariablesPtr{
+				Rollup:   vars.Rollup,
+				Auction:  vars.Auction,
+				WDelayer: vars.WDelayer,
+			},
+		})
+	}
+	if n.nodeAPI != nil {
+		if vars.Rollup != nil {
+			n.nodeAPI.api.SetRollupVariables(*vars.Rollup)
+		}
+		if vars.Auction != nil {
+			n.nodeAPI.api.SetAuctionVariables(*vars.Auction)
+		}
+		if vars.WDelayer != nil {
+			n.nodeAPI.api.SetWDelayerVariables(*vars.WDelayer)
+		}
+
+		if stats.Synced() {
+			if err := n.nodeAPI.api.UpdateNetworkInfo(
+				stats.Eth.LastBlock, stats.Sync.LastBlock,
+				common.BatchNum(stats.Eth.LastBatch),
+				stats.Sync.Auction.CurrentSlot.SlotNum,
+			); err != nil {
+				log.Errorw("API.UpdateNetworkInfo", "err", err)
+			}
+		}
+	}
+}
+
+func (n *Node) handleReorg(stats *synchronizer.Stats) {
+	if n.mode == ModeCoordinator {
+		n.coord.SendMsg(coordinator.MsgSyncReorg{
+			Stats: *stats,
+		})
+	}
+	if n.nodeAPI != nil {
+		vars := n.sync.SCVars()
+		n.nodeAPI.api.SetRollupVariables(*vars.Rollup)
+		n.nodeAPI.api.SetAuctionVariables(*vars.Auction)
+		n.nodeAPI.api.SetWDelayerVariables(*vars.WDelayer)
+		n.nodeAPI.api.UpdateNetworkInfoBlock(
+			stats.Eth.LastBlock, stats.Sync.LastBlock,
+		)
+	}
+}
+
 // TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
 // don't have to pass it around.
 func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration) {
@@ -338,59 +391,15 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 	} else if discarded != nil {
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
-		if n.mode == ModeCoordinator {
-			n.coord.SendMsg(coordinator.MsgSyncReorg{
-				Stats: *stats,
-			})
-		}
-		if n.nodeAPI != nil {
-			rollup, auction, wDelayer := n.sync.SCVars()
-			n.nodeAPI.api.SetRollupVariables(*rollup)
-			n.nodeAPI.api.SetAuctionVariables(*auction)
-			n.nodeAPI.api.SetWDelayerVariables(*wDelayer)
-			n.nodeAPI.api.UpdateNetworkInfoBlock(
-				stats.Eth.LastBlock, stats.Sync.LastBlock,
-			)
-		}
+		n.handleReorg(stats)
 		return nil, time.Duration(0)
 	} else if blockData != nil {
 		// case: new block
-		if n.mode == ModeCoordinator {
-			if stats.Synced() && (blockData.Rollup.Vars != nil ||
-				blockData.Auction.Vars != nil ||
-				blockData.WDelayer.Vars != nil) {
-				n.coord.SendMsg(coordinator.MsgSyncSCVars{
-					Rollup:   blockData.Rollup.Vars,
-					Auction:  blockData.Auction.Vars,
-					WDelayer: blockData.WDelayer.Vars,
-				})
-			}
-			n.coord.SendMsg(coordinator.MsgSyncBlock{
-				Stats:   *stats,
-				Batches: blockData.Rollup.Batches,
-			})
-		}
-		if n.nodeAPI != nil {
-			if blockData.Rollup.Vars != nil {
-				n.nodeAPI.api.SetRollupVariables(*blockData.Rollup.Vars)
-			}
-			if blockData.Auction.Vars != nil {
-				n.nodeAPI.api.SetAuctionVariables(*blockData.Auction.Vars)
-			}
-			if blockData.WDelayer.Vars != nil {
-				n.nodeAPI.api.SetWDelayerVariables(*blockData.WDelayer.Vars)
-			}
-
-			if stats.Synced() {
-				if err := n.nodeAPI.api.UpdateNetworkInfo(
-					stats.Eth.LastBlock, stats.Sync.LastBlock,
-					common.BatchNum(stats.Eth.LastBatch),
-					stats.Sync.Auction.CurrentSlot.SlotNum,
-				); err != nil {
-					log.Errorw("API.UpdateNetworkInfo", "err", err)
-				}
-			}
-		}
+		n.handleNewBlock(stats, synchronizer.SCVariablesPtr{
+			Rollup:   blockData.Rollup.Vars,
+			Auction:  blockData.Auction.Vars,
+			WDelayer: blockData.WDelayer.Vars,
+		}, blockData.Rollup.Batches)
 		return &blockData.Block, time.Duration(0)
 	} else {
 		// case: no block
@@ -401,6 +410,16 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 // StartSynchronizer starts the synchronizer
 func (n *Node) StartSynchronizer() {
 	log.Info("Starting Synchronizer...")
+
+	// Trigger a manual call to handleNewBlock with the loaded state of the
+	// synchronizer in order to quickly activate the API and Coordinator
+	// and avoid waiting for the next block.  Without this, the API and
+	// Coordinator will not react until the following block (starting from
+	// the last synced one) is synchronized
+	stats := n.sync.Stats()
+	vars := n.sync.SCVars()
+	n.handleNewBlock(stats, vars, []common.BatchData{})
+
 	n.wg.Add(1)
 	go func() {
 		var lastBlock *common.Block
