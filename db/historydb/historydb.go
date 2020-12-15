@@ -1256,7 +1256,10 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 
 // GetLastTxsPosition for a given to_forge_l1_txs_num
 func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {
-	row := hdb.db.QueryRow("SELECT MAX(position) FROM tx WHERE to_forge_l1_txs_num = $1;", toForgeL1TxsNum)
+	row := hdb.db.QueryRow(
+		"SELECT position FROM tx WHERE to_forge_l1_txs_num = $1 ORDER BY position DESC;",
+		toForgeL1TxsNum,
+	)
 	var lastL1TxsPosition int
 	return lastL1TxsPosition, tracerr.Wrap(row.Scan(&lastL1TxsPosition))
 }
@@ -1766,7 +1769,8 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 	metricsTotals := &MetricsTotals{}
 	metrics := &Metrics{}
 	err := meddler.QueryRow(
-		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs, MIN(tx.batch_num) as batch_num 
+		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs,
+		COALESCE (MIN(tx.batch_num), 0) as batch_num 
 		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
 		WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS';`)
 	if err != nil {
@@ -1783,7 +1787,7 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 
 	err = meddler.QueryRow(
 		hdb.db, metricsTotals, `SELECT COUNT(*) AS total_batches, 
-		SUM(total_fees_usd) AS total_fees FROM batch 
+		COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
 		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -1812,7 +1816,8 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 func (hdb *HistoryDB) GetAvgTxFee() (float64, error) {
 	metricsTotals := &MetricsTotals{}
 	err := meddler.QueryRow(
-		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs, MIN(tx.batch_num) as batch_num 
+		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs, 
+		COALESCE (MIN(tx.batch_num), 0) as batch_num 
 		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
 		WHERE block.timestamp >= NOW() - INTERVAL '1 HOURS';`)
 	if err != nil {
@@ -1820,7 +1825,7 @@ func (hdb *HistoryDB) GetAvgTxFee() (float64, error) {
 	}
 	err = meddler.QueryRow(
 		hdb.db, metricsTotals, `SELECT COUNT(*) AS total_batches, 
-		SUM(total_fees_usd) AS total_fees FROM batch 
+		COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
 		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
 	if err != nil {
 		return 0, tracerr.Wrap(err)
