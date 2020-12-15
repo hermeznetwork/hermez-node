@@ -61,9 +61,5 @@ func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBa
 		MaxL1Tx:  64,
 	}
 	ptOut, err := bb.localStateDB.ProcessTxs(ptc, coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	err = bb.localStateDB.MakeCheckpoint()
 	return ptOut.ZKInputs, tracerr.Wrap(err)
 }

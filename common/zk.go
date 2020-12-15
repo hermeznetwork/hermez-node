@@ -221,7 +221,7 @@ type ZKInputs struct {
 	ISInitStateRootFee *big.Int `json:"imInitStateRootFee"` // Hash
 	// ISFinalAccFee final accumulated fees (before computing the fees-tx).
 	// Contains the final values of the ISAccFeeOut parameter
-	ISFinalAccFee []*big.Int `json:"imFinalAccFee"` // big.Int, len: [maxFeeIdxs - 1]
+	ISFinalAccFee []*big.Int `json:"imFinalAccFee"` // big.Int, len: [maxFeeIdxs]
 }
 
 func bigIntsToStrings(v interface{}) interface{} {
@@ -384,7 +384,7 @@ func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatc
 	}
 	zki.ISStateRootFee = newSlice(maxFeeIdxs - 1)
 	zki.ISInitStateRootFee = big.NewInt(0)
-	zki.ISFinalAccFee = newSlice(maxFeeIdxs - 1)
+	zki.ISFinalAccFee = newSlice(maxFeeIdxs)
 
 	return zki
 }
