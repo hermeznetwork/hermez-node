@@ -1019,6 +1019,30 @@ func TestAddEscapeHatchWithdrawals(t *testing.T) {
 	assert.Equal(t, escapeHatchWithdrawals, dbEscapeHatchWithdrawals)
 }
 
+func TestGetMetricsEmpty(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	_, err := historyDB.GetMetrics(0)
+	assert.NoError(t, err)
+}
+
+func TestGetAvgTxFeeEmpty(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	_, err := historyDB.GetAvgTxFee()
+	assert.NoError(t, err)
+}
+
+func TestGetLastL1TxsNum(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	_, err := historyDB.GetLastL1TxsNum()
+	assert.NoError(t, err)
+}
+
+func TestGetLastTxsPosition(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	_, err := historyDB.GetLastTxsPosition(0)
+	assert.Equal(t, sql.ErrNoRows.Error(), err.Error())
+}
+
 // setTestBlocks WARNING: this will delete the blocks and recreate them
 func setTestBlocks(from, to int64) []common.Block {
 	test.WipeDB(historyDB.DB())
