@@ -63,7 +63,7 @@ type Client interface {
 	// Non-blocking
 	CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error
 	// Blocking
-	GetProof(ctx context.Context) (*Proof, error)
+	GetProof(ctx context.Context) (*Proof, []*big.Int, error)
 	// Non-Blocking
 	Cancel(ctx context.Context) error
 	// Blocking
@@ -209,23 +209,23 @@ func (p *ProofServerClient) CalculateProof(ctx context.Context, zkInputs *common
 
 // GetProof retreives the Proof from the ServerProof, blocking until the proof
 // is ready.
-func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, error) {
+func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	if err := p.WaitReady(ctx); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	status, err := p.apiStatus(ctx)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, nil, tracerr.Wrap(err)
 	}
 	if status.Status == StatusCodeSuccess {
 		var proof Proof
 		err := json.Unmarshal([]byte(status.Proof), &proof)
 		if err != nil {
-			return nil, tracerr.Wrap(err)
+			return nil, nil, tracerr.Wrap(err)
 		}
-		return &proof, nil
+		return &proof, nil, nil
 	}
-	return nil, fmt.Errorf("status != StatusCodeSuccess, status = %v", status.Status)
+	return nil, nil, fmt.Errorf("status != StatusCodeSuccess, status = %v", status.Status)
 }
 
 // Cancel cancels any current proof computation
@@ -265,13 +265,13 @@ func (p *MockClient) CalculateProof(ctx context.Context, zkInputs *common.ZKInpu
 }
 
 // GetProof retreives the Proof from the ServerProof
-func (p *MockClient) GetProof(ctx context.Context) (*Proof, error) {
+func (p *MockClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	// Simulate a delay
 	select {
 	case <-time.After(500 * time.Millisecond): //nolint:gomnd
-		return &Proof{}, nil
+		return &Proof{}, nil, nil
 	case <-ctx.Done():
-		return nil, tracerr.Wrap(common.ErrDone)
+		return nil, nil, tracerr.Wrap(common.ErrDone)
 	}
 }
 

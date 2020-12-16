@@ -486,7 +486,8 @@ func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 	}
 
 	if mt != nil {
-		return mt.Update(idx.BigInt(), v)
+		proof, err := mt.Update(idx.BigInt(), v)
+		return proof, tracerr.Wrap(err)
 	}
 	return nil, nil
 }
@@ -502,6 +503,11 @@ func (s *StateDB) MTGetProof(idx common.Idx) (*merkletree.CircomVerifierProof, e
 // MTGetRoot returns the current root of the underlying Merkle Tree
 func (s *StateDB) MTGetRoot() *big.Int {
 	return s.mt.Root().BigInt()
+}
+
+// MerkleTree returns the underlying StateDB merkle tree.  It can be nil.
+func (s *StateDB) MerkleTree() *merkletree.MerkleTree {
+	return s.mt
 }
 
 // LocalStateDB represents the local StateDB which allows to make copies from

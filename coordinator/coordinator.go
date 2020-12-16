@@ -638,21 +638,13 @@ func (p *Pipeline) SetSyncStats(stats *synchronizer.Stats) {
 	p.statsCh <- *stats
 }
 
-// Start the forging pipeline
-func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
-	syncStats *synchronizer.Stats, initSCVars *synchronizer.SCVariables) error {
-	if p.started {
-		log.Fatal("Pipeline already started")
-	}
-	p.started = true
-
-	// Reset pipeline state
+// reset pipeline state
+func (p *Pipeline) reset(batchNum common.BatchNum, lastForgeL1TxsNum int64,
+	initSCVars *synchronizer.SCVariables) error {
 	p.batchNum = batchNum
 	p.lastForgeL1TxsNum = lastForgeL1TxsNum
 	p.vars = *initSCVars
 	p.lastScheduledL1BatchBlockNum = 0
-
-	p.ctx, p.cancel = context.WithCancel(context.Background())
 
 	err := p.txSelector.Reset(p.batchNum)
 	if err != nil {
@@ -662,6 +654,21 @@ func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	return nil
+}
+
+// Start the forging pipeline
+func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
+	syncStats *synchronizer.Stats, initSCVars *synchronizer.SCVariables) error {
+	if p.started {
+		log.Fatal("Pipeline already started")
+	}
+	p.started = true
+
+	if err := p.reset(batchNum, lastForgeL1TxsNum, initSCVars); err != nil {
+		return tracerr.Wrap(err)
+	}
+	p.ctx, p.cancel = context.WithCancel(context.Background())
 
 	queueSize := 1
 	batchChSentServerProof := make(chan *BatchInfo, queueSize)
@@ -840,13 +847,14 @@ func (p *Pipeline) forgeSendServerProof(ctx context.Context, batchNum common.Bat
 
 // waitServerProof gets the generated zkProof & sends it to the SmartContract
 func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) error {
-	proof, err := batchInfo.ServerProof.GetProof(ctx) // blocking call, until not resolved don't continue. Returns when the proof server has calculated the proof
+	proof, pubInputs, err := batchInfo.ServerProof.GetProof(ctx) // blocking call, until not resolved don't continue. Returns when the proof server has calculated the proof
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
 	p.proversPool.Add(batchInfo.ServerProof)
 	batchInfo.ServerProof = nil
 	batchInfo.Proof = proof
+	batchInfo.PublicInputs = pubInputs
 	batchInfo.ForgeBatchArgs = p.prepareForgeBatchArgs(batchInfo)
 	batchInfo.TxStatus = TxStatusPending
 	p.cfg.debugBatchStore(batchInfo)

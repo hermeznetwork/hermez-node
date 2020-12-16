@@ -63,3 +63,8 @@ func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBa
 	ptOut, err := bb.localStateDB.ProcessTxs(ptc, coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs)
 	return ptOut.ZKInputs, tracerr.Wrap(err)
 }
+
+// LocalStateDB returns the underlying LocalStateDB
+func (bb *BatchBuilder) LocalStateDB() *statedb.LocalStateDB {
+	return bb.localStateDB
+}

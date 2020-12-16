@@ -11,14 +11,17 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
+	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test"
+	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-merkletree/db/pebble"
@@ -73,15 +76,29 @@ var syncDBPath string
 var txSelDBPath string
 var batchBuilderDBPath string
 
-func newTestModules(t *testing.T) (*historydb.HistoryDB, *l2db.L2DB,
-	*txselector.TxSelector, *batchbuilder.BatchBuilder) { // FUTURE once Synchronizer is ready, should return it also
+type modules struct {
+	historyDB    *historydb.HistoryDB
+	l2DB         *l2db.L2DB
+	txSelector   *txselector.TxSelector
+	batchBuilder *batchbuilder.BatchBuilder
+	stateDB      *statedb.StateDB
+}
+
+var maxL1UserTxs uint64 = 128
+var maxL1Txs uint64 = 256
+var maxL1CoordinatorTxs uint64 = maxL1Txs - maxL1UserTxs
+var maxTxs uint64 = 376
+var nLevels uint32 = 32   //nolint:deadcode,unused
+var maxFeeTxs uint32 = 64 //nolint:deadcode,varcheck
+
+func newTestModules(t *testing.T) modules {
 	nLevels := 32
 
 	var err error
 	syncDBPath, err = ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncSdb, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, nLevels)
+	syncStateDB, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, nLevels)
 	assert.NoError(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
@@ -94,18 +111,22 @@ func newTestModules(t *testing.T) (*historydb.HistoryDB, *l2db.L2DB,
 	txSelDBPath, err = ioutil.TempDir("", "tmpTxSelDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, txSelDBPath)
-	txsel, err := txselector.NewTxSelector(txSelDBPath, syncSdb, l2DB, 10, 10, 10)
+	txSelector, err := txselector.NewTxSelector(txSelDBPath, syncStateDB, l2DB, maxL1UserTxs, maxL1CoordinatorTxs, maxTxs)
 	assert.NoError(t, err)
 
 	batchBuilderDBPath, err = ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, batchBuilderDBPath)
-	bb, err := batchbuilder.NewBatchBuilder(batchBuilderDBPath, syncSdb, nil, 0, uint64(nLevels))
+	batchBuilder, err := batchbuilder.NewBatchBuilder(batchBuilderDBPath, syncStateDB, nil, 0, uint64(nLevels))
 	assert.NoError(t, err)
 
-	// l1Txs, coordinatorL1Txs, poolL2Txs := test.GenerateTestTxsFromSet(t, test.SetTest0)
-
-	return historyDB, l2DB, txsel, bb
+	return modules{
+		historyDB:    historyDB,
+		l2DB:         l2DB,
+		txSelector:   txSelector,
+		batchBuilder: batchBuilder,
+		stateDB:      syncStateDB,
+	}
 }
 
 type timer struct {
@@ -121,9 +142,8 @@ func (t *timer) Time() int64 {
 var bidder = ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f")
 var forger = ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 
-func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *test.Client, ethClientSetup *test.ClientSetup) *Coordinator {
-	historyDB, l2DB, txsel, bb := newTestModules(t)
-
+func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *test.Client,
+	ethClientSetup *test.ClientSetup, modules modules) *Coordinator {
 	debugBatchPath, err := ioutil.TempDir("", "tmpDebugBatch")
 	require.NoError(t, err)
 	deleteme = append(deleteme, debugBatchPath)
@@ -149,12 +169,38 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		Auction:  *ethClientSetup.AuctionVariables,
 		WDelayer: *ethClientSetup.WDelayerVariables,
 	}
-	coord, err := NewCoordinator(conf, historyDB, l2DB, txsel, bb, serverProofs,
-		ethClient, scConsts, initSCVars)
+	coord, err := NewCoordinator(conf, modules.historyDB, modules.l2DB, modules.txSelector,
+		modules.batchBuilder, serverProofs, ethClient, scConsts, initSCVars)
 	require.NoError(t, err)
 	return coord
 }
 
+func newTestSynchronizer(t *testing.T, ethClient *test.Client, ethClientSetup *test.ClientSetup,
+	modules modules) *synchronizer.Synchronizer {
+	sync, err := synchronizer.NewSynchronizer(ethClient, modules.historyDB, modules.stateDB,
+		synchronizer.Config{
+			StartBlockNum: synchronizer.ConfigStartBlockNum{
+				Rollup:   1,
+				Auction:  1,
+				WDelayer: 1,
+			},
+			InitialVariables: synchronizer.SCVariables{
+				Rollup:   *ethClientSetup.RollupVariables,
+				Auction:  *ethClientSetup.AuctionVariables,
+				WDelayer: *ethClientSetup.WDelayerVariables,
+			},
+		})
+	require.NoError(t, err)
+	return sync
+}
+
+// TestCoordinatorFlow is a test where the coordinator is stared (which means
+// that goroutines are spawned), and ethereum blocks are mined via the
+// test.Client to simulate starting and stopping forging times.  This test
+// works without a synchronizer, and no l2txs are inserted in the pool, so all
+// the batches are forged empty.  The purpose of this test is to manually
+// observe via the logs that nothing crashes and that the coordinator starts
+// and stops forging at the right blocks.
 func TestCoordinatorFlow(t *testing.T) {
 	if os.Getenv("TEST_COORD_FLOW") == "" {
 		return
@@ -162,7 +208,8 @@ func TestCoordinatorFlow(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	modules := newTestModules(t)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 
 	// Bid for slot 2 and 4
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
@@ -242,7 +289,8 @@ func TestCoordinatorStartStop(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	modules := newTestModules(t)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	coord.Start()
 	coord.Stop()
 }
@@ -253,13 +301,15 @@ func TestCoordCanForge(t *testing.T) {
 
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	modules := newTestModules(t)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
 	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
 	require.NoError(t, err)
 
-	bootCoord := newTestCoordinator(t, bootForger, ethClient, ethClientSetup)
+	modules2 := newTestModules(t)
+	bootCoord := newTestCoordinator(t, bootForger, ethClient, ethClientSetup, modules2)
 
 	assert.Equal(t, forger, coord.cfg.ForgerAddress)
 	assert.Equal(t, bootForger, bootCoord.cfg.ForgerAddress)
@@ -293,13 +343,14 @@ func TestCoordCanForge(t *testing.T) {
 	assert.Equal(t, false, bootCoord.canForge(&stats))
 }
 
-func TestCoordHandleMsgSyncStats(t *testing.T) {
+func TestCoordHandleMsgSyncBlock(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
 	bootForger := ethClientSetup.AuctionVariables.BootCoordinator
 
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	modules := newTestModules(t)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
 	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
@@ -355,7 +406,8 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	var timer timer
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup)
+	modules := newTestModules(t)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	pipeline, err := coord.newPipeline(ctx)
 	require.NoError(t, err)
 	pipeline.vars = coord.vars
@@ -412,6 +464,153 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
 	assert.Equal(t, true, pipeline.shouldL1L2Batch())
+}
+
+// ethAddTokens adds the tokens from the blocks to the blockchain
+func ethAddTokens(blocks []common.BlockData, client *test.Client) {
+	for _, block := range blocks {
+		for _, token := range block.Rollup.AddedTokens {
+			consts := eth.ERC20Consts{
+				Name:     fmt.Sprintf("Token %d", token.TokenID),
+				Symbol:   fmt.Sprintf("TK%d", token.TokenID),
+				Decimals: 18,
+			}
+			// tokenConsts[token.TokenID] = consts
+			client.CtlAddERC20(token.EthAddr, consts)
+		}
+	}
+}
+
+const testTokensLen = 3
+const testUsersLen = 4
+
+func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchronizer,
+	historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *til.Context {
+	// Create a set with `testTokensLen` tokens and for each token
+	// `testUsersLen` accounts.
+	var set []til.Instruction
+	// set = append(set, til.Instruction{Typ: "Blockchain"})
+	for tokenID := 1; tokenID < testTokensLen; tokenID++ {
+		set = append(set, til.Instruction{
+			Typ:     til.TypeAddToken,
+			TokenID: common.TokenID(tokenID),
+		})
+	}
+	depositAmount, ok := new(big.Int).SetString("10225000000000000000000000000000000", 10)
+	require.True(t, ok)
+	for tokenID := 0; tokenID < testTokensLen; tokenID++ {
+		for user := 0; user < testUsersLen; user++ {
+			set = append(set, til.Instruction{
+				Typ:           common.TxTypeCreateAccountDeposit,
+				TokenID:       common.TokenID(tokenID),
+				DepositAmount: depositAmount,
+				From:          fmt.Sprintf("User%d", user),
+			})
+		}
+	}
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+
+	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocksFromInstructions(set)
+	require.NoError(t, err)
+	require.NotNil(t, blocks)
+
+	ethAddTokens(blocks, ethClient)
+	err = ethClient.CtlAddBlocks(blocks)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	for {
+		syncBlock, discards, err := sync.Sync2(ctx, nil)
+		require.NoError(t, err)
+		require.Nil(t, discards)
+		if syncBlock == nil {
+			break
+		}
+	}
+	dbTokens, err := historyDB.GetAllTokens()
+	require.Nil(t, err)
+	require.Equal(t, testTokensLen, len(dbTokens))
+
+	dbAccounts, err := historyDB.GetAllAccounts()
+	require.Nil(t, err)
+	require.Equal(t, testTokensLen*testUsersLen, len(dbAccounts))
+
+	sdbAccounts, err := stateDB.GetAccounts()
+	require.Nil(t, err)
+	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
+
+	return tc
+}
+
+func TestPipeline1(t *testing.T) {
+	ethClientSetup := test.NewClientSetupExample()
+
+	var timer timer
+	ctx := context.Background()
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	modules := newTestModules(t)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	sync := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
+	pipeline, err := coord.newPipeline(ctx)
+	require.NoError(t, err)
+
+	require.NotNil(t, sync)
+	require.NotNil(t, pipeline)
+
+	// preload the synchronier (via the test ethClient) some tokens and
+	// users with positive balances
+	tilCtx := preloadSync(t, ethClient, sync, modules.historyDB, modules.stateDB)
+	syncStats := sync.Stats()
+	batchNum := common.BatchNum(syncStats.Sync.LastBatch)
+	syncSCVars := sync.SCVars()
+
+	// Insert some l2txs in the Pool
+	setPool := `
+Type: PoolL2
+
+PoolTransfer(0) User0-User1: 100 (126)
+PoolTransfer(0) User1-User2: 200 (126)
+PoolTransfer(0) User2-User3: 300 (126)
+	`
+	l2txs, err := tilCtx.GeneratePoolL2Txs(setPool)
+	require.NoError(t, err)
+	for _, tx := range l2txs {
+		err := modules.l2DB.AddTxTest(&tx) //nolint:gosec
+		require.NoError(t, err)
+	}
+
+	err = pipeline.reset(batchNum, syncStats.Sync.LastForgeL1TxsNum, &synchronizer.SCVariables{
+		Rollup:   *syncSCVars.Rollup,
+		Auction:  *syncSCVars.Auction,
+		WDelayer: *syncSCVars.WDelayer,
+	})
+	require.NoError(t, err)
+	// Sanity check
+	sdbAccounts, err := pipeline.txSelector.LocalAccountsDB().GetAccounts()
+	require.Nil(t, err)
+	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
+
+	// Sanity check
+	sdbAccounts, err = pipeline.batchBuilder.LocalStateDB().GetAccounts()
+	require.Nil(t, err)
+	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
+
+	// Sanity check
+	require.Equal(t, modules.stateDB.MerkleTree().Root(),
+		pipeline.batchBuilder.LocalStateDB().MerkleTree().Root())
+
+	batchNum++
+	batchInfo, err := pipeline.forgeSendServerProof(ctx, batchNum)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(batchInfo.L2Txs))
+
+	batchNum++
+	batchInfo, err = pipeline.forgeSendServerProof(ctx, batchNum)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(batchInfo.L2Txs))
 }
 
 // TODO: Test Reorg

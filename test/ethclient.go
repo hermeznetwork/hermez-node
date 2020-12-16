@@ -1719,3 +1719,50 @@ func (c *Client) WDelayerConstants() (*common.WDelayerConstants, error) {
 
 	return c.wDelayerConstants, nil
 }
+
+// CtlAddBlocks adds block data to the smarts contracts.  The added blocks will
+// appear as mined.  Not thread safe.
+func (c *Client) CtlAddBlocks(blocks []common.BlockData) (err error) {
+	// NOTE: We don't lock because internally we call public functions that
+	// lock already.
+	for _, block := range blocks {
+		nextBlock := c.nextBlock()
+		rollup := nextBlock.Rollup
+		auction := nextBlock.Auction
+		for _, token := range block.Rollup.AddedTokens {
+			if _, err := c.RollupAddTokenSimple(token.EthAddr, rollup.Vars.FeeAddToken); err != nil {
+				return err
+			}
+		}
+		for _, tx := range block.Rollup.L1UserTxs {
+			c.CtlSetAddr(tx.FromEthAddr)
+			if _, err := c.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.DepositAmount, tx.Amount,
+				uint32(tx.TokenID), int64(tx.ToIdx)); err != nil {
+				return err
+			}
+		}
+		c.CtlSetAddr(auction.Vars.BootCoordinator)
+		for _, batch := range block.Rollup.Batches {
+			if _, err := c.RollupForgeBatch(&eth.RollupForgeBatchArgs{
+				NewLastIdx:            batch.Batch.LastIdx,
+				NewStRoot:             batch.Batch.StateRoot,
+				NewExitRoot:           batch.Batch.ExitRoot,
+				L1CoordinatorTxs:      batch.L1CoordinatorTxs,
+				L1CoordinatorTxsAuths: [][]byte{}, // Intentionally empty
+				L2TxsData:             batch.L2Txs,
+				FeeIdxCoordinator:     batch.Batch.FeeIdxsCoordinator,
+				// Circuit selector
+				VerifierIdx: 0, // Intentionally empty
+				L1Batch:     batch.L1Batch,
+				ProofA:      [2]*big.Int{},    // Intentionally empty
+				ProofB:      [2][2]*big.Int{}, // Intentionally empty
+				ProofC:      [2]*big.Int{},    // Intentionally empty
+			}); err != nil {
+				return err
+			}
+		}
+		// Mine block and sync
+		c.CtlMineBlock()
+	}
+	return nil
+}

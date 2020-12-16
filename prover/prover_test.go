@@ -53,7 +53,7 @@ func testCalculateProof(t *testing.T) {
 }
 
 func testGetProof(t *testing.T) {
-	proof, err := proofServerClient.GetProof(context.Background())
+	proof, _, err := proofServerClient.GetProof(context.Background())
 	require.NoError(t, err)
 	require.NotNil(t, proof)
 	require.NotNil(t, proof.PiA)
