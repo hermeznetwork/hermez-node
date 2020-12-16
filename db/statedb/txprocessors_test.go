@@ -23,7 +23,7 @@ func checkBalance(t *testing.T, tc *til.Context, sdb *StateDB, username string, 
 	assert.Equal(t, expected, acc.Balance.String())
 }
 
-func TestCheckL1TxInvalidData(t *testing.T) {
+func TestComputeEffectiveAmounts(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
@@ -80,7 +80,7 @@ func TestCheckL1TxInvalidData(t *testing.T) {
 	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
-	// expect no-error due not enough funds in a
+	// expect no-error as there are enough funds in a
 	// CreateAccountDepositTransfer transction
 	tx = common.L1Tx{
 		FromIdx:       0,
@@ -130,6 +130,35 @@ func TestCheckL1TxInvalidData(t *testing.T) {
 	}
 	sdb.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
+
+	// expect on TxTypeDepositTransfer EffectiveAmount=0, but
+	// EffectiveDepositAmount!=0, due not enough funds to make the transfer
+	tx = common.L1Tx{
+		FromIdx:       256,
+		ToIdx:         257,
+		Amount:        big.NewInt(20),
+		DepositAmount: big.NewInt(8),
+		FromEthAddr:   tc.Users["A"].Addr,
+		UserOrigin:    true,
+	}
+	sdb.computeEffectiveAmounts(&tx)
+	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
+
+	// expect on TxTypeDepositTransfer EffectiveAmount=0, but
+	// EffectiveDepositAmount!=0, due different EthAddr from FromIdx
+	// address
+	tx = common.L1Tx{
+		FromIdx:       256,
+		ToIdx:         257,
+		Amount:        big.NewInt(8),
+		DepositAmount: big.NewInt(8),
+		FromEthAddr:   tc.Users["B"].Addr,
+		UserOrigin:    true,
+	}
+	sdb.computeEffectiveAmounts(&tx)
+	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 }
 
@@ -477,6 +506,8 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, common.TokenID(1), acc.TokenID)
 	assert.Equal(t, "2", acc.Balance.String())
+
+	assert.Equal(t, "2720257526434001367979405991743527513807903085728407823609738212616896104498", sdb.mt.Root().BigInt().String())
 }
 
 func TestProcessTxsRootTestVectors(t *testing.T) {
