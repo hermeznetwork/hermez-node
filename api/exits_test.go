@@ -124,7 +124,7 @@ func TestGetExits(t *testing.T) {
 		}
 	}
 	path = fmt.Sprintf(
-		"%s?hermezEthereumAddress=%s&limit=%d",
+		"%s?hezEthereumAddress=%s&limit=%d",
 		endpoint, account.EthAddr, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
@@ -244,7 +244,7 @@ func TestGetExits(t *testing.T) {
 	assertExitAPIs(t, flipedExits, fetchedExits)
 	// 400
 	path = fmt.Sprintf(
-		"%s?accountIndex=%s&hermezEthereumAddress=%s",
+		"%s?accountIndex=%s&hezEthereumAddress=%s",
 		endpoint, idx, account.EthAddr,
 	)
 	err = doBadReq("GET", path, nil, 400)

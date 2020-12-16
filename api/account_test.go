@@ -81,14 +81,14 @@ func TestGetAccounts(t *testing.T) {
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Filter by ethAddr
-	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&limit=%d", endpoint, tc.accounts[3].EthAddr, limit)
+	path = fmt.Sprintf("%s?hezEthereumAddress=%s&limit=%d", endpoint, tc.accounts[3].EthAddr, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// both filters (incompatible)
-	path = fmt.Sprintf("%s?hermezEthereumAddress=%s&BJJ=%s&limit=%d", endpoint, tc.accounts[0].EthAddr, tc.accounts[0].PublicKey, limit)
+	path = fmt.Sprintf("%s?hezEthereumAddress=%s&BJJ=%s&limit=%d", endpoint, tc.accounts[0].EthAddr, tc.accounts[0].PublicKey, limit)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
 	fetchedAccounts = []testAccount{}
@@ -143,6 +143,11 @@ func TestGetAccounts(t *testing.T) {
 		}
 		assert.Equal(t, reversedAccounts[i], fetchedAccounts[len(fetchedAccounts)-1-i])
 	}
+
+	// 400
+	path = fmt.Sprintf("%s?hezEthereumAddress=hez:0x123456", endpoint)
+	err = doBadReq("GET", path, nil, 400)
+	assert.NoError(t, err)
 
 	// Test GetAccount
 	path = fmt.Sprintf("%s/%s", endpoint, fetchedAccounts[2].Idx)
