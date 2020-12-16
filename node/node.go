@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -144,7 +145,12 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			cfg.Coordinator.L2DB.TTL.Duration,
 		)
 		// TODO: Get (maxL1UserTxs, maxL1OperatorTxs, maxTxs) from the smart contract
-		txSelector, err := txselector.NewTxSelector(cfg.Coordinator.TxSelector.Path, stateDB, l2DB, 10, 10, 10)
+		coordAccount := &txselector.CoordAccount{ // TODO TMP
+			Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+			BJJ:                 nil,
+			AccountCreationAuth: nil,
+		}
+		txSelector, err := txselector.NewTxSelector(coordAccount, cfg.Coordinator.TxSelector.Path, stateDB, l2DB)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}

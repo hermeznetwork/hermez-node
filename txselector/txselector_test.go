@@ -20,54 +20,84 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func initTest(t *testing.T, testSet string, maxL1UserTxs, maxL1OperatorTxs, maxTxs uint64) *TxSelector {
+func initTest(t *testing.T, testSet string) *TxSelector {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
 
 	dir, err := ioutil.TempDir("", "tmpdb")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
-	txsel, err := NewTxSelector(txselDir, sdb, l2DB, maxL1UserTxs, maxL1OperatorTxs, maxTxs)
-	require.Nil(t, err)
+
+	coordAccount := &CoordAccount{ // TODO TMP
+		Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+		BJJ:                 nil,
+		AccountCreationAuth: nil,
+	}
+
+	txsel, err := NewTxSelector(coordAccount, txselDir, sdb, l2DB)
+	require.NoError(t, err)
 
 	return txsel
 }
 func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []common.PoolL2Tx) {
 	for i := 0; i < len(poolL2Txs); i++ {
 		err := txsel.l2db.AddTxTest(&poolL2Txs[i])
-		require.Nil(t, err)
+		require.NoError(t, err)
 	}
 }
 
 func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 	hdb := historydb.NewHistoryDB(db)
 	test.WipeDB(hdb.DB())
-	assert.Nil(t, hdb.AddBlock(&common.Block{
+	assert.NoError(t, hdb.AddBlock(&common.Block{
 		Num: 1,
 	}))
-	assert.Nil(t, hdb.AddTokens(tokens))
+	assert.NoError(t, hdb.AddTokens(tokens))
+}
+
+func TestCoordIdxsDB(t *testing.T) {
+	txsel := initTest(t, til.SetPool0)
+	test.WipeDB(txsel.l2db.DB())
+
+	coordIdxs := make(map[common.TokenID]common.Idx)
+	coordIdxs[common.TokenID(0)] = common.Idx(256)
+	coordIdxs[common.TokenID(1)] = common.Idx(257)
+	coordIdxs[common.TokenID(2)] = common.Idx(258)
+
+	err := txsel.AddCoordIdxs(coordIdxs)
+	assert.NoError(t, err)
+
+	r, err := txsel.GetCoordIdxs()
+	assert.NoError(t, err)
+	assert.Equal(t, coordIdxs, r)
 }
 
 func TestGetL2TxSelection(t *testing.T) {
-	txsel := initTest(t, til.SetPool0, 5, 5, 10)
+	txsel := initTest(t, til.SetPool0)
 	test.WipeDB(txsel.l2db.DB())
 
 	tc := til.NewContext(common.RollupConstMaxL1UserTx)
 	// generate test transactions
 	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	// poolL2Txs, err := tc.GeneratePoolL2Txs(til.SetPool0)
 	// assert.Nil(t, err)
 
-	coordIdxs := []common.Idx{256, 257, 258, 259}
+	coordIdxs := make(map[common.TokenID]common.Idx)
+	coordIdxs[common.TokenID(0)] = common.Idx(256)
+	coordIdxs[common.TokenID(1)] = common.Idx(257)
+	coordIdxs[common.TokenID(2)] = common.Idx(258)
+	coordIdxs[common.TokenID(3)] = common.Idx(259)
+	err = txsel.AddCoordIdxs(coordIdxs)
+	assert.NoError(t, err)
 
 	// add tokens to HistoryDB to avoid breaking FK constrains
 	var tokens []common.Token
@@ -89,21 +119,27 @@ func TestGetL2TxSelection(t *testing.T) {
 		MaxTx:    512,
 		MaxL1Tx:  64,
 	}
+	selectionConfig := &SelectionConfig{
+		MaxL1UserTxs:        32,
+		MaxL1CoordinatorTxs: 32,
+		ProcessTxsConfig:    ptc,
+	}
+
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
 	_, err = txsel.localAccountsDB.ProcessTxs(ptc, nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// add the 1st batch of transactions to the TxSelector
 	addL2Txs(t, txsel, common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[0].L2Txs))
 
-	l1CoordTxs, l2Txs, err := txsel.GetL2TxSelection(coordIdxs, 0)
-	assert.Nil(t, err)
+	_, l1CoordTxs, l2Txs, err := txsel.GetL2TxSelection(selectionConfig, 0)
+	assert.NoError(t, err)
 	assert.Equal(t, 0, len(l2Txs))
 	assert.Equal(t, 0, len(l1CoordTxs))
 
-	_, _, _, err = txsel.GetL1L2TxSelection(coordIdxs, 0, blocks[0].Rollup.L1UserTxs)
-	assert.Nil(t, err)
+	_, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, 0, blocks[0].Rollup.L1UserTxs)
+	assert.NoError(t, err)
 
 	// TODO once L2DB is updated to return error in case that AddTxTest
 	// fails, and the Til is updated, update this test, checking that the

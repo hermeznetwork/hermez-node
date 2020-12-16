@@ -111,7 +111,13 @@ func newTestModules(t *testing.T) modules {
 	txSelDBPath, err = ioutil.TempDir("", "tmpTxSelDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, txSelDBPath)
-	txSelector, err := txselector.NewTxSelector(txSelDBPath, syncStateDB, l2DB, maxL1UserTxs, maxL1CoordinatorTxs, maxTxs)
+
+	coordAccount := &txselector.CoordAccount{ // TODO TMP
+		Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+		BJJ:                 nil,
+		AccountCreationAuth: nil,
+	}
+	txSelector, err := txselector.NewTxSelector(coordAccount, txSelDBPath, syncStateDB, l2DB)
 	assert.NoError(t, err)
 
 	batchBuilderDBPath, err = ioutil.TempDir("", "tmpBatchBuilderDB")
@@ -603,12 +609,24 @@ PoolTransfer(0) User2-User3: 300 (126)
 		pipeline.batchBuilder.LocalStateDB().MerkleTree().Root())
 
 	batchNum++
-	batchInfo, err := pipeline.forgeBatch(ctx, batchNum)
+
+	selectionConfig := &txselector.SelectionConfig{
+		MaxL1UserTxs:        maxL1UserTxs,
+		MaxL1CoordinatorTxs: maxL1CoordinatorTxs,
+		ProcessTxsConfig: statedb.ProcessTxsConfig{
+			NLevels:  nLevels,
+			MaxFeeTx: maxFeeTxs,
+			MaxTx:    uint32(maxTxs),
+			MaxL1Tx:  uint32(maxL1Txs),
+		},
+	}
+
+	batchInfo, err := pipeline.forgeBatch(ctx, batchNum, selectionConfig)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(batchInfo.L2Txs))
 
 	batchNum++
-	batchInfo, err = pipeline.forgeBatch(ctx, batchNum)
+	batchInfo, err = pipeline.forgeBatch(ctx, batchNum, selectionConfig)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(batchInfo.L2Txs))
 }
