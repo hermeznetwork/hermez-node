@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"path"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -29,6 +30,7 @@ type BatchInfo struct {
 	ServerProof    prover.Client
 	ZKInputs       *common.ZKInputs
 	Proof          *prover.Proof
+	PublicInputs   []*big.Int
 	L1UserTxsExtra []common.L1Tx
 	L1CoordTxs     []common.L1Tx
 	L2Txs          []common.PoolL2Tx

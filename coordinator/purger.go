@@ -143,8 +143,11 @@ func poolMarkInvalidOldNonces(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 				return tracerr.Wrap(err)
 			} else if idx <= lastIdx {
 				return tracerr.Wrap(fmt.Errorf("account with idx %v not found: %w", idx, err))
+			} else {
+				return tracerr.Wrap(fmt.Errorf("unexpected stateDB error with idx %v: %w", idx, err))
 			}
 		}
+		fmt.Printf("DBG acc: %#v\n", acc)
 		idxsNonce[i].Idx = idx
 		idxsNonce[i].Nonce = acc.Nonce
 	}

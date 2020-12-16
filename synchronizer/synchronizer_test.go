@@ -270,44 +270,6 @@ func ethAddTokens(blocks []common.BlockData, client *test.Client) {
 	}
 }
 
-// ethAddBlocks adds block data to the smart contracts
-func ethAddBlocks(t *testing.T, blocks []common.BlockData,
-	client *test.Client, clientSetup *test.ClientSetup) {
-	for _, block := range blocks {
-		for _, token := range block.Rollup.AddedTokens {
-			_, err := client.RollupAddTokenSimple(token.EthAddr, clientSetup.RollupVariables.FeeAddToken)
-			require.Nil(t, err)
-		}
-		for _, tx := range block.Rollup.L1UserTxs {
-			client.CtlSetAddr(tx.FromEthAddr)
-			_, err := client.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.DepositAmount, tx.Amount,
-				uint32(tx.TokenID), int64(tx.ToIdx))
-			require.Nil(t, err)
-		}
-		client.CtlSetAddr(clientSetup.AuctionVariables.BootCoordinator)
-		for _, batch := range block.Rollup.Batches {
-			_, err := client.RollupForgeBatch(&eth.RollupForgeBatchArgs{
-				NewLastIdx:            batch.Batch.LastIdx,
-				NewStRoot:             batch.Batch.StateRoot,
-				NewExitRoot:           batch.Batch.ExitRoot,
-				L1CoordinatorTxs:      batch.L1CoordinatorTxs,
-				L1CoordinatorTxsAuths: [][]byte{}, // Intentionally empty
-				L2TxsData:             batch.L2Txs,
-				FeeIdxCoordinator:     batch.Batch.FeeIdxsCoordinator,
-				// Circuit selector
-				VerifierIdx: 0, // Intentionally empty
-				L1Batch:     batch.L1Batch,
-				ProofA:      [2]*big.Int{},    // Intentionally empty
-				ProofB:      [2][2]*big.Int{}, // Intentionally empty
-				ProofC:      [2]*big.Int{},    // Intentionally empty
-			})
-			require.Nil(t, err)
-		}
-		// Mine block and sync
-		client.CtlMineBlock()
-	}
-}
-
 func TestSync(t *testing.T) {
 	//
 	// Setup
@@ -320,7 +282,7 @@ func TestSync(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	stateDB, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Init History DB
 	pass := os.Getenv("POSTGRES_PASS")
@@ -452,13 +414,14 @@ func TestSync(t *testing.T) {
 	ethAddTokens(blocks, client)
 
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tc.FillBlocksL1UserTxsBatchNum(blocks)
 	err = tc.FillBlocksForgedL1UserTxs(blocks)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add block data to the smart contracts
-	ethAddBlocks(t, blocks, client, clientSetup)
+	err = client.CtlAddBlocks(blocks)
+	require.NoError(t, err)
 
 	//
 	// Sync to synchronize the current state from the test smart contracts,
@@ -629,11 +592,12 @@ func TestSync(t *testing.T) {
 	ethAddTokens(blocks, client)
 
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tc.FillBlocksL1UserTxsBatchNum(blocks)
 
 	// Add block data to the smart contracts
-	ethAddBlocks(t, blocks, client, clientSetup)
+	err = client.CtlAddBlocks(blocks)
+	require.NoError(t, err)
 
 	// First sync detects the reorg and discards 4 blocks
 	syncBlock, discards, err = s.Sync2(ctx, nil)
