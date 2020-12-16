@@ -13,11 +13,10 @@ import (
 )
 
 const (
-	flagCfg      = "cfg"
-	flagCoordCfg = "coordcfg"
-	flagMode     = "mode"
-	modeSync     = "sync"
-	modeCoord    = "coord"
+	flagCfg   = "cfg"
+	flagMode  = "mode"
+	modeSync  = "sync"
+	modeCoord = "coord"
 )
 
 func cmdInit(c *cli.Context) error {
@@ -35,7 +34,7 @@ func cmdRun(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	node, err := node.NewNode(cfg.mode, cfg.node, cfg.coord)
+	node, err := node.NewNode(cfg.mode, cfg.node)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
 	}
@@ -61,9 +60,8 @@ func cmdRun(c *cli.Context) error {
 
 // Config is the configuration of the hermez node execution
 type Config struct {
-	mode  node.Mode
-	node  *config.Node
-	coord *config.Coordinator
+	mode node.Mode
+	node *config.Node
 }
 
 func parseCli(c *cli.Context) (*Config, error) {
@@ -80,36 +78,27 @@ func parseCli(c *cli.Context) (*Config, error) {
 func getConfig(c *cli.Context) (*Config, error) {
 	var cfg Config
 	mode := c.String(flagMode)
-	switch mode {
-	case modeSync:
-		cfg.mode = node.ModeSynchronizer
-	case modeCoord:
-		cfg.mode = node.ModeCoordinator
-	default:
-		return nil, tracerr.Wrap(fmt.Errorf("invalid mode \"%v\"", mode))
-	}
-
-	if cfg.mode == node.ModeCoordinator {
-		coordCfgPath := c.String(flagCoordCfg)
-		if coordCfgPath == "" {
-			return nil, tracerr.Wrap(fmt.Errorf("required flag \"%v\" not set", flagCoordCfg))
-		}
-		coordCfg, err := config.LoadCoordinator(coordCfgPath)
-		if err != nil {
-			return nil, tracerr.Wrap(err)
-		}
-		cfg.coord = coordCfg
-	}
 	nodeCfgPath := c.String(flagCfg)
 	if nodeCfgPath == "" {
 		return nil, tracerr.Wrap(fmt.Errorf("required flag \"%v\" not set", flagCfg))
 	}
-	nodeCfg, err := config.LoadNode(nodeCfgPath)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
+	var err error
+	switch mode {
+	case modeSync:
+		cfg.mode = node.ModeSynchronizer
+		cfg.node, err = config.LoadNode(nodeCfgPath)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	case modeCoord:
+		cfg.mode = node.ModeCoordinator
+		cfg.node, err = config.LoadCoordinator(nodeCfgPath)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	default:
+		return nil, tracerr.Wrap(fmt.Errorf("invalid mode \"%v\"", mode))
 	}
-	// nodeCfg.Synchronizer.InitialVariables.WDelayer.HermezRollupAddress = nodeCfg.SmartContracts.Rollup
-	cfg.node = nodeCfg
 
 	return &cfg, nil
 }
@@ -128,10 +117,6 @@ func main() {
 			Name:     flagCfg,
 			Usage:    "Node configuration `FILE`",
 			Required: true,
-		},
-		&cli.StringFlag{
-			Name:  flagCoordCfg,
-			Usage: "Coordinator configuration `FILE`",
 		},
 	}
 
