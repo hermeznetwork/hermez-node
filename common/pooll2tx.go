@@ -50,49 +50,62 @@ type PoolL2Tx struct {
 
 // NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated
 // from the L2Tx values
-func NewPoolL2Tx(poolL2Tx *PoolL2Tx) (*PoolL2Tx, error) {
-	// calculate TxType
-	var txType TxType
-	if poolL2Tx.ToIdx >= IdxUserThreshold {
-		txType = TxTypeTransfer
-	} else if poolL2Tx.ToIdx == 1 {
-		txType = TxTypeExit
-	} else if poolL2Tx.ToIdx == 0 {
-		if poolL2Tx.ToBJJ != nil && poolL2Tx.ToEthAddr == FFAddr {
-			txType = TxTypeTransferToBJJ
-		} else if poolL2Tx.ToEthAddr != FFAddr && poolL2Tx.ToEthAddr != EmptyAddr {
-			txType = TxTypeTransferToEthAddr
+func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
+	txTypeOld := tx.Type
+	if err := tx.SetType(); err != nil {
+		return nil, err
+	}
+	// If original Type doesn't match the correct one, return error
+	if txTypeOld != "" && txTypeOld != tx.Type {
+		return nil, tracerr.Wrap(fmt.Errorf("L2Tx.Type: %s, should be: %s",
+			tx.Type, txTypeOld))
+	}
+
+	txIDOld := tx.TxID
+	if err := tx.SetID(); err != nil {
+		return nil, err
+	}
+	// If original TxID doesn't match the correct one, return error
+	if txIDOld != (TxID{}) && txIDOld != tx.TxID {
+		return tx, tracerr.Wrap(fmt.Errorf("PoolL2Tx.TxID: %s, should be: %s",
+			tx.TxID.String(), txIDOld.String()))
+	}
+
+	return tx, nil
+}
+
+// SetType sets the type of the transaction
+func (tx *PoolL2Tx) SetType() error {
+	if tx.ToIdx >= IdxUserThreshold {
+		tx.Type = TxTypeTransfer
+	} else if tx.ToIdx == 1 {
+		tx.Type = TxTypeExit
+	} else if tx.ToIdx == 0 {
+		if tx.ToBJJ != nil && tx.ToEthAddr == FFAddr {
+			tx.Type = TxTypeTransferToBJJ
+		} else if tx.ToEthAddr != FFAddr && tx.ToEthAddr != EmptyAddr {
+			tx.Type = TxTypeTransferToEthAddr
 		}
 	} else {
-		return nil, tracerr.Wrap(errors.New("malformed transaction"))
+		return tracerr.Wrap(errors.New("malformed transaction"))
 	}
+	return nil
+}
 
-	// if TxType!=poolL2Tx.TxType return error
-	if poolL2Tx.Type != "" && poolL2Tx.Type != txType {
-		return poolL2Tx, tracerr.Wrap(fmt.Errorf("type: %s, should be: %s", poolL2Tx.Type, txType))
-	}
-	poolL2Tx.Type = txType
-
-	var txid [TxIDLen]byte
-	txid[0] = TxIDPrefixL2Tx
-	fromIdxBytes, err := poolL2Tx.FromIdx.Bytes()
+// SetID sets the ID of the transaction.  Uses (FromIdx, Nonce).
+func (tx *PoolL2Tx) SetID() error {
+	tx.TxID[0] = TxIDPrefixL2Tx
+	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
-		return poolL2Tx, tracerr.Wrap(err)
+		return tracerr.Wrap(err)
 	}
-	copy(txid[1:7], fromIdxBytes[:])
-	nonceBytes, err := poolL2Tx.Nonce.Bytes()
+	copy(tx.TxID[1:7], fromIdxBytes[:])
+	nonceBytes, err := tx.Nonce.Bytes()
 	if err != nil {
-		return poolL2Tx, tracerr.Wrap(err)
+		return tracerr.Wrap(err)
 	}
-	copy(txid[7:12], nonceBytes[:])
-	txID := TxID(txid)
-
-	// if TxID!=poolL2Tx.TxID return error
-	if poolL2Tx.TxID != (TxID{}) && poolL2Tx.TxID != txID {
-		return poolL2Tx, tracerr.Wrap(fmt.Errorf("id: %s, should be: %s", poolL2Tx.TxID.String(), txID.String()))
-	}
-	poolL2Tx.TxID = txID
-	return poolL2Tx, nil
+	copy(tx.TxID[7:12], nonceBytes[:])
+	return nil
 }
 
 // TxCompressedData spec:
@@ -305,11 +318,11 @@ func (tx PoolL2Tx) Tx() Tx {
 
 // PoolL2TxsToL2Txs returns an array of []L2Tx from an array of []PoolL2Tx
 func PoolL2TxsToL2Txs(txs []PoolL2Tx) ([]L2Tx, error) {
-	var r []L2Tx
-	for _, poolTx := range txs {
-		r = append(r, poolTx.L2Tx())
+	l2Txs := make([]L2Tx, len(txs))
+	for i, poolTx := range txs {
+		l2Txs[i] = poolTx.L2Tx()
 	}
-	return r, nil
+	return l2Txs, nil
 }
 
 // PoolL2TxState is a struct that represents the status of a L2 transaction

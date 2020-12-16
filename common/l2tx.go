@@ -24,38 +24,57 @@ type L2Tx struct {
 
 // NewL2Tx returns the given L2Tx with the TxId & Type parameters calculated
 // from the L2Tx values
-func NewL2Tx(l2Tx *L2Tx) (*L2Tx, error) {
-	// calculate TxType
-	var txType TxType
-	if l2Tx.ToIdx == Idx(1) {
-		txType = TxTypeExit
-	} else if l2Tx.ToIdx >= IdxUserThreshold {
-		txType = TxTypeTransfer
+func NewL2Tx(tx *L2Tx) (*L2Tx, error) {
+	txTypeOld := tx.Type
+	if err := tx.SetType(); err != nil {
+		return nil, err
+	}
+	// If original Type doesn't match the correct one, return error
+	if txTypeOld != "" && txTypeOld != tx.Type {
+		return nil, tracerr.Wrap(fmt.Errorf("L2Tx.Type: %s, should be: %s",
+			tx.Type, txTypeOld))
+	}
+
+	txIDOld := tx.TxID
+	if err := tx.SetID(); err != nil {
+		return nil, err
+	}
+	// If original TxID doesn't match the correct one, return error
+	if txIDOld != (TxID{}) && txIDOld != tx.TxID {
+		return tx, tracerr.Wrap(fmt.Errorf("L2Tx.TxID: %s, should be: %s",
+			tx.TxID.String(), txIDOld.String()))
+	}
+
+	return tx, nil
+}
+
+// SetType sets the type of the transaction.  Uses (FromIdx, Nonce).
+func (tx *L2Tx) SetType() error {
+	if tx.ToIdx == Idx(1) {
+		tx.Type = TxTypeExit
+	} else if tx.ToIdx >= IdxUserThreshold {
+		tx.Type = TxTypeTransfer
 	} else {
-		return l2Tx, tracerr.Wrap(fmt.Errorf("Can not determine type of L2Tx, invalid ToIdx value: %d", l2Tx.ToIdx))
+		return tracerr.Wrap(fmt.Errorf(
+			"cannot determine type of L2Tx, invalid ToIdx value: %d", tx.ToIdx))
 	}
+	return nil
+}
 
-	// if TxType!=l2Tx.TxType return error
-	if l2Tx.Type != "" && l2Tx.Type != txType {
-		return l2Tx, tracerr.Wrap(fmt.Errorf("L2Tx.Type: %s, should be: %s", l2Tx.Type, txType))
-	}
-	l2Tx.Type = txType
-
-	var txid [TxIDLen]byte
-	txid[0] = TxIDPrefixL2Tx
-	fromIdxBytes, err := l2Tx.FromIdx.Bytes()
+// SetID sets the ID of the transaction
+func (tx *L2Tx) SetID() error {
+	tx.TxID[0] = TxIDPrefixL2Tx
+	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
-		return l2Tx, tracerr.Wrap(err)
+		return tracerr.Wrap(err)
 	}
-	copy(txid[1:7], fromIdxBytes[:])
-	nonceBytes, err := l2Tx.Nonce.Bytes()
+	copy(tx.TxID[1:7], fromIdxBytes[:])
+	nonceBytes, err := tx.Nonce.Bytes()
 	if err != nil {
-		return l2Tx, tracerr.Wrap(err)
+		return tracerr.Wrap(err)
 	}
-	copy(txid[7:12], nonceBytes[:])
-	l2Tx.TxID = TxID(txid)
-
-	return l2Tx, nil
+	copy(tx.TxID[7:12], nonceBytes[:])
+	return nil
 }
 
 // Tx returns a *Tx from the L2Tx

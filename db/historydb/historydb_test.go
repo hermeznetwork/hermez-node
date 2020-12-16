@@ -144,9 +144,9 @@ func TestBatches(t *testing.T) {
 		CoordUser:     "A",
 	}
 	blocks, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	// Insert to DB
 	batches := []common.Batch{}
 	tokensValue := make(map[common.TokenID]float64)
@@ -365,9 +365,9 @@ func TestTxs(t *testing.T) {
 		CoordUser:     "A",
 	}
 	blocks, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	// Sanity check
 	require.Equal(t, 7, len(blocks))
@@ -617,7 +617,7 @@ func TestGetUnforgedL1UserTxs(t *testing.T) {
 	`
 	tc := til.NewContext(128)
 	blocks, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// Sanity check
 	require.Equal(t, 1, len(blocks))
 	require.Equal(t, 5, len(blocks[0].Rollup.L1UserTxs))
@@ -626,17 +626,17 @@ func TestGetUnforgedL1UserTxs(t *testing.T) {
 
 	for i := range blocks {
 		err = historyDB.AddBlockSCData(&blocks[i])
-		require.Nil(t, err)
+		require.NoError(t, err)
 	}
 
 	l1UserTxs, err := historyDB.GetUnforgedL1UserTxs(toForgeL1TxsNum)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 5, len(l1UserTxs))
 	assert.Equal(t, blocks[0].Rollup.L1UserTxs, l1UserTxs)
 
 	// No l1UserTxs for this toForgeL1TxsNum
 	l1UserTxs, err = historyDB.GetUnforgedL1UserTxs(2)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, len(l1UserTxs))
 }
 
@@ -685,9 +685,9 @@ func TestSetInitialSCVars(t *testing.T) {
 	assert.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))
 	rollup, auction, wDelayer := exampleInitSCVars()
 	err = historyDB.SetInitialSCVars(rollup, auction, wDelayer)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	dbRollup, dbAuction, dbWDelayer, err := historyDB.GetSCVars()
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, rollup, dbRollup)
 	require.Equal(t, auction, dbAuction)
 	require.Equal(t, wDelayer, dbWDelayer)
@@ -718,16 +718,16 @@ func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
 		CoordUser:     "A",
 	}
 	blocks, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	err = tc.FillBlocksForgedL1UserTxs(blocks)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Add only first block so that the L1UserTxs are not marked as forged
 	for i := range blocks[:1] {
 		err = historyDB.AddBlockSCData(&blocks[i])
-		require.Nil(t, err)
+		require.NoError(t, err)
 	}
 	// Add second batch to trigger the update of the batch_num,
 	// while avoiding the implicit call of setL1UserTxEffectiveAmounts
@@ -735,7 +735,7 @@ func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
 	assert.NoError(t, err)
 	err = historyDB.addBatch(historyDB.db, &blocks[1].Rollup.Batches[0].Batch)
 	assert.NoError(t, err)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Set the Effective{Amount,DepositAmount} of the L1UserTxs that are forged in the second block
 	l1Txs := blocks[1].Rollup.Batches[0].L1UserTxs
@@ -805,14 +805,14 @@ func TestUpdateExitTree(t *testing.T) {
 		CoordUser:     "A",
 	}
 	blocks, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	// Add all blocks except for the last two
 	for i := range blocks[:len(blocks)-2] {
 		err = historyDB.AddBlockSCData(&blocks[i])
-		require.Nil(t, err)
+		require.NoError(t, err)
 	}
 
 	// Add withdraws to the second-to-last block, and insert block into the DB
@@ -832,15 +832,15 @@ func TestUpdateExitTree(t *testing.T) {
 			Owner: tc.UsersByIdx[259].Addr, Token: tokenAddr},
 	)
 	err = historyDB.addBlock(historyDB.db, &block.Block)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	err = historyDB.updateExitTree(historyDB.db, block.Block.Num,
 		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Check that exits in DB match with the expected values
 	dbExits, err := historyDB.GetAllExits()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 4, len(dbExits))
 	dbExitsByIdx := make(map[common.Idx]common.ExitInfo)
 	for _, dbExit := range dbExits {
@@ -865,15 +865,15 @@ func TestUpdateExitTree(t *testing.T) {
 			Amount: big.NewInt(80),
 		})
 	err = historyDB.addBlock(historyDB.db, &block.Block)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	err = historyDB.updateExitTree(historyDB.db, block.Block.Num,
 		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Check that delayed withdrawn has been set
 	dbExits, err = historyDB.GetAllExits()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	for _, dbExit := range dbExits {
 		dbExitsByIdx[dbExit.AccountIdx] = dbExit
 	}
@@ -885,16 +885,16 @@ func TestGetBestBidCoordinator(t *testing.T) {
 
 	rollup, auction, wDelayer := exampleInitSCVars()
 	err := historyDB.SetInitialSCVars(rollup, auction, wDelayer)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	tc := til.NewContext(common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(`
 		Type: Blockchain
 		> block // blockNum=2
 	`)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = historyDB.AddBlockSCData(&blocks[0])
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	coords := []common.Coordinator{
 		{
@@ -911,7 +911,7 @@ func TestGetBestBidCoordinator(t *testing.T) {
 		},
 	}
 	err = historyDB.addCoordinators(historyDB.db, coords)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = historyDB.addBids(historyDB.db, []common.Bid{
 		{
 			SlotNum:     10,
@@ -926,10 +926,10 @@ func TestGetBestBidCoordinator(t *testing.T) {
 			Bidder:      coords[1].Bidder,
 		},
 	})
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	forger10, err := historyDB.GetBestBidCoordinator(10)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, coords[1].Forger, forger10.Forger)
 	require.Equal(t, coords[1].Bidder, forger10.Bidder)
 	require.Equal(t, coords[1].URL, forger10.URL)
