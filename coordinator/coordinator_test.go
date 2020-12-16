@@ -417,6 +417,6 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 // TODO: Test Reorg
 // TODO: Test Pipeline
 // TODO: Test TxMonitor
-// TODO: Test forgeSendServerProof
+// TODO: Test forgeBatch
 // TODO: Test waitServerProof
 // TODO: Test handleReorg
