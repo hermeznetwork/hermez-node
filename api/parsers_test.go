@@ -163,7 +163,7 @@ func TestParsePagination(t *testing.T) {
 }
 
 func TestParseQueryHezEthAddr(t *testing.T) {
-	name := "hermezEthereumAddress"
+	name := "hezEthereumAddress"
 	c := &queryParser{}
 	c.m = make(map[string]string)
 	ethAddr := ethCommon.BigToAddress(big.NewInt(int64(347683)))

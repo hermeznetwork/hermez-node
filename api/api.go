@@ -72,7 +72,7 @@ func NewAPI(
 	if coordinatorEndpoints {
 		// Account
 		server.POST("/account-creation-authorization", a.postAccountCreationAuth)
-		server.GET("/account-creation-authorization/:hermezEthereumAddress", a.getAccountCreationAuth)
+		server.GET("/account-creation-authorization/:hezEthereumAddress", a.getAccountCreationAuth)
 		// Transaction
 		server.POST("/transactions-pool", a.postPoolTx)
 		server.GET("/transactions-pool/:id", a.getPoolTx)

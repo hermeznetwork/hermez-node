@@ -82,7 +82,7 @@ func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolin
 }
 
 func parseQueryHezEthAddr(c querier) (*ethCommon.Address, error) {
-	const name = "hermezEthereumAddress"
+	const name = "hezEthereumAddress"
 	addrStr := c.Query(name)
 	return hezStringToEthAddr(addrStr, name)
 }
@@ -168,7 +168,7 @@ func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.
 		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	if addr != nil && bjj != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(errors.New("bjj and hermezEthereumAddress params are incompatible"))
+		return nil, nil, nil, nil, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
 	}
 	// Idx
 	idx, err := parseIdx(c)
@@ -176,7 +176,7 @@ func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.
 		return nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	if idx != nil && (addr != nil || bjj != nil || tokenID != nil) {
-		return nil, nil, nil, nil, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hermezEthereumAddress and tokenId"))
+		return nil, nil, nil, nil, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
 	}
 	return tokenID, addr, bjj, idx, nil
 }
@@ -264,7 +264,7 @@ func parseAccountFilters(c querier) ([]common.TokenID, *ethCommon.Address, *baby
 		return nil, nil, nil, tracerr.Wrap(err)
 	}
 	if addr != nil && bjj != nil {
-		return nil, nil, nil, tracerr.Wrap(errors.New("bjj and hermezEthereumAddress params are incompatible"))
+		return nil, nil, nil, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
 	}
 
 	return tokenIDs, addr, bjj, nil
@@ -427,7 +427,7 @@ func parseEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 }
 
 func parseParamHezEthAddr(c paramer) (*ethCommon.Address, error) {
-	const name = "hermezEthereumAddress"
+	const name = "hezEthereumAddress"
 	addrStr := c.Param(name)
 	return hezStringToEthAddr(addrStr, name)
 }
