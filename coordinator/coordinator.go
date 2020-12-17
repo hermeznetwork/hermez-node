@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/prover"
@@ -202,18 +203,31 @@ func (c *Coordinator) canForge(stats *synchronizer.Stats) bool {
 func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) error {
 	c.txManager.SetLastBlock(stats.Eth.LastBlock.Num)
 
+	// TMP
+	//nolint:gomnd
+	selectionConfig := &txselector.SelectionConfig{
+		MaxL1UserTxs:        32,
+		MaxL1CoordinatorTxs: 32,
+		ProcessTxsConfig: statedb.ProcessTxsConfig{
+			NLevels:  32,
+			MaxFeeTx: 64,
+			MaxTx:    512,
+			MaxL1Tx:  64,
+		},
+	}
+
 	canForge := c.canForge(stats)
 	if c.pipeline == nil {
 		if canForge {
-			log.Infow("Coordinator: forging state begin", "block", stats.Eth.LastBlock.Num,
-				"batch", stats.Sync.LastBatch)
+			log.Infow("Coordinator: forging state begin", "block",
+				stats.Eth.LastBlock.Num, "batch", stats.Sync.LastBatch)
 			batchNum := common.BatchNum(stats.Sync.LastBatch)
 			var err error
 			if c.pipeline, err = c.newPipeline(ctx); err != nil {
 				return tracerr.Wrap(err)
 			}
 			if err := c.pipeline.Start(batchNum, stats.Sync.LastForgeL1TxsNum,
-				stats, &c.vars); err != nil {
+				stats, &c.vars, selectionConfig); err != nil {
 				c.pipeline = nil
 				return tracerr.Wrap(err)
 			}
@@ -510,6 +524,7 @@ const longWaitDuration = 999 * time.Hour
 func (t *TxManager) Run(ctx context.Context) {
 	next := 0
 	waitDuration := time.Duration(longWaitDuration)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -659,7 +674,8 @@ func (p *Pipeline) reset(batchNum common.BatchNum, lastForgeL1TxsNum int64,
 
 // Start the forging pipeline
 func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
-	syncStats *synchronizer.Stats, initSCVars *synchronizer.SCVariables) error {
+	syncStats *synchronizer.Stats, initSCVars *synchronizer.SCVariables,
+	selectionConfig *txselector.SelectionConfig) error {
 	if p.started {
 		log.Fatal("Pipeline already started")
 	}
@@ -685,7 +701,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
 				p.stats = syncStats
 			default:
 				batchNum = p.batchNum + 1
-				batchInfo, err := p.forgeBatch(p.ctx, batchNum)
+				batchInfo, err := p.forgeBatch(p.ctx, batchNum, selectionConfig)
 				if common.IsErrDone(err) {
 					continue
 				} else if err != nil {
@@ -777,7 +793,7 @@ func (p *Pipeline) sendServerProof(ctx context.Context, batchInfo *BatchInfo) er
 }
 
 // forgeBatch the next batch.
-func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum) (*BatchInfo, error) {
+func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, selectionConfig *txselector.SelectionConfig) (*BatchInfo, error) {
 	// remove transactions from the pool that have been there for too long
 	_, err := p.purger.InvalidateMaybe(p.l2DB, p.txSelector.LocalAccountsDB(),
 		p.stats.Sync.LastBlock.Num, int64(batchNum))
@@ -794,6 +810,7 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum) (*B
 	var poolL2Txs []common.PoolL2Tx
 	// var feesInfo
 	var l1UserTxsExtra, l1CoordTxs []common.L1Tx
+	var coordIdxs []common.Idx
 	// 1. Decide if we forge L2Tx or L1+L2Tx
 	if p.shouldL1L2Batch() {
 		p.lastScheduledL1BatchBlockNum = p.stats.Eth.LastBlock.Num
@@ -803,13 +820,16 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum) (*B
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		l1UserTxsExtra, l1CoordTxs, poolL2Txs, err = p.txSelector.GetL1L2TxSelection([]common.Idx{}, batchNum, l1UserTxs) // TODO once feesInfo is added to method return, add the var
+		// TODO once feesInfo is added to method return, add the var
+		coordIdxs, l1UserTxsExtra, l1CoordTxs, poolL2Txs, err =
+			p.txSelector.GetL1L2TxSelection(selectionConfig, batchNum, l1UserTxs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
-		l1CoordTxs, poolL2Txs, err = p.txSelector.GetL2TxSelection([]common.Idx{}, batchNum)
+		coordIdxs, l1CoordTxs, poolL2Txs, err =
+			p.txSelector.GetL2TxSelection(selectionConfig, batchNum)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -830,7 +850,8 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum) (*B
 	// the poolL2Txs selected.  Will mark as invalid the txs that have a
 	// (fromIdx, nonce) which already appears in the selected txs (includes
 	// all the nonces smaller than the current one)
-	err = poolMarkInvalidOldNoncesFromL2Txs(p.l2DB, idxsNonceFromPoolL2Txs(poolL2Txs), batchInfo.BatchNum)
+	err = poolMarkInvalidOldNoncesFromL2Txs(p.l2DB, idxsNonceFromPoolL2Txs(poolL2Txs),
+		batchInfo.BatchNum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -839,8 +860,8 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum) (*B
 	configBatch := &batchbuilder.ConfigBatch{
 		ForgerAddress: p.cfg.ForgerAddress,
 	}
-	zkInputs, err := p.batchBuilder.BuildBatch([]common.Idx{}, configBatch,
-		l1UserTxsExtra, l1CoordTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
+	zkInputs, err := p.batchBuilder.BuildBatch(coordIdxs, configBatch, l1UserTxsExtra,
+		l1CoordTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
