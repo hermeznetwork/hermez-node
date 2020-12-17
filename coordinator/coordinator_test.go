@@ -603,12 +603,12 @@ PoolTransfer(0) User2-User3: 300 (126)
 		pipeline.batchBuilder.LocalStateDB().MerkleTree().Root())
 
 	batchNum++
-	batchInfo, err := pipeline.forgeSendServerProof(ctx, batchNum)
+	batchInfo, err := pipeline.forgeBatch(ctx, batchNum)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(batchInfo.L2Txs))
 
 	batchNum++
-	batchInfo, err = pipeline.forgeSendServerProof(ctx, batchNum)
+	batchInfo, err = pipeline.forgeBatch(ctx, batchNum)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(batchInfo.L2Txs))
 }
