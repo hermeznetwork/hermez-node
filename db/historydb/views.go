@@ -190,24 +190,11 @@ type ExitAPI struct {
 // MarshalJSON is used to neast some of the fields of ExitAPI
 // without the need of auxiliar structs
 func (e ExitAPI) MarshalJSON() ([]byte, error) {
-	siblings := []string{}
-	for i := 0; i < len(e.MerkleProof.Siblings); i++ {
-		siblings = append(siblings, e.MerkleProof.Siblings[i].String())
-	}
 	return json.Marshal(map[string]interface{}{
-		"itemId":       e.ItemID,
-		"batchNum":     e.BatchNum,
-		"accountIndex": e.AccountIdx,
-		"merkleProof": map[string]interface{}{
-			"Root":     e.MerkleProof.Root.String(),
-			"Siblings": siblings,
-			"OldKey":   e.MerkleProof.OldKey.String(),
-			"OldValue": e.MerkleProof.OldValue.String(),
-			"IsOld0":   e.MerkleProof.IsOld0,
-			"Key":      e.MerkleProof.Key.String(),
-			"Value":    e.MerkleProof.Value.String(),
-			"Fnc":      e.MerkleProof.Fnc,
-		},
+		"itemId":                 e.ItemID,
+		"batchNum":               e.BatchNum,
+		"accountIndex":           e.AccountIdx,
+		"merkleProof":            e.MerkleProof,
 		"balance":                e.Balance,
 		"instantWithdrawn":       e.InstantWithdrawn,
 		"delayedWithdrawRequest": e.DelayedWithdrawRequest,
