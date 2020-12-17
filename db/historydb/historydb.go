@@ -1246,7 +1246,8 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 		tx.amount, NULL AS effective_amount,
 		tx.deposit_amount, NULL AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
-		FROM tx WHERE batch_num IS NULL AND to_forge_l1_txs_num = $1;`,
+		FROM tx WHERE batch_num IS NULL AND to_forge_l1_txs_num = $1
+		ORDER BY position;`,
 		toForgeL1TxsNum,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), tracerr.Wrap(err)
@@ -1524,15 +1525,15 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	for i := range blockData.Rollup.Batches {
 		batch := &blockData.Rollup.Batches[i]
 
-		// Set the EffectiveAmount and EffectiveDepositAmount of all the
-		// L1UserTxs that have been forged in this batch
-		if err = hdb.setL1UserTxEffectiveAmounts(txn, batch.L1UserTxs); err != nil {
-			return tracerr.Wrap(err)
-		}
-
 		// Add Batch: this will trigger an update on the DB
 		// that will set the batch num of forged L1 txs in this batch
 		if err = hdb.addBatch(txn, &batch.Batch); err != nil {
+			return tracerr.Wrap(err)
+		}
+
+		// Set the EffectiveAmount and EffectiveDepositAmount of all the
+		// L1UserTxs that have been forged in this batch
+		if err = hdb.setL1UserTxEffectiveAmounts(txn, batch.L1UserTxs); err != nil {
 			return tracerr.Wrap(err)
 		}
 

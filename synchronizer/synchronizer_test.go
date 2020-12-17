@@ -44,7 +44,7 @@ func accountsCmp(accounts []common.Account) func(i, j int) bool {
 func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBlock *common.BlockData) {
 	// Check Blocks
 	dbBlocks, err := s.historyDB.GetAllBlocks()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	dbBlocks = dbBlocks[1:] // ignore block 0, added by default in the DB
 	assert.Equal(t, blockNum, len(dbBlocks))
 	assert.Equal(t, int64(blockNum), dbBlocks[blockNum-1].Num)
@@ -54,7 +54,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	// Check Tokens
 	assert.Equal(t, len(block.Rollup.AddedTokens), len(syncBlock.Rollup.AddedTokens))
 	dbTokens, err := s.historyDB.GetAllTokens()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	dbTokens = dbTokens[1:] // ignore token 0, added by default in the DB
 	for i, token := range block.Rollup.AddedTokens {
 		dbToken := dbTokens[i]
@@ -79,7 +79,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	// Check submitted L1UserTxs
 	assert.Equal(t, len(block.Rollup.L1UserTxs), len(syncBlock.Rollup.L1UserTxs))
 	dbL1UserTxs, err := s.historyDB.GetAllL1UserTxs()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// Ignore BatchNum in syncBlock.L1UserTxs because this value is set by
 	// the HistoryDB. Also ignore EffectiveAmount & EffectiveDepositAmount
 	// because this value is set by StateDB.ProcessTxs.
@@ -113,14 +113,14 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	// Check Batches
 	assert.Equal(t, len(block.Rollup.Batches), len(syncBlock.Rollup.Batches))
 	dbBatches, err := s.historyDB.GetAllBatches()
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	dbL1CoordinatorTxs, err := s.historyDB.GetAllL1CoordinatorTxs()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	dbL2Txs, err := s.historyDB.GetAllL2Txs()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	dbExits, err := s.historyDB.GetAllExits()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// dbL1CoordinatorTxs := []common.L1Tx{}
 	for i, batch := range block.Rollup.Batches {
 		var dbBatch *common.Batch
@@ -224,9 +224,9 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 			// and gives trouble when comparing big.Int with
 			// internal big.Int array != nil but empty.
 			mtp, err := json.Marshal(exit.MerkleProof)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			dbMtp, err := json.Marshal(dbExit.MerkleProof)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, mtp, dbMtp)
 			dbExit.MerkleProof = exit.MerkleProof
 			assert.Equal(t, &exit, dbExit) //nolint:gosec
@@ -235,9 +235,9 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 
 	// Compare accounts from HistoryDB with StateDB (they should match)
 	dbAccounts, err := s.historyDB.GetAllAccounts()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	sdbAccounts, err := s.stateDB.GetAccounts()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
 }
 
@@ -278,7 +278,7 @@ func TestSync(t *testing.T) {
 	ctx := context.Background()
 	// Int State DB
 	dir, err := ioutil.TempDir("", "tmpdb")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	stateDB, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32)
@@ -287,7 +287,7 @@ func TestSync(t *testing.T) {
 	// Init History DB
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	historyDB := historydb.NewHistoryDB(db)
 	// Clear DB
 	test.WipeDB(historyDB.DB())
@@ -311,7 +311,7 @@ func TestSync(t *testing.T) {
 			WDelayer: *clientSetup.WDelayerVariables,
 		},
 	})
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	//
 	// First Sync from an initial state
@@ -321,7 +321,7 @@ func TestSync(t *testing.T) {
 
 	// Test Sync for rollup genesis block
 	syncBlock, discards, err := s.Sync2(ctx, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
 	require.Nil(t, syncBlock.Rollup.Vars)
@@ -338,13 +338,13 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
 
 	dbBlocks, err := s.historyDB.GetAllBlocks()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 2, len(dbBlocks))
 	assert.Equal(t, int64(1), dbBlocks[1].Num)
 
 	// Sync again and expect no new blocks
 	syncBlock, discards, err = s.Sync2(ctx, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.Nil(t, syncBlock)
 
@@ -393,7 +393,7 @@ func TestSync(t *testing.T) {
 		CoordUser:     "A",
 	}
 	blocks, err := tc.GenerateBlocks(set1)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// Sanity check
 	require.Equal(t, 2, len(blocks))
 	// blocks 0 (blockNum=2)
@@ -431,7 +431,7 @@ func TestSync(t *testing.T) {
 	// Block 2
 
 	syncBlock, discards, err = s.Sync2(ctx, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
 	assert.Nil(t, syncBlock.Rollup.Vars)
@@ -449,7 +449,7 @@ func TestSync(t *testing.T) {
 
 	syncBlock, discards, err = s.Sync2(ctx, nil)
 	assert.NoError(t, err)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
 	assert.Nil(t, syncBlock.Rollup.Vars)
@@ -466,13 +466,13 @@ func TestSync(t *testing.T) {
 	// Block 4
 	// Generate 2 withdraws manually
 	_, err = client.RollupWithdrawMerkleProof(tc.Users["A"].BJJ.Public(), 1, 4, 256, big.NewInt(100), []*big.Int{}, true)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	_, err = client.RollupWithdrawMerkleProof(tc.Users["C"].BJJ.Public(), 1, 3, 258, big.NewInt(50), []*big.Int{}, false)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	client.CtlMineBlock()
 
 	syncBlock, discards, err = s.Sync2(ctx, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
 	assert.Nil(t, syncBlock.Rollup.Vars)
@@ -489,7 +489,7 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
 
 	dbExits, err := s.historyDB.GetAllExits()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	foundA1, foundC1 := false, false
 	for _, exit := range dbExits {
 		if exit.AccountIdx == 256 && exit.BatchNum == 4 {
@@ -507,23 +507,23 @@ func TestSync(t *testing.T) {
 	// Block 5
 	// Update variables manually
 	rollupVars, auctionVars, wDelayerVars, err := s.historyDB.GetSCVars()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	rollupVars.ForgeL1L2BatchTimeout = 42
 	_, err = client.RollupUpdateForgeL1L2BatchTimeout(rollupVars.ForgeL1L2BatchTimeout)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	auctionVars.OpenAuctionSlots = 17
 	_, err = client.AuctionSetOpenAuctionSlots(auctionVars.OpenAuctionSlots)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	wDelayerVars.WithdrawalDelay = 99
 	_, err = client.WDelayerChangeWithdrawalDelay(wDelayerVars.WithdrawalDelay)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	client.CtlMineBlock()
 
 	syncBlock, discards, err = s.Sync2(ctx, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
 	assert.NotNil(t, syncBlock.Rollup.Vars)
@@ -540,7 +540,7 @@ func TestSync(t *testing.T) {
 	assert.NotEqual(t, clientSetup.WDelayerVariables, vars.WDelayer)
 
 	dbRollupVars, dbAuctionVars, dbWDelayerVars, err := s.historyDB.GetSCVars()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// Set EthBlockNum for Vars to the blockNum in which they were updated (should be 5)
 	rollupVars.EthBlockNum = syncBlock.Block.Num
 	auctionVars.EthBlockNum = syncBlock.Block.Num
@@ -581,7 +581,7 @@ func TestSync(t *testing.T) {
 		CoordUser:     "A",
 	}
 	blocks, err = tc.GenerateBlocks(set2)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	for i := 0; i < 4; i++ {
 		client.CtlRollback()
@@ -602,7 +602,7 @@ func TestSync(t *testing.T) {
 
 	// First sync detects the reorg and discards 4 blocks
 	syncBlock, discards, err = s.Sync2(ctx, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	expetedDiscards := int64(4)
 	require.Equal(t, &expetedDiscards, discards)
 	require.Nil(t, syncBlock)
@@ -616,21 +616,21 @@ func TestSync(t *testing.T) {
 
 	// At this point, the DB only has data up to block 1
 	dbBlock, err := s.historyDB.GetLastBlock()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int64(1), dbBlock.Num)
 
 	// Accounts in HistoryDB and StateDB must be empty
 	dbAccounts, err := s.historyDB.GetAllAccounts()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	sdbAccounts, err := s.stateDB.GetAccounts()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
 
 	// Sync blocks 2-6
 	for i := 0; i < 5; i++ {
 		syncBlock, discards, err = s.Sync2(ctx, nil)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Nil(t, discards)
 		require.NotNil(t, syncBlock)
 		assert.Nil(t, syncBlock.Rollup.Vars)
@@ -655,14 +655,14 @@ func TestSync(t *testing.T) {
 	}
 
 	dbBlock, err = s.historyDB.GetLastBlock()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int64(6), dbBlock.Num)
 
 	// Accounts in HistoryDB and StateDB is only 2 entries
 	dbAccounts, err = s.historyDB.GetAllAccounts()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	sdbAccounts, err = s.stateDB.GetAccounts()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 2, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
 }
