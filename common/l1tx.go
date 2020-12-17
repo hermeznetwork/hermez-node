@@ -50,74 +50,88 @@ type L1Tx struct {
 
 // NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated
 // from the L1Tx values
-func NewL1Tx(l1Tx *L1Tx) (*L1Tx, error) {
-	// calculate TxType
-	var txType TxType
-	if l1Tx.FromIdx == 0 {
-		if l1Tx.ToIdx == Idx(0) {
-			txType = TxTypeCreateAccountDeposit
-		} else if l1Tx.ToIdx >= IdxUserThreshold {
-			txType = TxTypeCreateAccountDepositTransfer
-		} else {
-			return l1Tx, tracerr.Wrap(fmt.Errorf("Can not determine type of L1Tx, invalid ToIdx value: %d", l1Tx.ToIdx))
-		}
-	} else if l1Tx.FromIdx >= IdxUserThreshold {
-		if l1Tx.ToIdx == Idx(0) {
-			txType = TxTypeDeposit
-		} else if l1Tx.ToIdx == Idx(1) {
-			txType = TxTypeForceExit
-		} else if l1Tx.ToIdx >= IdxUserThreshold {
-			if l1Tx.DepositAmount.Int64() == int64(0) {
-				txType = TxTypeForceTransfer
-			} else {
-				txType = TxTypeDepositTransfer
-			}
-		} else {
-			return l1Tx, tracerr.Wrap(fmt.Errorf("Can not determine type of L1Tx, invalid ToIdx value: %d", l1Tx.ToIdx))
-		}
-	} else {
-		return l1Tx, tracerr.Wrap(fmt.Errorf("Can not determine type of L1Tx, invalid FromIdx value: %d", l1Tx.FromIdx))
+func NewL1Tx(tx *L1Tx) (*L1Tx, error) {
+	txTypeOld := tx.Type
+	if err := tx.SetType(); err != nil {
+		return nil, err
+	}
+	// If original Type doesn't match the correct one, return error
+	if txTypeOld != "" && txTypeOld != tx.Type {
+		return nil, tracerr.Wrap(fmt.Errorf("L1Tx.Type: %s, should be: %s",
+			tx.Type, txTypeOld))
 	}
 
-	if l1Tx.Type != "" && l1Tx.Type != txType {
-		return l1Tx, tracerr.Wrap(fmt.Errorf("L1Tx.Type: %s, should be: %s", l1Tx.Type, txType))
+	txIDOld := tx.TxID
+	if err := tx.SetID(); err != nil {
+		return nil, err
 	}
-	l1Tx.Type = txType
-
-	txID, err := l1Tx.CalcTxID()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
+	// If original TxID doesn't match the correct one, return error
+	if txIDOld != (TxID{}) && txIDOld != tx.TxID {
+		return tx, tracerr.Wrap(fmt.Errorf("L1Tx.TxID: %s, should be: %s",
+			tx.TxID.String(), txIDOld.String()))
 	}
-	l1Tx.TxID = *txID
 
-	return l1Tx, nil
+	return tx, nil
 }
 
-// CalcTxID calculates the TxId of the L1Tx
-func (tx *L1Tx) CalcTxID() (*TxID, error) {
-	var txID TxID
+// SetType sets the type of the transaction
+func (tx *L1Tx) SetType() error {
+	if tx.FromIdx == 0 {
+		if tx.ToIdx == Idx(0) {
+			tx.Type = TxTypeCreateAccountDeposit
+		} else if tx.ToIdx >= IdxUserThreshold {
+			tx.Type = TxTypeCreateAccountDepositTransfer
+		} else {
+			return tracerr.Wrap(fmt.Errorf(
+				"Can not determine type of L1Tx, invalid ToIdx value: %d", tx.ToIdx))
+		}
+	} else if tx.FromIdx >= IdxUserThreshold {
+		if tx.ToIdx == Idx(0) {
+			tx.Type = TxTypeDeposit
+		} else if tx.ToIdx == Idx(1) {
+			tx.Type = TxTypeForceExit
+		} else if tx.ToIdx >= IdxUserThreshold {
+			if tx.DepositAmount.Int64() == int64(0) {
+				tx.Type = TxTypeForceTransfer
+			} else {
+				tx.Type = TxTypeDepositTransfer
+			}
+		} else {
+			return tracerr.Wrap(fmt.Errorf(
+				"Can not determine type of L1Tx, invalid ToIdx value: %d", tx.ToIdx))
+		}
+	} else {
+		return tracerr.Wrap(fmt.Errorf(
+			"Can not determine type of L1Tx, invalid FromIdx value: %d", tx.FromIdx))
+	}
+	return nil
+}
+
+// SetID sets the ID of the transaction.  For L1UserTx uses (ToForgeL1TxsNum,
+// Position), for L1CoordinatorTx uses (BatchNum, Position).
+func (tx *L1Tx) SetID() error {
 	if tx.UserOrigin {
 		if tx.ToForgeL1TxsNum == nil {
-			return nil, tracerr.Wrap(fmt.Errorf("L1Tx.UserOrigin == true && L1Tx.ToForgeL1TxsNum == nil"))
+			return tracerr.Wrap(fmt.Errorf("L1Tx.UserOrigin == true && L1Tx.ToForgeL1TxsNum == nil"))
 		}
-		txID[0] = TxIDPrefixL1UserTx
+		tx.TxID[0] = TxIDPrefixL1UserTx
 		var toForgeL1TxsNumBytes [8]byte
 		binary.BigEndian.PutUint64(toForgeL1TxsNumBytes[:], uint64(*tx.ToForgeL1TxsNum))
-		copy(txID[1:9], toForgeL1TxsNumBytes[:])
+		copy(tx.TxID[1:9], toForgeL1TxsNumBytes[:])
 	} else {
 		if tx.BatchNum == nil {
-			return nil, tracerr.Wrap(fmt.Errorf("L1Tx.UserOrigin == false && L1Tx.BatchNum == nil"))
+			return tracerr.Wrap(fmt.Errorf("L1Tx.UserOrigin == false && L1Tx.BatchNum == nil"))
 		}
-		txID[0] = TxIDPrefixL1CoordTx
+		tx.TxID[0] = TxIDPrefixL1CoordTx
 		var batchNumBytes [8]byte
 		binary.BigEndian.PutUint64(batchNumBytes[:], uint64(*tx.BatchNum))
-		copy(txID[1:9], batchNumBytes[:])
+		copy(tx.TxID[1:9], batchNumBytes[:])
 	}
 	var positionBytes [2]byte
 	binary.BigEndian.PutUint16(positionBytes[:], uint16(tx.Position))
-	copy(txID[9:11], positionBytes[:])
+	copy(tx.TxID[9:11], positionBytes[:])
 
-	return &txID, nil
+	return nil
 }
 
 // Tx returns a *Tx from the L1Tx

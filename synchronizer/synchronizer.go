@@ -753,13 +753,11 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		// L1CoordinatorTxs, PoolL2Txs) into stateDB so that they are
 		// processed.
 
-		// Add TxID, TxType, Position, BlockNum and BatchNum to L2 txs
+		// Set TxType to the forged L2Txs
 		for i := range forgeBatchArgs.L2TxsData {
-			nTx, err := common.NewL2Tx(&forgeBatchArgs.L2TxsData[i])
-			if err != nil {
+			if err := forgeBatchArgs.L2TxsData[i].SetType(); err != nil {
 				return nil, tracerr.Wrap(err)
 			}
-			forgeBatchArgs.L2TxsData[i] = *nTx
 		}
 
 		// Transform L2 txs to PoolL2Txs
@@ -780,19 +778,22 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		}
 
 		// Transform processed PoolL2 txs to L2 and store in BatchData
-		if poolL2Txs != nil {
-			l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // NOTE: This is a big uggly, find a better way
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			for i := range l2Txs {
-				l2Txs[i].Position = position
-				l2Txs[i].EthBlockNum = blockNum
-				l2Txs[i].BatchNum = batchNum
-				position++
-			}
-			batchData.L2Txs = l2Txs
+		l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // NOTE: This is a big uggly, find a better way
+		if err != nil {
+			return nil, tracerr.Wrap(err)
 		}
+
+		// Set TxID, BlockNum, BatchNum and Position to the forged L2Txs
+		for i := range l2Txs {
+			if err := l2Txs[i].SetID(); err != nil {
+				return nil, err
+			}
+			l2Txs[i].EthBlockNum = blockNum
+			l2Txs[i].BatchNum = batchNum
+			l2Txs[i].Position = position
+			position++
+		}
+		batchData.L2Txs = l2Txs
 
 		// Set the BatchNum in the forged L1UserTxs
 		for i := range l1UserTxs {
