@@ -698,9 +698,12 @@ func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
 					continue
 				} else if err != nil {
 					log.Errorw("proversPool.Get", "err", err)
+					continue
 				}
-				if err := p.sendServerProof(p.ctx, serverProof, batchInfo); err != nil {
+				batchInfo.ServerProof = serverProof
+				if err := p.sendServerProof(p.ctx, batchInfo); err != nil {
 					log.Errorw("sendServerProof", "err", err)
+					batchInfo.ServerProof = nil
 					p.proversPool.Add(serverProof)
 					continue
 				}
@@ -762,8 +765,7 @@ func l2TxsIDs(txs []common.PoolL2Tx) []common.TxID {
 }
 
 // sendServerProof sends the circuit inputs to the proof server
-func (p *Pipeline) sendServerProof(ctx context.Context, serverProof prover.Client,
-	batchInfo *BatchInfo) error {
+func (p *Pipeline) sendServerProof(ctx context.Context, batchInfo *BatchInfo) error {
 	p.cfg.debugBatchStore(batchInfo)
 
 	// 7. Call the selected idle server proof with BatchBuilder output,
