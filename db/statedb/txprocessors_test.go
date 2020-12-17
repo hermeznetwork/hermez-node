@@ -160,6 +160,40 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 	sdb.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
+
+	// CreateAccountDepositTransfer for TokenID=1 when receiver does not
+	// have an account for that TokenID, expect that the
+	// EffectiveDepositAmount=DepositAmount, but EffectiveAmount==0
+	tx = common.L1Tx{
+		FromIdx:       0,
+		ToIdx:         257,
+		Amount:        big.NewInt(8),
+		DepositAmount: big.NewInt(8),
+		FromEthAddr:   tc.Users["A"].Addr,
+		TokenID:       2,
+		UserOrigin:    true,
+		Type:          common.TxTypeCreateAccountDepositTransfer,
+	}
+	sdb.computeEffectiveAmounts(&tx)
+	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
+
+	// DepositTransfer for TokenID=1 when receiver does not have an account
+	// for that TokenID, expect that the
+	// EffectiveDepositAmount=DepositAmount, but EffectiveAmount=0
+	tx = common.L1Tx{
+		FromIdx:       258,
+		ToIdx:         256,
+		Amount:        big.NewInt(8),
+		DepositAmount: big.NewInt(8),
+		FromEthAddr:   tc.Users["C"].Addr,
+		TokenID:       1,
+		UserOrigin:    true,
+		Type:          common.TxTypeDepositTransfer,
+	}
+	sdb.computeEffectiveAmounts(&tx)
+	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
+	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 }
 
 func TestProcessTxsBalances(t *testing.T) {
