@@ -132,6 +132,7 @@ type Node struct {
 	Debug struct {
 		APIAddress string
 	}
+	Coordinator Coordinator `validate:"-"`
 }
 
 // Load loads a generic config.
@@ -144,18 +145,21 @@ func Load(path string, cfg interface{}) error {
 	if _, err := toml.Decode(cfgToml, cfg); err != nil {
 		return tracerr.Wrap(err)
 	}
-	validate := validator.New()
-	if err := validate.Struct(cfg); err != nil {
-		return tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
-	}
 	return nil
 }
 
 // LoadCoordinator loads the Coordinator configuration from path.
-func LoadCoordinator(path string) (*Coordinator, error) {
-	var cfg Coordinator
+func LoadCoordinator(path string) (*Node, error) {
+	var cfg Node
 	if err := Load(path, &cfg); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("error loading coordinator configuration file: %w", err))
+		return nil, tracerr.Wrap(fmt.Errorf("error loading node configuration file: %w", err))
+	}
+	validate := validator.New()
+	if err := validate.Struct(cfg); err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
+	}
+	if err := validate.Struct(cfg.Coordinator); err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
 	return &cfg, nil
 }
@@ -165,6 +169,10 @@ func LoadNode(path string) (*Node, error) {
 	var cfg Node
 	if err := Load(path, &cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error loading node configuration file: %w", err))
+	}
+	validate := validator.New()
+	if err := validate.Struct(cfg); err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
 	return &cfg, nil
 }

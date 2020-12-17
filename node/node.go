@@ -49,8 +49,7 @@ type Node struct {
 	nodeAPI  *NodeAPI
 	debugAPI *debugapi.DebugAPI
 	// Coordinator
-	coord    *coordinator.Coordinator
-	coordCfg *config.Coordinator
+	coord *coordinator.Coordinator
 
 	// Synchronizer
 	sync *synchronizer.Synchronizer
@@ -65,7 +64,7 @@ type Node struct {
 }
 
 // NewNode creates a Node
-func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, error) {
+func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	// Stablish DB connection
 	db, err := dbUtils.InitSQLDB(
 		cfg.PostgreSQL.Port,
@@ -92,11 +91,11 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	var ethCfg eth.EthereumConfig
 	if mode == ModeCoordinator {
 		ethCfg = eth.EthereumConfig{
-			CallGasLimit:        coordCfg.EthClient.CallGasLimit,
-			DeployGasLimit:      coordCfg.EthClient.DeployGasLimit,
-			GasPriceDiv:         coordCfg.EthClient.GasPriceDiv,
-			ReceiptTimeout:      coordCfg.EthClient.ReceiptTimeout.Duration,
-			IntervalReceiptLoop: coordCfg.EthClient.ReceiptLoopInterval.Duration,
+			CallGasLimit:        cfg.Coordinator.EthClient.CallGasLimit,
+			DeployGasLimit:      cfg.Coordinator.EthClient.DeployGasLimit,
+			GasPriceDiv:         cfg.Coordinator.EthClient.GasPriceDiv,
+			ReceiptTimeout:      cfg.Coordinator.EthClient.ReceiptTimeout.Duration,
+			IntervalReceiptLoop: cfg.Coordinator.EthClient.ReceiptLoopInterval.Duration,
 		}
 	}
 	client, err := eth.NewClient(ethClient, nil, nil, &eth.ClientConfig{
@@ -140,45 +139,45 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 	if mode == ModeCoordinator {
 		l2DB = l2db.NewL2DB(
 			db,
-			coordCfg.L2DB.SafetyPeriod,
-			coordCfg.L2DB.MaxTxs,
-			coordCfg.L2DB.TTL.Duration,
+			cfg.Coordinator.L2DB.SafetyPeriod,
+			cfg.Coordinator.L2DB.MaxTxs,
+			cfg.Coordinator.L2DB.TTL.Duration,
 		)
 		// TODO: Get (maxL1UserTxs, maxL1OperatorTxs, maxTxs) from the smart contract
-		txSelector, err := txselector.NewTxSelector(coordCfg.TxSelector.Path, stateDB, l2DB, 10, 10, 10)
+		txSelector, err := txselector.NewTxSelector(cfg.Coordinator.TxSelector.Path, stateDB, l2DB, 10, 10, 10)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 		// TODO: Get (configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) from smart contract
 		nLevels := uint64(32) //nolint:gomnd
-		batchBuilder, err := batchbuilder.NewBatchBuilder(coordCfg.BatchBuilder.Path, stateDB, nil, 0, nLevels)
+		batchBuilder, err := batchbuilder.NewBatchBuilder(cfg.Coordinator.BatchBuilder.Path, stateDB, nil, 0, nLevels)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		serverProofs := make([]prover.Client, len(coordCfg.ServerProofs))
-		for i, serverProofCfg := range coordCfg.ServerProofs {
+		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
+		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
-				coordCfg.ProofServerPollInterval.Duration)
+				cfg.Coordinator.ProofServerPollInterval.Duration)
 		}
 
 		coord, err = coordinator.NewCoordinator(
 			coordinator.Config{
-				ForgerAddress:          coordCfg.ForgerAddress,
-				ConfirmBlocks:          coordCfg.ConfirmBlocks,
-				L1BatchTimeoutPerc:     coordCfg.L1BatchTimeoutPerc,
-				SyncRetryInterval:      coordCfg.SyncRetryInterval.Duration,
-				EthClientAttempts:      coordCfg.EthClient.Attempts,
-				EthClientAttemptsDelay: coordCfg.EthClient.AttemptsDelay.Duration,
-				TxManagerCheckInterval: coordCfg.EthClient.CheckLoopInterval.Duration,
-				DebugBatchPath:         coordCfg.Debug.BatchPath,
+				ForgerAddress:          cfg.Coordinator.ForgerAddress,
+				ConfirmBlocks:          cfg.Coordinator.ConfirmBlocks,
+				L1BatchTimeoutPerc:     cfg.Coordinator.L1BatchTimeoutPerc,
+				SyncRetryInterval:      cfg.Coordinator.SyncRetryInterval.Duration,
+				EthClientAttempts:      cfg.Coordinator.EthClient.Attempts,
+				EthClientAttemptsDelay: cfg.Coordinator.EthClient.AttemptsDelay.Duration,
+				TxManagerCheckInterval: cfg.Coordinator.EthClient.CheckLoopInterval.Duration,
+				DebugBatchPath:         cfg.Coordinator.Debug.BatchPath,
 				Purger: coordinator.PurgerCfg{
-					PurgeBatchDelay:      coordCfg.L2DB.PurgeBatchDelay,
-					InvalidateBatchDelay: coordCfg.L2DB.InvalidateBatchDelay,
-					PurgeBlockDelay:      coordCfg.L2DB.PurgeBlockDelay,
-					InvalidateBlockDelay: coordCfg.L2DB.InvalidateBlockDelay,
+					PurgeBatchDelay:      cfg.Coordinator.L2DB.PurgeBatchDelay,
+					InvalidateBatchDelay: cfg.Coordinator.L2DB.InvalidateBatchDelay,
+					PurgeBlockDelay:      cfg.Coordinator.L2DB.PurgeBlockDelay,
+					InvalidateBlockDelay: cfg.Coordinator.L2DB.InvalidateBlockDelay,
 				},
 			},
 			historyDB,
@@ -211,7 +210,7 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		server := gin.Default()
 		coord := false
 		if mode == ModeCoordinator {
-			coord = coordCfg.API.Coordinator
+			coord = cfg.Coordinator.API.Coordinator
 		}
 		var err error
 		nodeAPI, err = NewNodeAPI(
@@ -243,7 +242,6 @@ func NewNode(mode Mode, cfg *config.Node, coordCfg *config.Coordinator) (*Node, 
 		nodeAPI:  nodeAPI,
 		debugAPI: debugAPI,
 		coord:    coord,
-		coordCfg: coordCfg,
 		sync:     sync,
 		cfg:      cfg,
 		mode:     mode,
