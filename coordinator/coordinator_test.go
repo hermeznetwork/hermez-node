@@ -616,6 +616,6 @@ PoolTransfer(0) User2-User3: 300 (126)
 // TODO: Test Reorg
 // TODO: Test Pipeline
 // TODO: Test TxMonitor
-// TODO: Test forgeSendServerProof
+// TODO: Test forgeBatch
 // TODO: Test waitServerProof
 // TODO: Test handleReorg
