@@ -58,11 +58,28 @@ func (p *Proof) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// PublicInputs are the public inputs of the proof
+type PublicInputs []*big.Int
+
+// UnmarshalJSON unmarshals the JSON into the public inputs where the bigInts
+// are in decimal as quoted strings
+func (p *PublicInputs) UnmarshalJSON(data []byte) error {
+	pubInputs := []*bigInt{}
+	if err := json.Unmarshal(data, &pubInputs); err != nil {
+		return err
+	}
+	*p = make([]*big.Int, len(pubInputs))
+	for i, v := range pubInputs {
+		([]*big.Int)(*p)[i] = (*big.Int)(v)
+	}
+	return nil
+}
+
 // Client is the interface to a ServerProof that calculates zk proofs
 type Client interface {
 	// Non-blocking
 	CalculateProof(ctx context.Context, zkInputs *common.ZKInputs) error
-	// Blocking
+	// Blocking.  Returns the Proof and Public Data (public inputs)
 	GetProof(ctx context.Context) (*Proof, []*big.Int, error)
 	// Non-Blocking
 	Cancel(ctx context.Context) error
@@ -207,11 +224,11 @@ func (p *ProofServerClient) CalculateProof(ctx context.Context, zkInputs *common
 	return tracerr.Wrap(p.apiInput(ctx, zkInputs))
 }
 
-// GetProof retreives the Proof from the ServerProof, blocking until the proof
-// is ready.
+// GetProof retreives the Proof and Public Data (public inputs) from the
+// ServerProof, blocking until the proof is ready.
 func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	if err := p.WaitReady(ctx); err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	status, err := p.apiStatus(ctx)
 	if err != nil {
@@ -219,11 +236,14 @@ func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, []*big.Int, e
 	}
 	if status.Status == StatusCodeSuccess {
 		var proof Proof
-		err := json.Unmarshal([]byte(status.Proof), &proof)
-		if err != nil {
+		if err := json.Unmarshal([]byte(status.Proof), &proof); err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
-		return &proof, nil, nil
+		var pubInputs PublicInputs
+		if err := json.Unmarshal([]byte(status.PubData), &pubInputs); err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+		return &proof, pubInputs, nil
 	}
 	return nil, nil, fmt.Errorf("status != StatusCodeSuccess, status = %v", status.Status)
 }
@@ -269,7 +289,7 @@ func (p *MockClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	// Simulate a delay
 	select {
 	case <-time.After(500 * time.Millisecond): //nolint:gomnd
-		return &Proof{}, nil, nil
+		return &Proof{}, []*big.Int{big.NewInt(1234)}, nil //nolint:gomnd
 	case <-ctx.Done():
 		return nil, nil, tracerr.Wrap(common.ErrDone)
 	}

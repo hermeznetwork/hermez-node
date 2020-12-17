@@ -53,13 +53,16 @@ func testCalculateProof(t *testing.T) {
 }
 
 func testGetProof(t *testing.T) {
-	proof, _, err := proofServerClient.GetProof(context.Background())
+	proof, pubInputs, err := proofServerClient.GetProof(context.Background())
 	require.NoError(t, err)
-	require.NotNil(t, proof)
-	require.NotNil(t, proof.PiA)
-	require.NotNil(t, proof.PiB)
-	require.NotNil(t, proof.PiC)
-	require.NotNil(t, proof.Protocol)
+	assert.NotNil(t, proof.PiA)
+	assert.NotEqual(t, [2]*big.Int{}, proof.PiA)
+	assert.NotNil(t, proof.PiB)
+	assert.NotEqual(t, [3][2]*big.Int{}, proof.PiB)
+	assert.NotNil(t, proof.PiC)
+	assert.NotEqual(t, [2]*big.Int{}, proof.PiC)
+	assert.NotNil(t, proof.Protocol)
+	assert.NotEqual(t, 0, len(pubInputs))
 }
 
 func testCancel(t *testing.T) {
