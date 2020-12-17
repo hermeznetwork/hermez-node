@@ -8,7 +8,7 @@ The first step is to clone the github repository where the contracts are located
 
 While the prepared deployment is not found to master, branch in repository must be changed:
 
-`git checkout feature/newDeploymentScript-eth` (tested with commit `6335252b073dc59afafc45040dae8630c72ecdf3`)
+`git checkout feature/newDeploymentScript-eth-1` (tested with commit `071926ea2bce1c673cb1ff2728297191a396d350`)
 
 Now, install the dependencies:
 

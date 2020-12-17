@@ -137,7 +137,8 @@ func (c *EthereumClient) CallAuth(gasLimit uint64,
 	gasPrice.Add(gasPrice, inc)
 	log.Debugw("Transaction metadata", "gasPrice", gasPrice)
 
-	auth, err := bind.NewKeyStoreTransactor(c.ks, *c.account)
+	// TODO: Set the correct chainID
+	auth, err := bind.NewKeyStoreTransactorWithChainID(c.ks, *c.account, big.NewInt(0))
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
