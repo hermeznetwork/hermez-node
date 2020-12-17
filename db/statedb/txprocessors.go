@@ -1107,6 +1107,20 @@ func (s *StateDB) computeEffectiveAmounts(tx *common.L1Tx) {
 			tx.EffectiveAmount = big.NewInt(0)
 			return
 		}
+
+		// check if tx.TokenID==receiver.TokenID
+		accReceiver, err := s.GetAccount(tx.ToIdx)
+		if err != nil {
+			log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: can not get account for tx.ToIdx: %d", tx.ToIdx)
+			tx.EffectiveDepositAmount = big.NewInt(0)
+			tx.EffectiveAmount = big.NewInt(0)
+			return
+		}
+		if tx.TokenID != accReceiver.TokenID {
+			log.Debugf("EffectiveAmount = 0: tx TokenID (%d) != receiver account TokenID (%d)", tx.TokenID, accReceiver.TokenID)
+			tx.EffectiveAmount = big.NewInt(0)
+			return
+		}
 		return
 	}
 
@@ -1159,8 +1173,12 @@ func (s *StateDB) computeEffectiveAmounts(tx *common.L1Tx) {
 		return
 	}
 	if accSender.TokenID != accReceiver.TokenID {
-		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: sender account TokenID (%d) != receiver account TokenID (%d)", accSender.TokenID, accReceiver.TokenID)
-		tx.EffectiveDepositAmount = big.NewInt(0)
+		log.Debugf("EffectiveAmount = 0: sender account TokenID (%d) != receiver account TokenID (%d)", accSender.TokenID, accReceiver.TokenID)
+		tx.EffectiveAmount = big.NewInt(0)
+		return
+	}
+	if tx.TokenID != accReceiver.TokenID {
+		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: tx TokenID (%d) != receiver account TokenID (%d)", tx.TokenID, accReceiver.TokenID)
 		tx.EffectiveAmount = big.NewInt(0)
 		return
 	}
