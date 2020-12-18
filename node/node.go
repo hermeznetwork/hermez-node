@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -120,8 +121,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB, synchronizer.Config{
-		StartBlockNum:      cfg.Synchronizer.StartBlockNum,
-		InitialVariables:   cfg.Synchronizer.InitialVariables,
 		StatsRefreshPeriod: cfg.Synchronizer.StatsRefreshPeriod.Duration,
 	})
 	if err != nil {
@@ -390,7 +389,11 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
-		log.Errorw("Synchronizer.Sync", "err", err)
+		if strings.Contains(err.Error(), "context canceled") {
+			log.Warnw("Synchronizer.Sync", "err", err)
+		} else {
+			log.Errorw("Synchronizer.Sync", "err", err)
+		}
 		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration
 	} else if discarded != nil {
 		// case: reorg

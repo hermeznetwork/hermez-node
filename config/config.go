@@ -8,7 +8,6 @@ import (
 	"github.com/BurntSushi/toml"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/tracerr"
 	"gopkg.in/go-playground/validator.v9"
 )
@@ -111,10 +110,8 @@ type Node struct {
 		URL string `validate:"required"`
 	} `validate:"required"`
 	Synchronizer struct {
-		SyncLoopInterval   Duration                         `validate:"required"`
-		StatsRefreshPeriod Duration                         `validate:"required"`
-		StartBlockNum      synchronizer.ConfigStartBlockNum `validate:"required"`
-		InitialVariables   synchronizer.SCVariables         `validate:"required"`
+		SyncLoopInterval   Duration `validate:"required"`
+		StatsRefreshPeriod Duration `validate:"required"`
 	} `validate:"required"`
 	SmartContracts struct {
 		Rollup       ethCommon.Address `validate:"required"`

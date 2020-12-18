@@ -33,6 +33,18 @@ type WDelayerEventInitialize struct {
 	InitialEmergencyCouncil        ethCommon.Address
 }
 
+// WDelayerVariables returns the WDelayerVariables from the initialize event
+func (ei *WDelayerEventInitialize) WDelayerVariables() *common.WDelayerVariables {
+	return &common.WDelayerVariables{
+		EthBlockNum:                0,
+		HermezGovernanceAddress:    ei.InitialHermezGovernanceAddress,
+		EmergencyCouncilAddress:    ei.InitialEmergencyCouncil,
+		WithdrawalDelay:            ei.InitialWithdrawalDelay,
+		EmergencyModeStartingBlock: 0,
+		EmergencyMode:              false,
+	}
+}
+
 // WDelayerEventDeposit is an event of the WithdrawalDelayer Smart Contract
 type WDelayerEventDeposit struct {
 	Owner            ethCommon.Address
@@ -124,6 +136,7 @@ type WDelayerInterface interface {
 
 	WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error)
 	WDelayerConstants() (*common.WDelayerConstants, error)
+	WDelayerEventInit() (*WDelayerEventInitialize, int64, error)
 }
 
 //

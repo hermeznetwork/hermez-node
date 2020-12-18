@@ -59,6 +59,27 @@ type RollupEventInitialize struct {
 	WithdrawalDelay       uint64
 }
 
+// RollupVariables returns the RollupVariables from the initialize event
+func (ei *RollupEventInitialize) RollupVariables() *common.RollupVariables {
+	var buckets [common.RollupConstNumBuckets]common.BucketParams
+	for i := range buckets {
+		buckets[i] = common.BucketParams{
+			CeilUSD:             big.NewInt(0),
+			Withdrawals:         big.NewInt(0),
+			BlockWithdrawalRate: big.NewInt(0),
+			MaxWithdrawals:      big.NewInt(0),
+		}
+	}
+	return &common.RollupVariables{
+		EthBlockNum:           0,
+		FeeAddToken:           ei.FeeAddToken,
+		ForgeL1L2BatchTimeout: int64(ei.ForgeL1L2BatchTimeout),
+		WithdrawalDelay:       ei.WithdrawalDelay,
+		Buckets:               buckets,
+		SafeMode:              false,
+	}
+}
+
 // RollupEventL1UserTx is an event of the Rollup Smart Contract
 type RollupEventL1UserTx struct {
 	// ToForgeL1TxsNum int64 // QueueIndex       *big.Int
@@ -245,6 +266,7 @@ type RollupInterface interface {
 	RollupConstants() (*common.RollupConstants, error)
 	RollupEventsByBlock(blockNum int64) (*RollupEvents, *ethCommon.Hash, error)
 	RollupForgeBatchArgs(ethCommon.Hash, uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error)
+	RollupEventInit() (*RollupEventInitialize, int64, error)
 }
 
 //

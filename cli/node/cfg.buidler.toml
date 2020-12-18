@@ -24,76 +24,12 @@ URL = "http://localhost:8545"
 SyncLoopInterval = "1s"
 StatsRefreshPeriod = "1s"
 
-    [Synchronizer.StartBlockNum]
-    Rollup = 19
-    Auction = 17
-    WDelayer = 15
-
 [SmartContracts]
 Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
 Auction  = "0x317113D2593e3efF1FfAE0ba2fF7A61861Df7ae5"
 WDelayer = "0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F"
 TokenHEZ = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
 TokenHEZName = "Hermez Network Token"
-
-    [Synchronizer.InitialVariables.Auction]
-    DonationAddress = "0x0000000000000000000000000000000000000001"
-    BootCoordinator = "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7"
-    BootCoordinatorURL = "https://boot.coordinator.io"
-    DefaultSlotSetBid = [
-        "10000000000000000000",
-        "10000000000000000000",
-        "10000000000000000000",
-        "10000000000000000000",
-        "10000000000000000000",
-        "10000000000000000000",
-    ]
-    DefaultSlotSetBidSlotNum = 0
-    ClosedAuctionSlots = 2
-    OpenAuctionSlots = 4320
-    AllocationRatio = [4000, 4000, 2000]
-    Outbidding = 1000
-    SlotDeadline = 20
-
-    [Synchronizer.InitialVariables.WDelayer]
-    # HermezRollupAddress        =
-    HermezGovernanceAddress    = "0x0000000000000000000000000000000000000001"
-    EmergencyCouncilAddress    = "0x0000000000000000000000000000000000000001"
-    WithdrawalDelay            = 60
-    EmergencyModeStartingTime  = 0
-    EmergencyMode              = false
-
-    [Synchronizer.InitialVariables.Rollup]
-    FeeAddToken = "10"
-    ForgeL1L2BatchTimeout = 10
-    WithdrawalDelay = 1209600 # 60 * 60 * 24 * 7 * 2
-    SafeMode = false
-        [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        CeilUSD             = 0
-        Withdrawals         = 0
-        BlockWithdrawalRate = 0
-        MaxWithdrawals      = 0
-        [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        CeilUSD             = 0
-        Withdrawals         = 0
-        BlockWithdrawalRate = 0
-        MaxWithdrawals      = 0
-        [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        CeilUSD             = 0
-        Withdrawals         = 0
-        BlockWithdrawalRate = 0
-        MaxWithdrawals      = 0
-        [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        CeilUSD             = 0
-        Withdrawals         = 0
-        BlockWithdrawalRate = 0
-        MaxWithdrawals      = 0
-        [[Synchronizer.InitialVariables.Rollup.Buckets]]
-        CeilUSD             = 0
-        Withdrawals         = 0
-        BlockWithdrawalRate = 0
-        MaxWithdrawals      = 0
-
 
 [Coordinator]
 ForgerAddress = "0x6BB84Cc84D4A34467aD12a2039A312f7029e2071"

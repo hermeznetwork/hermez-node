@@ -69,6 +69,26 @@ type AuctionEventInitialize struct {
 	AllocationRatio        [3]uint16
 }
 
+// AuctionVariables returns the AuctionVariables from the initialize event
+func (ei *AuctionEventInitialize) AuctionVariables(InitialMinimalBidding *big.Int) *common.AuctionVariables {
+	return &common.AuctionVariables{
+		EthBlockNum:        0,
+		DonationAddress:    ei.DonationAddress,
+		BootCoordinator:    ei.BootCoordinatorAddress,
+		BootCoordinatorURL: ei.BootCoordinatorURL,
+		DefaultSlotSetBid: [6]*big.Int{
+			InitialMinimalBidding, InitialMinimalBidding, InitialMinimalBidding,
+			InitialMinimalBidding, InitialMinimalBidding, InitialMinimalBidding,
+		},
+		DefaultSlotSetBidSlotNum: 0,
+		ClosedAuctionSlots:       ei.ClosedAuctionSlots,
+		OpenAuctionSlots:         ei.OpenAuctionSlots,
+		AllocationRatio:          ei.AllocationRatio,
+		Outbidding:               ei.Outbidding,
+		SlotDeadline:             ei.SlotDeadline,
+	}
+}
+
 // AuctionEventNewBid is an event of the Auction Smart Contract
 type AuctionEventNewBid struct {
 	Slot      int64
@@ -235,6 +255,7 @@ type AuctionInterface interface {
 
 	AuctionConstants() (*common.AuctionConstants, error)
 	AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error)
+	AuctionEventInit() (*AuctionEventInitialize, int64, error)
 }
 
 //

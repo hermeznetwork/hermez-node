@@ -301,10 +301,20 @@ func NewClientSetupExample() *ClientSetup {
 		HermezAuctionContract:   ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
 		WithdrawDelayerContract: ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
 	}
+	var buckets [common.RollupConstNumBuckets]common.BucketParams
+	for i := range buckets {
+		buckets[i] = common.BucketParams{
+			CeilUSD:             big.NewInt(0),
+			Withdrawals:         big.NewInt(0),
+			BlockWithdrawalRate: big.NewInt(0),
+			MaxWithdrawals:      big.NewInt(0),
+		}
+	}
 	rollupVariables := &common.RollupVariables{
 		FeeAddToken:           big.NewInt(11),
 		ForgeL1L2BatchTimeout: 9,
 		WithdrawalDelay:       80,
+		Buckets:               buckets,
 	}
 	auctionConstants := &common.AuctionConstants{
 		BlocksPerSlot:         40,
@@ -319,8 +329,9 @@ func NewClientSetupExample() *ClientSetup {
 		BootCoordinator:    ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		BootCoordinatorURL: "https://boot.coordinator.com",
 		DefaultSlotSetBid: [6]*big.Int{
-			big.NewInt(1000), big.NewInt(1100), big.NewInt(1200),
-			big.NewInt(1300), big.NewInt(1400), big.NewInt(1500)},
+			initialMinimalBidding, initialMinimalBidding, initialMinimalBidding,
+			initialMinimalBidding, initialMinimalBidding, initialMinimalBidding,
+		},
 		ClosedAuctionSlots: 2,
 		OpenAuctionSlots:   4320,
 		AllocationRatio:    [3]uint16{4000, 4000, 2000},
@@ -1064,6 +1075,16 @@ func (c *Client) RollupEventsByBlock(blockNum int64) (*eth.RollupEvents, *ethCom
 	return &block.Rollup.Events, &block.Eth.Hash, nil
 }
 
+// RollupEventInit returns the initialize event with its corresponding block number
+func (c *Client) RollupEventInit() (*eth.RollupEventInitialize, int64, error) {
+	vars := c.blocks[0].Rollup.Vars
+	return &eth.RollupEventInitialize{
+		ForgeL1L2BatchTimeout: uint8(vars.ForgeL1L2BatchTimeout),
+		FeeAddToken:           vars.FeeAddToken,
+		WithdrawalDelay:       vars.WithdrawalDelay,
+	}, 1, nil
+}
+
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the Rollup Smart Contract in the given transaction
 func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, l1UserTxsLen uint16) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
 	c.rw.RLock()
@@ -1511,6 +1532,21 @@ func (c *Client) AuctionEventsByBlock(blockNum int64) (*eth.AuctionEvents, *ethC
 	return &block.Auction.Events, &block.Eth.Hash, nil
 }
 
+// AuctionEventInit returns the initialize event with its corresponding block number
+func (c *Client) AuctionEventInit() (*eth.AuctionEventInitialize, int64, error) {
+	vars := c.blocks[0].Auction.Vars
+	return &eth.AuctionEventInitialize{
+		DonationAddress:        vars.DonationAddress,
+		BootCoordinatorAddress: vars.BootCoordinator,
+		BootCoordinatorURL:     vars.BootCoordinatorURL,
+		Outbidding:             vars.Outbidding,
+		SlotDeadline:           vars.SlotDeadline,
+		ClosedAuctionSlots:     vars.ClosedAuctionSlots,
+		OpenAuctionSlots:       vars.OpenAuctionSlots,
+		AllocationRatio:        vars.AllocationRatio,
+	}, 1, nil
+}
+
 //
 // WDelayer
 //
@@ -1718,6 +1754,16 @@ func (c *Client) WDelayerConstants() (*common.WDelayerConstants, error) {
 	defer c.rw.RUnlock()
 
 	return c.wDelayerConstants, nil
+}
+
+// WDelayerEventInit returns the initialize event with its corresponding block number
+func (c *Client) WDelayerEventInit() (*eth.WDelayerEventInitialize, int64, error) {
+	vars := c.blocks[0].WDelayer.Vars
+	return &eth.WDelayerEventInitialize{
+		InitialWithdrawalDelay:         vars.WithdrawalDelay,
+		InitialHermezGovernanceAddress: vars.HermezGovernanceAddress,
+		InitialEmergencyCouncil:        vars.EmergencyCouncilAddress,
+	}, 1, nil
 }
 
 // CtlAddBlocks adds block data to the smarts contracts.  The added blocks will

@@ -17,31 +17,6 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-var (
-// ErrNotAbleToSync is used when there is not possible to find a valid block to sync
-// ErrNotAbleToSync = errors.New("it has not been possible to synchronize any block")
-)
-
-// // SyncronizerState describes the synchronization progress of the smart contracts
-// type SyncronizerState struct {
-// 	LastUpdate                time.Time // last time this information was updated
-// 	CurrentBatchNum           BatchNum  // Last batch that was forged on the blockchain
-// 	CurrentBlockNum           uint64    // Last block that was mined on Ethereum
-// 	CurrentToForgeL1TxsNum    uint32
-// 	LastSyncedBatchNum        BatchNum // last batch synchronized by the coordinator
-// 	LastSyncedBlockNum        uint64   // last Ethereum block synchronized by the coordinator
-// 	LastSyncedToForgeL1TxsNum uint32
-// }
-
-// // SyncStatus is returned by the Status method of the Synchronizer
-// type SyncStatus struct {
-// 	CurrentBlock      int64
-// 	CurrentBatch      BatchNum
-// 	CurrentForgerAddr ethCommon.Address
-// 	NextForgerAddr    ethCommon.Address
-// 	Synchronized      bool
-// }
-
 // Stats of the syncrhonizer
 type Stats struct {
 	Eth struct {
@@ -170,12 +145,12 @@ func (s *StatsHolder) batchesPerc(batchNum int64) float64 {
 		float64(s.Eth.LastBatch)
 }
 
-// ConfigStartBlockNum sets the first block used to start tracking the smart
+// StartBlockNums sets the first block used to start tracking the smart
 // contracts
-type ConfigStartBlockNum struct {
-	Rollup   int64 `validate:"required"`
-	Auction  int64 `validate:"required"`
-	WDelayer int64 `validate:"required"`
+type StartBlockNums struct {
+	Rollup   int64
+	Auction  int64
+	WDelayer int64
 }
 
 // SCVariables joins all the smart contract variables in a single struct
@@ -202,8 +177,8 @@ type SCConsts struct {
 
 // Config is the Synchronizer configuration
 type Config struct {
-	StartBlockNum      ConfigStartBlockNum
-	InitialVariables   SCVariables
+	// StartBlockNum StartBlockNum
+	// InitialVariables   SCVariables
 	StatsRefreshPeriod time.Duration
 }
 
@@ -217,6 +192,7 @@ type Synchronizer struct {
 	historyDB     *historydb.HistoryDB
 	stateDB       *statedb.StateDB
 	cfg           Config
+	initVars      SCVariables
 	startBlockNum int64
 	vars          SCVariables
 	stats         *StatsHolder
@@ -242,27 +218,38 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 		return nil, tracerr.Wrap(fmt.Errorf("NewSynchronizer ethClient.WDelayerConstants(): %w",
 			err))
 	}
+	consts := SCConsts{
+		Rollup:   *rollupConstants,
+		Auction:  *auctionConstants,
+		WDelayer: *wDelayerConstants,
+	}
 
+	initVars, startBlockNums, err := getInitialVariables(ethClient, &consts)
+	if err != nil {
+		return nil, err
+	}
+	log.Infow("Synchronizer syncing from smart contract blocks",
+		"rollup", startBlockNums.Rollup,
+		"auction", startBlockNums.Auction,
+		"wdelayer", startBlockNums.WDelayer,
+	)
 	// Set startBlockNum to the minimum between Auction, Rollup and
 	// WDelayer StartBlockNum
-	startBlockNum := cfg.StartBlockNum.Auction
-	if cfg.StartBlockNum.Rollup < startBlockNum {
-		startBlockNum = cfg.StartBlockNum.Rollup
+	startBlockNum := startBlockNums.Auction
+	if startBlockNums.Rollup < startBlockNum {
+		startBlockNum = startBlockNums.Rollup
 	}
-	if cfg.StartBlockNum.WDelayer < startBlockNum {
-		startBlockNum = cfg.StartBlockNum.WDelayer
+	if startBlockNums.WDelayer < startBlockNum {
+		startBlockNum = startBlockNums.WDelayer
 	}
 	stats := NewStatsHolder(startBlockNum, cfg.StatsRefreshPeriod)
 	s := &Synchronizer{
-		ethClient: ethClient,
-		consts: SCConsts{
-			Rollup:   *rollupConstants,
-			Auction:  *auctionConstants,
-			WDelayer: *wDelayerConstants,
-		},
+		ethClient:     ethClient,
+		consts:        consts,
 		historyDB:     historyDB,
 		stateDB:       stateDB,
 		cfg:           cfg,
+		initVars:      *initVars,
 		startBlockNum: startBlockNum,
 		stats:         stats,
 	}
@@ -596,22 +583,54 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 	return block.Num, nil
 }
 
+func getInitialVariables(ethClient eth.ClientInterface,
+	consts *SCConsts) (*SCVariables, *StartBlockNums, error) {
+	rollupInit, rollupInitBlock, err := ethClient.RollupEventInit()
+	if err != nil {
+		return nil, nil, err
+	}
+	auctionInit, auctionInitBlock, err := ethClient.AuctionEventInit()
+	if err != nil {
+		return nil, nil, err
+	}
+	wDelayerInit, wDelayerInitBlock, err := ethClient.WDelayerEventInit()
+	if err != nil {
+		return nil, nil, err
+	}
+	rollupVars := rollupInit.RollupVariables()
+	auctionVars := auctionInit.AuctionVariables(consts.Auction.InitialMinimalBidding)
+	wDelayerVars := wDelayerInit.WDelayerVariables()
+	return &SCVariables{
+			Rollup:   *rollupVars,
+			Auction:  *auctionVars,
+			WDelayer: *wDelayerVars,
+		}, &StartBlockNums{
+			Rollup:   rollupInitBlock,
+			Auction:  auctionInitBlock,
+			WDelayer: wDelayerInitBlock,
+		}, nil
+}
+
 func (s *Synchronizer) resetState(block *common.Block) error {
 	rollup, auction, wDelayer, err := s.historyDB.GetSCVars()
 	// If SCVars are not in the HistoryDB, this is probably the first run
 	// of the Synchronizer: store the initial vars taken from config
 	if tracerr.Unwrap(err) == sql.ErrNoRows {
-		rollup = &s.cfg.InitialVariables.Rollup
-		auction = &s.cfg.InitialVariables.Auction
-		wDelayer = &s.cfg.InitialVariables.WDelayer
+		vars := s.initVars
 		log.Info("Setting initial SCVars in HistoryDB")
-		if err = s.historyDB.SetInitialSCVars(rollup, auction, wDelayer); err != nil {
+		if err = s.historyDB.SetInitialSCVars(&vars.Rollup, &vars.Auction, &vars.WDelayer); err != nil {
 			return tracerr.Wrap(fmt.Errorf("historyDB.SetInitialSCVars: %w", err))
 		}
+		s.vars.Rollup = *vars.Rollup.Copy()
+		s.vars.Auction = *vars.Auction.Copy()
+		s.vars.WDelayer = *vars.WDelayer.Copy()
+	} else if err != nil {
+		return err
+	} else {
+		s.vars.Rollup = *rollup
+		s.vars.Auction = *auction
+		s.vars.WDelayer = *wDelayer
 	}
-	s.vars.Rollup = *rollup
-	s.vars.Auction = *auction
-	s.vars.WDelayer = *wDelayer
 
 	batchNum, err := s.historyDB.GetLastBatchNum()
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
