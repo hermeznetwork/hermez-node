@@ -731,14 +731,14 @@ var errTODO = fmt.Errorf("TODO: Not implemented yet")
 // }
 
 // RollupL1UserTxERC20Permit is the interface to call the smart contract function
-func (c *Client) RollupL1UserTxERC20Permit(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
 	log.Error("TODO")
 	return nil, tracerr.Wrap(errTODO)
 }
 
 // RollupL1UserTxERC20ETH sends an L1UserTx to the Rollup.
 func (c *Client) RollupL1UserTxERC20ETH(
-	fromBJJ *babyjub.PublicKey,
+	fromBJJ babyjub.PublicKeyComp,
 	fromIdx int64,
 	depositAmount *big.Int,
 	amount *big.Int,
@@ -826,7 +826,7 @@ func (c *Client) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]
 }
 
 // RollupWithdrawMerkleProof is the interface to call the smart contract function
-func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (tx *types.Transaction, err error) {
+func (c *Client) RollupWithdrawMerkleProof(babyPubKey babyjub.PublicKeyComp, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -843,6 +843,11 @@ func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenI
 	}
 	r.State.ExitNullifierMap[numExitRoot][idx] = true
 
+	babyPubKeyDecomp, err := babyPubKey.Decompress()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+
 	type data struct {
 		BabyPubKey      *babyjub.PublicKey
 		TokenID         uint32
@@ -853,7 +858,7 @@ func (c *Client) RollupWithdrawMerkleProof(babyPubKey *babyjub.PublicKey, tokenI
 		InstantWithdraw bool
 	}
 	tx = r.addTransaction(c.newTransaction("withdrawMerkleProof", data{
-		BabyPubKey:      babyPubKey,
+		BabyPubKey:      babyPubKeyDecomp,
 		TokenID:         tokenID,
 		NumExitRoot:     numExitRoot,
 		Idx:             idx,

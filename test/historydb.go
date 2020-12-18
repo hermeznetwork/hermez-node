@@ -130,7 +130,7 @@ func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAdd
 			TokenID:   tokens[i%len(tokens)].TokenID,
 			EthAddr:   addr,
 			BatchNum:  batches[i%len(batches)].BatchNum,
-			PublicKey: pubK,
+			PublicKey: pubK.Compress(),
 			Balance:   big.NewInt(int64(i * 10000000)), //nolint:gomnd
 		})
 	}

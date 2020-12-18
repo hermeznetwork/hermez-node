@@ -22,7 +22,7 @@ func TestGenerateBlocksNoBatches(t *testing.T) {
 	`
 	tc := NewContext(common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, len(blocks))
 	assert.Equal(t, 0, len(blocks[0].Rollup.Batches))
 	assert.Equal(t, 2, len(blocks[0].Rollup.AddedTokens))
@@ -89,7 +89,7 @@ func TestGenerateBlocks(t *testing.T) {
 	`
 	tc := NewContext(common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 2, len(blocks))
 	assert.Equal(t, 5, len(blocks[0].Rollup.Batches))
 	assert.Equal(t, 1, len(blocks[1].Rollup.Batches))
@@ -147,7 +147,7 @@ func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxTy
 		assert.Equal(t, tc.Users[from].Accounts[tokenID].Idx, tx.FromIdx)
 	}
 	assert.Equal(t, tc.Users[from].Addr.Hex(), tx.FromEthAddr.Hex())
-	assert.Equal(t, tc.Users[from].BJJ.Public(), tx.FromBJJ)
+	assert.Equal(t, tc.Users[from].BJJ.Public().Compress(), tx.FromBJJ)
 	if tx.ToIdx != common.Idx(0) {
 		assert.Equal(t, tc.Users[to].Accounts[tokenID].Idx, tx.ToIdx)
 	}
@@ -193,7 +193,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	`
 	tc := NewContext(common.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	set = `
 		Type: PoolL2
 		PoolTransfer(1) A-B: 6 (1)
@@ -209,7 +209,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		PoolTransferToBJJ(1) A-B: 1 (1)
 	`
 	poolL2Txs, err := tc.GeneratePoolL2Txs(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 11, len(poolL2Txs))
 	assert.Equal(t, common.TxTypeTransfer, poolL2Txs[0].Type)
 	assert.Equal(t, common.TxTypeExit, poolL2Txs[8].Type)
@@ -223,7 +223,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	assert.Equal(t, common.Nonce(3), poolL2Txs[8].Nonce)
 
 	assert.Equal(t, tc.Users["B"].Addr.Hex(), poolL2Txs[9].ToEthAddr.Hex())
-	assert.Nil(t, poolL2Txs[9].ToBJJ)
+	assert.Equal(t, common.EmptyBJJComp, poolL2Txs[9].ToBJJ)
 	assert.Equal(t, common.TxTypeTransferToEthAddr, poolL2Txs[9].Type)
 	assert.Equal(t, common.FFAddr, poolL2Txs[10].ToEthAddr)
 	assert.Equal(t, tc.Users["B"].BJJ.Public().String(), poolL2Txs[10].ToBJJ.String())
@@ -237,7 +237,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		PoolTransfer(1) A-C: 3 (1)
 	`
 	poolL2Txs, err = tc.GeneratePoolL2Txs(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.Nonce(6), poolL2Txs[0].Nonce)
 	assert.Equal(t, common.Nonce(2), poolL2Txs[1].Nonce)
 	assert.Equal(t, common.Nonce(7), poolL2Txs[2].Nonce)
@@ -253,14 +253,14 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	`
 	tc = NewContext(common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	set = `
 		Type: PoolL2
 		PoolTransferToEthAddr(1) A-B: 3 (1)
 		PoolTransferToBJJ(1) A-C: 3 (1)
 	`
 	_, err = tc.GeneratePoolL2Txs(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// expect error, as FromIdx=B is still not created for TokenID=1
 	set = `
 		Type: PoolL2
@@ -284,7 +284,7 @@ func TestGeneratePoolL2TxsFromInstructions(t *testing.T) {
 	`
 	tc := NewContext(common.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Generate Pool txs using instructions
 	instructionSet := []Instruction{}
@@ -312,18 +312,18 @@ func TestGeneratePoolL2TxsFromInstructions(t *testing.T) {
 		Fee:     1,
 	})
 	txsFromInstructions, err := tc.GeneratePoolL2TxsFromInstructions(instructionSet)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// Generate Pool txs using string
 	tc = NewContext(common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	stringSet := `
 		Type: PoolL2
 		PoolTransferToEthAddr(1) B-A: 3 (1)
 		PoolTransferToBJJ(1) B-A: 3 (1)
 	`
 	txsFromString, err := tc.GeneratePoolL2Txs(stringSet)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// Compare generated txs from instructions and string
 	// timestamps will be different
 	for i := 0; i < len(txsFromString); i++ {
@@ -396,7 +396,7 @@ func TestGenerateErrors(t *testing.T) {
 	`
 	tc = NewContext(common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// check nonces
 	set = `
@@ -414,7 +414,7 @@ func TestGenerateErrors(t *testing.T) {
 	`
 	tc = NewContext(common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.Nonce(3), tc.Users["A"].Accounts[common.TokenID(1)].Nonce)
 	assert.Equal(t, common.Idx(256), tc.Users["A"].Accounts[common.TokenID(1)].Idx)
 	assert.Equal(t, common.Nonce(1), tc.Users["B"].Accounts[common.TokenID(1)].Nonce)
@@ -520,8 +520,7 @@ func TestGenerateFromInstructions(t *testing.T) {
 
 	tc := NewContext(common.RollupConstMaxL1UserTx)
 	blockFromInstructions, err := tc.GenerateBlocksFromInstructions(setInst)
-	assert.NoError(t, err)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Generate block from string
 	setString := `
@@ -540,7 +539,7 @@ func TestGenerateFromInstructions(t *testing.T) {
 	`
 	tc = NewContext(common.RollupConstMaxL1UserTx)
 	blockFromString, err := tc.GenerateBlocks(setString)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Generated data should be equivalent, except for Eth Addrs and BJJs
 	for i, strBatch := range blockFromString[0].Rollup.Batches {

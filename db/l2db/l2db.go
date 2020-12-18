@@ -88,14 +88,12 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	insertTx := &PoolL2TxWrite{
 		TxID:      tx.TxID,
 		FromIdx:   tx.FromIdx,
-		ToBJJ:     tx.ToBJJ,
 		TokenID:   tx.TokenID,
 		Amount:    tx.Amount,
 		Fee:       tx.Fee,
 		Nonce:     tx.Nonce,
 		State:     common.PoolL2TxStatePending,
 		Signature: tx.Signature,
-		RqToBJJ:   tx.RqToBJJ,
 		RqAmount:  tx.RqAmount,
 		Type:      tx.Type,
 	}
@@ -117,6 +115,12 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	}
 	if tx.RqToEthAddr != nilAddr {
 		insertTx.RqToEthAddr = &tx.RqToEthAddr
+	}
+	if tx.ToBJJ != common.EmptyBJJComp {
+		insertTx.ToBJJ = &tx.ToBJJ
+	}
+	if tx.RqToBJJ != common.EmptyBJJComp {
+		insertTx.RqToBJJ = &tx.RqToBJJ
 	}
 	f := new(big.Float).SetInt(tx.Amount)
 	amountF, _ := f.Float64()

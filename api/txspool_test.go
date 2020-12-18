@@ -122,7 +122,7 @@ func genTestPoolTxs(
 			addr := ethAddrToHez(acc.EthAddr)
 			genReceiveTx.ToEthAddr = &addr
 		}
-		if poolTx.ToBJJ != nil {
+		if poolTx.ToBJJ != common.EmptyBJJComp {
 			toBJJ := bjjToString(poolTx.ToBJJ)
 			genSendTx.ToBJJ = &toBJJ
 			genReceiveTx.ToBJJ = &toBJJ
@@ -151,12 +151,13 @@ func genTestPoolTxs(
 				genSendTx.RqToEthAddr = &rqToEth
 				genReceiveTx.RqToEthAddr = &rqToEth
 			}
-			if poolTx.RqToBJJ != nil {
+			if poolTx.RqToBJJ != common.EmptyBJJComp {
 				rqToBJJ := bjjToString(poolTx.RqToBJJ)
 				genSendTx.RqToBJJ = &rqToBJJ
 				genReceiveTx.RqToBJJ = &rqToBJJ
 			}
 		}
+
 		poolTxsToSend = append(poolTxsToSend, genSendTx)
 		poolTxsToReceive = append(poolTxsToReceive, genReceiveTx)
 	}

@@ -822,7 +822,7 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 			ToForgeL1TxsNum:    l1txs[i].ToForgeL1TxsNum,
 			UserOrigin:         &l1txs[i].UserOrigin,
 			FromEthAddr:        &l1txs[i].FromEthAddr,
-			FromBJJ:            l1txs[i].FromBJJ,
+			FromBJJ:            &l1txs[i].FromBJJ,
 			DepositAmount:      l1txs[i].DepositAmount,
 			DepositAmountFloat: &depositAmountFloat,
 		})
@@ -929,7 +929,7 @@ func (hdb *HistoryDB) GetHistoryTx(txID common.TxID) (*TxAPI, error) {
 // GetHistoryTxs returns a list of txs from the DB using the HistoryTx struct
 // and pagination info
 func (hdb *HistoryDB) GetHistoryTxs(
-	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey,
+	ethAddr *ethCommon.Address, bjj *babyjub.PublicKeyComp,
 	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
 	fromItem, limit *uint, order string,
 ) ([]TxAPI, uint64, error) {
@@ -1082,7 +1082,7 @@ func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, err
 
 // GetExitsAPI returns a list of exits from the DB and pagination info
 func (hdb *HistoryDB) GetExitsAPI(
-	ethAddr *ethCommon.Address, bjj *babyjub.PublicKey, tokenID *common.TokenID,
+	ethAddr *ethCommon.Address, bjj *babyjub.PublicKeyComp, tokenID *common.TokenID,
 	idx *common.Idx, batchNum *uint, onlyPendingWithdraws *bool,
 	fromItem, limit *uint, order string,
 ) ([]ExitAPI, uint64, error) {
@@ -1691,7 +1691,7 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 // GetAccountsAPI returns a list of accounts from the DB and pagination info
 func (hdb *HistoryDB) GetAccountsAPI(
 	tokenIDs []common.TokenID, ethAddr *ethCommon.Address,
-	bjj *babyjub.PublicKey, fromItem, limit *uint, order string,
+	bjj *babyjub.PublicKeyComp, fromItem, limit *uint, order string,
 ) ([]AccountAPI, uint64, error) {
 	if ethAddr != nil && bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))

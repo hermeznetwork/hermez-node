@@ -58,7 +58,7 @@ func TestParseBlockchainTxs(t *testing.T) {
 
 	parser := newParser(strings.NewReader(s))
 	instructions, err := parser.parse()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 25, len(instructions.instructions))
 	assert.Equal(t, 7, len(instructions.users))
 
@@ -92,7 +92,7 @@ func TestParsePoolTxs(t *testing.T) {
 
 	parser := newParser(strings.NewReader(s))
 	instructions, err := parser.parse()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 5, len(instructions.instructions))
 	assert.Equal(t, 4, len(instructions.users))
 
@@ -151,7 +151,7 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	s = `
 		Type: Blockchain
 		Transfer(1) A-B: 10 (256)

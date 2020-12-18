@@ -278,7 +278,7 @@ func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
 	tokenIDUint32 := uint32(0)
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:       key.BJJPublicKey,
+		FromBJJ:       key.BJJPublicKey.Compress(),
 		FromIdx:       common.Idx(fromIdxInt64),
 		ToIdx:         common.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
@@ -310,7 +310,7 @@ func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
 	toIdxInt64 := int64(0)
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:       key.BJJPublicKey,
+		FromBJJ:       key.BJJPublicKey.Compress(),
 		FromIdx:       common.Idx(fromIdxInt64),
 		ToIdx:         common.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
@@ -342,7 +342,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
 	toIdxInt64 := int64(0)
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:       key.BJJPublicKey,
+		FromBJJ:       key.BJJPublicKey.Compress(),
 		FromIdx:       common.Idx(fromIdxInt64),
 		ToIdx:         common.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
@@ -374,7 +374,7 @@ func TestRollupL1UserTxETHDeposit(t *testing.T) {
 	tokenIDUint32 := uint32(0)
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:       nil,
+		FromBJJ:       common.EmptyBJJComp,
 		FromIdx:       common.Idx(fromIdxInt64),
 		ToIdx:         common.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
@@ -404,7 +404,7 @@ func TestRollupL1UserTxERC20Deposit(t *testing.T) {
 	toIdxInt64 := int64(0)
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromBJJ:       nil,
+		FromBJJ:       common.EmptyBJJComp,
 		FromIdx:       common.Idx(fromIdxInt64),
 		ToIdx:         common.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
@@ -909,9 +909,6 @@ func TestRollupWithdrawMerkleProof(t *testing.T) {
 	pkCompLE := common.SwapEndianness(pkCompBE)
 	copy(pkComp[:], pkCompLE)
 
-	pk, err := pkComp.Decompress()
-	require.NoError(t, err)
-
 	require.NoError(t, err)
 	tokenID := uint32(tokenHEZID)
 	numExitRoot := int64(3)
@@ -926,7 +923,7 @@ func TestRollupWithdrawMerkleProof(t *testing.T) {
 	// siblings = append(siblings, siblingBytes1)
 	instantWithdraw := true
 
-	_, err = rollupClientAux.RollupWithdrawMerkleProof(pk, tokenID, numExitRoot, fromIdx, amount, siblings, instantWithdraw)
+	_, err = rollupClientAux.RollupWithdrawMerkleProof(pkComp, tokenID, numExitRoot, fromIdx, amount, siblings, instantWithdraw)
 	require.NoError(t, err)
 
 	currentBlockNum, err := rollupClient.client.EthLastBlock()

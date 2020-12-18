@@ -61,7 +61,7 @@ type receivedAuth struct {
 func accountCreationAuthAPIToCommon(apiAuth *receivedAuth) *common.AccountCreationAuth {
 	return &common.AccountCreationAuth{
 		EthAddr:   ethCommon.Address(apiAuth.EthAddr),
-		BJJ:       (*babyjub.PublicKey)(&apiAuth.BJJ),
+		BJJ:       (babyjub.PublicKeyComp)(apiAuth.BJJ),
 		Signature: []byte(apiAuth.Signature),
 		Timestamp: apiAuth.Timestamp,
 	}

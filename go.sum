@@ -342,14 +342,10 @@ github.com/iden3/go-circom-prover-verifier v0.0.1/go.mod h1:1FkpX4nUXxYcY2fpzqd2
 github.com/iden3/go-circom-witnesscalc v0.0.1/go.mod h1:xjT1BlFZDBioHOlbD75SmZZLC1d1AfOycqbSa/1QRJU=
 github.com/iden3/go-iden3-core v0.0.8 h1:PLw7iCiX7Pw1dqBkR+JaLQWqB5RKd+vgu25UBdvFXGQ=
 github.com/iden3/go-iden3-core v0.0.8/go.mod h1:URNjIhMql6sEbWubIGrjJdw5wHCE1Pk1XghxjBOtA3s=
-github.com/iden3/go-iden3-crypto v0.0.5 h1:inCSm5a+ry+nbpVTL/9+m6UcIwSv6nhUm0tnIxEbcps=
 github.com/iden3/go-iden3-crypto v0.0.5/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=
-github.com/iden3/go-iden3-crypto v0.0.6-0.20200819064831-09d161e9f670 h1:gNBFu/WnRfNn+xywE04fgCWSHlb6wr0nIIll9i4R2fc=
 github.com/iden3/go-iden3-crypto v0.0.6-0.20200819064831-09d161e9f670/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
-github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e h1:DvzTgAkzfcW8l4mHgEaMv2hgDTlisym/gGNNTNKqnpQ=
-github.com/iden3/go-iden3-crypto v0.0.6-0.20201016142444-94e92e88fb4e/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
-github.com/iden3/go-iden3-crypto v0.0.6-0.20201203095229-821a601d2002 h1:f2twuL20aAqq1TlSdfQgL5r68hKjB/ioQdSctREQLuY=
-github.com/iden3/go-iden3-crypto v0.0.6-0.20201203095229-821a601d2002/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
+github.com/iden3/go-iden3-crypto v0.0.6-0.20201221160344-58e589b6eb4c h1:D2u8FFYey6iFXLsqqJZ8R7ch8gZum+/b98whvoSDbyg=
+github.com/iden3/go-iden3-crypto v0.0.6-0.20201221160344-58e589b6eb4c/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
 github.com/iden3/go-merkletree v0.0.0-20200902123354-eeb949f8c334 h1:FQngDJKiwM6i4kHlVFvSpJa9sO+QvZ7C+GqoPWe+5BI=
 github.com/iden3/go-merkletree v0.0.0-20200902123354-eeb949f8c334/go.mod h1:MRe6i0mi2oDVUzgBIHsNRE6XAg8EBuqIQZMsd+do+dU=
 github.com/iden3/go-merkletree v0.0.0-20201103115630-ad30c8309b44 h1:d6AbzJWWUosTpjb6Ab+I0bMO4UPY+u/HgkOdhksxDgY=

@@ -304,10 +304,11 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 			if s.zki != nil {
 				s.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
 				s.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
-				if babyjub.PointCoordSign(accCoord.PublicKey.X) {
+				coordBJJSign, coordBJJY := babyjub.UnpackSignY(accCoord.PublicKey)
+				if coordBJJSign {
 					s.zki.Sign3[iFee] = big.NewInt(1)
 				}
-				s.zki.Ay3[iFee] = accCoord.PublicKey.Y
+				s.zki.Ay3[iFee] = coordBJJY
 				s.zki.Balance3[iFee] = accCoord.Balance
 				s.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
 			}
@@ -432,8 +433,8 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 		}
 		s.zki.DepositAmountF[s.i] = big.NewInt(int64(depositAmountF16))
 		s.zki.FromEthAddr[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
-		if tx.FromBJJ != nil {
-			s.zki.FromBJJCompressed[s.i] = BJJCompressedTo256BigInts(tx.FromBJJ.Compress())
+		if tx.FromBJJ != common.EmptyBJJComp {
+			s.zki.FromBJJCompressed[s.i] = BJJCompressedTo256BigInts(tx.FromBJJ)
 		}
 
 		// Intermediate States, for all the transactions except for the last one
@@ -567,8 +568,8 @@ func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 			s.zki.AuxToIdx[s.i] = tx.AuxToIdx.BigInt()
 		}
 
-		if tx.ToBJJ != nil {
-			s.zki.ToBJJAy[s.i] = tx.ToBJJ.Y
+		if tx.ToBJJ != common.EmptyBJJComp {
+			_, s.zki.ToBJJAy[s.i] = babyjub.UnpackSignY(tx.ToBJJ)
 		}
 		s.zki.ToEthAddr[s.i] = common.EthAddrToBigInt(tx.ToEthAddr)
 
@@ -643,10 +644,11 @@ func (s *StateDB) applyCreateAccount(tx *common.L1Tx) error {
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = tx.TokenID.BigInt()
 		s.zki.Nonce1[s.i] = big.NewInt(0)
-		if babyjub.PointCoordSign(tx.FromBJJ.X) {
+		fromBJJSign, fromBJJY := babyjub.UnpackSignY(tx.FromBJJ)
+		if fromBJJSign {
 			s.zki.Sign1[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay1[s.i] = tx.FromBJJ.Y
+		s.zki.Ay1[s.i] = fromBJJY
 		s.zki.Balance1[s.i] = tx.EffectiveDepositAmount
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
 		s.zki.Siblings1[s.i] = siblingsToZKInputFormat(p.Siblings)
@@ -683,10 +685,11 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = accSender.TokenID.BigInt()
 		s.zki.Nonce1[s.i] = accSender.Nonce.BigInt()
-		if babyjub.PointCoordSign(accSender.PublicKey.X) {
+		senderBJJSign, senderBJJY := babyjub.UnpackSignY(accSender.PublicKey)
+		if senderBJJSign {
 			s.zki.Sign1[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay1[s.i] = accSender.PublicKey.Y
+		s.zki.Ay1[s.i] = senderBJJY
 		s.zki.Balance1[s.i] = accSender.Balance
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(accSender.EthAddr)
 	}
@@ -721,10 +724,11 @@ func (s *StateDB) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		if s.zki != nil {
 			s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
 			s.zki.Nonce2[s.i] = accReceiver.Nonce.BigInt()
-			if babyjub.PointCoordSign(accReceiver.PublicKey.X) {
+			receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.PublicKey)
+			if receiverBJJSign {
 				s.zki.Sign2[s.i] = big.NewInt(1)
 			}
-			s.zki.Ay2[s.i] = accReceiver.PublicKey.Y
+			s.zki.Ay2[s.i] = receiverBJJY
 			s.zki.Balance2[s.i] = accReceiver.Balance
 			s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(accReceiver.EthAddr)
 		}
@@ -769,10 +773,11 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		// Set the State1 before updating the Sender leaf
 		s.zki.TokenID1[s.i] = accSender.TokenID.BigInt()
 		s.zki.Nonce1[s.i] = accSender.Nonce.BigInt()
-		if babyjub.PointCoordSign(accSender.PublicKey.X) {
+		senderBJJSign, senderBJJY := babyjub.UnpackSignY(accSender.PublicKey)
+		if senderBJJSign {
 			s.zki.Sign1[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay1[s.i] = accSender.PublicKey.Y
+		s.zki.Ay1[s.i] = senderBJJY
 		s.zki.Balance1[s.i] = accSender.Balance
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(accSender.EthAddr)
 	}
@@ -835,10 +840,11 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		// Set the State2 before updating the Receiver leaf
 		s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
 		s.zki.Nonce2[s.i] = accReceiver.Nonce.BigInt()
-		if babyjub.PointCoordSign(accReceiver.PublicKey.X) {
+		receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.PublicKey)
+		if receiverBJJSign {
 			s.zki.Sign2[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay2[s.i] = accReceiver.PublicKey.Y
+		s.zki.Ay2[s.i] = receiverBJJY
 		s.zki.Balance2[s.i] = accReceiver.Balance
 		s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(accReceiver.EthAddr)
 	}
@@ -874,10 +880,11 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		// Set the State1 before updating the Sender leaf
 		s.zki.TokenID1[s.i] = tx.TokenID.BigInt()
 		s.zki.Nonce1[s.i] = big.NewInt(0)
-		if babyjub.PointCoordSign(tx.FromBJJ.X) {
+		fromBJJSign, fromBJJY := babyjub.UnpackSignY(tx.FromBJJ)
+		if fromBJJSign {
 			s.zki.Sign1[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay1[s.i] = tx.FromBJJ.Y
+		s.zki.Ay1[s.i] = fromBJJY
 		s.zki.Balance1[s.i] = tx.EffectiveDepositAmount
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(tx.FromEthAddr)
 	}
@@ -921,10 +928,11 @@ func (s *StateDB) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 		// Set the State2 before updating the Receiver leaf
 		s.zki.TokenID2[s.i] = accReceiver.TokenID.BigInt()
 		s.zki.Nonce2[s.i] = accReceiver.Nonce.BigInt()
-		if babyjub.PointCoordSign(accReceiver.PublicKey.X) {
+		receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.PublicKey)
+		if receiverBJJSign {
 			s.zki.Sign2[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay2[s.i] = accReceiver.PublicKey.Y
+		s.zki.Ay2[s.i] = receiverBJJY
 		s.zki.Balance2[s.i] = accReceiver.Balance
 		s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(accReceiver.EthAddr)
 	}
@@ -959,10 +967,11 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	if s.zki != nil {
 		s.zki.TokenID1[s.i] = acc.TokenID.BigInt()
 		s.zki.Nonce1[s.i] = acc.Nonce.BigInt()
-		if babyjub.PointCoordSign(acc.PublicKey.X) {
+		accBJJSign, accBJJY := babyjub.UnpackSignY(acc.PublicKey)
+		if accBJJSign {
 			s.zki.Sign1[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay1[s.i] = acc.PublicKey.Y
+		s.zki.Ay1[s.i] = accBJJY
 		s.zki.Balance1[s.i] = acc.Balance
 		s.zki.EthAddr1[s.i] = common.EthAddrToBigInt(acc.EthAddr)
 
@@ -1027,10 +1036,11 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			// Set the State2 before creating the Exit leaf
 			s.zki.TokenID2[s.i] = acc.TokenID.BigInt()
 			s.zki.Nonce2[s.i] = big.NewInt(0)
-			if babyjub.PointCoordSign(acc.PublicKey.X) {
+			accBJJSign, accBJJY := babyjub.UnpackSignY(acc.PublicKey)
+			if accBJJSign {
 				s.zki.Sign2[s.i] = big.NewInt(1)
 			}
-			s.zki.Ay2[s.i] = acc.PublicKey.Y
+			s.zki.Ay2[s.i] = accBJJY
 			s.zki.Balance2[s.i] = tx.Amount
 			s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(acc.EthAddr)
 		}
@@ -1057,10 +1067,11 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		// Set the State2 before updating the Exit leaf
 		s.zki.TokenID2[s.i] = acc.TokenID.BigInt()
 		s.zki.Nonce2[s.i] = big.NewInt(0)
-		if babyjub.PointCoordSign(acc.PublicKey.X) {
+		accBJJSign, accBJJY := babyjub.UnpackSignY(acc.PublicKey)
+		if accBJJSign {
 			s.zki.Sign2[s.i] = big.NewInt(1)
 		}
-		s.zki.Ay2[s.i] = acc.PublicKey.Y
+		s.zki.Ay2[s.i] = accBJJY
 		s.zki.Balance2[s.i] = tx.Amount
 		s.zki.EthAddr2[s.i] = common.EthAddrToBigInt(acc.EthAddr)
 	}

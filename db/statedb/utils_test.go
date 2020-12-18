@@ -17,11 +17,11 @@ import (
 
 func TestGetIdx(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
-	require.Nil(t, err)
-	defer assert.Nil(t, os.RemoveAll(dir))
+	require.NoError(t, err)
+	defer assert.NoError(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	var sk babyjub.PrivateKey
 	copy(sk[:], []byte("1234")) // only for testing
@@ -39,50 +39,50 @@ func TestGetIdx(t *testing.T) {
 	tokenID1 := common.TokenID(1)
 
 	// store the keys for idx by Addr & BJJ
-	err = sdb.setIdxByEthAddrBJJ(idx, addr, pk, tokenID0)
-	require.Nil(t, err)
+	err = sdb.setIdxByEthAddrBJJ(idx, addr, pk.Compress(), tokenID0)
+	require.NoError(t, err)
 
-	idxR, err := sdb.GetIdxByEthAddrBJJ(addr, pk, tokenID0)
-	assert.Nil(t, err)
+	idxR, err := sdb.GetIdxByEthAddrBJJ(addr, pk.Compress(), tokenID0)
+	assert.NoError(t, err)
 	assert.Equal(t, idx, idxR)
 
 	// expect error when getting only by EthAddr, as value does not exist
 	// in the db for only EthAddr
 	_, err = sdb.GetIdxByEthAddr(addr, tokenID0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	_, err = sdb.GetIdxByEthAddr(addr2, tokenID0)
 	assert.NotNil(t, err)
 	// expect error when getting by EthAddr and BJJ, but for another TokenID
-	_, err = sdb.GetIdxByEthAddrBJJ(addr, pk, tokenID1)
+	_, err = sdb.GetIdxByEthAddrBJJ(addr, pk.Compress(), tokenID1)
 	assert.NotNil(t, err)
 
 	// expect to fail
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk, tokenID0)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk.Compress(), tokenID0)
 	assert.NotNil(t, err)
 	assert.Equal(t, common.Idx(0), idxR)
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk2, tokenID0)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk2.Compress(), tokenID0)
 	assert.NotNil(t, err)
 	assert.Equal(t, common.Idx(0), idxR)
 
 	// try to store bigger idx, will not affect as already exist a smaller
 	// Idx for that Addr & BJJ
-	err = sdb.setIdxByEthAddrBJJ(idx2, addr, pk, tokenID0)
-	assert.Nil(t, err)
+	err = sdb.setIdxByEthAddrBJJ(idx2, addr, pk.Compress(), tokenID0)
+	assert.NoError(t, err)
 
 	// store smaller idx
-	err = sdb.setIdxByEthAddrBJJ(idx3, addr, pk, tokenID0)
-	assert.Nil(t, err)
+	err = sdb.setIdxByEthAddrBJJ(idx3, addr, pk.Compress(), tokenID0)
+	assert.NoError(t, err)
 
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk, tokenID0)
-	assert.Nil(t, err)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk.Compress(), tokenID0)
+	assert.NoError(t, err)
 	assert.Equal(t, idx3, idxR)
 
 	// by EthAddr should work
 	idxR, err = sdb.GetIdxByEthAddr(addr, tokenID0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, idx3, idxR)
 	// expect error when trying to get Idx by addr2 & pk2
-	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2, tokenID0)
+	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2.Compress(), tokenID0)
 	assert.NotNil(t, err)
 	expectedErr := fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrToIdxNotFound, addr2.Hex(), pk2, tokenID0)
 	assert.Equal(t, expectedErr, tracerr.Unwrap(err))

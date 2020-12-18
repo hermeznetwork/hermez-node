@@ -87,7 +87,7 @@ func parseQueryHezEthAddr(c querier) (*ethCommon.Address, error) {
 	return hezStringToEthAddr(addrStr, name)
 }
 
-func parseQueryBJJ(c querier) (*babyjub.PublicKey, error) {
+func parseQueryBJJ(c querier) (*babyjub.PublicKeyComp, error) {
 	const name = "BJJ"
 	bjjStr := c.Query(name)
 	if bjjStr == "" {
@@ -146,7 +146,7 @@ func parseIdx(c querier) (*common.Idx, error) {
 	return stringToIdx(idxStr, name)
 }
 
-func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.PublicKey, *common.Idx, error) {
+func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.PublicKeyComp, *common.Idx, error) {
 	// TokenID
 	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
 	if err != nil {
@@ -237,7 +237,7 @@ func parseSlotFilters(c querier) (*int64, *int64, *ethCommon.Address, *bool, err
 	return minSlotNum, maxSlotNum, wonByEthereumAddress, finishedAuction, nil
 }
 
-func parseAccountFilters(c querier) ([]common.TokenID, *ethCommon.Address, *babyjub.PublicKey, error) {
+func parseAccountFilters(c querier) ([]common.TokenID, *ethCommon.Address, *babyjub.PublicKeyComp, error) {
 	// TokenID
 	idsStr := c.Query("tokenIds")
 	var tokenIDs []common.TokenID
@@ -365,7 +365,7 @@ func hezStringToEthAddr(addrStr, name string) (*ethCommon.Address, error) {
 	return &addr, tracerr.Wrap(err)
 }
 
-func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKey, error) {
+func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKeyComp, error) {
 	const decodedLen = 33
 	splitted := strings.Split(bjjStr, "hez:")
 	if len(splitted) != 2 || len(splitted[1]) != 44 {
@@ -395,13 +395,7 @@ func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKey, error) {
 			name))
 	}
 	bjjComp := babyjub.PublicKeyComp(bjjBytes)
-	bjj, err := bjjComp.Decompress()
-	if err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf(
-			"invalid %s, error decompressing public key: %s",
-			name, err.Error()))
-	}
-	return bjj, nil
+	return &bjjComp, nil
 }
 
 func parseQueryEthAddr(name string, c querier) (*ethCommon.Address, error) {
@@ -436,8 +430,8 @@ type errorMsg struct {
 	Message string
 }
 
-func bjjToString(bjj *babyjub.PublicKey) string {
-	pkComp := [32]byte(bjj.Compress())
+func bjjToString(bjj babyjub.PublicKeyComp) string {
+	pkComp := [32]byte(bjj)
 	sum := pkComp[0]
 	for i := 1; i < len(pkComp); i++ {
 		sum += pkComp[i]
