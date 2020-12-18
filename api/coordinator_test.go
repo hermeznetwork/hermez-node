@@ -68,20 +68,31 @@ func TestGetCoordinators(t *testing.T) {
 	}
 	assertCoordinators(t, reversedCoordinators, fetchedCoordinators)
 
-	// Test GetCoordinator
-	for _, coord := range tc.coordinators {
-		path = fmt.Sprintf("%s/%s", endpoint, coord.Forger.String())
-		fetchedCoordinator := historydb.CoordinatorAPI{}
-		assert.NoError(t, doGoodReq("GET", path, nil, &fetchedCoordinator))
-		assertCoordinator(t, coord, fetchedCoordinator)
+	for _, filteredCoord := range tc.coordinators {
+		// By bidder
+		fetchedCoordinators = []historydb.CoordinatorAPI{}
+		err = doGoodReqPaginated(
+			fmt.Sprintf(path+"&bidderAddr=%s", filteredCoord.Bidder.String()),
+			historydb.OrderAsc, &testCoordinatorsResponse{}, appendIter,
+		)
+		assert.NoError(t, err)
+		assertCoordinators(t, []historydb.CoordinatorAPI{filteredCoord}, fetchedCoordinators)
+		// By forger
+		fetchedCoordinators = []historydb.CoordinatorAPI{}
+		err = doGoodReqPaginated(
+			fmt.Sprintf(path+"&forgerAddr=%s", filteredCoord.Forger.String()),
+			historydb.OrderAsc, &testCoordinatorsResponse{}, appendIter,
+		)
+		assert.NoError(t, err)
+		assertCoordinators(t, []historydb.CoordinatorAPI{filteredCoord}, fetchedCoordinators)
 	}
 
 	// 400
-	path = fmt.Sprintf("%s/0x001", endpoint)
+	path = fmt.Sprintf("%s?bidderAddr=0x001", endpoint)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
 	// 404
-	path = fmt.Sprintf("%s/0xaa942cfcd25ad4d90a62358b0dd84f33b398262a", endpoint)
+	path = fmt.Sprintf("%s?bidderAddr=0xaa942cfcd25ad4d90a62358b0dd84f33b398262a", endpoint)
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }

@@ -371,12 +371,12 @@ func (s *Synchronizer) init() error {
 	}
 	lastBlock := &common.Block{}
 	lastSavedBlock, err := s.historyDB.GetLastBlock()
-	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	// If there's no block in the DB (or we only have the default block 0),
+	// If we only have the default block 0,
 	// make sure that the stateDB is clean
-	if tracerr.Unwrap(err) == sql.ErrNoRows || lastSavedBlock.Num == 0 {
+	if lastSavedBlock.Num == 0 {
 		if err := s.stateDB.Reset(0); err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -607,6 +607,14 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 		log.Info("Setting initial SCVars in HistoryDB")
 		if err = s.historyDB.SetInitialSCVars(rollup, auction, wDelayer); err != nil {
 			return tracerr.Wrap(fmt.Errorf("historyDB.SetInitialSCVars: %w", err))
+		}
+		// Add initial boot coordinator to HistoryDB
+		if err := s.historyDB.AddCoordinators([]common.Coordinator{{
+			Forger:      auction.BootCoordinator,
+			URL:         auction.BootCoordinatorURL,
+			EthBlockNum: auction.EthBlockNum,
+		}}); err != nil {
+			return tracerr.Wrap(err)
 		}
 	}
 	s.vars.Rollup = *rollup
@@ -1015,6 +1023,12 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 		s.vars.Auction.BootCoordinator = evt.NewBootCoordinator
 		s.vars.Auction.BootCoordinatorURL = evt.NewBootCoordinatorURL
 		varsUpdate = true
+		// Add new boot coordinator
+		auctionData.Coordinators = append(auctionData.Coordinators, common.Coordinator{
+			Forger:      evt.NewBootCoordinator,
+			URL:         evt.NewBootCoordinatorURL,
+			EthBlockNum: blockNum,
+		})
 	}
 	for _, evt := range auctionEvents.NewOpenAuctionSlots {
 		s.vars.Auction.OpenAuctionSlots = evt.NewOpenAuctionSlots
