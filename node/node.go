@@ -22,6 +22,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test/debugapi"
@@ -47,8 +48,9 @@ const (
 
 // Node is the Hermez Node
 type Node struct {
-	nodeAPI  *NodeAPI
-	debugAPI *debugapi.DebugAPI
+	nodeAPI      *NodeAPI
+	debugAPI     *debugapi.DebugAPI
+	priceUpdater *priceupdater.PriceUpdater
 	// Coordinator
 	coord *coordinator.Coordinator
 
@@ -243,17 +245,23 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	if cfg.Debug.APIAddress != "" {
 		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB, sync)
 	}
+	priceUpdater, err := priceupdater.NewPriceUpdater(cfg.PriceUpdater.URL,
+		priceupdater.APIType(cfg.PriceUpdater.Type), historyDB)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{
-		nodeAPI:  nodeAPI,
-		debugAPI: debugAPI,
-		coord:    coord,
-		sync:     sync,
-		cfg:      cfg,
-		mode:     mode,
-		sqlConn:  db,
-		ctx:      ctx,
-		cancel:   cancel,
+		nodeAPI:      nodeAPI,
+		debugAPI:     debugAPI,
+		priceUpdater: priceUpdater,
+		coord:        coord,
+		sync:         sync,
+		cfg:          cfg,
+		mode:         mode,
+		sqlConn:      db,
+		ctx:          ctx,
+		cancel:       cancel,
 	}, nil
 }
 
@@ -439,7 +447,23 @@ func (n *Node) StartSynchronizer() {
 			}
 		}
 	}()
-	// TODO: Run price updater.  This is required by the API and the TxSelector
+
+	n.wg.Add(1)
+	go func() {
+		for {
+			select {
+			case <-n.ctx.Done():
+				log.Info("PriceUpdater done")
+				n.wg.Done()
+				return
+			case <-time.After(n.cfg.PriceUpdater.Interval.Duration):
+				if err := n.priceUpdater.UpdateTokenList(); err != nil {
+					log.Errorw("PriceUpdater.UpdateTokenList()", "err", err)
+				}
+				n.priceUpdater.UpdatePrices(n.ctx)
+			}
+		}
+	}()
 }
 
 // StartDebugAPI starts the DebugAPI
