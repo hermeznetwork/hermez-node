@@ -185,16 +185,7 @@ func newTestSynchronizer(t *testing.T, ethClient *test.Client, ethClientSetup *t
 	modules modules) *synchronizer.Synchronizer {
 	sync, err := synchronizer.NewSynchronizer(ethClient, modules.historyDB, modules.stateDB,
 		synchronizer.Config{
-			StartBlockNum: synchronizer.ConfigStartBlockNum{
-				Rollup:   1,
-				Auction:  1,
-				WDelayer: 1,
-			},
-			InitialVariables: synchronizer.SCVariables{
-				Rollup:   *ethClientSetup.RollupVariables,
-				Auction:  *ethClientSetup.AuctionVariables,
-				WDelayer: *ethClientSetup.WDelayerVariables,
-			},
+			StatsRefreshPeriod: 0 * time.Second,
 		})
 	require.NoError(t, err)
 	return sync
@@ -311,7 +302,11 @@ func TestCoordCanForge(t *testing.T) {
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
-	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
+	bid, ok := new(big.Int).SetString("12000000000000000000", 10)
+	if !ok {
+		panic("bad bid")
+	}
+	_, err = ethClient.AuctionBidSimple(2, bid)
 	require.NoError(t, err)
 
 	modules2 := newTestModules(t)
@@ -359,7 +354,11 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
-	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
+	bid, ok := new(big.Int).SetString("11000000000000000000", 10)
+	if !ok {
+		panic("bad bid")
+	}
+	_, err = ethClient.AuctionBidSimple(2, bid)
 	require.NoError(t, err)
 
 	var msg MsgSyncBlock

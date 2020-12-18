@@ -27,7 +27,7 @@ type L2Tx struct {
 func NewL2Tx(tx *L2Tx) (*L2Tx, error) {
 	txTypeOld := tx.Type
 	if err := tx.SetType(); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// If original Type doesn't match the correct one, return error
 	if txTypeOld != "" && txTypeOld != tx.Type {
@@ -37,7 +37,7 @@ func NewL2Tx(tx *L2Tx) (*L2Tx, error) {
 
 	txIDOld := tx.TxID
 	if err := tx.SetID(); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// If original TxID doesn't match the correct one, return error
 	if txIDOld != (TxID{}) && txIDOld != tx.TxID {

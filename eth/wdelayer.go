@@ -33,6 +33,18 @@ type WDelayerEventInitialize struct {
 	InitialEmergencyCouncil        ethCommon.Address
 }
 
+// WDelayerVariables returns the WDelayerVariables from the initialize event
+func (ei *WDelayerEventInitialize) WDelayerVariables() *common.WDelayerVariables {
+	return &common.WDelayerVariables{
+		EthBlockNum:                0,
+		HermezGovernanceAddress:    ei.InitialHermezGovernanceAddress,
+		EmergencyCouncilAddress:    ei.InitialEmergencyCouncil,
+		WithdrawalDelay:            ei.InitialWithdrawalDelay,
+		EmergencyModeStartingBlock: 0,
+		EmergencyMode:              false,
+	}
+}
+
 // WDelayerEventDeposit is an event of the WithdrawalDelayer Smart Contract
 type WDelayerEventDeposit struct {
 	Owner            ethCommon.Address
@@ -124,6 +136,7 @@ type WDelayerInterface interface {
 
 	WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error)
 	WDelayerConstants() (*common.WDelayerConstants, error)
+	WDelayerEventInit() (*WDelayerEventInitialize, int64, error)
 }
 
 //
@@ -395,11 +408,11 @@ func (c *WDelayerClient) WDelayerEventInit() (*WDelayerEventInitialize, int64, e
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(logs) != 1 {
-		return nil, 0, fmt.Errorf("no event of type InitializeWithdrawalDelayerEvent found")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("no event of type InitializeWithdrawalDelayerEvent found"))
 	}
 	vLog := logs[0]
 	if vLog.Topics[0] != logWDelayerInitialize {
-		return nil, 0, fmt.Errorf("event is not InitializeWithdrawalDelayerEvent")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("event is not InitializeWithdrawalDelayerEvent"))
 	}
 
 	var wDelayerInit WDelayerEventInitialize
@@ -407,7 +420,7 @@ func (c *WDelayerClient) WDelayerEventInit() (*WDelayerEventInitialize, int64, e
 		vLog.Data); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	return &wDelayerInit, int64(vLog.BlockNumber), err
+	return &wDelayerInit, int64(vLog.BlockNumber), tracerr.Wrap(err)
 }
 
 // WDelayerEventsByBlock returns the events in a block that happened in the

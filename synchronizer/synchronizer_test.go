@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"testing"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -300,16 +301,7 @@ func TestSync(t *testing.T) {
 
 	// Create Synchronizer
 	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
-		StartBlockNum: ConfigStartBlockNum{
-			Rollup:   1,
-			Auction:  1,
-			WDelayer: 1,
-		},
-		InitialVariables: SCVariables{
-			Rollup:   *clientSetup.RollupVariables,
-			Auction:  *clientSetup.AuctionVariables,
-			WDelayer: *clientSetup.WDelayerVariables,
-		},
+		StatsRefreshPeriod: 0 * time.Second,
 	})
 	require.NoError(t, err)
 

@@ -69,6 +69,26 @@ type AuctionEventInitialize struct {
 	AllocationRatio        [3]uint16
 }
 
+// AuctionVariables returns the AuctionVariables from the initialize event
+func (ei *AuctionEventInitialize) AuctionVariables(InitialMinimalBidding *big.Int) *common.AuctionVariables {
+	return &common.AuctionVariables{
+		EthBlockNum:        0,
+		DonationAddress:    ei.DonationAddress,
+		BootCoordinator:    ei.BootCoordinatorAddress,
+		BootCoordinatorURL: ei.BootCoordinatorURL,
+		DefaultSlotSetBid: [6]*big.Int{
+			InitialMinimalBidding, InitialMinimalBidding, InitialMinimalBidding,
+			InitialMinimalBidding, InitialMinimalBidding, InitialMinimalBidding,
+		},
+		DefaultSlotSetBidSlotNum: 0,
+		ClosedAuctionSlots:       ei.ClosedAuctionSlots,
+		OpenAuctionSlots:         ei.OpenAuctionSlots,
+		AllocationRatio:          ei.AllocationRatio,
+		Outbidding:               ei.Outbidding,
+		SlotDeadline:             ei.SlotDeadline,
+	}
+}
+
 // AuctionEventNewBid is an event of the Auction Smart Contract
 type AuctionEventNewBid struct {
 	Slot      int64
@@ -235,6 +255,7 @@ type AuctionInterface interface {
 
 	AuctionConstants() (*common.AuctionConstants, error)
 	AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error)
+	AuctionEventInit() (*AuctionEventInitialize, int64, error)
 }
 
 //
@@ -756,11 +777,11 @@ func (c *AuctionClient) AuctionEventInit() (*AuctionEventInitialize, int64, erro
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(logs) != 1 {
-		return nil, 0, fmt.Errorf("no event of type InitializeHermezAuctionProtocolEvent found")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("no event of type InitializeHermezAuctionProtocolEvent found"))
 	}
 	vLog := logs[0]
 	if vLog.Topics[0] != logAuctionInitialize {
-		return nil, 0, fmt.Errorf("event is not InitializeHermezAuctionProtocolEvent")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("event is not InitializeHermezAuctionProtocolEvent"))
 	}
 
 	var auctionInit AuctionEventInitialize
@@ -768,7 +789,7 @@ func (c *AuctionClient) AuctionEventInit() (*AuctionEventInitialize, int64, erro
 		"InitializeHermezAuctionProtocolEvent", vLog.Data); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	return &auctionInit, int64(vLog.BlockNumber), err
+	return &auctionInit, int64(vLog.BlockNumber), tracerr.Wrap(err)
 }
 
 // AuctionEventsByBlock returns the events in a block that happened in the

@@ -53,7 +53,7 @@ type L1Tx struct {
 func NewL1Tx(tx *L1Tx) (*L1Tx, error) {
 	txTypeOld := tx.Type
 	if err := tx.SetType(); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// If original Type doesn't match the correct one, return error
 	if txTypeOld != "" && txTypeOld != tx.Type {
@@ -63,7 +63,7 @@ func NewL1Tx(tx *L1Tx) (*L1Tx, error) {
 
 	txIDOld := tx.TxID
 	if err := tx.SetID(); err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	// If original TxID doesn't match the correct one, return error
 	if txIDOld != (TxID{}) && txIDOld != tx.TxID {
