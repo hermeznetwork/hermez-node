@@ -27,6 +27,20 @@ func TestAuctionGetCurrentSlotNumber(t *testing.T) {
 	assert.Equal(t, currentSlotConst, currentSlotInt)
 }
 
+func TestAuctionEventInit(t *testing.T) {
+	auctionInit, blockNum, err := auctionClientTest.AuctionEventInit()
+	require.NoError(t, err)
+	assert.Equal(t, int64(18), blockNum)
+	assert.Equal(t, donationAddressConst, auctionInit.DonationAddress)
+	assert.Equal(t, bootCoordinatorAddressConst, auctionInit.BootCoordinatorAddress)
+	assert.Equal(t, "https://boot.coordinator.io", auctionInit.BootCoordinatorURL)
+	assert.Equal(t, uint16(1000), auctionInit.Outbidding)
+	assert.Equal(t, uint8(20), auctionInit.SlotDeadline)
+	assert.Equal(t, uint16(2), auctionInit.ClosedAuctionSlots)
+	assert.Equal(t, uint16(4320), auctionInit.OpenAuctionSlots)
+	assert.Equal(t, [3]uint16{4000, 4000, 2000}, auctionInit.AllocationRatio)
+}
+
 func TestAuctionConstants(t *testing.T) {
 	INITMINBID := new(big.Int)
 	INITMINBID.SetString(minBidStr, 10)

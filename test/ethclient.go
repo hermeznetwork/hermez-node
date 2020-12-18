@@ -1599,21 +1599,21 @@ func (c *Client) WDelayerIsEmergencyMode() (bool, error) {
 }
 
 // WDelayerGetWithdrawalDelay is the interface to call the smart contract function
-func (c *Client) WDelayerGetWithdrawalDelay() (*big.Int, error) {
+func (c *Client) WDelayerGetWithdrawalDelay() (int64, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, tracerr.Wrap(errTODO)
+	return 0, tracerr.Wrap(errTODO)
 }
 
 // WDelayerGetEmergencyModeStartingTime is the interface to call the smart contract function
-func (c *Client) WDelayerGetEmergencyModeStartingTime() (*big.Int, error) {
+func (c *Client) WDelayerGetEmergencyModeStartingTime() (int64, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	log.Error("TODO")
-	return nil, tracerr.Wrap(errTODO)
+	return 0, tracerr.Wrap(errTODO)
 }
 
 // WDelayerEnableEmergencyMode is the interface to call the smart contract function

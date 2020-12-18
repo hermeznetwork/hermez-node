@@ -25,6 +25,14 @@ type DepositState struct {
 	DepositTimestamp uint64
 }
 
+// WDelayerEventInitialize is the InitializeWithdrawalDelayerEvent event of the
+// Smart Contract
+type WDelayerEventInitialize struct {
+	InitialWithdrawalDelay         uint64
+	InitialHermezGovernanceAddress ethCommon.Address
+	InitialEmergencyCouncil        ethCommon.Address
+}
+
 // WDelayerEventDeposit is an event of the WithdrawalDelayer Smart Contract
 type WDelayerEventDeposit struct {
 	Owner            ethCommon.Address
@@ -105,8 +113,8 @@ type WDelayerInterface interface {
 	WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (*types.Transaction, error)
 	WDelayerClaimEmergencyCouncil() (*types.Transaction, error)
 	WDelayerIsEmergencyMode() (bool, error)
-	WDelayerGetWithdrawalDelay() (*big.Int, error)
-	WDelayerGetEmergencyModeStartingTime() (*big.Int, error)
+	WDelayerGetWithdrawalDelay() (int64, error)
+	WDelayerGetEmergencyModeStartingTime() (int64, error)
 	WDelayerEnableEmergencyMode() (*types.Transaction, error)
 	WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (*types.Transaction, error)
 	WDelayerDepositInfo(owner, token ethCommon.Address) (depositInfo DepositState, err error)
@@ -238,25 +246,27 @@ func (c *WDelayerClient) WDelayerIsEmergencyMode() (ermergencyMode bool, err err
 }
 
 // WDelayerGetWithdrawalDelay is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetWithdrawalDelay() (withdrawalDelay *big.Int, err error) {
+func (c *WDelayerClient) WDelayerGetWithdrawalDelay() (withdrawalDelay int64, err error) {
+	var _withdrawalDelay uint64
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		withdrawalDelay, err = c.wdelayer.GetWithdrawalDelay(c.opts)
+		_withdrawalDelay, err = c.wdelayer.GetWithdrawalDelay(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, tracerr.Wrap(err)
+		return 0, tracerr.Wrap(err)
 	}
-	return withdrawalDelay, nil
+	return int64(_withdrawalDelay), nil
 }
 
 // WDelayerGetEmergencyModeStartingTime is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetEmergencyModeStartingTime() (emergencyModeStartingTime *big.Int, err error) {
+func (c *WDelayerClient) WDelayerGetEmergencyModeStartingTime() (emergencyModeStartingTime int64, err error) {
+	var _emergencyModeStartingTime uint64
 	if err := c.client.Call(func(ec *ethclient.Client) error {
-		emergencyModeStartingTime, err = c.wdelayer.GetEmergencyModeStartingTime(c.opts)
+		_emergencyModeStartingTime, err = c.wdelayer.GetEmergencyModeStartingTime(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
-		return nil, tracerr.Wrap(err)
+		return 0, tracerr.Wrap(err)
 	}
-	return emergencyModeStartingTime, nil
+	return int64(_emergencyModeStartingTime), nil
 }
 
 // WDelayerEnableEmergencyMode is the interface to call the smart contract function
@@ -368,7 +378,37 @@ var (
 	logWDelayerEscapeHatchWithdrawal      = crypto.Keccak256Hash([]byte("EscapeHatchWithdrawal(address,address,address,uint256)"))
 	logWDelayerNewEmergencyCouncil        = crypto.Keccak256Hash([]byte("NewEmergencyCouncil(address)"))
 	logWDelayerNewHermezGovernanceAddress = crypto.Keccak256Hash([]byte("NewHermezGovernanceAddress(address)"))
+	logWDelayerInitialize                 = crypto.Keccak256Hash([]byte(
+		"InitializeWithdrawalDelayerEvent(uint64,address,address)"))
 )
+
+// WDelayerEventInit returns the initialize event with its corresponding block number
+func (c *WDelayerClient) WDelayerEventInit() (*WDelayerEventInitialize, int64, error) {
+	query := ethereum.FilterQuery{
+		Addresses: []ethCommon.Address{
+			c.address,
+		},
+		Topics: [][]ethCommon.Hash{{logWDelayerInitialize}},
+	}
+	logs, err := c.client.client.FilterLogs(context.Background(), query)
+	if err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	if len(logs) != 1 {
+		return nil, 0, fmt.Errorf("no event of type InitializeWithdrawalDelayerEvent found")
+	}
+	vLog := logs[0]
+	if vLog.Topics[0] != logWDelayerInitialize {
+		return nil, 0, fmt.Errorf("event is not InitializeWithdrawalDelayerEvent")
+	}
+
+	var wDelayerInit WDelayerEventInitialize
+	if err := c.contractAbi.UnpackIntoInterface(&wDelayerInit, "InitializeWithdrawalDelayerEvent",
+		vLog.Data); err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	return &wDelayerInit, int64(vLog.BlockNumber), err
+}
 
 // WDelayerEventsByBlock returns the events in a block that happened in the
 // WDelayer Smart Contract and the blockHash where the eents happened.  If
@@ -402,7 +442,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 		switch vLog.Topics[0] {
 		case logWDelayerDeposit:
 			var deposit WDelayerEventDeposit
-			err := c.contractAbi.Unpack(&deposit, "Deposit", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&deposit, "Deposit", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
@@ -413,7 +453,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 
 		case logWDelayerWithdraw:
 			var withdraw WDelayerEventWithdraw
-			err := c.contractAbi.Unpack(&withdraw, "Withdraw", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&withdraw, "Withdraw", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
@@ -427,7 +467,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 
 		case logWDelayerNewWithdrawalDelay:
 			var withdrawalDelay WDelayerEventNewWithdrawalDelay
-			err := c.contractAbi.Unpack(&withdrawalDelay, "NewWithdrawalDelay", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay, "NewWithdrawalDelay", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
@@ -435,7 +475,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 
 		case logWDelayerEscapeHatchWithdrawal:
 			var escapeHatchWithdrawal WDelayerEventEscapeHatchWithdrawal
-			err := c.contractAbi.Unpack(&escapeHatchWithdrawal, "EscapeHatchWithdrawal", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&escapeHatchWithdrawal, "EscapeHatchWithdrawal", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
@@ -446,7 +486,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 
 		case logWDelayerNewEmergencyCouncil:
 			var emergencyCouncil WDelayerEventNewEmergencyCouncil
-			err := c.contractAbi.Unpack(&emergencyCouncil, "NewEmergencyCouncil", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&emergencyCouncil, "NewEmergencyCouncil", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
@@ -454,7 +494,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 
 		case logWDelayerNewHermezGovernanceAddress:
 			var governanceAddress WDelayerEventNewHermezGovernanceAddress
-			err := c.contractAbi.Unpack(&governanceAddress, "NewHermezGovernanceAddress", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&governanceAddress, "NewHermezGovernanceAddress", vLog.Data)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}

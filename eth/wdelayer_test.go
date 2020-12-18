@@ -12,10 +12,19 @@ import (
 var wdelayerClient *WDelayerClient
 var wdelayerClientTest *WDelayerClient
 
-var initWithdrawalDelay = big.NewInt(60)
-var newWithdrawalDelay = big.NewInt(79)
+var initWithdrawalDelay int64 = 60
+var newWithdrawalDelay int64 = 79
 var maxEmergencyModeTime = time.Hour * 24 * 7 * 26
 var maxWithdrawalDelay = time.Hour * 24 * 7 * 2
+
+func TestWDelayerInit(t *testing.T) {
+	wDelayerInit, blockNum, err := wdelayerClientTest.WDelayerEventInit()
+	require.NoError(t, err)
+	assert.Equal(t, int64(16), blockNum)
+	assert.Equal(t, uint64(initWithdrawalDelay), wDelayerInit.InitialWithdrawalDelay)
+	assert.Equal(t, governanceAddressConst, wDelayerInit.InitialHermezGovernanceAddress)
+	assert.Equal(t, emergencyCouncilAddressConst, wDelayerInit.InitialEmergencyCouncil)
+}
 
 func TestWDelayerConstants(t *testing.T) {
 	wDelayerConstants, err := wdelayerClientTest.WDelayerConstants()
@@ -94,7 +103,7 @@ func TestWDelayerGetWithdrawalDelay(t *testing.T) {
 }
 
 func TestWDelayerChangeWithdrawalDelay(t *testing.T) {
-	_, err := wdelayerClientTest.WDelayerChangeWithdrawalDelay(newWithdrawalDelay.Uint64())
+	_, err := wdelayerClientTest.WDelayerChangeWithdrawalDelay(uint64(newWithdrawalDelay))
 	require.Nil(t, err)
 	withdrawalDelay, err := wdelayerClientTest.WDelayerGetWithdrawalDelay()
 	require.Nil(t, err)
@@ -103,7 +112,7 @@ func TestWDelayerChangeWithdrawalDelay(t *testing.T) {
 	require.Nil(t, err)
 	wdelayerEvents, _, err := wdelayerClientTest.WDelayerEventsByBlock(currentBlockNum)
 	require.Nil(t, err)
-	assert.Equal(t, newWithdrawalDelay.Uint64(), wdelayerEvents.NewWithdrawalDelay[0].WithdrawalDelay)
+	assert.Equal(t, uint64(newWithdrawalDelay), wdelayerEvents.NewWithdrawalDelay[0].WithdrawalDelay)
 }
 
 func TestWDelayerDeposit(t *testing.T) {
@@ -135,7 +144,7 @@ func TestWDelayerWithdrawal(t *testing.T) {
 	amount.SetString("1100000000000000000", 10)
 	_, err := wdelayerClientTest.WDelayerWithdrawal(auxAddressConst, tokenHEZAddressConst)
 	require.Contains(t, err.Error(), "WITHDRAWAL_NOT_ALLOWED")
-	addTime(float64(newWithdrawalDelay.Int64()), ethClientDialURL)
+	addTime(float64(newWithdrawalDelay), ethClientDialURL)
 	addBlock(ethClientDialURL)
 	_, err = wdelayerClientTest.WDelayerWithdrawal(auxAddressConst, tokenHEZAddressConst)
 	require.Nil(t, err)
@@ -185,7 +194,7 @@ func TestWDelayerGetEmergencyModeStartingTime(t *testing.T) {
 	// contract construction.  Since we called WDelayerEnableEmergencyMode
 	// previously, `emergencyModeStartingTime` is set to the time when the
 	// call was made, so it's > 0.
-	assert.True(t, emergencyModeStartingTime.Cmp(big.NewInt(0)) == 1)
+	assert.Greater(t, emergencyModeStartingTime, int64(0))
 }
 
 func TestWDelayerEscapeHatchWithdrawal(t *testing.T) {

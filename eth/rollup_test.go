@@ -55,6 +55,15 @@ func genKeysBjj(i int64) *keys {
 	}
 }
 
+func TestRollupEventInit(t *testing.T) {
+	rollupInit, blockNum, err := rollupClient.RollupEventInit()
+	require.NoError(t, err)
+	assert.Equal(t, int64(19), blockNum)
+	assert.Equal(t, uint8(10), rollupInit.ForgeL1L2BatchTimeout)
+	assert.Equal(t, big.NewInt(10), rollupInit.FeeAddToken)
+	assert.Equal(t, uint64(60*60*24*7*2), rollupInit.WithdrawalDelay)
+}
+
 func TestRollupConstants(t *testing.T) {
 	rollupConstants, err := rollupClient.RollupConstants()
 	require.NoError(t, err)
