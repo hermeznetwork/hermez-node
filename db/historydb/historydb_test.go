@@ -912,7 +912,8 @@ func TestGetBestBidCoordinator(t *testing.T) {
 	}
 	err = historyDB.addCoordinators(historyDB.db, coords)
 	require.NoError(t, err)
-	err = historyDB.addBids(historyDB.db, []common.Bid{
+
+	bids := []common.Bid{
 		{
 			SlotNum:     10,
 			BidValue:    big.NewInt(10),
@@ -925,7 +926,9 @@ func TestGetBestBidCoordinator(t *testing.T) {
 			EthBlockNum: 2,
 			Bidder:      coords[1].Bidder,
 		},
-	})
+	}
+
+	err = historyDB.addBids(historyDB.db, bids)
 	require.NoError(t, err)
 
 	forger10, err := historyDB.GetBestBidCoordinator(10)
@@ -933,6 +936,11 @@ func TestGetBestBidCoordinator(t *testing.T) {
 	require.Equal(t, coords[1].Forger, forger10.Forger)
 	require.Equal(t, coords[1].Bidder, forger10.Bidder)
 	require.Equal(t, coords[1].URL, forger10.URL)
+	require.Equal(t, bids[1].SlotNum, forger10.SlotNum)
+	require.Equal(t, bids[1].BidValue, forger10.BidValue)
+	for i := range forger10.DefaultSlotSetBid {
+		require.Equal(t, auction.DefaultSlotSetBid[i], forger10.DefaultSlotSetBid[i])
+	}
 
 	_, err = historyDB.GetBestBidCoordinator(11)
 	require.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))

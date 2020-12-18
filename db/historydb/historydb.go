@@ -377,7 +377,7 @@ func (hdb *HistoryDB) GetBestBidCoordinator(slotNum int64) (*common.BidCoordinat
 	err := meddler.QueryRow(
 		hdb.db, bidCoord,
 		`SELECT (
-			SELECT default_slot_set_bid_slot_num
+			SELECT default_slot_set_bid
 			FROM auction_vars
 			WHERE default_slot_set_bid_slot_num <= $1
 			ORDER BY eth_block_num DESC LIMIT 1
