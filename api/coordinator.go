@@ -7,29 +7,17 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
-func (a *API) getCoordinator(c *gin.Context) {
-	// Get bidderAddr
-	const name = "bidderAddr"
-	bidderAddr, err := parseParamEthAddr(name, c)
-
+func (a *API) getCoordinators(c *gin.Context) {
+	bidderAddr, err := parseQueryEthAddr("bidderAddr", c)
 	if err != nil {
 		retBadReq(err, c)
 		return
-	} else if bidderAddr == nil {
-		retBadReq(ErrNillBidderAddr, c)
-		return
 	}
-
-	coordinator, err := a.h.GetCoordinatorAPI(*bidderAddr)
+	forgerAddr, err := parseQueryEthAddr("forgerAddr", c)
 	if err != nil {
-		retSQLErr(err, c)
+		retBadReq(err, c)
 		return
 	}
-
-	c.JSON(http.StatusOK, coordinator)
-}
-
-func (a *API) getCoordinators(c *gin.Context) {
 	// Pagination
 	fromItem, order, limit, err := parsePagination(c)
 	if err != nil {
@@ -38,7 +26,7 @@ func (a *API) getCoordinators(c *gin.Context) {
 	}
 
 	// Fetch coordinators from historyDB
-	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(fromItem, limit, order)
+	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(bidderAddr, forgerAddr, fromItem, limit, order)
 	if err != nil {
 		retSQLErr(err, c)
 		return

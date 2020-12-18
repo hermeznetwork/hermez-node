@@ -1144,6 +1144,18 @@ paths:
       description: Get information about coordinators.
       operationId: getCoordinators
       parameters:
+        - name: forgerAddr
+          in: query
+          required: false
+          description: Get coordinators by it's forger address.
+          schema:
+            $ref: '#/components/schemas/EthereumAddress'
+        - name: bidderAddr
+          in: query
+          required: false
+          description: Get coordinators by it's bidder address.
+          schema:
+            $ref: '#/components/schemas/EthereumAddress'
         - name: fromItem
           in: query
           required: false
@@ -1181,45 +1193,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '500':
-          description: Internal server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error500'
-  '/coordinators/{bidderAddr}':
-    get:
-      tags:
-        - Hermez status
-      summary: Get the information of a coordinator.
-      description: Get the information of a coordinator.
-      operationId: getCoordinator
-      parameters:
-        - name: bidderAddr
-          in: path
-          description: Coordinator identifier
-          required: true
-          schema:
-            $ref: '#/components/schemas/EthereumAddress'
-      responses:
-        '200':
-          description: Successful operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Coordinator'
-        '400':
-          description: Bad request.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:
