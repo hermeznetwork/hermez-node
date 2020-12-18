@@ -883,7 +883,7 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 				tc.extra.nonces[tx.FromIdx]++
 				tx.Nonce = tc.extra.nonces[tx.FromIdx]
 				if err := tx.SetID(); err != nil {
-					return err
+					return tracerr.Wrap(err)
 				}
 				nTx, err := common.NewL2Tx(tx)
 				if err != nil {

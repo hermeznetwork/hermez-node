@@ -1777,14 +1777,14 @@ func (c *Client) CtlAddBlocks(blocks []common.BlockData) (err error) {
 		auction := nextBlock.Auction
 		for _, token := range block.Rollup.AddedTokens {
 			if _, err := c.RollupAddTokenSimple(token.EthAddr, rollup.Vars.FeeAddToken); err != nil {
-				return err
+				return tracerr.Wrap(err)
 			}
 		}
 		for _, tx := range block.Rollup.L1UserTxs {
 			c.CtlSetAddr(tx.FromEthAddr)
 			if _, err := c.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.DepositAmount, tx.Amount,
 				uint32(tx.TokenID), int64(tx.ToIdx)); err != nil {
-				return err
+				return tracerr.Wrap(err)
 			}
 		}
 		c.CtlSetAddr(auction.Vars.BootCoordinator)
@@ -1804,7 +1804,7 @@ func (c *Client) CtlAddBlocks(blocks []common.BlockData) (err error) {
 				ProofB:      [2][2]*big.Int{}, // Intentionally empty
 				ProofC:      [2]*big.Int{},    // Intentionally empty
 			}); err != nil {
-				return err
+				return tracerr.Wrap(err)
 			}
 		}
 		// Mine block and sync

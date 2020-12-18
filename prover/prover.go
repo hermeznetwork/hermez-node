@@ -27,7 +27,7 @@ type bigInt big.Int
 func (b *bigInt) UnmarshalText(text []byte) error {
 	_, ok := (*big.Int)(b).SetString(string(text), 10)
 	if !ok {
-		return fmt.Errorf("invalid big int: \"%v\"", string(text))
+		return tracerr.Wrap(fmt.Errorf("invalid big int: \"%v\"", string(text)))
 	}
 	return nil
 }
@@ -42,7 +42,7 @@ func (p *Proof) UnmarshalJSON(data []byte) error {
 		Protocol string        `json:"protocol"`
 	}{}
 	if err := json.Unmarshal(data, &proof); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	p.PiA[0] = (*big.Int)(proof.PiA[0])
 	p.PiA[1] = (*big.Int)(proof.PiA[1])
@@ -66,7 +66,7 @@ type PublicInputs []*big.Int
 func (p *PublicInputs) UnmarshalJSON(data []byte) error {
 	pubInputs := []*bigInt{}
 	if err := json.Unmarshal(data, &pubInputs); err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	*p = make([]*big.Int, len(pubInputs))
 	for i, v := range pubInputs {
@@ -245,7 +245,7 @@ func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, []*big.Int, e
 		}
 		return &proof, pubInputs, nil
 	}
-	return nil, nil, fmt.Errorf("status != StatusCodeSuccess, status = %v", status.Status)
+	return nil, nil, tracerr.Wrap(fmt.Errorf("status != StatusCodeSuccess, status = %v", status.Status))
 }
 
 // Cancel cancels any current proof computation
@@ -261,7 +261,7 @@ func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 			return tracerr.Wrap(err)
 		}
 		if !status.Status.IsInitialized() {
-			return fmt.Errorf("Proof Server is not initialized")
+			return tracerr.Wrap(fmt.Errorf("Proof Server is not initialized"))
 		}
 		if status.Status.IsReady() {
 			return nil

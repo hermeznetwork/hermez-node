@@ -710,18 +710,18 @@ func (c *RollupClient) RollupEventInit() (*RollupEventInitialize, int64, error) 
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(logs) != 1 {
-		return nil, 0, fmt.Errorf("no event of type InitializeHermezEvent found")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("no event of type InitializeHermezEvent found"))
 	}
 	vLog := logs[0]
 	if vLog.Topics[0] != logHermezInitialize {
-		return nil, 0, fmt.Errorf("event is not InitializeHermezEvent")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("event is not InitializeHermezEvent"))
 	}
 
 	var rollupInit RollupEventInitialize
 	if err := c.contractAbi.UnpackIntoInterface(&rollupInit, "InitializeHermezEvent", vLog.Data); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	return &rollupInit, int64(vLog.BlockNumber), err
+	return &rollupInit, int64(vLog.BlockNumber), tracerr.Wrap(err)
 }
 
 // RollupEventsByBlock returns the events in a block that happened in the Rollup Smart Contract

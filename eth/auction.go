@@ -777,11 +777,11 @@ func (c *AuctionClient) AuctionEventInit() (*AuctionEventInitialize, int64, erro
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(logs) != 1 {
-		return nil, 0, fmt.Errorf("no event of type InitializeHermezAuctionProtocolEvent found")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("no event of type InitializeHermezAuctionProtocolEvent found"))
 	}
 	vLog := logs[0]
 	if vLog.Topics[0] != logAuctionInitialize {
-		return nil, 0, fmt.Errorf("event is not InitializeHermezAuctionProtocolEvent")
+		return nil, 0, tracerr.Wrap(fmt.Errorf("event is not InitializeHermezAuctionProtocolEvent"))
 	}
 
 	var auctionInit AuctionEventInitialize
@@ -789,7 +789,7 @@ func (c *AuctionClient) AuctionEventInit() (*AuctionEventInitialize, int64, erro
 		"InitializeHermezAuctionProtocolEvent", vLog.Data); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	return &auctionInit, int64(vLog.BlockNumber), err
+	return &auctionInit, int64(vLog.BlockNumber), tracerr.Wrap(err)
 }
 
 // AuctionEventsByBlock returns the events in a block that happened in the

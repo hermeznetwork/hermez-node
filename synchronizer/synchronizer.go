@@ -226,7 +226,7 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 
 	initVars, startBlockNums, err := getInitialVariables(ethClient, &consts)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	log.Infow("Synchronizer syncing from smart contract blocks",
 		"rollup", startBlockNums.Rollup,
@@ -587,15 +587,15 @@ func getInitialVariables(ethClient eth.ClientInterface,
 	consts *SCConsts) (*SCVariables, *StartBlockNums, error) {
 	rollupInit, rollupInitBlock, err := ethClient.RollupEventInit()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	auctionInit, auctionInitBlock, err := ethClient.AuctionEventInit()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	wDelayerInit, wDelayerInitBlock, err := ethClient.WDelayerEventInit()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, tracerr.Wrap(err)
 	}
 	rollupVars := rollupInit.RollupVariables()
 	auctionVars := auctionInit.AuctionVariables(consts.Auction.InitialMinimalBidding)
@@ -625,7 +625,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 		s.vars.Auction = *vars.Auction.Copy()
 		s.vars.WDelayer = *vars.WDelayer.Copy()
 	} else if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	} else {
 		s.vars.Rollup = *rollup
 		s.vars.Auction = *auction
@@ -805,7 +805,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		// Set TxID, BlockNum, BatchNum and Position to the forged L2Txs
 		for i := range l2Txs {
 			if err := l2Txs[i].SetID(); err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			l2Txs[i].EthBlockNum = blockNum
 			l2Txs[i].BatchNum = batchNum
