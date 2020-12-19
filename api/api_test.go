@@ -330,7 +330,10 @@ func TestMain(m *testing.M) {
 		commonL1Txs = append(commonL1Txs, block.Rollup.L1UserTxs...)
 		for _, batch := range block.Rollup.Batches {
 			commonL2Txs = append(commonL2Txs, batch.L2Txs...)
-			commonAccounts = append(commonAccounts, batch.CreatedAccounts...)
+			for i := range batch.CreatedAccounts {
+				batch.CreatedAccounts[i].Nonce = common.Nonce(i)
+				commonAccounts = append(commonAccounts, batch.CreatedAccounts[i])
+			}
 			commonBatches = append(commonBatches, batch.Batch)
 			commonExitTree = append(commonExitTree, batch.ExitTree...)
 			commonL1Txs = append(commonL1Txs, batch.L1CoordinatorTxs...)
