@@ -29,6 +29,7 @@ func (a *API) getAccount(c *gin.Context) {
 	}
 
 	apiAccount.Balance = apitypes.NewBigIntStr(account.Balance)
+	apiAccount.Nonce = account.Nonce
 
 	c.JSON(http.StatusOK, apiAccount)
 }
@@ -67,6 +68,7 @@ func (a *API) getAccounts(c *gin.Context) {
 			return
 		}
 		apiAccounts[x].Balance = apitypes.NewBigIntStr(account.Balance)
+		apiAccounts[x].Nonce = account.Nonce
 	}
 
 	// Build succesfull response
