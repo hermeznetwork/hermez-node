@@ -753,7 +753,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		// L1CoordinatorTxs, PoolL2Txs) into stateDB so that they are
 		// processed.
 
-		// Add TxID, TxType, Position, BlockNum and BatchNum to L2 txs
+		// Add TxID, TxType to L2 txs
 		for i := range forgeBatchArgs.L2TxsData {
 			nTx, err := common.NewL2Tx(&forgeBatchArgs.L2TxsData[i])
 			if err != nil {
@@ -790,6 +790,15 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 				l2Txs[i].EthBlockNum = blockNum
 				l2Txs[i].BatchNum = batchNum
 				position++
+				// At this point TxID should be incorrect, since it was calculated before the nonce being setted
+				// therefore TxID has to be calculated again
+				// TODO: use set id method once the code is rebased with master
+				// TODO: add unit test to check the TxID in historyDB is correct with synced L2Txs who's nonce > 0
+				txWithID, err := common.NewL2Tx(&l2Txs[i])
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				l2Txs[i] = *txWithID
 			}
 			batchData.L2Txs = l2Txs
 		}
