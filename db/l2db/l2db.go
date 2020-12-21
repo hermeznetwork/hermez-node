@@ -268,7 +268,7 @@ func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
 	return idxs, nil
 }
 
-var checkNoncesQuery = fmt.Sprintf(`
+var invalidateOldNoncesQuery = fmt.Sprintf(`
 		UPDATE tx_pool SET
 			state = '%s',
 			batch_num = %%d
@@ -276,20 +276,22 @@ var checkNoncesQuery = fmt.Sprintf(`
 			(NULL::::BIGINT, NULL::::BIGINT),
 			(:idx, :nonce)
 		) as updated_acc (idx, nonce)
-		WHERE tx_pool.from_idx = updated_acc.idx AND tx_pool.nonce <= updated_acc.nonce;
-	`, common.PoolL2TxStateInvalid)
+		WHERE tx_pool.state = '%s' AND
+			tx_pool.from_idx = updated_acc.idx AND
+			tx_pool.nonce < updated_acc.nonce;
+	`, common.PoolL2TxStateInvalid, common.PoolL2TxStatePending)
 
-// CheckNonces invalidate txs with nonces that are smaller or equal than their
+// InvalidateOldNonces invalidate txs with nonces that are smaller or equal than their
 // respective accounts nonces.  The state of the affected txs will be changed
 // from Pending to Invalid
-func (l2db *L2DB) CheckNonces(updatedAccounts []common.IdxNonce, batchNum common.BatchNum) (err error) {
+func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []common.IdxNonce, batchNum common.BatchNum) (err error) {
 	if len(updatedAccounts) == 0 {
 		return nil
 	}
 	// Fill the batch_num in the query with Sprintf because we are using a
 	// named query which works with slices, and doens't handle an extra
 	// individual argument.
-	query := fmt.Sprintf(checkNoncesQuery, batchNum)
+	query := fmt.Sprintf(invalidateOldNoncesQuery, batchNum)
 	if _, err := sqlx.NamedExec(l2db.db, query, updatedAccounts); err != nil {
 		return tracerr.Wrap(err)
 	}

@@ -92,13 +92,11 @@ var nLevels uint32 = 32   //nolint:deadcode,unused
 var maxFeeTxs uint32 = 64 //nolint:deadcode,varcheck
 
 func newTestModules(t *testing.T) modules {
-	nLevels := 32
-
 	var err error
 	syncDBPath, err = ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncStateDB, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, nLevels)
+	syncStateDB, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, 48)
 	assert.NoError(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
