@@ -4,6 +4,11 @@ Explorer = true
 UpdateMetricsInterval = "10s"
 UpdateRecommendedFeeInterval = "10s"
 
+[PriceUpdater]
+Interval = "10s"
+URL = "https://api-pub.bitfinex.com/v2/"
+Type = "bitfinexV2"
+
 [Debug]
 APIAddress = "localhost:12345"
 

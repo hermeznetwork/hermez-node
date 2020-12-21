@@ -1,6 +1,7 @@
 package priceupdater
 
 import (
+	"context"
 	"math/big"
 	"os"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPriceUpdater(t *testing.T) {
@@ -37,15 +39,16 @@ func TestPriceUpdater(t *testing.T) {
 	})
 	assert.NoError(t, historyDB.AddTokens(tokens))
 	// Init price updater
-	pu := NewPriceUpdater("https://api-pub.bitfinex.com/v2/", historyDB)
+	pu, err := NewPriceUpdater("https://api-pub.bitfinex.com/v2/", APITypeBitFinexV2, historyDB)
+	require.NoError(t, err)
 	// Update token list
 	assert.NoError(t, pu.UpdateTokenList())
 	// Update prices
-	pu.UpdatePrices()
+	pu.UpdatePrices(context.Background())
 	// Check that prices have been updated
 	limit := uint(10)
 	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, historydb.OrderAsc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// TokenID 0 (ETH) is always on the DB
 	assert.Equal(t, 2, len(fetchedTokens))
 	for _, token := range fetchedTokens {

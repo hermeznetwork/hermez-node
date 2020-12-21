@@ -96,6 +96,11 @@ type Coordinator struct {
 
 // Node is the hermez node configuration.
 type Node struct {
+	PriceUpdater struct {
+		Interval Duration `valudate:"required"`
+		URL      string   `valudate:"required"`
+		Type     string   `valudate:"required"`
+	} `validate:"required"`
 	StateDB struct {
 		Path string
 	} `validate:"required"`
