@@ -171,8 +171,9 @@ func (hdb *HistoryDB) GetBatchAPI(batchNum common.BatchNum) (*BatchAPI, error) {
 	batch := &BatchAPI{}
 	return batch, tracerr.Wrap(meddler.QueryRow(
 		hdb.db, batch,
-		`SELECT batch.*, block.timestamp, block.hash
-	 	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
+		`SELECT batch.*, block.timestamp, block.hash,
+		COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs
+		FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
 	 	WHERE batch_num = $1;`, batchNum,
 	))
 }
@@ -186,6 +187,7 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	var query string
 	var args []interface{}
 	queryStr := `SELECT batch.*, block.timestamp, block.hash,
+	COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs,
 	count(*) OVER() AS total_items
 	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num `
 	// Apply filters

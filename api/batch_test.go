@@ -27,6 +27,7 @@ type testBatch struct {
 	ExitRoot      string                    `json:"exitRoot"`
 	ForgeL1TxsNum *int64                    `json:"forgeL1TransactionsNum"`
 	SlotNum       int64                     `json:"slotNum"`
+	ForgedTxs     int                       `json:"forgedTransactions"`
 }
 type testBatchesResponse struct {
 	Batches      []testBatch `json:"batches"`
@@ -73,6 +74,12 @@ func genTestBatches(
 		for k, v := range cBatches[i].CollectedFees {
 			collectedFees[k] = v.String()
 		}
+		forgedTxs := 0
+		for _, tx := range txs {
+			if tx.BatchNum != nil && *tx.BatchNum == cBatches[i].BatchNum {
+				forgedTxs++
+			}
+		}
 		tBatch := testBatch{
 			BatchNum:      cBatches[i].BatchNum,
 			EthBlockNum:   cBatches[i].EthBlockNum,
@@ -86,6 +93,7 @@ func genTestBatches(
 			ExitRoot:      cBatches[i].ExitRoot.String(),
 			ForgeL1TxsNum: cBatches[i].ForgeL1TxsNum,
 			SlotNum:       cBatches[i].SlotNum,
+			ForgedTxs:     forgedTxs,
 		}
 		tBatches = append(tBatches, tBatch)
 	}
