@@ -1620,15 +1620,38 @@ func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*Coordina
 }
 
 // GetCoordinatorsAPI returns a list of coordinators from the DB and pagination info
-func (hdb *HistoryDB) GetCoordinatorsAPI(fromItem, limit *uint, order string) ([]CoordinatorAPI, uint64, error) {
+func (hdb *HistoryDB) GetCoordinatorsAPI(
+	bidderAddr, forgerAddr *ethCommon.Address,
+	fromItem, limit *uint, order string,
+) ([]CoordinatorAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	queryStr := `SELECT coordinator.*, 
 	COUNT(*) OVER() AS total_items
 	FROM coordinator `
 	// Apply filters
+	nextIsAnd := false
+	if bidderAddr != nil {
+		queryStr += "WHERE bidder_addr = ? "
+		nextIsAnd = true
+		args = append(args, bidderAddr)
+	}
+	if forgerAddr != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "forger_addr = ? "
+		nextIsAnd = true
+		args = append(args, forgerAddr)
+	}
 	if fromItem != nil {
-		queryStr += "WHERE "
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
 		if order == OrderAsc {
 			queryStr += "coordinator.item_id >= ? "
 		} else {
