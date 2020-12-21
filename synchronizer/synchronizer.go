@@ -799,9 +799,11 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 				l2Txs[i].BatchNum = batchNum
 				position++
 				// At this point TxID should be incorrect, since it was calculated before the nonce being setted
-				// therefore TxID has to be calculated again
+				// therefore TxID has to be calculated again. Furthermore the nonce should be -1 ed
+				// TODO: StateDB should return the correct nonce
 				// TODO: use set id method once the code is rebased with master
 				// TODO: add unit test to check the TxID in historyDB is correct with synced L2Txs who's nonce > 0
+				l2Txs[i].Nonce--
 				txWithID, err := common.NewL2Tx(&l2Txs[i])
 				if err != nil {
 					return nil, tracerr.Wrap(err)
