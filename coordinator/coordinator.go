@@ -245,7 +245,7 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 	if c.pipeline == nil {
 		// Mark invalid in Pool due to forged L2Txs
 		// for _, batch := range batches {
-		// 	if err := poolMarkInvalidOldNoncesFromL2Txs(c.l2DB,
+		// 	if err := c.l2DB.InvalidateOldNonces(
 		// 		idxsNonceFromL2Txs(batch.L2Txs), batch.Batch.BatchNum); err != nil {
 		// 		return err
 		// 	}
@@ -850,8 +850,7 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 	// the poolL2Txs selected.  Will mark as invalid the txs that have a
 	// (fromIdx, nonce) which already appears in the selected txs (includes
 	// all the nonces smaller than the current one)
-	err = poolMarkInvalidOldNoncesFromL2Txs(p.l2DB, idxsNonceFromPoolL2Txs(poolL2Txs),
-		batchInfo.BatchNum)
+	err = p.l2DB.InvalidateOldNonces(idxsNonceFromPoolL2Txs(poolL2Txs), batchInfo.BatchNum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

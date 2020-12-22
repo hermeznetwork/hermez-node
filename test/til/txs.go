@@ -597,7 +597,6 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 					return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 				}
 			}
-			tc.Users[inst.From].Accounts[inst.TokenID].Nonce++
 			// if account of receiver does not exist, don't use
 			// ToIdx, and use only ToEthAddr & ToBJJ
 			tx := common.PoolL2Tx{
@@ -612,6 +611,7 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 				RqToBJJ:     common.EmptyBJJComp,
 				Type:        inst.Typ,
 			}
+			tc.Users[inst.From].Accounts[inst.TokenID].Nonce++
 			if tx.Type == common.TxTypeTransfer {
 				tx.ToIdx = tc.Users[inst.To].Accounts[inst.TokenID].Idx
 				tx.ToEthAddr = tc.Users[inst.To].Addr
@@ -639,7 +639,6 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 
 			txs = append(txs, tx)
 		case common.TxTypeExit:
-			tc.Users[inst.From].Accounts[inst.TokenID].Nonce++
 			tx := common.PoolL2Tx{
 				FromIdx: tc.Users[inst.From].Accounts[inst.TokenID].Idx,
 				ToIdx:   common.Idx(1), // as is an Exit
@@ -650,6 +649,7 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 				State:   common.PoolL2TxStatePending,
 				Type:    common.TxTypeExit,
 			}
+			tc.Users[inst.From].Accounts[inst.TokenID].Nonce++
 			nTx, err := common.NewPoolL2Tx(&tx)
 			if err != nil {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))

@@ -35,10 +35,10 @@ type Purger struct {
 // CanPurge returns true if it's a good time to purge according to the
 // configuration
 func (p *Purger) CanPurge(blockNum, batchNum int64) bool {
-	if blockNum > p.lastPurgeBlock+p.cfg.PurgeBlockDelay {
+	if blockNum >= p.lastPurgeBlock+p.cfg.PurgeBlockDelay {
 		return true
 	}
-	if batchNum > p.lastPurgeBatch+p.cfg.PurgeBatchDelay {
+	if batchNum >= p.lastPurgeBatch+p.cfg.PurgeBatchDelay {
 		return true
 	}
 	return false
@@ -47,10 +47,10 @@ func (p *Purger) CanPurge(blockNum, batchNum int64) bool {
 // CanInvalidate returns true if it's a good time to invalidate according to
 // the configuration
 func (p *Purger) CanInvalidate(blockNum, batchNum int64) bool {
-	if blockNum > p.lastInvalidateBlock+p.cfg.InvalidateBlockDelay {
+	if blockNum >= p.lastInvalidateBlock+p.cfg.InvalidateBlockDelay {
 		return true
 	}
-	if batchNum > p.lastInvalidateBatch+p.cfg.InvalidateBatchDelay {
+	if batchNum >= p.lastInvalidateBatch+p.cfg.InvalidateBatchDelay {
 		return true
 	}
 	return false
@@ -114,15 +114,6 @@ func idxsNonceFromPoolL2Txs(txs []common.PoolL2Tx) []common.IdxNonce {
 	return idxsNonce
 }
 
-// poolMarkInvalidOldNoncesFromL2Txs marks as invalid the txs in the pool that
-// contain nonces equal or older to the highest nonce used in a forged l2Tx for
-// the
-// corresponding sender account
-func poolMarkInvalidOldNoncesFromL2Txs(l2DB *l2db.L2DB,
-	idxsNonce []common.IdxNonce, batchNum common.BatchNum) error {
-	return l2DB.CheckNonces(idxsNonce, batchNum)
-}
-
 // poolMarkInvalidOldNonces marks as invalid txs in the pool that contain
 // nonces equal or older to the nonce of the corresponding sender account
 func poolMarkInvalidOldNonces(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
@@ -147,9 +138,8 @@ func poolMarkInvalidOldNonces(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 				return tracerr.Wrap(fmt.Errorf("unexpected stateDB error with idx %v: %w", idx, err))
 			}
 		}
-		fmt.Printf("DBG acc: %#v\n", acc)
 		idxsNonce[i].Idx = idx
 		idxsNonce[i].Nonce = acc.Nonce
 	}
-	return l2DB.CheckNonces(idxsNonce, batchNum)
+	return l2DB.InvalidateOldNonces(idxsNonce, batchNum)
 }

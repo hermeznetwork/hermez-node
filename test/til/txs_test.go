@@ -218,9 +218,9 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	assert.Equal(t, tc.Users["User1"].Addr.Hex(), poolL2Txs[5].ToEthAddr.Hex())
 	assert.Equal(t, tc.Users["User1"].BJJ.Public().String(), poolL2Txs[5].ToBJJ.String())
 
-	assert.Equal(t, common.Nonce(1), poolL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(2), poolL2Txs[3].Nonce)
-	assert.Equal(t, common.Nonce(3), poolL2Txs[8].Nonce)
+	assert.Equal(t, common.Nonce(0), poolL2Txs[0].Nonce)
+	assert.Equal(t, common.Nonce(1), poolL2Txs[3].Nonce)
+	assert.Equal(t, common.Nonce(2), poolL2Txs[8].Nonce)
 
 	assert.Equal(t, tc.Users["B"].Addr.Hex(), poolL2Txs[9].ToEthAddr.Hex())
 	assert.Equal(t, common.EmptyBJJComp, poolL2Txs[9].ToBJJ)
@@ -238,9 +238,9 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	`
 	poolL2Txs, err = tc.GeneratePoolL2Txs(set)
 	require.NoError(t, err)
-	assert.Equal(t, common.Nonce(6), poolL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(2), poolL2Txs[1].Nonce)
-	assert.Equal(t, common.Nonce(7), poolL2Txs[2].Nonce)
+	assert.Equal(t, common.Nonce(5), poolL2Txs[0].Nonce)
+	assert.Equal(t, common.Nonce(1), poolL2Txs[1].Nonce)
+	assert.Equal(t, common.Nonce(6), poolL2Txs[2].Nonce)
 
 	// check that a PoolL2Tx can be done to a non existing ToIdx
 	set = `

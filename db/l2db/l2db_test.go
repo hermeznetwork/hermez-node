@@ -16,6 +16,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var l2DB *L2DB
@@ -217,7 +218,7 @@ func TestGetPending(t *testing.T) {
 
 func TestStartForging(t *testing.T) {
 	// Generate txs
-	const fakeBatchNum common.BatchNum = 33
+	var fakeBatchNum common.BatchNum = 33
 	err := prepareHistoryDB(historyDB)
 	if err != nil {
 		log.Error("Error prepare historyDB", err)
@@ -243,13 +244,13 @@ func TestStartForging(t *testing.T) {
 		fetchedTx, err := l2DB.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForging, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
+		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
 	}
 }
 
 func TestDoneForging(t *testing.T) {
 	// Generate txs
-	const fakeBatchNum common.BatchNum = 33
+	var fakeBatchNum common.BatchNum = 33
 	err := prepareHistoryDB(historyDB)
 	if err != nil {
 		log.Error("Error prepare historyDB", err)
@@ -288,13 +289,13 @@ func TestDoneForging(t *testing.T) {
 		fetchedTx, err := l2DB.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForged, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
+		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
 	}
 }
 
 func TestInvalidate(t *testing.T) {
 	// Generate txs
-	const fakeBatchNum common.BatchNum = 33
+	var fakeBatchNum common.BatchNum = 33
 	err := prepareHistoryDB(historyDB)
 	if err != nil {
 		log.Error("Error prepare historyDB", err)
@@ -320,13 +321,13 @@ func TestInvalidate(t *testing.T) {
 		fetchedTx, err := l2DB.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
+		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
 	}
 }
 
-func TestCheckNonces(t *testing.T) {
+func TestInvalidateOldNonces(t *testing.T) {
 	// Generate txs
-	const fakeBatchNum common.BatchNum = 33
+	var fakeBatchNum common.BatchNum = 33
 	err := prepareHistoryDB(historyDB)
 	if err != nil {
 		log.Error("Error prepare historyDB", err)
@@ -335,7 +336,7 @@ func TestCheckNonces(t *testing.T) {
 	assert.NoError(t, err)
 	// Update Accounts currentNonce
 	var updateAccounts []common.IdxNonce
-	const currentNonce = common.Nonce(1)
+	var currentNonce = common.Nonce(1)
 	for i := range accs {
 		updateAccounts = append(updateAccounts, common.IdxNonce{
 			Idx:   accs[i].Idx,
@@ -345,21 +346,23 @@ func TestCheckNonces(t *testing.T) {
 	// Add txs to DB
 	var invalidTxIDs []common.TxID
 	for i := range poolL2Txs {
-		if poolL2Txs[i].Nonce <= currentNonce {
+		if poolL2Txs[i].Nonce < currentNonce {
 			invalidTxIDs = append(invalidTxIDs, poolL2Txs[i].TxID)
 		}
 		err := l2DB.AddTxTest(&poolL2Txs[i])
 		assert.NoError(t, err)
 	}
+	// sanity check
+	require.Greater(t, len(invalidTxIDs), 0)
 
-	err = l2DB.CheckNonces(updateAccounts, fakeBatchNum)
+	err = l2DB.InvalidateOldNonces(updateAccounts, fakeBatchNum)
 	assert.NoError(t, err)
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range invalidTxIDs {
 		fetchedTx, err := l2DB.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
-		assert.Equal(t, fakeBatchNum, *fetchedTx.BatchNum)
+		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
 	}
 }
 
