@@ -457,9 +457,9 @@ func TestSync(t *testing.T) {
 
 	// Block 4
 	// Generate 2 withdraws manually
-	_, err = client.RollupWithdrawMerkleProof(tc.Users["A"].BJJ.Public(), 1, 4, 256, big.NewInt(100), []*big.Int{}, true)
+	_, err = client.RollupWithdrawMerkleProof(tc.Users["A"].BJJ.Public().Compress(), 1, 4, 256, big.NewInt(100), []*big.Int{}, true)
 	require.NoError(t, err)
-	_, err = client.RollupWithdrawMerkleProof(tc.Users["C"].BJJ.Public(), 1, 3, 258, big.NewInt(50), []*big.Int{}, false)
+	_, err = client.RollupWithdrawMerkleProof(tc.Users["C"].BJJ.Public().Compress(), 1, 3, 258, big.NewInt(50), []*big.Int{}, false)
 	require.NoError(t, err)
 	client.CtlMineBlock()
 

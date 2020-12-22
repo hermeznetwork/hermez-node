@@ -8,6 +8,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewPoolL2Tx(t *testing.T) {
@@ -19,24 +20,24 @@ func TestNewPoolL2Tx(t *testing.T) {
 		Nonce:   144,
 	}
 	poolL2Tx, err := NewPoolL2Tx(poolL2Tx)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "0x020000000156660000000090", poolL2Tx.TxID.String())
 }
 
 func TestTxCompressedData(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		FromIdx: 2,
 		ToIdx:   3,
 		Amount:  big.NewInt(4),
 		TokenID: 5,
 		Nonce:   6,
-		ToBJJ:   sk.Public(),
+		ToBJJ:   sk.Public().Compress(),
 	}
 	txCompressedData, err := tx.TxCompressedData()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	// test vector value generated from javascript implementation
 	expectedStr := "1766847064778421992193717128424891165872736891548909569553540445094274575"
 	assert.Equal(t, expectedStr, txCompressedData.String())
@@ -48,10 +49,10 @@ func TestTxCompressedData(t *testing.T) {
 		RqTokenID: 10,
 		RqNonce:   11,
 		RqFee:     12,
-		RqToBJJ:   sk.Public(),
+		RqToBJJ:   sk.Public().Compress(),
 	}
 	txCompressedData, err = tx.RqTxCompressedDataV2()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	// test vector value generated from javascript implementation
 	expectedStr = "6571340879233176732837827812956721483162819083004853354503"
 	assert.Equal(t, expectedStr, txCompressedData.String())
@@ -61,7 +62,7 @@ func TestTxCompressedData(t *testing.T) {
 func TestTxCompressedDataV2(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		FromIdx: 7,
 		ToIdx:   8,
@@ -69,10 +70,10 @@ func TestTxCompressedDataV2(t *testing.T) {
 		TokenID: 10,
 		Nonce:   11,
 		Fee:     12,
-		ToBJJ:   sk.Public(),
+		ToBJJ:   sk.Public().Compress(),
 	}
 	txCompressedData, err := tx.TxCompressedDataV2()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	// test vector value generated from javascript implementation
 	expectedStr := "6571340879233176732837827812956721483162819083004853354503"
 	assert.Equal(t, expectedStr, txCompressedData.String())
@@ -86,7 +87,7 @@ func TestTxCompressedDataV2(t *testing.T) {
 func TestRqTxCompressedDataV2(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		RqFromIdx: 7,
 		RqToIdx:   8,
@@ -94,10 +95,10 @@ func TestRqTxCompressedDataV2(t *testing.T) {
 		RqTokenID: 10,
 		RqNonce:   11,
 		RqFee:     12,
-		RqToBJJ:   sk.Public(),
+		RqToBJJ:   sk.Public().Compress(),
 	}
 	txCompressedData, err := tx.RqTxCompressedDataV2()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	// test vector value generated from javascript implementation
 	expectedStr := "6571340879233176732837827812956721483162819083004853354503"
 	assert.Equal(t, expectedStr, txCompressedData.String())
@@ -110,7 +111,7 @@ func TestRqTxCompressedDataV2(t *testing.T) {
 func TestHashToSign(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		FromIdx:   2,
 		ToIdx:     3,
@@ -120,29 +121,37 @@ func TestHashToSign(t *testing.T) {
 		ToEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 	toSign, err := tx.HashToSign()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "1469900657138253851938022936440971384682713995864967090251961124784132925291", toSign.String())
 }
 
 func TestVerifyTxSignature(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		FromIdx:     2,
 		ToIdx:       3,
 		Amount:      big.NewInt(4),
 		TokenID:     5,
 		Nonce:       6,
-		ToBJJ:       sk.Public(),
+		ToBJJ:       sk.Public().Compress(),
 		RqToEthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
-		RqToBJJ:     sk.Public(),
+		RqToBJJ:     sk.Public().Compress(),
 	}
 	toSign, err := tx.HashToSign()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "18645218094210271622244722988708640202588315450486586312909439859037906375295", toSign.String())
 
 	sig := sk.SignPoseidon(toSign)
 	tx.Signature = sig.Compress()
-	assert.True(t, tx.VerifySignature(sk.Public()))
+	assert.True(t, tx.VerifySignature(sk.Public().Compress()))
+}
+
+func TestDecompressEmptyBJJComp(t *testing.T) {
+	pkComp := EmptyBJJComp
+	pk, err := pkComp.Decompress()
+	require.NoError(t, err)
+	assert.Equal(t, "2957874849018779266517920829765869116077630550401372566248359756137677864698", pk.X.String())
+	assert.Equal(t, "0", pk.Y.String())
 }

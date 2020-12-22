@@ -12,19 +12,28 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
-// PoolL2Tx is a struct that represents a L2Tx sent by an account to the coordinator hat is waiting to be forged
+// EmptyBJJComp contains the 32 byte array of a empty BabyJubJub PublicKey
+// Compressed. It is a valid point in the BabyJubJub curve, so does not give
+// errors when being decompressed.
+var EmptyBJJComp = babyjub.PublicKeyComp([32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+
+// PoolL2Tx is a struct that represents a L2Tx sent by an account to the
+// coordinator that is waiting to be forged
 type PoolL2Tx struct {
 	// Stored in DB: mandatory fileds
 
 	// TxID (12 bytes) for L2Tx is:
 	// bytes:  |  1   |    6    |   5   |
 	// values: | type | FromIdx | Nonce |
-	TxID      TxID                  `meddler:"tx_id"`
-	FromIdx   Idx                   `meddler:"from_idx"`
-	ToIdx     Idx                   `meddler:"to_idx,zeroisnull"`
-	AuxToIdx  Idx                   `meddler:"-"` // AuxToIdx is only used internally at the StateDB to avoid repeated computation when processing transactions (from Synchronizer, TxSelector, BatchBuilder)
+	TxID    TxID `meddler:"tx_id"`
+	FromIdx Idx  `meddler:"from_idx"`
+	ToIdx   Idx  `meddler:"to_idx,zeroisnull"`
+	// AuxToIdx is only used internally at the StateDB to avoid repeated
+	// computation when processing transactions (from Synchronizer,
+	// TxSelector, BatchBuilder)
+	AuxToIdx  Idx                   `meddler:"-"`
 	ToEthAddr ethCommon.Address     `meddler:"to_eth_addr,zeroisnull"`
-	ToBJJ     *babyjub.PublicKey    `meddler:"to_bjj"`
+	ToBJJ     babyjub.PublicKeyComp `meddler:"to_bjj,zeroisnull"`
 	TokenID   TokenID               `meddler:"token_id"`
 	Amount    *big.Int              `meddler:"amount,bigint"` // TODO: change to float16
 	Fee       FeeSelector           `meddler:"fee"`
@@ -33,17 +42,17 @@ type PoolL2Tx struct {
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
-	RqFromIdx         Idx                `meddler:"rq_from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
-	RqToIdx           Idx                `meddler:"rq_to_idx,zeroisnull"`   // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
-	RqToEthAddr       ethCommon.Address  `meddler:"rq_to_eth_addr,zeroisnull"`
-	RqToBJJ           *babyjub.PublicKey `meddler:"rq_to_bjj"` // TODO: stop using json, use scanner/valuer
-	RqTokenID         TokenID            `meddler:"rq_token_id,zeroisnull"`
-	RqAmount          *big.Int           `meddler:"rq_amount,bigintnull"` // TODO: change to float16
-	RqFee             FeeSelector        `meddler:"rq_fee,zeroisnull"`
-	RqNonce           Nonce              `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
-	AbsoluteFee       float64            `meddler:"fee_usd,zeroisnull"`
-	AbsoluteFeeUpdate time.Time          `meddler:"usd_update,utctimez"`
-	Type              TxType             `meddler:"tx_type"`
+	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
+	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
+	RqToEthAddr       ethCommon.Address     `meddler:"rq_to_eth_addr,zeroisnull"`
+	RqToBJJ           babyjub.PublicKeyComp `meddler:"rq_to_bjj,zeroisnull"`
+	RqTokenID         TokenID               `meddler:"rq_token_id,zeroisnull"`
+	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"` // TODO: change to float16
+	RqFee             FeeSelector           `meddler:"rq_fee,zeroisnull"`
+	RqNonce           Nonce                 `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
+	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
+	AbsoluteFeeUpdate time.Time             `meddler:"usd_update,utctimez"`
+	Type              TxType                `meddler:"tx_type"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
 }
@@ -81,7 +90,7 @@ func (tx *PoolL2Tx) SetType() error {
 	} else if tx.ToIdx == 1 {
 		tx.Type = TxTypeExit
 	} else if tx.ToIdx == 0 {
-		if tx.ToBJJ != nil && tx.ToEthAddr == FFAddr {
+		if tx.ToBJJ != EmptyBJJComp && tx.ToEthAddr == FFAddr {
 			tx.Type = TxTypeTransferToBJJ
 		} else if tx.ToEthAddr != FFAddr && tx.ToEthAddr != EmptyAddr {
 			tx.Type = TxTypeTransferToEthAddr
@@ -125,10 +134,13 @@ func (tx *PoolL2Tx) TxCompressedData() (*big.Int, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	var b [31]byte
+
 	toBJJSign := byte(0)
-	if tx.ToBJJ != nil && babyjub.PointCoordSign(tx.ToBJJ.X) {
+	pkSign, _ := babyjub.UnpackSignY(tx.ToBJJ)
+	if pkSign {
 		toBJJSign = byte(1)
 	}
+
 	b[0] = toBJJSign
 	b[1] = byte(tx.Fee)
 	nonceBytes, err := tx.Nonce.Bytes()
@@ -174,8 +186,11 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 	}
 	var b [25]byte
 	toBJJSign := byte(0)
-	if tx.ToBJJ != nil && babyjub.PointCoordSign(tx.ToBJJ.X) {
-		toBJJSign = byte(1)
+	if tx.ToBJJ != EmptyBJJComp {
+		sign, _ := babyjub.UnpackSignY(tx.ToBJJ)
+		if sign {
+			toBJJSign = byte(1)
+		}
 	}
 	b[0] = toBJJSign
 	b[1] = byte(tx.Fee)
@@ -224,11 +239,14 @@ func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	var b [25]byte
-	toBJJSign := byte(0)
-	if tx.RqToBJJ != nil && babyjub.PointCoordSign(tx.RqToBJJ.X) {
-		toBJJSign = byte(1)
+	rqToBJJSign := byte(0)
+	if tx.RqToBJJ != EmptyBJJComp {
+		sign, _ := babyjub.UnpackSignY(tx.RqToBJJ)
+		if sign {
+			rqToBJJSign = byte(1)
+		}
 	}
-	b[0] = toBJJSign
+	b[0] = rqToBJJSign
 	b[1] = byte(tx.RqFee)
 	nonceBytes, err := tx.RqNonce.Bytes()
 	if err != nil {
@@ -260,29 +278,30 @@ func (tx *PoolL2Tx) HashToSign() (*big.Int, error) {
 	}
 	toEthAddr := EthAddrToBigInt(tx.ToEthAddr)
 	rqToEthAddr := EthAddrToBigInt(tx.RqToEthAddr)
-	toBJJY := big.NewInt(0)
-	if tx.ToBJJ != nil {
-		toBJJY = tx.ToBJJ.Y
-	}
+
+	_, toBJJY := babyjub.UnpackSignY(tx.ToBJJ)
+
 	rqTxCompressedDataV2, err := tx.RqTxCompressedDataV2()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	rqToBJJY := big.NewInt(0)
-	if tx.RqToBJJ != nil {
-		rqToBJJY = tx.RqToBJJ.Y
-	}
+
+	_, rqToBJJY := babyjub.UnpackSignY(tx.RqToBJJ)
 
 	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBJJY, rqTxCompressedDataV2, rqToEthAddr, rqToBJJY})
 }
 
-// VerifySignature returns true if the signature verification is correct for the given PublicKey
-func (tx *PoolL2Tx) VerifySignature(pk *babyjub.PublicKey) bool {
+// VerifySignature returns true if the signature verification is correct for the given PublicKeyComp
+func (tx *PoolL2Tx) VerifySignature(pkComp babyjub.PublicKeyComp) bool {
 	h, err := tx.HashToSign()
 	if err != nil {
 		return false
 	}
 	s, err := tx.Signature.Decompress()
+	if err != nil {
+		return false
+	}
+	pk, err := pkComp.Decompress()
 	if err != nil {
 		return false
 	}
@@ -325,13 +344,15 @@ func PoolL2TxsToL2Txs(txs []PoolL2Tx) ([]L2Tx, error) {
 	return l2Txs, nil
 }
 
-// PoolL2TxState is a struct that represents the status of a L2 transaction
+// PoolL2TxState is a string that represents the status of a L2 transaction
 type PoolL2TxState string
 
 const (
-	// PoolL2TxStatePending represents a valid L2Tx that hasn't started the forging process
+	// PoolL2TxStatePending represents a valid L2Tx that hasn't started the
+	// forging process
 	PoolL2TxStatePending PoolL2TxState = "pend"
-	// PoolL2TxStateForging represents a valid L2Tx that has started the forging process
+	// PoolL2TxStateForging represents a valid L2Tx that has started the
+	// forging process
 	PoolL2TxStateForging PoolL2TxState = "fing"
 	// PoolL2TxStateForged represents a L2Tx that has already been forged
 	PoolL2TxStateForged PoolL2TxState = "fged"

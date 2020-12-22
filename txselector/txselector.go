@@ -267,7 +267,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 		!bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.FFAddr.Bytes()) {
 		// case: ToEthAddr != 0x00 neither 0xff
 		var accAuth *common.AccountCreationAuth
-		if l2Tx.ToBJJ != nil {
+		if l2Tx.ToBJJ != common.EmptyBJJComp {
 			// case: ToBJJ!=0:
 			// if idx exist for EthAddr&BJJ use it
 			_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2Tx.ToEthAddr,
@@ -326,7 +326,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 		}
 		positionL1++
 		l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
-	} else if bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.FFAddr.Bytes()) && l2Tx.ToBJJ != nil {
+	} else if bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.FFAddr.Bytes()) && l2Tx.ToBJJ != common.EmptyBJJComp {
 		// if idx exist for EthAddr&BJJ use it
 		_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2Tx.ToEthAddr, l2Tx.ToBJJ,
 			l2Tx.TokenID)
@@ -358,10 +358,10 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 }
 
 func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx,
-	addr ethCommon.Address, bjj *babyjub.PublicKey) bool {
+	addr ethCommon.Address, bjj babyjub.PublicKeyComp) bool {
 	for i := 0; i < len(l1CoordinatorTxs); i++ {
 		if bytes.Equal(l1CoordinatorTxs[i].FromEthAddr.Bytes(), addr.Bytes()) {
-			if bjj == nil {
+			if bjj == common.EmptyBJJComp {
 				return true
 			}
 			if l1CoordinatorTxs[i].FromBJJ == bjj {

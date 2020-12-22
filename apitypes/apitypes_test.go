@@ -157,11 +157,11 @@ func TestStrHezBJJ(t *testing.T) {
 		I StrHezBJJ
 	}
 	priv := babyjub.NewRandPrivKey()
-	hezBjj := NewHezBJJ(priv.Public())
+	hezBjj := NewHezBJJ(priv.Public().Compress())
 	from := []byte(`{"I":"` + hezBjj + `"}`)
 	to := &testStrHezBJJ{}
 	assert.NoError(t, json.Unmarshal(from, to))
-	assert.Equal(t, priv.Public(), (*babyjub.PublicKey)(&to.I))
+	assert.Equal(t, priv.Public().Compress(), (babyjub.PublicKeyComp)(to.I))
 }
 
 func TestStrHezIdx(t *testing.T) {
@@ -262,20 +262,23 @@ func TestHezBJJ(t *testing.T) {
 	assert.NoError(t, err)
 	// Example structs
 	type bjjStruct struct {
-		I *babyjub.PublicKey `meddler:"i"`
+		I babyjub.PublicKeyComp `meddler:"i"`
 	}
 	type hezBJJStruct struct {
 		I HezBJJ `meddler:"i"`
+	}
+	type bjjStructNil struct {
+		I *babyjub.PublicKeyComp `meddler:"i"`
 	}
 	type hezBJJStructNil struct {
 		I *HezBJJ `meddler:"i"`
 	}
 
 	// Not nil case
-	// Insert into DB using *babyjub.PublicKey Scan/Value
+	// Insert into DB using *babyjub.PublicKeyComp Scan/Value
 	priv := babyjub.NewRandPrivKey()
 	fromBJJ := bjjStruct{
-		I: priv.Public(),
+		I: priv.Public().Compress(),
 	}
 	err = meddler.Insert(db, "test", &fromBJJ)
 	assert.NoError(t, err)
@@ -289,11 +292,11 @@ func TestHezBJJ(t *testing.T) {
 	assert.NoError(t, err)
 	// Insert into DB using HezBJJ Scan/Value
 	fromHezBJJ := hezBJJStruct{
-		I: NewHezBJJ(priv.Public()),
+		I: NewHezBJJ(priv.Public().Compress()),
 	}
 	err = meddler.Insert(db, "test", &fromHezBJJ)
 	assert.NoError(t, err)
-	// Read from DB using *babyjub.PublicKey Scan/Value
+	// Read from DB using *babyjub.PublicKeyComp Scan/Value
 	toBJJ := bjjStruct{}
 	err = meddler.QueryRow(db, &toBJJ, "select * from test")
 	assert.NoError(t, err)
@@ -303,8 +306,8 @@ func TestHezBJJ(t *testing.T) {
 	// Clean DB
 	_, err = db.Exec("delete from test")
 	assert.NoError(t, err)
-	// Insert into DB using *babyjub.PublicKey Scan/Value
-	fromBJJNil := bjjStruct{
+	// Insert into DB using *babyjub.PublicKeyComp Scan/Value
+	fromBJJNil := bjjStructNil{
 		I: nil,
 	}
 	err = meddler.Insert(db, "test", &fromBJJNil)
@@ -326,9 +329,10 @@ func TestHezBJJ(t *testing.T) {
 	}
 	err = meddler.Insert(db, "test", &fromHezBJJNil)
 	assert.NoError(t, err)
-	// Read from DB using *babyjub.PublicKey Scan/Value
-	toBJJNil := bjjStruct{
-		I: priv.Public(), // check that this will be set to nil, not because of not being initialized
+	// Read from DB using *babyjub.PublicKeyComp Scan/Value
+	bjjComp := priv.Public().Compress()
+	toBJJNil := bjjStructNil{
+		I: &bjjComp, // check that this will be set to nil, not because of not being initialized
 	}
 	err = meddler.QueryRow(db, &toBJJNil, "select * from test")
 	assert.NoError(t, err)

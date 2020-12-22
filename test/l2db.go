@@ -78,7 +78,7 @@ func GenAuths(nAuths int) []*common.AccountCreationAuth {
 		// Generate auth
 		auth := &common.AccountCreationAuth{
 			EthAddr: ethCrypto.PubkeyToAddress(ethPrivK.PublicKey),
-			BJJ:     bjjPrivK.Public(),
+			BJJ:     bjjPrivK.Public().Compress(),
 		}
 		// Sign
 		h, err := auth.HashToSign()

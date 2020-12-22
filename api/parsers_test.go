@@ -214,10 +214,10 @@ func TestParseQueryBJJ(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, res)
 	// Correct
-	c.m[name] = bjjToString(pubK)
+	c.m[name] = bjjToString(pubK.Compress())
 	res, err = parseQueryBJJ(c)
 	assert.NoError(t, err)
-	assert.Equal(t, *pubK, *res)
+	assert.Equal(t, pubK.Compress(), *res)
 }
 
 func TestParseQueryTxType(t *testing.T) {

@@ -23,27 +23,27 @@ func TestFeePercentage(t *testing.T) {
 func TestCalcFeeAmount(t *testing.T) {
 	v := big.NewInt(1000)
 	feeAmount, err := CalcFeeAmount(v, FeeSelector(195)) // 800%
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "8000", feeAmount.String())
 
 	feeAmount, err = CalcFeeAmount(v, FeeSelector(192)) // 100%
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "1000", feeAmount.String())
 
 	feeAmount, err = CalcFeeAmount(v, FeeSelector(172)) // 50%
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "500", feeAmount.String())
 
 	feeAmount, err = CalcFeeAmount(v, FeeSelector(126)) // 10.2%
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "101", feeAmount.String())
 
 	feeAmount, err = CalcFeeAmount(v, FeeSelector(60)) // 1.03%
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "10", feeAmount.String())
 
 	feeAmount, err = CalcFeeAmount(v, FeeSelector(31)) // 0.127%
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "1", feeAmount.String())
 }
 

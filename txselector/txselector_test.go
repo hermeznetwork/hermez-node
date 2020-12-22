@@ -28,13 +28,13 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.Nil(t, os.RemoveAll(dir))
+	defer assert.NoError(t, os.RemoveAll(dir))
 	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
 	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.NoError(t, err)
-	defer assert.Nil(t, os.RemoveAll(dir))
+	defer assert.NoError(t, os.RemoveAll(dir))
 
 	coordAccount := &CoordAccount{ // TODO TMP
 		Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
@@ -89,7 +89,7 @@ func TestGetL2TxSelection(t *testing.T) {
 	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
 	assert.NoError(t, err)
 	// poolL2Txs, err := tc.GeneratePoolL2Txs(til.SetPool0)
-	// assert.Nil(t, err)
+	// assert.NoError(t, err)
 
 	coordIdxs := make(map[common.TokenID]common.Idx)
 	coordIdxs[common.TokenID(0)] = common.Idx(256)
@@ -155,7 +155,7 @@ func TestGetL2TxSelection(t *testing.T) {
 		addL2Txs(t, txsel, common.L2TxsToPoolL2Txs(blocks[0].Batches[2].L2Txs))
 
 		_, l2Txs, err = txsel.GetL2TxSelection(coordIdxs, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		for _, tx := range l2Txs {
 			fmt.Println(tx.FromIdx, tx.ToIdx, tx.AbsoluteFee)
 		}

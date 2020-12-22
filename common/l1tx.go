@@ -28,16 +28,16 @@ type L1Tx struct {
 	// where type:
 	// 	- L1UserTx: 0
 	// 	- L1CoordinatorTx: 1
-	TxID            TxID               `meddler:"id"`
-	ToForgeL1TxsNum *int64             `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
-	Position        int                `meddler:"position"`
-	UserOrigin      bool               `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx         Idx                `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
-	FromEthAddr     ethCommon.Address  `meddler:"from_eth_addr,zeroisnull"`
-	FromBJJ         *babyjub.PublicKey `meddler:"from_bjj,zeroisnull"`
-	ToIdx           Idx                `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	TokenID         TokenID            `meddler:"token_id"`
-	Amount          *big.Int           `meddler:"amount,bigint"`
+	TxID            TxID                  `meddler:"id"`
+	ToForgeL1TxsNum *int64                `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
+	Position        int                   `meddler:"position"`
+	UserOrigin      bool                  `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
+	FromIdx         Idx                   `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
+	FromEthAddr     ethCommon.Address     `meddler:"from_eth_addr,zeroisnull"`
+	FromBJJ         babyjub.PublicKeyComp `meddler:"from_bjj,zeroisnull"`
+	ToIdx           Idx                   `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	TokenID         TokenID               `meddler:"token_id"`
+	Amount          *big.Int              `meddler:"amount,bigint"`
 	// EffectiveAmount only applies to L1UserTx.
 	EffectiveAmount *big.Int `meddler:"effective_amount,bigintnull"`
 	DepositAmount   *big.Int `meddler:"deposit_amount,bigint"`
@@ -261,8 +261,8 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 func (tx *L1Tx) BytesGeneric() ([]byte, error) {
 	var b [L1UserTxBytesLen]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
-	if tx.FromBJJ != nil {
-		pkCompL := tx.FromBJJ.Compress()
+	if tx.FromBJJ != EmptyBJJComp {
+		pkCompL := tx.FromBJJ
 		pkCompB := SwapEndianness(pkCompL[:])
 		copy(b[20:52], pkCompB[:])
 	}
@@ -310,7 +310,7 @@ func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, err
 	b[0] = v
 	copy(b[1:33], s)
 	copy(b[33:65], r)
-	pkCompL := tx.FromBJJ.Compress()
+	pkCompL := tx.FromBJJ
 	pkCompB := SwapEndianness(pkCompL[:])
 	copy(b[65:97], pkCompB[:])
 	copy(b[97:101], tx.TokenID.Bytes())
@@ -331,12 +331,7 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 
 	pkCompB := b[20:52]
 	pkCompL := SwapEndianness(pkCompB)
-	var pkComp babyjub.PublicKeyComp
-	copy(pkComp[:], pkCompL)
-	tx.FromBJJ, err = pkComp.Decompress()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
+	copy(tx.FromBJJ[:], pkCompL)
 	fromIdx, err := IdxFromBytes(b[52:58])
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -378,12 +373,7 @@ func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommo
 	r := b[33:65]
 	pkCompB := b[65:97]
 	pkCompL := SwapEndianness(pkCompB)
-	var pkComp babyjub.PublicKeyComp
-	copy(pkComp[:], pkCompL)
-	tx.FromBJJ, err = pkComp.Decompress()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
+	copy(tx.FromBJJ[:], pkCompL)
 	tx.TokenID, err = TokenIDFromBytes(b[97:101])
 	if err != nil {
 		return nil, tracerr.Wrap(err)

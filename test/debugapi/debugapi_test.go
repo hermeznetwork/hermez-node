@@ -35,7 +35,7 @@ func newAccount(t *testing.T, i int) *common.Account {
 		TokenID:   common.TokenID(i),
 		Nonce:     common.Nonce(i),
 		Balance:   big.NewInt(1000),
-		PublicKey: pk,
+		PublicKey: pk.Compress(),
 		EthAddr:   address,
 	}
 }

@@ -17,7 +17,7 @@ func TestNewL2Tx(t *testing.T) {
 		Nonce:   144,
 	}
 	l2Tx, err := NewL2Tx(l2Tx)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "0x020000000156660000000090", l2Tx.TxID.String())
 }
 
@@ -33,10 +33,10 @@ func TestL2TxByteParsers(t *testing.T) {
 	// Data from the compatibility test
 	expected := "00000101000001002b16c9"
 	encodedData, err := l2Tx.BytesDataAvailability(32)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, hex.EncodeToString(encodedData))
 
 	decodedData, err := L2TxFromBytesDataAvailability(encodedData, 32)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, l2Tx, decodedData)
 }

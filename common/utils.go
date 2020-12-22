@@ -27,15 +27,15 @@ func EthAddrToBigInt(a ethCommon.Address) *big.Int {
 // the Hermez checksum at the last byte, and is encoded in BigEndian) and
 // returns the corresponding *babyjub.PublicKey. This method is not part of the
 // spec, is used for importing javascript test vectors data.
-func BJJFromStringWithChecksum(s string) (*babyjub.PublicKey, error) {
+func BJJFromStringWithChecksum(s string) (babyjub.PublicKeyComp, error) {
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return EmptyBJJComp, tracerr.Wrap(err)
 	}
 	pkBytes := SwapEndianness(b)
 	var pkComp babyjub.PublicKeyComp
 	copy(pkComp[:], pkBytes[:])
-	return pkComp.Decompress()
+	return pkComp, nil
 }
 
 // CopyBigInt returns a copy of the big int

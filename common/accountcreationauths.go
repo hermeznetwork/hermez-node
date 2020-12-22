@@ -11,17 +11,17 @@ import (
 
 // AccountCreationAuth authorizations sent by users to the L2DB, to be used for account creations when necessary
 type AccountCreationAuth struct {
-	EthAddr   ethCommon.Address  `meddler:"eth_addr"`
-	BJJ       *babyjub.PublicKey `meddler:"bjj"`
-	Signature []byte             `meddler:"signature"`
-	Timestamp time.Time          `meddler:"timestamp,utctime"`
+	EthAddr   ethCommon.Address     `meddler:"eth_addr"`
+	BJJ       babyjub.PublicKeyComp `meddler:"bjj"`
+	Signature []byte                `meddler:"signature"`
+	Timestamp time.Time             `meddler:"timestamp,utctime"`
 }
 
 // HashToSign builds the hash to be signed using BJJ pub key and the constant message
 func (a *AccountCreationAuth) HashToSign() ([]byte, error) {
 	// Calculate message to be signed
 	const msg = "I authorize this babyjubjub key for hermez rollup account creation"
-	comp, err := a.BJJ.Compress().MarshalText()
+	comp, err := a.BJJ.MarshalText()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

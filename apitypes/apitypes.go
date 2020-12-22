@@ -143,14 +143,13 @@ func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// HezBJJ is used to scan/value *babyjub.PublicKey directly into strings that follow the BJJ public key hez fotmat (^hez:[A-Za-z0-9_-]{44}$) from/to sql DBs.
-// It assumes that *babyjub.PublicKey are inserted/fetched to/from the DB using the default Scan/Value interface
+// HezBJJ is used to scan/value *babyjub.PublicKeyComp directly into strings that follow the BJJ public key hez fotmat (^hez:[A-Za-z0-9_-]{44}$) from/to sql DBs.
+// It assumes that *babyjub.PublicKeyComp are inserted/fetched to/from the DB using the default Scan/Value interface
 type HezBJJ string
 
-// NewHezBJJ creates a HezBJJ from a *babyjub.PublicKey.
+// NewHezBJJ creates a HezBJJ from a *babyjub.PublicKeyComp.
 // Calling this method with a nil bjj causes panic
-func NewHezBJJ(bjj *babyjub.PublicKey) HezBJJ {
-	pkComp := [32]byte(bjj.Compress())
+func NewHezBJJ(pkComp babyjub.PublicKeyComp) HezBJJ {
 	sum := pkComp[0]
 	for i := 1; i < len(pkComp); i++ {
 		sum += pkComp[i]
@@ -159,20 +158,20 @@ func NewHezBJJ(bjj *babyjub.PublicKey) HezBJJ {
 	return HezBJJ("hez:" + base64.RawURLEncoding.EncodeToString(bjjSum))
 }
 
-func hezStrToBJJ(s string) (*babyjub.PublicKey, error) {
+func hezStrToBJJ(s string) (babyjub.PublicKeyComp, error) {
 	const decodedLen = 33
 	const encodedLen = 44
 	formatErr := errors.New("invalid BJJ format. Must follow this regex: ^hez:[A-Za-z0-9_-]{44}$")
 	encoded := strings.TrimPrefix(s, "hez:")
 	if len(encoded) != encodedLen {
-		return nil, formatErr
+		return common.EmptyBJJComp, formatErr
 	}
 	decoded, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
-		return nil, formatErr
+		return common.EmptyBJJComp, formatErr
 	}
 	if len(decoded) != decodedLen {
-		return nil, formatErr
+		return common.EmptyBJJComp, formatErr
 	}
 	bjjBytes := [decodedLen - 1]byte{}
 	copy(bjjBytes[:decodedLen-1], decoded[:decodedLen-1])
@@ -181,27 +180,27 @@ func hezStrToBJJ(s string) (*babyjub.PublicKey, error) {
 		sum += bjjBytes[i]
 	}
 	if decoded[decodedLen-1] != sum {
-		return nil, tracerr.Wrap(errors.New("checksum verification failed"))
+		return common.EmptyBJJComp, tracerr.Wrap(errors.New("checksum verification failed"))
 	}
 	bjjComp := babyjub.PublicKeyComp(bjjBytes)
-	return bjjComp.Decompress()
+	return bjjComp, nil
 }
 
-// ToBJJ returns a *babyjub.PublicKey created from HezBJJ
-func (b HezBJJ) ToBJJ() (*babyjub.PublicKey, error) {
+// ToBJJ returns a babyjub.PublicKeyComp created from HezBJJ
+func (b HezBJJ) ToBJJ() (babyjub.PublicKeyComp, error) {
 	return hezStrToBJJ(string(b))
 }
 
 // Scan implements Scanner for database/sql
 func (b *HezBJJ) Scan(src interface{}) error {
-	bjj := &babyjub.PublicKey{}
+	bjj := &babyjub.PublicKeyComp{}
 	if err := bjj.Scan(src); err != nil {
 		return tracerr.Wrap(err)
 	}
 	if bjj == nil {
 		return nil
 	}
-	*b = NewHezBJJ(bjj)
+	*b = NewHezBJJ(*bjj)
 	return nil
 }
 
@@ -214,8 +213,8 @@ func (b HezBJJ) Value() (driver.Value, error) {
 	return bjj.Value()
 }
 
-// StrHezBJJ is used to unmarshal HezBJJ directly into an alias of babyjub.PublicKey
-type StrHezBJJ babyjub.PublicKey
+// StrHezBJJ is used to unmarshal HezBJJ directly into an alias of babyjub.PublicKeyComp
+type StrHezBJJ babyjub.PublicKeyComp
 
 // UnmarshalText unmarshals a StrHezBJJ
 func (s *StrHezBJJ) UnmarshalText(text []byte) error {
@@ -223,7 +222,7 @@ func (s *StrHezBJJ) UnmarshalText(text []byte) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	*s = StrHezBJJ(*bjj)
+	*s = StrHezBJJ(bjj)
 	return nil
 }
 

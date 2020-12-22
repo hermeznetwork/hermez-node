@@ -115,13 +115,13 @@ func NonceFromBytes(b [5]byte) Nonce {
 
 // Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
 type Account struct {
-	Idx       Idx                `meddler:"idx"`
-	TokenID   TokenID            `meddler:"token_id"`
-	BatchNum  BatchNum           `meddler:"batch_num"`
-	PublicKey *babyjub.PublicKey `meddler:"bjj"`
-	EthAddr   ethCommon.Address  `meddler:"eth_addr"`
-	Nonce     Nonce              `meddler:"-"` // max of 40 bits used
-	Balance   *big.Int           `meddler:"-"` // max of 192 bits used
+	Idx       Idx                   `meddler:"idx"`
+	TokenID   TokenID               `meddler:"token_id"`
+	BatchNum  BatchNum              `meddler:"batch_num"`
+	PublicKey babyjub.PublicKeyComp `meddler:"bjj"`
+	EthAddr   ethCommon.Address     `meddler:"eth_addr"`
+	Nonce     Nonce                 `meddler:"-"` // max of 40 bits used
+	Balance   *big.Int              `meddler:"-"` // max of 192 bits used
 }
 
 func (a *Account) String() string {
@@ -158,15 +158,13 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	copy(b[28:32], a.TokenID.Bytes())
 	copy(b[23:28], nonceBytes[:])
 
-	if a.PublicKey == nil {
-		return b, tracerr.Wrap(fmt.Errorf("Account.PublicKey can not be nil"))
-	}
-	if babyjub.PointCoordSign(a.PublicKey.X) {
+	pkSign, pkY := babyjub.UnpackSignY(a.PublicKey)
+	if pkSign {
 		b[22] = 1
 	}
 	balanceBytes := a.Balance.Bytes()
 	copy(b[64-len(balanceBytes):64], balanceBytes)
-	ayBytes := a.PublicKey.Y.Bytes()
+	ayBytes := pkY.Bytes()
 	copy(b[96-len(ayBytes):96], ayBytes)
 	copy(b[108:128], a.EthAddr.Bytes())
 
@@ -234,11 +232,7 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 		return nil, tracerr.Wrap(fmt.Errorf("%s Balance", ErrNumOverflow))
 	}
 	ay := new(big.Int).SetBytes(b[64:96])
-	pkPoint, err := babyjub.PointFromSignAndY(sign, ay)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	publicKey := babyjub.PublicKey(*pkPoint)
+	publicKeyComp := babyjub.PackSignY(sign, ay)
 	ethAddr := ethCommon.BytesToAddress(b[108:128])
 
 	if !cryptoUtils.CheckBigIntInField(balance) {
@@ -252,7 +246,7 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 		TokenID:   TokenID(tokenID),
 		Nonce:     nonce,
 		Balance:   balance,
-		PublicKey: &publicKey,
+		PublicKey: publicKeyComp,
 		EthAddr:   ethAddr,
 	}
 	return &a, nil

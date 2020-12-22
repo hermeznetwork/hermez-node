@@ -200,7 +200,7 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 			}
 			tx := common.L1Tx{
 				FromEthAddr:   tc.Users[inst.From].Addr,
-				FromBJJ:       tc.Users[inst.From].BJJ.Public(),
+				FromBJJ:       tc.Users[inst.From].BJJ.Public().Compress(),
 				TokenID:       inst.TokenID,
 				Amount:        big.NewInt(0),
 				DepositAmount: big.NewInt(0),
@@ -220,7 +220,7 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 			}
 			tx := common.L1Tx{
 				FromEthAddr:   tc.Users[inst.From].Addr,
-				FromBJJ:       tc.Users[inst.From].BJJ.Public(),
+				FromBJJ:       tc.Users[inst.From].BJJ.Public().Compress(),
 				TokenID:       inst.TokenID,
 				Amount:        big.NewInt(0),
 				DepositAmount: inst.DepositAmount,
@@ -498,7 +498,7 @@ func (tc *Context) addToL1UserQueue(tx L1Tx) error {
 		tx.L1Tx.FromIdx = tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID].Idx
 	}
 	tx.L1Tx.FromEthAddr = tc.Users[tx.fromIdxName].Addr
-	tx.L1Tx.FromBJJ = tc.Users[tx.fromIdxName].BJJ.Public()
+	tx.L1Tx.FromBJJ = tc.Users[tx.fromIdxName].BJJ.Public().Compress()
 	if tx.toIdxName == "" {
 		tx.L1Tx.ToIdx = common.Idx(0)
 	} else {
@@ -609,20 +609,20 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 				State:       common.PoolL2TxStatePending,
 				Timestamp:   time.Now(),
 				RqToEthAddr: common.EmptyAddr,
-				RqToBJJ:     nil,
+				RqToBJJ:     common.EmptyBJJComp,
 				Type:        inst.Typ,
 			}
 			if tx.Type == common.TxTypeTransfer {
 				tx.ToIdx = tc.Users[inst.To].Accounts[inst.TokenID].Idx
 				tx.ToEthAddr = tc.Users[inst.To].Addr
-				tx.ToBJJ = tc.Users[inst.To].BJJ.Public()
+				tx.ToBJJ = tc.Users[inst.To].BJJ.Public().Compress()
 			} else if tx.Type == common.TxTypeTransferToEthAddr {
 				tx.ToIdx = common.Idx(0)
 				tx.ToEthAddr = tc.Users[inst.To].Addr
 			} else if tx.Type == common.TxTypeTransferToBJJ {
 				tx.ToIdx = common.Idx(0)
 				tx.ToEthAddr = common.FFAddr
-				tx.ToBJJ = tc.Users[inst.To].BJJ.Public()
+				tx.ToBJJ = tc.Users[inst.To].BJJ.Public().Compress()
 			}
 			nTx, err := common.NewPoolL2Tx(&tx)
 			if err != nil {
@@ -844,7 +844,7 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 							Idx:       common.Idx(tc.extra.idx),
 							TokenID:   tx.TokenID,
 							BatchNum:  batch.Batch.BatchNum,
-							PublicKey: user.BJJ.Public(),
+							PublicKey: user.BJJ.Public().Compress(),
 							EthAddr:   user.Addr,
 							Nonce:     0,
 							Balance:   big.NewInt(0),

@@ -83,7 +83,7 @@ func (tx *receivedPoolTx) toPoolL2TxWrite() *l2db.PoolL2TxWrite {
 		FromIdx:     common.Idx(tx.FromIdx),
 		ToIdx:       (*common.Idx)(tx.ToIdx),
 		ToEthAddr:   (*ethCommon.Address)(tx.ToEthAddr),
-		ToBJJ:       (*babyjub.PublicKey)(tx.ToBJJ),
+		ToBJJ:       (*babyjub.PublicKeyComp)(tx.ToBJJ),
 		TokenID:     tx.TokenID,
 		Amount:      (*big.Int)(&tx.Amount),
 		AmountFloat: amountF,
@@ -94,7 +94,7 @@ func (tx *receivedPoolTx) toPoolL2TxWrite() *l2db.PoolL2TxWrite {
 		RqFromIdx:   (*common.Idx)(tx.RqFromIdx),
 		RqToIdx:     (*common.Idx)(tx.RqToIdx),
 		RqToEthAddr: (*ethCommon.Address)(tx.RqToEthAddr),
-		RqToBJJ:     (*babyjub.PublicKey)(tx.RqToBJJ),
+		RqToBJJ:     (*babyjub.PublicKeyComp)(tx.RqToBJJ),
 		RqTokenID:   tx.RqTokenID,
 		RqAmount:    (*big.Int)(tx.RqAmount),
 		RqFee:       tx.RqFee,
@@ -107,14 +107,12 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	poolTx := common.PoolL2Tx{
 		TxID:    txw.TxID,
 		FromIdx: txw.FromIdx,
-		ToBJJ:   txw.ToBJJ,
 		TokenID: txw.TokenID,
 		Amount:  txw.Amount,
 		Fee:     txw.Fee,
 		Nonce:   txw.Nonce,
 		// State:     txw.State,
 		Signature: txw.Signature,
-		RqToBJJ:   txw.RqToBJJ,
 		RqAmount:  txw.RqAmount,
 		Type:      txw.Type,
 	}
@@ -127,6 +125,12 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 		poolTx.ToEthAddr = common.EmptyAddr
 	} else {
 		poolTx.ToEthAddr = *txw.ToEthAddr
+	}
+	// ToBJJ
+	if txw.ToBJJ == nil {
+		poolTx.ToBJJ = common.EmptyBJJComp
+	} else {
+		poolTx.ToBJJ = *txw.ToBJJ
 	}
 	// RqFromIdx
 	if txw.RqFromIdx != nil {
@@ -141,6 +145,12 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 		poolTx.RqToEthAddr = common.EmptyAddr
 	} else {
 		poolTx.RqToEthAddr = *txw.RqToEthAddr
+	}
+	// RqToBJJ
+	if txw.RqToBJJ == nil {
+		poolTx.RqToBJJ = common.EmptyBJJComp
+	} else {
+		poolTx.RqToBJJ = *txw.RqToBJJ
 	}
 	// RqTokenID
 	if txw.RqTokenID != nil {

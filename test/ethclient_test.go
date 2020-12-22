@@ -158,7 +158,7 @@ func TestClientRollup(t *testing.T) {
 		tx := common.L1Tx{
 			FromIdx:       0,
 			FromEthAddr:   keys[i].Addr,
-			FromBJJ:       keys[i].BJJPublicKey,
+			FromBJJ:       keys[i].BJJPublicKey.Compress(),
 			TokenID:       common.TokenID(0),
 			Amount:        big.NewInt(0),
 			DepositAmount: big.NewInt(10 + int64(i)),
