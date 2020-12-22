@@ -79,7 +79,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		return nil, tracerr.Wrap(fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)", len(coordIdxs), ptc.MaxFeeTx))
 	}
 
-	s.accumulatedFees = make(map[common.Idx]*big.Int)
+	s.AccumulatedFees = make(map[common.Idx]*big.Int)
 
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
 
@@ -124,7 +124,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	// Process L1UserTxs
 	for i := 0; i < len(l1usertxs); i++ {
 		// assumption: l1usertx are sorted by L1Tx.Position
-		exitIdx, exitAccount, newExit, createdAccount, err := s.processL1Tx(exitTree, &l1usertxs[i])
+		exitIdx, exitAccount, newExit, createdAccount, err := s.ProcessL1Tx(exitTree, &l1usertxs[i])
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -166,7 +166,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 
 	// Process L1CoordinatorTxs
 	for i := 0; i < len(l1coordinatortxs); i++ {
-		exitIdx, _, _, createdAccount, err := s.processL1Tx(exitTree, &l1coordinatortxs[i])
+		exitIdx, _, _, createdAccount, err := s.ProcessL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -194,15 +194,15 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		}
 	}
 
-	s.accumulatedFees = make(map[common.Idx]*big.Int)
+	s.AccumulatedFees = make(map[common.Idx]*big.Int)
 	for _, idx := range coordIdxs {
-		s.accumulatedFees[idx] = big.NewInt(0)
+		s.AccumulatedFees[idx] = big.NewInt(0)
 	}
 
 	// once L1UserTxs & L1CoordinatorTxs are processed, get TokenIDs of
 	// coordIdxs. In this way, if a coordIdx uses an Idx that is being
 	// created in the current batch, at this point the Idx will be created
-	coordIdxsMap, err := s.getTokenIDsFromIdxs(coordIdxs)
+	coordIdxsMap, err := s.GetTokenIDsFromIdxs(coordIdxs)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -228,7 +228,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 
 	// Process L2Txs
 	for i := 0; i < len(l2txs); i++ {
-		exitIdx, exitAccount, newExit, err := s.processL2Tx(coordIdxsMap, collectedFees, exitTree, &l2txs[i])
+		exitIdx, exitAccount, newExit, err := s.ProcessL2Tx(coordIdxsMap, collectedFees, exitTree, &l2txs[i])
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -287,7 +287,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	// distribute the AccumulatedFees from the processed L2Txs into the
 	// Coordinator Idxs
 	iFee := 0
-	for idx, accumulatedFee := range s.accumulatedFees {
+	for idx, accumulatedFee := range s.AccumulatedFees {
 		cmp := accumulatedFee.Cmp(big.NewInt(0))
 		if cmp == 1 { // accumulatedFee>0
 			// send the fee to the Idx of the Coordinator for the TokenID
@@ -321,7 +321,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		iFee++
 	}
 	if s.zki != nil {
-		for i := len(s.accumulatedFees); i < int(ptc.MaxFeeTx)-1; i++ {
+		for i := len(s.AccumulatedFees); i < int(ptc.MaxFeeTx)-1; i++ {
 			s.zki.ISStateRootFee[i] = s.mt.Root().BigInt()
 		}
 		// add Coord Idx to ZKInputs.FeeTxsData
@@ -400,14 +400,14 @@ func (s *StateDB) getFeePlanTokens(coordIdxs []common.Idx) ([]*big.Int, error) {
 	return tBI, nil
 }
 
-// processL1Tx process the given L1Tx applying the needed updates to the
+// ProcessL1Tx process the given L1Tx applying the needed updates to the
 // StateDB depending on the transaction Type. It returns the 3 parameters
 // related to the Exit (in case of): Idx, ExitAccount, boolean determining if
 // the Exit created a new Leaf in the ExitTree.
 // And another *common.Account parameter which contains the created account in
 // case that has been a new created account and that the StateDB is of type
 // TypeSynchronizer.
-func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx, *common.Account, bool, *common.Account, error) {
+func (s *StateDB) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx, *common.Account, bool, *common.Account, error) {
 	// ZKInputs
 	if s.zki != nil {
 		// Txs
@@ -520,11 +520,11 @@ func (s *StateDB) processL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) 
 	return nil, nil, false, createdAccount, nil
 }
 
-// processL2Tx process the given L2Tx applying the needed updates to the
+// ProcessL2Tx process the given L2Tx applying the needed updates to the
 // StateDB depending on the transaction Type. It returns the 3 parameters
 // related to the Exit (in case of): Idx, ExitAccount, boolean determining if
 // the Exit created a new Leaf in the ExitTree.
-func (s *StateDB) processL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collectedFees map[common.TokenID]*big.Int,
+func (s *StateDB) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collectedFees map[common.TokenID]*big.Int,
 	exitTree *merkletree.MerkleTree, tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
 	var err error
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
@@ -794,7 +794,7 @@ func (s *StateDB) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 				return tracerr.Wrap(fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d", accSender.TokenID, coordIdxsMap[accSender.TokenID]))
 			}
 			// accumulate the fee for the Coord account
-			accumulated := s.accumulatedFees[accCoord.Idx]
+			accumulated := s.AccumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
 
 			if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {
@@ -991,7 +991,7 @@ func (s *StateDB) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 				return nil, false, tracerr.Wrap(fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d", acc.TokenID, coordIdxsMap[acc.TokenID]))
 			}
 			// accumulate the fee for the Coord account
-			accumulated := s.accumulatedFees[accCoord.Idx]
+			accumulated := s.AccumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
 
 			if s.typ == TypeSynchronizer || s.typ == TypeBatchBuilder {

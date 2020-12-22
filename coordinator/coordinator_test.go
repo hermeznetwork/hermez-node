@@ -113,7 +113,7 @@ func newTestModules(t *testing.T) modules {
 
 	coordAccount := &txselector.CoordAccount{ // TODO TMP
 		Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
-		BJJ:                 nil,
+		BJJ:                 common.EmptyBJJComp,
 		AccountCreationAuth: nil,
 	}
 	txSelector, err := txselector.NewTxSelector(coordAccount, txSelDBPath, syncStateDB, l2DB)

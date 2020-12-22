@@ -148,7 +148,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		// TODO: Get (maxL1UserTxs, maxL1OperatorTxs, maxTxs) from the smart contract
 		coordAccount := &txselector.CoordAccount{ // TODO TMP
 			Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
-			BJJ:                 nil,
+			BJJ:                 common.EmptyBJJComp,
 			AccountCreationAuth: nil,
 		}
 		txSelector, err := txselector.NewTxSelector(coordAccount, cfg.Coordinator.TxSelector.Path, stateDB, l2DB)

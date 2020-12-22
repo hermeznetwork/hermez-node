@@ -123,12 +123,14 @@ func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk babyjub.PublicKe
 	return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrGetIdxNoCase, addr.Hex(), pk, tokenID))
 }
 
-func (s *StateDB) getTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]common.Idx, error) {
+// GetTokenIDsFromIdxs returns a map containing the common.TokenID with its
+// respective common.Idx for a given slice of common.Idx
+func (s *StateDB) GetTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]common.Idx, error) {
 	m := make(map[common.TokenID]common.Idx)
 	for i := 0; i < len(idxs); i++ {
 		a, err := s.GetAccount(idxs[i])
 		if err != nil {
-			return nil, tracerr.Wrap(fmt.Errorf("getTokenIDsFromIdxs error on GetAccount with Idx==%d: %s", idxs[i], err.Error()))
+			return nil, tracerr.Wrap(fmt.Errorf("GetTokenIDsFromIdxs error on GetAccount with Idx==%d: %s", idxs[i], err.Error()))
 		}
 		m[a.TokenID] = idxs[i]
 	}

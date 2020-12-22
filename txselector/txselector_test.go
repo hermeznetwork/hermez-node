@@ -38,7 +38,7 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 
 	coordAccount := &CoordAccount{ // TODO TMP
 		Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
-		BJJ:                 nil,
+		BJJ:                 common.EmptyBJJComp,
 		AccountCreationAuth: nil,
 	}
 
