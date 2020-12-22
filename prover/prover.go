@@ -16,9 +16,9 @@ import (
 
 // Proof TBD this type will be received from the proof server
 type Proof struct {
-	PiA      [2]*big.Int    `json:"pi_a"`
+	PiA      [3]*big.Int    `json:"pi_a"`
 	PiB      [3][2]*big.Int `json:"pi_b"`
-	PiC      [2]*big.Int    `json:"pi_c"`
+	PiC      [3]*big.Int    `json:"pi_c"`
 	Protocol string         `json:"protocol"`
 }
 
@@ -36,9 +36,9 @@ func (b *bigInt) UnmarshalText(text []byte) error {
 // ints as strings
 func (p *Proof) UnmarshalJSON(data []byte) error {
 	proof := struct {
-		PiA      [2]*bigInt    `json:"pi_a"`
+		PiA      [3]*bigInt    `json:"pi_a"`
 		PiB      [3][2]*bigInt `json:"pi_b"`
-		PiC      [2]*bigInt    `json:"pi_c"`
+		PiC      [3]*bigInt    `json:"pi_c"`
 		Protocol string        `json:"protocol"`
 	}{}
 	if err := json.Unmarshal(data, &proof); err != nil {
@@ -46,14 +46,26 @@ func (p *Proof) UnmarshalJSON(data []byte) error {
 	}
 	p.PiA[0] = (*big.Int)(proof.PiA[0])
 	p.PiA[1] = (*big.Int)(proof.PiA[1])
+	p.PiA[2] = (*big.Int)(proof.PiA[2])
+	if p.PiA[2].Int64() != 1 {
+		return fmt.Errorf("Expected PiA[2] == 1, but got %v", p.PiA[2])
+	}
 	p.PiB[0][0] = (*big.Int)(proof.PiB[0][0])
 	p.PiB[0][1] = (*big.Int)(proof.PiB[0][1])
 	p.PiB[1][0] = (*big.Int)(proof.PiB[1][0])
 	p.PiB[1][1] = (*big.Int)(proof.PiB[1][1])
 	p.PiB[2][0] = (*big.Int)(proof.PiB[2][0])
 	p.PiB[2][1] = (*big.Int)(proof.PiB[2][1])
+	if p.PiB[2][0].Int64() != 1 || p.PiB[2][1].Int64() != 0 {
+		return fmt.Errorf("Expected PiB[2] == [1, 0], but got %v", p.PiB[2])
+	}
 	p.PiC[0] = (*big.Int)(proof.PiC[0])
 	p.PiC[1] = (*big.Int)(proof.PiC[1])
+	p.PiC[2] = (*big.Int)(proof.PiC[2])
+	if p.PiC[2].Int64() != 1 {
+		return fmt.Errorf("Expected PiC[2] == 1, but got %v", p.PiC[2])
+	}
+	// TODO: Assert ones and zeroes
 	p.Protocol = proof.Protocol
 	return nil
 }
@@ -276,6 +288,7 @@ func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 
 // MockClient is a mock ServerProof to be used in tests.  It doesn't calculate anything
 type MockClient struct {
+	Delay time.Duration
 }
 
 // CalculateProof sends the *common.ZKInputs to the ServerProof to compute the
@@ -288,7 +301,7 @@ func (p *MockClient) CalculateProof(ctx context.Context, zkInputs *common.ZKInpu
 func (p *MockClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	// Simulate a delay
 	select {
-	case <-time.After(500 * time.Millisecond): //nolint:gomnd
+	case <-time.After(p.Delay): //nolint:gomnd
 		return &Proof{}, []*big.Int{big.NewInt(1234)}, nil //nolint:gomnd
 	case <-ctx.Done():
 		return nil, nil, tracerr.Wrap(common.ErrDone)

@@ -133,12 +133,12 @@ func TestGetL2TxSelection(t *testing.T) {
 	// add the 1st batch of transactions to the TxSelector
 	addL2Txs(t, txsel, common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[0].L2Txs))
 
-	_, l1CoordTxs, l2Txs, err := txsel.GetL2TxSelection(selectionConfig, 0)
+	_, _, l1CoordTxs, l2Txs, err := txsel.GetL2TxSelection(selectionConfig, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(l2Txs))
 	assert.Equal(t, 0, len(l1CoordTxs))
 
-	_, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, 0, blocks[0].Rollup.L1UserTxs)
+	_, _, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, 0, blocks[0].Rollup.L1UserTxs)
 	assert.NoError(t, err)
 
 	// TODO once L2DB is updated to return error in case that AddTxTest

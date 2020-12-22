@@ -3,6 +3,7 @@ package coordinator
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -772,7 +773,15 @@ func (p *Pipeline) Stop(ctx context.Context) {
 	}
 }
 
-func l2TxsIDs(txs []common.PoolL2Tx) []common.TxID {
+func poolL2TxsIDs(txs []common.PoolL2Tx) []common.TxID {
+	txIDs := make([]common.TxID, len(txs))
+	for i, tx := range txs {
+		txIDs[i] = tx.TxID
+	}
+	return txIDs
+}
+
+func l2TxsIDs(txs []common.L2Tx) []common.TxID {
 	txIDs := make([]common.TxID, len(txs))
 	for i, tx := range txs {
 		txIDs[i] = tx.TxID
@@ -810,9 +819,11 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 	var poolL2Txs []common.PoolL2Tx
 	// var feesInfo
 	var l1UserTxsExtra, l1CoordTxs []common.L1Tx
+	var auths [][]byte
 	var coordIdxs []common.Idx
 	// 1. Decide if we forge L2Tx or L1+L2Tx
 	if p.shouldL1L2Batch() {
+		batchInfo.L1Batch = true
 		p.lastScheduledL1BatchBlockNum = p.stats.Eth.LastBlock.Num
 		// 2a: L1+L2 txs
 		p.lastForgeL1TxsNum++
@@ -821,14 +832,14 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 			return nil, tracerr.Wrap(err)
 		}
 		// TODO once feesInfo is added to method return, add the var
-		coordIdxs, l1UserTxsExtra, l1CoordTxs, poolL2Txs, err =
+		coordIdxs, auths, l1UserTxsExtra, l1CoordTxs, poolL2Txs, err =
 			p.txSelector.GetL1L2TxSelection(selectionConfig, batchNum, l1UserTxs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
-		coordIdxs, l1CoordTxs, poolL2Txs, err =
+		coordIdxs, auths, l1CoordTxs, poolL2Txs, err =
 			p.txSelector.GetL2TxSelection(selectionConfig, batchNum)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -840,9 +851,10 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 	// TODO feesInfo
 	batchInfo.L1UserTxsExtra = l1UserTxsExtra
 	batchInfo.L1CoordTxs = l1CoordTxs
-	batchInfo.L2Txs = poolL2Txs
+	batchInfo.L1CoordinatorTxsAuths = auths
+	batchInfo.CoordIdxs = coordIdxs
 
-	if err := p.l2DB.StartForging(l2TxsIDs(batchInfo.L2Txs), batchInfo.BatchNum); err != nil {
+	if err := p.l2DB.StartForging(poolL2TxsIDs(poolL2Txs), batchInfo.BatchNum); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 
@@ -864,6 +876,11 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+	l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // NOTE: This is a big uggly, find a better way
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	batchInfo.L2Txs = l2Txs
 
 	// 5. Save metadata from BatchBuilder output for BatchNum
 	batchInfo.ZKInputs = zkInputs
@@ -903,6 +920,25 @@ func (p *Pipeline) shouldL1L2Batch() bool {
 }
 
 func (p *Pipeline) prepareForgeBatchArgs(batchInfo *BatchInfo) *eth.RollupForgeBatchArgs {
-	// TODO
-	return &eth.RollupForgeBatchArgs{}
+	proof := batchInfo.Proof
+	zki := batchInfo.ZKInputs
+	return &eth.RollupForgeBatchArgs{
+		NewLastIdx:            int64(zki.Metadata.NewLastIdxRaw),
+		NewStRoot:             zki.Metadata.NewStateRootRaw.BigInt(),
+		NewExitRoot:           zki.Metadata.NewExitRootRaw.BigInt(),
+		L1UserTxs:             batchInfo.L1UserTxsExtra,
+		L1CoordinatorTxs:      batchInfo.L1CoordTxs,
+		L1CoordinatorTxsAuths: batchInfo.L1CoordinatorTxsAuths,
+		L2TxsData:             batchInfo.L2Txs,
+		FeeIdxCoordinator:     batchInfo.CoordIdxs,
+		// Circuit selector
+		VerifierIdx: 0, // TODO
+		L1Batch:     batchInfo.L1Batch,
+		ProofA:      [2]*big.Int{proof.PiA[0], proof.PiA[1]},
+		ProofB: [2][2]*big.Int{
+			{proof.PiB[0][0], proof.PiB[0][1]},
+			{proof.PiB[1][0], proof.PiB[1][1]},
+		},
+		ProofC: [2]*big.Int{proof.PiC[0], proof.PiC[1]},
+	}
 }

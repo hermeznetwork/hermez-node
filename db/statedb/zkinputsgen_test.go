@@ -240,6 +240,143 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	assert.Equal(t, "20293112365009290386650039345314592436395562810005523677125576447132206192598", h.String())
 }
 
+// TestZKInputsEmpty:
+// tests:
+// - L1: empty
+// - L2: empty
+func TestZKInputsEmpty(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.Nil(t, err)
+	defer assert.Nil(t, os.RemoveAll(dir))
+
+	nLevels := 16
+
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	assert.Nil(t, err)
+
+	ptc := ProcessTxsConfig{
+		NLevels:  uint32(nLevels),
+		MaxTx:    10,
+		MaxL1Tx:  5,
+		MaxFeeTx: 2,
+	}
+
+	// 0. Generate a batch from the empty state with no transactions
+
+	coordIdxs := []common.Idx{}
+	l1UserTxs := []common.L1Tx{}
+	l1CoordTxs := []common.L1Tx{}
+	l2Txs := []common.PoolL2Tx{}
+
+	ptOut, err := sdb.ProcessTxs(ptc, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.Nil(t, err)
+
+	assert.Equal(t, "0", sdb.mt.Root().BigInt().String())
+	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+
+	// check that there are no accounts
+	accs, err := sdb.GetAccounts()
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(accs))
+
+	/* // TODO
+	h, err := ptOut.ZKInputs.HashGlobalData()
+	require.Nil(t, err)
+	assert.Equal(t, "TODO", h.String())
+
+	toHash, err := ptOut.ZKInputs.ToHashGlobalData()
+	require.Nil(t, err)
+	assert.Equal(t, "TODO", hex.EncodeToString(toHash))
+
+	s, err := json.Marshal(ptOut.ZKInputs)
+	require.Nil(t, err)
+	// the 'expected' data has been checked with the circom circuits
+	expected := `TODO`
+	assert.Equal(t, expected, string(s))
+	*/
+
+	// 1. Generate a batch with two transactions that create one account
+	// so that the state tree is not empty (same transactions as
+	// TestZKInputs0)
+
+	// same values than in the js test
+	users := generateJsUsers(t)
+
+	l1UserTxs = []common.L1Tx{
+		{
+			FromIdx:       0,
+			DepositAmount: big.NewInt(16000000),
+			Amount:        big.NewInt(0),
+			TokenID:       1,
+			FromBJJ:       users[0].BJJ.Public().Compress(),
+			FromEthAddr:   users[0].Addr,
+			ToIdx:         0,
+			Type:          common.TxTypeCreateAccountDeposit,
+			UserOrigin:    true,
+		},
+	}
+	l2Txs = []common.PoolL2Tx{
+		{
+			FromIdx: 256,
+			ToIdx:   256,
+			TokenID: 1,
+			Amount:  big.NewInt(1000),
+			Nonce:   0,
+			Fee:     0,
+			Type:    common.TxTypeTransfer,
+		},
+	}
+
+	toSign, err := l2Txs[0].HashToSign()
+	require.Nil(t, err)
+	sig := users[0].BJJ.SignPoseidon(toSign)
+	l2Txs[0].Signature = sig.Compress()
+
+	_, err = sdb.ProcessTxs(ptc, nil, l1UserTxs, nil, l2Txs)
+	require.Nil(t, err)
+
+	rootNonZero := sdb.mt.Root()
+
+	// check that there is 1 account
+	accs, err = sdb.GetAccounts()
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(accs))
+
+	// 2. Generate a batch from a non-empty state with no transactions
+
+	coordIdxs = []common.Idx{}
+	l1UserTxs = []common.L1Tx{}
+	l1CoordTxs = []common.L1Tx{}
+	l2Txs = []common.PoolL2Tx{}
+
+	ptOut, err = sdb.ProcessTxs(ptc, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.Nil(t, err)
+
+	assert.Equal(t, rootNonZero, sdb.mt.Root())
+	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+
+	// check that there is still 1 account
+	accs, err = sdb.GetAccounts()
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(accs))
+
+	/* // TODO
+	h, err := ptOut.ZKInputs.HashGlobalData()
+	require.Nil(t, err)
+	assert.Equal(t, "TODO", h.String())
+
+	toHash, err := ptOut.ZKInputs.ToHashGlobalData()
+	require.Nil(t, err)
+	assert.Equal(t, "TODO", hex.EncodeToString(toHash))
+
+	s, err := json.Marshal(ptOut.ZKInputs)
+	require.Nil(t, err)
+	// the 'expected' data has been checked with the circom circuits
+	expected := `TODO`
+	assert.Equal(t, expected, string(s))
+	*/
+}
+
 // TestZKInputs0:
 // tests:
 // - L1: CreateAccountDeposit
