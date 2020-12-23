@@ -81,9 +81,9 @@ type StateDB struct {
 	zki *common.ZKInputs
 	// i is the current transaction index in the ZKInputs generation (zki)
 	i int
-	// accumulatedFees contains the accumulated fees for each token (Coord
+	// AccumulatedFees contains the accumulated fees for each token (Coord
 	// Idx) in the processed batch
-	accumulatedFees map[common.Idx]*big.Int
+	AccumulatedFees map[common.Idx]*big.Int
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
