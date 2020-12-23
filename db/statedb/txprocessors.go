@@ -82,16 +82,6 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	s.accumulatedFees = make(map[common.Idx]*big.Int)
 
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
-	if nTx == 0 {
-		// TODO return ZKInputs of batch without txs
-		return &ProcessTxOutput{
-			ZKInputs:           nil,
-			ExitInfos:          nil,
-			CreatedAccounts:    nil,
-			CoordinatorIdxsMap: nil,
-			CollectedFees:      nil,
-		}, nil
-	}
 
 	if nTx > int(ptc.MaxTx) {
 		return nil, tracerr.Wrap(fmt.Errorf("L1UserTx + L1CoordinatorTx + L2Tx (%d) can not be bigger than MaxTx (%d)", nTx, ptc.MaxTx))
@@ -106,6 +96,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 		s.zki = common.NewZKInputs(ptc.MaxTx, ptc.MaxL1Tx, ptc.MaxTx, ptc.MaxFeeTx, ptc.NLevels, s.currentBatch.BigInt())
 		s.zki.OldLastIdx = s.idx.BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
+		s.zki.Metadata.NewLastIdxRaw = s.idx
 	}
 
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
@@ -272,7 +263,11 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	}
 
 	if s.zki != nil {
-		for i := s.i - 1; i < int(ptc.MaxTx); i++ {
+		last := s.i - 1
+		if s.i == 0 {
+			last = 0
+		}
+		for i := last; i < int(ptc.MaxTx); i++ {
 			if i < int(ptc.MaxTx)-1 {
 				s.zki.ISOutIdx[i] = s.idx.BigInt()
 				s.zki.ISStateRoot[i] = s.mt.Root().BigInt()

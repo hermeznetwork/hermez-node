@@ -431,8 +431,9 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 
 	// [MAX_NLEVELS bits] oldLastIdx
 	oldLastIdx := make([]byte, bytesMaxLevels)
-	copy(oldLastIdx, z.OldLastIdx.Bytes())
-	b = append(b, SwapEndianness(oldLastIdx)...)
+	oldLastIdxBytes := z.OldLastIdx.Bytes()
+	copy(oldLastIdx[len(oldLastIdx)-len(oldLastIdxBytes):], oldLastIdxBytes)
+	b = append(b, oldLastIdx...)
 
 	// [MAX_NLEVELS bits] newLastIdx
 	newLastIdx := make([]byte, bytesMaxLevels)

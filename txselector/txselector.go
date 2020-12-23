@@ -151,15 +151,15 @@ func (txsel *TxSelector) GetCoordIdxs() (map[common.TokenID]common.Idx, error) {
 // GetL2TxSelection returns the L1CoordinatorTxs and a selection of the L2Txs
 // for the next batch, from the L2DB pool
 func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig,
-	batchNum common.BatchNum) ([]common.Idx, []common.L1Tx, []common.PoolL2Tx, error) {
-	coordIdxs, _, l1CoordinatorTxs, l2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, batchNum,
+	batchNum common.BatchNum) ([]common.Idx, [][]byte, []common.L1Tx, []common.PoolL2Tx, error) {
+	coordIdxs, auths, _, l1CoordinatorTxs, l2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, batchNum,
 		[]common.L1Tx{})
-	return coordIdxs, l1CoordinatorTxs, l2Txs, tracerr.Wrap(err)
+	return coordIdxs, auths, l1CoordinatorTxs, l2Txs, tracerr.Wrap(err)
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs
 func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
-	batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.Idx, []common.L1Tx, []common.L1Tx,
+	batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx, []common.L1Tx,
 	[]common.PoolL2Tx, error) {
 	// apply l1-user-tx to localAccountDB
 	//     create new leaves
@@ -169,7 +169,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	// get existing CoordIdxs
 	coordIdxsMap, err := txsel.GetCoordIdxs()
 	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	var coordIdxs []common.Idx
 	for tokenID := range coordIdxsMap {
@@ -179,7 +179,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	// get pending l2-tx from tx-pool
 	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // (batchID)
 	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 
 	var validTxs txs
@@ -235,14 +235,19 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	// process the txs in the local AccountsDB
 	_, err = txsel.localAccountsDB.ProcessTxs(ptc, coordIdxs, l1Txs, l1CoordinatorTxs, l2Txs)
 	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	err = txsel.localAccountsDB.MakeCheckpoint()
 	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 
-	return nil, l1Txs, l1CoordinatorTxs, l2Txs, nil
+	// TODO
+	auths := make([][]byte, len(l1CoordinatorTxs))
+	for i := range auths {
+		auths[i] = make([]byte, 65)
+	}
+	return nil, auths, l1Txs, l1CoordinatorTxs, l2Txs, nil
 }
 
 // processTxsToEthAddrBJJ process the common.PoolL2Tx in the case where

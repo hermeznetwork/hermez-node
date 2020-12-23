@@ -12,7 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const apiURL = "http://localhost:3000/api"
+var apiURL = "http://localhost:3000/api"
+
 const pollInterval = 1 * time.Second
 
 var proofServerClient *ProofServerClient
@@ -20,6 +21,10 @@ var proofServerClient *ProofServerClient
 func TestMain(m *testing.M) {
 	exitVal := 0
 	if os.Getenv("INTEGRATION") != "" {
+		_apiURL := os.Getenv("PROOF_SERVER_URL")
+		if _apiURL != "" {
+			apiURL = _apiURL
+		}
 		proofServerClient = NewProofServerClient(apiURL, pollInterval)
 		err := proofServerClient.WaitReady(context.Background())
 		if err != nil {

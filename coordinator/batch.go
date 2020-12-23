@@ -26,15 +26,18 @@ const (
 
 // BatchInfo contans the Batch information
 type BatchInfo struct {
-	BatchNum       common.BatchNum
-	ServerProof    prover.Client
-	ZKInputs       *common.ZKInputs
-	Proof          *prover.Proof
-	PublicInputs   []*big.Int
-	L1UserTxsExtra []common.L1Tx
-	L1CoordTxs     []common.L1Tx
-	L2Txs          []common.PoolL2Tx
-	ForgeBatchArgs *eth.RollupForgeBatchArgs
+	BatchNum              common.BatchNum
+	ServerProof           prover.Client
+	ZKInputs              *common.ZKInputs
+	Proof                 *prover.Proof
+	PublicInputs          []*big.Int
+	L1Batch               bool
+	L1UserTxsExtra        []common.L1Tx
+	L1CoordTxs            []common.L1Tx
+	L1CoordinatorTxsAuths [][]byte
+	L2Txs                 []common.L2Tx
+	CoordIdxs             []common.Idx
+	ForgeBatchArgs        *eth.RollupForgeBatchArgs
 	// FeesInfo
 	TxStatus TxStatus
 	EthTx    *types.Transaction

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -157,11 +158,21 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		ConfirmBlocks:          5,
 		L1BatchTimeoutPerc:     0.5,
 		EthClientAttempts:      5,
+		SyncRetryInterval:      400 * time.Microsecond,
 		EthClientAttemptsDelay: 100 * time.Millisecond,
 		TxManagerCheckInterval: 300 * time.Millisecond,
 		DebugBatchPath:         debugBatchPath,
+		Purger: PurgerCfg{
+			PurgeBatchDelay:      10,
+			PurgeBlockDelay:      10,
+			InvalidateBatchDelay: 4,
+			InvalidateBlockDelay: 4,
+		},
 	}
-	serverProofs := []prover.Client{&prover.MockClient{}, &prover.MockClient{}}
+	serverProofs := []prover.Client{
+		&prover.MockClient{Delay: 300 * time.Millisecond},
+		&prover.MockClient{Delay: 400 * time.Millisecond},
+	}
 
 	scConsts := &synchronizer.SCConsts{
 		Rollup:   *ethClientSetup.RollupConstants,
@@ -626,6 +637,70 @@ PoolTransfer(0) User2-User3: 300 (126)
 	batchInfo, err = pipeline.forgeBatch(ctx, batchNum, selectionConfig)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(batchInfo.L2Txs))
+}
+
+func TestCoordinatorStress(t *testing.T) {
+	if os.Getenv("TEST_COORD_STRESS") == "" {
+		return
+	}
+	log.Info("Begin Test Coord Stress")
+	ethClientSetup := test.NewClientSetupExample()
+	var timer timer
+	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	modules := newTestModules(t)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	syn := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
+
+	coord.Start()
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
+	// Synchronizer loop
+	wg.Add(1)
+	go func() {
+		for {
+			blockData, _, err := syn.Sync2(ctx, nil)
+			if ctx.Err() != nil {
+				wg.Done()
+				return
+			}
+			require.NoError(t, err)
+			if blockData != nil {
+				stats := syn.Stats()
+				coord.SendMsg(MsgSyncBlock{
+					Stats:   *stats,
+					Batches: blockData.Rollup.Batches,
+					Vars: synchronizer.SCVariablesPtr{
+						Rollup:   blockData.Rollup.Vars,
+						Auction:  blockData.Auction.Vars,
+						WDelayer: blockData.WDelayer.Vars,
+					},
+				})
+			} else {
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+	}()
+
+	// Blockchain mining loop
+	wg.Add(1)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				wg.Done()
+				return
+			case <-time.After(100 * time.Millisecond):
+				ethClient.CtlMineBlock()
+			}
+		}
+	}()
+
+	time.Sleep(600 * time.Second)
+
+	cancel()
+	wg.Wait()
+	coord.Stop()
 }
 
 // TODO: Test Reorg
