@@ -265,6 +265,7 @@ type AuctionInterface interface {
 // AuctionClient is the implementation of the interface to the Auction Smart Contract in ethereum.
 type AuctionClient struct {
 	client      *EthereumClient
+	chainID     *big.Int
 	address     ethCommon.Address
 	tokenHEZCfg TokenConfig
 	auction     *HermezAuctionProtocol.HermezAuctionProtocol
@@ -287,8 +288,13 @@ func NewAuctionClient(client *EthereumClient, address ethCommon.Address, tokenHE
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+	chainID, err := client.EthChainID()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
 	return &AuctionClient{
 		client:      client,
+		chainID:     chainID,
 		address:     address,
 		tokenHEZCfg: tokenHEZCfg,
 		auction:     auction,
@@ -580,8 +586,7 @@ func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.I
 			}
 			tokenName := c.tokenHEZCfg.Name
 			tokenAddr := c.tokenHEZCfg.Address
-			chainid, _ := c.client.Client().ChainID(context.Background())
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenName)
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID, amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			_slot := big.NewInt(slot)
@@ -607,9 +612,8 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 			}
 			tokenName := c.tokenHEZCfg.Name
 			tokenAddr := c.tokenHEZCfg.Address
-			chainid, _ := c.client.Client().ChainID(context.Background())
 
-			digest, _ := createPermitDigest(tokenAddr, owner, spender, chainid, amount, nonce, deadline, tokenName)
+			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID, amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			_startingSlot := big.NewInt(startingSlot)

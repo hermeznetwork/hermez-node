@@ -34,6 +34,7 @@ type EthereumInterface interface {
 	EthTransactionReceipt(context.Context, ethCommon.Hash) (*types.Receipt, error)
 
 	EthERC20Consts(ethCommon.Address) (*ERC20Consts, error)
+	EthChainID() (*big.Int, error)
 }
 
 var (
@@ -99,6 +100,15 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account, ks *
 		config:         config,
 		opts:           newCallOpts(),
 	}
+}
+
+// EthChainID returns the ChainID of the ethereum network
+func (c *EthereumClient) EthChainID() (*big.Int, error) {
+	chainID, err := c.client.ChainID(context.Background())
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return chainID, nil
 }
 
 // BalanceAt retieves information about the default account

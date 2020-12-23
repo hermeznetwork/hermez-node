@@ -83,11 +83,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 
 	historyDB := historydb.NewHistoryDB(db)
 
-	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32, cfg.Coordinator.ChainID)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-
 	ethClient, err := ethclient.Dial(cfg.Web3.URL)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -118,6 +113,25 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			Address: cfg.SmartContracts.WDelayer,
 		},
 	})
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+
+	chainID, err := client.EthChainID()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if !chainID.IsUint64() {
+		return nil, tracerr.Wrap(fmt.Errorf("chainID cannot be represented as uint64"))
+	}
+	chainIDU64 := chainID.Uint64()
+	const maxUint16 uint64 = 0xffff
+	if chainIDU64 > maxUint16 {
+		return nil, tracerr.Wrap(fmt.Errorf("chainID overflows uint16"))
+	}
+	chainIDU16 := uint16(chainIDU64)
+
+	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32, chainIDU16)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -232,7 +246,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 				AuctionConstants:  scConsts.Auction,
 				WDelayerConstants: scConsts.WDelayer,
 			},
-			cfg.Coordinator.ChainID,
+			chainIDU16,
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)

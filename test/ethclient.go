@@ -272,6 +272,7 @@ type ClientSetup struct {
 	WDelayerConstants *common.WDelayerConstants
 	WDelayerVariables *common.WDelayerVariables
 	VerifyProof       bool
+	ChainID           *big.Int
 }
 
 // NewClientSetupExample returns a ClientSetup example with hardcoded realistic
@@ -357,6 +358,8 @@ func NewClientSetupExample() *ClientSetup {
 		AuctionVariables:  auctionVariables,
 		WDelayerConstants: wDelayerConstants,
 		WDelayerVariables: wDelayerVariables,
+		VerifyProof:       false,
+		ChainID:           big.NewInt(0),
 	}
 }
 
@@ -383,6 +386,7 @@ type Client struct {
 	rw                *sync.RWMutex
 	log               bool
 	addr              *ethCommon.Address
+	chainID           *big.Int
 	rollupConstants   *common.RollupConstants
 	auctionConstants  *common.AuctionConstants
 	wDelayerConstants *common.WDelayerConstants
@@ -600,6 +604,11 @@ func (c *Client) CtlLastForgedBatch() int64 {
 	currentBlock := c.currentBlock()
 	e := currentBlock.Rollup
 	return int64(len(e.State.ExitRoots)) - 1
+}
+
+// EthChainID returns the ChainID of the ethereum network
+func (c *Client) EthChainID() (*big.Int, error) {
+	return c.chainID, nil
 }
 
 // EthLastBlock returns the last blockNum

@@ -283,6 +283,7 @@ type RollupClient struct {
 	tokenHEZ    *HEZ.HEZ
 	contractAbi abi.ABI
 	opts        *bind.CallOpts
+	consts      *common.RollupConstants
 }
 
 // NewRollupClient creates a new RollupClient
@@ -299,11 +300,11 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	chainID, err := client.client.ChainID(context.Background())
+	chainID, err := client.EthChainID()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	return &RollupClient{
+	c := &RollupClient{
 		client:      client,
 		chainID:     chainID,
 		address:     address,
@@ -312,7 +313,13 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 		tokenHEZ:    tokenHEZ,
 		contractAbi: contractAbi,
 		opts:        newCallOpts(),
-	}, nil
+	}
+	consts, err := c.RollupConstants()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	c.consts = consts
+	return c, nil
 }
 
 // RollupForgeBatch is the interface to call the smart contract function
@@ -320,11 +327,7 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs) (tx *types.T
 	if tx, err = c.client.CallAuth(
 		1000000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			rollupConst, err := c.RollupConstants()
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			nLevels := rollupConst.Verifiers[args.VerifierIdx].NLevels
+			nLevels := c.consts.Verifiers[args.VerifierIdx].NLevels
 			lenBytes := nLevels / 8 //nolint:gomnd
 			newLastIdx := big.NewInt(int64(args.NewLastIdx))
 			// L1CoordinatorBytes
@@ -915,11 +918,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, l1UserTxsL
 		L2TxsData:             []common.L2Tx{},
 		FeeIdxCoordinator:     []common.Idx{},
 	}
-	rollupConsts, err := c.RollupConstants()
-	if err != nil {
-		return nil, nil, tracerr.Wrap(err)
-	}
-	nLevels := rollupConsts.Verifiers[rollupForgeBatchArgs.VerifierIdx].NLevels
+	nLevels := c.consts.Verifiers[rollupForgeBatchArgs.VerifierIdx].NLevels
 	lenL1L2TxsBytes := int((nLevels/8)*2 + 2 + 1)
 	numBytesL1TxUser := int(l1UserTxsLen) * lenL1L2TxsBytes
 	numTxsL1Coord := len(aux.EncodedL1CoordinatorTx) / common.L1CoordinatorTxBytesLen
