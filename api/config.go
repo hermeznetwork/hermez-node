@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"net/http"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 )
@@ -51,6 +52,8 @@ type Config struct {
 	RollupConstants   common.RollupConstants
 	AuctionConstants  common.AuctionConstants
 	WDelayerConstants common.WDelayerConstants
+	ChainID           uint16
+	HermezAddress     ethCommon.Address
 }
 
 type configAPI struct {

@@ -245,8 +245,9 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 				RollupConstants:   scConsts.Rollup,
 				AuctionConstants:  scConsts.Auction,
 				WDelayerConstants: scConsts.WDelayer,
+				ChainID:           chainIDU16,
+				HermezAddress:     cfg.SmartContracts.Rollup,
 			},
-			chainIDU16,
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -301,7 +302,6 @@ func NewNodeAPI(
 	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
 	config *api.Config,
-	chainID uint16,
 ) (*NodeAPI, error) {
 	engine := gin.Default()
 	engine.NoRoute(handleNoRoute)
@@ -313,7 +313,6 @@ func NewNodeAPI(
 		sdb,
 		l2db,
 		config,
-		chainID,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)

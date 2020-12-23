@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -31,12 +32,13 @@ type Status struct {
 
 // API serves HTTP requests to allow external interaction with the Hermez node
 type API struct {
-	h       *historydb.HistoryDB
-	cg      *configAPI
-	s       *statedb.StateDB
-	l2      *l2db.L2DB
-	status  Status
-	chainID uint16
+	h             *historydb.HistoryDB
+	cg            *configAPI
+	s             *statedb.StateDB
+	l2            *l2db.L2DB
+	status        Status
+	chainID       uint16
+	hermezAddress ethCommon.Address
 }
 
 // NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
@@ -47,7 +49,6 @@ func NewAPI(
 	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
 	config *Config,
-	chainID uint16,
 ) (*API, error) {
 	// Check input
 	// TODO: is stateDB only needed for explorer endpoints or for both?
@@ -65,10 +66,11 @@ func NewAPI(
 			AuctionConstants:  config.AuctionConstants,
 			WDelayerConstants: config.WDelayerConstants,
 		},
-		s:       sdb,
-		l2:      l2db,
-		status:  Status{},
-		chainID: chainID,
+		s:             sdb,
+		l2:            l2db,
+		status:        Status{},
+		chainID:       config.ChainID,
+		hermezAddress: config.HermezAddress,
 	}
 
 	// Add coordinator endpoints

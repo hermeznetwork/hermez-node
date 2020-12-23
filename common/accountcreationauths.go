@@ -1,15 +1,20 @@
 package common
 
 import (
+	"encoding/binary"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// AccountCreationAuth authorizations sent by users to the L2DB, to be used for account creations when necessary
+// AccountCreationAuthMsg is the message that is signed to authorize an account
+// creation
+const AccountCreationAuthMsg = "I authorize this babyjubjub key for hermez rollup account creation"
+
+// AccountCreationAuth authorizations sent by users to the L2DB, to be used for
+// account creations when necessary
 type AccountCreationAuth struct {
 	EthAddr   ethCommon.Address     `meddler:"eth_addr"`
 	BJJ       babyjub.PublicKeyComp `meddler:"bjj"`
@@ -18,21 +23,21 @@ type AccountCreationAuth struct {
 }
 
 // HashToSign builds the hash to be signed using BJJ pub key and the constant message
-func (a *AccountCreationAuth) HashToSign() ([]byte, error) {
+func (a *AccountCreationAuth) HashToSign(chainID uint16,
+	hermezContractAddr ethCommon.Address) ([]byte, error) {
 	// Calculate message to be signed
-	const msg = "I authorize this babyjubjub key for hermez rollup account creation"
-	comp, err := a.BJJ.MarshalText()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	// Hash message (msg || compressed-bjj)
-	return ethCrypto.Keccak256Hash([]byte(msg), comp).Bytes(), nil
+	var chainIDBytes [2]byte
+	binary.BigEndian.PutUint16(chainIDBytes[:], chainID)
+	// to hash: [AccountCreationAuthMsg | compressedBJJ | chainID | hermezContractAddr]
+	return ethCrypto.Keccak256Hash([]byte(AccountCreationAuthMsg), a.BJJ[:], chainIDBytes[:],
+		hermezContractAddr[:]).Bytes(), nil
 }
 
 // VerifySignature ensures that the Signature is done with the specified EthAddr
-func (a *AccountCreationAuth) VerifySignature() bool {
+func (a *AccountCreationAuth) VerifySignature(chainID uint16,
+	hermezContractAddr ethCommon.Address) bool {
 	// Calculate hash to be signed
-	msg, err := a.HashToSign()
+	msg, err := a.HashToSign(chainID, hermezContractAddr)
 	if err != nil {
 		return false
 	}

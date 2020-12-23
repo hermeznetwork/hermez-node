@@ -21,7 +21,7 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 	}
 	// API to common + verify signature
 	commonAuth := accountCreationAuthAPIToCommon(&apiAuth)
-	if !commonAuth.VerifySignature() {
+	if !commonAuth.VerifySignature(a.chainID, a.hermezAddress) {
 		retBadReq(errors.New("invalid signature"), c)
 		return
 	}
