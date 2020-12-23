@@ -1051,6 +1051,70 @@ func TestGetLastTxsPosition(t *testing.T) {
 	assert.Equal(t, sql.ErrNoRows.Error(), err.Error())
 }
 
+func TestGetFirstBatchBlockNumBySlot(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+
+	set := `
+		Type: Blockchain
+
+		// Slot = 0
+
+		> block // 2
+		> block // 3
+		> block // 4
+		> block // 5
+
+		// Slot = 1
+
+		> block // 6
+		> block // 7
+		> batch
+		> block // 8
+		> block // 9
+
+		// Slot = 2
+
+		> batch
+		> block // 10
+		> block // 11
+		> block // 12
+		> block // 13
+
+	`
+	tc := til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(set)
+	assert.NoError(t, err)
+
+	tilCfgExtra := til.ConfigExtra{
+		CoordUser: "A",
+	}
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	require.NoError(t, err)
+
+	for i := range blocks {
+		for j := range blocks[i].Rollup.Batches {
+			blocks[i].Rollup.Batches[j].Batch.SlotNum = int64(i) / 4
+		}
+	}
+
+	// Add all blocks
+	for i := range blocks {
+		err = historyDB.AddBlockSCData(&blocks[i])
+		require.NoError(t, err)
+	}
+
+	_, err = historyDB.GetFirstBatchBlockNumBySlot(0)
+	require.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))
+
+	bn1, err := historyDB.GetFirstBatchBlockNumBySlot(1)
+	require.NoError(t, err)
+	assert.Equal(t, int64(8), bn1)
+
+	bn2, err := historyDB.GetFirstBatchBlockNumBySlot(2)
+	require.NoError(t, err)
+	assert.Equal(t, int64(10), bn2)
+}
+
 // setTestBlocks WARNING: this will delete the blocks and recreate them
 func setTestBlocks(from, to int64) []common.Block {
 	test.WipeDB(historyDB.DB())

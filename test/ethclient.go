@@ -399,6 +399,8 @@ type Client struct {
 
 	forgeBatchArgsPending map[ethCommon.Hash]*batch
 	forgeBatchArgs        map[ethCommon.Hash]*batch
+
+	startBlock int64
 }
 
 // NewClient returns a new test Client that implements the eth.IClient
@@ -480,7 +482,10 @@ func NewClient(l bool, timer Timer, addr *ethCommon.Address, setup *ClientSetup)
 		maxBlockNum:           blockNum,
 	}
 
-	for i := int64(1); i < setup.AuctionConstants.GenesisBlockNum+1; i++ {
+	if c.startBlock == 0 {
+		c.startBlock = 2
+	}
+	for i := int64(1); i < c.startBlock; i++ {
 		c.CtlMineBlock()
 	}
 

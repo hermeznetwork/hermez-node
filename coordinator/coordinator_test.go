@@ -213,6 +213,7 @@ func TestCoordinatorFlow(t *testing.T) {
 		return
 	}
 	ethClientSetup := test.NewClientSetupExample()
+	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	modules := newTestModules(t)
@@ -294,6 +295,7 @@ func TestCoordinatorFlow(t *testing.T) {
 
 func TestCoordinatorStartStop(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
+	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	modules := newTestModules(t)
@@ -304,6 +306,7 @@ func TestCoordinatorStartStop(t *testing.T) {
 
 func TestCoordCanForge(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
+	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	bootForger := ethClientSetup.AuctionVariables.BootCoordinator
 
 	var timer timer
@@ -356,6 +359,7 @@ func TestCoordCanForge(t *testing.T) {
 
 func TestCoordHandleMsgSyncBlock(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
+	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	bootForger := ethClientSetup.AuctionVariables.BootCoordinator
 
 	var timer timer
@@ -417,6 +421,7 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 
 func TestPipelineShouldL1L2Batch(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
+	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 
 	var timer timer
 	ctx := context.Background()
@@ -562,6 +567,7 @@ func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchr
 
 func TestPipeline1(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
+	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 
 	var timer timer
 	ctx := context.Background()
@@ -646,6 +652,7 @@ func TestCoordinatorStress(t *testing.T) {
 	}
 	log.Info("Begin Test Coord Stress")
 	ethClientSetup := test.NewClientSetupExample()
+	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	modules := newTestModules(t)
@@ -691,7 +698,7 @@ func TestCoordinatorStress(t *testing.T) {
 			case <-ctx.Done():
 				wg.Done()
 				return
-			case <-time.After(100 * time.Millisecond):
+			case <-time.After(1 * time.Second):
 				ethClient.CtlMineBlock()
 			}
 		}

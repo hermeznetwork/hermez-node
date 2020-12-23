@@ -293,11 +293,15 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, erro
 	return db.SlicePtrsToSlice(batches).([]common.Batch), tracerr.Wrap(err)
 }
 
-// GetBatchesLen retrieve number of batches from the DB, given a slotNum
-func (hdb *HistoryDB) GetBatchesLen(slotNum int64) (int, error) {
-	row := hdb.db.QueryRow("SELECT COUNT(*) FROM batch WHERE slot_num = $1;", slotNum)
-	var batchesLen int
-	return batchesLen, tracerr.Wrap(row.Scan(&batchesLen))
+// GetFirstBatchBlockNumBySlot returns the ethereum block number of the first
+// batch within a slot
+func (hdb *HistoryDB) GetFirstBatchBlockNumBySlot(slotNum int64) (int64, error) {
+	row := hdb.db.QueryRow(
+		`SELECT eth_block_num FROM batch
+		WHERE slot_num = $1 ORDER BY batch_num ASC LIMIT 1;`, slotNum,
+	)
+	var blockNum int64
+	return blockNum, tracerr.Wrap(row.Scan(&blockNum))
 }
 
 // GetLastBatchNum returns the BatchNum of the latest forged batch

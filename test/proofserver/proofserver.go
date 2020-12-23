@@ -180,7 +180,7 @@ func (s *Mock) runProver(ctx context.Context) {
 				"pi_a": ["%v", "%v", "1"],
 				"pi_b": [["%v", "%v"],["%v", "%v"],["1", "0"]],
 				"pi_c": ["%v", "%v", "1"],
-				"protocol": "groth16"
+				"protocol": "groth"
 			}`, i, i+1, i+2, i+3, i+4, i+5, i+6, i+7) //nolint:gomnd
 			s.pubData = fmt.Sprintf(`[
 				"%v"
