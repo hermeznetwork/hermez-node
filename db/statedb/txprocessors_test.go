@@ -413,9 +413,9 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	require.NoError(t, err)
 
 	// after processing expect l2Txs[0:2].Nonce!=0 and has expected value
-	assert.Equal(t, common.Nonce(6), l2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(7), l2Txs[1].Nonce)
-	assert.Equal(t, common.Nonce(8), l2Txs[2].Nonce)
+	assert.Equal(t, common.Nonce(5), l2Txs[0].Nonce)
+	assert.Equal(t, common.Nonce(6), l2Txs[1].Nonce)
+	assert.Equal(t, common.Nonce(7), l2Txs[2].Nonce)
 
 	assert.Equal(t, 4, len(ptOut.ExitInfos)) // the 'ForceExit(1)' is not computed yet, as the batch is without L1UserTxs
 	assert.Equal(t, 1, len(ptOut.CreatedAccounts))

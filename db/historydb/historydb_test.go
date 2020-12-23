@@ -551,10 +551,10 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, common.TxTypeExit, dbL2Txs[3].Type)
 
 	// Tx ID
-	assert.Equal(t, "0x020000000001030000000001", dbL2Txs[0].TxID.String())
-	assert.Equal(t, "0x020000000001010000000001", dbL2Txs[1].TxID.String())
-	assert.Equal(t, "0x020000000001000000000001", dbL2Txs[2].TxID.String())
-	assert.Equal(t, "0x020000000001000000000002", dbL2Txs[3].TxID.String())
+	assert.Equal(t, "0x020000000001030000000000", dbL2Txs[0].TxID.String())
+	assert.Equal(t, "0x020000000001010000000000", dbL2Txs[1].TxID.String())
+	assert.Equal(t, "0x020000000001000000000000", dbL2Txs[2].TxID.String())
+	assert.Equal(t, "0x020000000001000000000001", dbL2Txs[3].TxID.String())
 
 	// Tx From and To IDx
 	assert.Equal(t, dbL2Txs[0].ToIdx, dbL2Txs[2].FromIdx)
