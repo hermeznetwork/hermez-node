@@ -100,7 +100,6 @@ func NewAPI(
 		server.GET("/tokens", a.getTokens)
 		server.GET("/tokens/:id", a.getToken)
 		server.GET("/coordinators", a.getCoordinators)
-		server.GET("/coordinators/:bidderAddr", a.getCoordinator)
 	}
 
 	return a, nil

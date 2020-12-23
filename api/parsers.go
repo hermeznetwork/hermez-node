@@ -406,14 +406,6 @@ func parseQueryEthAddr(name string, c querier) (*ethCommon.Address, error) {
 	return parseEthAddr(addrStr)
 }
 
-func parseParamEthAddr(name string, c paramer) (*ethCommon.Address, error) {
-	addrStr := c.Param(name)
-	if addrStr == "" {
-		return nil, nil
-	}
-	return parseEthAddr(addrStr)
-}
-
 func parseEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 	var addr ethCommon.Address
 	err := addr.UnmarshalText([]byte(ethAddrStr))
