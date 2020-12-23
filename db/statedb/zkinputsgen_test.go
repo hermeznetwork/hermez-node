@@ -65,8 +65,8 @@ func generateJsUsers(t *testing.T) []til.User {
 	return users
 }
 
-func signL2Tx(t *testing.T, user til.User, l2Tx common.PoolL2Tx) common.PoolL2Tx {
-	toSign, err := l2Tx.HashToSign()
+func signL2Tx(t *testing.T, chainID uint16, user til.User, l2Tx common.PoolL2Tx) common.PoolL2Tx {
+	toSign, err := l2Tx.HashToSign(chainID)
 	require.NoError(t, err)
 	sig := user.BJJ.SignPoseidon(toSign)
 	l2Tx.Signature = sig.Compress()
@@ -78,7 +78,8 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -152,7 +153,8 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -251,7 +253,8 @@ func TestZKInputsEmpty(t *testing.T) {
 
 	nLevels := 16
 
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	ptc := ProcessTxsConfig{
@@ -330,7 +333,7 @@ func TestZKInputsEmpty(t *testing.T) {
 		},
 	}
 
-	toSign, err := l2Txs[0].HashToSign()
+	toSign, err := l2Txs[0].HashToSign(sdb.chainID)
 	require.Nil(t, err)
 	sig := users[0].BJJ.SignPoseidon(toSign)
 	l2Txs[0].Signature = sig.Compress()
@@ -399,8 +402,8 @@ func TestZKInputs0(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -431,7 +434,7 @@ func TestZKInputs0(t *testing.T) {
 		},
 	}
 
-	toSign, err := l2Txs[0].HashToSign()
+	toSign, err := l2Txs[0].HashToSign(sdb.chainID)
 	require.NoError(t, err)
 	sig := users[0].BJJ.SignPoseidon(toSign)
 	l2Txs[0].Signature = sig.Compress()
@@ -487,8 +490,8 @@ func TestZKInputs1(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -530,7 +533,7 @@ func TestZKInputs1(t *testing.T) {
 		},
 	}
 
-	toSign, err := l2Txs[0].HashToSign()
+	toSign, err := l2Txs[0].HashToSign(sdb.chainID)
 	require.NoError(t, err)
 	sig := users[0].BJJ.SignPoseidon(toSign)
 	l2Txs[0].Signature = sig.Compress()
@@ -594,8 +597,8 @@ func TestZKInputs2(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -668,8 +671,8 @@ func TestZKInputs2(t *testing.T) {
 		},
 	}
 
-	l2Txs[0] = signL2Tx(t, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, users[0], l2Txs[1])
+	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
 
 	ptc := ProcessTxsConfig{
 		NLevels:  uint32(nLevels),
@@ -738,8 +741,8 @@ func TestZKInputs3(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -812,8 +815,8 @@ func TestZKInputs3(t *testing.T) {
 		},
 	}
 
-	l2Txs[0] = signL2Tx(t, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, users[0], l2Txs[1])
+	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
 
 	ptc := ProcessTxsConfig{
 		NLevels:  uint32(nLevels),
@@ -882,8 +885,8 @@ func TestZKInputs4(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -966,8 +969,8 @@ func TestZKInputs4(t *testing.T) {
 		},
 	}
 
-	l2Txs[0] = signL2Tx(t, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, users[0], l2Txs[1])
+	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
 
 	ptc := ProcessTxsConfig{
 		NLevels:  uint32(nLevels),
@@ -1036,8 +1039,8 @@ func TestZKInputs5(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -1098,8 +1101,8 @@ func TestZKInputs5(t *testing.T) {
 			Type:    common.TxTypeExit,
 		},
 	}
-	l2Txs[0] = signL2Tx(t, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, users[0], l2Txs[1])
+	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
 
 	ptc := ProcessTxsConfig{
 		NLevels:  uint32(nLevels),
@@ -1160,8 +1163,8 @@ func TestZKInputs6(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// Coordinator Idx where to send the fees
@@ -1174,7 +1177,7 @@ func TestZKInputs6(t *testing.T) {
 		MaxFeeTx: 4,
 	}
 
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(0, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(til.SetBlockchainMinimumFlow0)
 	require.NoError(t, err)
 

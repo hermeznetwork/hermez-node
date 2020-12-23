@@ -282,7 +282,7 @@ func (z ZKInputs) MarshalJSON() ([]byte, error) {
 }
 
 // NewZKInputs returns a pointer to an initialized struct of ZKInputs
-func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatch *big.Int) *ZKInputs {
+func NewZKInputs(chainID uint16, nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatch *big.Int) *ZKInputs {
 	zki := &ZKInputs{}
 	zki.Metadata.NTx = nTx
 	zki.Metadata.MaxFeeIdxs = maxFeeIdxs
@@ -290,12 +290,13 @@ func NewZKInputs(nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatc
 	zki.Metadata.NLevels = nLevels
 	zki.Metadata.MaxL1Tx = maxL1Tx
 	zki.Metadata.MaxTx = maxTx
+	zki.Metadata.ChainID = chainID
 
 	// General
 	zki.CurrentNumBatch = currentNumBatch
 	zki.OldLastIdx = big.NewInt(0)
 	zki.OldStateRoot = big.NewInt(0)
-	zki.GlobalChainID = big.NewInt(0) // TODO pass by parameter
+	zki.GlobalChainID = big.NewInt(int64(chainID))
 	zki.FeeIdxs = newSlice(maxFeeIdxs)
 	zki.FeePlanTokens = newSlice(maxFeeIdxs)
 

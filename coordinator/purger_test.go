@@ -28,7 +28,7 @@ func newStateDB(t *testing.T) *statedb.LocalStateDB {
 	syncDBPath, err := ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncStateDB, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, 48)
+	syncStateDB, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, 48, chainID)
 	assert.NoError(t, err)
 	stateDBPath, err := ioutil.TempDir("", "tmpStateDB")
 	require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestPoolMarkInvalidOldNonces(t *testing.T) {
 		> batchL1
 		> block
 	`
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set0)
 	require.NoError(t, err)
 	tilCfgExtra := til.ConfigExtra{

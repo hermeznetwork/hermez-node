@@ -61,6 +61,7 @@ type Context struct {
 	// queued in a batch
 	rollupConstMaxL1UserTx int
 
+	chainID       uint16
 	idx           int
 	currBlock     common.BlockData
 	currBatch     common.BatchData
@@ -78,7 +79,7 @@ type Context struct {
 }
 
 // NewContext returns a new Context
-func NewContext(rollupConstMaxL1UserTx int) *Context {
+func NewContext(chainID uint16, rollupConstMaxL1UserTx int) *Context {
 	currBatchNum := 1 // The protocol defines the first batchNum to be 1
 	return &Context{
 		Users:                 make(map[string]*User),
@@ -88,6 +89,7 @@ func NewContext(rollupConstMaxL1UserTx int) *Context {
 		LastRegisteredTokenID: 0,
 
 		rollupConstMaxL1UserTx: rollupConstMaxL1UserTx,
+		chainID:                chainID,
 		idx:                    common.UserThreshold,
 		// We use some placeholder values for StateRoot and ExitTree
 		// because these values will never be nil
@@ -630,7 +632,7 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 			}
 			tx = *nTx
 			// perform signature and set it to tx.Signature
-			toSign, err := tx.HashToSign()
+			toSign, err := tx.HashToSign(tc.chainID)
 			if err != nil {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
@@ -656,7 +658,7 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 			}
 			tx = *nTx
 			// perform signature and set it to tx.Signature
-			toSign, err := tx.HashToSign()
+			toSign, err := tx.HashToSign(tc.chainID)
 			if err != nil {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}

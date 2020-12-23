@@ -211,7 +211,8 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}()
-	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
+	chainID := uint16(0)
+	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0, chainID)
 	if err != nil {
 		panic(err)
 	}
@@ -237,6 +238,7 @@ func TestMain(m *testing.M) {
 		sdb,
 		l2DB,
 		&_config,
+		chainID,
 	)
 	if err != nil {
 		panic(err)
@@ -253,7 +255,7 @@ func TestMain(m *testing.M) {
 	test.WipeDB(api.h.DB())
 
 	// Genratre blockchain data with til
-	tcc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tcc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		CoordUser:     "Coord",

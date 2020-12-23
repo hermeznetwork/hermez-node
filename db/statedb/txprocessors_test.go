@@ -28,7 +28,8 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	set := `
@@ -42,7 +43,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		> batchL1
 		> block
 	`
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set)
 	require.NoError(t, err)
 
@@ -201,11 +202,12 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	// generate test transactions from test.SetBlockchain0 code
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(til.SetBlockchainMinimumFlow0)
 	require.NoError(t, err)
 
@@ -333,11 +335,12 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	// generate test transactions from test.SetBlockchain0 code
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(0, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
 	require.NoError(t, err)
 
@@ -461,11 +464,12 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
 	assert.NoError(t, err)
 
 	// generate test transactions from test.SetBlockchain0 code
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(0, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
 	require.NoError(t, err)
 
@@ -549,7 +553,8 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
 	assert.NoError(t, err)
 
 	// same values than in the js test
@@ -597,8 +602,8 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	nLevels := 16
-
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
 	assert.NoError(t, err)
 
 	users := generateJsUsers(t)

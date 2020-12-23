@@ -180,7 +180,7 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 		return tracerr.Wrap(err)
 	}
 	// Check signature
-	if !poolTx.VerifySignature(account.PublicKey) {
+	if !poolTx.VerifySignature(a.chainID, account.PublicKey) {
 		return tracerr.Wrap(errors.New("wrong signature"))
 	}
 	return nil

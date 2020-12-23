@@ -31,11 +31,12 @@ type Status struct {
 
 // API serves HTTP requests to allow external interaction with the Hermez node
 type API struct {
-	h      *historydb.HistoryDB
-	cg     *configAPI
-	s      *statedb.StateDB
-	l2     *l2db.L2DB
-	status Status
+	h       *historydb.HistoryDB
+	cg      *configAPI
+	s       *statedb.StateDB
+	l2      *l2db.L2DB
+	status  Status
+	chainID uint16
 }
 
 // NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
@@ -46,6 +47,7 @@ func NewAPI(
 	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
 	config *Config,
+	chainID uint16,
 ) (*API, error) {
 	// Check input
 	// TODO: is stateDB only needed for explorer endpoints or for both?
@@ -63,9 +65,10 @@ func NewAPI(
 			AuctionConstants:  config.AuctionConstants,
 			WDelayerConstants: config.WDelayerConstants,
 		},
-		s:      sdb,
-		l2:     l2db,
-		status: Status{},
+		s:       sdb,
+		l2:      l2db,
+		status:  Status{},
+		chainID: chainID,
 	}
 
 	// Add coordinator endpoints

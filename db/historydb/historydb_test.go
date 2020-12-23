@@ -66,7 +66,7 @@ func TestBlocks(t *testing.T) {
 		> block // blockNum=5
 		> block // blockNum=6
 	`
-	tc := til.NewContext(1)
+	tc := til.NewContext(uint16(0), 1)
 	blocks, err := tc.GenerateBlocks(set1)
 	require.NoError(t, err)
 	// Save timestamp of a block with UTC and change it without UTC
@@ -138,7 +138,7 @@ func TestBatches(t *testing.T) {
 		> batch   // batchNum=4, L2 only batch, forges transfer (without USD value)
 		> block
 	`
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		CoordUser:     "A",
@@ -359,7 +359,7 @@ func TestTxs(t *testing.T) {
 		> block
 
 	`
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		CoordUser:     "A",
@@ -615,7 +615,7 @@ func TestGetUnforgedL1UserTxs(t *testing.T) {
 
 		> block
 	`
-	tc := til.NewContext(128)
+	tc := til.NewContext(uint16(0), 128)
 	blocks, err := tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	// Sanity check
@@ -712,7 +712,7 @@ func TestSetL1UserTxEffectiveAmounts(t *testing.T) {
 		> block // blockNum=3
 	`
 
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		CoordUser:     "A",
@@ -799,7 +799,7 @@ func TestUpdateExitTree(t *testing.T) {
 		> block // blockNum=5 (empty block)
 	`
 
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		CoordUser:     "A",
@@ -887,7 +887,7 @@ func TestGetBestBidCoordinator(t *testing.T) {
 	err := historyDB.SetInitialSCVars(rollup, auction, wDelayer)
 	require.NoError(t, err)
 
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(`
 		Type: Blockchain
 		> block // blockNum=2

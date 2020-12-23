@@ -282,7 +282,8 @@ func TestSync(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	stateDB, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32)
+	chainID := uint16(0)
+	stateDB, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32, chainID)
 	require.NoError(t, err)
 
 	// Init History DB
@@ -379,7 +380,7 @@ func TestSync(t *testing.T) {
 		> batchL1 // forge L1UserTxs{3}, freeze defined L1UserTxs{nil}
 		> block // blockNum=3
 	`
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: bootCoordAddr,
 		CoordUser:     "A",
@@ -567,7 +568,7 @@ func TestSync(t *testing.T) {
 		> block // blockNum=5
 		> block // blockNum=6
 	`
-	tc = til.NewContext(common.RollupConstMaxL1UserTx)
+	tc = til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	tilCfgExtra = til.ConfigExtra{
 		BootCoordAddr: bootCoordAddr,
 		CoordUser:     "A",

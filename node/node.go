@@ -83,7 +83,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 
 	historyDB := historydb.NewHistoryDB(db)
 
-	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32)
+	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32, cfg.Coordinator.ChainID)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -232,6 +232,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 				AuctionConstants:  scConsts.Auction,
 				WDelayerConstants: scConsts.WDelayer,
 			},
+			cfg.Coordinator.ChainID,
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -286,6 +287,7 @@ func NewNodeAPI(
 	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
 	config *api.Config,
+	chainID uint16,
 ) (*NodeAPI, error) {
 	engine := gin.Default()
 	engine.NoRoute(handleNoRoute)
@@ -297,6 +299,7 @@ func NewNodeAPI(
 		sdb,
 		l2db,
 		config,
+		chainID,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)

@@ -20,7 +20,7 @@ func TestGenerateBlocksNoBatches(t *testing.T) {
 
 		> block
 	`
-	tc := NewContext(common.RollupConstMaxL1UserTx)
+	tc := NewContext(0, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(blocks))
@@ -87,7 +87,7 @@ func TestGenerateBlocks(t *testing.T) {
 		// batch and last block
 		Transfer(1) User1-User0: 1 (1)
 	`
-	tc := NewContext(common.RollupConstMaxL1UserTx)
+	tc := NewContext(0, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(blocks))
@@ -191,7 +191,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		> batchL1
 		> batchL1
 	`
-	tc := NewContext(common.RollupConstMaxL1UserTx)
+	tc := NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	set = `
@@ -251,7 +251,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 		> batchL1
 		> block
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	set = `
@@ -282,7 +282,7 @@ func TestGeneratePoolL2TxsFromInstructions(t *testing.T) {
 		> batchL1
 		> batchL1
 	`
-	tc := NewContext(common.RollupConstMaxL1UserTx)
+	tc := NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(set)
 	require.NoError(t, err)
 
@@ -314,7 +314,7 @@ func TestGeneratePoolL2TxsFromInstructions(t *testing.T) {
 	txsFromInstructions, err := tc.GeneratePoolL2TxsFromInstructions(instructionSet)
 	require.NoError(t, err)
 	// Generate Pool txs using string
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	stringSet := `
@@ -338,7 +338,7 @@ func TestGenerateErrors(t *testing.T) {
 		CreateAccountDeposit(1) A: 5
 		> batchL1
 		`
-	tc := NewContext(common.RollupConstMaxL1UserTx)
+	tc := NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(set)
 	assert.Equal(t, "Line 2: Can not process CreateAccountDeposit: TokenID 1 not registered, last registered TokenID: 0", err.Error())
 
@@ -347,7 +347,7 @@ func TestGenerateErrors(t *testing.T) {
 		Type: Blockchain
 		AddToken(0)
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 2: AddToken can not register TokenID 0", err.Error())
 
@@ -355,7 +355,7 @@ func TestGenerateErrors(t *testing.T) {
 		Type: Blockchain
 		AddToken(2)
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 2: AddToken TokenID should be sequential, expected TokenID: 1, defined TokenID: 2", err.Error())
 
@@ -366,7 +366,7 @@ func TestGenerateErrors(t *testing.T) {
 		AddToken(3)
 		AddToken(5)
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 5: AddToken TokenID should be sequential, expected TokenID: 4, defined TokenID: 5", err.Error())
 
@@ -380,7 +380,7 @@ func TestGenerateErrors(t *testing.T) {
 		Transfer(1) A-B: 6 (1)
 		> batch
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.Equal(t, "Line 5: CreateAccountDeposit(1)BTransfer(1) A-B: 6 (1)\n, err: Expected ':', found 'Transfer'", err.Error())
 	set = `
@@ -394,7 +394,7 @@ func TestGenerateErrors(t *testing.T) {
 		Transfer(1) A-B: 6 (1)
 		> batch
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.NoError(t, err)
 
@@ -412,7 +412,7 @@ func TestGenerateErrors(t *testing.T) {
 		Exit(1) A: 3 (1)
 		> batch
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	assert.Equal(t, common.Nonce(3), tc.Users["A"].Accounts[common.TokenID(1)].Nonce)
@@ -518,7 +518,7 @@ func TestGenerateFromInstructions(t *testing.T) {
 		Typ: TypeNewBlock,
 	})
 
-	tc := NewContext(common.RollupConstMaxL1UserTx)
+	tc := NewContext(0, common.RollupConstMaxL1UserTx)
 	blockFromInstructions, err := tc.GenerateBlocksFromInstructions(setInst)
 	require.NoError(t, err)
 
@@ -537,7 +537,7 @@ func TestGenerateFromInstructions(t *testing.T) {
 		> batch
 		> block
 	`
-	tc = NewContext(common.RollupConstMaxL1UserTx)
+	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	blockFromString, err := tc.GenerateBlocks(setString)
 	require.NoError(t, err)
 
