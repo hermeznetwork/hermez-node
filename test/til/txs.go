@@ -880,8 +880,8 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 				tx := &batch.L2Txs[k]
 				tx.Position = position
 				position++
-				tc.extra.nonces[tx.FromIdx]++
 				tx.Nonce = tc.extra.nonces[tx.FromIdx]
+				tc.extra.nonces[tx.FromIdx]++
 				if err := tx.SetID(); err != nil {
 					return tracerr.Wrap(err)
 				}

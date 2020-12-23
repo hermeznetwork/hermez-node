@@ -595,7 +595,7 @@ func (s *StateDB) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx, collec
 			log.Errorw("GetAccount", "fromIdx", tx.FromIdx, "err", err)
 			return nil, nil, false, tracerr.Wrap(err)
 		}
-		tx.Nonce = acc.Nonce + 1
+		tx.Nonce = acc.Nonce
 		tx.TokenID = acc.TokenID
 	}
 
