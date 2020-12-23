@@ -291,6 +291,7 @@ type BatchAPI struct {
 	ExitRoot      apitypes.BigIntStr     `json:"exitRoot" meddler:"exit_root"`
 	ForgeL1TxsNum *int64                 `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
 	SlotNum       int64                  `json:"slotNum" meddler:"slot_num"`
+	ForgedTxs     int                    `json:"forgedTransactions" meddler:"forged_txs"`
 	TotalItems    uint64                 `json:"-" meddler:"total_items"`
 	FirstItem     uint64                 `json:"-" meddler:"first_item"`
 	LastItem      uint64                 `json:"-" meddler:"last_item"`
