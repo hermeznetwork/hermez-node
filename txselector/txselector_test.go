@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func initTest(t *testing.T, testSet string) *TxSelector {
+func initTest(t *testing.T, chainID uint16, testSet string) *TxSelector {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
@@ -29,7 +29,7 @@ func initTest(t *testing.T, testSet string) *TxSelector {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
-	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0)
+	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0, chainID)
 	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
@@ -64,7 +64,8 @@ func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 }
 
 func TestCoordIdxsDB(t *testing.T) {
-	txsel := initTest(t, til.SetPool0)
+	chainID := uint16(0)
+	txsel := initTest(t, chainID, til.SetPool0)
 	test.WipeDB(txsel.l2db.DB())
 
 	coordIdxs := make(map[common.TokenID]common.Idx)
@@ -81,10 +82,11 @@ func TestCoordIdxsDB(t *testing.T) {
 }
 
 func TestGetL2TxSelection(t *testing.T) {
-	txsel := initTest(t, til.SetPool0)
+	chainID := uint16(0)
+	txsel := initTest(t, chainID, til.SetPool0)
 	test.WipeDB(txsel.l2db.DB())
 
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	// generate test transactions
 	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
 	assert.NoError(t, err)

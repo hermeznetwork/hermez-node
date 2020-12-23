@@ -64,7 +64,7 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 			> block
 			`
 
-	tc = til.NewContext(common.RollupConstMaxL1UserTx)
+	tc = til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
 		CoordUser:     "A",

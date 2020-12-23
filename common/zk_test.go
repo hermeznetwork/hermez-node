@@ -9,7 +9,8 @@ import (
 )
 
 func TestZKInputs(t *testing.T) {
-	zki := NewZKInputs(100, 16, 512, 24, 32, big.NewInt(1))
+	chainID := uint16(0)
+	zki := NewZKInputs(chainID, 100, 16, 512, 24, 32, big.NewInt(1))
 	_, err := json.Marshal(zki)
 	require.NoError(t, err)
 	// fmt.Println(string(s))

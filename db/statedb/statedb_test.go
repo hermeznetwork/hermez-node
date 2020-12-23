@@ -45,7 +45,8 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeTxSelector, 0, chainID)
 	assert.NoError(t, err)
 
 	// test values
@@ -67,7 +68,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey0'&'testvalue0' data)
-	sdb, err = NewStateDB(dir, TypeTxSelector, 0)
+	sdb, err = NewStateDB(dir, TypeTxSelector, 0, chainID)
 	assert.NoError(t, err)
 	v, err = sdb.db.Get(k0)
 	assert.NotNil(t, err)
@@ -109,7 +110,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey1'&'testvalue1' data)
-	sdb, err = NewStateDB(dir, TypeTxSelector, 0)
+	sdb, err = NewStateDB(dir, TypeTxSelector, 0, chainID)
 	assert.NoError(t, err)
 
 	v, err = sdb.db.Get(k0)
@@ -127,7 +128,8 @@ func TestStateDBWithoutMT(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeTxSelector, 0, chainID)
 	assert.NoError(t, err)
 
 	// create test accounts
@@ -181,7 +183,8 @@ func TestStateDBWithMT(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	// create test accounts
@@ -233,7 +236,8 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	// create test accounts
@@ -350,7 +354,8 @@ func TestStateDBGetAccounts(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 
-	sdb, err := NewStateDB(dir, TypeTxSelector, 0)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeTxSelector, 0, chainID)
 	assert.NoError(t, err)
 
 	// create test accounts
@@ -397,7 +402,8 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32)
+	chainID := uint16(0)
+	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
 	require.NoError(t, err)
 
 	ay0 := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(253), nil), big.NewInt(1))

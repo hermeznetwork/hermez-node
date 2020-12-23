@@ -76,6 +76,7 @@ type StateDB struct {
 	db           *pebble.PebbleStorage
 	mt           *merkletree.MerkleTree
 	typ          TypeStateDB
+	chainID      uint16
 	// idx holds the current Idx that the BatchBuilder is using
 	idx common.Idx
 	zki *common.ZKInputs
@@ -88,7 +89,7 @@ type StateDB struct {
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
 // storage
-func NewStateDB(path string, typ TypeStateDB, nLevels int) (*StateDB, error) {
+func NewStateDB(path string, typ TypeStateDB, nLevels int, chainID uint16) (*StateDB, error) {
 	var sto *pebble.PebbleStorage
 	var err error
 	sto, err = pebble.NewPebbleStorage(path+PathCurrent, false)
@@ -108,10 +109,11 @@ func NewStateDB(path string, typ TypeStateDB, nLevels int) (*StateDB, error) {
 	}
 
 	sdb := &StateDB{
-		path: path,
-		db:   sto,
-		mt:   mt,
-		typ:  typ,
+		path:    path,
+		db:      sto,
+		mt:      mt,
+		typ:     typ,
+		chainID: chainID,
 	}
 
 	// load currentBatch
@@ -521,7 +523,7 @@ type LocalStateDB struct {
 // NewLocalStateDB returns a new LocalStateDB connected to the given
 // synchronizerDB
 func NewLocalStateDB(path string, synchronizerDB *StateDB, typ TypeStateDB, nLevels int) (*LocalStateDB, error) {
-	s, err := NewStateDB(path, typ, nLevels)
+	s, err := NewStateDB(path, typ, nLevels, synchronizerDB.chainID)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

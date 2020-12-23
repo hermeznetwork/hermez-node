@@ -91,13 +91,14 @@ var maxL1CoordinatorTxs uint64 = maxL1Txs - maxL1UserTxs
 var maxTxs uint64 = 376
 var nLevels uint32 = 32   //nolint:deadcode,unused
 var maxFeeTxs uint32 = 64 //nolint:deadcode,varcheck
+var chainID uint16 = 0
 
 func newTestModules(t *testing.T) modules {
 	var err error
 	syncDBPath, err = ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncStateDB, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, 48)
+	syncStateDB, err := statedb.NewStateDB(syncDBPath, statedb.TypeSynchronizer, 48, chainID)
 	assert.NoError(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
@@ -526,7 +527,7 @@ func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchr
 	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
 	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
 
-	tc := til.NewContext(common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocksFromInstructions(set)
 	require.NoError(t, err)
 	require.NotNil(t, blocks)
