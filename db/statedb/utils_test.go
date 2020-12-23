@@ -21,7 +21,7 @@ func TestGetIdx(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeTxSelector, 0, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0, chainID)
 	assert.NoError(t, err)
 
 	var sk babyjub.PrivateKey

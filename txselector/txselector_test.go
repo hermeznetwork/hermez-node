@@ -29,7 +29,7 @@ func initTest(t *testing.T, chainID uint16, testSet string) *TxSelector {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
-	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0, chainID)
 	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")

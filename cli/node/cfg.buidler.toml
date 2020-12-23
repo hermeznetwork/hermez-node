@@ -14,6 +14,7 @@ APIAddress = "localhost:12345"
 
 [StateDB]
 Path = "/tmp/iden3-test/hermez/statedb"
+Keep = 256
 
 [PostgreSQL]
 Port     = 5432

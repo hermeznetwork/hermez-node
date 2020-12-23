@@ -29,7 +29,8 @@ type ConfigBatch struct {
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset
 // method
 func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) (*BatchBuilder, error) {
-	localStateDB, err := statedb.NewLocalStateDB(dbpath, synchronizerStateDB, statedb.TypeBatchBuilder, int(nLevels))
+	localStateDB, err := statedb.NewLocalStateDB(dbpath, 128, synchronizerStateDB,
+		statedb.TypeBatchBuilder, int(nLevels))
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

@@ -130,7 +130,13 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 	chainIDU16 := uint16(chainIDU64)
 
-	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32, chainIDU16)
+	const safeStateDBKeep = 128
+	if cfg.StateDB.Keep < safeStateDBKeep {
+		return nil, tracerr.Wrap(fmt.Errorf("cfg.StateDB.Keep = %v < %v, which is unsafe",
+			cfg.StateDB.Keep, safeStateDBKeep))
+	}
+	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, cfg.StateDB.Keep,
+		statedb.TypeSynchronizer, 32, chainIDU16)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

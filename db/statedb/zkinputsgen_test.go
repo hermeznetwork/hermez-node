@@ -79,7 +79,7 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, 32, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -154,7 +154,7 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, 32, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -254,7 +254,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	nLevels := 16
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	ptc := ProcessTxsConfig{
@@ -403,7 +403,7 @@ func TestZKInputs0(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -491,7 +491,7 @@ func TestZKInputs1(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -598,7 +598,7 @@ func TestZKInputs2(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -742,7 +742,7 @@ func TestZKInputs3(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -886,7 +886,7 @@ func TestZKInputs4(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -1040,7 +1040,7 @@ func TestZKInputs5(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -1164,7 +1164,7 @@ func TestZKInputs6(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.Nil(t, err)
 
 	// Coordinator Idx where to send the fees
