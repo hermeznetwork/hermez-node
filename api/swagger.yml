@@ -2113,6 +2113,10 @@ components:
           nullable: true
         slotNum:
           $ref: '#/components/schemas/SlotNum'
+        forgedTransactions:
+          type: integer
+          description: Amount of forged transactions in this batch.
+          example: 318
       additionalProperties: false
       required:
           - itemId
@@ -2128,6 +2132,7 @@ components:
           - exitRoot
           - forgeL1TransactionsNum
           - slotNum
+          - forgedTransactions
     FullBatch:
       type: object
       description: Group of transactions forged in a coordinator and sent and validated in Ethereum.
