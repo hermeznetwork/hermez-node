@@ -288,7 +288,8 @@ func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 
 // MockClient is a mock ServerProof to be used in tests.  It doesn't calculate anything
 type MockClient struct {
-	Delay time.Duration
+	counter int64
+	Delay   time.Duration
 }
 
 // CalculateProof sends the *common.ZKInputs to the ServerProof to compute the
@@ -302,7 +303,24 @@ func (p *MockClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	// Simulate a delay
 	select {
 	case <-time.After(p.Delay): //nolint:gomnd
-		return &Proof{}, []*big.Int{big.NewInt(1234)}, nil //nolint:gomnd
+		i := p.counter * 100 //nolint:gomnd
+		p.counter++
+		return &Proof{
+				PiA: [3]*big.Int{
+					big.NewInt(i), big.NewInt(i + 1), big.NewInt(1), //nolint:gomnd
+				},
+				PiB: [3][2]*big.Int{
+					{big.NewInt(i + 2), big.NewInt(i + 3)}, //nolint:gomnd
+					{big.NewInt(i + 4), big.NewInt(i + 5)}, //nolint:gomnd
+					{big.NewInt(1), big.NewInt(0)},         //nolint:gomnd
+				},
+				PiC: [3]*big.Int{
+					big.NewInt(i + 6), big.NewInt(i + 7), big.NewInt(1), //nolint:gomnd
+				},
+				Protocol: "groth",
+			},
+			[]*big.Int{big.NewInt(i + 42)}, //nolint:gomnd
+			nil
 	case <-ctx.Done():
 		return nil, nil, tracerr.Wrap(common.ErrDone)
 	}

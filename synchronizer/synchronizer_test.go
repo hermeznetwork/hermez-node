@@ -271,18 +271,25 @@ func ethAddTokens(blocks []common.BlockData, client *test.Client) {
 	}
 }
 
-func TestSync(t *testing.T) {
-	//
-	// Setup
-	//
+var chainID uint16 = 0
+var deleteme = []string{}
 
-	ctx := context.Background()
+func TestMain(m *testing.M) {
+	exitVal := m.Run()
+	for _, dir := range deleteme {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	}
+	os.Exit(exitVal)
+}
+
+func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB) {
 	// Int State DB
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.Nil(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
-	chainID := uint16(0)
 	stateDB, err := statedb.NewStateDB(dir, statedb.TypeSynchronizer, 32, chainID)
 	require.NoError(t, err)
 
@@ -294,9 +301,20 @@ func TestSync(t *testing.T) {
 	// Clear DB
 	test.WipeDB(historyDB.DB())
 
+	return stateDB, historyDB
+}
+
+func TestSyncGeneral(t *testing.T) {
+	//
+	// Setup
+	//
+
+	stateDB, historyDB := newTestModules(t)
+
 	// Init eth client
 	var timer timer
 	clientSetup := test.NewClientSetupExample()
+	clientSetup.ChainID = big.NewInt(int64(chainID))
 	bootCoordAddr := clientSetup.AuctionVariables.BootCoordinator
 	client := test.NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 
@@ -305,6 +323,8 @@ func TestSync(t *testing.T) {
 		StatsRefreshPeriod: 0 * time.Second,
 	})
 	require.NoError(t, err)
+
+	ctx := context.Background()
 
 	//
 	// First Sync from an initial state
@@ -658,4 +678,130 @@ func TestSync(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
+}
+
+func TestSyncForgerCommitment(t *testing.T) {
+	stateDB, historyDB := newTestModules(t)
+
+	// Init eth client
+	var timer timer
+	clientSetup := test.NewClientSetupExample()
+	clientSetup.ChainID = big.NewInt(int64(chainID))
+	clientSetup.AuctionConstants.GenesisBlockNum = 2
+	clientSetup.AuctionConstants.BlocksPerSlot = 4
+	clientSetup.AuctionVariables.SlotDeadline = 2
+	bootCoordAddr := clientSetup.AuctionVariables.BootCoordinator
+	client := test.NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
+
+	// Create Synchronizer
+	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
+		StatsRefreshPeriod: 0 * time.Second,
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	set := `
+		Type: Blockchain
+
+		// Slot = 0
+
+		> block // 2
+		> block // 3
+		> block // 4
+		> block // 5
+
+		// Slot = 1
+
+		> block // 6
+		> batch
+		> block // 7
+		> block // 8
+		> block // 9
+
+		// Slot = 2
+
+		> block // 10
+		> block // 11
+		> batch
+		> block // 12
+		> block // 13
+
+	`
+	// For each block, true when the slot that belongs to the following
+	// block has forgerCommitment
+	commitment := map[int64]bool{
+		2: false,
+		3: false,
+		4: false,
+		5: false,
+
+		6: false,
+		7: true,
+		8: true,
+		9: false,
+
+		10: false,
+		11: false,
+		12: false,
+		13: false,
+	}
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(set)
+	assert.NoError(t, err)
+
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: bootCoordAddr,
+		CoordUser:     "A",
+	}
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	require.NoError(t, err)
+
+	// for i := range blocks {
+	// 	for j := range blocks[i].Rollup.Batches {
+	// 		blocks[i].Rollup.Batches[j].Batch.SlotNum = int64(i) / 4
+	// 	}
+	// }
+
+	// be in sync
+	for {
+		syncBlock, discards, err := s.Sync2(ctx, nil)
+		require.NoError(t, err)
+		require.Nil(t, discards)
+		if syncBlock == nil {
+			break
+		}
+	}
+	stats := s.Stats()
+	require.Equal(t, int64(1), stats.Sync.LastBlock.Num)
+
+	// Store ForgerComitmnent observed at every block by the live synchronizer
+	syncCommitment := map[int64]bool{}
+	// Store ForgerComitmnent observed at every block by a syncrhonizer that is restarted
+	syncRestartedCommitment := map[int64]bool{}
+	for _, block := range blocks {
+		// Add block data to the smart contracts
+		err = client.CtlAddBlocks([]common.BlockData{block})
+		require.NoError(t, err)
+
+		syncBlock, discards, err := s.Sync2(ctx, nil)
+		require.NoError(t, err)
+		require.Nil(t, discards)
+		if syncBlock == nil {
+			break
+		}
+		stats := s.Stats()
+		require.True(t, stats.Synced())
+		syncCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
+
+		s2, err := NewSynchronizer(client, historyDB, stateDB, Config{
+			StatsRefreshPeriod: 0 * time.Second,
+		})
+		require.NoError(t, err)
+		stats = s2.Stats()
+		require.True(t, stats.Synced())
+		syncRestartedCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
+	}
+	assert.Equal(t, commitment, syncCommitment)
+	assert.Equal(t, commitment, syncRestartedCommitment)
 }

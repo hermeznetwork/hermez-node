@@ -190,9 +190,10 @@ func (c *Coordinator) syncSCVars(vars synchronizer.SCVariablesPtr) {
 
 func (c *Coordinator) canForge(stats *synchronizer.Stats) bool {
 	anyoneForge := false
-	if stats.Sync.Auction.CurrentSlot.BatchesLen == 0 &&
-		c.consts.Auction.RelativeBlock(stats.Eth.LastBlock.Num+1) > int64(c.vars.Auction.SlotDeadline) {
-		log.Debug("Coordinator: anyone can forge in the current slot (slotDeadline passed)")
+	if !stats.Sync.Auction.CurrentSlot.ForgerCommitment &&
+		c.consts.Auction.RelativeBlock(stats.Eth.LastBlock.Num+1) >= int64(c.vars.Auction.SlotDeadline) {
+		log.Debugw("Coordinator: anyone can forge in the current slot (slotDeadline passed)",
+			"block", stats.Eth.LastBlock.Num)
 		anyoneForge = true
 	}
 	if stats.Sync.Auction.CurrentSlot.Forger == c.cfg.ForgerAddress || anyoneForge {

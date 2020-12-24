@@ -47,7 +47,7 @@ type BatchInfo struct {
 // DebugStore is a debug function to store the BatchInfo as a json text file in
 // storePath
 func (b *BatchInfo) DebugStore(storePath string) error {
-	batchJSON, err := json.Marshal(b)
+	batchJSON, err := json.MarshalIndent(b, "", "  ")
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
