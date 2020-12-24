@@ -419,7 +419,7 @@ func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
-		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, err
+		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
 	} else if discarded != nil {
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)

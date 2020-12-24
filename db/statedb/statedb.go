@@ -220,7 +220,7 @@ func (s *StateDB) DeleteCheckpoint(batchNum common.BatchNum) error {
 func (s *StateDB) listCheckpoints() ([]int, error) {
 	files, err := ioutil.ReadDir(s.path)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	checkpoints := []int{}
 	var checkpoint int
@@ -229,7 +229,7 @@ func (s *StateDB) listCheckpoints() ([]int, error) {
 		fileName := file.Name()
 		if file.IsDir() && strings.HasPrefix(fileName, PathBatchNum) {
 			if _, err := fmt.Sscanf(fileName, pattern, &checkpoint); err != nil {
-				return nil, err
+				return nil, tracerr.Wrap(err)
 			}
 			checkpoints = append(checkpoints, checkpoint)
 		}
@@ -240,7 +240,7 @@ func (s *StateDB) listCheckpoints() ([]int, error) {
 		for _, checkpoint := range checkpoints[1:] {
 			first++
 			if checkpoint != first {
-				return nil, fmt.Errorf("checkpoint gap at %v", checkpoint)
+				return nil, tracerr.Wrap(fmt.Errorf("checkpoint gap at %v", checkpoint))
 			}
 		}
 	}
@@ -252,12 +252,12 @@ func (s *StateDB) listCheckpoints() ([]int, error) {
 func (s *StateDB) deleteOldCheckpoints() error {
 	list, err := s.listCheckpoints()
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	if len(list) > s.keep {
 		for _, checkpoint := range list[:len(list)-s.keep] {
 			if err := s.DeleteCheckpoint(common.BatchNum(checkpoint)); err != nil {
-				return err
+				return tracerr.Wrap(err)
 			}
 		}
 	}
@@ -324,7 +324,7 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 	// remove all checkpoints > batchNum
 	for i := batchNum + 1; i <= s.currentBatch; i++ {
 		if err := s.DeleteCheckpoint(i); err != nil {
-			return err
+			return tracerr.Wrap(err)
 		}
 	}
 	if batchNum == 0 {

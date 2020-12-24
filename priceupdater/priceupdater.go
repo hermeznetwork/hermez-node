@@ -68,7 +68,7 @@ func getTokenPriceBitfinex(ctx context.Context, client *sling.Sling,
 		return 0, tracerr.Wrap(err)
 	}
 	if res.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("http response is not is %v", res.StatusCode)
+		return 0, tracerr.Wrap(fmt.Errorf("http response is not is %v", res.StatusCode))
 	}
 	return state[6], nil
 }
