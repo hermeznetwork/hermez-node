@@ -180,7 +180,14 @@ func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx, 
 }
 
 // GetL2TxSelection returns the L1CoordinatorTxs and a selection of the L2Txs
-// for the next batch, from the L2DB pool
+// for the next batch, from the L2DB pool.
+// It returns: the CoordinatorIdxs used to receive the fees of the selected
+// L2Txs. An array of bytearrays with the signatures of the
+// AccountCreationAuthorization of the accounts of the users created by the
+// Coordinator with L1CoordinatorTxs of those accounts that does not exist yet
+// but there is a transactions to them and the authorization of account
+// creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
+// included in the next batch.
 func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig,
 	batchNum common.BatchNum) ([]common.Idx, [][]byte, []common.L1Tx, []common.PoolL2Tx, error) {
 	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, batchNum,
@@ -188,7 +195,14 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig,
 	return coordIdxs, accCreationAuths, l1CoordinatorTxs, l2Txs, tracerr.Wrap(err)
 }
 
-// GetL1L2TxSelection returns the selection of L1 + L2 txs
+// GetL1L2TxSelection returns the selection of L1 + L2 txs.
+// It returns: the CoordinatorIdxs used to receive the fees of the selected
+// L2Txs. An array of bytearrays with the signatures of the
+// AccountCreationAuthorization of the accounts of the users created by the
+// Coordinator with L1CoordinatorTxs of those accounts that does not exist yet
+// but there is a transactions to them and the authorization of account
+// creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
+// included in the next batch.
 func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx, []common.L1Tx,
 	[]common.PoolL2Tx, error) {
@@ -235,6 +249,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	// lastIdx := txsel.localStateDB.idx
 	// update lastIdx with the L1UserTxs (of account creation)
 
+	var accAuths [][]byte
 	for i := 0; i < len(l2TxsRaw); i++ {
 		// If tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB,
 		// if so, tx is used.  If tx.ToIdx==0, for an L2Tx will be the
@@ -245,12 +260,16 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 		// of CreateAccountAndDeposit is created. If tx.ToIdx==1, is a
 		// Exit type and is used.
 		if l2TxsRaw[i].ToIdx == 0 { // ToEthAddr/ToBJJ case
-			validTxs, l1CoordinatorTxs, positionL1, err =
+			var accAuth *common.AccountCreationAuth
+			validTxs, l1CoordinatorTxs, accAuth, positionL1, err =
 				txsel.processTxToEthAddrBJJ(validTxs, l1CoordinatorTxs,
 					positionL1, l2TxsRaw[i])
 			if err != nil {
 				log.Debug(err)
 				continue
+			}
+			if accAuth != nil {
+				accAuths = append(accAuths, accAuth.Signature)
 			}
 		} else if l2TxsRaw[i].ToIdx >= common.IdxUserThreshold {
 			_, err = txsel.localAccountsDB.GetAccount(l2TxsRaw[i].ToIdx)
@@ -283,7 +302,6 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 
 	// Process L1CoordinatorTxs
 	for i := 0; i < len(l1CoordinatorTxs); i++ {
-		fmt.Println("PRINT", i, &l1CoordinatorTxs[i])
 		_, _, _, _, err := txsel.localAccountsDB.ProcessL1Tx(nil, &l1CoordinatorTxs[i])
 		if err != nil {
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
@@ -323,12 +341,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 
-	// TODO
-	auths := make([][]byte, len(l1CoordinatorTxs))
-	for i := range auths {
-		auths[i] = make([]byte, 65)
-	}
-	return nil, auths, l1Txs, l1CoordinatorTxs, l2Txs, nil
+	return nil, accAuths, l1Txs, l1CoordinatorTxs, l2Txs, nil
 }
 
 // processTxsToEthAddrBJJ process the common.PoolL2Tx in the case where
@@ -338,7 +351,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 // l1CoordinatorTxs array, and then the PoolL2Tx is added into the validTxs
 // array.
 func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []common.L1Tx,
-	positionL1 int, l2Tx common.PoolL2Tx) (txs, []common.L1Tx, int, error) {
+	positionL1 int, l2Tx common.PoolL2Tx) (txs, []common.L1Tx, *common.AccountCreationAuth, int, error) {
 	// if L2Tx needs a new L1CoordinatorTx of CreateAccount type, and a
 	// previous L2Tx in the current process already created a
 	// L1CoordinatorTx of this type, in the DB there still seem that needs
@@ -346,13 +359,13 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 	// is valid
 	if checkAlreadyPendingToCreate(l1CoordinatorTxs, l2Tx.TokenID, l2Tx.ToEthAddr, l2Tx.ToBJJ) {
 		validTxs = append(validTxs, l2Tx)
-		return validTxs, l1CoordinatorTxs, positionL1, nil
+		return validTxs, l1CoordinatorTxs, nil, positionL1, nil
 	}
 
+	var accAuth *common.AccountCreationAuth
 	if !bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) &&
 		!bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.FFAddr.Bytes()) {
 		// case: ToEthAddr != 0x00 neither 0xff
-		var accAuth *common.AccountCreationAuth
 		if l2Tx.ToBJJ != common.EmptyBJJComp {
 			// case: ToBJJ!=0:
 			// if idx exist for EthAddr&BJJ use it
@@ -363,20 +376,20 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 				// there is no need to create a new one.
 				// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
 				validTxs = append(validTxs, l2Tx)
-				return validTxs, l1CoordinatorTxs, positionL1, nil
+				return validTxs, l1CoordinatorTxs, nil, positionL1, nil
 			}
 			// if not, check if AccountCreationAuth exist for that
 			// ToEthAddr
 			accAuth, err = txsel.l2db.GetAccountCreationAuth(l2Tx.ToEthAddr)
 			if err != nil {
 				// not found, l2Tx will not be added in the selection
-				return validTxs, l1CoordinatorTxs, positionL1, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
+				return validTxs, l1CoordinatorTxs, nil, positionL1, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
 					l2Tx.ToIdx, l2Tx.ToEthAddr.Hex()))
 			}
 			if accAuth.BJJ != l2Tx.ToBJJ {
 				// if AccountCreationAuth.BJJ is not the same
 				// than in the tx, tx is not accepted
-				return validTxs, l1CoordinatorTxs, positionL1, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr & ToBJJ found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s, ToBJJ: %s",
+				return validTxs, l1CoordinatorTxs, nil, positionL1, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr & ToBJJ found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s, ToBJJ: %s",
 					l2Tx.ToIdx, l2Tx.ToEthAddr.Hex(), l2Tx.ToBJJ.String()))
 			}
 			validTxs = append(validTxs, l2Tx)
@@ -389,13 +402,13 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 				// there is no need to create a new one.
 				// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
 				validTxs = append(validTxs, l2Tx)
-				return validTxs, l1CoordinatorTxs, positionL1, nil
+				return validTxs, l1CoordinatorTxs, nil, positionL1, nil
 			}
 			// if not, check if AccountCreationAuth exist for that ToEthAddr
 			accAuth, err = txsel.l2db.GetAccountCreationAuth(l2Tx.ToEthAddr)
 			if err != nil {
 				// not found, l2Tx will not be added in the selection
-				return validTxs, l1CoordinatorTxs, positionL1, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
+				return validTxs, l1CoordinatorTxs, nil, positionL1, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
 					l2Tx.ToIdx, l2Tx.ToEthAddr))
 			}
 			validTxs = append(validTxs, l2Tx)
@@ -421,7 +434,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 			// there is no need to create a new one.
 			// tx valid, StateDB will use the ToIdx==0 to define the AuxToIdx
 			validTxs = append(validTxs, l2Tx)
-			return validTxs, l1CoordinatorTxs, positionL1, nil
+			return validTxs, l1CoordinatorTxs, nil, positionL1, nil
 		}
 		// if idx don't exist for EthAddr&BJJ,
 		// coordinator can create a new account without
@@ -440,7 +453,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 		l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 	}
 
-	return validTxs, l1CoordinatorTxs, positionL1, nil
+	return validTxs, l1CoordinatorTxs, accAuth, positionL1, nil
 }
 
 func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, tokenID common.TokenID,
