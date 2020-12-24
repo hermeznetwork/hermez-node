@@ -90,6 +90,7 @@ func GenAuths(nAuths int, chainID uint16, hermezContractAddr ethCommon.Address) 
 		if err != nil {
 			panic(err)
 		}
+		signature[64] += 27
 		auth.Signature = signature
 		auths = append(auths, auth)
 	}
