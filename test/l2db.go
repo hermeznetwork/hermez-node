@@ -1,6 +1,7 @@
 package test
 
 import (
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -66,7 +67,7 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 }
 
 // GenAuths generates account creation authorizations
-func GenAuths(nAuths int) []*common.AccountCreationAuth {
+func GenAuths(nAuths int, chainID uint16, hermezContractAddr ethCommon.Address) []*common.AccountCreationAuth {
 	auths := []*common.AccountCreationAuth{}
 	for i := 0; i < nAuths; i++ {
 		// Generate keys
@@ -81,7 +82,7 @@ func GenAuths(nAuths int) []*common.AccountCreationAuth {
 			BJJ:     bjjPrivK.Public().Compress(),
 		}
 		// Sign
-		h, err := auth.HashToSign()
+		h, err := auth.HashToSign(chainID, hermezContractAddr)
 		if err != nil {
 			panic(err)
 		}

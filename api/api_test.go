@@ -221,7 +221,7 @@ func TestMain(m *testing.M) {
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 
 	// Config (smart contract constants)
-	_config := getConfigTest()
+	_config := getConfigTest(chainID)
 	config = configAPI{
 		RollupConstants:   *newRollupConstants(_config.RollupConstants),
 		AuctionConstants:  _config.AuctionConstants,
@@ -238,7 +238,6 @@ func TestMain(m *testing.M) {
 		sdb,
 		l2DB,
 		&_config,
-		chainID,
 	)
 	if err != nil {
 		panic(err)
@@ -423,7 +422,7 @@ func TestMain(m *testing.M) {
 		exits:            testExits,
 		poolTxsToSend:    poolTxsToSend,
 		poolTxsToReceive: poolTxsToReceive,
-		auths:            genTestAuths(test.GenAuths(5)),
+		auths:            genTestAuths(test.GenAuths(5, _config.ChainID, _config.HermezAddress)),
 		router:           router,
 		bids:             testBids,
 		slots: api.genTestSlots(

@@ -611,8 +611,10 @@ func TestPurge(t *testing.T) {
 func TestAuth(t *testing.T) {
 	test.WipeDB(l2DB.DB())
 	const nAuths = 5
+	chainID := uint16(0)
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 	// Generate authorizations
-	auths := test.GenAuths(nAuths)
+	auths := test.GenAuths(nAuths, chainID, hermezContractAddr)
 	for i := 0; i < len(auths); i++ {
 		// Add to the DB
 		err := l2DB.AddAccountCreationAuth(auths[i])

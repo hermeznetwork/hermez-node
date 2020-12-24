@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getConfigTest() Config {
+func getConfigTest(chainID uint16) Config {
 	var config Config
 
 	var rollupPublicConstants common.RollupConstants
@@ -39,6 +39,9 @@ func getConfigTest() Config {
 	config.RollupConstants = rollupPublicConstants
 	config.AuctionConstants = auctionConstants
 	config.WDelayerConstants = wdelayerConstants
+
+	config.ChainID = chainID
+	config.HermezAddress = ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 
 	return config
 }
