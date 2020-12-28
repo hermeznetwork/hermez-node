@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -122,6 +123,21 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 		return nil, tracerr.Wrap(err)
 	}
 	nextForgers := []NextForger{}
+	// Get min bid info
+	var minBidInfo []historydb.MinBidInfo
+	if currentSlot >= a.status.Auction.DefaultSlotSetBidSlotNum {
+		// All min bids can be calculated with the last update of AuctionVariables
+		minBidInfo = []historydb.MinBidInfo{{
+			DefaultSlotSetBid:        a.status.Auction.DefaultSlotSetBid,
+			DefaultSlotSetBidSlotNum: a.status.Auction.DefaultSlotSetBidSlotNum,
+		}}
+	} else {
+		// Get all the relevant updates from the DB
+		minBidInfo, err = a.h.GetAuctionVarsUntilSetSlotNum(lastClosedSlot, int(lastClosedSlot-currentSlot)+1)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	}
 	// Create nextForger for each slot
 	for i := currentSlot; i <= lastClosedSlot; i++ {
 		fromBlock := i*int64(a.cg.AuctionConstants.BlocksPerSlot) + a.cg.AuctionConstants.GenesisBlockNum
@@ -135,11 +151,35 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 				ToTimestamp:   lastBlock.Timestamp.Add(time.Second * time.Duration(secondsPerBlock*(toBlock-lastBlock.Num))),
 			},
 		}
-		foundBid := false
+		foundForger := false
 		// If there is a bid for a slot, get forger (coordinator)
 		for j := range bids {
-			if bids[j].SlotNum == i {
-				foundBid = true
+			slotNum := bids[j].SlotNum
+			if slotNum == i {
+				// There's a bid for the slot
+				// Check if the bid is greater than the minimum required
+				for i := 0; i < len(minBidInfo); i++ {
+					// Find the most recent update
+					if slotNum >= minBidInfo[i].DefaultSlotSetBidSlotNum {
+						// Get min bid
+						minBidSelector := slotNum % int64(len(a.status.Auction.DefaultSlotSetBid))
+						minBid := minBidInfo[i].DefaultSlotSetBid[minBidSelector]
+						// Check if the bid has beaten the minimum
+						bid, ok := new(big.Int).SetString(string(bids[j].BidValue), 10)
+						if !ok {
+							return nil, tracerr.New("Wrong bid value, error parsing it as big.Int")
+						}
+						if minBid.Cmp(bid) == 1 {
+							// Min bid is greater than bid, the slot will be forged by boot coordinator
+							break
+						}
+						foundForger = true
+						break
+					}
+				}
+				if !foundForger { // There is no bid or it's smaller than the minimum
+					break
+				}
 				coordinator, err := a.h.GetCoordinatorAPI(bids[j].Bidder)
 				if err != nil {
 					return nil, tracerr.Wrap(err)
@@ -149,7 +189,7 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 			}
 		}
 		// If there is no bid, the coordinator that will forge is boot coordinator
-		if !foundBid {
+		if !foundForger {
 			nextForger.Coordinator = bootCoordinator
 		}
 		nextForgers = append(nextForgers, nextForger)

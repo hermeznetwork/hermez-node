@@ -345,7 +345,7 @@ func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 			EthBlockNum: blocks[i%len(blocks)].Num,
 			Forger:      ethCommon.BigToAddress(big.NewInt(int64(i))),
 			Bidder:      ethCommon.BigToAddress(big.NewInt(int64(i))),
-			URL:         "https://foo.bar",
+			URL:         fmt.Sprintf("https://%d.coord", i),
 		})
 	}
 	return coords

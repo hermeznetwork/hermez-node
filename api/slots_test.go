@@ -62,13 +62,13 @@ func (a *API) genTestSlots(nSlots int, lastBlockNum int64, bids []testBid, aucti
 	return tSlots
 }
 
-func (a *API) getEmptyTestSlot(slotNum int64) testSlot {
-	firstBlock, lastBlock := a.getFirstLastBlock(slotNum)
+func (a *API) getEmptyTestSlot(slotNum, lastBlock int64, auctionVars common.AuctionVariables) testSlot {
+	firstSlotBlock, lastSlotBlock := a.getFirstLastBlock(slotNum)
 	slot := testSlot{
 		SlotNum:     slotNum,
-		FirstBlock:  firstBlock,
-		LastBlock:   lastBlock,
-		OpenAuction: false,
+		FirstBlock:  firstSlotBlock,
+		LastBlock:   lastSlotBlock,
+		OpenAuction: a.isOpenAuction(lastBlock, slotNum, auctionVars),
 		WinnerBid:   nil,
 	}
 	return slot
@@ -98,7 +98,7 @@ func TestGetSlot(t *testing.T) {
 			nil, &fetchedSlot,
 		),
 	)
-	emptySlot := api.getEmptyTestSlot(slotNum)
+	emptySlot := api.getEmptyTestSlot(slotNum, api.status.Network.LastSyncBlock, tc.auctionVars)
 	assertSlot(t, emptySlot, fetchedSlot)
 
 	// Invalid slotNum
@@ -127,7 +127,7 @@ func TestGetSlots(t *testing.T) {
 	assert.NoError(t, err)
 	allSlots := tc.slots
 	for i := tc.slots[len(tc.slots)-1].SlotNum; i < maxSlotNum; i++ {
-		emptySlot := api.getEmptyTestSlot(i + 1)
+		emptySlot := api.getEmptyTestSlot(i+1, api.status.Network.LastSyncBlock, tc.auctionVars)
 		allSlots = append(allSlots, emptySlot)
 	}
 	assertSlots(t, allSlots, fetchedSlots)
@@ -148,7 +148,7 @@ func TestGetSlots(t *testing.T) {
 	// maxSlotNum & wonByEthereumAddress
 	fetchedSlots = []testSlot{}
 	limit = 1
-	bidderAddr := tc.coordinators[2].Bidder
+	bidderAddr := tc.coordinators[0].Bidder
 	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d", endpoint, maxSlotNum, bidderAddr.String(), limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)

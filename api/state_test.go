@@ -2,14 +2,11 @@ package api
 
 import (
 	"testing"
-	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/stretchr/testify/assert"
 )
-
-const secondsPerBlock = 15
 
 type testStatus struct {
 	Network           testNetwork              `json:"network"`
@@ -47,36 +44,6 @@ func TestSetAuctionVariables(t *testing.T) {
 	assert.Equal(t, *auctionVars, api.status.Auction)
 	api.SetAuctionVariables(tc.auctionVars)
 	assert.Equal(t, tc.auctionVars, api.status.Auction)
-}
-
-func TestNextForgers(t *testing.T) {
-	// It's assumed that bids for each slot will be received in increasing order
-	bestBids := make(map[int64]testBid)
-	for j := range tc.bids {
-		bestBids[tc.bids[j].SlotNum] = tc.bids[j]
-	}
-	lastBlock := tc.blocks[len(tc.blocks)-1]
-	for i := int64(0); i < tc.slots[len(tc.slots)-1].SlotNum; i++ {
-		lastClosedSlot := i + int64(api.status.Auction.ClosedAuctionSlots)
-		nextForgers, err := api.getNextForgers(tc.blocks[len(tc.blocks)-1], i, lastClosedSlot)
-		assert.NoError(t, err)
-		for j := i; j <= lastClosedSlot; j++ {
-			for q := range nextForgers {
-				if nextForgers[q].Period.SlotNum == j {
-					if nextForgers[q].Coordinator.ItemID != 0 {
-						assert.Equal(t, bestBids[j].Bidder, nextForgers[q].Coordinator.Bidder)
-					} else {
-						assert.Equal(t, bootCoordinator.Bidder, nextForgers[q].Coordinator.Bidder)
-					}
-					firstBlockSlot, lastBlockSlot := api.getFirstLastBlock(j)
-					fromTimestamp := lastBlock.Timestamp.Add(time.Second * time.Duration(secondsPerBlock*(firstBlockSlot-lastBlock.Num)))
-					toTimestamp := lastBlock.Timestamp.Add(time.Second * time.Duration(secondsPerBlock*(lastBlockSlot-lastBlock.Num)))
-					assert.Equal(t, fromTimestamp.Unix(), nextForgers[q].Period.FromTimestamp.Unix())
-					assert.Equal(t, toTimestamp.Unix(), nextForgers[q].Period.ToTimestamp.Unix())
-				}
-			}
-		}
-	}
 }
 
 func TestUpdateNetworkInfo(t *testing.T) {
@@ -143,23 +110,43 @@ func TestGetState(t *testing.T) {
 	var status testStatus
 
 	assert.NoError(t, doGoodReq("GET", endpoint, nil, &status))
+
+	// SC vars
 	assert.Equal(t, tc.rollupVars, status.Rollup)
 	assert.Equal(t, tc.auctionVars, status.Auction)
 	assert.Equal(t, tc.wdelayerVars, status.WithdrawalDelayer)
+	// Network
 	assert.Equal(t, lastBlock.Num, status.Network.LastEthBlock)
 	assert.Equal(t, lastBlock.Num, status.Network.LastSyncBlock)
+	// TODO: assert all the batch, not just the batch num
 	assert.Equal(t, lastBatchNum, status.Network.LastBatch.BatchNum)
 	assert.Equal(t, currentSlotNum, status.Network.CurrentSlot)
-	assert.Equal(t, int(api.status.Auction.ClosedAuctionSlots)+1, len(status.Network.NextForgers))
+	assertNextForgers(t, tc.nextForgers, status.Network.NextForgers)
+	// Metrics
+	// TODO: perform real asserts (not just greater than 0)
 	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, status.Metrics.BatchFrequency, float64(0))
 	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, status.Metrics.TotalAccounts, int64(0))
 	assert.Greater(t, status.Metrics.TotalBJJs, int64(0))
 	assert.Greater(t, status.Metrics.AvgTransactionFee, float64(0))
+	// Recommended fee
+	// TODO: perform real asserts (not just greater than 0)
 	assert.Greater(t, status.RecommendedFee.ExistingAccount, float64(0))
 	assert.Equal(t, status.RecommendedFee.CreatesAccount,
 		status.RecommendedFee.ExistingAccount*createAccountExtraFeePercentage)
 	assert.Equal(t, status.RecommendedFee.CreatesAccountAndRegister,
 		status.RecommendedFee.ExistingAccount*createAccountInternalExtraFeePercentage)
+}
+
+func assertNextForgers(t *testing.T, expected, actual []NextForger) {
+	assert.Equal(t, len(expected), len(actual))
+	for i := range expected {
+		// ignore timestamps and other metadata
+		actual[i].Period.FromTimestamp = expected[i].Period.FromTimestamp
+		actual[i].Period.ToTimestamp = expected[i].Period.ToTimestamp
+		actual[i].Coordinator.ItemID = expected[i].Coordinator.ItemID
+		actual[i].Coordinator.EthBlockNum = expected[i].Coordinator.EthBlockNum
+		assert.Equal(t, expected[i], actual[i])
+	}
 }
