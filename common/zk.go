@@ -21,10 +21,9 @@ import (
 type ZKMetadata struct {
 	// Circuit parameters
 	// absolute maximum of L1 or L2 transactions allowed
-	NTx uint32
-	// merkle tree depth
-	NLevels   uint32
 	MaxLevels uint32
+	// merkle tree depth
+	NLevels uint32
 	// absolute maximum of L1 transaction allowed
 	MaxL1Tx uint32
 	// total txs allowed
@@ -75,66 +74,66 @@ type ZKInputs struct {
 
 	// transaction L1-L2
 	// TxCompressedData
-	TxCompressedData []*big.Int `json:"txCompressedData"` // big.Int (max 251 bits), len: [nTx]
+	TxCompressedData []*big.Int `json:"txCompressedData"` // big.Int (max 251 bits), len: [maxTx]
 	// TxCompressedDataV2, only used in L2Txs, in L1Txs is set to 0
-	TxCompressedDataV2 []*big.Int `json:"txCompressedDataV2"` // big.Int (max 193 bits), len: [nTx]
+	TxCompressedDataV2 []*big.Int `json:"txCompressedDataV2"` // big.Int (max 193 bits), len: [maxTx]
 	// MaxNumBatch is the maximum allowed batch number when the transaction
 	// can be processed
 	MaxNumBatch []*big.Int `json:"maxNumBatch"` // uint32
 
 	// FromIdx
-	FromIdx []*big.Int `json:"fromIdx"` // uint64 (max nLevels bits), len: [nTx]
+	FromIdx []*big.Int `json:"fromIdx"` // uint64 (max nLevels bits), len: [maxTx]
 	// AuxFromIdx is the Idx of the new created account which is consequence of a L1CreateAccountTx
-	AuxFromIdx []*big.Int `json:"auxFromIdx"` // uint64 (max nLevels bits), len: [nTx]
+	AuxFromIdx []*big.Int `json:"auxFromIdx"` // uint64 (max nLevels bits), len: [maxTx]
 
 	// ToIdx
-	ToIdx []*big.Int `json:"toIdx"` // uint64 (max nLevels bits), len: [nTx]
+	ToIdx []*big.Int `json:"toIdx"` // uint64 (max nLevels bits), len: [maxTx]
 	// AuxToIdx is the Idx of the Tx that has 'toIdx==0', is the
 	// coordinator who will find which Idx corresponds to the 'toBJJAy' or
 	// 'toEthAddr'
-	AuxToIdx []*big.Int `json:"auxToIdx"` // uint64 (max nLevels bits), len: [nTx]
+	AuxToIdx []*big.Int `json:"auxToIdx"` // uint64 (max nLevels bits), len: [maxTx]
 	// ToBJJAy
-	ToBJJAy []*big.Int `json:"toBjjAy"` // big.Int, len: [nTx]
+	ToBJJAy []*big.Int `json:"toBjjAy"` // big.Int, len: [maxTx]
 	// ToEthAddr
-	ToEthAddr []*big.Int `json:"toEthAddr"` // ethCommon.Address, len: [nTx]
+	ToEthAddr []*big.Int `json:"toEthAddr"` // ethCommon.Address, len: [maxTx]
 
 	// OnChain determines if is L1 (1/true) or L2 (0/false)
-	OnChain []*big.Int `json:"onChain"` // bool, len: [nTx]
+	OnChain []*big.Int `json:"onChain"` // bool, len: [maxTx]
 
 	//
 	// Txs/L1Txs
 	//
 	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new account (fromIdx==0)
-	NewAccount []*big.Int `json:"newAccount"` // bool, len: [nTx]
+	NewAccount []*big.Int `json:"newAccount"` // bool, len: [maxTx]
 	// DepositAmountF encoded as float16
-	DepositAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [nTx]
+	DepositAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [maxTx]
 	// FromEthAddr
-	FromEthAddr []*big.Int `json:"fromEthAddr"` // ethCommon.Address, len: [nTx]
+	FromEthAddr []*big.Int `json:"fromEthAddr"` // ethCommon.Address, len: [maxTx]
 	// FromBJJCompressed boolean encoded where each value is a *big.Int
-	FromBJJCompressed [][256]*big.Int `json:"fromBjjCompressed"` // bool array, len: [nTx][256]
+	FromBJJCompressed [][256]*big.Int `json:"fromBjjCompressed"` // bool array, len: [maxTx][256]
 
 	//
 	// Txs/L2Txs
 	//
 
 	// RqOffset relative transaction position to be linked. Used to perform atomic transactions.
-	RqOffset []*big.Int `json:"rqOffset"` // uint8 (max 3 bits), len: [nTx]
+	RqOffset []*big.Int `json:"rqOffset"` // uint8 (max 3 bits), len: [maxTx]
 
 	// transaction L2 request data
 	// RqTxCompressedDataV2
-	RqTxCompressedDataV2 []*big.Int `json:"rqTxCompressedDataV2"` // big.Int (max 251 bits), len: [nTx]
+	RqTxCompressedDataV2 []*big.Int `json:"rqTxCompressedDataV2"` // big.Int (max 251 bits), len: [maxTx]
 	// RqToEthAddr
-	RqToEthAddr []*big.Int `json:"rqToEthAddr"` // ethCommon.Address, len: [nTx]
+	RqToEthAddr []*big.Int `json:"rqToEthAddr"` // ethCommon.Address, len: [maxTx]
 	// RqToBJJAy
-	RqToBJJAy []*big.Int `json:"rqToBjjAy"` // big.Int, len: [nTx]
+	RqToBJJAy []*big.Int `json:"rqToBjjAy"` // big.Int, len: [maxTx]
 
 	// transaction L2 signature
 	// S
-	S []*big.Int `json:"s"` // big.Int, len: [nTx]
+	S []*big.Int `json:"s"` // big.Int, len: [maxTx]
 	// R8x
-	R8x []*big.Int `json:"r8x"` // big.Int, len: [nTx]
+	R8x []*big.Int `json:"r8x"` // big.Int, len: [maxTx]
 	// R8y
-	R8y []*big.Int `json:"r8y"` // big.Int, len: [nTx]
+	R8y []*big.Int `json:"r8y"` // big.Int, len: [maxTx]
 
 	//
 	// State MerkleTree Leafs transitions
@@ -143,33 +142,33 @@ type ZKInputs struct {
 	// state 1, value of the sender (from) account leaf. The values at the
 	// moment pre-smtprocessor of the update (before updating the Sender
 	// leaf).
-	TokenID1  []*big.Int   `json:"tokenID1"`  // uint32, len: [nTx]
-	Nonce1    []*big.Int   `json:"nonce1"`    // uint64 (max 40 bits), len: [nTx]
-	Sign1     []*big.Int   `json:"sign1"`     // bool, len: [nTx]
-	Ay1       []*big.Int   `json:"ay1"`       // big.Int, len: [nTx]
-	Balance1  []*big.Int   `json:"balance1"`  // big.Int (max 192 bits), len: [nTx]
-	EthAddr1  []*big.Int   `json:"ethAddr1"`  // ethCommon.Address, len: [nTx]
-	Siblings1 [][]*big.Int `json:"siblings1"` // big.Int, len: [nTx][nLevels + 1]
+	TokenID1  []*big.Int   `json:"tokenID1"`  // uint32, len: [maxTx]
+	Nonce1    []*big.Int   `json:"nonce1"`    // uint64 (max 40 bits), len: [maxTx]
+	Sign1     []*big.Int   `json:"sign1"`     // bool, len: [maxTx]
+	Ay1       []*big.Int   `json:"ay1"`       // big.Int, len: [maxTx]
+	Balance1  []*big.Int   `json:"balance1"`  // big.Int (max 192 bits), len: [maxTx]
+	EthAddr1  []*big.Int   `json:"ethAddr1"`  // ethCommon.Address, len: [maxTx]
+	Siblings1 [][]*big.Int `json:"siblings1"` // big.Int, len: [maxTx][nLevels + 1]
 	// Required for inserts and deletes, values of the CircomProcessorProof (smt insert proof)
-	IsOld0_1  []*big.Int `json:"isOld0_1"`  // bool, len: [nTx]
-	OldKey1   []*big.Int `json:"oldKey1"`   // uint64 (max 40 bits), len: [nTx]
-	OldValue1 []*big.Int `json:"oldValue1"` // Hash, len: [nTx]
+	IsOld0_1  []*big.Int `json:"isOld0_1"`  // bool, len: [maxTx]
+	OldKey1   []*big.Int `json:"oldKey1"`   // uint64 (max 40 bits), len: [maxTx]
+	OldValue1 []*big.Int `json:"oldValue1"` // Hash, len: [maxTx]
 
 	// state 2, value of the receiver (to) account leaf
 	// if Tx is an Exit, state 2 is used for the Exit Merkle Proof
-	TokenID2  []*big.Int   `json:"tokenID2"`  // uint32, len: [nTx]
-	Nonce2    []*big.Int   `json:"nonce2"`    // uint64 (max 40 bits), len: [nTx]
-	Sign2     []*big.Int   `json:"sign2"`     // bool, len: [nTx]
-	Ay2       []*big.Int   `json:"ay2"`       // big.Int, len: [nTx]
-	Balance2  []*big.Int   `json:"balance2"`  // big.Int (max 192 bits), len: [nTx]
-	EthAddr2  []*big.Int   `json:"ethAddr2"`  // ethCommon.Address, len: [nTx]
-	Siblings2 [][]*big.Int `json:"siblings2"` // big.Int, len: [nTx][nLevels + 1]
+	TokenID2  []*big.Int   `json:"tokenID2"`  // uint32, len: [maxTx]
+	Nonce2    []*big.Int   `json:"nonce2"`    // uint64 (max 40 bits), len: [maxTx]
+	Sign2     []*big.Int   `json:"sign2"`     // bool, len: [maxTx]
+	Ay2       []*big.Int   `json:"ay2"`       // big.Int, len: [maxTx]
+	Balance2  []*big.Int   `json:"balance2"`  // big.Int (max 192 bits), len: [maxTx]
+	EthAddr2  []*big.Int   `json:"ethAddr2"`  // ethCommon.Address, len: [maxTx]
+	Siblings2 [][]*big.Int `json:"siblings2"` // big.Int, len: [maxTx][nLevels + 1]
 	// newExit determines if an exit transaction has to create a new leaf in the exit tree
-	NewExit []*big.Int `json:"newExit"` // bool, len: [nTx]
+	NewExit []*big.Int `json:"newExit"` // bool, len: [maxTx]
 	// Required for inserts and deletes, values of the CircomProcessorProof (smt insert proof)
-	IsOld0_2  []*big.Int `json:"isOld0_2"`  // bool, len: [nTx]
-	OldKey2   []*big.Int `json:"oldKey2"`   // uint64 (max 40 bits), len: [nTx]
-	OldValue2 []*big.Int `json:"oldValue2"` // Hash, len: [nTx]
+	IsOld0_2  []*big.Int `json:"isOld0_2"`  // bool, len: [maxTx]
+	OldKey2   []*big.Int `json:"oldKey2"`   // uint64 (max 40 bits), len: [maxTx]
+	OldValue2 []*big.Int `json:"oldValue2"` // Hash, len: [maxTx]
 
 	// state 3, value of the account leaf receiver of the Fees
 	// fee tx
@@ -189,29 +188,29 @@ type ZKInputs struct {
 	// Intermediate States to parallelize witness computation
 	// Note: the Intermediate States (IS) of the last transaction does not
 	// exist. Meaning that transaction 3 (4th) will fill the parameters
-	// FromIdx[3] and ISOnChain[3], but last transaction (nTx-1) will fill
-	// FromIdx[nTx-1] but will not fill ISOnChain. That's why IS have
-	// length of nTx-1, while the other parameters have length of nTx.
+	// FromIdx[3] and ISOnChain[3], but last transaction (maxTx-1) will fill
+	// FromIdx[maxTx-1] but will not fill ISOnChain. That's why IS have
+	// length of maxTx-1, while the other parameters have length of maxTx.
 	// Last transaction does not need intermediate state since its output
 	// will not be used.
 
 	// decode-tx
 	// ISOnChain indicates if tx is L1 (true (1)) or L2 (false (0))
-	ISOnChain []*big.Int `json:"imOnChain"` // bool, len: [nTx - 1]
+	ISOnChain []*big.Int `json:"imOnChain"` // bool, len: [maxTx - 1]
 	// ISOutIdx current index account for each Tx
 	// Contains the index of the created account in case that the tx is of
 	// account creation type.
-	ISOutIdx []*big.Int `json:"imOutIdx"` // uint64 (max nLevels bits), len: [nTx - 1]
+	ISOutIdx []*big.Int `json:"imOutIdx"` // uint64 (max nLevels bits), len: [maxTx - 1]
 	// rollup-tx
 	// ISStateRoot root at the moment of the Tx (once processed), the state
 	// root value once the Tx is processed into the state tree
-	ISStateRoot []*big.Int `json:"imStateRoot"` // Hash, len: [nTx - 1]
+	ISStateRoot []*big.Int `json:"imStateRoot"` // Hash, len: [maxTx - 1]
 	// ISExitTree root at the moment (once processed) of the Tx the value
 	// once the Tx is processed into the exit tree
-	ISExitRoot []*big.Int `json:"imExitRoot"` // Hash, len: [nTx - 1]
+	ISExitRoot []*big.Int `json:"imExitRoot"` // Hash, len: [maxTx - 1]
 	// ISAccFeeOut accumulated fees once the Tx is processed.  Contains the
 	// array of FeeAccount Balances at each moment of each Tx processed.
-	ISAccFeeOut [][]*big.Int `json:"imAccFeeOut"` // big.Int, len: [nTx - 1][maxFeeIdxs]
+	ISAccFeeOut [][]*big.Int `json:"imAccFeeOut"` // big.Int, len: [maxTx - 1][maxFeeIdxs]
 	// fee-tx:
 	// ISStateRootFee root at the moment of the Tx (once processed), the
 	// state root value once the Tx is processed into the state tree
@@ -282,9 +281,8 @@ func (z ZKInputs) MarshalJSON() ([]byte, error) {
 }
 
 // NewZKInputs returns a pointer to an initialized struct of ZKInputs
-func NewZKInputs(chainID uint16, nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32, currentNumBatch *big.Int) *ZKInputs {
+func NewZKInputs(chainID uint16, maxTx, maxL1Tx, maxFeeIdxs, nLevels uint32, currentNumBatch *big.Int) *ZKInputs {
 	zki := &ZKInputs{}
-	zki.Metadata.NTx = nTx
 	zki.Metadata.MaxFeeIdxs = maxFeeIdxs
 	zki.Metadata.MaxLevels = uint32(48) //nolint:gomnd
 	zki.Metadata.NLevels = nLevels
@@ -301,22 +299,22 @@ func NewZKInputs(chainID uint16, nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32
 	zki.FeePlanTokens = newSlice(maxFeeIdxs)
 
 	// Txs
-	zki.TxCompressedData = newSlice(nTx)
-	zki.TxCompressedDataV2 = newSlice(nTx)
-	zki.MaxNumBatch = newSlice(nTx)
-	zki.FromIdx = newSlice(nTx)
-	zki.AuxFromIdx = newSlice(nTx)
-	zki.ToIdx = newSlice(nTx)
-	zki.AuxToIdx = newSlice(nTx)
-	zki.ToBJJAy = newSlice(nTx)
-	zki.ToEthAddr = newSlice(nTx)
-	zki.OnChain = newSlice(nTx)
-	zki.NewAccount = newSlice(nTx)
+	zki.TxCompressedData = newSlice(maxTx)
+	zki.TxCompressedDataV2 = newSlice(maxTx)
+	zki.MaxNumBatch = newSlice(maxTx)
+	zki.FromIdx = newSlice(maxTx)
+	zki.AuxFromIdx = newSlice(maxTx)
+	zki.ToIdx = newSlice(maxTx)
+	zki.AuxToIdx = newSlice(maxTx)
+	zki.ToBJJAy = newSlice(maxTx)
+	zki.ToEthAddr = newSlice(maxTx)
+	zki.OnChain = newSlice(maxTx)
+	zki.NewAccount = newSlice(maxTx)
 
 	// L1
-	zki.DepositAmountF = newSlice(nTx)
-	zki.FromEthAddr = newSlice(nTx)
-	zki.FromBJJCompressed = make([][256]*big.Int, nTx)
+	zki.DepositAmountF = newSlice(maxTx)
+	zki.FromEthAddr = newSlice(maxTx)
+	zki.FromBJJCompressed = make([][256]*big.Int, maxTx)
 	for i := 0; i < len(zki.FromBJJCompressed); i++ {
 		// zki.FromBJJCompressed[i] = newSlice(256)
 		for j := 0; j < 256; j++ {
@@ -325,43 +323,43 @@ func NewZKInputs(chainID uint16, nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32
 	}
 
 	// L2
-	zki.RqOffset = newSlice(nTx)
-	zki.RqTxCompressedDataV2 = newSlice(nTx)
-	zki.RqToEthAddr = newSlice(nTx)
-	zki.RqToBJJAy = newSlice(nTx)
-	zki.S = newSlice(nTx)
-	zki.R8x = newSlice(nTx)
-	zki.R8y = newSlice(nTx)
+	zki.RqOffset = newSlice(maxTx)
+	zki.RqTxCompressedDataV2 = newSlice(maxTx)
+	zki.RqToEthAddr = newSlice(maxTx)
+	zki.RqToBJJAy = newSlice(maxTx)
+	zki.S = newSlice(maxTx)
+	zki.R8x = newSlice(maxTx)
+	zki.R8y = newSlice(maxTx)
 
 	// State MerkleTree Leafs transitions
-	zki.TokenID1 = newSlice(nTx)
-	zki.Nonce1 = newSlice(nTx)
-	zki.Sign1 = newSlice(nTx)
-	zki.Ay1 = newSlice(nTx)
-	zki.Balance1 = newSlice(nTx)
-	zki.EthAddr1 = newSlice(nTx)
-	zki.Siblings1 = make([][]*big.Int, nTx)
+	zki.TokenID1 = newSlice(maxTx)
+	zki.Nonce1 = newSlice(maxTx)
+	zki.Sign1 = newSlice(maxTx)
+	zki.Ay1 = newSlice(maxTx)
+	zki.Balance1 = newSlice(maxTx)
+	zki.EthAddr1 = newSlice(maxTx)
+	zki.Siblings1 = make([][]*big.Int, maxTx)
 	for i := 0; i < len(zki.Siblings1); i++ {
 		zki.Siblings1[i] = newSlice(nLevels + 1)
 	}
-	zki.IsOld0_1 = newSlice(nTx)
-	zki.OldKey1 = newSlice(nTx)
-	zki.OldValue1 = newSlice(nTx)
+	zki.IsOld0_1 = newSlice(maxTx)
+	zki.OldKey1 = newSlice(maxTx)
+	zki.OldValue1 = newSlice(maxTx)
 
-	zki.TokenID2 = newSlice(nTx)
-	zki.Nonce2 = newSlice(nTx)
-	zki.Sign2 = newSlice(nTx)
-	zki.Ay2 = newSlice(nTx)
-	zki.Balance2 = newSlice(nTx)
-	zki.EthAddr2 = newSlice(nTx)
-	zki.Siblings2 = make([][]*big.Int, nTx)
+	zki.TokenID2 = newSlice(maxTx)
+	zki.Nonce2 = newSlice(maxTx)
+	zki.Sign2 = newSlice(maxTx)
+	zki.Ay2 = newSlice(maxTx)
+	zki.Balance2 = newSlice(maxTx)
+	zki.EthAddr2 = newSlice(maxTx)
+	zki.Siblings2 = make([][]*big.Int, maxTx)
 	for i := 0; i < len(zki.Siblings2); i++ {
 		zki.Siblings2[i] = newSlice(nLevels + 1)
 	}
-	zki.NewExit = newSlice(nTx)
-	zki.IsOld0_2 = newSlice(nTx)
-	zki.OldKey2 = newSlice(nTx)
-	zki.OldValue2 = newSlice(nTx)
+	zki.NewExit = newSlice(maxTx)
+	zki.IsOld0_2 = newSlice(maxTx)
+	zki.OldKey2 = newSlice(maxTx)
+	zki.OldValue2 = newSlice(maxTx)
 
 	zki.TokenID3 = newSlice(maxFeeIdxs)
 	zki.Nonce3 = newSlice(maxFeeIdxs)
@@ -375,11 +373,11 @@ func NewZKInputs(chainID uint16, nTx, maxL1Tx, maxTx, maxFeeIdxs, nLevels uint32
 	}
 
 	// Intermediate States
-	zki.ISOnChain = newSlice(nTx - 1)
-	zki.ISOutIdx = newSlice(nTx - 1)
-	zki.ISStateRoot = newSlice(nTx - 1)
-	zki.ISExitRoot = newSlice(nTx - 1)
-	zki.ISAccFeeOut = make([][]*big.Int, nTx-1)
+	zki.ISOnChain = newSlice(maxTx - 1)
+	zki.ISOutIdx = newSlice(maxTx - 1)
+	zki.ISStateRoot = newSlice(maxTx - 1)
+	zki.ISExitRoot = newSlice(maxTx - 1)
+	zki.ISAccFeeOut = make([][]*big.Int, maxTx-1)
 	for i := 0; i < len(zki.ISAccFeeOut); i++ {
 		zki.ISAccFeeOut[i] = newSlice(maxFeeIdxs)
 	}
