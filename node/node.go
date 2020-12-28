@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -131,7 +130,13 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 	chainIDU16 := uint16(chainIDU64)
 
-	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, statedb.TypeSynchronizer, 32, chainIDU16)
+	const safeStateDBKeep = 128
+	if cfg.StateDB.Keep < safeStateDBKeep {
+		return nil, tracerr.Wrap(fmt.Errorf("cfg.StateDB.Keep = %v < %v, which is unsafe",
+			cfg.StateDB.Keep, safeStateDBKeep))
+	}
+	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, cfg.StateDB.Keep,
+		statedb.TypeSynchronizer, 32, chainIDU16)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -408,22 +413,17 @@ func (n *Node) handleReorg(stats *synchronizer.Stats) {
 
 // TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
 // don't have to pass it around.
-func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration) {
-	blockData, discarded, err := n.sync.Sync2(n.ctx, lastBlock)
+func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block, time.Duration, error) {
+	blockData, discarded, err := n.sync.Sync2(ctx, lastBlock)
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
-		if strings.Contains(err.Error(), "context canceled") {
-			log.Warnw("Synchronizer.Sync", "err", err)
-		} else {
-			log.Errorw("Synchronizer.Sync", "err", err)
-		}
-		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration
+		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
 	} else if discarded != nil {
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
 		n.handleReorg(stats)
-		return nil, time.Duration(0)
+		return nil, time.Duration(0), nil
 	} else if blockData != nil {
 		// case: new block
 		n.handleNewBlock(stats, synchronizer.SCVariablesPtr{
@@ -431,10 +431,10 @@ func (n *Node) syncLoopFn(lastBlock *common.Block) (*common.Block, time.Duration
 			Auction:  blockData.Auction.Vars,
 			WDelayer: blockData.WDelayer.Vars,
 		}, blockData.Rollup.Batches)
-		return &blockData.Block, time.Duration(0)
+		return &blockData.Block, time.Duration(0), nil
 	} else {
 		// case: no block
-		return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration
+		return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 	}
 }
 
@@ -453,6 +453,7 @@ func (n *Node) StartSynchronizer() {
 
 	n.wg.Add(1)
 	go func() {
+		var err error
 		var lastBlock *common.Block
 		waitDuration := time.Duration(0)
 		for {
@@ -462,7 +463,13 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(waitDuration):
-				lastBlock, waitDuration = n.syncLoopFn(lastBlock)
+				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx,
+					lastBlock); err != nil {
+					if n.ctx.Err() != nil {
+						continue
+					}
+					log.Errorw("Synchronizer.Sync", "err", err)
+				}
 			}
 		}
 	}()
@@ -495,6 +502,9 @@ func (n *Node) StartDebugAPI() {
 			n.wg.Done()
 		}()
 		if err := n.debugAPI.Run(n.ctx); err != nil {
+			if n.ctx.Err() != nil {
+				return
+			}
 			log.Fatalw("DebugAPI.Run", "err", err)
 		}
 	}()
@@ -510,6 +520,9 @@ func (n *Node) StartNodeAPI() {
 			n.wg.Done()
 		}()
 		if err := n.nodeAPI.Run(n.ctx); err != nil {
+			if n.ctx.Err() != nil {
+				return
+			}
 			log.Fatalw("NodeAPI.Run", "err", err)
 		}
 	}()

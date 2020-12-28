@@ -3,9 +3,12 @@ package statedb
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
-	"strconv"
+	"path"
+	"sort"
+	"strings"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -51,10 +54,10 @@ var (
 const (
 	// PathBatchNum defines the subpath of the Batch Checkpoint in the
 	// subpath of the StateDB
-	PathBatchNum = "/BatchNum"
+	PathBatchNum = "BatchNum"
 	// PathCurrent defines the subpath of the current Batch in the subpath
 	// of the StateDB
-	PathCurrent = "/current"
+	PathCurrent = "current"
 	// TypeSynchronizer defines a StateDB used by the Synchronizer, that
 	// generates the ExitTree when processing the txs
 	TypeSynchronizer = "synchronizer"
@@ -85,14 +88,16 @@ type StateDB struct {
 	// AccumulatedFees contains the accumulated fees for each token (Coord
 	// Idx) in the processed batch
 	AccumulatedFees map[common.Idx]*big.Int
+	keep            int
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
-// storage
-func NewStateDB(path string, typ TypeStateDB, nLevels int, chainID uint16) (*StateDB, error) {
+// storage.  Checkpoints older than the value defined by `keep` will be
+// deleted.
+func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int, chainID uint16) (*StateDB, error) {
 	var sto *pebble.PebbleStorage
 	var err error
-	sto, err = pebble.NewPebbleStorage(path+PathCurrent, false)
+	sto, err = pebble.NewPebbleStorage(path.Join(pathDB, PathCurrent), false)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -109,11 +114,12 @@ func NewStateDB(path string, typ TypeStateDB, nLevels int, chainID uint16) (*Sta
 	}
 
 	sdb := &StateDB{
-		path:    path,
+		path:    pathDB,
 		db:      sto,
 		mt:      mt,
 		typ:     typ,
 		chainID: chainID,
+		keep:    keep,
 	}
 
 	// load currentBatch
@@ -170,10 +176,9 @@ func (s *StateDB) MakeCheckpoint() error {
 	s.currentBatch++
 	log.Debugw("Making StateDB checkpoint", "batch", s.currentBatch, "type", s.typ)
 
-	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(s.currentBatch))
+	checkpointPath := path.Join(s.path, fmt.Sprintf("%s%d", PathBatchNum, s.currentBatch))
 
-	err := s.setCurrentBatch()
-	if err != nil {
+	if err := s.setCurrentBatch(); err != nil {
 		return tracerr.Wrap(err)
 	}
 
@@ -188,8 +193,11 @@ func (s *StateDB) MakeCheckpoint() error {
 	}
 
 	// execute Checkpoint
-	err = s.db.Pebble().Checkpoint(checkpointPath)
-	if err != nil {
+	if err := s.db.Pebble().Checkpoint(checkpointPath); err != nil {
+		return tracerr.Wrap(err)
+	}
+	// delete old checkpoints
+	if err := s.deleteOldCheckpoints(); err != nil {
 		return tracerr.Wrap(err)
 	}
 
@@ -198,13 +206,62 @@ func (s *StateDB) MakeCheckpoint() error {
 
 // DeleteCheckpoint removes if exist the checkpoint of the given batchNum
 func (s *StateDB) DeleteCheckpoint(batchNum common.BatchNum) error {
-	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
+	checkpointPath := path.Join(s.path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
 
 	if _, err := os.Stat(checkpointPath); os.IsNotExist(err) {
 		return tracerr.Wrap(fmt.Errorf("Checkpoint with batchNum %d does not exist in DB", batchNum))
 	}
 
 	return os.RemoveAll(checkpointPath)
+}
+
+// listCheckpoints returns the list of batchNums of the checkpoints, sorted.
+// If there's a gap between the list of checkpoints, an error is returned.
+func (s *StateDB) listCheckpoints() ([]int, error) {
+	files, err := ioutil.ReadDir(s.path)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	checkpoints := []int{}
+	var checkpoint int
+	pattern := fmt.Sprintf("%s%%d", PathBatchNum)
+	for _, file := range files {
+		fileName := file.Name()
+		if file.IsDir() && strings.HasPrefix(fileName, PathBatchNum) {
+			if _, err := fmt.Sscanf(fileName, pattern, &checkpoint); err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			checkpoints = append(checkpoints, checkpoint)
+		}
+	}
+	sort.Ints(checkpoints)
+	if len(checkpoints) > 0 {
+		first := checkpoints[0]
+		for _, checkpoint := range checkpoints[1:] {
+			first++
+			if checkpoint != first {
+				return nil, tracerr.Wrap(fmt.Errorf("checkpoint gap at %v", checkpoint))
+			}
+		}
+	}
+	return checkpoints, nil
+}
+
+// deleteOldCheckpoints deletes old checkpoints when there are more than
+// `s.keep` checkpoints
+func (s *StateDB) deleteOldCheckpoints() error {
+	list, err := s.listCheckpoints()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if len(list) > s.keep {
+		for _, checkpoint := range list[:len(list)-s.keep] {
+			if err := s.DeleteCheckpoint(common.BatchNum(checkpoint)); err != nil {
+				return tracerr.Wrap(err)
+			}
+		}
+	}
+	return nil
 }
 
 func pebbleMakeCheckpoint(source, dest string) error {
@@ -252,7 +309,7 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 // deleted when MakeCheckpoint overwrites them.  `closeCurrent` will close the
 // currently opened db before doing the reset.
 func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
-	currentPath := s.path + PathCurrent
+	currentPath := path.Join(s.path, PathCurrent)
 
 	if closeCurrent {
 		if err := s.db.Pebble().Close(); err != nil {
@@ -263,6 +320,12 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 	err := os.RemoveAll(currentPath)
 	if err != nil {
 		return tracerr.Wrap(err)
+	}
+	// remove all checkpoints > batchNum
+	for i := batchNum + 1; i <= s.currentBatch; i++ {
+		if err := s.DeleteCheckpoint(i); err != nil {
+			return tracerr.Wrap(err)
+		}
 	}
 	if batchNum == 0 {
 		// if batchNum == 0, open the new fresh 'current'
@@ -285,7 +348,7 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 		return nil
 	}
 
-	checkpointPath := s.path + PathBatchNum + strconv.Itoa(int(batchNum))
+	checkpointPath := path.Join(s.path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
 	// copy 'BatchNumX' to 'current'
 	err = pebbleMakeCheckpoint(checkpointPath, currentPath)
 	if err != nil {
@@ -521,9 +584,11 @@ type LocalStateDB struct {
 }
 
 // NewLocalStateDB returns a new LocalStateDB connected to the given
-// synchronizerDB
-func NewLocalStateDB(path string, synchronizerDB *StateDB, typ TypeStateDB, nLevels int) (*LocalStateDB, error) {
-	s, err := NewStateDB(path, typ, nLevels, synchronizerDB.chainID)
+// synchronizerDB.  Checkpoints older than the value defined by `keep` will be
+// deleted.
+func NewLocalStateDB(path string, keep int, synchronizerDB *StateDB, typ TypeStateDB,
+	nLevels int) (*LocalStateDB, error) {
+	s, err := NewStateDB(path, keep, typ, nLevels, synchronizerDB.chainID)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -541,9 +606,10 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 		return nil
 	}
 
-	synchronizerCheckpointPath := l.synchronizerStateDB.path + PathBatchNum + strconv.Itoa(int(batchNum))
-	checkpointPath := l.path + PathBatchNum + strconv.Itoa(int(batchNum))
-	currentPath := l.path + PathCurrent
+	synchronizerCheckpointPath := path.Join(l.synchronizerStateDB.path,
+		fmt.Sprintf("%s%d", PathBatchNum, batchNum))
+	checkpointPath := path.Join(l.path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
+	currentPath := path.Join(l.path, PathCurrent)
 
 	if fromSynchronizer {
 		// use checkpoint from SynchronizerStateDB

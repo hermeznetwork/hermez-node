@@ -72,7 +72,7 @@ type TxSelector struct {
 // NewTxSelector returns a *TxSelector
 func NewTxSelector(coordAccount *CoordAccount, dbpath string,
 	synchronizerStateDB *statedb.StateDB, l2 *l2db.L2DB) (*TxSelector, error) {
-	localAccountsDB, err := statedb.NewLocalStateDB(dbpath,
+	localAccountsDB, err := statedb.NewLocalStateDB(dbpath, 128,
 		synchronizerStateDB, statedb.TypeTxSelector, 0) // without merkletree
 	if err != nil {
 		return nil, tracerr.Wrap(err)

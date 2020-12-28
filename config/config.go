@@ -102,7 +102,8 @@ type Node struct {
 		Type     string   `valudate:"required"`
 	} `validate:"required"`
 	StateDB struct {
-		Path string
+		Path string `validate:"required"`
+		Keep int    `validate:"required"`
 	} `validate:"required"`
 	PostgreSQL struct {
 		Port     int    `validate:"required"`

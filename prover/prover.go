@@ -48,7 +48,7 @@ func (p *Proof) UnmarshalJSON(data []byte) error {
 	p.PiA[1] = (*big.Int)(proof.PiA[1])
 	p.PiA[2] = (*big.Int)(proof.PiA[2])
 	if p.PiA[2].Int64() != 1 {
-		return fmt.Errorf("Expected PiA[2] == 1, but got %v", p.PiA[2])
+		return tracerr.Wrap(fmt.Errorf("Expected PiA[2] == 1, but got %v", p.PiA[2]))
 	}
 	p.PiB[0][0] = (*big.Int)(proof.PiB[0][0])
 	p.PiB[0][1] = (*big.Int)(proof.PiB[0][1])
@@ -57,13 +57,13 @@ func (p *Proof) UnmarshalJSON(data []byte) error {
 	p.PiB[2][0] = (*big.Int)(proof.PiB[2][0])
 	p.PiB[2][1] = (*big.Int)(proof.PiB[2][1])
 	if p.PiB[2][0].Int64() != 1 || p.PiB[2][1].Int64() != 0 {
-		return fmt.Errorf("Expected PiB[2] == [1, 0], but got %v", p.PiB[2])
+		return tracerr.Wrap(fmt.Errorf("Expected PiB[2] == [1, 0], but got %v", p.PiB[2]))
 	}
 	p.PiC[0] = (*big.Int)(proof.PiC[0])
 	p.PiC[1] = (*big.Int)(proof.PiC[1])
 	p.PiC[2] = (*big.Int)(proof.PiC[2])
 	if p.PiC[2].Int64() != 1 {
-		return fmt.Errorf("Expected PiC[2] == 1, but got %v", p.PiC[2])
+		return tracerr.Wrap(fmt.Errorf("Expected PiC[2] == 1, but got %v", p.PiC[2]))
 	}
 	// TODO: Assert ones and zeroes
 	p.Protocol = proof.Protocol

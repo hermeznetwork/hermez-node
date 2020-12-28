@@ -16,7 +16,7 @@ func TestBatchBuilder(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	synchDB, err := statedb.NewStateDB(dir, statedb.TypeBatchBuilder, 0, chainID)
+	synchDB, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 0, chainID)
 	assert.Nil(t, err)
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")

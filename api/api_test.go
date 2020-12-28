@@ -212,7 +212,7 @@ func TestMain(m *testing.M) {
 		}
 	}()
 	chainID := uint16(0)
-	sdb, err := statedb.NewStateDB(dir, statedb.TypeTxSelector, 0, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0, chainID)
 	if err != nil {
 		panic(err)
 	}

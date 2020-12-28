@@ -29,7 +29,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	set := `
@@ -203,7 +203,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	// generate test transactions from test.SetBlockchain0 code
@@ -336,7 +336,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeSynchronizer, 32, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32, chainID)
 	assert.NoError(t, err)
 
 	// generate test transactions from test.SetBlockchain0 code
@@ -465,7 +465,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, 32, chainID)
 	assert.NoError(t, err)
 
 	// generate test transactions from test.SetBlockchain0 code
@@ -554,7 +554,7 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, 32, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, 32, chainID)
 	assert.NoError(t, err)
 
 	// same values than in the js test
@@ -603,7 +603,7 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 
 	nLevels := 16
 	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
 	assert.NoError(t, err)
 
 	users := generateJsUsers(t)
