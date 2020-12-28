@@ -93,7 +93,7 @@ func (s *StateDB) ProcessTxs(ptc ProcessTxsConfig, coordIdxs []common.Idx, l1use
 	exits := make([]processedExit, nTx)
 
 	if s.typ == TypeBatchBuilder {
-		s.zki = common.NewZKInputs(s.chainID, ptc.MaxTx, ptc.MaxL1Tx, ptc.MaxTx, ptc.MaxFeeTx, ptc.NLevels, s.currentBatch.BigInt())
+		s.zki = common.NewZKInputs(s.chainID, ptc.MaxTx, ptc.MaxL1Tx, ptc.MaxFeeTx, ptc.NLevels, s.currentBatch.BigInt())
 		s.zki.OldLastIdx = s.idx.BigInt()
 		s.zki.OldStateRoot = s.mt.Root().BigInt()
 		s.zki.Metadata.NewLastIdxRaw = s.idx
