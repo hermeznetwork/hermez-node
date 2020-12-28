@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"strconv"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -9,9 +10,12 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// AccountCreationAuthMsg is the message that is signed to authorize an account
-// creation
+// AccountCreationAuthMsg is the message that is signed to authorize a Hermez
+// account creation
 const AccountCreationAuthMsg = "I authorize this babyjubjub key for hermez rollup account creation"
+
+// EthMsgPrefix is the prefix for message signing at the Ethereum ecosystem
+const EthMsgPrefix = "\x19Ethereum Signed Message:\n"
 
 // AccountCreationAuth authorizations sent by users to the L2DB, to be used for
 // account creations when necessary
@@ -22,18 +26,31 @@ type AccountCreationAuth struct {
 	Timestamp time.Time             `meddler:"timestamp,utctime"`
 }
 
-// HashToSign builds the hash to be signed using BJJ pub key and the constant message
-func (a *AccountCreationAuth) HashToSign(chainID uint16,
-	hermezContractAddr ethCommon.Address) ([]byte, error) {
-	// Calculate message to be signed
+func (a *AccountCreationAuth) toHash(chainID uint16,
+	hermezContractAddr ethCommon.Address) []byte {
 	var chainIDBytes [2]byte
 	binary.BigEndian.PutUint16(chainIDBytes[:], chainID)
-	// to hash: [AccountCreationAuthMsg | compressedBJJ | chainID | hermezContractAddr]
-	return ethCrypto.Keccak256Hash([]byte(AccountCreationAuthMsg), a.BJJ[:], chainIDBytes[:],
-		hermezContractAddr[:]).Bytes(), nil
+	// [EthPrefix | AccountCreationAuthMsg | compressedBJJ | chainID | hermezContractAddr]
+	var b []byte
+	b = append(b, []byte(AccountCreationAuthMsg)...)
+	b = append(b, SwapEndianness(a.BJJ[:])...) // for js implementation compatibility
+	b = append(b, chainIDBytes[:]...)
+	b = append(b, hermezContractAddr[:]...)
+
+	ethPrefix := EthMsgPrefix + strconv.Itoa(len(b))
+	return append([]byte(ethPrefix), b...)
 }
 
-// VerifySignature ensures that the Signature is done with the specified EthAddr
+// HashToSign returns the hash to be signed by the Etherum address to authorize
+// the account creation
+func (a *AccountCreationAuth) HashToSign(chainID uint16,
+	hermezContractAddr ethCommon.Address) ([]byte, error) {
+	b := a.toHash(chainID, hermezContractAddr)
+	return ethCrypto.Keccak256Hash(b).Bytes(), nil
+}
+
+// VerifySignature ensures that the Signature is done with the EthAddr, for the
+// chainID and hermezContractAddress passed by parameter
 func (a *AccountCreationAuth) VerifySignature(chainID uint16,
 	hermezContractAddr ethCommon.Address) bool {
 	// Calculate hash to be signed
@@ -41,8 +58,13 @@ func (a *AccountCreationAuth) VerifySignature(chainID uint16,
 	if err != nil {
 		return false
 	}
+
+	var sig [65]byte
+	copy(sig[:], a.Signature[:])
+	sig[64] -= 27
+
 	// Get public key from Signature
-	pubKBytes, err := ethCrypto.Ecrecover(msg, a.Signature)
+	pubKBytes, err := ethCrypto.Ecrecover(msg, sig[:])
 	if err != nil {
 		return false
 	}
