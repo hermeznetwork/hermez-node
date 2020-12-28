@@ -1,4 +1,4 @@
-package statedb
+package txprocessor
 
 import (
 	"encoding/hex"
@@ -12,6 +12,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -78,8 +79,7 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, 32, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 32)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -109,17 +109,21 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 		},
 	}
 
-	ptc := ProcessTxsConfig{
+	chainID := uint16(0)
+	config := Config{
 		NLevels:  32,
 		MaxFeeTx: 8,
 		MaxTx:    32,
 		MaxL1Tx:  16,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
-	ptOut, err := sdb.ProcessTxs(ptc, nil, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(nil, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -153,16 +157,11 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, 32, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 32)
 	assert.Nil(t, err)
 
 	// same values than in the js test
 	users := generateJsUsers(t)
-	// bjj0, err := common.BJJFromStringWithChecksum("21b0a1688b37f77b1d1d5539ec3b826db5ac78b2513f574a04c50a7d4f8246d7")
-	// assert.Nil(t, err)
-	// bjj1, err := common.BJJFromStringWithChecksum("093985b1993d9f743f9d7d943ed56f38601cb8b196db025f79650c4007c3054d")
-	// assert.Nil(t, err)
 	l1Txs := []common.L1Tx{
 		{
 			FromIdx:       0,
@@ -199,17 +198,21 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 		},
 	}
 
-	ptc := ProcessTxsConfig{
+	chainID := uint16(0)
+	config := Config{
 		NLevels:  32,
 		MaxFeeTx: 8,
 		MaxTx:    32,
 		MaxL1Tx:  16,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
-	ptOut, err := sdb.ProcessTxs(ptc, nil, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(nil, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -253,18 +256,21 @@ func TestZKInputsEmpty(t *testing.T) {
 
 	nLevels := 16
 
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
-	ptc := ProcessTxsConfig{
+	chainID := uint16(0)
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    3,
 		MaxL1Tx:  2,
 		MaxFeeTx: 2,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	// 0. Generate a batch from the empty state with no transactions
@@ -274,10 +280,10 @@ func TestZKInputsEmpty(t *testing.T) {
 	l1CoordTxs := []common.L1Tx{}
 	l2Txs := []common.PoolL2Tx{}
 
-	ptOut, err := sdb.ProcessTxs(ptc, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.Nil(t, err)
 
-	assert.Equal(t, "0", sdb.mt.Root().BigInt().String())
+	assert.Equal(t, "0", sdb.MT.Root().BigInt().String())
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
 	// check that there are no accounts
@@ -333,15 +339,15 @@ func TestZKInputsEmpty(t *testing.T) {
 		},
 	}
 
-	toSign, err := l2Txs[0].HashToSign(sdb.chainID)
+	toSign, err := l2Txs[0].HashToSign(tp.config.ChainID)
 	require.Nil(t, err)
 	sig := users[0].BJJ.SignPoseidon(toSign)
 	l2Txs[0].Signature = sig.Compress()
 
-	ptOut, err = sdb.ProcessTxs(ptc, nil, l1UserTxs, nil, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, nil, l2Txs)
 	require.Nil(t, err)
 
-	rootNonZero := sdb.mt.Root()
+	rootNonZero := sdb.MT.Root()
 
 	// check that there is 1 account
 	accs, err = sdb.GetAccounts()
@@ -363,10 +369,10 @@ func TestZKInputsEmpty(t *testing.T) {
 	l1CoordTxs = []common.L1Tx{}
 	l2Txs = []common.PoolL2Tx{}
 
-	ptOut, err = sdb.ProcessTxs(ptc, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.Nil(t, err)
 
-	assert.Equal(t, rootNonZero, sdb.mt.Root())
+	assert.Equal(t, rootNonZero, sdb.MT.Root())
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
 	// check that there is still 1 account
@@ -402,8 +408,7 @@ func TestZKInputs0(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -434,22 +439,26 @@ func TestZKInputs0(t *testing.T) {
 		},
 	}
 
-	toSign, err := l2Txs[0].HashToSign(sdb.chainID)
+	chainID := uint16(0)
+	toSign, err := l2Txs[0].HashToSign(chainID)
 	require.NoError(t, err)
 	sig := users[0].BJJ.SignPoseidon(toSign)
 	l2Txs[0].Signature = sig.Compress()
 
-	ptc := ProcessTxsConfig{
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    3,
 		MaxL1Tx:  2,
 		MaxFeeTx: 2,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
-	ptOut, err := sdb.ProcessTxs(ptc, nil, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(nil, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -490,8 +499,7 @@ func TestZKInputs1(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -533,23 +541,27 @@ func TestZKInputs1(t *testing.T) {
 		},
 	}
 
-	toSign, err := l2Txs[0].HashToSign(sdb.chainID)
+	chainID := uint16(0)
+	toSign, err := l2Txs[0].HashToSign(chainID)
 	require.NoError(t, err)
 	sig := users[0].BJJ.SignPoseidon(toSign)
 	l2Txs[0].Signature = sig.Compress()
 
-	ptc := ProcessTxsConfig{
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    3,
 		MaxL1Tx:  2,
 		MaxFeeTx: 2,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	coordIdxs := []common.Idx{257}
-	ptOut, err := sdb.ProcessTxs(ptc, coordIdxs, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -597,8 +609,7 @@ func TestZKInputs2(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -671,21 +682,25 @@ func TestZKInputs2(t *testing.T) {
 		},
 	}
 
-	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
+	chainID := uint16(0)
+	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
 
-	ptc := ProcessTxsConfig{
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    10,
 		MaxL1Tx:  4,
 		MaxFeeTx: 2,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	coordIdxs := []common.Idx{257}
-	ptOut, err := sdb.ProcessTxs(ptc, coordIdxs, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -741,8 +756,7 @@ func TestZKInputs3(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -815,21 +829,25 @@ func TestZKInputs3(t *testing.T) {
 		},
 	}
 
-	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
+	chainID := uint16(0)
+	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
 
-	ptc := ProcessTxsConfig{
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    10,
 		MaxL1Tx:  4,
 		MaxFeeTx: 2,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	coordIdxs := []common.Idx{257}
-	ptOut, err := sdb.ProcessTxs(ptc, coordIdxs, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -885,8 +903,7 @@ func TestZKInputs4(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -969,21 +986,25 @@ func TestZKInputs4(t *testing.T) {
 		},
 	}
 
-	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
+	chainID := uint16(0)
+	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
 
-	ptc := ProcessTxsConfig{
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    10,
 		MaxL1Tx:  5,
 		MaxFeeTx: 2,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	coordIdxs := []common.Idx{257}
-	ptOut, err := sdb.ProcessTxs(ptc, coordIdxs, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -1039,8 +1060,7 @@ func TestZKInputs5(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
 	// same values than in the js test
@@ -1101,24 +1121,29 @@ func TestZKInputs5(t *testing.T) {
 			Type:    common.TxTypeExit,
 		},
 	}
-	l2Txs[0] = signL2Tx(t, sdb.chainID, users[0], l2Txs[0])
-	l2Txs[1] = signL2Tx(t, sdb.chainID, users[0], l2Txs[1])
 
-	ptc := ProcessTxsConfig{
+	chainID := uint16(0)
+	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
+	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
+
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    10,
 		MaxL1Tx:  5,
 		MaxFeeTx: 2,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
+
 	// skip first batch to do the test with BatchNum=1
-	_, err = sdb.ProcessTxs(ptc, nil, nil, nil, nil)
+	_, err = tp.ProcessTxs(nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	coordIdxs := []common.Idx{257}
-	ptOut, err := sdb.ProcessTxs(ptc, coordIdxs, l1Txs, nil, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 
-	assert.Equal(t, "9004936174112171168716185012590576631374182232656264130522697453639057968430", sdb.mt.Root().BigInt().String())
+	assert.Equal(t, "9004936174112171168716185012590576631374182232656264130522697453639057968430", sdb.MT.Root().BigInt().String())
 	assert.Equal(t, "13150113024143718339322897969767386088676980172693068463217180231955278216962", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
 	// check expected account keys values from tx inputs
@@ -1163,29 +1188,31 @@ func TestZKInputs6(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeBatchBuilder, nLevels, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.Nil(t, err)
 
 	// Coordinator Idx where to send the fees
 	// coordIdxs := []common.Idx{256, 257}
 
-	ptc := ProcessTxsConfig{
+	chainID := uint16(0)
+	config := Config{
 		NLevels:  uint32(nLevels),
 		MaxTx:    10,
 		MaxL1Tx:  4,
 		MaxFeeTx: 4,
+		ChainID:  chainID,
 	}
+	tp := NewTxProcessor(sdb, config)
 
 	tc := til.NewContext(0, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(til.SetBlockchainMinimumFlow0)
 	require.NoError(t, err)
 
 	log.Debug("block:0 batch:0, only L1CoordinatorTxs")
-	ptOut, err := sdb.ProcessTxs(ptc, nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
 
-	assert.Equal(t, "9039235803989265562752459273677612535578150724983094202749787856042851287937", sdb.mt.Root().BigInt().String())
+	assert.Equal(t, "9039235803989265562752459273677612535578150724983094202749787856042851287937", sdb.MT.Root().BigInt().String())
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	h, err := ptOut.ZKInputs.HashGlobalData()
 	require.NoError(t, err)
@@ -1196,10 +1223,10 @@ func TestZKInputs6(t *testing.T) {
 	log.Debug("block:0 batch:1")
 	l1UserTxs := []common.L1Tx{}
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	ptOut, err = sdb.ProcessTxs(ptc, nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	assert.Equal(t, "11268490488303545450371226436237399651863451560820293060171443690124510027423", sdb.mt.Root().BigInt().String())
+	assert.Equal(t, "11268490488303545450371226436237399651863451560820293060171443690124510027423", sdb.MT.Root().BigInt().String())
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	h, err = ptOut.ZKInputs.HashGlobalData()
 	require.NoError(t, err)
@@ -1210,9 +1237,9 @@ func TestZKInputs6(t *testing.T) {
 	// log.Debug("block:0 batch:2")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	ptOut, err = sdb.ProcessTxs(ptc, nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "4506051426679555819811005692198685182747763336038770877076710632305611650930", sdb.mt.Root().BigInt().String())
+	assert.Equal(t, "4506051426679555819811005692198685182747763336038770877076710632305611650930", sdb.MT.Root().BigInt().String())
 	h, err = ptOut.ZKInputs.HashGlobalData()
 	require.NoError(t, err)
 	assert.Equal(t, "4701632846207201125105176884973241543664109364248244712634276477520091620527", h.String())

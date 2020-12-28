@@ -4,6 +4,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -55,13 +56,17 @@ func (bb *BatchBuilder) Reset(batchNum common.BatchNum, fromSynchronizer bool) e
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
 func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBatch, l1usertxs, l1coordinatortxs []common.L1Tx, pooll2txs []common.PoolL2Tx, tokenIDs []common.TokenID) (*common.ZKInputs, error) {
 	//nolint:gomnd
-	ptc := statedb.ProcessTxsConfig{ // TODO TMP
+	tpc := txprocessor.Config{ // TODO TMP
 		NLevels:  32,
 		MaxFeeTx: 64,
 		MaxTx:    512,
 		MaxL1Tx:  64,
+		ChainID:  uint16(0),
 	}
-	ptOut, err := bb.localStateDB.ProcessTxs(ptc, coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs)
+	bbStateDB := bb.localStateDB.StateDB
+	tp := txprocessor.NewTxProcessor(bbStateDB, tpc)
+
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs)
 	return ptOut.ZKInputs, tracerr.Wrap(err)
 }
 

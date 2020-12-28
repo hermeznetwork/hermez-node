@@ -290,7 +290,7 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	stateDB, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32, chainID)
+	stateDB, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32)
 	require.NoError(t, err)
 
 	// Init History DB

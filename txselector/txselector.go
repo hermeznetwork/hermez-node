@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree/db"
@@ -55,8 +56,8 @@ type SelectionConfig struct {
 	// MaxL1CoordinatorTxs is the maximum L1-coordinator-tx for a batch
 	MaxL1CoordinatorTxs uint64
 
-	// ProcessTxsConfig contains the config for ProcessTxs
-	ProcessTxsConfig statedb.ProcessTxsConfig
+	// TxProcessorConfig contains the config for ProcessTxs
+	TxProcessorConfig txprocessor.Config
 }
 
 // TxSelector implements all the functionalities to select the txs for the next
@@ -66,7 +67,7 @@ type TxSelector struct {
 	localAccountsDB *statedb.LocalStateDB
 
 	coordAccount *CoordAccount
-	coordIdxsDB  *pebble.PebbleStorage
+	coordIdxsDB  *pebble.Storage
 }
 
 // NewTxSelector returns a *TxSelector
@@ -232,6 +233,9 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 
+	txselStateDB := txsel.localAccountsDB.StateDB
+	tp := txprocessor.NewTxProcessor(txselStateDB, selectionConfig.TxProcessorConfig)
+
 	var validTxs txs
 	var l1CoordinatorTxs []common.L1Tx
 	positionL1 := len(l1Txs)
@@ -239,7 +243,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	// Process L1UserTxs
 	for i := 0; i < len(l1Txs); i++ {
 		// assumption: l1usertx are sorted by L1Tx.Position
-		_, _, _, _, err := txsel.localAccountsDB.ProcessL1Tx(nil, &l1Txs[i])
+		_, _, _, _, err := tp.ProcessL1Tx(nil, &l1Txs[i])
 		if err != nil {
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
@@ -302,14 +306,14 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 
 	// Process L1CoordinatorTxs
 	for i := 0; i < len(l1CoordinatorTxs); i++ {
-		_, _, _, _, err := txsel.localAccountsDB.ProcessL1Tx(nil, &l1CoordinatorTxs[i])
+		_, _, _, _, err := tp.ProcessL1Tx(nil, &l1CoordinatorTxs[i])
 		if err != nil {
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
 	}
-	txsel.localAccountsDB.AccumulatedFees = make(map[common.Idx]*big.Int)
+	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
 	for _, idx := range coordIdxs {
-		txsel.localAccountsDB.AccumulatedFees[idx] = big.NewInt(0)
+		tp.AccumulatedFees[idx] = big.NewInt(0)
 	}
 
 	// once L1UserTxs & L1CoordinatorTxs are processed, get TokenIDs of
@@ -321,12 +325,12 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	}
 
 	// get most profitable L2-tx
-	maxL2Txs := selectionConfig.ProcessTxsConfig.MaxTx - uint32(len(l1CoordinatorTxs)) // - len(l1UserTxs) // TODO if there are L1UserTxs take them in to account
+	maxL2Txs := selectionConfig.TxProcessorConfig.MaxTx - uint32(len(l1CoordinatorTxs)) // - len(l1UserTxs) // TODO if there are L1UserTxs take them in to account
 	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
 
 	// Process L2Txs
 	for i := 0; i < len(l2Txs); i++ {
-		_, _, _, err = txsel.localAccountsDB.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
+		_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
 		if err != nil {
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}

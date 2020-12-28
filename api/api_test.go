@@ -211,8 +211,7 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}()
-	chainID := uint16(0)
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -221,6 +220,7 @@ func TestMain(m *testing.M) {
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 
 	// Config (smart contract constants)
+	chainID := uint16(0)
 	_config := getConfigTest(chainID)
 	config = configAPI{
 		RollupConstants:   *newRollupConstants(_config.RollupConstants),

@@ -28,7 +28,7 @@ func newStateDB(t *testing.T) *statedb.LocalStateDB {
 	syncDBPath, err := ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncStateDB, err := statedb.NewStateDB(syncDBPath, 128, statedb.TypeSynchronizer, 48, chainID)
+	syncStateDB, err := statedb.NewStateDB(syncDBPath, 128, statedb.TypeSynchronizer, 48)
 	assert.NoError(t, err)
 	stateDBPath, err := ioutil.TempDir("", "tmpStateDB")
 	require.NoError(t, err)

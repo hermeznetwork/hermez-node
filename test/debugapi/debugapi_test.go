@@ -44,8 +44,7 @@ func TestDebugAPI(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.Nil(t, err)
 
-	chainID := uint16(0)
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32)
 	require.Nil(t, err)
 	err = sdb.MakeCheckpoint() // Make a checkpoint to increment the batchNum
 	require.Nil(t, err)
