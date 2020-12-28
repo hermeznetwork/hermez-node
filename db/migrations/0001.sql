@@ -515,13 +515,14 @@ $BODY$
 BEGIN
     IF NEW.forge_l1_txs_num IS NOT NULL THEN
         UPDATE tx 
-        SET item_id = nextval('tx_item_id'), batch_num = NEW.batch_num 
-        WHERE id IN (
-            SELECT id FROM tx 
+        SET item_id = upd.item_id, batch_num = NEW.batch_num 
+        FROM (
+            SELECT id, nextval('tx_item_id') FROM tx 
             WHERE user_origin AND NEW.forge_l1_txs_num = to_forge_l1_txs_num 
             ORDER BY position
             FOR UPDATE
-        ); 
+        ) as upd (id, item_id)
+        WHERE tx.id = upd.id; 
     END IF;
     RETURN NEW;
 END;

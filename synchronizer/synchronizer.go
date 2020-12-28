@@ -318,9 +318,10 @@ func (s *Synchronizer) updateCurrentSlotIfSync(reset bool, firstBatchBlockNum *i
 		} else if err == nil {
 			slot.BidValue = bidCoord.BidValue
 			slot.DefaultSlotBid = bidCoord.DefaultSlotSetBid[slot.SlotNum%6]
-			// Only if the highest bid value is higher than the
-			// default slot bid, the bidder is the winner of the
-			// slot.  Otherwise the boot coordinator is the winner.
+			// Only if the highest bid value is greater/equal than
+			// the default slot bid, the bidder is the winner of
+			// the slot.  Otherwise the boot coordinator is the
+			// winner.
 			if slot.BidValue.Cmp(slot.DefaultSlotBid) >= 0 {
 				slot.Bidder = bidCoord.Bidder
 				slot.Forger = bidCoord.Forger
