@@ -2318,6 +2318,10 @@ components:
             - example: 7394
         accountIndex:
           $ref: '#/components/schemas/AccountIndex'
+        bjj:
+          $ref: '#/components/schemas/BJJ'      
+        hezEthereumAddress:
+          $ref: '#/components/schemas/HezEthereumAddress'
         itemId:
           $ref: '#/components/schemas/ItemId'
         merkleProof:
@@ -2382,6 +2386,8 @@ components:
       required:
           - batchNum
           - accountIndex
+          - bjj
+          - hezEthereumAddress
           - itemId
           - merkleProof
           - balance

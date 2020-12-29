@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
@@ -26,6 +27,8 @@ type testExit struct {
 	ItemID                 uint64                 `json:"itemId"`
 	BatchNum               common.BatchNum        `json:"batchNum"`
 	AccountIdx             string                 `json:"accountIndex"`
+	BJJ                    apitypes.HezBJJ        `json:"bjj"`
+	EthAddr                apitypes.HezEthAddr    `json:"hezEthereumAddress"`
 	MerkleProof            testCVP                `json:"merkleProof"`
 	Balance                string                 `json:"balance"`
 	InstantWithdrawn       *int64                 `json:"instantWithdrawn"`
@@ -63,9 +66,12 @@ func genTestExits(
 		for i := 0; i < len(exit.MerkleProof.Siblings); i++ {
 			siblings = append(siblings, exit.MerkleProof.Siblings[i].String())
 		}
+		acc := getAccountByIdx(exit.AccountIdx, accs)
 		allExits = append(allExits, testExit{
 			BatchNum:   exit.BatchNum,
 			AccountIdx: idxToHez(exit.AccountIdx, token.Symbol),
+			BJJ:        apitypes.NewHezBJJ(acc.PublicKey),
+			EthAddr:    apitypes.NewHezEthAddr(acc.EthAddr),
 			MerkleProof: testCVP{
 				Root:     exit.MerkleProof.Root.String(),
 				Siblings: siblings,

@@ -168,6 +168,8 @@ type ExitAPI struct {
 	ItemID                 uint64                          `meddler:"item_id"`
 	BatchNum               common.BatchNum                 `meddler:"batch_num"`
 	AccountIdx             apitypes.HezIdx                 `meddler:"account_idx"`
+	EthAddr                *apitypes.HezEthAddr            `meddler:"eth_addr"`
+	BJJ                    *apitypes.HezBJJ                `meddler:"bjj"`
 	MerkleProof            *merkletree.CircomVerifierProof `meddler:"merkle_proof,json"`
 	Balance                apitypes.BigIntStr              `meddler:"balance"`
 	InstantWithdrawn       *int64                          `meddler:"instant_withdrawn"`
@@ -179,7 +181,7 @@ type ExitAPI struct {
 	TokenID                common.TokenID                  `meddler:"token_id"`
 	TokenItemID            uint64                          `meddler:"token_item_id"`
 	TokenEthBlockNum       int64                           `meddler:"token_block"`
-	TokenEthAddr           ethCommon.Address               `meddler:"eth_addr"`
+	TokenEthAddr           ethCommon.Address               `meddler:"token_eth_addr"`
 	TokenName              string                          `meddler:"name"`
 	TokenSymbol            string                          `meddler:"symbol"`
 	TokenDecimals          uint64                          `meddler:"decimals"`
@@ -194,6 +196,8 @@ func (e ExitAPI) MarshalJSON() ([]byte, error) {
 		"itemId":                 e.ItemID,
 		"batchNum":               e.BatchNum,
 		"accountIndex":           e.AccountIdx,
+		"bjj":                    e.BJJ,
+		"hezEthereumAddress":     e.EthAddr,
 		"merkleProof":            e.MerkleProof,
 		"balance":                e.Balance,
 		"instantWithdrawn":       e.InstantWithdrawn,
