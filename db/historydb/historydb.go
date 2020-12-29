@@ -82,7 +82,7 @@ func (hdb *HistoryDB) GetAllBlocks() ([]common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
 		hdb.db, &blocks,
-		"SELECT * FROM block;",
+		"SELECT * FROM block ORDER BY eth_block_num;",
 	)
 	return db.SlicePtrsToSlice(blocks).([]common.Block), tracerr.Wrap(err)
 }
@@ -92,7 +92,7 @@ func (hdb *HistoryDB) GetBlocks(from, to int64) ([]common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
 		hdb.db, &blocks,
-		"SELECT * FROM block WHERE $1 <= eth_block_num AND eth_block_num < $2;",
+		"SELECT * FROM block WHERE $1 <= eth_block_num AND eth_block_num < $2 ORDER BY eth_block_num;",
 		from, to,
 	)
 	return db.SlicePtrsToSlice(blocks).([]common.Block), tracerr.Wrap(err)
@@ -277,7 +277,8 @@ func (hdb *HistoryDB) GetAllBatches() ([]common.Batch, error) {
 		hdb.db, &batches,
 		`SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr, batch.fees_collected,
 		 batch.fee_idxs_coordinator, batch.state_root, batch.num_accounts, batch.last_idx, batch.exit_root,
-		 batch.forge_l1_txs_num, batch.slot_num, batch.total_fees_usd FROM batch;`,
+		 batch.forge_l1_txs_num, batch.slot_num, batch.total_fees_usd FROM batch
+		 ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(batches).([]common.Batch), tracerr.Wrap(err)
 }
@@ -287,7 +288,7 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, erro
 	var batches []*common.Batch
 	err := meddler.QueryAll(
 		hdb.db, &batches,
-		"SELECT * FROM batch WHERE $1 <= batch_num AND batch_num < $2;",
+		"SELECT * FROM batch WHERE $1 <= batch_num AND batch_num < $2 ORDER BY batch_num;",
 		from, to,
 	)
 	return db.SlicePtrsToSlice(batches).([]common.Batch), tracerr.Wrap(err)
@@ -360,7 +361,8 @@ func (hdb *HistoryDB) GetAllBids() ([]common.Bid, error) {
 	var bids []*common.Bid
 	err := meddler.QueryAll(
 		hdb.db, &bids,
-		`SELECT bid.slot_num, bid.bid_value, bid.eth_block_num, bid.bidder_addr FROM bid;`,
+		`SELECT bid.slot_num, bid.bid_value, bid.eth_block_num, bid.bidder_addr FROM bid
+		ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(bids).([]common.Bid), tracerr.Wrap(err)
 }
@@ -805,6 +807,9 @@ func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error {
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
 // EffectiveAmount and EffectiveDepositAmount are seted with default values by the DB.
 func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
+	if len(l1txs) == 0 {
+		return nil
+	}
 	txs := []txWrite{}
 	for i := 0; i < len(l1txs); i++ {
 		af := new(big.Float).SetInt(l1txs[i].Amount)
@@ -1063,7 +1068,7 @@ func (hdb *HistoryDB) GetAllExits() ([]common.ExitInfo, error) {
 		hdb.db, &exits,
 		`SELECT exit_tree.batch_num, exit_tree.account_idx, exit_tree.merkle_proof,
 		exit_tree.balance, exit_tree.instant_withdrawn, exit_tree.delayed_withdraw_request,
-		exit_tree.delayed_withdrawn FROM exit_tree;`,
+		exit_tree.delayed_withdrawn FROM exit_tree ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(exits).([]common.ExitInfo), tracerr.Wrap(err)
 }
@@ -1207,7 +1212,7 @@ func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 		tx.amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.amount_success THEN tx.amount ELSE '\x' END) AS effective_amount,
 		tx.deposit_amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.deposit_amount_success THEN tx.deposit_amount ELSE '\x' END) AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
-		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE;`,
+		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), tracerr.Wrap(err)
 }
@@ -1224,7 +1229,7 @@ func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
 		tx.amount, tx.amount AS effective_amount,
 		tx.deposit_amount, tx.deposit_amount AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
-		FROM tx WHERE is_l1 = TRUE AND user_origin = FALSE;`,
+		FROM tx WHERE is_l1 = TRUE AND user_origin = FALSE ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), tracerr.Wrap(err)
 }
@@ -1237,7 +1242,7 @@ func (hdb *HistoryDB) GetAllL2Txs() ([]common.L2Tx, error) {
 		`SELECT tx.id, tx.batch_num, tx.position,
 		tx.from_idx, tx.to_idx, tx.amount, tx.fee, tx.nonce,
 		tx.type, tx.eth_block_num
-		FROM tx WHERE is_l1 = FALSE;`,
+		FROM tx WHERE is_l1 = FALSE ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L2Tx), tracerr.Wrap(err)
 }
@@ -1325,7 +1330,7 @@ func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
 	var bucketUpdates []*common.BucketUpdate
 	err := meddler.QueryAll(
 		hdb.db, &bucketUpdates,
-		"SELECT * FROM bucket_update;",
+		"SELECT * FROM bucket_update ORDER BY item_id;",
 	)
 	return db.SlicePtrsToSlice(bucketUpdates).([]common.BucketUpdate), tracerr.Wrap(err)
 }
@@ -1350,7 +1355,7 @@ func (hdb *HistoryDB) GetAllTokenExchanges() ([]common.TokenExchange, error) {
 	var tokenExchanges []*common.TokenExchange
 	err := meddler.QueryAll(
 		hdb.db, &tokenExchanges,
-		"SELECT * FROM token_exchange;",
+		"SELECT * FROM token_exchange ORDER BY item_id;",
 	)
 	return db.SlicePtrsToSlice(tokenExchanges).([]common.TokenExchange), tracerr.Wrap(err)
 }
@@ -1378,7 +1383,7 @@ func (hdb *HistoryDB) GetAllEscapeHatchWithdrawals() ([]common.WDelayerEscapeHat
 	var escapeHatchWithdrawals []*common.WDelayerEscapeHatchWithdrawal
 	err := meddler.QueryAll(
 		hdb.db, &escapeHatchWithdrawals,
-		"SELECT * FROM escape_hatch_withdrawal;",
+		"SELECT * FROM escape_hatch_withdrawal ORDER BY item_id;",
 	)
 	return db.SlicePtrsToSlice(escapeHatchWithdrawals).([]common.WDelayerEscapeHatchWithdrawal),
 		tracerr.Wrap(err)

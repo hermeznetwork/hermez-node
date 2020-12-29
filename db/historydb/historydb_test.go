@@ -2,6 +2,7 @@ package historydb
 
 import (
 	"database/sql"
+	"fmt"
 	"math"
 	"math/big"
 	"os"
@@ -1113,6 +1114,106 @@ func TestGetFirstBatchBlockNumBySlot(t *testing.T) {
 	bn2, err := historyDB.GetFirstBatchBlockNumBySlot(2)
 	require.NoError(t, err)
 	assert.Equal(t, int64(10), bn2)
+}
+
+func TestTxItemID(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+	testUsersLen := 10
+	var set []til.Instruction
+	for user := 0; user < testUsersLen; user++ {
+		set = append(set, til.Instruction{
+			Typ:           common.TxTypeCreateAccountDeposit,
+			TokenID:       common.TokenID(0),
+			DepositAmount: big.NewInt(1000000),
+			Amount:        big.NewInt(0),
+			From:          fmt.Sprintf("User%02d", user),
+		})
+		set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	}
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	for user := 0; user < testUsersLen; user++ {
+		set = append(set, til.Instruction{
+			Typ:           common.TxTypeDeposit,
+			TokenID:       common.TokenID(0),
+			DepositAmount: big.NewInt(100000),
+			Amount:        big.NewInt(0),
+			From:          fmt.Sprintf("User%02d", user),
+		})
+		set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	}
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	for user := 0; user < testUsersLen; user++ {
+		set = append(set, til.Instruction{
+			Typ:           common.TxTypeDepositTransfer,
+			TokenID:       common.TokenID(0),
+			DepositAmount: big.NewInt(10000 * int64(user+1)),
+			Amount:        big.NewInt(1000 * int64(user+1)),
+			From:          fmt.Sprintf("User%02d", user),
+			To:            fmt.Sprintf("User%02d", (user+1)%testUsersLen),
+		})
+		set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	}
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	for user := 0; user < testUsersLen; user++ {
+		set = append(set, til.Instruction{
+			Typ:           common.TxTypeForceTransfer,
+			TokenID:       common.TokenID(0),
+			Amount:        big.NewInt(100 * int64(user+1)),
+			DepositAmount: big.NewInt(0),
+			From:          fmt.Sprintf("User%02d", user),
+			To:            fmt.Sprintf("User%02d", (user+1)%testUsersLen),
+		})
+		set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	}
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	for user := 0; user < testUsersLen; user++ {
+		set = append(set, til.Instruction{
+			Typ:           common.TxTypeForceExit,
+			TokenID:       common.TokenID(0),
+			Amount:        big.NewInt(10 * int64(user+1)),
+			DepositAmount: big.NewInt(0),
+			From:          fmt.Sprintf("User%02d", user),
+		})
+		set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	}
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	var chainID uint16 = 0
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocksFromInstructions(set)
+	assert.NoError(t, err)
+
+	tilCfgExtra := til.ConfigExtra{
+		CoordUser: "A",
+	}
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	require.NoError(t, err)
+
+	// Add all blocks
+	for i := range blocks {
+		err = historyDB.AddBlockSCData(&blocks[i])
+		require.NoError(t, err)
+	}
+
+	txs, err := historyDB.GetAllL1UserTxs()
+	require.NoError(t, err)
+	position := 0
+	for _, tx := range txs {
+		if tx.Position == 0 {
+			position = 0
+		}
+		assert.Equal(t, position, tx.Position)
+		position++
+	}
 }
 
 // setTestBlocks WARNING: this will delete the blocks and recreate them
