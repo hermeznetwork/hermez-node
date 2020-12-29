@@ -114,10 +114,10 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 
 	if tp.s.Typ == statedb.TypeBatchBuilder {
 		tp.zki = common.NewZKInputs(tp.config.ChainID, tp.config.MaxTx, tp.config.MaxL1Tx,
-			tp.config.MaxFeeTx, tp.config.NLevels, tp.s.CurrentBatch.BigInt())
-		tp.zki.OldLastIdx = tp.s.CurrentIdx.BigInt()
+			tp.config.MaxFeeTx, tp.config.NLevels, tp.s.CurrentBatch().BigInt())
+		tp.zki.OldLastIdx = tp.s.CurrentIdx().BigInt()
 		tp.zki.OldStateRoot = tp.s.MT.Root().BigInt()
-		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx
+		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx()
 	}
 
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
@@ -169,7 +169,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			tp.zki.Metadata.L1TxsDataAvailability =
 				append(tp.zki.Metadata.L1TxsDataAvailability, l1TxDataAvailability)
 
-			tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx.BigInt()
+			tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx().BigInt()
 			tp.zki.ISStateRoot[tp.i] = tp.s.MT.Root().BigInt()
 			if exitIdx == nil {
 				tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
@@ -214,7 +214,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			tp.zki.Metadata.L1TxsDataAvailability =
 				append(tp.zki.Metadata.L1TxsDataAvailability, l1TxDataAvailability)
 
-			tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx.BigInt()
+			tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx().BigInt()
 			tp.zki.ISStateRoot[tp.i] = tp.s.MT.Root().BigInt()
 			tp.i++
 		}
@@ -268,7 +268,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 
 			// Intermediate States
 			if tp.i < nTx-1 {
-				tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx.BigInt()
+				tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx().BigInt()
 				tp.zki.ISStateRoot[tp.i] = tp.s.MT.Root().BigInt()
 				tp.zki.ISAccFeeOut[tp.i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens)
 				if exitIdx == nil {
@@ -296,7 +296,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 		for i := last; i < int(tp.config.MaxTx); i++ {
 			if i < int(tp.config.MaxTx)-1 {
-				tp.zki.ISOutIdx[i] = tp.s.CurrentIdx.BigInt()
+				tp.zki.ISOutIdx[i] = tp.s.CurrentIdx().BigInt()
 				tp.zki.ISStateRoot[i] = tp.s.MT.Root().BigInt()
 				tp.zki.ISAccFeeOut[i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens)
 				tp.zki.ISExitRoot[i] = exitTree.Root().BigInt()
@@ -541,7 +541,7 @@ func (tp *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L
 		(tx.Type == common.TxTypeCreateAccountDeposit ||
 			tx.Type == common.TxTypeCreateAccountDepositTransfer) {
 		var err error
-		createdAccount, err = tp.s.GetAccount(tp.s.CurrentIdx)
+		createdAccount, err = tp.s.GetAccount(tp.s.CurrentIdx())
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, nil, tracerr.Wrap(err)
@@ -664,7 +664,7 @@ func (tp *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 		EthAddr:   tx.FromEthAddr,
 	}
 
-	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx+1), account)
+	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx()+1), account)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -685,9 +685,9 @@ func (tp *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 		tp.zki.OldKey1[tp.i] = p.OldKey.BigInt()
 		tp.zki.OldValue1[tp.i] = p.OldValue.BigInt()
 
-		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx + 1
+		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx() + 1
 
-		tp.zki.AuxFromIdx[tp.i] = common.Idx(tp.s.CurrentIdx + 1).BigInt()
+		tp.zki.AuxFromIdx[tp.i] = common.Idx(tp.s.CurrentIdx() + 1).BigInt()
 		tp.zki.NewAccount[tp.i] = big.NewInt(1)
 
 		if tp.i < len(tp.zki.ISOnChain) { // len(tp.zki.ISOnChain) == nTx
@@ -696,7 +696,7 @@ func (tp *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 		}
 	}
 
-	return tp.s.SetIdx(tp.s.CurrentIdx + 1)
+	return tp.s.SetCurrentIdx(tp.s.CurrentIdx() + 1)
 }
 
 // applyDeposit updates the balance in the account of the depositer, if
@@ -894,7 +894,7 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 // applyCreateAccountDepositTransfer, in a single tx, creates a new account,
 // makes a deposit, and performs a transfer to another account
 func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
-	auxFromIdx := common.Idx(tp.s.CurrentIdx + 1)
+	auxFromIdx := common.Idx(tp.s.CurrentIdx() + 1)
 	accSender := &common.Account{
 		TokenID:   tx.TokenID,
 		Nonce:     0,
@@ -920,7 +920,7 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
 
 	// create Account of the Sender
-	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx+1), accSender)
+	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx()+1), accSender)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -932,7 +932,7 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 		tp.zki.OldKey1[tp.i] = p.OldKey.BigInt()
 		tp.zki.OldValue1[tp.i] = p.OldValue.BigInt()
 
-		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx + 1
+		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx() + 1
 
 		tp.zki.AuxFromIdx[tp.i] = auxFromIdx.BigInt()
 		tp.zki.NewAccount[tp.i] = big.NewInt(1)
@@ -976,7 +976,7 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 		tp.zki.Siblings2[tp.i] = siblingsToZKInputFormat(p.Siblings)
 	}
 
-	return tp.s.SetIdx(tp.s.CurrentIdx + 1)
+	return tp.s.SetCurrentIdx(tp.s.CurrentIdx() + 1)
 }
 
 // It returns the ExitAccount and a boolean determining if the Exit created a

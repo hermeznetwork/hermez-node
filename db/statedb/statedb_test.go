@@ -55,13 +55,13 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	v1 := []byte("testvalue1")
 
 	// store some data
-	tx, err := sdb.db.NewTx()
+	tx, err := sdb.db.DB().NewTx()
 	assert.NoError(t, err)
 	err = tx.Put(k0, v0)
 	assert.NoError(t, err)
 	err = tx.Commit()
 	assert.NoError(t, err)
-	v, err := sdb.db.Get(k0)
+	v, err := sdb.db.DB().Get(k0)
 	assert.NoError(t, err)
 	assert.Equal(t, v0, v)
 
@@ -69,41 +69,41 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	// executing a Reset (discarding the last 'testkey0'&'testvalue0' data)
 	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
 	assert.NoError(t, err)
-	v, err = sdb.db.Get(k0)
+	v, err = sdb.db.DB().Get(k0)
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 	assert.Nil(t, v)
 
 	// store the same data from the beginning that has ben lost since last NewStateDB
-	tx, err = sdb.db.NewTx()
+	tx, err = sdb.db.DB().NewTx()
 	assert.NoError(t, err)
 	err = tx.Put(k0, v0)
 	assert.NoError(t, err)
 	err = tx.Commit()
 	assert.NoError(t, err)
-	v, err = sdb.db.Get(k0)
+	v, err = sdb.db.DB().Get(k0)
 	assert.NoError(t, err)
 	assert.Equal(t, v0, v)
 
 	// make checkpoints with the current state
-	bn, err := sdb.GetCurrentBatch()
+	bn, err := sdb.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(0), bn)
-	err = sdb.MakeCheckpoint()
+	err = sdb.db.MakeCheckpoint()
 	assert.NoError(t, err)
-	bn, err = sdb.GetCurrentBatch()
+	bn, err = sdb.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(1), bn)
 
 	// write more data
-	tx, err = sdb.db.NewTx()
+	tx, err = sdb.db.DB().NewTx()
 	assert.NoError(t, err)
 	err = tx.Put(k1, v1)
 	assert.NoError(t, err)
 	err = tx.Commit()
 	assert.NoError(t, err)
 
-	v, err = sdb.db.Get(k1)
+	v, err = sdb.db.DB().Get(k1)
 	assert.NoError(t, err)
 	assert.Equal(t, v1, v)
 
@@ -112,11 +112,11 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
 	assert.NoError(t, err)
 
-	v, err = sdb.db.Get(k0)
+	v, err = sdb.db.DB().Get(k0)
 	assert.NoError(t, err)
 	assert.Equal(t, v0, v)
 
-	v, err = sdb.db.Get(k1)
+	v, err = sdb.db.DB().Get(k1)
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 	assert.Nil(t, v)
@@ -228,6 +228,8 @@ func TestStateDBWithMT(t *testing.T) {
 	assert.Equal(t, accounts[0].Nonce, a.Nonce)
 }
 
+// TestCheckpoints performs almost the same test than kvdb/kvdb_test.go
+// TestCheckpoints, but over the StateDB
 func TestCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "sdb")
 	require.NoError(t, err)
@@ -249,17 +251,17 @@ func TestCheckpoints(t *testing.T) {
 	}
 
 	// do checkpoints and check that currentBatch is correct
-	err = sdb.MakeCheckpoint()
+	err = sdb.db.MakeCheckpoint()
 	assert.NoError(t, err)
-	cb, err := sdb.GetCurrentBatch()
+	cb, err := sdb.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(1), cb)
 
 	for i := 1; i < 10; i++ {
-		err = sdb.MakeCheckpoint()
+		err = sdb.db.MakeCheckpoint()
 		assert.NoError(t, err)
 
-		cb, err = sdb.GetCurrentBatch()
+		cb, err = sdb.db.GetCurrentBatch()
 		assert.NoError(t, err)
 		assert.Equal(t, common.BatchNum(i+1), cb)
 	}
@@ -276,24 +278,24 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	// check that currentBatch is as expected after Reset
-	cb, err = sdb.GetCurrentBatch()
+	cb, err = sdb.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(3), cb)
 
 	// advance one checkpoint and check that currentBatch is fine
-	err = sdb.MakeCheckpoint()
+	err = sdb.db.MakeCheckpoint()
 	assert.NoError(t, err)
-	cb, err = sdb.GetCurrentBatch()
+	cb, err = sdb.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 
-	err = sdb.DeleteCheckpoint(common.BatchNum(1))
+	err = sdb.db.DeleteCheckpoint(common.BatchNum(1))
 	assert.NoError(t, err)
-	err = sdb.DeleteCheckpoint(common.BatchNum(2))
+	err = sdb.db.DeleteCheckpoint(common.BatchNum(2))
 	assert.NoError(t, err)
-	err = sdb.DeleteCheckpoint(common.BatchNum(1)) // does not exist, should return err
+	err = sdb.db.DeleteCheckpoint(common.BatchNum(1)) // does not exist, should return err
 	assert.NotNil(t, err)
-	err = sdb.DeleteCheckpoint(common.BatchNum(2)) // does not exist, should return err
+	err = sdb.db.DeleteCheckpoint(common.BatchNum(2)) // does not exist, should return err
 	assert.NotNil(t, err)
 
 	// Create a LocalStateDB from the initial StateDB
@@ -307,13 +309,13 @@ func TestCheckpoints(t *testing.T) {
 	err = ldb.Reset(4, true)
 	assert.NoError(t, err)
 	// check that currentBatch is 4 after the Reset
-	cb, err = ldb.GetCurrentBatch()
+	cb, err = ldb.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb
-	err = ldb.MakeCheckpoint()
+	err = ldb.db.MakeCheckpoint()
 	assert.NoError(t, err)
-	cb, err = ldb.GetCurrentBatch()
+	cb, err = ldb.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(5), cb)
 
@@ -328,13 +330,13 @@ func TestCheckpoints(t *testing.T) {
 	err = ldb2.Reset(4, true)
 	assert.NoError(t, err)
 	// check that currentBatch is 4 after the Reset
-	cb, err = ldb2.GetCurrentBatch()
+	cb, err = ldb2.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb2
-	err = ldb2.MakeCheckpoint()
+	err = ldb2.db.MakeCheckpoint()
 	assert.NoError(t, err)
-	cb, err = ldb2.GetCurrentBatch()
+	cb, err = ldb2.db.GetCurrentBatch()
 	assert.NoError(t, err)
 	assert.Equal(t, common.BatchNum(5), cb)
 
@@ -464,6 +466,8 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	assert.Equal(t, "17298264051379321456969039521810887093935433569451713402227686942080129181291", sdb.MT.Root().BigInt().String())
 }
 
+// TestListCheckpoints performs almost the same test than kvdb/kvdb_test.go
+// TestListCheckpoints, but over the StateDB
 func TestListCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
@@ -475,10 +479,10 @@ func TestListCheckpoints(t *testing.T) {
 	numCheckpoints := 16
 	// do checkpoints
 	for i := 0; i < numCheckpoints; i++ {
-		err = sdb.MakeCheckpoint()
+		err = sdb.db.MakeCheckpoint()
 		require.NoError(t, err)
 	}
-	list, err := sdb.listCheckpoints()
+	list, err := sdb.db.ListCheckpoints()
 	require.NoError(t, err)
 	assert.Equal(t, numCheckpoints, len(list))
 	assert.Equal(t, 1, list[0])
@@ -487,13 +491,15 @@ func TestListCheckpoints(t *testing.T) {
 	numReset := 10
 	err = sdb.Reset(common.BatchNum(numReset))
 	require.NoError(t, err)
-	list, err = sdb.listCheckpoints()
+	list, err = sdb.db.ListCheckpoints()
 	require.NoError(t, err)
 	assert.Equal(t, numReset, len(list))
 	assert.Equal(t, 1, list[0])
 	assert.Equal(t, numReset, list[len(list)-1])
 }
 
+// TestDeleteOldCheckpoints performs almost the same test than
+// kvdb/kvdb_test.go TestDeleteOldCheckpoints, but over the StateDB
 func TestDeleteOldCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
@@ -507,9 +513,9 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	// do checkpoints and check that we never have more than `keep`
 	// checkpoints
 	for i := 0; i < numCheckpoints; i++ {
-		err = sdb.MakeCheckpoint()
+		err = sdb.db.MakeCheckpoint()
 		require.NoError(t, err)
-		checkpoints, err := sdb.listCheckpoints()
+		checkpoints, err := sdb.db.ListCheckpoints()
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(checkpoints), keep)
 	}

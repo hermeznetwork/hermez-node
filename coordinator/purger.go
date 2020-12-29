@@ -123,7 +123,7 @@ func poolMarkInvalidOldNonces(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 		return tracerr.Wrap(err)
 	}
 	idxsNonce := make([]common.IdxNonce, len(idxs))
-	lastIdx, err := stateDB.GetIdx()
+	lastIdx, err := stateDB.GetCurrentIdx()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
