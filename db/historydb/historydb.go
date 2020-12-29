@@ -1079,10 +1079,11 @@ func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, err
 	err := meddler.QueryRow(
 		hdb.db, exit, `SELECT exit_tree.item_id, exit_tree.batch_num,
 		hez_idx(exit_tree.account_idx, token.symbol) AS account_idx,
+		account.bjj, account.eth_addr,
 		exit_tree.merkle_proof, exit_tree.balance, exit_tree.instant_withdrawn,
 		exit_tree.delayed_withdraw_request, exit_tree.delayed_withdrawn,
 		token.token_id, token.item_id AS token_item_id, 
-		token.eth_block_num AS token_block, token.eth_addr, token.name, token.symbol, 
+		token.eth_block_num AS token_block, token.eth_addr AS token_eth_addr, token.name, token.symbol, 
 		token.decimals, token.usd, token.usd_update
 		FROM exit_tree INNER JOIN account ON exit_tree.account_idx = account.idx 
 		INNER JOIN token ON account.token_id = token.token_id 
@@ -1104,10 +1105,11 @@ func (hdb *HistoryDB) GetExitsAPI(
 	var args []interface{}
 	queryStr := `SELECT exit_tree.item_id, exit_tree.batch_num,
 	hez_idx(exit_tree.account_idx, token.symbol) AS account_idx,
+	account.bjj, account.eth_addr,
 	exit_tree.merkle_proof, exit_tree.balance, exit_tree.instant_withdrawn,
 	exit_tree.delayed_withdraw_request, exit_tree.delayed_withdrawn,
 	token.token_id, token.item_id AS token_item_id,
-	token.eth_block_num AS token_block, token.eth_addr, token.name, token.symbol,
+	token.eth_block_num AS token_block, token.eth_addr AS token_eth_addr, token.name, token.symbol,
 	token.decimals, token.usd, token.usd_update, COUNT(*) OVER() AS total_items
 	FROM exit_tree INNER JOIN account ON exit_tree.account_idx = account.idx 
 	INNER JOIN token ON account.token_id = token.token_id `
