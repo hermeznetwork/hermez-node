@@ -119,7 +119,7 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 	// currentSlot and lastClosedSlot included
 	limit := uint(lastClosedSlot - currentSlot + 1)
 	bids, _, err := a.h.GetBestBidsAPI(&currentSlot, &lastClosedSlot, nil, &limit, "ASC")
-	if err != nil {
+	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		return nil, tracerr.Wrap(err)
 	}
 	nextForgers := []NextForger{}
