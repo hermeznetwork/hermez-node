@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 
+	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/config"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/node"
@@ -15,18 +18,41 @@ import (
 const (
 	flagCfg   = "cfg"
 	flagMode  = "mode"
+	flagSK    = "privatekey"
 	modeSync  = "sync"
 	modeCoord = "coord"
 )
 
-func cmdInit(c *cli.Context) error {
-	log.Info("Init")
-	cfg, err := parseCli(c)
+func cmdImportKey(c *cli.Context) error {
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	if _cfg.mode != node.ModeCoordinator {
+		return tracerr.Wrap(fmt.Errorf("importkey must use mode coordinator"))
+	}
+	cfg := _cfg.node
+
+	scryptN := ethKeystore.StandardScryptN
+	scryptP := ethKeystore.StandardScryptP
+	if cfg.Coordinator.Debug.LightScrypt {
+		scryptN = ethKeystore.LightScryptN
+		scryptP = ethKeystore.LightScryptP
+	}
+	keyStore := ethKeystore.NewKeyStore(cfg.Coordinator.EthClient.Keystore.Path,
+		scryptN, scryptP)
+	hexKey := c.String(flagSK)
+	hexKey = strings.TrimPrefix(hexKey, "0x")
+	sk, err := crypto.HexToECDSA(hexKey)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	fmt.Println("TODO", cfg)
-	return tracerr.Wrap(err)
+	acc, err := keyStore.ImportECDSA(sk, cfg.Coordinator.EthClient.Keystore.Password)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Infow("Imported private key", "addr", acc.Address.Hex())
+	return nil
 }
 
 func cmdRun(c *cli.Context) error {
@@ -122,10 +148,16 @@ func main() {
 
 	app.Commands = []*cli.Command{
 		{
-			Name:    "init",
+			Name:    "importkey",
 			Aliases: []string{},
-			Usage:   "Initialize the hermez-node",
-			Action:  cmdInit,
+			Usage:   "Import ethereum private key",
+			Action:  cmdImportKey,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     flagSK,
+					Usage:    "ethereum `PRIVATE_KEY` in hex",
+					Required: true,
+				}},
 		},
 		{
 			Name:    "run",

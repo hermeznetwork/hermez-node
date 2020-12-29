@@ -83,6 +83,10 @@ type Coordinator struct {
 		// AttemptsDelay is delay between attempts do do an eth client
 		// RPC call
 		AttemptsDelay Duration `validate:"required"`
+		Keystore      struct {
+			Path     string `validate:"required"`
+			Password string `validate:"required"`
+		} `validate:"required"`
 	} `validate:"required"`
 	API struct {
 		Coordinator bool
@@ -91,6 +95,9 @@ type Coordinator struct {
 		// BatchPath if set, specifies the path where batchInfo is stored
 		// in JSON in every step/update of the pipeline
 		BatchPath string
+		// LightScrypt if set, uses light parameters for the ethereum
+		// keystore encryption algorithm.
+		LightScrypt bool
 	}
 }
 
