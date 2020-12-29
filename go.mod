@@ -13,7 +13,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/hermeznetwork/tracerr v0.3.1-0.20201126162137-de9930d0cf29
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20201221160344-58e589b6eb4c
-	github.com/iden3/go-merkletree v0.0.0-20201218120219-8f3905f15f89
+	github.com/iden3/go-merkletree v0.0.0-20201230093451-4280a9914f51
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0

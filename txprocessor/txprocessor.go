@@ -372,10 +372,11 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		exitAccount := exits[i].acc
 
 		// 0. generate MerkleProof
-		p, err := exitTree.GenerateCircomVerifierProof(exitIdx.BigInt(), nil)
+		p, err := exitTree.GenerateSCVerifierProof(exitIdx.BigInt(), nil)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+
 		// 1. generate common.ExitInfo
 		ei := common.ExitInfo{
 			AccountIdx:  exitIdx,

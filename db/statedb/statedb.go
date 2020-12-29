@@ -328,7 +328,11 @@ func (s *StateDB) MTGetProof(idx common.Idx) (*merkletree.CircomVerifierProof, e
 	if s.MT == nil {
 		return nil, tracerr.Wrap(ErrStateDBWithoutMT)
 	}
-	return s.MT.GenerateCircomVerifierProof(idx.BigInt(), s.MT.Root())
+	p, err := s.MT.GenerateSCVerifierProof(idx.BigInt(), s.MT.Root())
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return p, nil
 }
 
 // MTGetRoot returns the current root of the underlying Merkle Tree
