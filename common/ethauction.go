@@ -62,7 +62,7 @@ type AuctionVariables struct {
 	// The minimum bid value in a series of 6 slots
 	DefaultSlotSetBid [6]*big.Int `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
 	// SlotNum at which the new default_slot_set_bid applies
-	DefaultSlotSetBidSlotNum int64 `json:"-" meddler:"default_slot_set_bid_slot_num"`
+	DefaultSlotSetBidSlotNum int64 `json:"defaultSlotSetBidSlotNum" meddler:"default_slot_set_bid_slot_num"`
 	// Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
 	ClosedAuctionSlots uint16 `json:"closedAuctionSlots" meddler:"closed_auction_slots" validate:"required"`
 	// Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )

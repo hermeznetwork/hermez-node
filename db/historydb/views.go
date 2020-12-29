@@ -331,3 +331,9 @@ type BidAPI struct {
 	FirstItem   uint64             `json:"-" meddler:"first_item"`
 	LastItem    uint64             `json:"-" meddler:"last_item"`
 }
+
+// MinBidInfo gives information of the minum bid for specific slot(s)
+type MinBidInfo struct {
+	DefaultSlotSetBid        [6]*big.Int `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
+	DefaultSlotSetBidSlotNum int64       `json:"-" meddler:"default_slot_set_bid_slot_num"`
+}

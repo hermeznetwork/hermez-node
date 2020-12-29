@@ -177,6 +177,7 @@ type testCommon struct {
 	auctionVars      common.AuctionVariables
 	rollupVars       common.RollupVariables
 	wdelayerVars     common.WDelayerVariables
+	nextForgers      []NextForger
 }
 
 var tc testCommon
@@ -218,7 +219,6 @@ func TestMain(m *testing.M) {
 	// L2DB
 	l2DB := l2db.NewL2DB(database, 10, 100, 24*time.Hour)
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
-
 	// Config (smart contract constants)
 	chainID := uint16(0)
 	_config := getConfigTest(chainID)
@@ -357,26 +357,128 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	// Generate Bids and add them to HistoryDB
-	const nBids = 20
-	commonBids := test.GenBids(nBids, commonBlocks, commonCoords)
-	if err = api.h.AddBids(commonBids); err != nil {
+	// Test next forgers
+	// Set auction vars
+	// Slots 3 and 6 will have bids that will be invalidated because of minBid update
+	// Slots 4 and 7 will have valid bids, the rest will be cordinator slots
+	var slot3MinBid int64 = 3
+	var slot4MinBid int64 = 4
+	var slot6MinBid int64 = 6
+	var slot7MinBid int64 = 7
+	// First update will indicate how things behave from slot 0
+	var defaultSlotSetBid [6]*big.Int = [6]*big.Int{
+		big.NewInt(10),          // Slot 0 min bid
+		big.NewInt(10),          // Slot 1 min bid
+		big.NewInt(10),          // Slot 2 min bid
+		big.NewInt(slot3MinBid), // Slot 3 min bid
+		big.NewInt(slot4MinBid), // Slot 4 min bid
+		big.NewInt(10),          // Slot 5 min bid
+	}
+	auctionVars := common.AuctionVariables{
+		EthBlockNum:              int64(2),
+		DonationAddress:          ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+		DefaultSlotSetBid:        defaultSlotSetBid,
+		DefaultSlotSetBidSlotNum: 0,
+		Outbidding:               uint16(1),
+		SlotDeadline:             uint8(20),
+		BootCoordinator:          ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+		BootCoordinatorURL:       "https://boot.coordinator.io",
+		ClosedAuctionSlots:       uint16(10),
+		OpenAuctionSlots:         uint16(20),
+	}
+	if err := api.h.AddAuctionVars(&auctionVars); err != nil {
+		panic(err)
+	}
+	// Last update in auction vars will indicate how things will behave from slot 5
+	defaultSlotSetBid = [6]*big.Int{
+		big.NewInt(10),          // Slot 5 min bid
+		big.NewInt(slot6MinBid), // Slot 6 min bid
+		big.NewInt(slot7MinBid), // Slot 7 min bid
+		big.NewInt(10),          // Slot 8 min bid
+		big.NewInt(10),          // Slot 9 min bid
+		big.NewInt(10),          // Slot 10 min bid
+	}
+	auctionVars = common.AuctionVariables{
+		EthBlockNum:              int64(3),
+		DonationAddress:          ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+		DefaultSlotSetBid:        defaultSlotSetBid,
+		DefaultSlotSetBidSlotNum: 5,
+		Outbidding:               uint16(1),
+		SlotDeadline:             uint8(20),
+		BootCoordinator:          ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
+		BootCoordinatorURL:       "https://boot.coordinator.io",
+		ClosedAuctionSlots:       uint16(10),
+		OpenAuctionSlots:         uint16(20),
+	}
+	if err := api.h.AddAuctionVars(&auctionVars); err != nil {
 		panic(err)
 	}
 
-	// Generate SC vars and add them to HistoryDB (if needed)
-	var defaultSlotSetBid [6]*big.Int = [6]*big.Int{big.NewInt(10), big.NewInt(10), big.NewInt(10), big.NewInt(10), big.NewInt(10), big.NewInt(10)}
-	auctionVars := common.AuctionVariables{
-		EthBlockNum:        int64(2),
-		DonationAddress:    ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
-		DefaultSlotSetBid:  defaultSlotSetBid,
-		Outbidding:         uint16(1),
-		SlotDeadline:       uint8(20),
-		BootCoordinator:    ethCommon.HexToAddress("0x1111111111111111111111111111111111111111"),
-		BootCoordinatorURL: "https://boot.coordinator.io",
-		ClosedAuctionSlots: uint16(2),
-		OpenAuctionSlots:   uint16(5),
+	// Generate Bids and add them to HistoryDB
+	bids := []common.Bid{}
+	// Slot 1 and 2, no bids, wins boot coordinator
+	// Slot 3, below what's going to be the minimum (wins boot coordinator)
+	bids = append(bids, common.Bid{
+		SlotNum:     3,
+		BidValue:    big.NewInt(slot3MinBid - 1),
+		EthBlockNum: commonBlocks[0].Num,
+		Bidder:      commonCoords[0].Bidder,
+	})
+	// Slot 4, valid bid (wins bidder)
+	bids = append(bids, common.Bid{
+		SlotNum:     4,
+		BidValue:    big.NewInt(slot4MinBid),
+		EthBlockNum: commonBlocks[0].Num,
+		Bidder:      commonCoords[0].Bidder,
+	})
+	// Slot 5 no bids, wins boot coordinator
+	// Slot 6, below what's going to be the minimum (wins boot coordinator)
+	bids = append(bids, common.Bid{
+		SlotNum:     6,
+		BidValue:    big.NewInt(slot6MinBid - 1),
+		EthBlockNum: commonBlocks[0].Num,
+		Bidder:      commonCoords[0].Bidder,
+	})
+	// Slot 7, valid bid (wins bidder)
+	bids = append(bids, common.Bid{
+		SlotNum:     7,
+		BidValue:    big.NewInt(slot7MinBid),
+		EthBlockNum: commonBlocks[0].Num,
+		Bidder:      commonCoords[0].Bidder,
+	})
+	if err = api.h.AddBids(bids); err != nil {
+		panic(err)
 	}
+	bootForger := NextForger{
+		Coordinator: historydb.CoordinatorAPI{
+			Bidder: ethCommon.HexToAddress("0x0111111111111111111111111111111111111111"),
+			Forger: ethCommon.HexToAddress("0x0111111111111111111111111111111111111111"),
+			URL:    "https://bootCoordinator",
+		},
+	}
+	// Set next forgers: set all as boot coordinator then replace the non boot coordinators
+	nextForgers := []NextForger{}
+	var initBlock int64 = 140
+	var deltaBlocks int64 = 40
+	for i := 1; i < int(auctionVars.ClosedAuctionSlots)+2; i++ {
+		fromBlock := initBlock + deltaBlocks*int64(i-1)
+		bootForger.Period = Period{
+			SlotNum:   int64(i),
+			FromBlock: fromBlock,
+			ToBlock:   fromBlock + deltaBlocks - 1,
+		}
+		nextForgers = append(nextForgers, bootForger)
+	}
+	// Set next forgers that aren't the boot coordinator
+	nonBootForger := historydb.CoordinatorAPI{
+		Bidder: commonCoords[0].Bidder,
+		Forger: commonCoords[0].Forger,
+		URL:    commonCoords[0].URL,
+	}
+	// Slot 4
+	nextForgers[3].Coordinator = nonBootForger
+	// Slot 7
+	nextForgers[6].Coordinator = nonBootForger
 
 	var buckets [common.RollupConstNumBuckets]common.BucketParams
 	for i := range buckets {
@@ -386,6 +488,7 @@ func TestMain(m *testing.M) {
 		buckets[i].MaxWithdrawals = big.NewInt(int64(i) * 10000)
 	}
 
+	// Generate SC vars and add them to HistoryDB (if needed)
 	rollupVars := common.RollupVariables{
 		EthBlockNum:           int64(3),
 		FeeAddToken:           big.NewInt(100),
@@ -399,14 +502,9 @@ func TestMain(m *testing.M) {
 		WithdrawalDelay: uint64(3000),
 	}
 
-	err = api.h.AddAuctionVars(&auctionVars)
-	if err != nil {
-		panic(err)
-	}
-
 	// Generate test data, as expected to be received/sended from/to the API
 	testCoords := genTestCoordinators(commonCoords)
-	testBids := genTestBids(commonBlocks, testCoords, commonBids)
+	testBids := genTestBids(commonBlocks, testCoords, bids)
 	testExits := genTestExits(commonExitTree, testTokens, commonAccounts)
 	testTxs := genTestTxs(commonL1Txs, commonL2Txs, commonAccounts, testTokens, commonBlocks)
 	testBatches, testFullBatches := genTestBatches(commonBlocks, commonBatches, testTxs)
@@ -434,8 +532,11 @@ func TestMain(m *testing.M) {
 		auctionVars:  auctionVars,
 		rollupVars:   rollupVars,
 		wdelayerVars: wdelayerVars,
+		nextForgers:  nextForgers,
 	}
 
+	// Run tests
+	result := m.Run()
 	// Fake server
 	if os.Getenv("FAKE_SERVER") == "yes" {
 		for {
@@ -443,8 +544,6 @@ func TestMain(m *testing.M) {
 			time.Sleep(30 * time.Second)
 		}
 	}
-	// Run tests
-	result := m.Run()
 	// Stop server
 	if err := server.Shutdown(context.Background()); err != nil {
 		panic(err)

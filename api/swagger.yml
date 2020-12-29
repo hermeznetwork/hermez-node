@@ -2714,6 +2714,9 @@ components:
           items:
             type: integer
           example: [32,0,68,21,55,99]
+        defaultSlotSetBidSlotNum:
+          type: integer
+          description: Slot in which the changes will be applied for the first time.
         outbidding:
           type: number
           description: Minimum outbid over the previous one to consider it valid.

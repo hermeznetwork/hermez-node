@@ -141,7 +141,7 @@ func TestGetBids(t *testing.T) {
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
 	// 404
-	path = fmt.Sprintf("%s?slotNum=%d&bidderAddr=%s", endpoint, tc.bids[0].SlotNum, tc.bids[1].Bidder.String())
+	path = fmt.Sprintf("%s?slotNum=%d&bidderAddr=%s", endpoint, 5, tc.bids[1].Bidder.String())
 	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }

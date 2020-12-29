@@ -1706,6 +1706,23 @@ func (hdb *HistoryDB) GetAuctionVars() (*common.AuctionVariables, error) {
 	return auctionVars, tracerr.Wrap(err)
 }
 
+// GetAuctionVarsUntilSetSlotNum returns all the updates of the auction vars
+// from the last entry in which DefaultSlotSetBidSlotNum <= slotNum
+func (hdb *HistoryDB) GetAuctionVarsUntilSetSlotNum(slotNum int64, maxItems int) ([]MinBidInfo, error) {
+	auctionVars := []*MinBidInfo{}
+	query := `
+		SELECT DISTINCT default_slot_set_bid, default_slot_set_bid_slot_num FROM auction_vars
+		WHERE default_slot_set_bid_slot_num < $1
+		ORDER BY default_slot_set_bid_slot_num DESC
+		LIMIT $2;
+	`
+	err := meddler.QueryAll(hdb.db, &auctionVars, query, slotNum, maxItems)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return db.SlicePtrsToSlice(auctionVars).([]MinBidInfo), nil
+}
+
 // GetAccountAPI returns an account by its index
 func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 	account := &AccountAPI{}
