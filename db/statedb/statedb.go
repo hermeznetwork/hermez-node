@@ -49,6 +49,8 @@ var (
 	PrefixKeyAddr = []byte("a:")
 	// PrefixKeyAddrBJJ is the key prefix for address-babyjubjub in the db
 	PrefixKeyAddrBJJ = []byte("ab:")
+	// keyidx is used as key in the db to store the current Idx
+	keyidx = []byte("k:idx")
 )
 
 const (
@@ -74,28 +76,21 @@ type TypeStateDB string
 
 // StateDB represents the StateDB object
 type StateDB struct {
-	path         string
-	currentBatch common.BatchNum
-	db           *pebble.PebbleStorage
-	mt           *merkletree.MerkleTree
-	typ          TypeStateDB
-	chainID      uint16
-	// idx holds the current Idx that the BatchBuilder is using
-	idx common.Idx
-	zki *common.ZKInputs
-	// i is the current transaction index in the ZKInputs generation (zki)
-	i int
-	// AccumulatedFees contains the accumulated fees for each token (Coord
-	// Idx) in the processed batch
-	AccumulatedFees map[common.Idx]*big.Int
-	keep            int
+	path string
+	Typ  TypeStateDB
+	// CurrentIdx holds the current Idx that the BatchBuilder is using
+	CurrentIdx   common.Idx
+	CurrentBatch common.BatchNum
+	db           *pebble.Storage
+	MT           *merkletree.MerkleTree
+	keep         int
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
 // storage.  Checkpoints older than the value defined by `keep` will be
 // deleted.
-func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int, chainID uint16) (*StateDB, error) {
-	var sto *pebble.PebbleStorage
+func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int) (*StateDB, error) {
+	var sto *pebble.Storage
 	var err error
 	sto, err = pebble.NewPebbleStorage(path.Join(pathDB, PathCurrent), false)
 	if err != nil {
@@ -114,22 +109,21 @@ func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int, chainID u
 	}
 
 	sdb := &StateDB{
-		path:    pathDB,
-		db:      sto,
-		mt:      mt,
-		typ:     typ,
-		chainID: chainID,
-		keep:    keep,
+		path: pathDB,
+		db:   sto,
+		MT:   mt,
+		Typ:  typ,
+		keep: keep,
 	}
 
 	// load currentBatch
-	sdb.currentBatch, err = sdb.GetCurrentBatch()
+	sdb.CurrentBatch, err = sdb.GetCurrentBatch()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 
 	// make reset (get checkpoint) at currentBatch
-	err = sdb.reset(sdb.currentBatch, false)
+	err = sdb.reset(sdb.CurrentBatch, false)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -137,8 +131,8 @@ func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int, chainID u
 	return sdb, nil
 }
 
-// DB returns the *pebble.PebbleStorage from the StateDB
-func (s *StateDB) DB() *pebble.PebbleStorage {
+// DB returns the *pebble.Storage from the StateDB
+func (s *StateDB) DB() *pebble.Storage {
 	return s.db
 }
 
@@ -160,7 +154,7 @@ func (s *StateDB) setCurrentBatch() error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	err = tx.Put(KeyCurrentBatch, s.currentBatch.Bytes())
+	err = tx.Put(KeyCurrentBatch, s.CurrentBatch.Bytes())
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -173,10 +167,10 @@ func (s *StateDB) setCurrentBatch() error {
 // MakeCheckpoint does a checkpoint at the given batchNum in the defined path. Internally this advances & stores the current BatchNum, and then stores a Checkpoint of the current state of the StateDB.
 func (s *StateDB) MakeCheckpoint() error {
 	// advance currentBatch
-	s.currentBatch++
-	log.Debugw("Making StateDB checkpoint", "batch", s.currentBatch, "type", s.typ)
+	s.CurrentBatch++
+	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch, "type", s.Typ)
 
-	checkpointPath := path.Join(s.path, fmt.Sprintf("%s%d", PathBatchNum, s.currentBatch))
+	checkpointPath := path.Join(s.path, fmt.Sprintf("%s%d", PathBatchNum, s.CurrentBatch))
 
 	if err := s.setCurrentBatch(); err != nil {
 		return tracerr.Wrap(err)
@@ -322,7 +316,7 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 		return tracerr.Wrap(err)
 	}
 	// remove all checkpoints > batchNum
-	for i := batchNum + 1; i <= s.currentBatch; i++ {
+	for i := batchNum + 1; i <= s.CurrentBatch; i++ {
 		if err := s.DeleteCheckpoint(i); err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -334,16 +328,16 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 			return tracerr.Wrap(err)
 		}
 		s.db = sto
-		s.idx = 255
-		s.currentBatch = batchNum
+		s.CurrentIdx = 255
+		s.CurrentBatch = batchNum
 
-		if s.mt != nil {
+		if s.MT != nil {
 			// open the MT for the current s.db
-			mt, err := merkletree.NewMerkleTree(s.db.WithPrefix(PrefixKeyMT), s.mt.MaxLevels())
+			mt, err := merkletree.NewMerkleTree(s.db.WithPrefix(PrefixKeyMT), s.MT.MaxLevels())
 			if err != nil {
 				return tracerr.Wrap(err)
 			}
-			s.mt = mt
+			s.MT = mt
 		}
 		return nil
 	}
@@ -363,31 +357,66 @@ func (s *StateDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 	s.db = sto
 
 	// get currentBatch num
-	s.currentBatch, err = s.GetCurrentBatch()
+	s.CurrentBatch, err = s.GetCurrentBatch()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
 	// idx is obtained from the statedb reset
-	s.idx, err = s.GetIdx()
+	s.CurrentIdx, err = s.GetIdx()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
 
-	if s.mt != nil {
+	if s.MT != nil {
 		// open the MT for the current s.db
-		mt, err := merkletree.NewMerkleTree(s.db.WithPrefix(PrefixKeyMT), s.mt.MaxLevels())
+		mt, err := merkletree.NewMerkleTree(s.db.WithPrefix(PrefixKeyMT), s.MT.MaxLevels())
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		s.mt = mt
+		s.MT = mt
 	}
 
 	return nil
 }
 
+// GetIdx returns the stored Idx from the localStateDB, which is the last Idx
+// used for an Account in the localStateDB.
+func (s *StateDB) GetIdx() (common.Idx, error) {
+	idxBytes, err := s.DB().Get(keyidx)
+	if tracerr.Unwrap(err) == db.ErrNotFound {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, tracerr.Wrap(err)
+	}
+	return common.IdxFromBytes(idxBytes[:])
+}
+
+// SetIdx stores Idx in the localStateDB
+func (s *StateDB) SetIdx(idx common.Idx) error {
+	s.CurrentIdx = idx
+
+	tx, err := s.DB().NewTx()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	idxBytes, err := idx.Bytes()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	err = tx.Put(keyidx, idxBytes[:])
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return tracerr.Wrap(err)
+	}
+	return nil
+}
+
 // GetAccount returns the account for the given Idx
 func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
-	return getAccountInTreeDB(s.db, idx)
+	return GetAccountInTreeDB(s.db, idx)
 }
 
 // GetAccounts returns all the accounts in the db.  Use for debugging pruposes
@@ -419,9 +448,9 @@ func (s *StateDB) GetAccounts() ([]common.Account, error) {
 	return accs, nil
 }
 
-// getAccountInTreeDB is abstracted from StateDB to be used from StateDB and
+// GetAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  GetAccount returns the account for the given Idx
-func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
+func GetAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
 	idxBytes, err := idx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -445,10 +474,10 @@ func getAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 }
 
 // CreateAccount creates a new Account in the StateDB for the given Idx.  If
-// StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
+// StateDB.MT==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
-	cpp, err := createAccountInTreeDB(s.db, s.mt, idx, account)
+	cpp, err := CreateAccountInTreeDB(s.db, s.MT, idx, account)
 	if err != nil {
 		return cpp, tracerr.Wrap(err)
 	}
@@ -457,11 +486,11 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 	return cpp, tracerr.Wrap(err)
 }
 
-// createAccountInTreeDB is abstracted from StateDB to be used from StateDB and
+// CreateAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  Creates a new Account in the StateDB for the given Idx.  If
-// StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
+// StateDB.MT==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
@@ -511,14 +540,14 @@ func createAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
-	return updateAccountInTreeDB(s.db, s.mt, idx, account)
+	return UpdateAccountInTreeDB(s.db, s.MT, idx, account)
 }
 
-// updateAccountInTreeDB is abstracted from StateDB to be used from StateDB and
+// UpdateAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  Updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: account.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
@@ -559,20 +588,15 @@ func updateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 
 // MTGetProof returns the CircomVerifierProof for a given Idx
 func (s *StateDB) MTGetProof(idx common.Idx) (*merkletree.CircomVerifierProof, error) {
-	if s.mt == nil {
+	if s.MT == nil {
 		return nil, tracerr.Wrap(ErrStateDBWithoutMT)
 	}
-	return s.mt.GenerateCircomVerifierProof(idx.BigInt(), s.mt.Root())
+	return s.MT.GenerateCircomVerifierProof(idx.BigInt(), s.MT.Root())
 }
 
 // MTGetRoot returns the current root of the underlying Merkle Tree
 func (s *StateDB) MTGetRoot() *big.Int {
-	return s.mt.Root().BigInt()
-}
-
-// MerkleTree returns the underlying StateDB merkle tree.  It can be nil.
-func (s *StateDB) MerkleTree() *merkletree.MerkleTree {
-	return s.mt
+	return s.MT.Root().BigInt()
 }
 
 // LocalStateDB represents the local StateDB which allows to make copies from
@@ -588,7 +612,7 @@ type LocalStateDB struct {
 // deleted.
 func NewLocalStateDB(path string, keep int, synchronizerDB *StateDB, typ TypeStateDB,
 	nLevels int) (*LocalStateDB, error) {
-	s, err := NewStateDB(path, keep, typ, nLevels, synchronizerDB.chainID)
+	s, err := NewStateDB(path, keep, typ, nLevels)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -602,7 +626,7 @@ func NewLocalStateDB(path string, keep int, synchronizerDB *StateDB, typ TypeSta
 // gets the state from LocalStateDB.synchronizerStateDB for the given batchNum. If fromSynchronizer is false, get the state from LocalStateDB checkpoints.
 func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) error {
 	if batchNum == 0 {
-		l.idx = 0
+		l.CurrentIdx = 0
 		return nil
 	}
 
@@ -646,17 +670,17 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 		l.db = sto
 
 		// get currentBatch num
-		l.currentBatch, err = l.GetCurrentBatch()
+		l.CurrentBatch, err = l.GetCurrentBatch()
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
 		// open the MT for the current s.db
-		if l.mt != nil {
-			mt, err := merkletree.NewMerkleTree(l.db.WithPrefix(PrefixKeyMT), l.mt.MaxLevels())
+		if l.MT != nil {
+			mt, err := merkletree.NewMerkleTree(l.db.WithPrefix(PrefixKeyMT), l.MT.MaxLevels())
 			if err != nil {
 				return tracerr.Wrap(err)
 			}
-			l.mt = mt
+			l.MT = mt
 		}
 
 		return nil

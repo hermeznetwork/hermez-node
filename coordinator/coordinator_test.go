@@ -23,6 +23,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-merkletree/db/pebble"
@@ -98,7 +99,7 @@ func newTestModules(t *testing.T) modules {
 	syncDBPath, err = ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncStateDB, err := statedb.NewStateDB(syncDBPath, 128, statedb.TypeSynchronizer, 48, chainID)
+	syncStateDB, err := statedb.NewStateDB(syncDBPath, 128, statedb.TypeSynchronizer, 48)
 	assert.NoError(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")
@@ -620,19 +621,20 @@ PoolTransfer(0) User2-User3: 300 (126)
 	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
 
 	// Sanity check
-	require.Equal(t, modules.stateDB.MerkleTree().Root(),
-		pipeline.batchBuilder.LocalStateDB().MerkleTree().Root())
+	require.Equal(t, modules.stateDB.MT.Root(),
+		pipeline.batchBuilder.LocalStateDB().MT.Root())
 
 	batchNum++
 
 	selectionConfig := &txselector.SelectionConfig{
 		MaxL1UserTxs:        maxL1UserTxs,
 		MaxL1CoordinatorTxs: maxL1CoordinatorTxs,
-		ProcessTxsConfig: statedb.ProcessTxsConfig{
+		TxProcessorConfig: txprocessor.Config{
 			NLevels:  nLevels,
 			MaxFeeTx: maxFeeTxs,
 			MaxTx:    uint32(maxTxs),
 			MaxL1Tx:  uint32(maxL1Txs),
+			ChainID:  chainID,
 		},
 	}
 

@@ -14,6 +14,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -796,13 +797,16 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
 		//nolint:gomnd
-		ptc := statedb.ProcessTxsConfig{ // TODO TMP
+		tpc := txprocessor.Config{ // TODO TMP
 			NLevels:  32,
 			MaxFeeTx: 64,
 			MaxTx:    512,
 			MaxL1Tx:  64,
+			ChainID:  uint16(0),
 		}
-		processTxsOut, err := s.stateDB.ProcessTxs(ptc, forgeBatchArgs.FeeIdxCoordinator,
+		tp := txprocessor.NewTxProcessor(s.stateDB, tpc)
+
+		processTxsOut, err := tp.ProcessTxs(forgeBatchArgs.FeeIdxCoordinator,
 			l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)

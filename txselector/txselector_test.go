@@ -15,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ func initTest(t *testing.T, chainID uint16, testSet string) *TxSelector {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0, chainID)
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0)
 	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
@@ -115,21 +116,24 @@ func TestGetL2TxSelection(t *testing.T) {
 	}
 	addTokens(t, tokens, txsel.l2db.DB())
 
-	ptc := statedb.ProcessTxsConfig{
+	tpc := txprocessor.Config{
 		NLevels:  32,
 		MaxFeeTx: 64,
 		MaxTx:    512,
 		MaxL1Tx:  64,
+		ChainID:  chainID,
 	}
 	selectionConfig := &SelectionConfig{
 		MaxL1UserTxs:        32,
 		MaxL1CoordinatorTxs: 32,
-		ProcessTxsConfig:    ptc,
+		TxProcessorConfig:   tpc,
 	}
+	txselStateDB := txsel.localAccountsDB.StateDB
+	tp := txprocessor.NewTxProcessor(txselStateDB, selectionConfig.TxProcessorConfig)
 
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
-	_, err = txsel.localAccountsDB.ProcessTxs(ptc, nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	_, err = tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
 
 	// add the 1st batch of transactions to the TxSelector

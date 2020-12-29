@@ -136,7 +136,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			cfg.StateDB.Keep, safeStateDBKeep))
 	}
 	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, cfg.StateDB.Keep,
-		statedb.TypeSynchronizer, 32, chainIDU16)
+		statedb.TypeSynchronizer, 32)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

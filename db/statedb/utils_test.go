@@ -3,7 +3,6 @@ package statedb
 import (
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"testing"
 
@@ -20,8 +19,7 @@ func TestGetIdx(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	chainID := uint16(0)
-	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0, chainID)
+	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
 	assert.NoError(t, err)
 
 	var sk babyjub.PrivateKey
@@ -91,34 +89,4 @@ func TestGetIdx(t *testing.T) {
 	// expect error when trying to get Idx by addr with not used TokenID
 	_, err = sdb.GetIdxByEthAddr(addr, tokenID1)
 	assert.NotNil(t, err)
-}
-
-func TestBJJCompressedTo256BigInt(t *testing.T) {
-	var pkComp babyjub.PublicKeyComp
-	r := BJJCompressedTo256BigInts(pkComp)
-	zero := big.NewInt(0)
-	for i := 0; i < 256; i++ {
-		assert.Equal(t, zero, r[i])
-	}
-
-	pkComp[0] = 3
-	r = BJJCompressedTo256BigInts(pkComp)
-	one := big.NewInt(1)
-	for i := 0; i < 256; i++ {
-		if i != 0 && i != 1 {
-			assert.Equal(t, zero, r[i])
-		} else {
-			assert.Equal(t, one, r[i])
-		}
-	}
-
-	pkComp[31] = 4
-	r = BJJCompressedTo256BigInts(pkComp)
-	for i := 0; i < 256; i++ {
-		if i != 0 && i != 1 && i != 250 {
-			assert.Equal(t, zero, r[i])
-		} else {
-			assert.Equal(t, one, r[i])
-		}
-	}
 }

@@ -14,11 +14,11 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
-	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
 )
@@ -210,11 +210,12 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 	selectionConfig := &txselector.SelectionConfig{
 		MaxL1UserTxs:        32,
 		MaxL1CoordinatorTxs: 32,
-		ProcessTxsConfig: statedb.ProcessTxsConfig{
+		TxProcessorConfig: txprocessor.Config{
 			NLevels:  32,
 			MaxFeeTx: 64,
 			MaxTx:    512,
 			MaxL1Tx:  64,
+			ChainID:  uint16(0),
 		},
 	}
 

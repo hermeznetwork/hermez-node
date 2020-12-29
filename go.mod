@@ -4,18 +4,16 @@ go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/aristanetworks/goarista v0.0.0-20190912214011-b54698eaaca6
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/dghubble/sling v1.3.0
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/getkin/kin-openapi v0.22.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.5.0
-	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/hermeznetwork/tracerr v0.3.1-0.20201126162137-de9930d0cf29
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20201221160344-58e589b6eb4c
-	github.com/iden3/go-merkletree v0.0.0-20201215142017-730707e5659a
+	github.com/iden3/go-merkletree v0.0.0-20201218120219-8f3905f15f89
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0
