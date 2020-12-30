@@ -88,6 +88,9 @@ type testTxsResponse struct {
 }
 
 func (t testTxsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	if len(t.Txs) == 0 {
+		return 0, 0
+	}
 	pendingItems = t.PendingItems
 	lastItemID = t.Txs[len(t.Txs)-1].ItemID
 	return pendingItems, lastItemID
@@ -420,6 +423,12 @@ func TestGetHistoryTxs(t *testing.T) {
 		flipedTxs = append(flipedTxs, tc.txs[len(tc.txs)-1-i])
 	}
 	assertTxs(t, flipedTxs, fetchedTxs)
+	// Empty array
+	fetchedTxs = []testTx{}
+	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
+	err = doGoodReqPaginated(path, historydb.OrderDesc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	assertTxs(t, []testTx{}, fetchedTxs)
 	// 400
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&hezEthereumAddress=%s",
@@ -429,13 +438,6 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	path = fmt.Sprintf("%s?tokenId=X", endpoint)
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	// 404
-	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
-	err = doBadReq("GET", path, nil, 404)
-	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?fromItem=1000999999", endpoint)
-	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
 

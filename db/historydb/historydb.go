@@ -1,7 +1,6 @@
 package historydb
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"math"
@@ -265,7 +264,7 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	}
 	batches := db.SlicePtrsToSlice(batchPtrs).([]BatchAPI)
 	if len(batches) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return batches, 0, nil
 	}
 	return batches, batches[0].TotalItems - uint64(len(batches)), nil
 }
@@ -441,7 +440,7 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 	// log.Debug(query)
 	bids := db.SlicePtrsToSlice(bidPtrs).([]BidAPI)
 	if len(bids) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return bids, 0, nil
 	}
 	return bids, bids[0].TotalItems - uint64(len(bids)), nil
 }
@@ -512,7 +511,7 @@ func (hdb *HistoryDB) GetBidsAPI(
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(bids) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return []BidAPI{}, 0, nil
 	}
 	return db.SlicePtrsToSlice(bids).([]BidAPI), bids[0].TotalItems - uint64(len(bids)), nil
 }
@@ -739,7 +738,7 @@ func (hdb *HistoryDB) GetTokens(
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(tokens) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return []TokenWithUSD{}, 0, nil
 	}
 	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), uint64(len(tokens)) - tokens[0].TotalItems, nil
 }
@@ -1056,7 +1055,7 @@ func (hdb *HistoryDB) GetHistoryTxs(
 	}
 	txs := db.SlicePtrsToSlice(txsPtrs).([]TxAPI)
 	if len(txs) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return txs, 0, nil
 	}
 	return txs, txs[0].TotalItems - uint64(len(txs)), nil
 }
@@ -1199,7 +1198,7 @@ func (hdb *HistoryDB) GetExitsAPI(
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(exits) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return []ExitAPI{}, 0, nil
 	}
 	return db.SlicePtrsToSlice(exits).([]ExitAPI), exits[0].TotalItems - uint64(len(exits)), nil
 }
@@ -1688,7 +1687,7 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(coordinators) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return []CoordinatorAPI{}, 0, nil
 	}
 	return db.SlicePtrsToSlice(coordinators).([]CoordinatorAPI),
 		coordinators[0].TotalItems - uint64(len(coordinators)), nil
@@ -1811,7 +1810,7 @@ func (hdb *HistoryDB) GetAccountsAPI(
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(accounts) == 0 {
-		return nil, 0, tracerr.Wrap(sql.ErrNoRows)
+		return []AccountAPI{}, 0, nil
 	}
 
 	return db.SlicePtrsToSlice(accounts).([]AccountAPI),

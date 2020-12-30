@@ -16,6 +16,9 @@ type testCoordinatorsResponse struct {
 }
 
 func (t testCoordinatorsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	if len(t.Coordinators) == 0 {
+		return 0, 0
+	}
 	pendingItems = t.PendingItems
 	lastItemID = t.Coordinators[len(t.Coordinators)-1].ItemID
 	return pendingItems, lastItemID
@@ -67,7 +70,6 @@ func TestGetCoordinators(t *testing.T) {
 		reversedCoordinators = append(reversedCoordinators, tc.coordinators[len(tc.coordinators)-1-i])
 	}
 	assertCoordinators(t, reversedCoordinators, fetchedCoordinators)
-
 	for _, filteredCoord := range tc.coordinators {
 		// By bidder
 		fetchedCoordinators = []historydb.CoordinatorAPI{}
@@ -87,13 +89,16 @@ func TestGetCoordinators(t *testing.T) {
 		assertCoordinators(t, []historydb.CoordinatorAPI{filteredCoord}, fetchedCoordinators)
 	}
 
+	// Empty array
+	fetchedCoordinators = []historydb.CoordinatorAPI{}
+	path = fmt.Sprintf("%s?bidderAddr=0xaa942cfcd25ad4d90a62358b0dd84f33b398262a", endpoint)
+	err = doGoodReqPaginated(path, historydb.OrderDesc, &testCoordinatorsResponse{}, appendIter)
+	assert.NoError(t, err)
+	assertCoordinators(t, []historydb.CoordinatorAPI{}, fetchedCoordinators)
+
 	// 400
 	path = fmt.Sprintf("%s?bidderAddr=0x001", endpoint)
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	// 404
-	path = fmt.Sprintf("%s?bidderAddr=0xaa942cfcd25ad4d90a62358b0dd84f33b398262a", endpoint)
-	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
 

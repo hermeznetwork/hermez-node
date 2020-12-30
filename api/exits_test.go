@@ -43,6 +43,9 @@ type testExitsResponse struct {
 }
 
 func (t testExitsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	if len(t.Exits) == 0 {
+		return 0, 0
+	}
 	pendingItems = t.PendingItems
 	lastItemID = t.Exits[len(t.Exits)-1].ItemID
 	return pendingItems, lastItemID
@@ -248,6 +251,12 @@ func TestGetExits(t *testing.T) {
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertExitAPIs(t, flipedExits, fetchedExits)
+	// Empty array
+	fetchedExits = []testExit{}
+	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
+	err = doGoodReqPaginated(path, historydb.OrderDesc, &testExitsResponse{}, appendIter)
+	assert.NoError(t, err)
+	assertExitAPIs(t, []testExit{}, fetchedExits)
 	// 400
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&hezEthereumAddress=%s",
@@ -257,13 +266,6 @@ func TestGetExits(t *testing.T) {
 	assert.NoError(t, err)
 	path = fmt.Sprintf("%s?tokenId=X", endpoint)
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	// 404
-	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
-	err = doBadReq("GET", path, nil, 404)
-	assert.NoError(t, err)
-	path = fmt.Sprintf("%s?fromItem=1000999999", endpoint)
-	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
 
