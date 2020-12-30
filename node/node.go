@@ -28,6 +28,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test/debugapi"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
@@ -202,8 +203,8 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			return nil, tracerr.Wrap(err)
 		}
 		// TODO: Get (configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) from smart contract
-		nLevels := uint64(32) //nolint:gomnd
-		batchBuilder, err := batchbuilder.NewBatchBuilder(cfg.Coordinator.BatchBuilder.Path, stateDB, nil, 0, nLevels)
+		batchBuilder, err := batchbuilder.NewBatchBuilder(cfg.Coordinator.BatchBuilder.Path,
+			stateDB, nil, 0, uint64(cfg.Coordinator.Circuit.NLevels))
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -215,6 +216,22 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
 				cfg.Coordinator.ProofServerPollInterval.Duration)
 		}
+
+		txProcessorCfg := txprocessor.Config{
+			NLevels:  uint32(cfg.Coordinator.Circuit.NLevels),
+			MaxTx:    uint32(cfg.Coordinator.Circuit.MaxTx),
+			ChainID:  chainIDU16,
+			MaxFeeTx: common.RollupConstMaxFeeIdxCoordinator,
+			MaxL1Tx:  common.RollupConstMaxL1Tx,
+		}
+		verifierIdx, err := scConsts.Rollup.FindVerifierIdx(
+			cfg.Coordinator.Circuit.MaxTx,
+			cfg.Coordinator.Circuit.NLevels,
+		)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		log.Infow("Found verifier that matches circuit config", "verifierIdx", verifierIdx)
 
 		coord, err = coordinator.NewCoordinator(
 			coordinator.Config{
@@ -232,6 +249,8 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 					PurgeBlockDelay:      cfg.Coordinator.L2DB.PurgeBlockDelay,
 					InvalidateBlockDelay: cfg.Coordinator.L2DB.InvalidateBlockDelay,
 				},
+				VerifierIdx:       uint8(verifierIdx),
+				TxProcessorConfig: txProcessorCfg,
 			},
 			historyDB,
 			l2DB,

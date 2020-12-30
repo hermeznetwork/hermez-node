@@ -65,7 +65,6 @@ func (p *Proof) UnmarshalJSON(data []byte) error {
 	if p.PiC[2].Int64() != 1 {
 		return tracerr.Wrap(fmt.Errorf("Expected PiC[2] == 1, but got %v", p.PiC[2]))
 	}
-	// TODO: Assert ones and zeroes
 	p.Protocol = proof.Protocol
 	return nil
 }

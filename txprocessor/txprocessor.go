@@ -441,7 +441,7 @@ func (tp *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L
 	if tp.zki != nil {
 		// Txs
 		var err error
-		tp.zki.TxCompressedData[tp.i], err = tx.TxCompressedData()
+		tp.zki.TxCompressedData[tp.i], err = tx.TxCompressedData(tp.config.ChainID)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, nil, tracerr.Wrap(err)

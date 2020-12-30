@@ -90,9 +90,7 @@ type modules struct {
 	stateDB      *statedb.StateDB
 }
 
-var maxL1UserTxs uint64 = 128
 var maxL1Txs uint64 = 256
-var maxL1CoordinatorTxs uint64 = maxL1Txs - maxL1UserTxs
 var maxTxs uint64 = 376
 var nLevels uint32 = 32   //nolint:deadcode,unused
 var maxFeeTxs uint32 = 64 //nolint:deadcode,varcheck
@@ -174,7 +172,16 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 			InvalidateBatchDelay: 4,
 			InvalidateBlockDelay: 4,
 		},
+		TxProcessorConfig: txprocessor.Config{
+			NLevels:  nLevels,
+			MaxFeeTx: maxFeeTxs,
+			MaxTx:    uint32(maxTxs),
+			MaxL1Tx:  uint32(maxL1Txs),
+			ChainID:  chainID,
+		},
+		VerifierIdx: 0,
 	}
+
 	serverProofs := []prover.Client{
 		&prover.MockClient{Delay: 300 * time.Millisecond},
 		&prover.MockClient{Delay: 400 * time.Millisecond},
@@ -627,24 +634,12 @@ PoolTransfer(0) User2-User3: 300 (126)
 
 	batchNum++
 
-	selectionConfig := &txselector.SelectionConfig{
-		MaxL1UserTxs:        maxL1UserTxs,
-		MaxL1CoordinatorTxs: maxL1CoordinatorTxs,
-		TxProcessorConfig: txprocessor.Config{
-			NLevels:  nLevels,
-			MaxFeeTx: maxFeeTxs,
-			MaxTx:    uint32(maxTxs),
-			MaxL1Tx:  uint32(maxL1Txs),
-			ChainID:  chainID,
-		},
-	}
-
-	batchInfo, err := pipeline.forgeBatch(ctx, batchNum, selectionConfig)
+	batchInfo, err := pipeline.forgeBatch(batchNum)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(batchInfo.L2Txs))
 
 	batchNum++
-	batchInfo, err = pipeline.forgeBatch(ctx, batchNum, selectionConfig)
+	batchInfo, err = pipeline.forgeBatch(batchNum)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(batchInfo.L2Txs))
 }

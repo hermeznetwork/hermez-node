@@ -50,8 +50,10 @@ type Config struct {
 	TxManagerCheckInterval time.Duration
 	// DebugBatchPath if set, specifies the path where batchInfo is stored
 	// in JSON in every step/update of the pipeline
-	DebugBatchPath string
-	Purger         PurgerCfg
+	DebugBatchPath    string
+	Purger            PurgerCfg
+	VerifierIdx       uint8
+	TxProcessorConfig txprocessor.Config
 }
 
 func (c *Config) debugBatchStore(batchInfo *BatchInfo) {
@@ -213,20 +215,6 @@ func (c *Coordinator) canForge(stats *synchronizer.Stats) bool {
 func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) error {
 	c.txManager.SetLastBlock(stats.Eth.LastBlock.Num)
 
-	// TMP
-	//nolint:gomnd
-	selectionConfig := &txselector.SelectionConfig{
-		MaxL1UserTxs:        32,
-		MaxL1CoordinatorTxs: 32,
-		TxProcessorConfig: txprocessor.Config{
-			NLevels:  32,
-			MaxFeeTx: 64,
-			MaxTx:    512,
-			MaxL1Tx:  64,
-			ChainID:  uint16(0),
-		},
-	}
-
 	canForge := c.canForge(stats)
 	if c.pipeline == nil {
 		if canForge {
@@ -238,7 +226,7 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 				return tracerr.Wrap(err)
 			}
 			if err := c.pipeline.Start(batchNum, stats.Sync.LastForgeL1TxsNum,
-				stats, &c.vars, selectionConfig); err != nil {
+				stats, &c.vars); err != nil {
 				c.pipeline = nil
 				return tracerr.Wrap(err)
 			}
@@ -689,8 +677,7 @@ func (p *Pipeline) reset(batchNum common.BatchNum, lastForgeL1TxsNum int64,
 
 // Start the forging pipeline
 func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
-	syncStats *synchronizer.Stats, initSCVars *synchronizer.SCVariables,
-	selectionConfig *txselector.SelectionConfig) error {
+	syncStats *synchronizer.Stats, initSCVars *synchronizer.SCVariables) error {
 	if p.started {
 		log.Fatal("Pipeline already started")
 	}
@@ -716,7 +703,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum, lastForgeL1TxsNum int64,
 				p.stats = syncStats
 			default:
 				batchNum = p.batchNum + 1
-				batchInfo, err := p.forgeBatch(p.ctx, batchNum, selectionConfig)
+				batchInfo, err := p.forgeBatch(batchNum)
 				if p.ctx.Err() != nil {
 					continue
 				} else if err != nil {
@@ -818,7 +805,7 @@ func (p *Pipeline) sendServerProof(ctx context.Context, batchInfo *BatchInfo) er
 }
 
 // forgeBatch the next batch.
-func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, selectionConfig *txselector.SelectionConfig) (*BatchInfo, error) {
+func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (*BatchInfo, error) {
 	// remove transactions from the pool that have been there for too long
 	_, err := p.purger.InvalidateMaybe(p.l2DB, p.txSelector.LocalAccountsDB(),
 		p.stats.Sync.LastBlock.Num, int64(batchNum))
@@ -831,6 +818,11 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 	}
 
 	batchInfo := BatchInfo{BatchNum: batchNum} // to accumulate metadata of the batch
+
+	selectionCfg := &txselector.SelectionConfig{
+		MaxL1UserTxs:      common.RollupConstMaxL1UserTx,
+		TxProcessorConfig: p.cfg.TxProcessorConfig,
+	}
 
 	var poolL2Txs []common.PoolL2Tx
 	// var feesInfo
@@ -847,16 +839,15 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		// TODO once feesInfo is added to method return, add the var
 		coordIdxs, auths, l1UserTxsExtra, l1CoordTxs, poolL2Txs, err =
-			p.txSelector.GetL1L2TxSelection(selectionConfig, batchNum, l1UserTxs)
+			p.txSelector.GetL1L2TxSelection(selectionCfg, batchNum, l1UserTxs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
 		coordIdxs, auths, l1CoordTxs, poolL2Txs, err =
-			p.txSelector.GetL2TxSelection(selectionConfig, batchNum)
+			p.txSelector.GetL2TxSelection(selectionCfg, batchNum)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -864,11 +855,11 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 	}
 
 	// 3.  Save metadata from TxSelector output for BatchNum
-	// TODO feesInfo
 	batchInfo.L1UserTxsExtra = l1UserTxsExtra
 	batchInfo.L1CoordTxs = l1CoordTxs
 	batchInfo.L1CoordinatorTxsAuths = auths
 	batchInfo.CoordIdxs = coordIdxs
+	batchInfo.VerifierIdx = p.cfg.VerifierIdx
 
 	if err := p.l2DB.StartForging(poolL2TxsIDs(poolL2Txs), batchInfo.BatchNum); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -885,10 +876,11 @@ func (p *Pipeline) forgeBatch(ctx context.Context, batchNum common.BatchNum, sel
 
 	// 4. Call BatchBuilder with TxSelector output
 	configBatch := &batchbuilder.ConfigBatch{
-		ForgerAddress: p.cfg.ForgerAddress,
+		ForgerAddress:     p.cfg.ForgerAddress,
+		TxProcessorConfig: p.cfg.TxProcessorConfig,
 	}
 	zkInputs, err := p.batchBuilder.BuildBatch(coordIdxs, configBatch, l1UserTxsExtra,
-		l1CoordTxs, poolL2Txs, nil) // TODO []common.TokenID --> feesInfo
+		l1CoordTxs, poolL2Txs, nil)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -948,7 +940,7 @@ func prepareForgeBatchArgs(batchInfo *BatchInfo) *eth.RollupForgeBatchArgs {
 		L2TxsData:             batchInfo.L2Txs,
 		FeeIdxCoordinator:     batchInfo.CoordIdxs,
 		// Circuit selector
-		VerifierIdx: 0, // TODO
+		VerifierIdx: batchInfo.VerifierIdx,
 		L1Batch:     batchInfo.L1Batch,
 		ProofA:      [2]*big.Int{proof.PiA[0], proof.PiA[1]},
 		ProofB: [2][2]*big.Int{
