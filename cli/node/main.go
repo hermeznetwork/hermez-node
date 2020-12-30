@@ -9,6 +9,7 @@ import (
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/config"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/node"
 	"github.com/hermeznetwork/tracerr"
@@ -19,6 +20,7 @@ const (
 	flagCfg   = "cfg"
 	flagMode  = "mode"
 	flagSK    = "privatekey"
+	flagYes   = "yes"
 	modeSync  = "sync"
 	modeCoord = "coord"
 )
@@ -52,6 +54,41 @@ func cmdImportKey(c *cli.Context) error {
 		return tracerr.Wrap(err)
 	}
 	log.Infow("Imported private key", "addr", acc.Address.Hex())
+	return nil
+}
+
+func cmdWipeSQL(c *cli.Context) error {
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	cfg := _cfg.node
+	yes := c.Bool(flagYes)
+	if !yes {
+		fmt.Print("*WARNING* Are you sure you want to delete the SQL DB? [y/N]: ")
+		var input string
+		if _, err := fmt.Scanln(&input); err != nil {
+			return tracerr.Wrap(err)
+		}
+		input = strings.ToLower(input)
+		if !(input == "y" || input == "yes") {
+			return nil
+		}
+	}
+	db, err := dbUtils.ConnectSQLDB(
+		cfg.PostgreSQL.Port,
+		cfg.PostgreSQL.Host,
+		cfg.PostgreSQL.User,
+		cfg.PostgreSQL.Password,
+		cfg.PostgreSQL.Name,
+	)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Info("Wiping SQL DB...")
+	if err := dbUtils.MigrationsDown(db.DB); err != nil {
+		return tracerr.Wrap(err)
+	}
 	return nil
 }
 
@@ -157,6 +194,19 @@ func main() {
 					Name:     flagSK,
 					Usage:    "ethereum `PRIVATE_KEY` in hex",
 					Required: true,
+				}},
+		},
+		{
+			Name:    "wipesql",
+			Aliases: []string{},
+			Usage: "Wipe the SQL DB (HistoryDB and L2DB), " +
+				"leaving the DB in a clean state",
+			Action: cmdWipeSQL,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:     flagYes,
+					Usage:    "automatic yes to the prompt",
+					Required: false,
 				}},
 		},
 		{
