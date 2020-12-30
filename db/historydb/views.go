@@ -314,6 +314,8 @@ type MetricsTotals struct {
 	FirstBatchNum     common.BatchNum `meddler:"batch_num"`
 	TotalBatches      int64           `meddler:"total_batches"`
 	TotalFeesUSD      float64         `meddler:"total_fees"`
+	MinTimestamp      time.Time       `meddler:"min_timestamp,utctime"`
+	MaxTimestamp      time.Time       `meddler:"max_timestamp,utctime"`
 }
 
 // BidAPI is a representation of a bid with additional information

@@ -2,6 +2,7 @@ package historydb
 
 import (
 	"database/sql"
+	"fmt"
 	"math"
 	"math/big"
 	"os"
@@ -1025,6 +1026,164 @@ func TestAddEscapeHatchWithdrawals(t *testing.T) {
 	dbEscapeHatchWithdrawals, err := historyDB.GetAllEscapeHatchWithdrawals()
 	require.NoError(t, err)
 	assert.Equal(t, escapeHatchWithdrawals, dbEscapeHatchWithdrawals)
+}
+
+func TestGetMetrics(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+
+	set := `
+		Type: Blockchain
+
+		AddToken(1)
+
+		CreateAccountDeposit(1) A: 1000 // numTx=1
+		CreateAccountDeposit(1) B: 2000 // numTx=2
+		CreateAccountDeposit(1) C: 3000 //numTx=3
+
+		// block 0 is stored as default in the DB
+		// block 1 does not exist
+		> batchL1 // numBatches=1
+		> batchL1 // numBatches=2
+		> block // blockNum=2
+
+		Transfer(1) C-A : 10 (1) // numTx=4
+		> batch // numBatches=3
+		> block // blockNum=3
+		Transfer(1) B-C : 10 (1) // numTx=5
+		> batch // numBatches=5
+		> block // blockNum=4
+		Transfer(1) A-B : 10 (1) // numTx=6
+		> batch // numBatches=5
+		> block // blockNum=5
+		Transfer(1) A-B : 10 (1) // numTx=7
+		> batch // numBatches=6
+		> block // blockNum=6
+	`
+
+	const numBatches int = 6
+	const numTx int = 7
+	const blockNum = 6 - 1
+
+	tc := til.NewContext(uint16(0), common.RollupConstMaxL1UserTx)
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		CoordUser:     "A",
+	}
+	blocks, err := tc.GenerateBlocks(set)
+	require.NoError(t, err)
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	require.NoError(t, err)
+
+	// Sanity check
+	require.Equal(t, blockNum, len(blocks))
+
+	// Adding one batch per block
+	// batch frequency can be chosen
+	const frequency int = 15
+
+	for i := range blocks {
+		blocks[i].Block.Timestamp = time.Now().Add(-time.Second * time.Duration(frequency*(len(blocks)-i)))
+		err = historyDB.AddBlockSCData(&blocks[i])
+		assert.NoError(t, err)
+	}
+
+	res, err := historyDB.GetMetrics(common.BatchNum(numBatches))
+	assert.NoError(t, err)
+
+	assert.Equal(t, float64(numTx)/float64(numBatches-1), res.TransactionsPerBatch)
+
+	// Frequency is not exactly the desired one, some decimals may appear
+	assert.GreaterOrEqual(t, res.BatchFrequency, float64(frequency))
+	assert.Less(t, res.BatchFrequency, float64(frequency+1))
+	// Truncate frecuency into an int to do an exact check
+	assert.Equal(t, frequency, int(res.BatchFrequency))
+	// This may also be different in some decimals
+	// Truncate it to the third decimal to compare
+	assert.Equal(t, math.Trunc((float64(numTx)/float64(frequency*blockNum-frequency))/0.001)*0.001, math.Trunc(res.TransactionsPerSecond/0.001)*0.001)
+	assert.Equal(t, int64(3), res.TotalAccounts)
+	assert.Equal(t, int64(3), res.TotalBJJs)
+	// Til does not set fees
+	assert.Equal(t, float64(0), res.AvgTransactionFee)
+}
+
+func TestGetMetricsMoreThan24Hours(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+
+	testUsersLen := 3
+	var set []til.Instruction
+	for user := 0; user < testUsersLen; user++ {
+		set = append(set, til.Instruction{
+			Typ:           common.TxTypeCreateAccountDeposit,
+			TokenID:       common.TokenID(0),
+			DepositAmount: big.NewInt(1000000),
+			Amount:        big.NewInt(0),
+			From:          fmt.Sprintf("User%02d", user),
+		})
+		set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	}
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
+	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+
+	// Transfers
+	for x := 0; x < 6000; x++ {
+		set = append(set, til.Instruction{
+			Typ:           common.TxTypeTransfer,
+			TokenID:       common.TokenID(0),
+			DepositAmount: big.NewInt(1),
+			Amount:        big.NewInt(0),
+			From:          "User00",
+			To:            "User01",
+		})
+		set = append(set, til.Instruction{Typ: til.TypeNewBatch})
+		set = append(set, til.Instruction{Typ: til.TypeNewBlock})
+	}
+
+	var chainID uint16 = 0
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocksFromInstructions(set)
+	assert.NoError(t, err)
+
+	tilCfgExtra := til.ConfigExtra{
+		CoordUser: "A",
+	}
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	require.NoError(t, err)
+
+	const numBatches int = 6002
+	const numTx int = 6003
+	const blockNum = 6005 - 1
+
+	// Sanity check
+	require.Equal(t, blockNum, len(blocks))
+
+	// Adding one batch per block
+	// batch frequency can be chosen
+	const frequency int = 15
+
+	for i := range blocks {
+		blocks[i].Block.Timestamp = time.Now().Add(-time.Second * time.Duration(frequency*(len(blocks)-i)))
+		err = historyDB.AddBlockSCData(&blocks[i])
+		assert.NoError(t, err)
+	}
+
+	res, err := historyDB.GetMetrics(common.BatchNum(numBatches))
+	assert.NoError(t, err)
+
+	assert.Equal(t, math.Trunc((float64(numTx)/float64(numBatches-1))/0.001)*0.001, math.Trunc(res.TransactionsPerBatch/0.001)*0.001)
+
+	// Frequency is not exactly the desired one, some decimals may appear
+	assert.GreaterOrEqual(t, res.BatchFrequency, float64(frequency))
+	assert.Less(t, res.BatchFrequency, float64(frequency+1))
+	// Truncate frecuency into an int to do an exact check
+	assert.Equal(t, frequency, int(res.BatchFrequency))
+	// This may also be different in some decimals
+	// Truncate it to the third decimal to compare
+	assert.Equal(t, math.Trunc((float64(numTx)/float64(frequency*blockNum-frequency))/0.001)*0.001, math.Trunc(res.TransactionsPerSecond/0.001)*0.001)
+	assert.Equal(t, int64(3), res.TotalAccounts)
+	assert.Equal(t, int64(3), res.TotalBJJs)
+	// Til does not set fees
+	assert.Equal(t, float64(0), res.AvgTransactionFee)
 }
 
 func TestGetMetricsEmpty(t *testing.T) {
