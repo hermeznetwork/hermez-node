@@ -731,11 +731,8 @@ func TestRollupForgeBatch(t *testing.T) {
 	ethClient, err := ethclient.Dial(web3URL)
 	require.NoError(t, err)
 	ethCfg := eth.EthereumConfig{
-		CallGasLimit:        300000,
-		DeployGasLimit:      1000000,
-		GasPriceDiv:         100,
-		ReceiptTimeout:      60 * time.Second,
-		IntervalReceiptLoop: 500 * time.Millisecond,
+		CallGasLimit: 300000,
+		GasPriceDiv:  100,
 	}
 	scryptN := ethKeystore.LightScryptN
 	scryptP := ethKeystore.LightScryptP

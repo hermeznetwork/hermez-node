@@ -32,6 +32,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
+	"github.com/russross/meddler"
 )
 
 // Mode sets the working mode of the node (synchronizer or coordinator)
@@ -71,6 +72,7 @@ type Node struct {
 
 // NewNode creates a Node
 func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
+	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
 	db, err := dbUtils.InitSQLDB(
 		cfg.PostgreSQL.Port,
@@ -94,11 +96,8 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	var keyStore *ethKeystore.KeyStore
 	if mode == ModeCoordinator {
 		ethCfg = eth.EthereumConfig{
-			CallGasLimit:        cfg.Coordinator.EthClient.CallGasLimit,
-			DeployGasLimit:      cfg.Coordinator.EthClient.DeployGasLimit,
-			GasPriceDiv:         cfg.Coordinator.EthClient.GasPriceDiv,
-			ReceiptTimeout:      cfg.Coordinator.EthClient.ReceiptTimeout.Duration,
-			IntervalReceiptLoop: cfg.Coordinator.EthClient.ReceiptLoopInterval.Duration,
+			CallGasLimit: cfg.Coordinator.EthClient.CallGasLimit,
+			GasPriceDiv:  cfg.Coordinator.EthClient.GasPriceDiv,
 		}
 
 		scryptN := ethKeystore.StandardScryptN
