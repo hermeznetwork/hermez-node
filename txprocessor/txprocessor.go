@@ -99,8 +99,6 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		return nil, tracerr.Wrap(fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)", len(coordIdxs), tp.config.MaxFeeTx))
 	}
 
-	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
-
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
 
 	if nTx > int(tp.config.MaxTx) {

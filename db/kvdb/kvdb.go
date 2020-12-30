@@ -123,7 +123,7 @@ func (kvdb *KVDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 		}
 		kvdb.db = sto
 		kvdb.CurrentIdx = 255
-		kvdb.CurrentBatch = batchNum
+		kvdb.CurrentBatch = 0
 
 		return nil
 	}
@@ -207,6 +207,11 @@ func (kvdb *KVDB) ResetFromSynchronizer(batchNum common.BatchNum, synchronizerKV
 
 	// get currentBatch num
 	kvdb.CurrentBatch, err = kvdb.GetCurrentBatch()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	// get currentIdx
+	kvdb.CurrentIdx, err = kvdb.GetCurrentIdx()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}

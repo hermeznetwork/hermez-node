@@ -64,24 +64,6 @@ func addTokens(t *testing.T, tokens []common.Token, db *sqlx.DB) {
 	assert.NoError(t, hdb.AddTokens(tokens))
 }
 
-func TestCoordIdxsDB(t *testing.T) {
-	chainID := uint16(0)
-	txsel := initTest(t, chainID, til.SetPool0)
-	test.WipeDB(txsel.l2db.DB())
-
-	coordIdxs := make(map[common.TokenID]common.Idx)
-	coordIdxs[common.TokenID(0)] = common.Idx(256)
-	coordIdxs[common.TokenID(1)] = common.Idx(257)
-	coordIdxs[common.TokenID(2)] = common.Idx(258)
-
-	err := txsel.AddCoordIdxs(coordIdxs)
-	assert.NoError(t, err)
-
-	r, err := txsel.GetCoordIdxs()
-	assert.NoError(t, err)
-	assert.Equal(t, coordIdxs, r)
-}
-
 func TestGetL2TxSelection(t *testing.T) {
 	chainID := uint16(0)
 	txsel := initTest(t, chainID, til.SetPool0)
@@ -99,8 +81,6 @@ func TestGetL2TxSelection(t *testing.T) {
 	coordIdxs[common.TokenID(1)] = common.Idx(257)
 	coordIdxs[common.TokenID(2)] = common.Idx(258)
 	coordIdxs[common.TokenID(3)] = common.Idx(259)
-	err = txsel.AddCoordIdxs(coordIdxs)
-	assert.NoError(t, err)
 
 	// add tokens to HistoryDB to avoid breaking FK constrains
 	var tokens []common.Token
