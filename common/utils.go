@@ -1,12 +1,14 @@
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree"
 )
 
 // SwapEndianness swaps the order of the bytes in the slice.
@@ -41,4 +43,22 @@ func BJJFromStringWithChecksum(s string) (babyjub.PublicKeyComp, error) {
 // CopyBigInt returns a copy of the big int
 func CopyBigInt(a *big.Int) *big.Int {
 	return new(big.Int).SetBytes(a.Bytes())
+}
+
+// RmEndingZeroes is used to convert the Siblings from a CircomProof into
+// Siblings of a merkletree Proof compatible with the js version. This method
+// should be used only if it exist an already generated CircomProof compatible
+// with circom circuits and a CircomProof compatible with SmartContracts is
+// needed. If the proof is not generated yet, this method should not be needed
+// and should be used mt.GenerateSCVerifierProof to directly generate the
+// CircomProof for the SmartContracts.
+func RmEndingZeroes(siblings []*merkletree.Hash) []*merkletree.Hash {
+	pos := 0
+	for i := len(siblings) - 1; i >= 0; i-- {
+		if !bytes.Equal(siblings[i].Bytes(), merkletree.HashZero.Bytes()) {
+			pos = i + 1
+			break
+		}
+	}
+	return siblings[:pos]
 }
