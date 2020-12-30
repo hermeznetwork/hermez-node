@@ -29,6 +29,9 @@ type testBidsResponse struct {
 }
 
 func (t testBidsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	if len(t.Bids) == 0 {
+		return 0, 0
+	}
 	pendingItems = t.PendingItems
 	lastItemID = t.Bids[len(t.Bids)-1].ItemID
 	return pendingItems, lastItemID
@@ -127,6 +130,13 @@ func TestGetBids(t *testing.T) {
 	}
 	assertBids(t, slotNumBidderAddrBids, fetchedBids)
 
+	// Empty array
+	fetchedBids = []testBid{}
+	path = fmt.Sprintf("%s?slotNum=%d&bidderAddr=%s", endpoint, 5, tc.bids[1].Bidder.String())
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
+	assert.NoError(t, err)
+	assertBids(t, []testBid{}, fetchedBids)
+
 	// 400
 	// No filters
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
@@ -139,10 +149,6 @@ func TestGetBids(t *testing.T) {
 	// Invalid bidderAddress
 	path = fmt.Sprintf("%s?bidderAddr=%s", endpoint, "0xG0000001")
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	// 404
-	path = fmt.Sprintf("%s?slotNum=%d&bidderAddr=%s", endpoint, 5, tc.bids[1].Bidder.String())
-	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
 

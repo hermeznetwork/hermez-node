@@ -215,12 +215,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:
@@ -347,12 +341,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:
@@ -565,12 +553,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:
@@ -687,12 +669,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:
@@ -850,12 +826,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:
@@ -960,12 +930,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:
@@ -1085,12 +1049,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error400'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error404'
         '500':
           description: Internal server error.
           content:

@@ -35,6 +35,9 @@ type testBatchesResponse struct {
 }
 
 func (t testBatchesResponse) GetPending() (pendingItems, lastItemID uint64) {
+	if len(t.Batches) == 0 {
+		return 0, 0
+	}
 	pendingItems = t.PendingItems
 	lastItemID = t.Batches[len(t.Batches)-1].ItemID
 	return pendingItems, lastItemID
@@ -220,6 +223,13 @@ func TestGetBatches(t *testing.T) {
 	}
 	assertBatches(t, minMaxBatchNumBatches, fetchedBatches)
 
+	// Empty array
+	fetchedBatches = []testBatch{}
+	path = fmt.Sprintf("%s?slotNum=%d&minBatchNum=%d", endpoint, 1, 25)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	assert.NoError(t, err)
+	assertBatches(t, []testBatch{}, fetchedBatches)
+
 	// 400
 	// Invalid minBatchNum
 	path = fmt.Sprintf("%s?minBatchNum=%d", endpoint, -2)
@@ -228,10 +238,6 @@ func TestGetBatches(t *testing.T) {
 	// Invalid forgerAddr
 	path = fmt.Sprintf("%s?forgerAddr=%s", endpoint, "0xG0000001")
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
-	// 404
-	path = fmt.Sprintf("%s?slotNum=%d&minBatchNum=%d", endpoint, 1, 25)
-	err = doBadReq("GET", path, nil, 404)
 	assert.NoError(t, err)
 }
 
