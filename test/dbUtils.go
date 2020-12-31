@@ -3,9 +3,8 @@ package test
 import (
 	"testing"
 
-	"github.com/gobuffalo/packr/v2"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/jmoiron/sqlx"
-	migrate "github.com/rubenv/sql-migrate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,15 +27,10 @@ func AssertUSD(t *testing.T, expected, actual *float64) {
 // WipeDB redo all the migrations of the SQL DB (HistoryDB and L2DB),
 // efectively recreating the original state
 func WipeDB(db *sqlx.DB) {
-	migrations := &migrate.PackrMigrationSource{
-		Box: packr.New("hermez-db-migrations", "../db/migrations"),
-	}
-	_, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Down)
-	if err != nil {
+	if err := dbUtils.MigrationsDown(db.DB); err != nil {
 		panic(err)
 	}
-	_, err = migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
-	if err != nil {
+	if err := dbUtils.MigrationsUp(db.DB); err != nil {
 		panic(err)
 	}
 }

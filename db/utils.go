@@ -15,8 +15,43 @@ import (
 	"github.com/russross/meddler"
 )
 
-// InitSQLDB runs migrations and registers meddlers
-func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
+var migrations *migrate.PackrMigrationSource
+
+func init() {
+	migrations = &migrate.PackrMigrationSource{
+		Box: packr.New("hermez-db-migrations", "./migrations"),
+	}
+	ms, err := migrations.FindMigrations()
+	if err != nil {
+		panic(err)
+	}
+	if len(ms) == 0 {
+		panic(fmt.Errorf("no SQL migrations found"))
+	}
+}
+
+// MigrationsUp runs the SQL migrations Up
+func MigrationsUp(db *sql.DB) error {
+	nMigrations, err := migrate.Exec(db, "postgres", migrations, migrate.Up)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Info("successfully ran ", nMigrations, " migrations Up")
+	return nil
+}
+
+// MigrationsDown runs the SQL migrations Down
+func MigrationsDown(db *sql.DB) error {
+	nMigrations, err := migrate.Exec(db, "postgres", migrations, migrate.Down)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Info("successfully ran ", nMigrations, " migrations Down")
+	return nil
+}
+
+// ConnectSQLDB connects to the SQL DB
+func ConnectSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 	// Init meddler
 	initMeddler()
 	meddler.Default = meddler.PostgreSQL
@@ -33,15 +68,19 @@ func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	// Run DB migrations
-	migrations := &migrate.PackrMigrationSource{
-		Box: packr.New("hermez-db-migrations", "./migrations"),
-	}
-	nMigrations, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+	return db, nil
+}
+
+// InitSQLDB runs migrations and registers meddlers
+func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
+	db, err := ConnectSQLDB(port, host, user, password, name)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	log.Info("successfully ran ", nMigrations, " migrations")
+	// Run DB migrations
+	if err := MigrationsUp(db.DB); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
 	return db, nil
 }
 
