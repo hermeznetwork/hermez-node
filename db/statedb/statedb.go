@@ -22,9 +22,9 @@ var (
 	// Account already exists
 	ErrAccountAlreadyExists = errors.New("Can not CreateAccount because Account already exists")
 
-	// ErrToIdxNotFound is used when trying to get the ToIdx from ToEthAddr
-	// or ToEthAddr&ToBJJ
-	ErrToIdxNotFound = errors.New("ToIdx can not be found")
+	// ErrIdxNotFound is used when trying to get the Idx from EthAddr or
+	// EthAddr&ToBJJ
+	ErrIdxNotFound = errors.New("Idx can not be found")
 	// ErrGetIdxNoCase is used when trying to get the Idx from EthAddr &
 	// BJJ with not compatible combination
 	ErrGetIdxNoCase = errors.New("Can not get Idx due unexpected combination of ethereum Address & BabyJubJub PublicKey")
@@ -148,6 +148,7 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 		}
 		s.MT = mt
 	}
+	log.Debugw("Making StateDB Reset", "batch", batchNum)
 	return nil
 }
 

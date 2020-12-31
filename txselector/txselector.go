@@ -17,7 +17,6 @@ import (
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree/db"
-	"github.com/iden3/go-merkletree/db/pebble"
 )
 
 const (
@@ -67,7 +66,6 @@ type TxSelector struct {
 	localAccountsDB *statedb.LocalStateDB
 
 	coordAccount *CoordAccount
-	coordIdxsDB  *pebble.Storage
 }
 
 // NewTxSelector returns a *TxSelector
@@ -79,16 +77,10 @@ func NewTxSelector(coordAccount *CoordAccount, dbpath string,
 		return nil, tracerr.Wrap(err)
 	}
 
-	coordIdxsDB, err := pebble.NewPebbleStorage(dbpath+PathCoordIdxsDB, false)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-
 	return &TxSelector{
 		l2db:            l2,
 		localAccountsDB: localAccountsDB,
 		coordAccount:    coordAccount,
-		coordIdxsDB:     coordIdxsDB,
 	}, nil
 }
 
@@ -107,65 +99,35 @@ func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
 	return nil
 }
 
-// AddCoordIdxs stores the given TokenID with the correspondent Idx to the
-// CoordIdxsDB
-func (txsel *TxSelector) AddCoordIdxs(idxs map[common.TokenID]common.Idx) error {
-	tx, err := txsel.coordIdxsDB.NewTx()
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	for tokenID, idx := range idxs {
-		idxBytes, err := idx.Bytes()
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-		err = tx.Put(tokenID.Bytes(), idxBytes[:])
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return tracerr.Wrap(err)
-	}
-	return nil
+func (txsel *TxSelector) getCoordIdx(tokenID common.TokenID) (common.Idx, error) {
+	return txsel.localAccountsDB.GetIdxByEthAddrBJJ(txsel.coordAccount.Addr, txsel.coordAccount.BJJ, tokenID)
 }
 
-// GetCoordIdxs returns a map with the stored TokenID with the correspondent
-// Coordinator Idx
-func (txsel *TxSelector) GetCoordIdxs() (map[common.TokenID]common.Idx, error) {
-	r := make(map[common.TokenID]common.Idx)
-	err := txsel.coordIdxsDB.Iterate(func(tokenIDBytes []byte, idxBytes []byte) (bool, error) {
-		idx, err := common.IdxFromBytes(idxBytes)
-		if err != nil {
-			return false, tracerr.Wrap(err)
-		}
-		tokenID, err := common.TokenIDFromBytes(tokenIDBytes)
-		if err != nil {
-			return false, tracerr.Wrap(err)
-		}
-		r[tokenID] = idx
-		return true, nil
-	})
-
-	return r, tracerr.Wrap(err)
-}
-
+// coordAccountForTokenID creates a new L1CoordinatorTx to create a new
+// Coordinator account for the given TokenID in the case that the account does
+// not exist yet in the db, and does not exist a L1CoordinatorTx to creat that
+// account in the given array of L1CoordinatorTxs. If a new Coordinator account
+// needs to be created, a new L1CoordinatorTx will be returned from this
+// function.
 //nolint:unused
-func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx, tokenID common.TokenID, positionL1 int) (*common.L1Tx, int, error) {
+func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx,
+	tokenID common.TokenID, positionL1 int) (*common.L1Tx, int, error) {
 	// check if CoordinatorAccount for TokenID is already pending to create
-	if checkAlreadyPendingToCreate(l1CoordinatorTxs, tokenID, txsel.coordAccount.Addr, txsel.coordAccount.BJJ) {
+	if checkAlreadyPendingToCreate(l1CoordinatorTxs, tokenID,
+		txsel.coordAccount.Addr, txsel.coordAccount.BJJ) {
 		return nil, positionL1, nil
 	}
-
-	_, err := txsel.coordIdxsDB.Get(tokenID.Bytes())
-	if tracerr.Unwrap(err) == db.ErrNotFound {
-		// create L1CoordinatorTx to create new CoordAccount for TokenID
+	_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(txsel.coordAccount.Addr, txsel.coordAccount.BJJ, tokenID)
+	if tracerr.Unwrap(err) == statedb.ErrIdxNotFound {
+		// create L1CoordinatorTx to create new CoordAccount for
+		// TokenID
 		l1CoordinatorTx := common.L1Tx{
 			Position:      positionL1,
 			UserOrigin:    false,
 			FromEthAddr:   txsel.coordAccount.Addr,
 			FromBJJ:       txsel.coordAccount.BJJ,
 			TokenID:       tokenID,
+			Amount:        big.NewInt(0),
 			DepositAmount: big.NewInt(0),
 			Type:          common.TxTypeCreateAccountDeposit,
 		}
@@ -191,8 +153,8 @@ func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx, 
 // included in the next batch.
 func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig,
 	batchNum common.BatchNum) ([]common.Idx, [][]byte, []common.L1Tx, []common.PoolL2Tx, error) {
-	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, batchNum,
-		[]common.L1Tx{})
+	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs, err :=
+		txsel.GetL1L2TxSelection(selectionConfig, batchNum, []common.L1Tx{})
 	return coordIdxs, accCreationAuths, l1CoordinatorTxs, l2Txs, tracerr.Wrap(err)
 }
 
@@ -205,40 +167,21 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig,
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
 func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
-	batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx, []common.L1Tx,
-	[]common.PoolL2Tx, error) {
+	batchNum common.BatchNum, l1Txs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
+	[]common.L1Tx, []common.PoolL2Tx, error) {
 	// TODO WIP this method uses a 'cherry-pick' of internal calls of the
 	// StateDB, a refactor of the StateDB to reorganize it internally is
 	// planned once the main functionallities are covered, with that
 	// refactor the TxSelector will be updated also
 
-	// apply l1-user-tx to localAccountDB
-	//     create new leaves
-	//     update balances
-	//     update nonces
-
-	// get existing CoordIdxs
-	coordIdxsMap, err := txsel.GetCoordIdxs()
-	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	}
-	var coordIdxs []common.Idx
-	for tokenID := range coordIdxsMap {
-		coordIdxs = append(coordIdxs, coordIdxsMap[tokenID])
-	}
-
 	// get pending l2-tx from tx-pool
-	l2TxsRaw, err := txsel.l2db.GetPendingTxs() // (batchID)
+	l2TxsRaw, err := txsel.l2db.GetPendingTxs()
 	if err != nil {
 		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 
 	txselStateDB := txsel.localAccountsDB.StateDB
 	tp := txprocessor.NewTxProcessor(txselStateDB, selectionConfig.TxProcessorConfig)
-
-	var validTxs txs
-	var l1CoordinatorTxs []common.L1Tx
-	positionL1 := len(l1Txs)
 
 	// Process L1UserTxs
 	for i := 0; i < len(l1Txs); i++ {
@@ -249,12 +192,51 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 		}
 	}
 
-	// get last idx from LocalStateDB
-	// lastIdx := txsel.localStateDB.idx
-	// update lastIdx with the L1UserTxs (of account creation)
-
+	var l1CoordinatorTxs []common.L1Tx
+	positionL1 := len(l1Txs)
 	var accAuths [][]byte
-	for i := 0; i < len(l2TxsRaw); i++ {
+
+	// sort l2TxsRaw (cropping at MaxTx at this point)
+	l2Txs := txsel.getL2Profitable(l2TxsRaw, selectionConfig.TxProcessorConfig.MaxTx)
+
+	// TODO for L1CoordinatorTxs check that always len(l1UserTxs)+len(l1CoordinatorTxs)<MaxL1Txs
+
+	// iterate over l2Txs
+	// - if tx.TokenID does not exist at CoordsIdxDB
+	// 	- create new L1CoordinatorTx, for Coordinator to receive the fee of the new TokenID
+	for i := 0; i < len(l2Txs); i++ {
+		// check if l2Tx.TokenID does not exist at CoordsIdxDB
+		_, err = txsel.getCoordIdx(l2Txs[i].TokenID) // TODO already used inside coordAccountForTokenID, this will be removed
+		if tracerr.Unwrap(err) != db.ErrNotFound {
+			// if TokenID does not exist yet, create new
+			// L1CoordinatorTx to create the CoordinatorAccount for
+			// that TokenID, to receive the fees. Only in the case
+			// that there does not exist yet a pending
+			// L1CoordinatorTx to create the account for the
+			// Coordinator for that TokenID
+
+			// TODO TMP
+			// var newL1CoordTx *common.L1Tx
+			// newL1CoordTx, positionL1, err =
+			//         txsel.coordAccountForTokenID(l1CoordinatorTxs,
+			//                 l2TxsRaw[i].TokenID, positionL1)
+			// if err != nil {
+			//         return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+			// }
+			// if newL1CoordTx != nil {
+			//         l1CoordinatorTxs = append(l1CoordinatorTxs, *newL1CoordTx)
+			// }
+		} else if err != nil {
+			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+		}
+	}
+
+	var validTxs txs
+	// iterate over l2TxsRaw
+	// - if needed, create new L1CoordinatorTxs for unexisting ToIdx
+	// 	- keep used accAuths
+	// - put the valid txs into validTxs array
+	for i := 0; i < len(l2Txs); i++ {
 		// If tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB,
 		// if so, tx is used.  If tx.ToIdx==0, for an L2Tx will be the
 		// case of TxToEthAddr or TxToBJJ, check if
@@ -263,11 +245,11 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 		// AccountCreationAuthDB, if so, tx is used and L1CoordinatorTx
 		// of CreateAccountAndDeposit is created. If tx.ToIdx==1, is a
 		// Exit type and is used.
-		if l2TxsRaw[i].ToIdx == 0 { // ToEthAddr/ToBJJ case
+		if l2Txs[i].ToIdx == 0 { // ToEthAddr/ToBJJ case
 			var accAuth *common.AccountCreationAuth
 			validTxs, l1CoordinatorTxs, accAuth, positionL1, err =
 				txsel.processTxToEthAddrBJJ(validTxs, l1CoordinatorTxs,
-					positionL1, l2TxsRaw[i])
+					positionL1, l2Txs[i])
 			if err != nil {
 				log.Debug(err)
 				continue
@@ -275,33 +257,22 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 			if accAuth != nil {
 				accAuths = append(accAuths, accAuth.Signature)
 			}
-		} else if l2TxsRaw[i].ToIdx >= common.IdxUserThreshold {
-			_, err = txsel.localAccountsDB.GetAccount(l2TxsRaw[i].ToIdx)
+		} else if l2Txs[i].ToIdx >= common.IdxUserThreshold {
+			_, err = txsel.localAccountsDB.GetAccount(l2Txs[i].ToIdx)
 			if err != nil {
 				// tx not valid
 				log.Debugw("invalid L2Tx: ToIdx not found in StateDB",
-					"ToIdx", l2TxsRaw[i].ToIdx)
+					"ToIdx", l2Txs[i].ToIdx)
 				continue
 			}
-
 			// TODO if EthAddr!=0 or BJJ!=0, check that ToIdxAccount.EthAddr or BJJ
 
 			// Account found in the DB, include the l2Tx in the selection
-			validTxs = append(validTxs, l2TxsRaw[i])
-		} else if l2TxsRaw[i].ToIdx == common.Idx(1) {
+			validTxs = append(validTxs, l2Txs[i])
+		} else if l2Txs[i].ToIdx == common.Idx(1) {
 			// valid txs (of Exit type)
-			validTxs = append(validTxs, l2TxsRaw[i])
+			validTxs = append(validTxs, l2Txs[i])
 		}
-		// TODO if needed add L1CoordinatorTx to create a Coordinator
-		// account for the new TokenID
-		// var newL1CoordTx *common.L1Tx
-		// newL1CoordTx, positionL1, err = txsel.coordAccountForTokenID(l1CoordinatorTxs, l2TxsRaw[i].TokenID, positionL1)
-		// if err != nil {
-		//         return nil, nil, nil, nil, nil, tracerr.Wrap(err)
-		// }
-		// if newL1CoordTx != nil {
-		//         l1CoordinatorTxs = append(l1CoordinatorTxs, *newL1CoordTx)
-		// }
 	}
 
 	// Process L1CoordinatorTxs
@@ -311,41 +282,39 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
 	}
-	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
-	for _, idx := range coordIdxs {
-		tp.AccumulatedFees[idx] = big.NewInt(0)
-	}
 
-	// once L1UserTxs & L1CoordinatorTxs are processed, get TokenIDs of
-	// coordIdxs. In this way, if a coordIdx uses an Idx that is being
-	// created in the current batch, at this point the Idx will be created
-	coordIdxsMap, err = txsel.localAccountsDB.GetTokenIDsFromIdxs(coordIdxs)
-	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	// get CoordIdxsMap for the TokenIDs
+	coordIdxsMap := make(map[common.TokenID]common.Idx)
+	// TODO TMP (related to L#260
+	// for i := 0; i < len(l2Txs); i++ {
+	//         coordIdx, err := txsel.getCoordIdx(l2Txs[i].TokenID)
+	//         if err != nil {
+	//                 // if err is db.ErrNotFound, should not happen, as all
+	//                 // the l2Txs.TokenID should have a CoordinatorIdx
+	//                 // created in the DB at this point
+	//                 return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	//         }
+	//         coordIdxsMap[l2Txs[i].TokenID] = coordIdx
+	// }
+
+	var coordIdxs []common.Idx
+	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
+	for _, idx := range coordIdxsMap {
+		tp.AccumulatedFees[idx] = big.NewInt(0)
+		coordIdxs = append(coordIdxs, idx)
 	}
 
 	// get most profitable L2-tx
 	maxL2Txs := selectionConfig.TxProcessorConfig.MaxTx - uint32(len(l1CoordinatorTxs)) // - len(l1UserTxs) // TODO if there are L1UserTxs take them in to account
-	l2Txs := txsel.getL2Profitable(validTxs, maxL2Txs)
-
-	// Process L2Txs
-	for i := 0; i < len(l2Txs); i++ {
-		_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
+	selectedL2Txs := txsel.getL2Profitable(l2Txs, maxL2Txs)                             // TODO this will only need to crop the lasts, as are already sorted
+	for i := 0; i < len(selectedL2Txs); i++ {
+		_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &selectedL2Txs[i])
 		if err != nil {
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
 	}
-	err = txsel.AddCoordIdxs(coordIdxsMap)
-	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	}
 
-	err = txsel.localAccountsDB.MakeCheckpoint()
-	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	}
-
-	return nil, accAuths, l1Txs, l1CoordinatorTxs, l2Txs, nil
+	return coordIdxs, accAuths, l1Txs, l1CoordinatorTxs, selectedL2Txs, nil
 }
 
 // processTxsToEthAddrBJJ process the common.PoolL2Tx in the case where
@@ -424,6 +393,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 			FromEthAddr:   accAuth.EthAddr,
 			FromBJJ:       accAuth.BJJ,
 			TokenID:       l2Tx.TokenID,
+			Amount:        big.NewInt(0),
 			DepositAmount: big.NewInt(0),
 			Type:          common.TxTypeCreateAccountDeposit,
 		}
@@ -450,6 +420,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs txs, l1CoordinatorTxs []
 			FromEthAddr:   l2Tx.ToEthAddr,
 			FromBJJ:       l2Tx.ToBJJ,
 			TokenID:       l2Tx.TokenID,
+			Amount:        big.NewInt(0),
 			DepositAmount: big.NewInt(0),
 			Type:          common.TxTypeCreateAccountDeposit,
 		}

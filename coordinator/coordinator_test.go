@@ -29,6 +29,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db/pebble"
 	"github.com/stretchr/testify/assert"
@@ -115,9 +116,12 @@ func newTestModules(t *testing.T) modules {
 	require.NoError(t, err)
 	deleteme = append(deleteme, txSelDBPath)
 
+	var bjj babyjub.PublicKeyComp
+	err = bjj.UnmarshalText([]byte("c433f7a696b7aa3a5224efb3993baf0ccd9e92eecee0c29a3f6c8208a9e81d9e"))
+	require.NoError(t, err)
 	coordAccount := &txselector.CoordAccount{ // TODO TMP
 		Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
-		BJJ:                 common.EmptyBJJComp,
+		BJJ:                 bjj,
 		AccountCreationAuth: nil,
 	}
 	txSelector, err := txselector.NewTxSelector(coordAccount, txSelDBPath, syncStateDB, l2DB)

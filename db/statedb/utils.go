@@ -9,6 +9,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree/db"
 )
 
 func concatEthAddrTokenID(addr ethCommon.Address, tokenID common.TokenID) []byte {
@@ -84,7 +85,7 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID
 	b, err := s.db.DB().Get(append(PrefixKeyAddr, k...))
 	if err != nil {
 		return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d",
-			ErrToIdxNotFound, addr.Hex(), tokenID))
+			ErrIdxNotFound, addr.Hex(), tokenID))
 	}
 	idx, err := common.IdxFromBytes(b)
 	if err != nil {
@@ -99,26 +100,34 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID
 // address, it's ignored in the query.  If `pk` is nil, it's ignored in the
 // query.  Will return common.Idx(0) and error in case that Idx is not found in
 // the StateDB.
-func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk babyjub.PublicKeyComp, tokenID common.TokenID) (common.Idx, error) {
+func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk babyjub.PublicKeyComp,
+	tokenID common.TokenID) (common.Idx, error) {
 	if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk == common.EmptyBJJComp {
 		// ToEthAddr
 		// case ToEthAddr!=0 && ToBJJ=0
 		return s.GetIdxByEthAddr(addr, tokenID)
-	} else if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk != common.EmptyBJJComp {
+	} else if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) &&
+		pk != common.EmptyBJJComp {
 		// case ToEthAddr!=0 && ToBJJ!=0
 		k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 		b, err := s.db.DB().Get(append(PrefixKeyAddrBJJ, k...))
-		if err != nil {
-			return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrToIdxNotFound, addr.Hex(), pk, tokenID))
+		if tracerr.Unwrap(err) == db.ErrNotFound {
+			// return the error (ErrNotFound), so can be traced at upper layers
+			return common.Idx(0), tracerr.Wrap(ErrIdxNotFound)
+		} else if err != nil {
+			return common.Idx(0),
+				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrIdxNotFound, addr.Hex(), pk, tokenID))
 		}
 		idx, err := common.IdxFromBytes(b)
 		if err != nil {
-			return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", err, addr.Hex(), pk, tokenID))
+			return common.Idx(0),
+				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", err, addr.Hex(), pk, tokenID))
 		}
 		return idx, nil
 	}
 	// rest of cases (included case ToEthAddr==0) are not possible
-	return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrGetIdxNoCase, addr.Hex(), pk, tokenID))
+	return common.Idx(0),
+		tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrGetIdxNoCase, addr.Hex(), pk, tokenID))
 }
 
 // GetTokenIDsFromIdxs returns a map containing the common.TokenID with its
