@@ -11,7 +11,8 @@ import (
 func TestEthERC20(t *testing.T) {
 	ethClient, err := ethclient.Dial(ethClientDialURL)
 	require.Nil(t, err)
-	client := NewEthereumClient(ethClient, auxAccount, ks, nil)
+	client, err := NewEthereumClient(ethClient, auxAccount, ks, nil)
+	require.Nil(t, err)
 
 	consts, err := client.EthERC20Consts(tokenHEZAddressConst)
 	require.Nil(t, err)

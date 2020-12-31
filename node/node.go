@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
+	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
@@ -87,6 +89,8 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	var ethCfg eth.EthereumConfig
+	var account *accounts.Account
+	var keyStore *ethKeystore.KeyStore
 	if mode == ModeCoordinator {
 		ethCfg = eth.EthereumConfig{
 			CallGasLimit:        cfg.Coordinator.EthClient.CallGasLimit,
@@ -95,8 +99,31 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			ReceiptTimeout:      cfg.Coordinator.EthClient.ReceiptTimeout.Duration,
 			IntervalReceiptLoop: cfg.Coordinator.EthClient.ReceiptLoopInterval.Duration,
 		}
+
+		scryptN := ethKeystore.StandardScryptN
+		scryptP := ethKeystore.StandardScryptP
+		if cfg.Coordinator.Debug.LightScrypt {
+			scryptN = ethKeystore.LightScryptN
+			scryptP = ethKeystore.LightScryptP
+		}
+		keyStore = ethKeystore.NewKeyStore(cfg.Coordinator.EthClient.Keystore.Path,
+			scryptN, scryptP)
+		if !keyStore.HasAddress(cfg.Coordinator.ForgerAddress) {
+			return nil, tracerr.Wrap(fmt.Errorf(
+				"ethereum keystore doesn't have the key for address %v",
+				cfg.Coordinator.ForgerAddress))
+		}
+		account = &accounts.Account{
+			Address: cfg.Coordinator.ForgerAddress,
+		}
+		if err := keyStore.Unlock(*account,
+			cfg.Coordinator.EthClient.Keystore.Password); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		log.Infow("Forger ethereum account unlocked in the keystore",
+			"addr", cfg.Coordinator.ForgerAddress)
 	}
-	client, err := eth.NewClient(ethClient, nil, nil, &eth.ClientConfig{
+	client, err := eth.NewClient(ethClient, account, keyStore, &eth.ClientConfig{
 		Ethereum: ethCfg,
 		Rollup: eth.RollupConfig{
 			Address: cfg.SmartContracts.Rollup,

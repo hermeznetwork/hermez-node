@@ -10,7 +10,10 @@ import (
 	"testing"
 	"time"
 
+	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
@@ -26,6 +29,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db/pebble"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -428,8 +432,9 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	modules := newTestModules(t)
+	var stats synchronizer.Stats
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
-	pipeline, err := coord.newPipeline(ctx)
+	pipeline, err := coord.newPipeline(ctx, &stats)
 	require.NoError(t, err)
 	pipeline.vars = coord.vars
 
@@ -438,8 +443,6 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	require.Equal(t, int64(9), ethClientSetup.RollupVariables.ForgeL1L2BatchTimeout)
 	l1BatchTimeoutPerc := pipeline.cfg.L1BatchTimeoutPerc
 	l1BatchTimeout := ethClientSetup.RollupVariables.ForgeL1L2BatchTimeout
-
-	var stats synchronizer.Stats
 
 	startBlock := int64(100)
 
@@ -576,11 +579,6 @@ func TestPipeline1(t *testing.T) {
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	sync := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
-	pipeline, err := coord.newPipeline(ctx)
-	require.NoError(t, err)
-
-	require.NotNil(t, sync)
-	require.NotNil(t, pipeline)
 
 	// preload the synchronier (via the test ethClient) some tokens and
 	// users with positive balances
@@ -588,6 +586,9 @@ func TestPipeline1(t *testing.T) {
 	syncStats := sync.Stats()
 	batchNum := common.BatchNum(syncStats.Sync.LastBatch)
 	syncSCVars := sync.SCVars()
+
+	pipeline, err := coord.newPipeline(ctx, syncStats)
+	require.NoError(t, err)
 
 	// Insert some l2txs in the Pool
 	setPool := `
@@ -711,6 +712,80 @@ func TestCoordinatorStress(t *testing.T) {
 	cancel()
 	wg.Wait()
 	coord.Stop()
+}
+
+func TestRollupForgeBatch(t *testing.T) {
+	if os.Getenv("TEST_ROLLUP_FORGE_BATCH") == "" {
+		return
+	}
+	const web3URL = "http://localhost:8545"
+	const password = "test"
+	addr := ethCommon.HexToAddress("0xb4124ceb3451635dacedd11767f004d8a28c6ee7")
+	sk, err := crypto.HexToECDSA(
+		"a8a54b2d8197bc0b19bb8a084031be71835580a01e70a45a13babd16c9bc1563")
+	require.NoError(t, err)
+	rollupAddr := ethCommon.HexToAddress("0x8EEaea23686c319133a7cC110b840d1591d9AeE0")
+	pathKeystore, err := ioutil.TempDir("", "tmpKeystore")
+	require.NoError(t, err)
+	deleteme = append(deleteme, pathKeystore)
+	ctx := context.Background()
+	batchInfo := &BatchInfo{}
+	proofClient := &prover.MockClient{}
+	chainID := uint16(0)
+
+	ethClient, err := ethclient.Dial(web3URL)
+	require.NoError(t, err)
+	ethCfg := eth.EthereumConfig{
+		CallGasLimit:        300000,
+		DeployGasLimit:      1000000,
+		GasPriceDiv:         100,
+		ReceiptTimeout:      60 * time.Second,
+		IntervalReceiptLoop: 500 * time.Millisecond,
+	}
+	scryptN := ethKeystore.LightScryptN
+	scryptP := ethKeystore.LightScryptP
+	keyStore := ethKeystore.NewKeyStore(pathKeystore,
+		scryptN, scryptP)
+	account, err := keyStore.ImportECDSA(sk, password)
+	require.NoError(t, err)
+	require.Equal(t, account.Address, addr)
+	err = keyStore.Unlock(account, password)
+	require.NoError(t, err)
+
+	client, err := eth.NewClient(ethClient, &account, keyStore, &eth.ClientConfig{
+		Ethereum: ethCfg,
+		Rollup: eth.RollupConfig{
+			Address: rollupAddr,
+		},
+		Auction: eth.AuctionConfig{
+			Address: ethCommon.Address{},
+			TokenHEZ: eth.TokenConfig{
+				Address: ethCommon.Address{},
+				Name:    "HEZ",
+			},
+		},
+		WDelayer: eth.WDelayerConfig{
+			Address: ethCommon.Address{},
+		},
+	})
+	require.NoError(t, err)
+
+	zkInputs := common.NewZKInputs(chainID, 100, 24, 512, 32, big.NewInt(1))
+	zkInputs.Metadata.NewStateRootRaw = &merkletree.Hash{1}
+	zkInputs.Metadata.NewExitRootRaw = &merkletree.Hash{2}
+	batchInfo.ZKInputs = zkInputs
+	err = proofClient.CalculateProof(ctx, batchInfo.ZKInputs)
+	require.NoError(t, err)
+
+	proof, pubInputs, err := proofClient.GetProof(ctx)
+	require.NoError(t, err)
+	batchInfo.Proof = proof
+	batchInfo.PublicInputs = pubInputs
+
+	batchInfo.ForgeBatchArgs = prepareForgeBatchArgs(batchInfo)
+	_, err = client.RollupForgeBatch(batchInfo.ForgeBatchArgs)
+	require.NoError(t, err)
+	batchInfo.Proof = proof
 }
 
 // TODO: Test Reorg

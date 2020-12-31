@@ -112,6 +112,10 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
 	assert.NoError(t, err)
 
+	bn, err = sdb.db.GetCurrentBatch()
+	assert.NoError(t, err)
+	assert.Equal(t, common.BatchNum(1), bn)
+
 	v, err = sdb.db.DB().Get(k0)
 	assert.NoError(t, err)
 	assert.Equal(t, v0, v)

@@ -38,7 +38,8 @@ TokenHEZ = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
 TokenHEZName = "Hermez Network Token"
 
 [Coordinator]
-ForgerAddress = "0x6BB84Cc84D4A34467aD12a2039A312f7029e2071"
+# ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD" # Non-Boot Coordinator
+ForgerAddress = "0xb4124ceb3451635dacedd11767f004d8a28c6ee7" # Boot Coordinator
 ConfirmBlocks = 10
 L1BatchTimeoutPerc = 0.6
 ProofServerPollInterval = "1s"
@@ -60,7 +61,7 @@ Path = "/tmp/iden3-test/hermez/txselector"
 Path = "/tmp/iden3-test/hermez/batchbuilder"
 
 [[Coordinator.ServerProofs]]
-URL = "http://localhost:3000"
+URL = "http://localhost:3000/api"
 
 [Coordinator.EthClient]
 CallGasLimit        = 300000
@@ -73,8 +74,13 @@ CheckLoopInterval = "500ms"
 Attempts = 8
 AttemptsDelay = "200ms"
 
+[Coordinator.EthClient.Keystore]
+Path = "/tmp/iden3-test/hermez/ethkeystore"
+Password = "yourpasswordhere"
+
 [Coordinator.API]
 Coordinator = true
 
 [Coordinator.Debug]
 BatchPath = "/tmp/iden3-test/hermez/batchesdebug"
+LightScrypt = true

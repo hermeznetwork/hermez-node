@@ -73,6 +73,7 @@ type EthereumConfig struct {
 // EthereumClient is an ethereum client to call Smart Contract methods and check blockchain information.
 type EthereumClient struct {
 	client         *ethclient.Client
+	chainID        *big.Int
 	account        *accounts.Account
 	ks             *ethKeystore.KeyStore
 	ReceiptTimeout time.Duration
@@ -82,7 +83,7 @@ type EthereumClient struct {
 
 // NewEthereumClient creates a EthereumClient instance.  The account is not mandatory (it can
 // be nil).  If the account is nil, CallAuth will fail with ErrAccountNil.
-func NewEthereumClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, config *EthereumConfig) *EthereumClient {
+func NewEthereumClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, config *EthereumConfig) (*EthereumClient, error) {
 	if config == nil {
 		config = &EthereumConfig{
 			CallGasLimit:        defaultCallGasLimit,
@@ -92,7 +93,7 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account, ks *
 			IntervalReceiptLoop: defaultIntervalReceiptLoop,
 		}
 	}
-	return &EthereumClient{
+	c := &EthereumClient{
 		client:         client,
 		account:        account,
 		ks:             ks,
@@ -100,6 +101,12 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account, ks *
 		config:         config,
 		opts:           newCallOpts(),
 	}
+	chainID, err := c.EthChainID()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	c.chainID = chainID
+	return c, nil
 }
 
 // EthChainID returns the ChainID of the ethereum network
@@ -147,8 +154,7 @@ func (c *EthereumClient) CallAuth(gasLimit uint64,
 	gasPrice.Add(gasPrice, inc)
 	log.Debugw("Transaction metadata", "gasPrice", gasPrice)
 
-	// TODO: Set the correct chainID
-	auth, err := bind.NewKeyStoreTransactorWithChainID(c.ks, *c.account, big.NewInt(0))
+	auth, err := bind.NewKeyStoreTransactorWithChainID(c.ks, *c.account, c.chainID)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

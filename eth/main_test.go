@@ -164,7 +164,10 @@ func TestMain(m *testing.M) {
 		}
 
 		// Controllable Governance Address
-		ethereumClientGov := NewEthereumClient(ethClient, governanceAccount, ks, nil)
+		ethereumClientGov, err := NewEthereumClient(ethClient, governanceAccount, ks, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
 		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHEZ)
 		if err != nil {
 			log.Fatal(err)
@@ -186,10 +189,22 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 
-		ethereumClientEmergencyCouncil = NewEthereumClient(ethClient, emergencyCouncilAccount, ks, nil)
-		ethereumClientAux = NewEthereumClient(ethClient, auxAccount, ks, nil)
-		ethereumClientAux2 = NewEthereumClient(ethClient, aux2Account, ks, nil)
-		ethereumClientHermez = NewEthereumClient(ethClient, hermezRollupTestAccount, ks, nil)
+		ethereumClientEmergencyCouncil, err = NewEthereumClient(ethClient, emergencyCouncilAccount, ks, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ethereumClientAux, err = NewEthereumClient(ethClient, auxAccount, ks, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ethereumClientAux2, err = NewEthereumClient(ethClient, aux2Account, ks, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ethereumClientHermez, err = NewEthereumClient(ethClient, hermezRollupTestAccount, ks, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		exitVal = m.Run()
 	}
