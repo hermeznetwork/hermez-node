@@ -56,7 +56,8 @@ func TestL1TxCompressedData(t *testing.T) {
 		Amount:  big.NewInt(4),
 		TokenID: 5,
 	}
-	txCompressedData, err := tx.TxCompressedData()
+	chainID := uint16(0)
+	txCompressedData, err := tx.TxCompressedData(chainID)
 	assert.NoError(t, err)
 
 	// test vector value generated from javascript implementation

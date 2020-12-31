@@ -32,6 +32,7 @@ type BatchInfo struct {
 	Proof                 *prover.Proof
 	PublicInputs          []*big.Int
 	L1Batch               bool
+	VerifierIdx           uint8
 	L1UserTxsExtra        []common.L1Tx
 	L1CoordTxs            []common.L1Tx
 	L1CoordinatorTxsAuths [][]byte

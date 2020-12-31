@@ -68,7 +68,12 @@ type Coordinator struct {
 		Path string `validate:"required"`
 	} `validate:"required"`
 	ServerProofs []ServerProof `validate:"required"`
-	EthClient    struct {
+	Circuit      struct {
+		// VerifierIdx uint8  `validate:"required"`
+		MaxTx   int64 `validate:"required"`
+		NLevels int64 `validate:"required"`
+	} `validate:"required"`
+	EthClient struct {
 		CallGasLimit        uint64   `validate:"required"`
 		DeployGasLimit      uint64   `validate:"required"`
 		GasPriceDiv         uint64   `validate:"required"`
