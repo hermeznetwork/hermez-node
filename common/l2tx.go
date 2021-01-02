@@ -124,6 +124,15 @@ func L2TxsToPoolL2Txs(txs []L2Tx) []PoolL2Tx {
 	return r
 }
 
+// TxIDsFromL2Txs returns an array of TxID from the []L2Tx
+func TxIDsFromL2Txs(txs []L2Tx) []TxID {
+	txIDs := make([]TxID, len(txs))
+	for i, tx := range txs {
+		txIDs[i] = tx.TxID
+	}
+	return txIDs
+}
+
 // BytesDataAvailability encodes a L2Tx into []byte for the Data Availability
 func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd

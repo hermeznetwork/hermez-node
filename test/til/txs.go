@@ -123,6 +123,7 @@ type Account struct {
 type User struct {
 	Name     string
 	BJJ      *babyjub.PrivateKey
+	EthSk    *ecdsa.PrivateKey
 	Addr     ethCommon.Address
 	Accounts map[common.TokenID]*Account
 }
@@ -696,6 +697,7 @@ func (tc *Context) generateKeys(userNames []string) {
 		u := User{
 			Name:     userNames[i-1],
 			BJJ:      &sk,
+			EthSk:    &key,
 			Addr:     addr,
 			Accounts: make(map[common.TokenID]*Account),
 		}

@@ -215,19 +215,14 @@ Type: Blockchain
 AddToken(1)
 
 
-// Coordinator accounts, Idxs: 256, 257
-CreateAccountCoordinator(0) Coord
-CreateAccountCoordinator(1) Coord
-
 // close Block:0, Batch:0
-> batch // forge L1Coord{2}
+> batch
 
 CreateAccountDeposit(0) A: 500
 CreateAccountDeposit(1) C: 0
-CreateAccountCoordinator(0) C
 
 // close Block:0, Batch:1
-> batchL1 // freeze L1User{2}, forge L1Coord{1}
+> batchL1 // freeze L1User{2}, forge L1Coord{0}
 // Expected balances:
 //     Coord(0): 0, Coord(1): 0
 //     C(0): 0
@@ -263,13 +258,19 @@ CreateAccountDeposit(0) D: 800
 //     B(0): 400
 //     C(0): 0
 
+// Coordinator creates needed accounts to receive Fees
+CreateAccountCoordinator(1) Coord
+CreateAccountCoordinator(0) Coord
+// Coordinator creates needed 'To' accounts for the L2Txs
 CreateAccountCoordinator(1) B
+CreateAccountCoordinator(0) C
+
 
 Transfer(1) A-B: 200 (126)
 Transfer(0) B-C: 100 (126)
 
 // close Block:0, Batch:6
-> batchL1 // forge L1User{1}, forge L1Coord{2}, forge L2{2}
+> batchL1 // forge L1User{1}, forge L1Coord{4}, forge L2{2}
 // Expected balances:
 //     Coord(0): 10, Coord(1): 20
 //     A(0): 600, A(1): 280
