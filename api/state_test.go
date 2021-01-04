@@ -64,7 +64,6 @@ func TestUpdateNetworkInfo(t *testing.T) {
 }
 
 func TestUpdateMetrics(t *testing.T) {
-	// TODO: Improve checks when til is integrated
 	// Update Metrics needs api.status.Network.LastBatch.BatchNum to be updated
 	lastBlock := tc.blocks[3]
 	lastBatchNum := common.BatchNum(3)
@@ -76,7 +75,7 @@ func TestUpdateMetrics(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Greater(t, api.status.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, api.status.Metrics.BatchFrequency, float64(0))
-	assert.Greater(t, api.status.Metrics.TransactionsPerBatch, float64(0))
+	assert.Greater(t, api.status.Metrics.TransactionsPerSecond, float64(0))
 	assert.Greater(t, api.status.Metrics.TotalAccounts, int64(0))
 	assert.Greater(t, api.status.Metrics.TotalBJJs, int64(0))
 	assert.Greater(t, api.status.Metrics.AvgTransactionFee, float64(0))
@@ -126,7 +125,7 @@ func TestGetState(t *testing.T) {
 	// TODO: perform real asserts (not just greater than 0)
 	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, status.Metrics.BatchFrequency, float64(0))
-	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
+	assert.Greater(t, status.Metrics.TransactionsPerSecond, float64(0))
 	assert.Greater(t, status.Metrics.TotalAccounts, int64(0))
 	assert.Greater(t, status.Metrics.TotalBJJs, int64(0))
 	assert.Greater(t, status.Metrics.AvgTransactionFee, float64(0))

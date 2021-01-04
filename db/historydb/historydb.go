@@ -1823,17 +1823,25 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 	metrics := &Metrics{}
 	err := meddler.QueryRow(
 		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs,
-		COALESCE (MIN(tx.batch_num), 0) as batch_num 
+		COALESCE (MIN(tx.batch_num), 0) as batch_num, COALESCE (MIN(block.timestamp), 
+		NOW()) AS min_timestamp, COALESCE (MAX(block.timestamp), NOW()) AS max_timestamp
 		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
 		WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS';`)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 
-	metrics.TransactionsPerSecond = float64(metricsTotals.TotalTransactions / (24 * 60 * 60))
+	seconds := metricsTotals.MaxTimestamp.Sub(metricsTotals.MinTimestamp).Seconds()
+	// Avoid dividing by 0
+	if seconds == 0 {
+		seconds++
+	}
+
+	metrics.TransactionsPerSecond = float64(metricsTotals.TotalTransactions) / seconds
+
 	if (lastBatchNum - metricsTotals.FirstBatchNum) > 0 {
-		metrics.TransactionsPerBatch = float64(int64(metricsTotals.TotalTransactions) /
-			int64(lastBatchNum-metricsTotals.FirstBatchNum))
+		metrics.TransactionsPerBatch = float64(metricsTotals.TotalTransactions) /
+			float64(lastBatchNum-metricsTotals.FirstBatchNum+1)
 	} else {
 		metrics.TransactionsPerBatch = float64(0)
 	}
@@ -1846,7 +1854,7 @@ func (hdb *HistoryDB) GetMetrics(lastBatchNum common.BatchNum) (*Metrics, error)
 		return nil, tracerr.Wrap(err)
 	}
 	if metricsTotals.TotalBatches > 0 {
-		metrics.BatchFrequency = float64((24 * 60 * 60) / metricsTotals.TotalBatches)
+		metrics.BatchFrequency = seconds / float64(metricsTotals.TotalBatches)
 	} else {
 		metrics.BatchFrequency = 0
 	}
