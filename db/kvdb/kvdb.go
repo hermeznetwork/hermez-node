@@ -110,11 +110,24 @@ func (kvdb *KVDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 		return tracerr.Wrap(err)
 	}
 	// remove all checkpoints > batchNum
-	for i := batchNum + 1; i <= kvdb.CurrentBatch; i++ {
-		if err := kvdb.DeleteCheckpoint(i); err != nil {
+	list, err := kvdb.ListCheckpoints()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	// Find first batch that is greater than batchNum, and delete
+	// everything after that
+	start := 0
+	for ; start < len(list); start++ {
+		if common.BatchNum(list[start]) > batchNum {
+			break
+		}
+	}
+	for _, bn := range list[start:] {
+		if err := kvdb.DeleteCheckpoint(common.BatchNum(bn)); err != nil {
 			return tracerr.Wrap(err)
 		}
 	}
+
 	if batchNum == 0 {
 		// if batchNum == 0, open the new fresh 'current'
 		sto, err := pebble.NewPebbleStorage(currentPath, false)
@@ -163,37 +176,58 @@ func (kvdb *KVDB) ResetFromSynchronizer(batchNum common.BatchNum, synchronizerKV
 		return tracerr.Wrap(fmt.Errorf("synchronizerKVDB can not be nil"))
 	}
 
-	if batchNum == 0 {
-		kvdb.CurrentIdx = 0
-		return nil
-	}
-	synchronizerCheckpointPath := path.Join(synchronizerKVDB.path,
-		fmt.Sprintf("%s%d", PathBatchNum, batchNum))
-	checkpointPath := path.Join(kvdb.path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
 	currentPath := path.Join(kvdb.path, PathCurrent)
-
-	// use checkpoint from synchronizerKVDB
-	if _, err := os.Stat(synchronizerCheckpointPath); os.IsNotExist(err) {
-		// if synchronizerKVDB does not have checkpoint at batchNum, return err
-		return tracerr.Wrap(fmt.Errorf("Checkpoint \"%v\" not exist in Synchronizer",
-			synchronizerCheckpointPath))
-	}
-
 	if err := kvdb.db.Pebble().Close(); err != nil {
 		return tracerr.Wrap(err)
 	}
+
 	// remove 'current'
 	err := os.RemoveAll(currentPath)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	// copy synchronizer'BatchNumX' to 'current'
-	err = pebbleMakeCheckpoint(synchronizerCheckpointPath, currentPath)
+	// remove all checkpoints
+	list, err := kvdb.ListCheckpoints()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	for _, bn := range list {
+		if err := kvdb.DeleteCheckpoint(common.BatchNum(bn)); err != nil {
+			return tracerr.Wrap(err)
+		}
+	}
+
+	if batchNum == 0 {
+		// if batchNum == 0, open the new fresh 'current'
+		sto, err := pebble.NewPebbleStorage(currentPath, false)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		kvdb.db = sto
+		kvdb.CurrentIdx = 255
+		kvdb.CurrentBatch = 0
+
+		return nil
+	}
+
+	checkpointPath := path.Join(kvdb.path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
+
+	// use checkpoint from synchronizerKVDB
+	synchronizerCheckpointPath := path.Join(synchronizerKVDB.path,
+		fmt.Sprintf("%s%d", PathBatchNum, batchNum))
+	if _, err := os.Stat(synchronizerCheckpointPath); os.IsNotExist(err) {
+		// if synchronizerKVDB does not have checkpoint at batchNum, return err
+		return tracerr.Wrap(fmt.Errorf("Checkpoint \"%v\" not exist in Synchronizer",
+			synchronizerCheckpointPath))
+	}
 	// copy synchronizer'BatchNumX' to 'BatchNumX'
 	err = pebbleMakeCheckpoint(synchronizerCheckpointPath, checkpointPath)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	// copy 'BatchNumX' to 'current'
+	err = pebbleMakeCheckpoint(checkpointPath, currentPath)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -354,6 +388,7 @@ func (kvdb *KVDB) ListCheckpoints() ([]int, error) {
 		for _, checkpoint := range checkpoints[1:] {
 			first++
 			if checkpoint != first {
+				log.Errorw("GAP", "checkpoints", checkpoints)
 				return nil, tracerr.Wrap(fmt.Errorf("checkpoint gap at %v", checkpoint))
 			}
 		}

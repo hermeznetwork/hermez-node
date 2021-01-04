@@ -33,7 +33,7 @@ const (
 	// RollupConstInputSHAConstantBytes [6 bytes] lastIdx + [6 bytes] newLastIdx  + [32 bytes] stateRoot  + [32 bytes] newStRoot  + [32 bytes] newExitRoot +
 	// [_MAX_L1_TX * _L1_USER_TOTALBYTES bytes] l1TxsData + totalL2TxsDataLength + feeIdxCoordinatorLength + [2 bytes] chainID =
 	// 18542 bytes +  totalL2TxsDataLength + feeIdxCoordinatorLength
-	RollupConstInputSHAConstantBytes = 18542
+	RollupConstInputSHAConstantBytes = 18546
 	// RollupConstNumBuckets Number of buckets
 	RollupConstNumBuckets = 5
 	// RollupConstMaxWithdrawalDelay max withdrawal delay in seconds

@@ -57,16 +57,15 @@ func initTest(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address
 		BJJ:                 bjj,
 		AccountCreationAuth: nil,
 	}
-	a := &common.AccountCreationAuth{
+	auth := common.AccountCreationAuth{
 		EthAddr: addr,
 		BJJ:     bjj,
 	}
-	msg, err := a.HashToSign(chainID, hermezContractAddr)
+	err = auth.Sign(func(hash []byte) ([]byte, error) {
+		return ethCrypto.Sign(hash, &ethSk)
+	}, chainID, hermezContractAddr)
 	assert.NoError(t, err)
-	sig, err := ethCrypto.Sign(msg, &ethSk)
-	assert.NoError(t, err)
-	sig[64] += 27
-	coordAccount.AccountCreationAuth = sig
+	coordAccount.AccountCreationAuth = auth.Signature
 
 	txsel, err := NewTxSelector(coordAccount, txselDir, sdb, l2DB)
 	require.NoError(t, err)
@@ -80,20 +79,18 @@ func initTest(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address
 
 func addAccCreationAuth(t *testing.T, tc *til.Context, txsel *TxSelector, chainID uint16, hermezContractAddr ethCommon.Address, username string) []byte {
 	user := tc.Users[username]
-	a := &common.AccountCreationAuth{
+	auth := &common.AccountCreationAuth{
 		EthAddr: user.Addr,
 		BJJ:     user.BJJ.Public().Compress(),
 	}
-	msg, err := a.HashToSign(chainID, hermezContractAddr)
+	err := auth.Sign(func(hash []byte) ([]byte, error) {
+		return ethCrypto.Sign(hash, user.EthSk)
+	}, chainID, hermezContractAddr)
 	assert.NoError(t, err)
-	sig, err := ethCrypto.Sign(msg, user.EthSk)
-	assert.NoError(t, err)
-	sig[64] += 27
-	a.Signature = sig
 
-	err = txsel.l2db.AddAccountCreationAuth(a)
+	err = txsel.l2db.AddAccountCreationAuth(auth)
 	assert.NoError(t, err)
-	return a.Signature
+	return auth.Signature
 }
 
 func addL2Txs(t *testing.T, txsel *TxSelector, poolL2Txs []common.PoolL2Tx) {
