@@ -217,7 +217,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	// L2DB
-	l2DB := l2db.NewL2DB(database, 10, 100, 24*time.Hour)
+	l2DB := l2db.NewL2DB(database, 10, 1000, 24*time.Hour)
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 	// Config (smart contract constants)
 	chainID := uint16(0)

@@ -24,7 +24,7 @@ type L2DB struct {
 	db           *sqlx.DB
 	safetyPeriod common.BatchNum
 	ttl          time.Duration
-	maxTxs       uint32
+	maxTxs       uint32 // limit of txs that are accepted in the pool
 }
 
 // NewL2DB creates a L2DB.
@@ -78,6 +78,19 @@ func (l2db *L2DB) GetAccountCreationAuthAPI(addr ethCommon.Address) (*AccountCre
 
 // AddTx inserts a tx to the pool
 func (l2db *L2DB) AddTx(tx *PoolL2TxWrite) error {
+	row := l2db.db.QueryRow(
+		"SELECT COUNT(*) FROM tx_pool WHERE state = $1;",
+		common.PoolL2TxStatePending,
+	)
+	var totalTxs uint32
+	if err := row.Scan(&totalTxs); err != nil {
+		return tracerr.Wrap(err)
+	}
+	if totalTxs >= l2db.maxTxs {
+		return tracerr.New(
+			"The pool is at full capacity. More transactions are not accepted currently",
+		)
+	}
 	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", tx))
 }
 
@@ -313,38 +326,22 @@ func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 }
 
 // Purge deletes transactions that have been forged or marked as invalid for longer than the safety period
-// it also deletes txs that has been in the L2DB for longer than the ttl if maxTxs has been exceeded
+// it also deletes pending txs that have been in the L2DB for longer than the ttl if maxTxs has been exceeded
 func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
-	txn, err := l2db.db.Beginx()
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	defer func() {
-		// Rollback the transaction if there was an error.
-		if err != nil {
-			db.Rollback(txn)
-		}
-	}()
-	// Delete pending txs that have been in the pool after the TTL if maxTxs is reached
 	now := time.Now().UTC().Unix()
-	_, err = txn.Exec(
-		`DELETE FROM tx_pool WHERE (SELECT count(*) FROM tx_pool) > $1 AND timestamp < $2`,
-		l2db.maxTxs,
-		time.Unix(now-int64(l2db.ttl.Seconds()), 0),
-	)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	// Delete txs that have been marked as forged / invalid after the safety period
-	_, err = txn.Exec(
-		`DELETE FROM tx_pool 
-		WHERE batch_num < $1 AND (state = $2 OR state = $3)`,
+	_, err = l2db.db.Exec(
+		`DELETE FROM tx_pool WHERE (
+			batch_num < $1 AND (state = $2 OR state = $3)
+		) OR (
+			(SELECT count(*) FROM tx_pool WHERE state = $4) > $5 
+			AND timestamp < $6 AND state = $4
+		);`,
 		currentBatchNum-l2db.safetyPeriod,
 		common.PoolL2TxStateForged,
 		common.PoolL2TxStateInvalid,
+		common.PoolL2TxStatePending,
+		l2db.maxTxs,
+		time.Unix(now-int64(l2db.ttl.Seconds()), 0),
 	)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	return tracerr.Wrap(txn.Commit())
+	return tracerr.Wrap(err)
 }

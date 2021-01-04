@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	l2DB = NewL2DB(db, 10, 100, 24*time.Hour)
+	l2DB = NewL2DB(db, 10, 1000, 24*time.Hour)
 	test.WipeDB(l2DB.DB())
 	historyDB = historydb.NewHistoryDB(db)
 	// Run tests
@@ -529,8 +529,8 @@ func TestPurge(t *testing.T) {
 	if err != nil {
 		log.Error("Error prepare historyDB", err)
 	}
-	// generatePoolL2Txs generate 10 txs
-	generateTx := int(l2DB.maxTxs/10 + 1)
+	// generatePoolL2Txs
+	generateTx := int(l2DB.maxTxs/8 + 1)
 	var poolL2Tx []common.PoolL2Tx
 	for i := 0; i < generateTx; i++ {
 		poolL2TxAux, err := generatePoolL2Txs()
@@ -538,24 +538,27 @@ func TestPurge(t *testing.T) {
 		poolL2Tx = append(poolL2Tx, poolL2TxAux...)
 	}
 
-	deletedIDs := []common.TxID{}
+	afterTTLIDs := []common.TxID{}
 	keepedIDs := []common.TxID{}
+	var deletedIDs []common.TxID
 	var invalidTxIDs []common.TxID
 	var doneForgingTxIDs []common.TxID
 	const toDeleteBatchNum common.BatchNum = 30
 	safeBatchNum := toDeleteBatchNum + l2DB.safetyPeriod + 1
 	// Add txs to the DB
-	for i := 0; i < int(l2DB.maxTxs); i++ {
+	for i := 0; i < len(poolL2Tx); i++ {
 		tx := poolL2Tx[i]
 		if i%2 == 0 { // keep tx
 			keepedIDs = append(keepedIDs, tx.TxID)
 		} else { // delete after safety period
 			if i%3 == 0 {
 				doneForgingTxIDs = append(doneForgingTxIDs, tx.TxID)
-			} else {
+			} else if i%5 == 0 {
 				invalidTxIDs = append(invalidTxIDs, tx.TxID)
+			} else {
+				afterTTLIDs = append(afterTTLIDs, tx.TxID)
 			}
-			deletedIDs = append(deletedIDs, tx.TxID)
+			deletedIDs = append(deletedIDs, poolL2Tx[i].TxID)
 		}
 		err := l2DB.AddTxTest(&tx)
 		assert.NoError(t, err)
@@ -577,16 +580,13 @@ func TestPurge(t *testing.T) {
 	// Invalidate txs and set batchNum
 	err = l2DB.InvalidateTxs(invalidTxIDs, toDeleteBatchNum)
 	assert.NoError(t, err)
-	for i := int(l2DB.maxTxs); i < len(poolL2Tx); i++ {
-		// Delete after TTL
-		deletedIDs = append(deletedIDs, poolL2Tx[i].TxID)
-		err := l2DB.AddTxTest(&poolL2Tx[i])
-		assert.NoError(t, err)
+	// Update timestamp of afterTTL txs
+	deleteTimestamp := time.Unix(time.Now().UTC().Unix()-int64(l2DB.ttl.Seconds()+float64(4*time.Second)), 0)
+	for _, id := range afterTTLIDs {
 		// Set timestamp
-		deleteTimestamp := time.Unix(time.Now().UTC().Unix()-int64(l2DB.ttl.Seconds()+float64(4*time.Second)), 0)
 		_, err = l2DB.db.Exec(
-			"UPDATE tx_pool SET timestamp = $1 WHERE tx_id = $2;",
-			deleteTimestamp, poolL2Tx[i].TxID,
+			"UPDATE tx_pool SET timestamp = $1, state = $2 WHERE tx_id = $3;",
+			deleteTimestamp, common.PoolL2TxStatePending, id,
 		)
 		assert.NoError(t, err)
 	}
@@ -596,10 +596,7 @@ func TestPurge(t *testing.T) {
 	assert.NoError(t, err)
 	// Check results
 	for _, id := range deletedIDs {
-		tx, err := l2DB.GetTx(id)
-		if err == nil {
-			log.Debug(tx)
-		}
+		_, err := l2DB.GetTx(id)
 		assert.Error(t, err)
 	}
 	for _, id := range keepedIDs {
