@@ -29,6 +29,7 @@ func (d *Duration) UnmarshalText(data []byte) error {
 
 // ServerProof is the server proof configuration data.
 type ServerProof struct {
+	// URL is the server proof API URL
 	URL string `validate:"required"`
 }
 
@@ -48,10 +49,17 @@ type Coordinator struct {
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval Duration `validate:"required"`
-	L2DB              struct {
+	// L2DB is the DB that holds the pool of L2Txs
+	L2DB struct {
+		// SafetyPeriod is the number of batches after which
+		// non-pending L2Txs are deleted from the pool
 		SafetyPeriod common.BatchNum `validate:"required"`
-		MaxTxs       uint32          `validate:"required"`
-		TTL          Duration        `validate:"required"`
+		// MaxTxs is the number of L2Txs that once reached triggers
+		// deletion of old L2Txs
+		MaxTxs uint32 `validate:"required"`
+		// TTL is the Time To Live for L2Txs in the pool.  Once MaxTxs
+		// L2Txs is reached, L2Txs older than TTL will be deleted.
+		TTL Duration `validate:"required"`
 		// PurgeBatchDelay is the delay between batches to purge outdated transactions
 		PurgeBatchDelay int64 `validate:"required"`
 		// InvalidateBatchDelay is the delay between batches to mark invalid transactions
@@ -62,23 +70,29 @@ type Coordinator struct {
 		InvalidateBlockDelay int64 `validate:"required"`
 	} `validate:"required"`
 	TxSelector struct {
+		// Path where the TxSelector StateDB is stored
 		Path string `validate:"required"`
 	} `validate:"required"`
 	BatchBuilder struct {
+		// Path where the BatchBuilder StateDB is stored
 		Path string `validate:"required"`
 	} `validate:"required"`
 	ServerProofs []ServerProof `validate:"required"`
 	Circuit      struct {
 		// VerifierIdx uint8  `validate:"required"`
-		MaxTx   int64 `validate:"required"`
+		// MaxTx is the maximum number of txs supported by the circuit
+		MaxTx int64 `validate:"required"`
+		// NLevels is the maximum number of merkle tree levels
+		// supported by the circuit
 		NLevels int64 `validate:"required"`
 	} `validate:"required"`
 	EthClient struct {
-		CallGasLimit        uint64   `validate:"required"`
-		DeployGasLimit      uint64   `validate:"required"`
-		GasPriceDiv         uint64   `validate:"required"`
-		ReceiptTimeout      Duration `validate:"required"`
-		ReceiptLoopInterval Duration `validate:"required"`
+		// CallGasLimit is the default gas limit set for ethereum
+		// calls, except for methods  where a particular gas limit is
+		// harcoded because it's known to be a big value
+		CallGasLimit uint64 `validate:"required"`
+		// GasPriceDiv is the gas price division
+		GasPriceDiv uint64 `validate:"required"`
 		// CheckLoopInterval is the waiting interval between receipt
 		// checks of ethereum transactions in the TxManager
 		CheckLoopInterval Duration `validate:"required"`
@@ -88,12 +102,16 @@ type Coordinator struct {
 		// AttemptsDelay is delay between attempts do do an eth client
 		// RPC call
 		AttemptsDelay Duration `validate:"required"`
-		Keystore      struct {
-			Path     string `validate:"required"`
+		// Keystore is the ethereum keystore where private keys are kept
+		Keystore struct {
+			// Path to the keystore
+			Path string `validate:"required"`
+			// Password used to decrypt the keys in the keystore
 			Password string `validate:"required"`
 		} `validate:"required"`
 	} `validate:"required"`
 	API struct {
+		// Coordinator enables the coordinator API endpoints
 		Coordinator bool
 	} `validate:"required"`
 	Debug struct {
@@ -109,43 +127,79 @@ type Coordinator struct {
 // Node is the hermez node configuration.
 type Node struct {
 	PriceUpdater struct {
+		// Interval between price updater calls
 		Interval Duration `valudate:"required"`
-		URL      string   `valudate:"required"`
-		Type     string   `valudate:"required"`
+		// URL of the token prices provider
+		URL string `valudate:"required"`
+		// Type of the API of the token prices provider
+		Type string `valudate:"required"`
 	} `validate:"required"`
 	StateDB struct {
+		// Path where the synchronizer StateDB is stored
 		Path string `validate:"required"`
-		Keep int    `validate:"required"`
+		// Keep is the number of checkpoints to keep
+		Keep int `validate:"required"`
 	} `validate:"required"`
 	PostgreSQL struct {
-		Port     int    `validate:"required"`
-		Host     string `validate:"required"`
-		User     string `validate:"required"`
+		// Port of the PostgreSQL server
+		Port int `validate:"required"`
+		// Host of the PostgreSQL server
+		Host string `validate:"required"`
+		// User of the PostgreSQL server
+		User string `validate:"required"`
+		// Password of the PostgreSQL server
 		Password string `validate:"required"`
-		Name     string `validate:"required"`
+		// Name of the PostgreSQL server database
+		Name string `validate:"required"`
 	} `validate:"required"`
 	Web3 struct {
+		// URL is the URL of the web3 ethereum-node RPC server
 		URL string `validate:"required"`
 	} `validate:"required"`
 	Synchronizer struct {
-		SyncLoopInterval   Duration `validate:"required"`
+		// SyncLoopInterval is the interval between attempts to
+		// synchronize a new block from an ethereum node
+		SyncLoopInterval Duration `validate:"required"`
+		// StatsRefreshPeriod is the interval between updates of the
+		// synchronizer state Eth parameters (`Eth.LastBlock` and
+		// `Eth.LastBatch`)
 		StatsRefreshPeriod Duration `validate:"required"`
 	} `validate:"required"`
 	SmartContracts struct {
-		Rollup       ethCommon.Address `validate:"required"`
-		Auction      ethCommon.Address `validate:"required"`
-		WDelayer     ethCommon.Address `validate:"required"`
-		TokenHEZ     ethCommon.Address `validate:"required"`
-		TokenHEZName string            `validate:"required"`
+		// Rollup is the address of the Hermez.sol smart contract
+		Rollup ethCommon.Address `validate:"required"`
+		// Rollup is the address of the HermezAuctionProtocol.sol smart
+		// contract
+		Auction ethCommon.Address `validate:"required"`
+		// WDelayer is the address of the WithdrawalDelayer.sol smart
+		// contract
+		WDelayer ethCommon.Address `validate:"required"`
+		// TokenHEZ is the address of the HEZTokenFull.sol smart
+		// contract
+		TokenHEZ ethCommon.Address `validate:"required"`
+		// TokenHEZName is the name of the HEZ token deployed at
+		// TokenHEZ address
+		TokenHEZName string `validate:"required"`
 	} `validate:"required"`
 	API struct {
-		Address                      string
-		Explorer                     bool
-		UpdateMetricsInterval        Duration
+		// Address where the API will listen if set
+		Address string
+		// Explorer enables the Explorer API endpoints
+		Explorer bool
+		// UpdateMetricsInterval is the interval between updates of the
+		// API metrics
+		UpdateMetricsInterval Duration
+		// UpdateMetricsInterval is the interval between updates of the
+		// recommended fees
 		UpdateRecommendedFeeInterval Duration
 	} `validate:"required"`
 	Debug struct {
+		// APIAddress is the address where the debugAPI will listen if
+		// set
 		APIAddress string
+		// MeddlerLogs enables meddler debug mode, where unused columns and struct
+		// fields will be logged
+		MeddlerLogs bool
 	}
 	Coordinator Coordinator `validate:"-"`
 }
