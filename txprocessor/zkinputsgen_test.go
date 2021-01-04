@@ -1212,11 +1212,11 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
 
-	assert.Equal(t, "9039235803989265562752459273677612535578150724983094202749787856042851287937", sdb.MT.Root().BigInt().String())
+	assert.Equal(t, "0", sdb.MT.Root().BigInt().String())
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	h, err := ptOut.ZKInputs.HashGlobalData()
 	require.NoError(t, err)
-	assert.Equal(t, "16379429180374022967705349031545993941940235797391087559198349725707777217313", h.String())
+	assert.Equal(t, "11185464138041166840819960504404439577014916009324100031008662249284619863031", h.String())
 
 	// printZKInputs(t, ptOut.ZKInputs)
 
@@ -1226,11 +1226,11 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	assert.Equal(t, "11268490488303545450371226436237399651863451560820293060171443690124510027423", sdb.MT.Root().BigInt().String())
+	assert.Equal(t, "0", sdb.MT.Root().BigInt().String())
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	h, err = ptOut.ZKInputs.HashGlobalData()
 	require.NoError(t, err)
-	assert.Equal(t, "7929589021941867224637424679829482351183189155476180469293857163025959492111", h.String())
+	assert.Equal(t, "12631863710217571237457816324742333499903148838621785764212585803181094983889", h.String())
 
 	// printZKInputs(t, ptOut.ZKInputs)
 
@@ -1239,10 +1239,10 @@ func TestZKInputs6(t *testing.T) {
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
 	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "4506051426679555819811005692198685182747763336038770877076710632305611650930", sdb.MT.Root().BigInt().String())
+	assert.Equal(t, "1226521246017973425160735051912281623711495425744154152193517863144350256876", sdb.MT.Root().BigInt().String())
 	h, err = ptOut.ZKInputs.HashGlobalData()
 	require.NoError(t, err)
-	assert.Equal(t, "4701632846207201125105176884973241543664109364248244712634276477520091620527", h.String())
+	assert.Equal(t, "10907825458127261621699288732778996369331396845273565886224483543414801610880", h.String())
 
 	// printZKInputs(t, ptOut.ZKInputs)
 }

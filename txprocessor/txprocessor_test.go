@@ -214,8 +214,6 @@ func TestProcessTxsBalances(t *testing.T) {
 	blocks, err := tc.GenerateBlocks(til.SetBlockchainMinimumFlow0)
 	require.NoError(t, err)
 
-	// Coordinator Idx where to send the fees
-	coordIdxs := []common.Idx{256, 257}
 	config := Config{
 		NLevels:  32,
 		MaxFeeTx: 64,
@@ -232,20 +230,20 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:1")
 	l1UserTxs := []common.L1Tx{}
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[3].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
@@ -253,7 +251,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[4].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
@@ -261,12 +259,13 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[5].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "600")
 	checkBalance(t, tc, sdb, "A", 1, "500")
 	checkBalance(t, tc, sdb, "B", 0, "400")
 
+	coordIdxs := []common.Idx{261, 262}
 	log.Debug("block:0 batch:6")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[6].L2Txs)

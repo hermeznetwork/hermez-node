@@ -123,6 +123,7 @@ type Account struct {
 type User struct {
 	Name     string
 	BJJ      *babyjub.PrivateKey
+	EthSk    *ecdsa.PrivateKey
 	Addr     ethCommon.Address
 	Accounts map[common.TokenID]*Account
 }
@@ -673,6 +674,15 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 	return txs, nil
 }
 
+// RestartNonces sets all the Users.Accounts.Nonces to 0
+func (tc *Context) RestartNonces() {
+	for name, user := range tc.Users {
+		for tokenID := range user.Accounts {
+			tc.Users[name].Accounts[tokenID].Nonce = common.Nonce(0)
+		}
+	}
+}
+
 // generateKeys generates BabyJubJub & Address keys for the given list of user
 // names in a deterministic way. This means, that for the same given
 // 'userNames' in a certain order, the keys will be always the same.
@@ -696,6 +706,7 @@ func (tc *Context) generateKeys(userNames []string) {
 		u := User{
 			Name:     userNames[i-1],
 			BJJ:      &sk,
+			EthSk:    &key,
 			Addr:     addr,
 			Accounts: make(map[common.TokenID]*Account),
 		}

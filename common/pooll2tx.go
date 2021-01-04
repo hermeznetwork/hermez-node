@@ -345,6 +345,15 @@ func PoolL2TxsToL2Txs(txs []PoolL2Tx) ([]L2Tx, error) {
 	return l2Txs, nil
 }
 
+// TxIDsFromPoolL2Txs returns an array of TxID from the []PoolL2Tx
+func TxIDsFromPoolL2Txs(txs []PoolL2Tx) []TxID {
+	txIDs := make([]TxID, len(txs))
+	for i, tx := range txs {
+		txIDs[i] = tx.TxID
+	}
+	return txIDs
+}
+
 // PoolL2TxState is a string that represents the status of a L2 transaction
 type PoolL2TxState string
 

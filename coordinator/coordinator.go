@@ -467,7 +467,7 @@ func (t *TxManager) rollupForgeBatch(ctx context.Context, batchInfo *BatchInfo) 
 	batchInfo.EthTx = ethTx
 	log.Infow("TxManager ethClient.RollupForgeBatch", "batch", batchInfo.BatchNum, "tx", ethTx.Hash().Hex())
 	t.cfg.debugBatchStore(batchInfo)
-	if err := t.l2DB.DoneForging(l2TxsIDs(batchInfo.L2Txs), batchInfo.BatchNum); err != nil {
+	if err := t.l2DB.DoneForging(common.TxIDsFromL2Txs(batchInfo.L2Txs), batchInfo.BatchNum); err != nil {
 		return tracerr.Wrap(err)
 	}
 	return nil
@@ -776,22 +776,6 @@ func (p *Pipeline) Stop(ctx context.Context) {
 	}
 }
 
-func poolL2TxsIDs(txs []common.PoolL2Tx) []common.TxID {
-	txIDs := make([]common.TxID, len(txs))
-	for i, tx := range txs {
-		txIDs[i] = tx.TxID
-	}
-	return txIDs
-}
-
-func l2TxsIDs(txs []common.L2Tx) []common.TxID {
-	txIDs := make([]common.TxID, len(txs))
-	for i, tx := range txs {
-		txIDs[i] = tx.TxID
-	}
-	return txIDs
-}
-
 // sendServerProof sends the circuit inputs to the proof server
 func (p *Pipeline) sendServerProof(ctx context.Context, batchInfo *BatchInfo) error {
 	p.cfg.debugBatchStore(batchInfo)
@@ -861,7 +845,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (*BatchInfo, error) {
 	batchInfo.CoordIdxs = coordIdxs
 	batchInfo.VerifierIdx = p.cfg.VerifierIdx
 
-	if err := p.l2DB.StartForging(poolL2TxsIDs(poolL2Txs), batchInfo.BatchNum); err != nil {
+	if err := p.l2DB.StartForging(common.TxIDsFromPoolL2Txs(poolL2Txs), batchInfo.BatchNum); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 

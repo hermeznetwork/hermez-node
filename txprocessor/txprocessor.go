@@ -65,6 +65,11 @@ func NewTxProcessor(sdb *statedb.StateDB, config Config) *TxProcessor {
 	}
 }
 
+// StateDB returns a pointer to the StateDB of the TxProcessor
+func (tp *TxProcessor) StateDB() *statedb.StateDB {
+	return tp.s
+}
+
 func (tp *TxProcessor) resetZKInputs() {
 	tp.zki = nil
 	tp.i = 0 // initialize current transaction index in the ZKInputs generation
@@ -566,7 +571,12 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 			return nil, nil, false, tracerr.Wrap(fmt.Errorf("In StateDB with Synchronizer mode L2.ToIdx can't be 0"))
 		}
 		// case when tx.Type== common.TxTypeTransferToEthAddr or common.TxTypeTransferToBJJ
-		tx.AuxToIdx, err = tp.s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ, tx.TokenID)
+
+		accSender, err := tp.s.GetAccount(tx.FromIdx)
+		if err != nil {
+			return nil, nil, false, tracerr.Wrap(err)
+		}
+		tx.AuxToIdx, err = tp.s.GetIdxByEthAddrBJJ(tx.ToEthAddr, tx.ToBJJ, accSender.TokenID)
 		if err != nil {
 			return nil, nil, false, tracerr.Wrap(err)
 		}
@@ -782,8 +792,7 @@ func (tp *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) error {
 // the receiver. This parameter is used when the tx.ToIdx is not specified and
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
 func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
-	collectedFees map[common.TokenID]*big.Int,
-	tx common.Tx, auxToIdx common.Idx) error {
+	collectedFees map[common.TokenID]*big.Int, tx common.Tx, auxToIdx common.Idx) error {
 	if auxToIdx == common.Idx(0) {
 		auxToIdx = tx.ToIdx
 	}
@@ -858,7 +867,7 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 	} else {
 		accReceiver, err = tp.s.GetAccount(auxToIdx)
 		if err != nil {
-			log.Error(err)
+			log.Error(err, auxToIdx)
 			return tracerr.Wrap(err)
 		}
 	}
@@ -1020,6 +1029,7 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			if err != nil {
 				return nil, false, tracerr.Wrap(fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d", acc.TokenID, coordIdxsMap[acc.TokenID]))
 			}
+
 			// accumulate the fee for the Coord account
 			accumulated := tp.AccumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
