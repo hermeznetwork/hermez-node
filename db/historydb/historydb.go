@@ -170,7 +170,10 @@ func (hdb *HistoryDB) GetBatchAPI(batchNum common.BatchNum) (*BatchAPI, error) {
 	batch := &BatchAPI{}
 	return batch, tracerr.Wrap(meddler.QueryRow(
 		hdb.db, batch,
-		`SELECT batch.*, block.timestamp, block.hash,
+		`SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
+		batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
+		batch.num_accounts, batch.exit_root, batch.forge_l1_txs_num, batch.slot_num,
+		block.timestamp, block.hash,
 	    COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs
 	    FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
 	 	WHERE batch_num = $1;`, batchNum,
@@ -185,7 +188,10 @@ func (hdb *HistoryDB) GetBatchesAPI(
 ) ([]BatchAPI, uint64, error) {
 	var query string
 	var args []interface{}
-	queryStr := `SELECT batch.*, block.timestamp, block.hash,
+	queryStr := `SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
+	batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
+	batch.num_accounts, batch.exit_root, batch.forge_l1_txs_num, batch.slot_num,
+	block.timestamp, block.hash,
 	COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs,
 	count(*) OVER() AS total_items
 	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num `
@@ -287,7 +293,9 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, erro
 	var batches []*common.Batch
 	err := meddler.QueryAll(
 		hdb.db, &batches,
-		"SELECT * FROM batch WHERE $1 <= batch_num AND batch_num < $2 ORDER BY batch_num;",
+		`SELECT batch_num, eth_block_num, forger_addr, fees_collected, fee_idxs_coordinator, 
+		state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num, total_fees_usd 
+		FROM batch WHERE $1 <= batch_num AND batch_num < $2 ORDER BY batch_num;`,
 		from, to,
 	)
 	return db.SlicePtrsToSlice(batches).([]common.Batch), tracerr.Wrap(err)
@@ -788,7 +796,7 @@ func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 	var accs []*common.Account
 	err := meddler.QueryAll(
 		hdb.db, &accs,
-		"SELECT * FROM account ORDER BY idx;",
+		"SELECT idx, token_id, batch_num, bjj, eth_addr FROM account ORDER BY idx;",
 	)
 	return db.SlicePtrsToSlice(accs).([]common.Account), tracerr.Wrap(err)
 }
@@ -1331,7 +1339,8 @@ func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
 	var bucketUpdates []*common.BucketUpdate
 	err := meddler.QueryAll(
 		hdb.db, &bucketUpdates,
-		"SELECT * FROM bucket_update ORDER BY item_id;",
+		`SELECT eth_block_num, num_bucket, block_stamp, withdrawals  
+		FROM bucket_update ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(bucketUpdates).([]common.BucketUpdate), tracerr.Wrap(err)
 }
@@ -1356,7 +1365,7 @@ func (hdb *HistoryDB) GetAllTokenExchanges() ([]common.TokenExchange, error) {
 	var tokenExchanges []*common.TokenExchange
 	err := meddler.QueryAll(
 		hdb.db, &tokenExchanges,
-		"SELECT * FROM token_exchange ORDER BY item_id;",
+		"SELECT eth_block_num, eth_addr, value_usd FROM token_exchange ORDER BY item_id;",
 	)
 	return db.SlicePtrsToSlice(tokenExchanges).([]common.TokenExchange), tracerr.Wrap(err)
 }
@@ -1384,7 +1393,7 @@ func (hdb *HistoryDB) GetAllEscapeHatchWithdrawals() ([]common.WDelayerEscapeHat
 	var escapeHatchWithdrawals []*common.WDelayerEscapeHatchWithdrawal
 	err := meddler.QueryAll(
 		hdb.db, &escapeHatchWithdrawals,
-		"SELECT * FROM escape_hatch_withdrawal ORDER BY item_id;",
+		"SELECT eth_block_num, who_addr, to_addr, token_addr, amount FROM escape_hatch_withdrawal ORDER BY item_id;",
 	)
 	return db.SlicePtrsToSlice(escapeHatchWithdrawals).([]common.WDelayerEscapeHatchWithdrawal),
 		tracerr.Wrap(err)
