@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -262,6 +263,63 @@ func TestTokens(t *testing.T) {
 
 	// Update token value
 	for i, token := range tokens {
+		value := 1.01 * float64(i)
+		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
+	}
+	// Fetch tokens
+	fetchedTokens, _, err = historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
+	assert.NoError(t, err)
+	// Compare fetched tokens vs generated tokens
+	// All the tokens should have USDUpdate setted by the DB trigger
+	for i, token := range fetchedTokens {
+		value := 1.01 * float64(i)
+		assert.Equal(t, value, *token.USD)
+		nameZone, offset := token.USDUpdate.Zone()
+		assert.Equal(t, "UTC", nameZone)
+		assert.Equal(t, 0, offset)
+	}
+}
+
+func TestTokensUTF8(t *testing.T) {
+	// Reset DB
+	test.WipeDB(historyDB.DB())
+	const fromBlock int64 = 1
+	const toBlock int64 = 5
+	// Prepare blocks in the DB
+	blocks := setTestBlocks(fromBlock, toBlock)
+	// Generate fake tokens
+	const nTokens = 5
+	tokens, ethToken := test.GenTokens(nTokens, blocks)
+	nonUTFTokens := make([]common.Token, len(tokens)+1)
+	// Force token.name and token.symbol to be non UTF-8 Strings
+	for i, token := range tokens {
+		token.Name = fmt.Sprint("NON-UTF8-NAME-\xc5-", i)
+		token.Symbol = fmt.Sprint("S-\xc5-", i)
+		tokens[i] = token
+		nonUTFTokens[i] = token
+	}
+	err := historyDB.AddTokens(tokens)
+	assert.NoError(t, err)
+	// Work with nonUTFTokens as tokens one gets updated and non UTF-8 characters are lost
+	nonUTFTokens = append([]common.Token{ethToken}, nonUTFTokens...)
+	limit := uint(10)
+	// Fetch tokens
+	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
+	assert.NoError(t, err)
+	// Compare fetched tokens vs generated tokens
+	// All the tokens should have USDUpdate setted by the DB trigger
+	for i, token := range fetchedTokens {
+		assert.Equal(t, nonUTFTokens[i].TokenID, token.TokenID)
+		assert.Equal(t, nonUTFTokens[i].EthBlockNum, token.EthBlockNum)
+		assert.Equal(t, nonUTFTokens[i].EthAddr, token.EthAddr)
+		assert.Equal(t, strings.ToValidUTF8(nonUTFTokens[i].Name, " "), token.Name)
+		assert.Equal(t, strings.ToValidUTF8(nonUTFTokens[i].Symbol, " "), token.Symbol)
+		assert.Nil(t, token.USD)
+		assert.Nil(t, token.USDUpdate)
+	}
+
+	// Update token value
+	for i, token := range nonUTFTokens {
 		value := 1.01 * float64(i)
 		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
 	}

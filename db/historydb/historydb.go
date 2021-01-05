@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -638,6 +639,12 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 	if len(tokens) == 0 {
 		return nil
 	}
+	// Sanitize name and symbol
+	for i, token := range tokens {
+		token.Name = strings.ToValidUTF8(token.Name, " ")
+		token.Symbol = strings.ToValidUTF8(token.Symbol, " ")
+		tokens[i] = token
+	}
 	return tracerr.Wrap(db.BulkInsert(
 		d,
 		`INSERT INTO token (
@@ -654,6 +661,9 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 
 // UpdateTokenValue updates the USD value of a token
 func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error {
+	// Sanitize symbol
+	tokenSymbol = strings.ToValidUTF8(tokenSymbol, " ")
+
 	_, err := hdb.db.Exec(
 		"UPDATE token SET usd = $1 WHERE symbol = $2;",
 		value, tokenSymbol,
