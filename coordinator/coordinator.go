@@ -824,14 +824,14 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (*BatchInfo, error) {
 			return nil, tracerr.Wrap(err)
 		}
 		coordIdxs, auths, l1UserTxsExtra, l1CoordTxs, poolL2Txs, err =
-			p.txSelector.GetL1L2TxSelection(selectionCfg, batchNum, l1UserTxs)
+			p.txSelector.GetL1L2TxSelection(selectionCfg, l1UserTxs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
 		coordIdxs, auths, l1CoordTxs, poolL2Txs, err =
-			p.txSelector.GetL2TxSelection(selectionCfg, batchNum)
+			p.txSelector.GetL2TxSelection(selectionCfg)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}

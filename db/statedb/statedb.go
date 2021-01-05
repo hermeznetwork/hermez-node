@@ -220,7 +220,7 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 		return cpp, tracerr.Wrap(err)
 	}
 	// store idx by EthAddr & BJJ
-	err = s.setIdxByEthAddrBJJ(idx, account.EthAddr, account.PublicKey, account.TokenID)
+	err = s.setIdxByEthAddrBJJ(idx, account.EthAddr, account.BJJ, account.TokenID)
 	return cpp, tracerr.Wrap(err)
 }
 

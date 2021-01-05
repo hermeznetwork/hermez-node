@@ -153,7 +153,7 @@ func genTestTxs(
 				if l1.ToIdx == acc.Idx {
 					toEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
 					tx.ToEthAddr = &toEthAddr
-					toBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
+					toBJJ := string(apitypes.NewHezBJJ(acc.BJJ))
 					tx.ToBJJ = &toBJJ
 					break
 				}
@@ -208,7 +208,7 @@ func genTestTxs(
 			if l2s[i].FromIdx == acc.Idx {
 				fromEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
 				tx.FromEthAddr = &fromEthAddr
-				fromBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
+				fromBJJ := string(apitypes.NewHezBJJ(acc.BJJ))
 				tx.FromBJJ = &fromBJJ
 				break
 			}
@@ -220,7 +220,7 @@ func genTestTxs(
 				if l2s[i].ToIdx == acc.Idx {
 					toEthAddr := string(apitypes.NewHezEthAddr(acc.EthAddr))
 					tx.ToEthAddr = &toEthAddr
-					toBJJ := string(apitypes.NewHezBJJ(acc.PublicKey))
+					toBJJ := string(apitypes.NewHezBJJ(acc.BJJ))
 					tx.ToBJJ = &toBJJ
 					break
 				}

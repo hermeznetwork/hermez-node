@@ -115,19 +115,19 @@ func NonceFromBytes(b [5]byte) Nonce {
 
 // Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
 type Account struct {
-	Idx       Idx                   `meddler:"idx"`
-	TokenID   TokenID               `meddler:"token_id"`
-	BatchNum  BatchNum              `meddler:"batch_num"`
-	PublicKey babyjub.PublicKeyComp `meddler:"bjj"`
-	EthAddr   ethCommon.Address     `meddler:"eth_addr"`
-	Nonce     Nonce                 `meddler:"-"` // max of 40 bits used
-	Balance   *big.Int              `meddler:"-"` // max of 192 bits used
+	Idx      Idx                   `meddler:"idx"`
+	TokenID  TokenID               `meddler:"token_id"`
+	BatchNum BatchNum              `meddler:"batch_num"`
+	BJJ      babyjub.PublicKeyComp `meddler:"bjj"`
+	EthAddr  ethCommon.Address     `meddler:"eth_addr"`
+	Nonce    Nonce                 `meddler:"-"` // max of 40 bits used
+	Balance  *big.Int              `meddler:"-"` // max of 192 bits used
 }
 
 func (a *Account) String() string {
 	buf := bytes.NewBufferString("")
 	fmt.Fprintf(buf, "Idx: %v, ", a.Idx)
-	fmt.Fprintf(buf, "PublicKey: %s..., ", a.PublicKey.String()[:10])
+	fmt.Fprintf(buf, "BJJ: %s..., ", a.BJJ.String()[:10])
 	fmt.Fprintf(buf, "EthAddr: %s..., ", a.EthAddr.String()[:10])
 	fmt.Fprintf(buf, "TokenID: %v, ", a.TokenID)
 	fmt.Fprintf(buf, "Nonce: %d, ", a.Nonce)
@@ -158,7 +158,7 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	copy(b[28:32], a.TokenID.Bytes())
 	copy(b[23:28], nonceBytes[:])
 
-	pkSign, pkY := babyjub.UnpackSignY(a.PublicKey)
+	pkSign, pkY := babyjub.UnpackSignY(a.BJJ)
 	if pkSign {
 		b[22] = 1
 	}
@@ -243,11 +243,11 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 	}
 
 	a := Account{
-		TokenID:   TokenID(tokenID),
-		Nonce:     nonce,
-		Balance:   balance,
-		PublicKey: publicKeyComp,
-		EthAddr:   ethAddr,
+		TokenID: TokenID(tokenID),
+		Nonce:   nonce,
+		Balance: balance,
+		BJJ:     publicKeyComp,
+		EthAddr: ethAddr,
 	}
 	return &a, nil
 }
