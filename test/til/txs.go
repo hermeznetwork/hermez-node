@@ -854,13 +854,13 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 					}
 					batch.CreatedAccounts = append(batch.CreatedAccounts,
 						common.Account{
-							Idx:       common.Idx(tc.extra.idx),
-							TokenID:   tx.TokenID,
-							BatchNum:  batch.Batch.BatchNum,
-							PublicKey: user.BJJ.Public().Compress(),
-							EthAddr:   user.Addr,
-							Nonce:     0,
-							Balance:   big.NewInt(0),
+							Idx:      common.Idx(tc.extra.idx),
+							TokenID:  tx.TokenID,
+							BatchNum: batch.Batch.BatchNum,
+							BJJ:      user.BJJ.Public().Compress(),
+							EthAddr:  user.Addr,
+							Nonce:    0,
+							Balance:  big.NewInt(0),
 						})
 					tc.extra.idx++
 				}

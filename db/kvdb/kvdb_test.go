@@ -38,7 +38,7 @@ func TestCheckpoints(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	db, err := NewKVDB(dir, 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// add test key-values
 	for i := 0; i < 10; i++ {

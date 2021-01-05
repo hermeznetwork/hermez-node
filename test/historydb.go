@@ -126,12 +126,12 @@ func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAdd
 			pubK = privK.Public()
 		}
 		accs = append(accs, common.Account{
-			Idx:       common.Idx(i),
-			TokenID:   tokens[i%len(tokens)].TokenID,
-			EthAddr:   addr,
-			BatchNum:  batches[i%len(batches)].BatchNum,
-			PublicKey: pubK.Compress(),
-			Balance:   big.NewInt(int64(i * 10000000)), //nolint:gomnd
+			Idx:      common.Idx(i),
+			TokenID:  tokens[i%len(tokens)].TokenID,
+			EthAddr:  addr,
+			BatchNum: batches[i%len(batches)].BatchNum,
+			BJJ:      pubK.Compress(),
+			Balance:  big.NewInt(int64(i * 10000000)), //nolint:gomnd
 		})
 	}
 	return accs
@@ -243,7 +243,7 @@ func setFromToAndAppend(
 		}
 		tx.FromIdx = from.Idx
 		tx.FromEthAddr = from.EthAddr
-		tx.FromBJJ = from.PublicKey
+		tx.FromBJJ = from.BJJ
 		tx.ToIdx = to.Idx
 		*userTxs = append(*userTxs, tx)
 	} else {
@@ -257,7 +257,7 @@ func setFromToAndAppend(
 		}
 		tx.FromIdx = from.Idx
 		tx.FromEthAddr = from.EthAddr
-		tx.FromBJJ = from.PublicKey
+		tx.FromBJJ = from.BJJ
 		tx.ToIdx = to.Idx
 		*othersTxs = append(*othersTxs, tx)
 	}

@@ -31,12 +31,12 @@ func newAccount(t *testing.T, i int) *common.Account {
 	address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
 	return &common.Account{
-		Idx:       common.Idx(256 + i),
-		TokenID:   common.TokenID(i),
-		Nonce:     common.Nonce(i),
-		Balance:   big.NewInt(1000),
-		PublicKey: pk.Compress(),
-		EthAddr:   address,
+		Idx:     common.Idx(256 + i),
+		TokenID: common.TokenID(i),
+		Nonce:   common.Nonce(i),
+		Balance: big.NewInt(1000),
+		BJJ:     pk.Compress(),
+		EthAddr: address,
 	}
 }
 

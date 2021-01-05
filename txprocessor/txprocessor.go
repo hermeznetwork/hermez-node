@@ -329,7 +329,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			if tp.zki != nil {
 				tp.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
 				tp.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
-				coordBJJSign, coordBJJY := babyjub.UnpackSignY(accCoord.PublicKey)
+				coordBJJSign, coordBJJY := babyjub.UnpackSignY(accCoord.BJJ)
 				if coordBJJSign {
 					tp.zki.Sign3[iFee] = big.NewInt(1)
 				}
@@ -402,7 +402,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	}
 
 	// compute last ZKInputs parameters
-	tp.zki.GlobalChainID = big.NewInt(0) // TODO, 0: ethereum, this will be get from config file
+	tp.zki.GlobalChainID = big.NewInt(int64(tp.config.ChainID))
 	tp.zki.Metadata.NewStateRootRaw = tp.s.MT.Root()
 	tp.zki.Metadata.NewExitRootRaw = exitTree.Root()
 
@@ -666,11 +666,11 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 // stores the deposit value
 func (tp *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 	account := &common.Account{
-		TokenID:   tx.TokenID,
-		Nonce:     0,
-		Balance:   tx.EffectiveDepositAmount,
-		PublicKey: tx.FromBJJ,
-		EthAddr:   tx.FromEthAddr,
+		TokenID: tx.TokenID,
+		Nonce:   0,
+		Balance: tx.EffectiveDepositAmount,
+		BJJ:     tx.FromBJJ,
+		EthAddr: tx.FromEthAddr,
 	}
 
 	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx()+1), account)
@@ -720,7 +720,7 @@ func (tp *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	if tp.zki != nil {
 		tp.zki.TokenID1[tp.i] = accSender.TokenID.BigInt()
 		tp.zki.Nonce1[tp.i] = accSender.Nonce.BigInt()
-		senderBJJSign, senderBJJY := babyjub.UnpackSignY(accSender.PublicKey)
+		senderBJJSign, senderBJJY := babyjub.UnpackSignY(accSender.BJJ)
 		if senderBJJSign {
 			tp.zki.Sign1[tp.i] = big.NewInt(1)
 		}
@@ -759,7 +759,7 @@ func (tp *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		if tp.zki != nil {
 			tp.zki.TokenID2[tp.i] = accReceiver.TokenID.BigInt()
 			tp.zki.Nonce2[tp.i] = accReceiver.Nonce.BigInt()
-			receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.PublicKey)
+			receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.BJJ)
 			if receiverBJJSign {
 				tp.zki.Sign2[tp.i] = big.NewInt(1)
 			}
@@ -807,7 +807,7 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		// Set the State1 before updating the Sender leaf
 		tp.zki.TokenID1[tp.i] = accSender.TokenID.BigInt()
 		tp.zki.Nonce1[tp.i] = accSender.Nonce.BigInt()
-		senderBJJSign, senderBJJY := babyjub.UnpackSignY(accSender.PublicKey)
+		senderBJJSign, senderBJJY := babyjub.UnpackSignY(accSender.BJJ)
 		if senderBJJSign {
 			tp.zki.Sign1[tp.i] = big.NewInt(1)
 		}
@@ -875,7 +875,7 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		// Set the State2 before updating the Receiver leaf
 		tp.zki.TokenID2[tp.i] = accReceiver.TokenID.BigInt()
 		tp.zki.Nonce2[tp.i] = accReceiver.Nonce.BigInt()
-		receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.PublicKey)
+		receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.BJJ)
 		if receiverBJJSign {
 			tp.zki.Sign2[tp.i] = big.NewInt(1)
 		}
@@ -904,11 +904,11 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
 	auxFromIdx := common.Idx(tp.s.CurrentIdx() + 1)
 	accSender := &common.Account{
-		TokenID:   tx.TokenID,
-		Nonce:     0,
-		Balance:   tx.EffectiveDepositAmount,
-		PublicKey: tx.FromBJJ,
-		EthAddr:   tx.FromEthAddr,
+		TokenID: tx.TokenID,
+		Nonce:   0,
+		Balance: tx.EffectiveDepositAmount,
+		BJJ:     tx.FromBJJ,
+		EthAddr: tx.FromEthAddr,
 	}
 
 	if tp.zki != nil {
@@ -963,7 +963,7 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 		// Set the State2 before updating the Receiver leaf
 		tp.zki.TokenID2[tp.i] = accReceiver.TokenID.BigInt()
 		tp.zki.Nonce2[tp.i] = accReceiver.Nonce.BigInt()
-		receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.PublicKey)
+		receiverBJJSign, receiverBJJY := babyjub.UnpackSignY(accReceiver.BJJ)
 		if receiverBJJSign {
 			tp.zki.Sign2[tp.i] = big.NewInt(1)
 		}
@@ -1001,7 +1001,7 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	if tp.zki != nil {
 		tp.zki.TokenID1[tp.i] = acc.TokenID.BigInt()
 		tp.zki.Nonce1[tp.i] = acc.Nonce.BigInt()
-		accBJJSign, accBJJY := babyjub.UnpackSignY(acc.PublicKey)
+		accBJJSign, accBJJY := babyjub.UnpackSignY(acc.BJJ)
 		if accBJJSign {
 			tp.zki.Sign1[tp.i] = big.NewInt(1)
 		}
@@ -1063,17 +1063,17 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		// add new leaf 'ExitTreeLeaf', where ExitTreeLeaf.Balance =
 		// exitAmount (exitAmount=tx.Amount)
 		exitAccount := &common.Account{
-			TokenID:   acc.TokenID,
-			Nonce:     common.Nonce(0),
-			Balance:   tx.Amount,
-			PublicKey: acc.PublicKey,
-			EthAddr:   acc.EthAddr,
+			TokenID: acc.TokenID,
+			Nonce:   common.Nonce(0),
+			Balance: tx.Amount,
+			BJJ:     acc.BJJ,
+			EthAddr: acc.EthAddr,
 		}
 		if tp.zki != nil {
 			// Set the State2 before creating the Exit leaf
 			tp.zki.TokenID2[tp.i] = acc.TokenID.BigInt()
 			tp.zki.Nonce2[tp.i] = big.NewInt(0)
-			accBJJSign, accBJJY := babyjub.UnpackSignY(acc.PublicKey)
+			accBJJSign, accBJJY := babyjub.UnpackSignY(acc.BJJ)
 			if accBJJSign {
 				tp.zki.Sign2[tp.i] = big.NewInt(1)
 			}
@@ -1104,7 +1104,7 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		// Set the State2 before updating the Exit leaf
 		tp.zki.TokenID2[tp.i] = acc.TokenID.BigInt()
 		tp.zki.Nonce2[tp.i] = big.NewInt(0)
-		accBJJSign, accBJJY := babyjub.UnpackSignY(acc.PublicKey)
+		accBJJSign, accBJJY := babyjub.UnpackSignY(acc.BJJ)
 		if accBJJSign {
 			tp.zki.Sign2[tp.i] = big.NewInt(1)
 		}

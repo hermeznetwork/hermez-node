@@ -73,7 +73,7 @@ func genTestExits(
 		allExits = append(allExits, testExit{
 			BatchNum:   exit.BatchNum,
 			AccountIdx: idxToHez(exit.AccountIdx, token.Symbol),
-			BJJ:        apitypes.NewHezBJJ(acc.PublicKey),
+			BJJ:        apitypes.NewHezBJJ(acc.BJJ),
 			EthAddr:    apitypes.NewHezEthAddr(acc.EthAddr),
 			MerkleProof: testCVP{
 				Root:     exit.MerkleProof.Root.String(),
