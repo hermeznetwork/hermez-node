@@ -64,7 +64,7 @@ func NewKVDB(pathDB string, keep int) (*KVDB, error) {
 	}
 
 	// make reset (get checkpoint) at currentBatch
-	err = kvdb.reset(kvdb.CurrentBatch, false)
+	err = kvdb.reset(kvdb.CurrentBatch, true)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

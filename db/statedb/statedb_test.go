@@ -65,10 +65,14 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, v0, v)
 
+	// Close PebbleDB before creating a new StateDB
+	err = sdb.db.DB().Pebble().Close()
+	require.NoError(t, err)
+
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey0'&'testvalue0' data)
 	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	v, err = sdb.db.DB().Get(k0)
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
@@ -107,10 +111,14 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, v1, v)
 
+	// Close PebbleDB before creating a new StateDB
+	err = sdb.db.DB().Pebble().Close()
+	require.NoError(t, err)
+
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey1'&'testvalue1' data)
 	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bn, err = sdb.db.GetCurrentBatch()
 	assert.NoError(t, err)
