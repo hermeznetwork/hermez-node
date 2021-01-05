@@ -81,11 +81,11 @@ func TestAccount(t *testing.T) {
 	pk := sk.Public()
 
 	account := &Account{
-		TokenID:   TokenID(1),
-		Nonce:     Nonce(1234),
-		Balance:   big.NewInt(1000),
-		PublicKey: pk.Compress(),
-		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+		TokenID: TokenID(1),
+		Nonce:   Nonce(1234),
+		Balance: big.NewInt(1000),
+		BJJ:     pk.Compress(),
+		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 	b, err := account.Bytes()
 	assert.NoError(t, err)
@@ -124,11 +124,11 @@ func TestAccountLoop(t *testing.T) {
 		address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
 		account := &Account{
-			TokenID:   TokenID(i),
-			Nonce:     Nonce(i),
-			Balance:   big.NewInt(1000),
-			PublicKey: pk.Compress(),
-			EthAddr:   address,
+			TokenID: TokenID(i),
+			Nonce:   Nonce(i),
+			Balance: big.NewInt(1000),
+			BJJ:     pk.Compress(),
+			EthAddr: address,
 		}
 		b, err := account.Bytes()
 		assert.NoError(t, err)
@@ -161,11 +161,11 @@ func TestAccountLoopRandom(t *testing.T) {
 		address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
 		account := &Account{
-			TokenID:   TokenID(i),
-			Nonce:     Nonce(i),
-			Balance:   big.NewInt(1000),
-			PublicKey: pk.Compress(),
-			EthAddr:   address,
+			TokenID: TokenID(i),
+			Nonce:   Nonce(i),
+			Balance: big.NewInt(1000),
+			BJJ:     pk.Compress(),
+			EthAddr: address,
 		}
 		b, err := account.Bytes()
 		assert.NoError(t, err)
@@ -204,11 +204,11 @@ func TestAccountHashValue(t *testing.T) {
 	pk := sk.Public()
 
 	account := &Account{
-		TokenID:   TokenID(1),
-		Nonce:     Nonce(1234),
-		Balance:   big.NewInt(1000),
-		PublicKey: pk.Compress(),
-		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+		TokenID: TokenID(1),
+		Nonce:   Nonce(1234),
+		Balance: big.NewInt(1000),
+		BJJ:     pk.Compress(),
+		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 	v, err := account.HashValue()
 	assert.NoError(t, err)
@@ -224,12 +224,12 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	bjj := babyjub.PublicKey(*bjjPoint)
 
 	account := &Account{
-		Idx:       1,
-		TokenID:   0xFFFFFFFF,
-		PublicKey: bjj.Compress(),
-		EthAddr:   ethCommon.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-		Nonce:     Nonce(0xFFFFFFFFFF),
-		Balance:   bigFromStr("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16),
+		Idx:     1,
+		TokenID: 0xFFFFFFFF,
+		BJJ:     bjj.Compress(),
+		EthAddr: ethCommon.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+		Nonce:   Nonce(0xFFFFFFFFFF),
+		Balance: bigFromStr("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16),
 	}
 
 	e, err := account.BigInts()
@@ -253,11 +253,11 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	require.NoError(t, err)
 	bjj = babyjub.PublicKey(*bjjPoint)
 	account = &Account{
-		TokenID:   0,
-		PublicKey: bjj.Compress(),
-		EthAddr:   ethCommon.HexToAddress("0x00"),
-		Nonce:     Nonce(0),
-		Balance:   big.NewInt(0),
+		TokenID: 0,
+		BJJ:     bjj.Compress(),
+		EthAddr: ethCommon.HexToAddress("0x00"),
+		Nonce:   Nonce(0),
+		Balance: big.NewInt(0),
 	}
 	v, err = account.HashValue()
 	assert.NoError(t, err)
@@ -269,11 +269,11 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	require.NoError(t, err)
 	bjj = babyjub.PublicKey(*bjjPoint)
 	account = &Account{
-		TokenID:   3,
-		PublicKey: bjj.Compress(),
-		EthAddr:   ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
-		Nonce:     Nonce(129),
-		Balance:   bigFromStr("42000000000000000000", 10),
+		TokenID: 3,
+		BJJ:     bjj.Compress(),
+		EthAddr: ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
+		Nonce:   Nonce(129),
+		Balance: bigFromStr("42000000000000000000", 10),
 	}
 	e, err = account.BigInts()
 	assert.NoError(t, err)
@@ -318,11 +318,11 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 
 	// check limit
 	account := &Account{
-		TokenID:   TokenID(1),
-		Nonce:     Nonce(math.Pow(2, 40) - 1),
-		Balance:   big.NewInt(1000),
-		PublicKey: pk.Compress(),
-		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+		TokenID: TokenID(1),
+		Nonce:   Nonce(math.Pow(2, 40) - 1),
+		Balance: big.NewInt(1000),
+		BJJ:     pk.Compress(),
+		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 	_, err = account.Bytes()
 	assert.NoError(t, err)
@@ -345,11 +345,11 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 
 	// check limit
 	account := &Account{
-		TokenID:   TokenID(1),
-		Nonce:     Nonce(math.Pow(2, 40) - 1),
-		Balance:   new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(192), nil), big.NewInt(1)),
-		PublicKey: pk.Compress(),
-		EthAddr:   ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
+		TokenID: TokenID(1),
+		Nonce:   Nonce(math.Pow(2, 40) - 1),
+		Balance: new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(192), nil), big.NewInt(1)),
+		BJJ:     pk.Compress(),
+		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
 	assert.Equal(t, "6277101735386680763835789423207666416102355444464034512895", account.Balance.String())
 

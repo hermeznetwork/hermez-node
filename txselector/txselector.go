@@ -293,10 +293,10 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 				}
 			}
 			if l2Txs[i].ToBJJ != common.EmptyBJJComp {
-				if l2Txs[i].ToBJJ != receiverAcc.PublicKey {
+				if l2Txs[i].ToBJJ != receiverAcc.BJJ {
 					log.Debugw("invalid L2Tx: ToBJJ does not correspond to the Account.BJJ",
 						"ToIdx", l2Txs[i].ToIdx, "tx.ToEthAddr", l2Txs[i].ToBJJ,
-						"account.BJJ", receiverAcc.PublicKey)
+						"account.BJJ", receiverAcc.BJJ)
 					continue
 				}
 			}

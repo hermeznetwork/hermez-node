@@ -45,7 +45,7 @@ func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD)
 		tAccount := testAccount{
 			ItemID:    uint64(x + 1),
 			Idx:       apitypes.HezIdx(idxToHez(account.Idx, token.Symbol)),
-			PublicKey: apitypes.NewHezBJJ(account.PublicKey),
+			PublicKey: apitypes.NewHezBJJ(account.BJJ),
 			EthAddr:   apitypes.NewHezEthAddr(account.EthAddr),
 			Nonce:     account.Nonce,
 			Balance:   apitypes.NewBigIntStr(account.Balance),

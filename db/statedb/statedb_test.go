@@ -31,12 +31,12 @@ func newAccount(t *testing.T, i int) *common.Account {
 	address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
 	return &common.Account{
-		Idx:       common.Idx(256 + i),
-		TokenID:   common.TokenID(i),
-		Nonce:     common.Nonce(i),
-		Balance:   big.NewInt(1000),
-		PublicKey: pk.Compress(),
-		EthAddr:   address,
+		Idx:     common.Idx(256 + i),
+		TokenID: common.TokenID(i),
+		Nonce:   common.Nonce(i),
+		Balance: big.NewInt(1000),
+		BJJ:     pk.Compress(),
+		EthAddr: address,
 	}
 }
 
@@ -433,36 +433,36 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	bjj3 := babyjub.PublicKeyComp(bjjPoint3Comp)
 	accounts := []*common.Account{
 		{
-			Idx:       1,
-			TokenID:   0xFFFFFFFF,
-			PublicKey: bjj0,
-			EthAddr:   ethCommon.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-			Nonce:     common.Nonce(0xFFFFFFFFFF),
-			Balance:   bigFromStr("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16),
+			Idx:     1,
+			TokenID: 0xFFFFFFFF,
+			BJJ:     bjj0,
+			EthAddr: ethCommon.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+			Nonce:   common.Nonce(0xFFFFFFFFFF),
+			Balance: bigFromStr("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16),
 		},
 		{
-			Idx:       100,
-			TokenID:   0,
-			PublicKey: bjj1,
-			EthAddr:   ethCommon.HexToAddress("0x00"),
-			Nonce:     common.Nonce(0),
-			Balance:   bigFromStr("0", 10),
+			Idx:     100,
+			TokenID: 0,
+			BJJ:     bjj1,
+			EthAddr: ethCommon.HexToAddress("0x00"),
+			Nonce:   common.Nonce(0),
+			Balance: bigFromStr("0", 10),
 		},
 		{
-			Idx:       0xFFFFFFFFFFFF,
-			TokenID:   3,
-			PublicKey: bjj2,
-			EthAddr:   ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
-			Nonce:     common.Nonce(129),
-			Balance:   bigFromStr("42000000000000000000", 10),
+			Idx:     0xFFFFFFFFFFFF,
+			TokenID: 3,
+			BJJ:     bjj2,
+			EthAddr: ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
+			Nonce:   common.Nonce(129),
+			Balance: bigFromStr("42000000000000000000", 10),
 		},
 		{
-			Idx:       10000,
-			TokenID:   1000,
-			PublicKey: bjj3,
-			EthAddr:   ethCommon.HexToAddress("0x64"),
-			Nonce:     common.Nonce(1900),
-			Balance:   bigFromStr("14000000000000000000", 10),
+			Idx:     10000,
+			TokenID: 1000,
+			BJJ:     bjj3,
+			EthAddr: ethCommon.HexToAddress("0x64"),
+			Nonce:   common.Nonce(1900),
+			Balance: bigFromStr("14000000000000000000", 10),
 		},
 	}
 	for i := 0; i < len(accounts); i++ {

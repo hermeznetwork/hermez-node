@@ -106,7 +106,7 @@ func genTestPoolTxs(
 		fromAcc := getAccountByIdx(poolTx.FromIdx, accs)
 		fromAddr := ethAddrToHez(fromAcc.EthAddr)
 		genReceiveTx.FromEthAddr = &fromAddr
-		fromBjj := bjjToString(fromAcc.PublicKey)
+		fromBjj := bjjToString(fromAcc.BJJ)
 		genReceiveTx.FromBJJ = &fromBjj
 		if poolTx.ToIdx != 0 {
 			toIdx := idxToHez(poolTx.ToIdx, token.Symbol)
@@ -128,7 +128,7 @@ func genTestPoolTxs(
 			genReceiveTx.ToBJJ = &toBJJ
 		} else if poolTx.ToIdx > 255 {
 			acc := getAccountByIdx(poolTx.ToIdx, accs)
-			bjj := bjjToString(acc.PublicKey)
+			bjj := bjjToString(acc.BJJ)
 			genReceiveTx.ToBJJ = &bjj
 		}
 		if poolTx.RqFromIdx != 0 {
