@@ -353,6 +353,14 @@ func TestMain(m *testing.M) {
 	// Generate Coordinators and add them to HistoryDB
 	const nCoords = 10
 	commonCoords := test.GenCoordinators(nCoords, commonBlocks)
+	// Update one coordinator to test behaviour when bidder address is repeated
+	updatedCoordBlock := commonCoords[len(commonCoords)-1].EthBlockNum
+	commonCoords = append(commonCoords, common.Coordinator{
+		Bidder:      commonCoords[0].Bidder,
+		Forger:      commonCoords[0].Forger,
+		EthBlockNum: updatedCoordBlock,
+		URL:         commonCoords[0].URL + ".new",
+	})
 	if err := api.h.AddCoordinators(commonCoords); err != nil {
 		panic(err)
 	}
@@ -473,7 +481,7 @@ func TestMain(m *testing.M) {
 	nonBootForger := historydb.CoordinatorAPI{
 		Bidder: commonCoords[0].Bidder,
 		Forger: commonCoords[0].Forger,
-		URL:    commonCoords[0].URL,
+		URL:    commonCoords[0].URL + ".new",
 	}
 	// Slot 4
 	nextForgers[3].Coordinator = nonBootForger
@@ -762,10 +770,16 @@ func getBlockByNum(ethBlockNum int64, blocks []common.Block) common.Block {
 }
 
 func getCoordinatorByBidder(bidder ethCommon.Address, coordinators []historydb.CoordinatorAPI) historydb.CoordinatorAPI {
+	var coordLastUpdate historydb.CoordinatorAPI
+	found := false
 	for _, c := range coordinators {
 		if c.Bidder == bidder {
-			return c
+			coordLastUpdate = c
+			found = true
 		}
 	}
-	panic("coordinator not found")
+	if !found {
+		panic("coordinator not found")
+	}
+	return coordLastUpdate
 }
