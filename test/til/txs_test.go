@@ -1,13 +1,33 @@
 package til
 
 import (
+	"encoding/hex"
+	"fmt"
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestGenerateKeys(t *testing.T) {
+	tc := NewContext(0, common.RollupConstMaxL1UserTx)
+	usernames := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"}
+	tc.generateKeys(usernames)
+	debug := false
+	if debug {
+		for i, username := range usernames {
+			fmt.Println(i, username)
+			sk := crypto.FromECDSA(tc.Users[username].EthSk)
+			fmt.Println("	eth_sk", hex.EncodeToString(sk))
+			fmt.Println("	eth_addr", tc.Users[username].Addr)
+			fmt.Println("	bjj_sk", hex.EncodeToString(tc.Users[username].BJJ[:]))
+			fmt.Println("	bjj_pub", tc.Users[username].BJJ.Public().Compress())
+		}
+	}
+}
 
 func TestGenerateBlocksNoBatches(t *testing.T) {
 	set := `

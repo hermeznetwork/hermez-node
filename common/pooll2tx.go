@@ -311,10 +311,16 @@ func (tx *PoolL2Tx) VerifySignature(chainID uint16, pkComp babyjub.PublicKeyComp
 
 // L2Tx returns a *L2Tx from the PoolL2Tx
 func (tx PoolL2Tx) L2Tx() L2Tx {
+	var toIdx Idx
+	if tx.ToIdx == Idx(0) {
+		toIdx = tx.AuxToIdx
+	} else {
+		toIdx = tx.ToIdx
+	}
 	return L2Tx{
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
-		ToIdx:   tx.ToIdx,
+		ToIdx:   toIdx,
 		Amount:  tx.Amount,
 		Fee:     tx.Fee,
 		Nonce:   tx.Nonce,

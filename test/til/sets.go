@@ -224,7 +224,6 @@ CreateAccountDeposit(1) C: 0
 // close Block:0, Batch:1
 > batchL1 // freeze L1User{2}, forge L1Coord{0}
 // Expected balances:
-//     Coord(0): 0, Coord(1): 0
 //     C(0): 0
 
 CreateAccountDeposit(1) A: 500
@@ -232,14 +231,12 @@ CreateAccountDeposit(1) A: 500
 // close Block:0, Batch:2
 > batchL1 // freeze L1User{1}, forge L1User{2}
 // Expected balances:
-//     Coord(0): 0, Coord(1): 0
 //     A(0): 500
 //     C(0): 0, C(1): 0
 
 // close Block:0, Batch:3
 > batchL1 // freeze L1User{nil}, forge L1User{1}
 // Expected balances:
-//     Coord(0): 0, Coord(1): 0
 //     A(0): 500, A(1): 500
 //     C(0): 0
 
@@ -253,7 +250,6 @@ CreateAccountDeposit(0) D: 800
 // close Block:0, Batch:5
 > batchL1 // freeze L1User{1}, forge L1User{1}
 // Expected balances:
-//     Coord(0): 0, Coord(1): 0
 //     A(0): 600, A(1): 500
 //     B(0): 400
 //     C(0): 0

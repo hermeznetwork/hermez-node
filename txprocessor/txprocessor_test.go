@@ -226,12 +226,14 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:0, only L1CoordinatorTxs")
 	_, err = tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
+	assert.Equal(t, "0", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:1")
 	l1UserTxs := []common.L1Tx{}
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
 	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
+	assert.Equal(t, "0", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
@@ -239,6 +241,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
+	assert.Equal(t, "13644148972047617726265275926674266298636745191961029124811988256139761111521", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
@@ -247,6 +250,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
+	assert.Equal(t, "12433441613247342495680642890662773367605896324555599297255745922589338651261", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
@@ -255,6 +259,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
+	assert.Equal(t, "12433441613247342495680642890662773367605896324555599297255745922589338651261", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
@@ -264,6 +269,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "A", 0, "600")
 	checkBalance(t, tc, sdb, "A", 1, "500")
 	checkBalance(t, tc, sdb, "B", 0, "400")
+	assert.Equal(t, "4191361650490017591061467288209836928064232431729236465872209988325272262963", tp.s.MT.Root().BigInt().String())
 
 	coordIdxs := []common.Idx{261, 262}
 	log.Debug("block:0 batch:6")
@@ -279,6 +285,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "B", 1, "200")
 	checkBalance(t, tc, sdb, "C", 0, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
+	assert.Equal(t, "7614010373759339299470010949167613050707822522530721724565424494781010548240", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:7")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
@@ -294,6 +301,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 0, "45")
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
+	assert.Equal(t, "21231789250434471575486264439945776732824482207853465397552873521865656677689", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:1 batch:0")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
@@ -309,12 +317,14 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 0, "845")
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "470")
+	assert.Equal(t, "11289313644810782435120113035387729451095637380468777086895109386127538554246", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:1 batch:1")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
 	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
+	assert.Equal(t, "10342681351319338354912862547249967104198317571995055517008223832276478908482", tp.s.MT.Root().BigInt().String())
 
 	// use Set of PoolL2 txs
 	poolL2Txs, err := tc.GeneratePoolL2Txs(til.SetPoolL2MinimumFlow1)
@@ -553,7 +563,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Equal(t, common.TokenID(1), acc.TokenID)
 	assert.Equal(t, "2", acc.Balance.String())
 
-	assert.Equal(t, "2720257526434001367979405991743527513807903085728407823609738212616896104498", sdb.MT.Root().BigInt().String())
+	assert.Equal(t, "18894163991492573893706613133132363559300580460789469708968288074813925659539", sdb.MT.Root().BigInt().String())
 }
 
 func TestProcessTxsRootTestVectors(t *testing.T) {

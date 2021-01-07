@@ -42,7 +42,8 @@ type ZKMetadata struct {
 	NewExitRootRaw  *merkletree.Hash
 }
 
-// ZKInputs represents the inputs that will be used to generate the zkSNARK proof
+// ZKInputs represents the inputs that will be used to generate the zkSNARK
+// proof
 type ZKInputs struct {
 	Metadata ZKMetadata `json:"-"`
 
@@ -60,12 +61,16 @@ type ZKInputs struct {
 	// GlobalChainID is the blockchain ID (0 for Ethereum mainnet). This
 	// value can be get from the smart contract.
 	GlobalChainID *big.Int `json:"globalChainID"` // uint16
-	// FeeIdxs is an array of merkle tree indexes where the coordinator
-	// will receive the accumulated fees
+	// FeeIdxs is an array of merkle tree indexes (Idxs) where the
+	// coordinator will receive the accumulated fees
 	FeeIdxs []*big.Int `json:"feeIdxs"` // uint64 (max nLevels bits), len: [maxFeeIdxs]
 
 	// accumulate fees
-	// FeePlanTokens contains all the tokenIDs for which the fees are being accumulated
+	// FeePlanTokens contains all the tokenIDs for which the fees are being
+	// accumulated and those fees accoumulated will be paid to the FeeIdxs
+	// array.  The order of FeeIdxs & FeePlanTokens & State3 must match.
+	// Coordinator fees are processed correlated such as:
+	// [FeePlanTokens[i], FeeIdxs[i]]
 	FeePlanTokens []*big.Int `json:"feePlanTokens"` // uint32 (max nLevels bits), len: [maxFeeIdxs]
 
 	//
@@ -79,11 +84,12 @@ type ZKInputs struct {
 	TxCompressedDataV2 []*big.Int `json:"txCompressedDataV2"` // big.Int (max 193 bits), len: [maxTx]
 	// MaxNumBatch is the maximum allowed batch number when the transaction
 	// can be processed
-	MaxNumBatch []*big.Int `json:"maxNumBatch"` // uint32
+	MaxNumBatch []*big.Int `json:"maxNumBatch"` // big.Int (max 32 bits), len: [maxTx]
 
 	// FromIdx
 	FromIdx []*big.Int `json:"fromIdx"` // uint64 (max nLevels bits), len: [maxTx]
-	// AuxFromIdx is the Idx of the new created account which is consequence of a L1CreateAccountTx
+	// AuxFromIdx is the Idx of the new created account which is
+	// consequence of a L1CreateAccountTx
 	AuxFromIdx []*big.Int `json:"auxFromIdx"` // uint64 (max nLevels bits), len: [maxTx]
 
 	// ToIdx
@@ -103,7 +109,8 @@ type ZKInputs struct {
 	//
 	// Txs/L1Txs
 	//
-	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new account (fromIdx==0)
+	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new
+	// account (fromIdx==0)
 	NewAccount []*big.Int `json:"newAccount"` // bool, len: [maxTx]
 	// DepositAmountF encoded as float16
 	DepositAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [maxTx]
@@ -116,7 +123,8 @@ type ZKInputs struct {
 	// Txs/L2Txs
 	//
 
-	// RqOffset relative transaction position to be linked. Used to perform atomic transactions.
+	// RqOffset relative transaction position to be linked. Used to perform
+	// atomic transactions.
 	RqOffset []*big.Int `json:"rqOffset"` // uint8 (max 3 bits), len: [maxTx]
 
 	// transaction L2 request data
@@ -149,13 +157,17 @@ type ZKInputs struct {
 	Balance1  []*big.Int   `json:"balance1"`  // big.Int (max 192 bits), len: [maxTx]
 	EthAddr1  []*big.Int   `json:"ethAddr1"`  // ethCommon.Address, len: [maxTx]
 	Siblings1 [][]*big.Int `json:"siblings1"` // big.Int, len: [maxTx][nLevels + 1]
-	// Required for inserts and deletes, values of the CircomProcessorProof (smt insert proof)
+	// Required for inserts and deletes, values of the CircomProcessorProof
+	// (smt insert proof)
 	IsOld0_1  []*big.Int `json:"isOld0_1"`  // bool, len: [maxTx]
 	OldKey1   []*big.Int `json:"oldKey1"`   // uint64 (max 40 bits), len: [maxTx]
 	OldValue1 []*big.Int `json:"oldValue1"` // Hash, len: [maxTx]
 
-	// state 2, value of the receiver (to) account leaf
-	// if Tx is an Exit, state 2 is used for the Exit Merkle Proof
+	// state 2, value of the receiver (to) account leaf. The values at the
+	// moment pre-smtprocessor of the update (before updating the Receiver
+	// leaf).
+	// If Tx is an Exit (tx.ToIdx=1), state 2 is used for the Exit Merkle
+	// Proof of the Exit MerkleTree.
 	TokenID2  []*big.Int   `json:"tokenID2"`  // uint32, len: [maxTx]
 	Nonce2    []*big.Int   `json:"nonce2"`    // uint64 (max 40 bits), len: [maxTx]
 	Sign2     []*big.Int   `json:"sign2"`     // bool, len: [maxTx]
@@ -163,16 +175,22 @@ type ZKInputs struct {
 	Balance2  []*big.Int   `json:"balance2"`  // big.Int (max 192 bits), len: [maxTx]
 	EthAddr2  []*big.Int   `json:"ethAddr2"`  // ethCommon.Address, len: [maxTx]
 	Siblings2 [][]*big.Int `json:"siblings2"` // big.Int, len: [maxTx][nLevels + 1]
-	// newExit determines if an exit transaction has to create a new leaf in the exit tree
+	// NewExit determines if an exit transaction has to create a new leaf
+	// in the exit tree. If already exists an exit leaf of an account in
+	// the ExitTree, there is no 'new leaf' creation and 'NewExit' for that
+	// tx is 0 (if is an 'insert' in the tree, NewExit=1, if is an 'update'
+	// of an existing leaf, NewExit=0).
 	NewExit []*big.Int `json:"newExit"` // bool, len: [maxTx]
-	// Required for inserts and deletes, values of the CircomProcessorProof (smt insert proof)
+	// Required for inserts and deletes, values of the CircomProcessorProof
+	// (smt insert proof)
 	IsOld0_2  []*big.Int `json:"isOld0_2"`  // bool, len: [maxTx]
 	OldKey2   []*big.Int `json:"oldKey2"`   // uint64 (max 40 bits), len: [maxTx]
 	OldValue2 []*big.Int `json:"oldValue2"` // Hash, len: [maxTx]
 
-	// state 3, value of the account leaf receiver of the Fees
-	// fee tx
-	// State fees
+	// state 3, fee leafs states, value of the account leaf receiver of the
+	// Fees fee tx. The values at the moment pre-smtprocessor of the update
+	// (before updating the Receiver leaf).
+	// The order of FeeIdxs & FeePlanTokens & State3 must match.
 	TokenID3  []*big.Int   `json:"tokenID3"`  // uint32, len: [maxFeeIdxs]
 	Nonce3    []*big.Int   `json:"nonce3"`    // uint64 (max 40 bits), len: [maxFeeIdxs]
 	Sign3     []*big.Int   `json:"sign3"`     // bool, len: [maxFeeIdxs]

@@ -2,9 +2,9 @@ package til
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -694,7 +694,9 @@ func (tc *Context) generateKeys(userNames []string) {
 		}
 		// babyjubjub key
 		var sk babyjub.PrivateKey
-		copy(sk[:], []byte(strconv.Itoa(i))) // only for testing
+		var iBytes [8]byte
+		binary.LittleEndian.PutUint64(iBytes[:], uint64(i))
+		copy(sk[:], iBytes[:]) // only for testing
 
 		// eth address
 		var key ecdsa.PrivateKey
