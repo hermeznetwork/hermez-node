@@ -9,6 +9,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -37,6 +38,13 @@ type ServerProof struct {
 type Coordinator struct {
 	// ForgerAddress is the address under which this coordinator is forging
 	ForgerAddress ethCommon.Address `validate:"required"`
+	// FeeAccount is the Hermez account that the coordinator uses to receive fees
+	FeeAccount struct {
+		// Address is the ethereum address of the account to receive fees
+		Address ethCommon.Address `validate:"required"`
+		// BJJ is the baby jub jub public key of the account to receive fees
+		BJJ babyjub.PublicKeyComp `validate:"required"`
+	} `validate:"required"`
 	// ConfirmBlocks is the number of confirmation blocks to wait for sent
 	// ethereum transactions before forgetting about them
 	ConfirmBlocks int64 `validate:"required"`
@@ -162,7 +170,8 @@ type Node struct {
 		SyncLoopInterval Duration `validate:"required"`
 		// StatsRefreshPeriod is the interval between updates of the
 		// synchronizer state Eth parameters (`Eth.LastBlock` and
-		// `Eth.LastBatch`)
+		// `Eth.LastBatch`).  This value only affects the reported % of
+		// synchronization of blocks and batches, nothing else.
 		StatsRefreshPeriod Duration `validate:"required"`
 	} `validate:"required"`
 	SmartContracts struct {

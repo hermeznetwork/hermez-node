@@ -9,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -108,6 +107,9 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		}
 		keyStore = ethKeystore.NewKeyStore(cfg.Coordinator.EthClient.Keystore.Path,
 			scryptN, scryptP)
+
+		// Unlock Coordinator ForgerAddr in the keystore to make calls
+		// to ForgeBatch in the smart contract
 		if !keyStore.HasAddress(cfg.Coordinator.ForgerAddress) {
 			return nil, tracerr.Wrap(fmt.Errorf(
 				"ethereum keystore doesn't have the key for address %v",
@@ -191,17 +193,39 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			cfg.Coordinator.L2DB.MaxTxs,
 			cfg.Coordinator.L2DB.TTL.Duration,
 		)
-		// TODO: Get (maxL1UserTxs, maxL1OperatorTxs, maxTxs) from the smart contract
-		coordAccount := &txselector.CoordAccount{ // TODO TMP
-			Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
-			BJJ:                 common.EmptyBJJComp,
-			AccountCreationAuth: nil,
+
+		// Unlock FeeAccount EthAddr in the keystore to generate the
+		// account creation authorization
+		if !keyStore.HasAddress(cfg.Coordinator.FeeAccount.Address) {
+			return nil, tracerr.Wrap(fmt.Errorf(
+				"ethereum keystore doesn't have the key for address %v",
+				cfg.Coordinator.FeeAccount.Address))
+		}
+		feeAccount := accounts.Account{
+			Address: cfg.Coordinator.FeeAccount.Address,
+		}
+		if err := keyStore.Unlock(feeAccount,
+			cfg.Coordinator.EthClient.Keystore.Password); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		auth := &common.AccountCreationAuth{
+			EthAddr: cfg.Coordinator.FeeAccount.Address,
+			BJJ:     cfg.Coordinator.FeeAccount.BJJ,
+		}
+		if err := auth.Sign(func(msg []byte) ([]byte, error) {
+			return keyStore.SignHash(feeAccount, msg)
+		}, chainIDU16, cfg.SmartContracts.Rollup); err != nil {
+			return nil, err
+		}
+		coordAccount := &txselector.CoordAccount{
+			Addr:                cfg.Coordinator.FeeAccount.Address,
+			BJJ:                 cfg.Coordinator.FeeAccount.BJJ,
+			AccountCreationAuth: auth.Signature,
 		}
 		txSelector, err := txselector.NewTxSelector(coordAccount, cfg.Coordinator.TxSelector.Path, stateDB, l2DB)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		// TODO: Get (configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) from smart contract
 		batchBuilder, err := batchbuilder.NewBatchBuilder(cfg.Coordinator.BatchBuilder.Path,
 			stateDB, nil, 0, uint64(cfg.Coordinator.Circuit.NLevels))
 		if err != nil {
@@ -408,12 +432,8 @@ func (n *Node) handleNewBlock(stats *synchronizer.Stats, vars synchronizer.SCVar
 	if n.mode == ModeCoordinator {
 		n.coord.SendMsg(coordinator.MsgSyncBlock{
 			Stats:   *stats,
+			Vars:    vars,
 			Batches: batches,
-			Vars: synchronizer.SCVariablesPtr{
-				Rollup:   vars.Rollup,
-				Auction:  vars.Auction,
-				WDelayer: vars.WDelayer,
-			},
 		})
 	}
 	if n.nodeAPI != nil {
@@ -439,10 +459,11 @@ func (n *Node) handleNewBlock(stats *synchronizer.Stats, vars synchronizer.SCVar
 	}
 }
 
-func (n *Node) handleReorg(stats *synchronizer.Stats) {
+func (n *Node) handleReorg(stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr) {
 	if n.mode == ModeCoordinator {
 		n.coord.SendMsg(coordinator.MsgSyncReorg{
 			Stats: *stats,
+			Vars:  vars,
 		})
 	}
 	if n.nodeAPI != nil {
@@ -467,15 +488,17 @@ func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common
 	} else if discarded != nil {
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
-		n.handleReorg(stats)
+		vars := n.sync.SCVars()
+		n.handleReorg(stats, vars)
 		return nil, time.Duration(0), nil
 	} else if blockData != nil {
 		// case: new block
-		n.handleNewBlock(stats, synchronizer.SCVariablesPtr{
+		vars := synchronizer.SCVariablesPtr{
 			Rollup:   blockData.Rollup.Vars,
 			Auction:  blockData.Auction.Vars,
 			WDelayer: blockData.WDelayer.Vars,
-		}, blockData.Rollup.Batches)
+		}
+		n.handleNewBlock(stats, vars, blockData.Rollup.Batches)
 		return &blockData.Block, time.Duration(0), nil
 	} else {
 		// case: no block
@@ -625,9 +648,9 @@ func (n *Node) Start() {
 func (n *Node) Stop() {
 	log.Infow("Stopping node...")
 	n.cancel()
+	n.wg.Wait()
 	if n.mode == ModeCoordinator {
 		log.Info("Stopping Coordinator...")
 		n.coord.Stop()
 	}
-	n.wg.Wait()
 }

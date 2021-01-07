@@ -139,6 +139,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		defer sto.Close()
 		exitTree, err = merkletree.NewMerkleTree(sto, tp.s.MT.MaxLevels())
 		if err != nil {
 			return nil, tracerr.Wrap(err)

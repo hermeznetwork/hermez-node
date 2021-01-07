@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAccountCreationAuthVerification(t *testing.T) {
+func TestAccountCreationAuthSignVerify(t *testing.T) {
 	// Ethereum key
 	ethSk, err := ethCrypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
 	require.NoError(t, err)
@@ -21,7 +21,7 @@ func TestAccountCreationAuthVerification(t *testing.T) {
 	var sk babyjub.PrivateKey
 	_, err = hex.Decode(sk[:],
 		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	chainID := uint16(0)
 	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
@@ -29,16 +29,22 @@ func TestAccountCreationAuthVerification(t *testing.T) {
 		EthAddr: ethAddr,
 		BJJ:     sk.Public().Compress(),
 	}
-	msg, err := a.HashToSign(chainID, hermezContractAddr)
-	assert.NoError(t, err)
-	assert.Equal(t, "4f8df75e96fdce1ac90bb2f8d81c42047600f85bfcef80ce3b91c2a2afc58c1e",
-		hex.EncodeToString(msg))
 
-	// sign AccountCreationAuth with eth key
-	sig, err := ethCrypto.Sign(msg, ethSk)
-	assert.NoError(t, err)
+	// Sign using the Sign function (stores signature in a.Signature)
+	err = a.Sign(func(hash []byte) ([]byte, error) {
+		return ethCrypto.Sign(hash, ethSk)
+	}, chainID, hermezContractAddr)
+	require.NoError(t, err)
+
+	// Hash and sign manually and compare the generated signature
+	hash, err := a.HashToSign(chainID, hermezContractAddr)
+	require.NoError(t, err)
+	assert.Equal(t, "4f8df75e96fdce1ac90bb2f8d81c42047600f85bfcef80ce3b91c2a2afc58c1e",
+		hex.EncodeToString(hash))
+	sig, err := ethCrypto.Sign(hash, ethSk)
+	require.NoError(t, err)
 	sig[64] += 27
-	a.Signature = sig
+	assert.Equal(t, sig, a.Signature)
 
 	assert.True(t, a.VerifySignature(chainID, hermezContractAddr))
 }
@@ -107,7 +113,7 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		// BabyJubJub key
 		pkCompStr := tv.pkCompStr
 		pkComp, err := BJJFromStringWithChecksum(pkCompStr)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		chainID := tv.chainID
 		hermezContractAddr := ethCommon.HexToAddress(tv.hermezContractAddr)
@@ -122,13 +128,13 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		assert.Equal(t, 120+len(EthMsgPrefix)+len([]byte("120")), len(toHash))
 
 		msg, err := a.HashToSign(chainID, hermezContractAddr)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, tv.hashExpected,
 			hex.EncodeToString(msg))
 
 		// sign AccountCreationAuth with eth key
 		sig, err := ethCrypto.Sign(msg, ethSk)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		sig[64] += 27
 		assert.Equal(t, tv.sigExpected,
 			hex.EncodeToString(sig))

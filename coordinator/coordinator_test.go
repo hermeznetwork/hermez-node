@@ -445,7 +445,7 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	modules := newTestModules(t)
 	var stats synchronizer.Stats
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
-	pipeline, err := coord.newPipeline(ctx, &stats)
+	pipeline, err := coord.newPipeline(ctx)
 	require.NoError(t, err)
 	pipeline.vars = coord.vars
 
@@ -598,7 +598,7 @@ func TestPipeline1(t *testing.T) {
 	batchNum := common.BatchNum(syncStats.Sync.LastBatch)
 	syncSCVars := sync.SCVars()
 
-	pipeline, err := coord.newPipeline(ctx, syncStats)
+	pipeline, err := coord.newPipeline(ctx)
 	require.NoError(t, err)
 
 	// Insert some l2txs in the Pool
@@ -616,7 +616,7 @@ PoolTransfer(0) User2-User3: 300 (126)
 		require.NoError(t, err)
 	}
 
-	err = pipeline.reset(batchNum, syncStats.Sync.LastForgeL1TxsNum, &synchronizer.SCVariables{
+	err = pipeline.reset(batchNum, syncStats.Sync.LastForgeL1TxsNum, syncStats, &synchronizer.SCVariables{
 		Rollup:   *syncSCVars.Rollup,
 		Auction:  *syncSCVars.Auction,
 		WDelayer: *syncSCVars.WDelayer,

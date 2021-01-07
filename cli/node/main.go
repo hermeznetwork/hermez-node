@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/node"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/urfave/cli/v2"
 )
 
@@ -24,6 +26,15 @@ const (
 	modeSync  = "sync"
 	modeCoord = "coord"
 )
+
+func cmdGenBJJ(c *cli.Context) error {
+	sk := babyjub.NewRandPrivKey()
+	skBuf := [32]byte(sk)
+	pk := sk.Public()
+	fmt.Printf("BJJ = \"0x%s\"\n", pk.String())
+	fmt.Printf("BJJPrivateKey = \"0x%s\"\n", hex.EncodeToString(skBuf[:]))
+	return nil
+}
 
 func cmdImportKey(c *cli.Context) error {
 	_cfg, err := parseCli(c)
@@ -195,6 +206,12 @@ func main() {
 					Usage:    "ethereum `PRIVATE_KEY` in hex",
 					Required: true,
 				}},
+		},
+		{
+			Name:    "genbjj",
+			Aliases: []string{},
+			Usage:   "Generate a new BabyJubJub key",
+			Action:  cmdGenBJJ,
 		},
 		{
 			Name:    "wipesql",

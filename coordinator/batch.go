@@ -14,14 +14,22 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-// TxStatus is used to mark the status of an ethereum transaction
-type TxStatus string
+// Status is used to mark the status of the batch
+type Status string
 
 const (
-	// TxStatusPending marks the Tx as Pending
-	TxStatusPending TxStatus = "pending"
-	// TxStatusSent marks the Tx as Sent
-	TxStatusSent TxStatus = "sent"
+	// StatusPending marks the Tx as Pending
+	StatusPending Status = "pending"
+	// StatusForged marks the batch as forged internally
+	StatusForged Status = "forged"
+	// StatusProof marks the batch as proof calculated
+	StatusProof Status = "proof"
+	// StatusSent marks the EthTx as Sent
+	StatusSent Status = "sent"
+	// StatusMined marks the EthTx as Mined
+	StatusMined Status = "mined"
+	// StatusFailed marks the EthTx as Failed
+	StatusFailed Status = "failed"
 )
 
 // BatchInfo contans the Batch information
@@ -40,9 +48,9 @@ type BatchInfo struct {
 	CoordIdxs             []common.Idx
 	ForgeBatchArgs        *eth.RollupForgeBatchArgs
 	// FeesInfo
-	TxStatus TxStatus
-	EthTx    *types.Transaction
-	Receipt  *types.Receipt
+	Status  Status
+	EthTx   *types.Transaction
+	Receipt *types.Receipt
 }
 
 // DebugStore is a debug function to store the BatchInfo as a json text file in

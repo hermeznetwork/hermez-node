@@ -24,7 +24,7 @@ func addTestKV(t *testing.T, db *KVDB, k, v []byte) {
 
 func printCheckpoints(t *testing.T, path string) {
 	files, err := ioutil.ReadDir(path)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fmt.Println(path)
 	for _, f := range files {
@@ -35,7 +35,7 @@ func printCheckpoints(t *testing.T, path string) {
 func TestCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "sdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	db, err := NewKVDB(dir, 128)
 	require.NoError(t, err)
@@ -47,47 +47,49 @@ func TestCheckpoints(t *testing.T) {
 
 	// do checkpoints and check that currentBatch is correct
 	err = db.MakeCheckpoint()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cb, err := db.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(1), cb)
 
 	for i := 1; i < 10; i++ {
 		err = db.MakeCheckpoint()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		cb, err = db.GetCurrentBatch()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, common.BatchNum(i+1), cb)
 	}
 
-	// printCheckpoints(t, sdb.path)
+	// printCheckpoints(t, db.path)
 
 	// reset checkpoint
 	err = db.Reset(3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// check that reset can be repeated (as there exist the 'current' and
 	// 'BatchNum3', from where the 'current' is a copy)
 	err = db.Reset(3)
 	require.NoError(t, err)
 
+	printCheckpoints(t, db.path)
+
 	// check that currentBatch is as expected after Reset
 	cb, err = db.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(3), cb)
 
 	// advance one checkpoint and check that currentBatch is fine
 	err = db.MakeCheckpoint()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cb, err = db.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 
 	err = db.DeleteCheckpoint(common.BatchNum(1))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = db.DeleteCheckpoint(common.BatchNum(2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = db.DeleteCheckpoint(common.BatchNum(1)) // does not exist, should return err
 	assert.NotNil(t, err)
 	err = db.DeleteCheckpoint(common.BatchNum(2)) // does not exist, should return err
@@ -96,43 +98,43 @@ func TestCheckpoints(t *testing.T) {
 	// Create a new KVDB which will get Reset from the initial KVDB
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dirLocal))
+	defer require.NoError(t, os.RemoveAll(dirLocal))
 	ldb, err := NewKVDB(dirLocal, 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
 	err = ldb.ResetFromSynchronizer(4, db)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// check that currentBatch is 4 after the Reset
 	cb, err = ldb.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb
 	err = ldb.MakeCheckpoint()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cb, err = ldb.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(5), cb)
 
 	// Create a 3rd KVDB which will get Reset from the initial KVDB
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dirLocal2))
+	defer require.NoError(t, os.RemoveAll(dirLocal2))
 	ldb2, err := NewKVDB(dirLocal2, 128)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
 	err = ldb2.ResetFromSynchronizer(4, db)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// check that currentBatch is 4 after the Reset
 	cb, err = ldb2.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb2
 	err = ldb2.MakeCheckpoint()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cb, err = ldb2.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(5), cb)
 
 	debug := false
@@ -146,7 +148,7 @@ func TestCheckpoints(t *testing.T) {
 func TestListCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	db, err := NewKVDB(dir, 128)
 	require.NoError(t, err)
@@ -176,7 +178,7 @@ func TestListCheckpoints(t *testing.T) {
 func TestDeleteOldCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	keep := 16
 	db, err := NewKVDB(dir, keep)

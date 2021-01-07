@@ -49,12 +49,34 @@ func (a *AccountCreationAuth) HashToSign(chainID uint16,
 	return ethCrypto.Keccak256Hash(b).Bytes(), nil
 }
 
+// Sign signs the account creation authorization message using the provided
+// `signHash` function, and stores the signaure in `a.Signature`.  `signHash`
+// should do an ethereum signature using the account corresponding to
+// `a.EthAddr`.  The `signHash` function is used to make signig flexible: in
+// tests we sign directly using the private key, outside tests we sign using
+// the keystore (which never exposes the private key).
+func (a *AccountCreationAuth) Sign(signHash func(hash []byte) ([]byte, error),
+	chainID uint16, hermezContractAddr ethCommon.Address) error {
+	hash, err := a.HashToSign(chainID, hermezContractAddr)
+	if err != nil {
+		return err
+	}
+	sig, err := signHash(hash)
+	if err != nil {
+		return err
+	}
+	sig[64] += 27
+	a.Signature = sig
+	a.Timestamp = time.Now()
+	return nil
+}
+
 // VerifySignature ensures that the Signature is done with the EthAddr, for the
 // chainID and hermezContractAddress passed by parameter
 func (a *AccountCreationAuth) VerifySignature(chainID uint16,
 	hermezContractAddr ethCommon.Address) bool {
 	// Calculate hash to be signed
-	msg, err := a.HashToSign(chainID, hermezContractAddr)
+	hash, err := a.HashToSign(chainID, hermezContractAddr)
 	if err != nil {
 		return false
 	}
@@ -64,7 +86,7 @@ func (a *AccountCreationAuth) VerifySignature(chainID uint16,
 	sig[64] -= 27
 
 	// Get public key from Signature
-	pubKBytes, err := ethCrypto.Ecrecover(msg, sig[:])
+	pubKBytes, err := ethCrypto.Ecrecover(hash, sig[:])
 	if err != nil {
 		return false
 	}
