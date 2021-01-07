@@ -64,26 +64,15 @@ servers:
   - description: Localhost mock Up
     url: http://localhost:4010
 tags:
-  - name: Account
-    description: Hermez account and the tokens it holds.
-    externalDocs:
-      description: Find out more.
-      url: 'https://idocs.hermez.io/#/spec/zkrollup/README?id=account-types'
-  - name: Transaction
-    description: Send tokens off chain and track transactions.
-    externalDocs:
-      description: Find out more
-      url: 'https://idocs.hermez.io/#/spec/zkrollup/README?id=transaction-types'
-  - name: Hermez status
-    description: Info about operators, tokens, auctions and more.
-    externalDocs:
-      description: Find out more.
-      url: 'https://idocs.hermez.io/#/spec/zkrollup/README'
+  - name: Coordinator
+    description: Endpoints used by the nodes running in coordinator mode. They are used to interact with the network.
+  - name: Explorer
+    description: Endpoints used by the nodes running in explorer mode. They are used to get information of the netwrok.
 paths:
   '/account-creation-authorization':
     post:
       tags:
-        - Account
+        - Coordinator
       summary: Send an authorization that will allow the coordinator to register accounts associated to an Ethereum address on behalf of the user.
       description: >-
         Send an authorization to create rollup accounts associated with an Ethereum address. Each account creation (an account can only hold a specific token) is effective once the coordinator forges the corresponding L1CoordinatorTx (which is always of type *account creation*).
@@ -113,7 +102,7 @@ paths:
   '/account-creation-authorization/{hezEthereumAddress}':
     get:
       tags:
-        - Account
+        - Coordinator
       summary: Find out if the coordinator has the ability to create accounts associated with an Ethereum address.
       description: >-
         Returns the authorization to perform an account creation with the given Ethereum address on behalf of the Ethereum address holder.
@@ -153,7 +142,7 @@ paths:
   '/accounts':
     get:
       tags:
-        - Account
+        - Explorer
       summary: Get accounts balances and other associated information.
       description: Get account balances and other associated information.
       operationId: getAccounts
@@ -166,7 +155,7 @@ paths:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
           in: query
-          description: Only get accounts associated to a BabyJubJub public key.  Incompatible with the query `hezEthereumAddress`.
+          description: Only get accounts associated to a BabyJubJub compressed public key.  Incompatible with the query `hezEthereumAddress`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
@@ -224,7 +213,7 @@ paths:
   '/accounts/{accountIndex}':
     get:
       tags:
-        - Account
+        - Explorer
       summary: Get an account by its index.
       description: Get an account by its index.
       operationId: getAccount
@@ -263,7 +252,7 @@ paths:
   '/exits':
     get:
       tags:
-        - Account
+        - Explorer
       summary: Get exit information. This information is required to perform a withdraw.
       description: Get exit information. This information is required to perform a withdraw.
       operationId: getExits
@@ -282,7 +271,7 @@ paths:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
           in: query
-          description: Get exits associated to a BabyJubJub public key. Incompatible with query `hezEthereumAddress` and `accountIndex`.
+          description: Get exits associated to a BabyJubJub compressed public key. Incompatible with query `hezEthereumAddress` and `accountIndex`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
@@ -350,7 +339,7 @@ paths:
   '/exits/{batchNum}/{accountIndex}':
     get:
       tags:
-        - Account
+        - Explorer
       summary: Get specific exit information.
       description: Get exit information form a specific exit tree and account. This information is required to perform a withdraw. Exits are identified with accounIndex and batchNum since every batch that has exits has a different exit tree.
       operationId: getExit
@@ -395,7 +384,7 @@ paths:
   '/transactions-pool':
     post:
       tags:
-        - Transaction
+        - Coordinator
       summary: Add an L2 transaction to the coordinator's pool.
       description: >-
         Send L2 transaction. The transaction will be stored in the transaction pool of the coordinator and eventually forged.
@@ -429,7 +418,7 @@ paths:
   '/transactions-pool/{id}':
     get:
       tags:
-        - Transaction
+        - Coordinator
       summary: Get details and status of a transaction that is in the pool.
       description: >-
         Get transaction from the pool by its ID. This endpoint is specially useful for tracking the status of a transaction that may not be forged yet.
@@ -472,7 +461,7 @@ paths:
   '/transactions-history':
     get:
       tags:
-        - Transaction
+        - Explorer
       summary: Get details and status of transactions that have been forged.
       description: >-
         Get historical transactions. This endpoint will return all the different types of **forged** transactions, this means that:
@@ -494,7 +483,7 @@ paths:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
           in: query
-          description: Only get transactions associated with a BabyJubJub public key. Incompatible with the queries `hezEthereumAddress` and `accountIndex`.
+          description: Only get transactions associated with a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress` and `accountIndex`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
@@ -562,7 +551,7 @@ paths:
   '/transactions-history/{id}':
     get:
       tags:
-        - Transaction
+        - Explorer
       summary: Get details and status of a historical transaction.
       description: >-
         Get transaction by its ID. This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
@@ -602,7 +591,7 @@ paths:
   '/batches':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get information about forged batches.
       description: >-
         Get information about forged batches.
@@ -678,7 +667,7 @@ paths:
   '/batches/{batchNum}':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get a specific batch.
       description: >-
         Get a specific batch.
@@ -718,7 +707,7 @@ paths:
   '/full-batches/{batchNum}':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get a full batch.
       description: >-
         Get a specific batch, including the associated transactions. The object returned in this method can be a bit heavy. 
@@ -759,7 +748,7 @@ paths:
   '/slots':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get information about slots.
       description: >-
         Get information about slots.
@@ -835,7 +824,7 @@ paths:
   '/slots/{slotNum}':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get information about a specific slot.
       description: >-
         Get information about a specific slot.
@@ -875,7 +864,7 @@ paths:
   '/bids':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get a list of bids.
       description: >- 
         Get a list of bids. It's necessary to provide at least one of the following filters: `slotNum`, `bidderAddr`.
@@ -939,7 +928,7 @@ paths:
   '/state':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Return information that represents the current state of the network.
       description: Return information that represents the current state of the network. It also includes metrics and statistics.
       operationId: getState
@@ -965,7 +954,7 @@ paths:
   '/config':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Return constant configuration of the network.
       description: Return constant configuration of the network.
       operationId: getConfig
@@ -985,7 +974,7 @@ paths:
   '/tokens':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get information of the supported tokens in the Hermez Network.
       description: Get information of the supported tokens in the Hermez Network.
       operationId: getTokens
@@ -1058,7 +1047,7 @@ paths:
   '/tokens/{id}':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get information of a token supported by Hermez Network.
       description: Get information of a token supported by Hermez Network.
       operationId: getToken
@@ -1097,7 +1086,7 @@ paths:
   '/coordinators':
     get:
       tags:
-        - Hermez status
+        - Explorer
       summary: Get information about coordinators.
       description: Get information about coordinators.
       operationId: getCoordinators
@@ -1191,7 +1180,7 @@ components:
         toBjj:
           type: string
           description: >-
-            BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes.
+            BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes.
             If this is provided, toAccountIndex must be null and toHezEthereumAddress must be hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: null
@@ -1291,7 +1280,7 @@ components:
           nullable: true
         fromBJJ:
           type: string
-          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: "hez:9CK9fjQdMUTGm8KDvGLy3MB-vnP0NCcGX7Uh7OO6KRJm"
           nullable: true
@@ -1310,7 +1299,7 @@ components:
           nullable: true
         toBjj:
           type: string
-          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: null
           nullable: true
@@ -1363,7 +1352,7 @@ components:
           example: null
         requestToBJJ:
           type: string
-          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           nullable: true
           example: null
@@ -1468,7 +1457,7 @@ components:
       example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     BJJ:
       type: string
-      description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+      description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
       pattern: "^hez:[A-Za-z0-9_-]{44}$"
       example: "hez:rR7LXKal-av7I56Y0dEBCVmwc9zpoLY5ERhy5w7G-xwe"
     AccountIndex:
@@ -1623,7 +1612,7 @@ components:
           nullable: true
         fromBJJ:
           type: string
-          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: "hez:9CK9fjQdMUTGm8KDvGLy3MB-vnP0NCcGX7Uh7OO6KRJm"
           nullable: true
@@ -1639,7 +1628,7 @@ components:
           nullable: true
         toBJJ:
           type: string
-          description: "BabyJubJub public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
           example: "hez:f1J78_6uqTyjX6jrVCqN4RFeRBnWQAGl477ZFtOnH6Sm"
           nullable: true
@@ -1981,7 +1970,7 @@ components:
     URL:
       type: string
       description: HTTP URL
-      example: "https://hermez.io"
+      example: "https://apimock.hermez.network"
     TokenSymbol:
       type: string
       description: Abreviation of the token name.
@@ -2318,7 +2307,7 @@ components:
           additionalProperties: false
         balance:
           $ref: '#/components/schemas/BigInt'
-        instantWithdrawn:
+        instantWithdraw:
           type: integer
           description: Block in which the exit balance was instantly withdrawn. Null indicates that an instant withdrawn hasn't been performed.
           minimum: 0
@@ -2332,7 +2321,7 @@ components:
           maximum: 1.84467440737096e+19
           example: null
           nullable: true
-        delayedWithdrawn:
+        delayedWithdraw:
           type: integer
           description: Block in which the exit balance was delayed withdrawn after a delay withdraw request. Null indicates that a delay withdraw hasn't been performed.
           minimum: 0
@@ -2349,9 +2338,9 @@ components:
           - itemId
           - merkleProof
           - balance
-          - instantWithdrawn
+          - instantWithdraw
           - delayedWithdrawRequest
-          - delayedWithdrawn
+          - delayedWithdraw
           - token
       additionalProperties: false
     Exits:
@@ -2387,37 +2376,22 @@ components:
         token:
           $ref: '#/components/schemas/Token'
       example:
-        exits:
-        - accountIndex: hez:ETH:259
-          balance: '66666600000000000'
-          batchNum: 8
-          delayedWithdrawRequest: 
-          delayedWithdrawn: 
-          instantWithdrawn: 
+        accountIndex: hez:ETH:259
+        balance: '2590000000000000000'
+        bjj: hez:W6x4TZOAZ9mAqdOb3Xm_hKDLspaXfEfMMN4tXOkinS-W
+        hezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+        itemId: 4
+        nonce: 0
+        token:
+          USD: 500
+          decimals: 18
+          ethereumAddress: '0x0000000000000000000000000000000000000000'
+          ethereumBlockNum: 0
+          fiatUpdate: '2020-11-26T09:53:47.444444Z'
+          id: 0
           itemId: 1
-          merkleProof:
-            Fnc: 0
-            IsOld0: true
-            Key: '256'
-            OldKey: '256'
-            OldValue: '256'
-            Root: '256'
-            Siblings:
-            - '0'
-            - '1'
-            - '2'
-            Value: '256'
-          token:
-            USD: 500
-            decimals: 18
-            ethereumAddress: '0x0000000000000000000000000000000000000000'
-            ethereumBlockNum: 0
-            fiatUpdate: '2020-11-26T09:57:29.110879Z'
-            id: 0
-            itemId: 1
-            name: Ether
-            symbol: ETH
-        pendingItems: 0
+          name: Ether
+          symbol: ETH
       additionalProperties: false
       required:
         - itemId

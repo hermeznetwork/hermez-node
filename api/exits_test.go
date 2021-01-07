@@ -31,9 +31,9 @@ type testExit struct {
 	EthAddr                apitypes.HezEthAddr    `json:"hezEthereumAddress"`
 	MerkleProof            testCVP                `json:"merkleProof"`
 	Balance                string                 `json:"balance"`
-	InstantWithdrawn       *int64                 `json:"instantWithdrawn"`
+	InstantWithdrawn       *int64                 `json:"instantWithdraw"`
 	DelayedWithdrawRequest *int64                 `json:"delayedWithdrawRequest"`
-	DelayedWithdrawn       *int64                 `json:"delayedWithdrawn"`
+	DelayedWithdrawn       *int64                 `json:"delayedWithdraw"`
 	Token                  historydb.TokenWithUSD `json:"token"`
 }
 
