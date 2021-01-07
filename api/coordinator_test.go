@@ -31,12 +31,27 @@ func (t testCoordinatorsResponse) New() Pendinger { return &testCoordinatorsResp
 func genTestCoordinators(coordinators []common.Coordinator) []historydb.CoordinatorAPI {
 	testCoords := []historydb.CoordinatorAPI{}
 	for i := 0; i < len(coordinators); i++ {
-		testCoords = append(testCoords, historydb.CoordinatorAPI{
-			Bidder:      coordinators[i].Bidder,
-			Forger:      coordinators[i].Forger,
-			EthBlockNum: coordinators[i].EthBlockNum,
-			URL:         coordinators[i].URL,
-		})
+		alreadyRegistered := false
+		for j := 0; j < len(testCoords); j++ {
+			// coordinator already registered
+			if coordinators[i].Bidder == testCoords[j].Bidder {
+				alreadyRegistered = true
+				if coordinators[i].EthBlockNum > testCoords[j].EthBlockNum {
+					// This occurrence is more updated, delete current and append new
+					testCoords = append(testCoords[:j], testCoords[j+1:]...)
+					alreadyRegistered = false
+				}
+				break
+			}
+		}
+		if !alreadyRegistered {
+			testCoords = append(testCoords, historydb.CoordinatorAPI{
+				Bidder:      coordinators[i].Bidder,
+				Forger:      coordinators[i].Forger,
+				EthBlockNum: coordinators[i].EthBlockNum,
+				URL:         coordinators[i].URL,
+			})
+		}
 	}
 	return testCoords
 }

@@ -379,8 +379,12 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 	bid := &BidAPI{}
 	err := meddler.QueryRow(
 		hdb.db, bid, `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url 
-		FROM bid INNER JOIN block ON bid.eth_block_num = block.eth_block_num 
-		INNER JOIN coordinator ON bid.bidder_addr = coordinator.bidder_addr 
+		FROM bid INNER JOIN block ON bid.eth_block_num = block.eth_block_num
+		INNER JOIN (
+			SELECT bidder_addr, MAX(item_id) AS item_id FROM coordinator
+			GROUP BY bidder_addr
+		) c ON bid.bidder_addr = c.bidder_addr 
+		INNER JOIN coordinator ON c.item_id = coordinator.item_id 
 		WHERE slot_num = $1 ORDER BY item_id DESC LIMIT 1;`, slotNum,
 	)
 	return *bid, tracerr.Wrap(err)
@@ -396,11 +400,15 @@ func (hdb *HistoryDB) GetBestBidCoordinator(slotNum int64) (*common.BidCoordinat
 			FROM auction_vars
 			WHERE default_slot_set_bid_slot_num <= $1
 			ORDER BY eth_block_num DESC LIMIT 1
-			),
+		),
 		bid.slot_num, bid.bid_value, bid.bidder_addr,
 		coordinator.forger_addr, coordinator.url
 		FROM bid
-		INNER JOIN coordinator ON bid.bidder_addr = coordinator.bidder_addr
+		INNER JOIN (
+			SELECT bidder_addr, MAX(item_id) AS item_id FROM coordinator
+			GROUP BY bidder_addr
+		) c ON bid.bidder_addr = c.bidder_addr 
+		INNER JOIN coordinator ON c.item_id = coordinator.item_id
 		WHERE bid.slot_num = $1 ORDER BY bid.item_id DESC LIMIT 1;`,
 		slotNum)
 
@@ -415,14 +423,19 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 ) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
+	// JOIN the best bid of each slot with the latest update of each coordinator
 	queryStr := `SELECT b.*, block.timestamp, coordinator.forger_addr, coordinator.url, 
 	COUNT(*) OVER() AS total_items FROM (
 	   SELECT slot_num, MAX(item_id) as maxitem 
 	   FROM bid GROUP BY slot_num
-	   )
+	)
 	AS x INNER JOIN bid AS b ON b.item_id = x.maxitem
 	INNER JOIN block ON b.eth_block_num = block.eth_block_num
-	INNER JOIN coordinator ON b.bidder_addr = coordinator.bidder_addr 
+	INNER JOIN (
+		SELECT bidder_addr, MAX(item_id) AS item_id FROM coordinator
+		GROUP BY bidder_addr
+	) c ON b.bidder_addr = c.bidder_addr 
+	INNER JOIN coordinator ON c.item_id = coordinator.item_id 
 	WHERE (b.slot_num >= ? AND b.slot_num <= ?)`
 	args = append(args, minSlotNum)
 	args = append(args, maxSlotNum)
@@ -455,15 +468,20 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 
 // GetBidsAPI return the bids applying the given filters
 func (hdb *HistoryDB) GetBidsAPI(
-	slotNum *int64, forgerAddr *ethCommon.Address,
+	slotNum *int64, bidderAddr *ethCommon.Address,
 	fromItem, limit *uint, order string,
 ) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
-	queryStr := `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url, 
+	// JOIN each bid with the latest update of each coordinator
+	queryStr := `SELECT bid.*, block.timestamp, coord.forger_addr, coord.url, 
 	COUNT(*) OVER() AS total_items
 	FROM bid INNER JOIN block ON bid.eth_block_num = block.eth_block_num 
-	INNER JOIN coordinator ON bid.bidder_addr = coordinator.bidder_addr `
+	INNER JOIN (
+		SELECT bidder_addr, MAX(item_id) AS item_id FROM coordinator
+		GROUP BY bidder_addr
+	) c ON bid.bidder_addr = c.bidder_addr 
+	INNER JOIN coordinator coord ON c.item_id = coord.item_id `
 	// Apply filters
 	nextIsAnd := false
 	// slotNum filter
@@ -477,15 +495,15 @@ func (hdb *HistoryDB) GetBidsAPI(
 		args = append(args, slotNum)
 		nextIsAnd = true
 	}
-	// slotNum filter
-	if forgerAddr != nil {
+	// bidder filter
+	if bidderAddr != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "bid.bidder_addr = ? "
-		args = append(args, forgerAddr)
+		args = append(args, bidderAddr)
 		nextIsAnd = true
 	}
 	if fromItem != nil {
@@ -1637,7 +1655,11 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 // GetCoordinatorAPI returns a coordinator by its bidderAddr
 func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*CoordinatorAPI, error) {
 	coordinator := &CoordinatorAPI{}
-	err := meddler.QueryRow(hdb.db, coordinator, "SELECT * FROM coordinator WHERE bidder_addr = $1;", bidderAddr)
+	err := meddler.QueryRow(
+		hdb.db, coordinator,
+		"SELECT * FROM coordinator WHERE bidder_addr = $1 ORDER BY item_id DESC LIMIT 1;",
+		bidderAddr,
+	)
 	return coordinator, tracerr.Wrap(err)
 }
 
@@ -1648,9 +1670,11 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(
 ) ([]CoordinatorAPI, uint64, error) {
 	var query string
 	var args []interface{}
-	queryStr := `SELECT coordinator.*, 
-	COUNT(*) OVER() AS total_items
-	FROM coordinator `
+	queryStr := `SELECT coordinator.*, COUNT(*) OVER() AS total_items
+	FROM coordinator INNER JOIN (
+		SELECT MAX(item_id) AS item_id FROM coordinator
+		GROUP BY bidder_addr
+	) c ON coordinator.item_id = c.item_id `
 	// Apply filters
 	nextIsAnd := false
 	if bidderAddr != nil {

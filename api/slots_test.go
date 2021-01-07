@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
@@ -148,7 +149,12 @@ func TestGetSlots(t *testing.T) {
 	// maxSlotNum & wonByEthereumAddress
 	fetchedSlots = []testSlot{}
 	limit = 1
-	bidderAddr := tc.coordinators[0].Bidder
+	var bidderAddr ethCommon.Address
+	for i := 0; i < len(tc.slots); i++ {
+		if tc.slots[i].WinnerBid != nil {
+			bidderAddr = tc.slots[i].WinnerBid.Bidder
+		}
+	}
 	path = fmt.Sprintf("%s?maxSlotNum=%d&wonByEthereumAddress=%s&limit=%d", endpoint, maxSlotNum, bidderAddr.String(), limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testSlotsResponse{}, appendIter)
 	assert.NoError(t, err)
