@@ -203,7 +203,7 @@ func (c *Coordinator) canForge(stats *synchronizer.Stats) bool {
 	if !stats.Sync.Auction.CurrentSlot.ForgerCommitment &&
 		c.consts.Auction.RelativeBlock(stats.Eth.LastBlock.Num+1) >= int64(c.vars.Auction.SlotDeadline) {
 		log.Debugw("Coordinator: anyone can forge in the current slot (slotDeadline passed)",
-			"block", stats.Eth.LastBlock.Num)
+			"block", stats.Eth.LastBlock.Num+1)
 		anyoneForge = true
 	}
 	if stats.Sync.Auction.CurrentSlot.Forger == c.cfg.ForgerAddress || anyoneForge {
@@ -219,7 +219,7 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 	if c.pipeline == nil {
 		if canForge {
 			log.Infow("Coordinator: forging state begin", "block",
-				stats.Eth.LastBlock.Num, "batch", stats.Sync.LastBatch)
+				stats.Eth.LastBlock.Num+1, "batch", stats.Sync.LastBatch)
 			batchNum := common.BatchNum(stats.Sync.LastBatch)
 			var err error
 			if c.pipeline, err = c.newPipeline(ctx); err != nil {
@@ -234,7 +234,7 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 		}
 	} else {
 		if !canForge {
-			log.Infow("Coordinator: forging state end", "block", stats.Eth.LastBlock.Num)
+			log.Infow("Coordinator: forging state end", "block", stats.Eth.LastBlock.Num+1)
 			c.pipeline.Stop(c.ctx)
 			c.pipeline = nil
 		}
@@ -443,6 +443,11 @@ func (t *TxManager) SetLastBlock(lastBlock int64) {
 }
 
 func (t *TxManager) rollupForgeBatch(ctx context.Context, batchInfo *BatchInfo) error {
+	batchInfo.Debug.Status = StatusSent
+	batchInfo.Debug.SendBlockNum = t.lastBlock + 1
+	batchInfo.Debug.SendTimestamp = time.Now()
+	batchInfo.Debug.StartToSendDelay = batchInfo.Debug.SendTimestamp.Sub(
+		batchInfo.Debug.StartTimestamp).Seconds()
 	var ethTx *types.Transaction
 	var err error
 	for attempt := 0; attempt < t.cfg.EthClientAttempts; attempt++ {
@@ -450,11 +455,11 @@ func (t *TxManager) rollupForgeBatch(ctx context.Context, batchInfo *BatchInfo) 
 		if err != nil {
 			if strings.Contains(err.Error(), common.AuctionErrMsgCannotForge) {
 				log.Debugw("TxManager ethClient.RollupForgeBatch", "err", err,
-					"block", t.lastBlock)
+					"block", t.lastBlock+1)
 				return tracerr.Wrap(err)
 			}
 			log.Errorw("TxManager ethClient.RollupForgeBatch",
-				"attempt", attempt, "err", err, "block", t.lastBlock,
+				"attempt", attempt, "err", err, "block", t.lastBlock+1,
 				"batchNum", batchInfo.BatchNum)
 		} else {
 			break
@@ -469,7 +474,6 @@ func (t *TxManager) rollupForgeBatch(ctx context.Context, batchInfo *BatchInfo) 
 		return tracerr.Wrap(fmt.Errorf("reached max attempts for ethClient.RollupForgeBatch: %w", err))
 	}
 	batchInfo.EthTx = ethTx
-	batchInfo.Status = StatusSent
 	log.Infow("TxManager ethClient.RollupForgeBatch", "batch", batchInfo.BatchNum, "tx", ethTx.Hash().Hex())
 	t.cfg.debugBatchStore(batchInfo)
 	if err := t.l2DB.DoneForging(common.TxIDsFromL2Txs(batchInfo.L2Txs), batchInfo.BatchNum); err != nil {
@@ -511,12 +515,15 @@ func (t *TxManager) handleReceipt(batchInfo *BatchInfo) (*int64, error) {
 	receipt := batchInfo.Receipt
 	if receipt != nil {
 		if receipt.Status == types.ReceiptStatusFailed {
-			batchInfo.Status = StatusFailed
+			batchInfo.Debug.Status = StatusFailed
 			t.cfg.debugBatchStore(batchInfo)
 			log.Errorw("TxManager receipt status is failed", "receipt", receipt)
 			return nil, tracerr.Wrap(fmt.Errorf("ethereum transaction receipt statis is failed"))
 		} else if receipt.Status == types.ReceiptStatusSuccessful {
-			batchInfo.Status = StatusMined
+			batchInfo.Debug.Status = StatusMined
+			batchInfo.Debug.MineBlockNum = receipt.BlockNumber.Int64()
+			batchInfo.Debug.StartToMineBlocksDelay = batchInfo.Debug.MineBlockNum -
+				batchInfo.Debug.StartBlockNum
 			t.cfg.debugBatchStore(batchInfo)
 			if batchInfo.BatchNum > t.lastConfirmedBatch {
 				t.lastConfirmedBatch = batchInfo.BatchNum
@@ -795,7 +802,9 @@ func (p *Pipeline) Stop(ctx context.Context) {
 	p.cancel()
 	p.wg.Wait()
 	for _, prover := range p.provers {
-		if err := prover.Cancel(ctx); err != nil {
+		if err := prover.Cancel(ctx); ctx.Err() != nil {
+			continue
+		} else if err != nil {
 			log.Errorw("prover.Cancel", "err", err)
 		}
 	}
@@ -827,6 +836,8 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (*BatchInfo, error) {
 	}
 
 	batchInfo := BatchInfo{BatchNum: batchNum} // to accumulate metadata of the batch
+	batchInfo.Debug.StartTimestamp = time.Now()
+	batchInfo.Debug.StartBlockNum = p.stats.Eth.LastBlock.Num + 1
 
 	selectionCfg := &txselector.SelectionConfig{
 		MaxL1UserTxs:      common.RollupConstMaxL1UserTx,
@@ -840,9 +851,9 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (*BatchInfo, error) {
 	var coordIdxs []common.Idx
 
 	// 1. Decide if we forge L2Tx or L1+L2Tx
-	if p.shouldL1L2Batch() {
+	if p.shouldL1L2Batch(&batchInfo) {
 		batchInfo.L1Batch = true
-		p.lastScheduledL1BatchBlockNum = p.stats.Eth.LastBlock.Num
+		p.lastScheduledL1BatchBlockNum = p.stats.Eth.LastBlock.Num + 1
 		// 2a: L1+L2 txs
 		p.lastForgeL1TxsNum++
 		l1UserTxs, err := p.historyDB.GetUnforgedL1UserTxs(p.lastForgeL1TxsNum)
@@ -902,7 +913,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (*BatchInfo, error) {
 
 	// 5. Save metadata from BatchBuilder output for BatchNum
 	batchInfo.ZKInputs = zkInputs
-	batchInfo.Status = StatusForged
+	batchInfo.Debug.Status = StatusForged
 	p.cfg.debugBatchStore(&batchInfo)
 
 	return &batchInfo, nil
@@ -917,25 +928,28 @@ func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) er
 	batchInfo.Proof = proof
 	batchInfo.PublicInputs = pubInputs
 	batchInfo.ForgeBatchArgs = prepareForgeBatchArgs(batchInfo)
-	batchInfo.Status = StatusProof
+	batchInfo.Debug.Status = StatusProof
 	p.cfg.debugBatchStore(batchInfo)
 	return nil
 }
 
-func (p *Pipeline) shouldL1L2Batch() bool {
+func (p *Pipeline) shouldL1L2Batch(batchInfo *BatchInfo) bool {
 	// Take the lastL1BatchBlockNum as the biggest between the last
 	// scheduled one, and the synchronized one.
 	lastL1BatchBlockNum := p.lastScheduledL1BatchBlockNum
 	if p.stats.Sync.LastL1BatchBlock > lastL1BatchBlockNum {
 		lastL1BatchBlockNum = p.stats.Sync.LastL1BatchBlock
 	}
+	// Set Debug information
+	batchInfo.Debug.LastScheduledL1BatchBlockNum = p.lastScheduledL1BatchBlockNum
+	batchInfo.Debug.LastL1BatchBlock = p.stats.Sync.LastL1BatchBlock
+	batchInfo.Debug.LastL1BatchBlockDelta = p.stats.Eth.LastBlock.Num + 1 - lastL1BatchBlockNum
+	batchInfo.Debug.L1BatchBlockScheduleDeadline =
+		int64(float64(p.vars.Rollup.ForgeL1L2BatchTimeout-1) * p.cfg.L1BatchTimeoutPerc)
 	// Return true if we have passed the l1BatchTimeoutPerc portion of the
 	// range before the l1batch timeout.
-	if p.stats.Eth.LastBlock.Num-lastL1BatchBlockNum >=
-		int64(float64(p.vars.Rollup.ForgeL1L2BatchTimeout-1)*p.cfg.L1BatchTimeoutPerc) {
-		return true
-	}
-	return false
+	return p.stats.Eth.LastBlock.Num+1-lastL1BatchBlockNum >=
+		int64(float64(p.vars.Rollup.ForgeL1L2BatchTimeout-1)*p.cfg.L1BatchTimeoutPerc)
 }
 
 func prepareForgeBatchArgs(batchInfo *BatchInfo) *eth.RollupForgeBatchArgs {

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"path"
+	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -32,6 +33,39 @@ const (
 	StatusFailed Status = "failed"
 )
 
+// Debug information related to the Batch
+type Debug struct {
+	// StartTimestamp of is the time of batch start
+	StartTimestamp time.Time
+	// SendTimestamp  the time of batch sent to ethereum
+	SendTimestamp time.Time
+	// Status of the Batch
+	Status Status
+	// StartBlockNum is the blockNum when the Batch was started
+	StartBlockNum int64
+	// MineBlockNum is the blockNum in which the batch was mined
+	MineBlockNum int64
+	// SendBlockNum is the blockNum when the batch was sent to ethereum
+	SendBlockNum int64
+	// LastScheduledL1BatchBlockNum is the blockNum when the last L1Batch
+	// was scheduled
+	LastScheduledL1BatchBlockNum int64
+	// LastL1BatchBlock is the blockNum in which the last L1Batch was
+	// synced
+	LastL1BatchBlock int64
+	// LastL1BatchBlockDelta is the number of blocks after the last L1Batch
+	LastL1BatchBlockDelta int64
+	// L1BatchBlockScheduleDeadline is the number of blocks after the last
+	// L1Batch after which an L1Batch will be scheduled
+	L1BatchBlockScheduleDeadline int64
+	// StartToMineBlocksDelay is the number of blocks that happen between
+	// scheduling a batch and having it mined
+	StartToMineBlocksDelay int64
+	// StartToSendDelay is the delay between starting a batch and sending
+	// it to ethereum, in seconds
+	StartToSendDelay float64
+}
+
 // BatchInfo contans the Batch information
 type BatchInfo struct {
 	BatchNum              common.BatchNum
@@ -48,23 +82,24 @@ type BatchInfo struct {
 	CoordIdxs             []common.Idx
 	ForgeBatchArgs        *eth.RollupForgeBatchArgs
 	// FeesInfo
-	Status  Status
 	EthTx   *types.Transaction
 	Receipt *types.Receipt
+	Debug   Debug
 }
 
 // DebugStore is a debug function to store the BatchInfo as a json text file in
-// storePath
+// storePath.  The filename contains the batchNumber followed by a timestamp of
+// batch start.
 func (b *BatchInfo) DebugStore(storePath string) error {
 	batchJSON, err := json.MarshalIndent(b, "", "  ")
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	oldStateRoot := "null"
-	if b.ZKInputs != nil && b.ZKInputs.OldStateRoot != nil {
-		oldStateRoot = b.ZKInputs.OldStateRoot.String()
-	}
-	filename := fmt.Sprintf("%010d-%s.json", b.BatchNum, oldStateRoot)
+	// nolint reason: hardcoded 1_000_000 is the number of nanoseconds in a
+	// millisecond
+	//nolint:gomnd
+	filename := fmt.Sprintf("%08d-%v.%v.json", b.BatchNum,
+		b.Debug.StartTimestamp.Unix(), b.Debug.StartTimestamp.Nanosecond()/1_000_000)
 	// nolint reason: 0640 allows rw to owner and r to group
 	//nolint:gosec
 	return ioutil.WriteFile(path.Join(storePath, filename), batchJSON, 0640)
