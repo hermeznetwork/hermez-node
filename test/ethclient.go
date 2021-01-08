@@ -313,7 +313,7 @@ func NewClientSetupExample() *ClientSetup {
 	}
 	rollupVariables := &common.RollupVariables{
 		FeeAddToken:           big.NewInt(11),
-		ForgeL1L2BatchTimeout: 9,
+		ForgeL1L2BatchTimeout: 10,
 		WithdrawalDelay:       80,
 		Buckets:               buckets,
 	}

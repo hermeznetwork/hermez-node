@@ -265,7 +265,6 @@ func TestCoordinatorFlow(t *testing.T) {
 			canForge, err := ethClient.AuctionCanForge(forger, blockNum+1)
 			require.NoError(t, err)
 			if canForge {
-				// fmt.Println("DBG canForge")
 				stats.Sync.Auction.CurrentSlot.Forger = forger
 			}
 			// Copy stateDB to synchronizer if there was a new batch
@@ -451,11 +450,13 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 
 	// Check that the parameters are the ones we expect and use in this test
 	require.Equal(t, 0.5, pipeline.cfg.L1BatchTimeoutPerc)
-	require.Equal(t, int64(9), ethClientSetup.RollupVariables.ForgeL1L2BatchTimeout)
+	require.Equal(t, int64(10), ethClientSetup.RollupVariables.ForgeL1L2BatchTimeout)
 	l1BatchTimeoutPerc := pipeline.cfg.L1BatchTimeoutPerc
 	l1BatchTimeout := ethClientSetup.RollupVariables.ForgeL1L2BatchTimeout
 
 	startBlock := int64(100)
+	// Empty batchInfo to pass to shouldL1L2Batch() which sets debug information
+	batchInfo := BatchInfo{}
 
 	//
 	// No scheduled L1Batch
@@ -466,21 +467,21 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	stats.Sync.LastL1BatchBlock = 0
 	pipeline.stats = stats
-	assert.Equal(t, true, pipeline.shouldL1L2Batch())
+	assert.Equal(t, true, pipeline.shouldL1L2Batch(&batchInfo))
 
 	stats.Sync.LastL1BatchBlock = startBlock
 
 	// We are are one block before the timeout range * 0.5
-	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc) - 1
+	stats.Eth.LastBlock.Num = startBlock - 1 + int64(float64(l1BatchTimeout-1)*l1BatchTimeoutPerc) - 1
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
-	assert.Equal(t, false, pipeline.shouldL1L2Batch())
+	assert.Equal(t, false, pipeline.shouldL1L2Batch(&batchInfo))
 
 	// We are are at timeout range * 0.5
-	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc)
+	stats.Eth.LastBlock.Num = startBlock - 1 + int64(float64(l1BatchTimeout-1)*l1BatchTimeoutPerc)
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
-	assert.Equal(t, true, pipeline.shouldL1L2Batch())
+	assert.Equal(t, true, pipeline.shouldL1L2Batch(&batchInfo))
 
 	//
 	// Scheduled L1Batch
@@ -489,16 +490,16 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	stats.Sync.LastL1BatchBlock = startBlock - 10
 
 	// We are are one block before the timeout range * 0.5
-	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc) - 1
+	stats.Eth.LastBlock.Num = startBlock - 1 + int64(float64(l1BatchTimeout-1)*l1BatchTimeoutPerc) - 1
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
-	assert.Equal(t, false, pipeline.shouldL1L2Batch())
+	assert.Equal(t, false, pipeline.shouldL1L2Batch(&batchInfo))
 
 	// We are are at timeout range * 0.5
-	stats.Eth.LastBlock.Num = startBlock + int64(float64(l1BatchTimeout)*l1BatchTimeoutPerc)
+	stats.Eth.LastBlock.Num = startBlock - 1 + int64(float64(l1BatchTimeout-1)*l1BatchTimeoutPerc)
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
-	assert.Equal(t, true, pipeline.shouldL1L2Batch())
+	assert.Equal(t, true, pipeline.shouldL1L2Batch(&batchInfo))
 }
 
 // ethAddTokens adds the tokens from the blocks to the blockchain
