@@ -200,9 +200,9 @@ func (e ExitAPI) MarshalJSON() ([]byte, error) {
 		"hezEthereumAddress":     e.EthAddr,
 		"merkleProof":            e.MerkleProof,
 		"balance":                e.Balance,
-		"instantWithdrawn":       e.InstantWithdrawn,
+		"instantWithdraw":        e.InstantWithdrawn,
 		"delayedWithdrawRequest": e.DelayedWithdrawRequest,
-		"delayedWithdrawn":       e.DelayedWithdrawn,
+		"delayedWithdraw":        e.DelayedWithdrawn,
 		"token": map[string]interface{}{
 			"id":               e.TokenID,
 			"itemId":           e.TokenItemID,
