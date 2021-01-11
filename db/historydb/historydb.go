@@ -1362,6 +1362,12 @@ func (hdb *HistoryDB) addBucketUpdates(d meddler.DB, bucketUpdates []common.Buck
 	))
 }
 
+// AddBucketUpdatesTest allows call to unexported method
+// only for internal testing purposes
+func (hdb *HistoryDB) AddBucketUpdatesTest(d meddler.DB, bucketUpdates []common.BucketUpdate) error {
+	return hdb.addBucketUpdates(d, bucketUpdates)
+}
+
 // GetAllBucketUpdates retrieves all the bucket updates
 func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
 	var bucketUpdates []*common.BucketUpdate
@@ -1369,6 +1375,19 @@ func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
 		hdb.db, &bucketUpdates,
 		`SELECT eth_block_num, num_bucket, block_stamp, withdrawals  
 		FROM bucket_update ORDER BY item_id;`,
+	)
+	return db.SlicePtrsToSlice(bucketUpdates).([]common.BucketUpdate), tracerr.Wrap(err)
+}
+
+// GetBucketUpdates retrieves latest values for each bucket
+func (hdb *HistoryDB) GetBucketUpdates() ([]common.BucketUpdate, error) {
+	var bucketUpdates []*common.BucketUpdate
+	err := meddler.QueryAll(
+		hdb.db, &bucketUpdates,
+		`SELECT num_bucket, withdrawals FROM bucket_update 
+		WHERE item_id in(SELECT max(item_id) FROM bucket_update 
+		group by num_bucket) 
+		ORDER BY num_bucket ASC;`,
 	)
 	return db.SlicePtrsToSlice(bucketUpdates).([]common.BucketUpdate), tracerr.Wrap(err)
 }

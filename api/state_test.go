@@ -1,11 +1,13 @@
 package api
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testStatus struct {
@@ -55,12 +57,39 @@ func TestUpdateNetworkInfo(t *testing.T) {
 	lastBlock := tc.blocks[3]
 	lastBatchNum := common.BatchNum(3)
 	currentSlotNum := int64(1)
-	err := api.UpdateNetworkInfo(lastBlock, lastBlock, lastBatchNum, currentSlotNum)
+
+	// Generate some bucket_update data
+	bucketUpdates := []common.BucketUpdate{
+		{
+			EthBlockNum: 4,
+			NumBucket:   0,
+			BlockStamp:  4,
+			Withdrawals: big.NewInt(123),
+		},
+		{
+			EthBlockNum: 5,
+			NumBucket:   2,
+			BlockStamp:  5,
+			Withdrawals: big.NewInt(42),
+		},
+		{
+			EthBlockNum: 5,
+			NumBucket:   2, // Repeated bucket
+			BlockStamp:  5,
+			Withdrawals: big.NewInt(43),
+		},
+	}
+	err := api.h.AddBucketUpdatesTest(api.h.DB(), bucketUpdates)
+	require.NoError(t, err)
+
+	err = api.UpdateNetworkInfo(lastBlock, lastBlock, lastBatchNum, currentSlotNum)
 	assert.NoError(t, err)
 	assert.Equal(t, lastBlock.Num, api.status.Network.LastSyncBlock)
 	assert.Equal(t, lastBatchNum, api.status.Network.LastBatch.BatchNum)
 	assert.Equal(t, currentSlotNum, api.status.Network.CurrentSlot)
 	assert.Equal(t, int(api.status.Auction.ClosedAuctionSlots)+1, len(api.status.Network.NextForgers))
+	assert.Equal(t, api.status.Rollup.Buckets[0].Withdrawals, big.NewInt(123))
+	assert.Equal(t, api.status.Rollup.Buckets[2].Withdrawals, big.NewInt(43))
 }
 
 func TestUpdateMetrics(t *testing.T) {
@@ -111,6 +140,10 @@ func TestGetState(t *testing.T) {
 	assert.NoError(t, doGoodReq("GET", endpoint, nil, &status))
 
 	// SC vars
+	// UpdateNetworkInfo will overwrite buckets withdrawal values
+	// So we restore them before comparing, they are checked at
+	// TestUpdateNetworkInfo
+	status.Rollup.Buckets = tc.rollupVars.Buckets
 	assert.Equal(t, tc.rollupVars, status.Rollup)
 	assert.Equal(t, tc.auctionVars, status.Auction)
 	assert.Equal(t, tc.wdelayerVars, status.WithdrawalDelayer)
