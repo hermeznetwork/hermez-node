@@ -46,6 +46,7 @@ ForgerAddress = "0xb4124ceb3451635dacedd11767f004d8a28c6ee7" # Boot Coordinator
 ConfirmBlocks = 10
 L1BatchTimeoutPerc = 0.4
 ProofServerPollInterval = "1s"
+ForgeRetryInterval = "500ms"
 SyncRetryInterval = "1s"
 
 [Coordinator.FeeAccount]

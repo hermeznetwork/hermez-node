@@ -54,6 +54,9 @@ type Coordinator struct {
 	// ProofServerPollInterval is the waiting interval between polling the
 	// ProofServer while waiting for a particular status
 	ProofServerPollInterval Duration `validate:"required"`
+	// ForgeRetryInterval is the waiting interval between calls forge a
+	// batch after an error
+	ForgeRetryInterval Duration `validate:"required"`
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval Duration `validate:"required"`
