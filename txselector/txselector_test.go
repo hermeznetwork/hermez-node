@@ -303,7 +303,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	require.NoError(t, err)
 
 	log.Debug("block:0 batch:7")
-	// simulate the PoolL2Txs of the batch6
+	// simulate the PoolL2Txs of the batch7
 	batchPoolL2 = `
 	Type: PoolL2
 	PoolTransfer(0) A-B: 100 (126)

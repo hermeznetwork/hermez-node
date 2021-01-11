@@ -36,14 +36,16 @@ func BJJCompressedTo256BigInts(pkComp babyjub.PublicKeyComp) [256]*big.Int {
 // formatAccumulatedFees returns an array of [nFeeAccounts]*big.Int containing
 // the balance of each FeeAccount, taken from the 'collectedFees' map, in the
 // order of the 'orderTokenIDs'
-func formatAccumulatedFees(collectedFees map[common.TokenID]*big.Int, orderTokenIDs []*big.Int) []*big.Int {
+// func formatAccumulatedFees(collectedFees map[common.TokenID]*big.Int, orderTokenIDs []*big.Int) []*big.Int {
+func formatAccumulatedFees(collectedFees map[common.TokenID]*big.Int, orderTokenIDs []*big.Int, coordIdxs []common.Idx) []*big.Int {
 	accFeeOut := make([]*big.Int, len(orderTokenIDs))
-	for i := 0; i < len(orderTokenIDs); i++ {
+	for i := 0; i < len(accFeeOut); i++ {
+		accFeeOut[i] = big.NewInt(0)
+	}
+	for i := 0; i < len(coordIdxs); i++ {
 		tokenID := common.TokenIDFromBigInt(orderTokenIDs[i])
 		if _, ok := collectedFees[tokenID]; ok {
 			accFeeOut[i] = new(big.Int).Set(collectedFees[tokenID])
-		} else {
-			accFeeOut[i] = big.NewInt(0)
 		}
 	}
 	return accFeeOut

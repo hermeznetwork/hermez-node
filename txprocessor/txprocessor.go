@@ -274,7 +274,8 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			if tp.i < nTx-1 {
 				tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx().BigInt()
 				tp.zki.ISStateRoot[tp.i] = tp.s.MT.Root().BigInt()
-				tp.zki.ISAccFeeOut[tp.i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens)
+				// tp.zki.ISAccFeeOut[tp.i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens)
+				tp.zki.ISAccFeeOut[tp.i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens, coordIdxs)
 				if exitIdx == nil {
 					tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
 				}
@@ -302,14 +303,14 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			if i < int(tp.config.MaxTx)-1 {
 				tp.zki.ISOutIdx[i] = tp.s.CurrentIdx().BigInt()
 				tp.zki.ISStateRoot[i] = tp.s.MT.Root().BigInt()
-				tp.zki.ISAccFeeOut[i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens)
+				tp.zki.ISAccFeeOut[i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens, coordIdxs)
 				tp.zki.ISExitRoot[i] = exitTree.Root().BigInt()
 			}
 			if i >= tp.i {
 				tp.zki.TxCompressedData[i] = new(big.Int).SetBytes(common.SignatureConstantBytes)
 			}
 		}
-		isFinalAccFee := formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens)
+		isFinalAccFee := formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens, coordIdxs)
 		copy(tp.zki.ISFinalAccFee, isFinalAccFee)
 		// before computing the Fees txs, set the ISInitStateRootFee
 		tp.zki.ISInitStateRootFee = tp.s.MT.Root().BigInt()
@@ -318,7 +319,9 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	// distribute the AccumulatedFees from the processed L2Txs into the
 	// Coordinator Idxs
 	iFee := 0
-	for idx, accumulatedFee := range tp.AccumulatedFees {
+	for _, idx := range coordIdxs {
+		accumulatedFee := tp.AccumulatedFees[idx]
+
 		cmp := accumulatedFee.Cmp(big.NewInt(0))
 		if cmp == 1 { // accumulatedFee>0
 			// send the fee to the Idx of the Coordinator for the TokenID
@@ -816,7 +819,7 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		tp.zki.Balance1[tp.i] = accSender.Balance
 		tp.zki.EthAddr1[tp.i] = common.EthAddrToBigInt(accSender.EthAddr)
 	}
-	if !tx.IsL1 {
+	if !tx.IsL1 { // L2
 		// increment nonce
 		accSender.Nonce++
 
@@ -1009,8 +1012,6 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		tp.zki.Ay1[tp.i] = accBJJY
 		tp.zki.Balance1[tp.i] = acc.Balance
 		tp.zki.EthAddr1[tp.i] = common.EthAddrToBigInt(acc.EthAddr)
-
-		tp.zki.NewExit[tp.i] = big.NewInt(1)
 	}
 
 	if !tx.IsL1 {
@@ -1081,6 +1082,8 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			tp.zki.Ay2[tp.i] = accBJJY
 			tp.zki.Balance2[tp.i] = tx.Amount
 			tp.zki.EthAddr2[tp.i] = common.EthAddrToBigInt(acc.EthAddr)
+			// as Leaf didn't exist in the ExitTree, set NewExit[i]=1
+			tp.zki.NewExit[tp.i] = big.NewInt(1)
 		}
 		p, err = statedb.CreateAccountInTreeDB(exitTree.DB(), exitTree, tx.FromIdx, exitAccount)
 		if err != nil {
@@ -1099,12 +1102,14 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	} else if err != nil {
 		return exitAccount, false, tracerr.Wrap(err)
 	}
+	exitAccount.Nonce = exitAccount.Nonce + 1
 
 	// 1b. if idx already exist in exitTree:
 	if tp.zki != nil {
 		// Set the State2 before updating the Exit leaf
 		tp.zki.TokenID2[tp.i] = acc.TokenID.BigInt()
-		tp.zki.Nonce2[tp.i] = big.NewInt(0)
+		// increment nonce from existing ExitLeaf
+		tp.zki.Nonce2[tp.i] = exitAccount.Nonce.BigInt()
 		accBJJSign, accBJJY := babyjub.UnpackSignY(acc.BJJ)
 		if accBJJSign {
 			tp.zki.Sign2[tp.i] = big.NewInt(1)
