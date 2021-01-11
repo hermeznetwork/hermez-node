@@ -13,7 +13,7 @@ AddToken(1)
 AddToken(2)
 AddToken(3)
 
-// block:0 batch:0
+// block:0 batch:1
 
 // Coordinator accounts, Idxs: 256, 257, 258, 259
 CreateAccountCoordinator(0) Coord
@@ -22,7 +22,7 @@ CreateAccountCoordinator(2) Coord
 CreateAccountCoordinator(3) Coord
 
 > batch
-// block:0 batch:1
+// block:0 batch:2
 
 // deposits TokenID: 1
 CreateAccountDeposit(1) A: 50
@@ -61,7 +61,7 @@ CreateAccountDeposit(0) B: 10000
 CreateAccountDeposit(0) C: 1
 
 > batchL1
-// block:0 batch:2
+// block:0 batch:3
 
 // transactions TokenID: 1
 Transfer(1) A-B: 5 (1)
@@ -90,7 +90,7 @@ Transfer(0) B-C: 50 (100)
 > batchL1
 > block
 
-// block:1 batch:0
+// block:1 batch:1
 
 // A (3) still does not exist, coordinator should create new L1Tx to create the account
 CreateAccountCoordinator(3) A
@@ -161,7 +161,7 @@ Exit(1) Y: 5 (1)
 Exit(1) Z: 5 (1)
 
 > batch
-// block:1 batch:1
+// block:1 batch:2
 
 Deposit(1) A: 50
 Deposit(1) B: 5
@@ -214,27 +214,26 @@ Type: Blockchain
 
 AddToken(1)
 
-
-// close Block:0, Batch:0
+// close Block:0, Batch:1
 > batch
 
 CreateAccountDeposit(0) A: 500
 CreateAccountDeposit(1) C: 0
 
-// close Block:0, Batch:1
+// close Block:0, Batch:2
 > batchL1 // freeze L1User{2}, forge L1Coord{0}
 // Expected balances:
 //     C(0): 0
 
 CreateAccountDeposit(1) A: 500
 
-// close Block:0, Batch:2
+// close Block:0, Batch:3
 > batchL1 // freeze L1User{1}, forge L1User{2}
 // Expected balances:
 //     A(0): 500
 //     C(0): 0, C(1): 0
 
-// close Block:0, Batch:3
+// close Block:0, Batch:4
 > batchL1 // freeze L1User{nil}, forge L1User{1}
 // Expected balances:
 //     A(0): 500, A(1): 500
@@ -243,11 +242,11 @@ CreateAccountDeposit(1) A: 500
 
 CreateAccountDepositTransfer(0) B-A: 500, 100
 
-// close Block:0, Batch:4
+// close Block:0, Batch:5
 > batchL1 // freeze L1User{1}, forge L1User{nil}
 CreateAccountDeposit(0) D: 800
 
-// close Block:0, Batch:5
+// close Block:0, Batch:6
 > batchL1 // freeze L1User{1}, forge L1User{1}
 // Expected balances:
 //     A(0): 600, A(1): 500
@@ -265,7 +264,7 @@ CreateAccountCoordinator(0) C
 Transfer(1) A-B: 200 (126)
 Transfer(0) B-C: 100 (126)
 
-// close Block:0, Batch:6
+// close Block:0, Batch:7
 > batchL1 // forge L1User{1}, forge L1Coord{4}, forge L2{2}
 // Expected balances:
 //     Coord(0): 10, Coord(1): 20
@@ -285,7 +284,7 @@ Exit(0) A: 100 (126)
 ForceTransfer(0) D-B: 200
 ForceExit(0) B: 100
 
-// close Block:0, Batch:7
+// close Block:0, Batch:8
 > batchL1 // freeze L1User{4}, forge L1User{nil}, forge L2{4}
 > block
 // Expected balances:
@@ -298,8 +297,8 @@ ForceExit(0) B: 100
 Transfer(0) D-A: 300 (126)
 Transfer(0) B-D: 100 (126)
 
-// close Block:1, Batch:0
-> batchL1 // freeze L1User{nil}, forge L1User{4}, forge L2{1}
+// close (batch9) Block:1, Batch:1
+> batchL1 // freeze L1User{nil}, forge L1User{4}, forge L2{2}
 // Expected balances:
 //     Coord(0): 75, Coord(1): 30
 //     A(0): 730, A(1): 280
@@ -309,7 +308,7 @@ Transfer(0) B-D: 100 (126)
 
 CreateAccountCoordinator(0) F
 
-> batch // forge L1CoordinatorTx{1}
+> batch // batch10: forge L1CoordinatorTx{1}
 > block
 `
 

@@ -185,7 +185,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 
 	// coordIdxs, accAuths, l1UserTxs, l1CoordTxs, l2Txs, err
 
-	log.Debug("block:0 batch:0")
+	log.Debug("block:0 batch:1")
 	l1UserTxs := []common.L1Tx{}
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
 	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
-	log.Debug("block:0 batch:1")
+	log.Debug("block:0 batch:2")
 	l1UserTxs = []common.L1Tx{}
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
 	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
-	log.Debug("block:0 batch:2")
+	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	checkBalance(t, tc, txsel, "A", 0, "500")
 	checkBalance(t, tc, txsel, "C", 1, "0")
 
-	log.Debug("block:0 batch:3")
+	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
@@ -230,7 +230,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	checkBalance(t, tc, txsel, "A", 1, "500")
 	checkBalance(t, tc, txsel, "C", 1, "0")
 
-	log.Debug("block:0 batch:4")
+	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	checkBalance(t, tc, txsel, "A", 1, "500")
 	checkBalance(t, tc, txsel, "C", 1, "0")
 
-	log.Debug("block:0 batch:5")
+	log.Debug("block:0 batch:6")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
@@ -257,8 +257,8 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	checkBalance(t, tc, txsel, "B", 0, "400")
 	checkBalance(t, tc, txsel, "C", 1, "0")
 
-	log.Debug("block:0 batch:6")
-	// simulate the PoolL2Txs of the batch6
+	log.Debug("block:0 batch:7")
+	// simulate the PoolL2Txs of the batch7
 	batchPoolL2 := `
 	Type: PoolL2
 	PoolTransfer(1) A-B: 200 (126)
@@ -302,8 +302,8 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(poolL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
 
-	log.Debug("block:0 batch:7")
-	// simulate the PoolL2Txs of the batch7
+	log.Debug("block:0 batch:8")
+	// simulate the PoolL2Txs of the batch8
 	batchPoolL2 = `
 	Type: PoolL2
 	PoolTransfer(0) A-B: 100 (126)
@@ -337,8 +337,8 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(poolL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
 
-	log.Debug("block:1 batch:0")
-	// simulate the PoolL2Txs of the batch6
+	log.Debug("(batch9)block:1 batch:1")
+	// simulate the PoolL2Txs of the batch9
 	batchPoolL2 = `
 	Type: PoolL2
 	PoolTransfer(0) D-A: 300 (126)
