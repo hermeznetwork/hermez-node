@@ -109,6 +109,24 @@ func (a *API) UpdateNetworkInfo(
 	a.status.Network.LastBatch = lastBatch
 	a.status.Network.CurrentSlot = currentSlot
 	a.status.Network.NextForgers = nextForgers
+
+	// Update buckets withdrawals
+	bucketsUpdate, err := a.h.GetBucketUpdates()
+	if tracerr.Unwrap(err) == sql.ErrNoRows {
+		bucketsUpdate = nil
+	} else if err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	for i, bucketParams := range a.status.Rollup.Buckets {
+		for _, bucketUpdate := range bucketsUpdate {
+			if bucketUpdate.NumBucket == i {
+				bucketParams.Withdrawals = bucketUpdate.Withdrawals
+				a.status.Rollup.Buckets[i] = bucketParams
+				break
+			}
+		}
+	}
 	a.status.Unlock()
 	return nil
 }
