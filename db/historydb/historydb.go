@@ -1380,8 +1380,8 @@ func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
 }
 
 // GetBucketUpdates retrieves latest values for each bucket
-func (hdb *HistoryDB) GetBucketUpdates() ([]common.BucketUpdate, error) {
-	var bucketUpdates []*common.BucketUpdate
+func (hdb *HistoryDB) GetBucketUpdates() ([]BucketUpdateAPI, error) {
+	var bucketUpdates []*BucketUpdateAPI
 	err := meddler.QueryAll(
 		hdb.db, &bucketUpdates,
 		`SELECT num_bucket, withdrawals FROM bucket_update 
@@ -1389,7 +1389,7 @@ func (hdb *HistoryDB) GetBucketUpdates() ([]common.BucketUpdate, error) {
 		group by num_bucket) 
 		ORDER BY num_bucket ASC;`,
 	)
-	return db.SlicePtrsToSlice(bucketUpdates).([]common.BucketUpdate), tracerr.Wrap(err)
+	return db.SlicePtrsToSlice(bucketUpdates).([]BucketUpdateAPI), tracerr.Wrap(err)
 }
 
 func (hdb *HistoryDB) addTokenExchanges(d meddler.DB, tokenExchanges []common.TokenExchange) error {

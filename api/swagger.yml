@@ -2693,7 +2693,7 @@ components:
           description: Max Ethereum blocks after the last L1-L2-batch, when exceeds the timeout only L1-L2-batch are allowed.
           example: 5
         feeAddToken:
-          type: integer
+          type: string
           description: Fee to pay when registering tokens into the network.
           example: 5698
         withdrawalDelay:
@@ -2707,19 +2707,19 @@ components:
             type: object
             properties:
               ceilUSD:
-                type: integer
+                type: string
                 description: Max USD value
                 example: 1000
               withdrawals:
-                type: integer
+                type: string
                 description: Available withdrawals of the bucket
                 example: 4
               blockWithdrawalRate:
-                type: integer
+                type: string
                 description: Every `blockWithdrawalRate` blocks add 1 withdrawal
                 example: 8
               maxWithdrawals:
-                type: integer
+                type: string
                 description: Max withdrawals the bucket can hold
                 example: 4
             additionalProperties: false

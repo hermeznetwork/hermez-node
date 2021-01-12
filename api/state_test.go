@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/stretchr/testify/assert"
@@ -11,12 +12,12 @@ import (
 )
 
 type testStatus struct {
-	Network           testNetwork              `json:"network"`
-	Metrics           historydb.Metrics        `json:"metrics"`
-	Rollup            common.RollupVariables   `json:"rollup"`
-	Auction           common.AuctionVariables  `json:"auction"`
-	WithdrawalDelayer common.WDelayerVariables `json:"withdrawalDelayer"`
-	RecommendedFee    common.RecommendedFee    `json:"recommendedFee"`
+	Network           testNetwork                  `json:"network"`
+	Metrics           historydb.Metrics            `json:"metrics"`
+	Rollup            historydb.RollupVariablesAPI `json:"rollup"`
+	Auction           common.AuctionVariables      `json:"auction"`
+	WithdrawalDelayer common.WDelayerVariables     `json:"withdrawalDelayer"`
+	RecommendedFee    common.RecommendedFee        `json:"recommendedFee"`
 }
 
 type testNetwork struct {
@@ -29,9 +30,24 @@ type testNetwork struct {
 
 func TestSetRollupVariables(t *testing.T) {
 	rollupVars := &common.RollupVariables{}
-	assert.Equal(t, *rollupVars, api.status.Rollup)
+	assertEqualRollupVariables(t, *rollupVars, api.status.Rollup, true)
 	api.SetRollupVariables(tc.rollupVars)
-	assert.Equal(t, tc.rollupVars, api.status.Rollup)
+	assertEqualRollupVariables(t, tc.rollupVars, api.status.Rollup, true)
+}
+
+func assertEqualRollupVariables(t *testing.T, rollupVariables common.RollupVariables, apiVariables historydb.RollupVariablesAPI, checkBuckets bool) {
+	assert.Equal(t, apitypes.NewBigIntStr(rollupVariables.FeeAddToken), apiVariables.FeeAddToken)
+	assert.Equal(t, rollupVariables.ForgeL1L2BatchTimeout, apiVariables.ForgeL1L2BatchTimeout)
+	assert.Equal(t, rollupVariables.WithdrawalDelay, apiVariables.WithdrawalDelay)
+	assert.Equal(t, rollupVariables.SafeMode, apiVariables.SafeMode)
+	if checkBuckets {
+		for i, bucket := range rollupVariables.Buckets {
+			assert.Equal(t, apitypes.NewBigIntStr(bucket.BlockWithdrawalRate), apiVariables.Buckets[i].BlockWithdrawalRate)
+			assert.Equal(t, apitypes.NewBigIntStr(bucket.CeilUSD), apiVariables.Buckets[i].CeilUSD)
+			assert.Equal(t, apitypes.NewBigIntStr(bucket.MaxWithdrawals), apiVariables.Buckets[i].MaxWithdrawals)
+			assert.Equal(t, apitypes.NewBigIntStr(bucket.Withdrawals), apiVariables.Buckets[i].Withdrawals)
+		}
+	}
 }
 
 func TestSetWDelayerVariables(t *testing.T) {
@@ -88,8 +104,8 @@ func TestUpdateNetworkInfo(t *testing.T) {
 	assert.Equal(t, lastBatchNum, api.status.Network.LastBatch.BatchNum)
 	assert.Equal(t, currentSlotNum, api.status.Network.CurrentSlot)
 	assert.Equal(t, int(api.status.Auction.ClosedAuctionSlots)+1, len(api.status.Network.NextForgers))
-	assert.Equal(t, api.status.Rollup.Buckets[0].Withdrawals, big.NewInt(123))
-	assert.Equal(t, api.status.Rollup.Buckets[2].Withdrawals, big.NewInt(43))
+	assert.Equal(t, api.status.Rollup.Buckets[0].Withdrawals, apitypes.NewBigIntStr(big.NewInt(123)))
+	assert.Equal(t, api.status.Rollup.Buckets[2].Withdrawals, apitypes.NewBigIntStr(big.NewInt(43)))
 }
 
 func TestUpdateMetrics(t *testing.T) {
@@ -141,10 +157,9 @@ func TestGetState(t *testing.T) {
 
 	// SC vars
 	// UpdateNetworkInfo will overwrite buckets withdrawal values
-	// So we restore them before comparing, they are checked at
+	// So they won't be checked here, they are checked at
 	// TestUpdateNetworkInfo
-	status.Rollup.Buckets = tc.rollupVars.Buckets
-	assert.Equal(t, tc.rollupVars, status.Rollup)
+	assertEqualRollupVariables(t, tc.rollupVars, status.Rollup, false)
 	assert.Equal(t, tc.auctionVars, status.Auction)
 	assert.Equal(t, tc.wdelayerVars, status.WithdrawalDelayer)
 	// Network
