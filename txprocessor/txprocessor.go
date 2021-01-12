@@ -117,7 +117,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 
 	if tp.s.Typ == statedb.TypeBatchBuilder {
 		tp.zki = common.NewZKInputs(tp.config.ChainID, tp.config.MaxTx, tp.config.MaxL1Tx,
-			tp.config.MaxFeeTx, tp.config.NLevels, tp.s.CurrentBatch().BigInt())
+			tp.config.MaxFeeTx, tp.config.NLevels, (tp.s.CurrentBatch() + 1).BigInt())
 		tp.zki.OldLastIdx = tp.s.CurrentIdx().BigInt()
 		tp.zki.OldStateRoot = tp.s.MT.Root().BigInt()
 		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx()

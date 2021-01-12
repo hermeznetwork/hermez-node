@@ -101,7 +101,7 @@ func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int) (*StateDB
 // Internally this advances & stores the current BatchNum, and then stores a
 // Checkpoint of the current state of the StateDB.
 func (s *StateDB) MakeCheckpoint() error {
-	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch())
+	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch()+1)
 	return s.db.MakeCheckpoint()
 }
 
