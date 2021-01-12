@@ -8,6 +8,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
@@ -57,7 +58,23 @@ func (a *API) getState(c *gin.Context) {
 // SetRollupVariables set Status.Rollup variables
 func (a *API) SetRollupVariables(rollupVariables common.RollupVariables) {
 	a.status.Lock()
-	a.status.Rollup = rollupVariables
+	var rollupVAPI historydb.RollupVariablesAPI
+	rollupVAPI.EthBlockNum = rollupVariables.EthBlockNum
+	rollupVAPI.FeeAddToken = apitypes.NewBigIntStr(rollupVariables.FeeAddToken)
+	rollupVAPI.ForgeL1L2BatchTimeout = rollupVariables.ForgeL1L2BatchTimeout
+	rollupVAPI.WithdrawalDelay = rollupVariables.WithdrawalDelay
+
+	for i, bucket := range rollupVariables.Buckets {
+		var apiBucket historydb.BucketParamsAPI
+		apiBucket.CeilUSD = apitypes.NewBigIntStr(bucket.CeilUSD)
+		apiBucket.Withdrawals = apitypes.NewBigIntStr(bucket.Withdrawals)
+		apiBucket.BlockWithdrawalRate = apitypes.NewBigIntStr(bucket.BlockWithdrawalRate)
+		apiBucket.MaxWithdrawals = apitypes.NewBigIntStr(bucket.MaxWithdrawals)
+		rollupVAPI.Buckets[i] = apiBucket
+	}
+
+	rollupVAPI.SafeMode = rollupVariables.SafeMode
+	a.status.Rollup = rollupVAPI
 	a.status.Unlock()
 }
 

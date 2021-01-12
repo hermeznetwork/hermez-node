@@ -343,3 +343,31 @@ type MinBidInfo struct {
 	DefaultSlotSetBid        [6]*big.Int `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
 	DefaultSlotSetBidSlotNum int64       `json:"-" meddler:"default_slot_set_bid_slot_num"`
 }
+
+// BucketUpdateAPI are the bucket updates (tracking the withdrawals value changes)
+// in Rollup Smart Contract
+type BucketUpdateAPI struct {
+	EthBlockNum int64               `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	NumBucket   int                 `json:"numBucket" meddler:"num_bucket"`
+	BlockStamp  int64               `json:"blockStamp" meddler:"block_stamp"`
+	Withdrawals *apitypes.BigIntStr `json:"withdrawals" meddler:"withdrawals"`
+}
+
+// BucketParamsAPI are the parameter variables of each Bucket of Rollup Smart
+// Contract
+type BucketParamsAPI struct {
+	CeilUSD             *apitypes.BigIntStr `json:"ceilUSD"`
+	Withdrawals         *apitypes.BigIntStr `json:"withdrawals"`
+	BlockWithdrawalRate *apitypes.BigIntStr `json:"blockWithdrawalRate"`
+	MaxWithdrawals      *apitypes.BigIntStr `json:"maxWithdrawals"`
+}
+
+// RollupVariablesAPI are the variables of the Rollup Smart Contract
+type RollupVariablesAPI struct {
+	EthBlockNum           int64                                         `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	FeeAddToken           *apitypes.BigIntStr                           `json:"feeAddToken" meddler:"fee_add_token" validate:"required"`
+	ForgeL1L2BatchTimeout int64                                         `json:"forgeL1L2BatchTimeout" meddler:"forge_l1_timeout" validate:"required"`
+	WithdrawalDelay       uint64                                        `json:"withdrawalDelay" meddler:"withdrawal_delay" validate:"required"`
+	Buckets               [common.RollupConstNumBuckets]BucketParamsAPI `json:"buckets" meddler:"buckets,json"`
+	SafeMode              bool                                          `json:"safeMode" meddler:"safe_mode"`
+}
