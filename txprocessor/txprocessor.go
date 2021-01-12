@@ -294,6 +294,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 	}
 
+	txCompressedDataEmpty := common.TxCompressedDataEmpty(tp.config.ChainID)
 	if tp.zki != nil {
 		last := tp.i - 1
 		if tp.i == 0 {
@@ -307,7 +308,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 				tp.zki.ISExitRoot[i] = exitTree.Root().BigInt()
 			}
 			if i >= tp.i {
-				tp.zki.TxCompressedData[i] = new(big.Int).SetBytes(common.SignatureConstantBytes)
+				tp.zki.TxCompressedData[i] = txCompressedDataEmpty
 			}
 		}
 		isFinalAccFee := formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens, coordIdxs)
