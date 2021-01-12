@@ -14,26 +14,25 @@ var log *zap.SugaredLogger
 
 func init() {
 	// default level: debug
-	Init("debug", "")
+	Init("debug", []string{"stdout"})
 }
 
-// Init the logger with defined level. errorsPath defines the file where to store the errors, if set to "" will not store errors.
-func Init(levelStr, logPath string) {
+// Init the logger with defined level. outputs defines the outputs where the
+// logs will be sent. By default outputs contains "stdout", which prints the
+// logs at the output of the process. To add a log file as output, the path
+// should be added at the outputs array. To avoid printing the logs but storing
+// them on a file, can use []string{"pathtofile.log"}
+func Init(levelStr string, outputs []string) {
 	var level zap.AtomicLevel
 	err := level.UnmarshalText([]byte(levelStr))
 	if err != nil {
 		panic(fmt.Errorf("Error on setting log level: %s", err))
 	}
-	outputPaths := []string{"stdout"}
-	if logPath != "" {
-		log.Infof("log file: %s", logPath)
-		outputPaths = append(outputPaths, logPath)
-	}
 
 	cfg := zap.Config{
 		Level:            level,
 		Encoding:         "console",
-		OutputPaths:      outputPaths,
+		OutputPaths:      outputs,
 		ErrorOutputPaths: []string{"stderr"},
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey: "message",
@@ -64,8 +63,6 @@ func Init(levelStr, logPath string) {
 	defer logger.Sync()
 	withOptions := logger.WithOptions(zap.AddCallerSkip(1))
 	log = withOptions.Sugar()
-
-	log.Infof("log level: %s", level)
 }
 
 func sprintStackTrace(st []tracerr.Frame) string {
