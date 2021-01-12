@@ -12,12 +12,12 @@ import (
 )
 
 type testStatus struct {
-	Network           testNetwork                  `json:"network"`
-	Metrics           historydb.Metrics            `json:"metrics"`
-	Rollup            historydb.RollupVariablesAPI `json:"rollup"`
-	Auction           common.AuctionVariables      `json:"auction"`
-	WithdrawalDelayer common.WDelayerVariables     `json:"withdrawalDelayer"`
-	RecommendedFee    common.RecommendedFee        `json:"recommendedFee"`
+	Network           testNetwork                   `json:"network"`
+	Metrics           historydb.Metrics             `json:"metrics"`
+	Rollup            historydb.RollupVariablesAPI  `json:"rollup"`
+	Auction           historydb.AuctionVariablesAPI `json:"auction"`
+	WithdrawalDelayer common.WDelayerVariables      `json:"withdrawalDelayer"`
+	RecommendedFee    common.RecommendedFee         `json:"recommendedFee"`
 }
 
 type testNetwork struct {
@@ -59,9 +59,29 @@ func TestSetWDelayerVariables(t *testing.T) {
 
 func TestSetAuctionVariables(t *testing.T) {
 	auctionVars := &common.AuctionVariables{}
-	assert.Equal(t, *auctionVars, api.status.Auction)
+	assertEqualAuctionVariables(t, *auctionVars, api.status.Auction)
 	api.SetAuctionVariables(tc.auctionVars)
-	assert.Equal(t, tc.auctionVars, api.status.Auction)
+	assertEqualAuctionVariables(t, tc.auctionVars, api.status.Auction)
+}
+
+func assertEqualAuctionVariables(t *testing.T, auctionVariables common.AuctionVariables, apiVariables historydb.AuctionVariablesAPI) {
+	assert.Equal(t, auctionVariables.EthBlockNum, apiVariables.EthBlockNum)
+	assert.Equal(t, auctionVariables.DonationAddress, apiVariables.DonationAddress)
+	assert.Equal(t, auctionVariables.BootCoordinator, apiVariables.BootCoordinator)
+	assert.Equal(t, auctionVariables.BootCoordinatorURL, apiVariables.BootCoordinatorURL)
+	assert.Equal(t, auctionVariables.DefaultSlotSetBidSlotNum, apiVariables.DefaultSlotSetBidSlotNum)
+	assert.Equal(t, auctionVariables.ClosedAuctionSlots, apiVariables.ClosedAuctionSlots)
+	assert.Equal(t, auctionVariables.OpenAuctionSlots, apiVariables.OpenAuctionSlots)
+	assert.Equal(t, auctionVariables.Outbidding, apiVariables.Outbidding)
+	assert.Equal(t, auctionVariables.SlotDeadline, apiVariables.SlotDeadline)
+
+	for i, slot := range auctionVariables.DefaultSlotSetBid {
+		assert.Equal(t, apitypes.NewBigIntStr(slot), apiVariables.DefaultSlotSetBid[i])
+	}
+
+	for i, ratio := range auctionVariables.AllocationRatio {
+		assert.Equal(t, ratio, apiVariables.AllocationRatio[i])
+	}
 }
 
 func TestUpdateNetworkInfo(t *testing.T) {
@@ -160,7 +180,7 @@ func TestGetState(t *testing.T) {
 	// So they won't be checked here, they are checked at
 	// TestUpdateNetworkInfo
 	assertEqualRollupVariables(t, tc.rollupVars, status.Rollup, false)
-	assert.Equal(t, tc.auctionVars, status.Auction)
+	assertEqualAuctionVariables(t, tc.auctionVars, status.Auction)
 	assert.Equal(t, tc.wdelayerVars, status.WithdrawalDelayer)
 	// Network
 	assert.Equal(t, lastBlock.Num, status.Network.LastEthBlock)

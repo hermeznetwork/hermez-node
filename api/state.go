@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"math/big"
 	"net/http"
 	"time"
@@ -88,7 +89,27 @@ func (a *API) SetWDelayerVariables(wDelayerVariables common.WDelayerVariables) {
 // SetAuctionVariables set Status.Auction variables
 func (a *API) SetAuctionVariables(auctionVariables common.AuctionVariables) {
 	a.status.Lock()
-	a.status.Auction = auctionVariables
+	var auctionAPI historydb.AuctionVariablesAPI
+
+	auctionAPI.EthBlockNum = auctionVariables.EthBlockNum
+	auctionAPI.DonationAddress = auctionVariables.DonationAddress
+	auctionAPI.BootCoordinator = auctionVariables.BootCoordinator
+	auctionAPI.BootCoordinatorURL = auctionVariables.BootCoordinatorURL
+	auctionAPI.DefaultSlotSetBidSlotNum = auctionVariables.DefaultSlotSetBidSlotNum
+	auctionAPI.ClosedAuctionSlots = auctionVariables.ClosedAuctionSlots
+	auctionAPI.OpenAuctionSlots = auctionVariables.OpenAuctionSlots
+	auctionAPI.Outbidding = auctionVariables.Outbidding
+	auctionAPI.SlotDeadline = auctionVariables.SlotDeadline
+
+	for i, slot := range auctionVariables.DefaultSlotSetBid {
+		auctionAPI.DefaultSlotSetBid[i] = apitypes.NewBigIntStr(slot)
+	}
+
+	for i, ratio := range auctionVariables.AllocationRatio {
+		auctionAPI.AllocationRatio[i] = ratio
+	}
+
+	a.status.Auction = auctionAPI
 	a.status.Unlock()
 }
 
@@ -148,6 +169,21 @@ func (a *API) UpdateNetworkInfo(
 	return nil
 }
 
+// apiSlotToBigInts converts from [6]*apitypes.BigIntStr to [6]*big.Int
+func apiSlotToBigInts(defaultSlotSetBid [6]*apitypes.BigIntStr) ([6]*big.Int, error) {
+	var slots [6]*big.Int
+
+	for i, slot := range defaultSlotSetBid {
+		bigInt, ok := new(big.Int).SetString(string(*slot), 10)
+		if !ok {
+			return slots, tracerr.Wrap(fmt.Errorf("can't convert %T into big.Int", slot))
+		}
+		slots[i] = bigInt
+	}
+
+	return slots, nil
+}
+
 // getNextForgers returns next forgers
 func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot int64) ([]NextForger, error) {
 	secondsPerBlock := int64(15) //nolint:gomnd
@@ -162,8 +198,13 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 	var minBidInfo []historydb.MinBidInfo
 	if currentSlot >= a.status.Auction.DefaultSlotSetBidSlotNum {
 		// All min bids can be calculated with the last update of AuctionVariables
+		bigIntSlots, err := apiSlotToBigInts(a.status.Auction.DefaultSlotSetBid)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+
 		minBidInfo = []historydb.MinBidInfo{{
-			DefaultSlotSetBid:        a.status.Auction.DefaultSlotSetBid,
+			DefaultSlotSetBid:        bigIntSlots,
 			DefaultSlotSetBidSlotNum: a.status.Auction.DefaultSlotSetBidSlotNum,
 		}}
 	} else {

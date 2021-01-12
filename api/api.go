@@ -22,12 +22,12 @@ const (
 // Status define status of the network
 type Status struct {
 	sync.RWMutex
-	Network           Network                      `json:"network"`
-	Metrics           historydb.Metrics            `json:"metrics"`
-	Rollup            historydb.RollupVariablesAPI `json:"rollup"`
-	Auction           common.AuctionVariables      `json:"auction"`
-	WithdrawalDelayer common.WDelayerVariables     `json:"withdrawalDelayer"`
-	RecommendedFee    common.RecommendedFee        `json:"recommendedFee"`
+	Network           Network                       `json:"network"`
+	Metrics           historydb.Metrics             `json:"metrics"`
+	Rollup            historydb.RollupVariablesAPI  `json:"rollup"`
+	Auction           historydb.AuctionVariablesAPI `json:"auction"`
+	WithdrawalDelayer common.WDelayerVariables      `json:"withdrawalDelayer"`
+	RecommendedFee    common.RecommendedFee         `json:"recommendedFee"`
 }
 
 // API serves HTTP requests to allow external interaction with the Hermez node

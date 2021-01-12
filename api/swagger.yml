@@ -2650,8 +2650,8 @@ components:
           type: array
           description: "Initial minimal bid for each auction. Expressed as an array of 6 values. To calculate which value corresponds to each slot: `initialMinimalBidding[slotNum%6]`."
           items:
-            type: integer
-          example: [32,0,68,21,55,99]
+            type: string
+          example: ["32","0","68","21","55","99"]
         defaultSlotSetBidSlotNum:
           type: integer
           description: Slot in which the changes will be applied for the first time.
@@ -2695,7 +2695,7 @@ components:
         feeAddToken:
           type: string
           description: Fee to pay when registering tokens into the network.
-          example: 5698
+          example: "5698"
         withdrawalDelay:
           type: integer
           description: Withdraw delay in seconds
@@ -2709,19 +2709,19 @@ components:
               ceilUSD:
                 type: string
                 description: Max USD value
-                example: 1000
+                example: "1000"
               withdrawals:
                 type: string
                 description: Available withdrawals of the bucket
-                example: 4
+                example: "4"
               blockWithdrawalRate:
                 type: string
                 description: Every `blockWithdrawalRate` blocks add 1 withdrawal
-                example: 8
+                example: "8"
               maxWithdrawals:
                 type: string
                 description: Max withdrawals the bucket can hold
-                example: 4
+                example: "4"
             additionalProperties: false
             required: 
               - ceilUSD
