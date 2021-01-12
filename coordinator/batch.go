@@ -98,7 +98,7 @@ func (b *BatchInfo) DebugStore(storePath string) error {
 	// nolint reason: hardcoded 1_000_000 is the number of nanoseconds in a
 	// millisecond
 	//nolint:gomnd
-	filename := fmt.Sprintf("%08d-%v.%v.json", b.BatchNum,
+	filename := fmt.Sprintf("%08d-%v.%03d.json", b.BatchNum,
 		b.Debug.StartTimestamp.Unix(), b.Debug.StartTimestamp.Nanosecond()/1_000_000)
 	// nolint reason: 0640 allows rw to owner and r to group
 	//nolint:gosec

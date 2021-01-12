@@ -63,6 +63,7 @@ func NewStatsHolder(firstBlockNum int64, refreshPeriod time.Duration) *StatsHold
 	stats := Stats{}
 	stats.Eth.RefreshPeriod = refreshPeriod
 	stats.Eth.FirstBlockNum = firstBlockNum
+	stats.Sync.LastForgeL1TxsNum = -1
 	return &StatsHolder{Stats: stats}
 }
 

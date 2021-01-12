@@ -261,6 +261,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 				ForgerAddress:          cfg.Coordinator.ForgerAddress,
 				ConfirmBlocks:          cfg.Coordinator.ConfirmBlocks,
 				L1BatchTimeoutPerc:     cfg.Coordinator.L1BatchTimeoutPerc,
+				ForgeRetryInterval:     cfg.Coordinator.ForgeRetryInterval.Duration,
 				SyncRetryInterval:      cfg.Coordinator.SyncRetryInterval.Duration,
 				EthClientAttempts:      cfg.Coordinator.EthClient.Attempts,
 				EthClientAttemptsDelay: cfg.Coordinator.EthClient.AttemptsDelay.Duration,
