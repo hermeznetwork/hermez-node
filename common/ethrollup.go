@@ -119,19 +119,19 @@ func (c *RollupConstants) FindVerifierIdx(MaxTx, NLevels int64) (int, error) {
 // BucketParams are the parameter variables of each Bucket of Rollup Smart
 // Contract
 type BucketParams struct {
-	CeilUSD             *big.Int `json:"ceilUSD"`
-	Withdrawals         *big.Int `json:"withdrawals"`
-	BlockWithdrawalRate *big.Int `json:"blockWithdrawalRate"`
-	MaxWithdrawals      *big.Int `json:"maxWithdrawals"`
+	CeilUSD             *big.Int
+	Withdrawals         *big.Int
+	BlockWithdrawalRate *big.Int
+	MaxWithdrawals      *big.Int
 }
 
 // BucketUpdate are the bucket updates (tracking the withdrawals value changes)
 // in Rollup Smart Contract
 type BucketUpdate struct {
-	EthBlockNum int64    `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	NumBucket   int      `json:"numBucket" meddler:"num_bucket"`
-	BlockStamp  int64    `json:"blockStamp" meddler:"block_stamp"`
-	Withdrawals *big.Int `json:"withdrawals" meddler:"withdrawals,bigint"`
+	EthBlockNum int64    `meddler:"eth_block_num"`
+	NumBucket   int      `meddler:"num_bucket"`
+	BlockStamp  int64    `meddler:"block_stamp"`
+	Withdrawals *big.Int `meddler:"withdrawals,bigint"`
 }
 
 // TokenExchange are the exchange value for tokens registered in the Rollup
@@ -144,12 +144,12 @@ type TokenExchange struct {
 
 // RollupVariables are the variables of the Rollup Smart Contract
 type RollupVariables struct {
-	EthBlockNum           int64                               `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	FeeAddToken           *big.Int                            `json:"feeAddToken" meddler:"fee_add_token,bigint" validate:"required"`
-	ForgeL1L2BatchTimeout int64                               `json:"forgeL1L2BatchTimeout" meddler:"forge_l1_timeout" validate:"required"`
-	WithdrawalDelay       uint64                              `json:"withdrawalDelay" meddler:"withdrawal_delay" validate:"required"`
-	Buckets               [RollupConstNumBuckets]BucketParams `json:"buckets" meddler:"buckets,json"`
-	SafeMode              bool                                `json:"safeMode" meddler:"safe_mode"`
+	EthBlockNum           int64                               `meddler:"eth_block_num"`
+	FeeAddToken           *big.Int                            `meddler:"fee_add_token,bigint" validate:"required"`
+	ForgeL1L2BatchTimeout int64                               `meddler:"forge_l1_timeout" validate:"required"`
+	WithdrawalDelay       uint64                              `meddler:"withdrawal_delay" validate:"required"`
+	Buckets               [RollupConstNumBuckets]BucketParams `meddler:"buckets,json"`
+	SafeMode              bool                                `meddler:"safe_mode"`
 }
 
 // Copy returns a deep copy of the Variables

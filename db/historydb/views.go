@@ -371,3 +371,28 @@ type RollupVariablesAPI struct {
 	Buckets               [common.RollupConstNumBuckets]BucketParamsAPI `json:"buckets" meddler:"buckets,json"`
 	SafeMode              bool                                          `json:"safeMode" meddler:"safe_mode"`
 }
+
+// AuctionVariablesAPI are the variables of the Auction Smart Contract
+type AuctionVariablesAPI struct {
+	EthBlockNum int64 `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	// Donation Address
+	DonationAddress ethCommon.Address `json:"donationAddress" meddler:"donation_address" validate:"required"`
+	// Boot Coordinator Address
+	BootCoordinator ethCommon.Address `json:"bootCoordinator" meddler:"boot_coordinator" validate:"required"`
+	// Boot Coordinator URL
+	BootCoordinatorURL string `json:"bootCoordinatorUrl" meddler:"boot_coordinator_url" validate:"required"`
+	// The minimum bid value in a series of 6 slots
+	DefaultSlotSetBid [6]*apitypes.BigIntStr `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
+	// SlotNum at which the new default_slot_set_bid applies
+	DefaultSlotSetBidSlotNum int64 `json:"defaultSlotSetBidSlotNum" meddler:"default_slot_set_bid_slot_num"`
+	// Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
+	ClosedAuctionSlots uint16 `json:"closedAuctionSlots" meddler:"closed_auction_slots" validate:"required"`
+	// Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )
+	OpenAuctionSlots uint16 `json:"openAuctionSlots" meddler:"open_auction_slots" validate:"required"`
+	// How the HEZ tokens deposited by the slot winner are distributed (Burn: 40% - Donation: 40% - HGT: 20%)
+	AllocationRatio [3]uint16 `json:"allocationRatio" meddler:"allocation_ratio,json" validate:"required"`
+	// Minimum outbid (percentage) over the previous one to consider it valid
+	Outbidding uint16 `json:"outbidding" meddler:"outbidding" validate:"required"`
+	// Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before
+	SlotDeadline uint8 `json:"slotDeadline" meddler:"slot_deadline" validate:"required"`
+}
