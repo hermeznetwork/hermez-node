@@ -98,6 +98,11 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 				tx.Position == _dbTx.Position {
 				dbTx = new(common.L1Tx)
 				*dbTx = _dbTx
+				// NOTE: Overwrite EffectiveFromIdx in L1UserTx
+				// from db because we don't expect
+				// EffectiveFromIdx to be set yet, as this tx
+				// is not in yet forged
+				dbTx.EffectiveFromIdx = 0
 				break
 			}
 		}
@@ -142,7 +147,18 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 		batch.Batch.NumAccounts = len(batch.CreatedAccounts)
 
 		// Test field by field to facilitate debugging of errors
+		assert.Equal(t, len(batch.L1UserTxs), len(syncBatch.L1UserTxs))
+		// NOTE: EffectiveFromIdx is set to til L1UserTxs in
+		// `FillBlocksForgedL1UserTxs` function
+		for j := range syncBatch.L1UserTxs {
+			assert.NotEqual(t, 0, syncBatch.L1UserTxs[j].EffectiveFromIdx)
+		}
 		assert.Equal(t, batch.L1UserTxs, syncBatch.L1UserTxs)
+		// NOTE: EffectiveFromIdx is set to til L1CoordinatorTxs in
+		// `FillBlocksExtra` function
+		for j := range syncBatch.L1CoordinatorTxs {
+			assert.NotEqual(t, 0, syncBatch.L1CoordinatorTxs[j].EffectiveFromIdx)
+		}
 		assert.Equal(t, batch.L1CoordinatorTxs, syncBatch.L1CoordinatorTxs)
 		assert.Equal(t, batch.L2Txs, syncBatch.L2Txs)
 		// In exit tree, we only check AccountIdx and Balance, because

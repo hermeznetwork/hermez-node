@@ -143,14 +143,9 @@ func genTestTxs(
 			bn := common.BatchNum(*tx.L1Info.ToForgeL1TxsNum + 2)
 			tx.BatchNum = &bn
 		}
-		// TODO: User L1 txs that create txs will have fromAccountIndex equal to the idx of the
-		// created account. Once this is done this test will be broken and will need to be updated here.
-		// At the moment they are null
-		if l1.Type != common.TxTypeCreateAccountDeposit &&
-			l1.Type != common.TxTypeCreateAccountDepositTransfer {
-			idxStr := idxToHez(l1.FromIdx, token.Symbol)
-			tx.FromIdx = &idxStr
-		}
+		// If FromIdx is not nil
+		idxStr := idxToHez(l1.EffectiveFromIdx, token.Symbol)
+		tx.FromIdx = &idxStr
 		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
 		if l1.ToIdx >= common.UserThreshold {
 			// find account

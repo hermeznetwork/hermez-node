@@ -268,6 +268,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	err = tcc.FillBlocksForgedL1UserTxs(blocksData)
+	if err != nil {
+		panic(err)
+	}
 	AddAditionalInformation(blocksData)
 	// Generate L2 Txs with til
 	commonPoolTxs, err := tcc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow0)
@@ -330,7 +334,6 @@ func TestMain(m *testing.M) {
 			testTokens = append(testTokens, token)
 		}
 		// Set USD value for tokens in DB
-		commonL1Txs = append(commonL1Txs, block.Rollup.L1UserTxs...)
 		for _, batch := range block.Rollup.Batches {
 			commonL2Txs = append(commonL2Txs, batch.L2Txs...)
 			for i := range batch.CreatedAccounts {
@@ -339,6 +342,7 @@ func TestMain(m *testing.M) {
 			}
 			commonBatches = append(commonBatches, batch.Batch)
 			commonExitTree = append(commonExitTree, batch.ExitTree...)
+			commonL1Txs = append(commonL1Txs, batch.L1UserTxs...)
 			commonL1Txs = append(commonL1Txs, batch.L1CoordinatorTxs...)
 		}
 	}

@@ -852,9 +852,13 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 		laf := new(big.Float).SetInt(l1txs[i].DepositAmount)
 		depositAmountFloat, _ := laf.Float64()
 		var effectiveFromIdx *common.Idx
-		if l1txs[i].Type != common.TxTypeCreateAccountDeposit &&
-			l1txs[i].Type != common.TxTypeCreateAccountDepositTransfer {
-			effectiveFromIdx = &l1txs[i].FromIdx
+		if l1txs[i].UserOrigin {
+			if l1txs[i].Type != common.TxTypeCreateAccountDeposit &&
+				l1txs[i].Type != common.TxTypeCreateAccountDepositTransfer {
+				effectiveFromIdx = &l1txs[i].FromIdx
+			}
+		} else {
+			effectiveFromIdx = &l1txs[i].EffectiveFromIdx
 		}
 		txs = append(txs, txWrite{
 			// Generic
@@ -1242,7 +1246,7 @@ func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 	err := meddler.QueryAll(
 		hdb.db, &txs, // Note that '\x' gets parsed as a big.Int with value = 0
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
-		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
+		tx.from_idx, tx.effective_from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.amount_success THEN tx.amount ELSE '\x' END) AS effective_amount,
 		tx.deposit_amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.deposit_amount_success THEN tx.deposit_amount ELSE '\x' END) AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
@@ -1259,7 +1263,7 @@ func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
 	err := meddler.QueryAll(
 		hdb.db, &txs,
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
-		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
+		tx.from_idx, tx.effective_from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, tx.amount AS effective_amount,
 		tx.deposit_amount, tx.deposit_amount AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
@@ -1477,20 +1481,21 @@ func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 	return tracerr.Wrap(txn.Commit())
 }
 
-// setExtraInfoForgedL1UserTxs sets the EffectiveAmount and EffectiveDepositAmount
-// of the given l1UserTxs (with an UPDATE)
-// TODO: Set effective_from_idx for txs that create accounts
+// setExtraInfoForgedL1UserTxs sets the EffectiveAmount, EffectiveDepositAmount
+// and EffectiveFromIdx of the given l1UserTxs (with an UPDATE)
 func (hdb *HistoryDB) setExtraInfoForgedL1UserTxs(d sqlx.Ext, txs []common.L1Tx) error {
 	if len(txs) == 0 {
 		return nil
 	}
 	// Effective amounts are stored as success flags in the DB, with true value by default
 	// to reduce the amount of updates. Therefore, only amounts that became uneffective should be
-	// updated to become false
+	// updated to become false.  At the same time, all the txs that contain
+	// accounts (FromIdx == 0) are updated to set the EffectiveFromIdx.
 	type txUpdate struct {
 		ID                   common.TxID `db:"id"`
 		AmountSuccess        bool        `db:"amount_success"`
 		DepositAmountSuccess bool        `db:"deposit_amount_success"`
+		EffectiveFromIdx     common.Idx  `db:"effective_from_idx"`
 	}
 	txUpdates := []txUpdate{}
 	equal := func(a *big.Int, b *big.Int) bool {
@@ -1499,22 +1504,24 @@ func (hdb *HistoryDB) setExtraInfoForgedL1UserTxs(d sqlx.Ext, txs []common.L1Tx)
 	for i := range txs {
 		amountSuccess := equal(txs[i].Amount, txs[i].EffectiveAmount)
 		depositAmountSuccess := equal(txs[i].DepositAmount, txs[i].EffectiveDepositAmount)
-		if !amountSuccess || !depositAmountSuccess {
+		if !amountSuccess || !depositAmountSuccess || txs[i].FromIdx == 0 {
 			txUpdates = append(txUpdates, txUpdate{
 				ID:                   txs[i].TxID,
 				AmountSuccess:        amountSuccess,
 				DepositAmountSuccess: depositAmountSuccess,
+				EffectiveFromIdx:     txs[i].EffectiveFromIdx,
 			})
 		}
 	}
 	const query string = `
 		UPDATE tx SET
 			amount_success = tx_update.amount_success,
-			deposit_amount_success = tx_update.deposit_amount_success
+			deposit_amount_success = tx_update.deposit_amount_success,
+			effective_from_idx = tx_update.effective_from_idx
 		FROM (VALUES
-			(NULL::::BYTEA, NULL::::BOOL, NULL::::BOOL),
-			(:id, :amount_success, :deposit_amount_success)
-		) as tx_update (id, amount_success, deposit_amount_success)
+			(NULL::::BYTEA, NULL::::BOOL, NULL::::BOOL, NULL::::BIGINT),
+			(:id, :amount_success, :deposit_amount_success, :effective_from_idx)
+		) as tx_update (id, amount_success, deposit_amount_success, effective_from_idx)
 		WHERE tx.id = tx_update.id;
 	`
 	if len(txUpdates) > 0 {
@@ -1604,7 +1611,6 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 
 		// Set the EffectiveAmount and EffectiveDepositAmount of all the
 		// L1UserTxs that have been forged in this batch
-		// TODO: Set also effective_from_idx for txs that create accounts
 		if err = hdb.setExtraInfoForgedL1UserTxs(txn, batch.L1UserTxs); err != nil {
 			return tracerr.Wrap(err)
 		}

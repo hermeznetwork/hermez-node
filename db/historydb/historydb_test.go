@@ -791,9 +791,10 @@ func TestSetExtraInfoForgedL1UserTxs(t *testing.T) {
 	// Add second batch to trigger the update of the batch_num,
 	// while avoiding the implicit call of setExtraInfoForgedL1UserTxs
 	err = historyDB.addBlock(historyDB.db, &blocks[1].Block)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = historyDB.addBatch(historyDB.db, &blocks[1].Rollup.Batches[0].Batch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	err = historyDB.addAccounts(historyDB.db, blocks[1].Rollup.Batches[0].CreatedAccounts)
 	require.NoError(t, err)
 
 	// Set the Effective{Amount,DepositAmount} of the L1UserTxs that are forged in the second block
