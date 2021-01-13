@@ -786,7 +786,7 @@ func TestZKInputs6(t *testing.T) {
 	// printZKInputs(t, ptOut.ZKInputs)
 
 	log.Debug("block:0 batch:7")
-	// simulate the PoolL2Txs of the batch6
+	// simulate the PoolL2Txs of the batch7
 	batchPoolL2 := `
 	Type: PoolL2
 	PoolTransferToEthAddr(1) A-B: 200 (126)
@@ -813,7 +813,7 @@ func TestZKInputs6(t *testing.T) {
 	// printZKInputs(t, ptOut.ZKInputs)
 
 	log.Debug("block:0 batch:8")
-	// simulate the PoolL2Txs of the batch7
+	// simulate the PoolL2Txs of the batch8
 	batchPoolL2 = `
 	Type: PoolL2
 	PoolTransfer(0) A-B: 100 (126)
@@ -840,7 +840,7 @@ func TestZKInputs6(t *testing.T) {
 	// printZKInputs(t, ptOut.ZKInputs)
 
 	log.Debug("(batch9) block:1 batch:1")
-	// simulate the PoolL2Txs of the block1,batch0
+	// simulate the PoolL2Txs of the batch9
 	batchPoolL2 = `
 	Type: PoolL2
 	PoolTransfer(0) D-A: 300 (126)
@@ -866,7 +866,6 @@ func TestZKInputs6(t *testing.T) {
 	// printZKInputs(t, ptOut.ZKInputs)
 
 	log.Debug("(batch10) block:1 batch:2")
-	// simulate the PoolL2Txs of the block1,batch0
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = []common.PoolL2Tx{}
 	coordIdxs = []common.Idx{}
