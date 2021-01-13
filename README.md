@@ -30,3 +30,18 @@ databse because it's shared among all tests.
 ```
 golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports -E golint --exclude-use-default=false --max-same-issues 0
 ```
+
+## Usage Details
+
+### `/tmp` as tmpfs
+
+For every processed batch, the node builds a temporary exit tree in a key-value
+DB stored in `/tmp`.  It is highly recommended that `/tmp` is mounted as a RAM
+file system in production to avoid unecessary reads an writes to disk.  This
+can be done by mounting `/tmp` as tmpfs; for example, by having this line in
+`/etc/fstab`:
+```
+tmpfs			/tmp		tmpfs		defaults,noatime,mode=1777	0 0
+```
+
+
