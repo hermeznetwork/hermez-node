@@ -304,6 +304,7 @@ func TestMain(m *testing.M) {
 		// Insert block into HistoryDB
 		// nolint reason: block is used as read only in the function
 		if err := api.h.AddBlockSCData(&block); err != nil { //nolint:gosec
+			log.Error(err)
 			panic(err)
 		}
 		// Extract data
