@@ -25,6 +25,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
+	"github.com/hermeznetwork/hermez-node/test/txsets"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -269,7 +270,7 @@ func TestMain(m *testing.M) {
 	}
 	AddAditionalInformation(blocksData)
 	// Generate L2 Txs with til
-	commonPoolTxs, err := tcc.GeneratePoolL2Txs(til.SetPoolL2MinimumFlow0)
+	commonPoolTxs, err := tcc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow0)
 	if err != nil {
 		panic(err)
 	}

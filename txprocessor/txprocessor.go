@@ -294,8 +294,8 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 	}
 
-	txCompressedDataEmpty := common.TxCompressedDataEmpty(tp.config.ChainID)
 	if tp.zki != nil {
+		txCompressedDataEmpty := common.TxCompressedDataEmpty(tp.config.ChainID)
 		last := tp.i - 1
 		if tp.i == 0 {
 			last = 0
