@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test/til"
+	"github.com/hermeznetwork/hermez-node/test/txsets"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -211,7 +212,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	chainID := uint16(0)
 	// generate test transactions from test.SetBlockchain0 code
 	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
-	blocks, err := tc.GenerateBlocks(til.SetBlockchainMinimumFlow0)
+	blocks, err := tc.GenerateBlocks(txsets.SetBlockchainMinimumFlow0)
 	require.NoError(t, err)
 
 	config := Config{
@@ -329,7 +330,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	assert.Equal(t, "10342681351319338354912862547249967104198317571995055517008223832276478908482", tp.s.MT.Root().BigInt().String())
 
 	// use Set of PoolL2 txs
-	poolL2Txs, err := tc.GeneratePoolL2Txs(til.SetPoolL2MinimumFlow1)
+	poolL2Txs, err := tc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow1)
 	assert.NoError(t, err)
 
 	_, err = tp.ProcessTxs(coordIdxs, []common.L1Tx{}, []common.L1Tx{}, poolL2Txs)
@@ -357,7 +358,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	chainID := uint16(0)
 	// generate test transactions from test.SetBlockchain0 code
 	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
-	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
+	blocks, err := tc.GenerateBlocks(txsets.SetBlockchain0)
 	require.NoError(t, err)
 
 	assert.Equal(t, 31, len(blocks[0].Rollup.L1UserTxs))
@@ -488,7 +489,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	chainID := uint16(0)
 	// generate test transactions from test.SetBlockchain0 code
 	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
-	blocks, err := tc.GenerateBlocks(til.SetBlockchain0)
+	blocks, err := tc.GenerateBlocks(txsets.SetBlockchain0)
 	require.NoError(t, err)
 
 	// Coordinator Idx where to send the fees
@@ -627,7 +628,7 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
 	assert.NoError(t, err)
 
-	users := generateJsUsers(t)
+	users := txsets.GenerateJsUsers(t)
 
 	daMaxHex, err := hex.DecodeString("FFFF")
 	require.NoError(t, err)

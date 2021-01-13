@@ -168,6 +168,16 @@ func (tx *PoolL2Tx) TxCompressedData(chainID uint16) (*big.Int, error) {
 	return bi, nil
 }
 
+// TxCompressedDataEmpty calculates the TxCompressedData of an empty
+// transaction
+func TxCompressedDataEmpty(chainID uint16) *big.Int {
+	var b [31]byte
+	binary.BigEndian.PutUint16(b[25:27], chainID)
+	copy(b[27:31], SignatureConstantBytes[:])
+	bi := new(big.Int).SetBytes(b[:])
+	return bi
+}
+
 // TxCompressedDataV2 spec:
 // [ 1 bits  ] toBJJSign // 1 byte
 // [ 8 bits  ] userFee // 1 byte

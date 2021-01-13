@@ -1,23 +1,16 @@
-package til
+package txsets
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCompileSetsBase(t *testing.T) {
-	parser := newParser(strings.NewReader(SetBlockchain0))
-	_, err := parser.parse()
-	assert.NoError(t, err)
-	parser = newParser(strings.NewReader(SetPool0))
-	_, err = parser.parse()
-	assert.NoError(t, err)
-
-	tc := NewContext(0, common.RollupConstMaxL1UserTx)
-	_, err = tc.GenerateBlocks(SetBlockchain0)
+	tc := til.NewContext(0, common.RollupConstMaxL1UserTx)
+	_, err := tc.GenerateBlocks(SetBlockchain0)
 	assert.NoError(t, err)
 	_, err = tc.GeneratePoolL2Txs(SetPool0)
 	assert.NoError(t, err)
@@ -25,7 +18,7 @@ func TestCompileSetsBase(t *testing.T) {
 
 func TestCompileSetsMinimumFlow(t *testing.T) {
 	// minimum flow
-	tc := NewContext(0, common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err := tc.GenerateBlocks(SetBlockchainMinimumFlow0)
 	assert.NoError(t, err)
 	_, err = tc.GeneratePoolL2Txs(SetPoolL2MinimumFlow0)

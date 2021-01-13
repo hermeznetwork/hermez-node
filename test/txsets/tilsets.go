@@ -1,4 +1,4 @@
-package til
+package txsets
 
 // sets of instructions to be used in tests of other packages
 
