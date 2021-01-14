@@ -180,6 +180,7 @@ type SCConsts struct {
 // Config is the Synchronizer configuration
 type Config struct {
 	StatsRefreshPeriod time.Duration
+	ChainID            uint16
 }
 
 // Synchronizer implements the Synchronizer type
@@ -797,17 +798,21 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		// Transform L2 txs to PoolL2Txs
 		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData) // NOTE: This is a big ugly, find a better way
 
-		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
-		//nolint:gomnd
-		tpc := txprocessor.Config{ // TODO TMP
-			NLevels:  32,
-			MaxFeeTx: 64,
-			MaxTx:    512,
-			MaxL1Tx:  64,
-			ChainID:  uint16(0),
+		if int(forgeBatchArgs.VerifierIdx) >= len(s.consts.Rollup.Verifiers) {
+			return nil, tracerr.Wrap(fmt.Errorf("forgeBatchArgs.VerifierIdx (%v) >= "+
+				" len(s.consts.Rollup.Verifiers) (%v)",
+				forgeBatchArgs.VerifierIdx, len(s.consts.Rollup.Verifiers)))
+		}
+		tpc := txprocessor.Config{
+			NLevels:  uint32(s.consts.Rollup.Verifiers[forgeBatchArgs.VerifierIdx].NLevels),
+			MaxTx:    uint32(s.consts.Rollup.Verifiers[forgeBatchArgs.VerifierIdx].MaxTx),
+			ChainID:  s.cfg.ChainID,
+			MaxFeeTx: common.RollupConstMaxFeeIdxCoordinator,
+			MaxL1Tx:  common.RollupConstMaxL1Tx,
 		}
 		tp := txprocessor.NewTxProcessor(s.stateDB, tpc)
 
+		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
 		processTxsOut, err := tp.ProcessTxs(forgeBatchArgs.FeeIdxCoordinator,
 			l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {

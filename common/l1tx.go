@@ -28,16 +28,17 @@ type L1Tx struct {
 	// where type:
 	// 	- L1UserTx: 0
 	// 	- L1CoordinatorTx: 1
-	TxID            TxID                  `meddler:"id"`
-	ToForgeL1TxsNum *int64                `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
-	Position        int                   `meddler:"position"`
-	UserOrigin      bool                  `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx         Idx                   `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
-	FromEthAddr     ethCommon.Address     `meddler:"from_eth_addr,zeroisnull"`
-	FromBJJ         babyjub.PublicKeyComp `meddler:"from_bjj,zeroisnull"`
-	ToIdx           Idx                   `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	TokenID         TokenID               `meddler:"token_id"`
-	Amount          *big.Int              `meddler:"amount,bigint"`
+	TxID             TxID                  `meddler:"id"`
+	ToForgeL1TxsNum  *int64                `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
+	Position         int                   `meddler:"position"`
+	UserOrigin       bool                  `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
+	FromIdx          Idx                   `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
+	EffectiveFromIdx Idx                   `meddler:"effective_from_idx,zeroisnull"`
+	FromEthAddr      ethCommon.Address     `meddler:"from_eth_addr,zeroisnull"`
+	FromBJJ          babyjub.PublicKeyComp `meddler:"from_bjj,zeroisnull"`
+	ToIdx            Idx                   `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	TokenID          TokenID               `meddler:"token_id"`
+	Amount           *big.Int              `meddler:"amount,bigint"`
 	// EffectiveAmount only applies to L1UserTx.
 	EffectiveAmount *big.Int `meddler:"effective_amount,bigintnull"`
 	DepositAmount   *big.Int `meddler:"deposit_amount,bigint"`

@@ -149,6 +149,7 @@ CREATE TABLE tx (
     type VARCHAR(40) NOT NULL,
     position INT NOT NULL,
     from_idx BIGINT,
+    effective_from_idx BIGINT REFERENCES account (idx) ON DELETE SET NULL,
     from_eth_addr BYTEA,
     from_bjj BYTEA,
     to_idx BIGINT NOT NULL,

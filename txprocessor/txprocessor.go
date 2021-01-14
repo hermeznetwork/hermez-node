@@ -154,10 +154,14 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		if tp.s.Typ == statedb.TypeSynchronizer && createdAccount != nil {
-			createdAccounts = append(createdAccounts, *createdAccount)
+		if tp.s.Typ == statedb.TypeSynchronizer {
+			if createdAccount != nil {
+				createdAccounts = append(createdAccounts, *createdAccount)
+				l1usertxs[i].EffectiveFromIdx = createdAccount.Idx
+			} else {
+				l1usertxs[i].EffectiveFromIdx = l1usertxs[i].FromIdx
+			}
 		}
-
 		if tp.zki != nil {
 			l1TxData, err := l1usertxs[i].BytesGeneric()
 			if err != nil {
@@ -201,8 +205,13 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		if exitIdx != nil {
 			log.Error("Unexpected Exit in L1CoordinatorTx")
 		}
-		if tp.s.Typ == statedb.TypeSynchronizer && createdAccount != nil {
-			createdAccounts = append(createdAccounts, *createdAccount)
+		if tp.s.Typ == statedb.TypeSynchronizer {
+			if createdAccount != nil {
+				createdAccounts = append(createdAccounts, *createdAccount)
+				l1coordinatortxs[i].EffectiveFromIdx = createdAccount.Idx
+			} else {
+				l1coordinatortxs[i].EffectiveFromIdx = l1coordinatortxs[i].FromIdx
+			}
 		}
 		if tp.zki != nil {
 			l1TxData, err := l1coordinatortxs[i].BytesGeneric()

@@ -123,17 +123,18 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 // EffectiveAmount and EffectiveDepositAmount are not set since they have default values in the DB
 type txWrite struct {
 	// Generic
-	IsL1        bool             `meddler:"is_l1"`
-	TxID        common.TxID      `meddler:"id"`
-	Type        common.TxType    `meddler:"type"`
-	Position    int              `meddler:"position"`
-	FromIdx     *common.Idx      `meddler:"from_idx"`
-	ToIdx       common.Idx       `meddler:"to_idx"`
-	Amount      *big.Int         `meddler:"amount,bigint"`
-	AmountFloat float64          `meddler:"amount_f"`
-	TokenID     common.TokenID   `meddler:"token_id"`
-	BatchNum    *common.BatchNum `meddler:"batch_num"`     // batchNum in which this tx was forged. If the tx is L2, this must be != 0
-	EthBlockNum int64            `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
+	IsL1             bool             `meddler:"is_l1"`
+	TxID             common.TxID      `meddler:"id"`
+	Type             common.TxType    `meddler:"type"`
+	Position         int              `meddler:"position"`
+	FromIdx          *common.Idx      `meddler:"from_idx"`
+	EffectiveFromIdx *common.Idx      `meddler:"effective_from_idx"`
+	ToIdx            common.Idx       `meddler:"to_idx"`
+	Amount           *big.Int         `meddler:"amount,bigint"`
+	AmountFloat      float64          `meddler:"amount_f"`
+	TokenID          common.TokenID   `meddler:"token_id"`
+	BatchNum         *common.BatchNum `meddler:"batch_num"`     // batchNum in which this tx was forged. If the tx is L2, this must be != 0
+	EthBlockNum      int64            `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
 	// L1
 	ToForgeL1TxsNum    *int64                 `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
 	UserOrigin         *bool                  `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
@@ -375,24 +376,24 @@ type RollupVariablesAPI struct {
 // AuctionVariablesAPI are the variables of the Auction Smart Contract
 type AuctionVariablesAPI struct {
 	EthBlockNum int64 `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	// Donation Address
+	// DonationAddress Address where the donations will be sent
 	DonationAddress ethCommon.Address `json:"donationAddress" meddler:"donation_address" validate:"required"`
-	// Boot Coordinator Address
+	// BootCoordinator Address of the boot coordinator
 	BootCoordinator ethCommon.Address `json:"bootCoordinator" meddler:"boot_coordinator" validate:"required"`
-	// Boot Coordinator URL
+	// BootCoordinatorURL URL of the boot coordinator
 	BootCoordinatorURL string `json:"bootCoordinatorUrl" meddler:"boot_coordinator_url" validate:"required"`
-	// The minimum bid value in a series of 6 slots
+	// DefaultSlotSetBid The minimum bid value in a series of 6 slots
 	DefaultSlotSetBid [6]*apitypes.BigIntStr `json:"defaultSlotSetBid" meddler:"default_slot_set_bid,json" validate:"required"`
-	// SlotNum at which the new default_slot_set_bid applies
+	// DefaultSlotSetBidSlotNum SlotNum at which the new default_slot_set_bid applies
 	DefaultSlotSetBidSlotNum int64 `json:"defaultSlotSetBidSlotNum" meddler:"default_slot_set_bid_slot_num"`
-	// Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
+	// ClosedAuctionSlots Distance (#slots) to the closest slot to which you can bid ( 2 Slots = 2 * 40 Blocks = 20 min )
 	ClosedAuctionSlots uint16 `json:"closedAuctionSlots" meddler:"closed_auction_slots" validate:"required"`
-	// Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )
+	// OpenAuctionSlots Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )
 	OpenAuctionSlots uint16 `json:"openAuctionSlots" meddler:"open_auction_slots" validate:"required"`
-	// How the HEZ tokens deposited by the slot winner are distributed (Burn: 40% - Donation: 40% - HGT: 20%)
+	// AllocationRatio How the HEZ tokens deposited by the slot winner are distributed (Burn: 40% - Donation: 40% - HGT: 20%)
 	AllocationRatio [3]uint16 `json:"allocationRatio" meddler:"allocation_ratio,json" validate:"required"`
-	// Minimum outbid (percentage) over the previous one to consider it valid
+	// Outbidding Minimum outbid (percentage) over the previous one to consider it valid
 	Outbidding uint16 `json:"outbidding" meddler:"outbidding" validate:"required"`
-	// Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before
+	// SlotDeadline Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before
 	SlotDeadline uint8 `json:"slotDeadline" meddler:"slot_deadline" validate:"required"`
 }

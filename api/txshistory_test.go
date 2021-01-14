@@ -144,7 +144,7 @@ func genTestTxs(
 			tx.BatchNum = &bn
 		}
 		// If FromIdx is not nil
-		idxStr := idxToHez(l1.FromIdx, token.Symbol)
+		idxStr := idxToHez(l1.EffectiveFromIdx, token.Symbol)
 		tx.FromIdx = &idxStr
 		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
 		if l1.ToIdx >= common.UserThreshold {

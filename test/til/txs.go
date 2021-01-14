@@ -45,6 +45,7 @@ type contextExtra struct {
 	toForgeL1TxsNum int64
 	nonces          map[common.Idx]common.Nonce
 	idx             int
+	idxByTxID       map[common.TxID]common.Idx
 }
 
 // Context contains the data of the test
@@ -107,6 +108,7 @@ func NewContext(chainID uint16, rollupConstMaxL1UserTx int) *Context {
 			toForgeL1TxsNum: 0,
 			nonces:          make(map[common.Idx]common.Nonce),
 			idx:             common.UserThreshold,
+			idxByTxID:       make(map[common.TxID]common.Idx),
 		},
 	}
 }
@@ -762,7 +764,12 @@ func (tc *Context) FillBlocksL1UserTxsBatchNum(blocks []common.BlockData) {
 
 // FillBlocksForgedL1UserTxs fills the L1UserTxs of a batch with the L1UserTxs
 // that are forged in that batch.  It always sets `EffectiveAmount` = `Amount`
-// and `EffectiveDepositAmount` = `DepositAmount`.
+// and `EffectiveDepositAmount` = `DepositAmount`.  This function requires a
+// previous call to `FillBlocksExtra`.
+// - blocks[].Rollup.L1UserTxs[].BatchNum
+// - blocks[].Rollup.L1UserTxs[].EffectiveAmount
+// - blocks[].Rollup.L1UserTxs[].EffectiveDepositAmount
+// - blocks[].Rollup.L1UserTxs[].EffectiveFromIdx
 func (tc *Context) FillBlocksForgedL1UserTxs(blocks []common.BlockData) error {
 	for i := range blocks {
 		block := &blocks[i]
@@ -783,6 +790,11 @@ func (tc *Context) FillBlocksForgedL1UserTxs(blocks []common.BlockData) error {
 						return tracerr.Wrap(err)
 					}
 					*tx = *_tx
+					if tx.FromIdx == 0 {
+						tx.EffectiveFromIdx = tc.extra.idxByTxID[tx.TxID]
+					} else {
+						tx.EffectiveFromIdx = tx.FromIdx
+					}
 				}
 			}
 		}
@@ -802,6 +814,7 @@ func (tc *Context) FillBlocksForgedL1UserTxs(blocks []common.BlockData) error {
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].Position
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveAmount
 // - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveDepositAmount
+// - blocks[].Rollup.Batch.L1CoordinatorTxs[].EffectiveFromIdx
 // - blocks[].Rollup.Batch.L2Txs[].TxID
 // - blocks[].Rollup.Batch.L2Txs[].Position
 // - blocks[].Rollup.Batch.L2Txs[].Nonce
@@ -839,15 +852,17 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 		block := &blocks[i]
 		for j := range block.Rollup.Batches {
 			batch := &block.Rollup.Batches[j]
-			l1Txs := []common.L1Tx{}
+			l1Txs := []*common.L1Tx{}
 			if batch.L1Batch {
-				for _, tx := range tc.Queues[*batch.Batch.ForgeL1TxsNum] {
-					l1Txs = append(l1Txs, tx.L1Tx)
+				for k := range tc.Queues[*batch.Batch.ForgeL1TxsNum] {
+					l1Txs = append(l1Txs, &tc.Queues[*batch.Batch.ForgeL1TxsNum][k].L1Tx)
 				}
 			}
-			l1Txs = append(l1Txs, batch.L1CoordinatorTxs...)
+			for k := range batch.L1CoordinatorTxs {
+				l1Txs = append(l1Txs, &batch.L1CoordinatorTxs[k])
+			}
 			for k := range l1Txs {
-				tx := &l1Txs[k]
+				tx := l1Txs[k]
 				if tx.Type == common.TxTypeCreateAccountDeposit ||
 					tx.Type == common.TxTypeCreateAccountDepositTransfer {
 					user, ok := tc.UsersByIdx[tc.extra.idx]
@@ -864,6 +879,10 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 							Nonce:    0,
 							Balance:  big.NewInt(0),
 						})
+					if !tx.UserOrigin {
+						tx.EffectiveFromIdx = common.Idx(tc.extra.idx)
+					}
+					tc.extra.idxByTxID[tx.TxID] = common.Idx(tc.extra.idx)
 					tc.extra.idx++
 				}
 			}
