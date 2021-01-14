@@ -283,7 +283,6 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			if tp.i < nTx-1 {
 				tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx().BigInt()
 				tp.zki.ISStateRoot[tp.i] = tp.s.MT.Root().BigInt()
-				// tp.zki.ISAccFeeOut[tp.i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens)
 				tp.zki.ISAccFeeOut[tp.i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens, coordIdxs)
 				if exitIdx == nil {
 					tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()

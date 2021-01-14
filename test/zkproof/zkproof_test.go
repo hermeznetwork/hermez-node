@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/prover"
+	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/hermeznetwork/hermez-node/test/txsets"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/stretchr/testify/assert"
@@ -36,32 +38,25 @@ const MaxL1Tx = 256
 const MaxFeeTx = 64
 const ChainID uint16 = 1
 
-func TestZKInputs5(t *testing.T) {
+var config = txprocessor.Config{
+	NLevels:  uint32(NLevels),
+	MaxTx:    MaxTx,
+	MaxL1Tx:  MaxL1Tx,
+	MaxFeeTx: MaxFeeTx,
+	ChainID:  ChainID,
+}
+
+func initStateDB(t *testing.T) *statedb.StateDB {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, NLevels)
 	require.NoError(t, err)
+	return sdb
+}
 
-	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs5(t, ChainID)
-
-	config := txprocessor.Config{
-		NLevels:  uint32(NLevels),
-		MaxTx:    MaxTx,
-		MaxL1Tx:  MaxL1Tx,
-		MaxFeeTx: MaxFeeTx,
-		ChainID:  ChainID,
-	}
-	tp := txprocessor.NewTxProcessor(sdb, config)
-
-	// skip first batch to do the test with BatchNum=1
-	_, err = tp.ProcessTxs(nil, nil, nil, nil)
-	require.NoError(t, err)
-
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
-	require.NoError(t, err)
-
+func sendProofAndCheckResp(t *testing.T, ptOut *txprocessor.ProcessTxOutput) {
 	// Store zkinputs json for debugging purposes
 	zkInputsJSON, err := json.Marshal(ptOut.ZKInputs)
 	require.NoError(t, err)
@@ -77,4 +72,221 @@ func TestZKInputs5(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Printf("proof: %#v\n", proof)
 	fmt.Printf("pubInputs: %#v\n", pubInputs)
+}
+
+func TestZKInputsEmpty(t *testing.T) {
+	sdb := initStateDB(t)
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+
+	coordIdxs := []common.Idx{}
+	l1UserTxs := []common.L1Tx{}
+	l1CoordTxs := []common.L1Tx{}
+	l2Txs := []common.PoolL2Tx{}
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut) // test empty batch ZKInputs
+
+	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs = txsets.GenerateTxsZKInputs0(t, ChainID)
+
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	coordIdxs = []common.Idx{}
+	l1UserTxs = []common.L1Tx{}
+	l1CoordTxs = []common.L1Tx{}
+	l2Txs = []common.PoolL2Tx{}
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+	sendProofAndCheckResp(t, ptOut) // test empty batch ZKInputs after a non-empty batch
+}
+
+func TestZKInputs0(t *testing.T) {
+	sdb := initStateDB(t)
+
+	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs0(t, ChainID)
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+}
+func TestZKInputs1(t *testing.T) {
+	sdb := initStateDB(t)
+
+	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs1(t, ChainID)
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+}
+func TestZKInputs2(t *testing.T) {
+	sdb := initStateDB(t)
+
+	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs2(t, ChainID)
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+}
+func TestZKInputs3(t *testing.T) {
+	sdb := initStateDB(t)
+
+	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs3(t, ChainID)
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+}
+func TestZKInputs4(t *testing.T) {
+	sdb := initStateDB(t)
+
+	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs4(t, ChainID)
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+}
+
+func TestZKInputs5(t *testing.T) {
+	sdb := initStateDB(t)
+
+	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs5(t, ChainID)
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+}
+
+func TestZKInputs6(t *testing.T) {
+	sdb := initStateDB(t)
+
+	tc := til.NewContext(ChainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(txsets.SetBlockchainMinimumFlow0)
+	require.NoError(t, err)
+
+	// restart nonces of TilContext, as will be set by generating directly
+	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
+	tc.RestartNonces()
+
+	tp := txprocessor.NewTxProcessor(sdb, config)
+	// batch1
+	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch2
+	l1UserTxs := []common.L1Tx{}
+	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch3
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
+	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch4
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
+	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[3].L2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch5
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
+	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[4].L2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch6
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
+	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[5].L2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch7
+	// simulate the PoolL2Txs of the batch6
+	batchPoolL2 := `
+	Type: PoolL2
+	PoolTransferToEthAddr(1) A-B: 200 (126)
+	PoolTransferToEthAddr(0) B-C: 100 (126)`
+	poolL2Txs, err := tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+
+	// Coordinator Idx where to send the fees
+	coordIdxs := []common.Idx{261, 262}
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
+	l2Txs = poolL2Txs
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch8
+	// simulate the PoolL2Txs of the batch7
+	batchPoolL2 = `
+	Type: PoolL2
+	PoolTransfer(0) A-B: 100 (126)
+	PoolTransfer(0) C-A: 50 (126)
+	PoolTransfer(1) B-C: 100 (126)
+	PoolExit(0) A: 100 (126)`
+	poolL2Txs, err = tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
+	l2Txs = poolL2Txs
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch9
+	// simulate the PoolL2Txs of the batch9
+	batchPoolL2 = `
+	Type: PoolL2
+	PoolTransfer(0) D-A: 300 (126)
+	PoolTransfer(0) B-D: 100 (126)`
+	poolL2Txs, err = tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
+	l2Txs = poolL2Txs
+	coordIdxs = []common.Idx{262}
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
+
+	// batch10
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
+	l2Txs = []common.PoolL2Tx{}
+	coordIdxs = []common.Idx{}
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	require.NoError(t, err)
+
+	sendProofAndCheckResp(t, ptOut)
 }
