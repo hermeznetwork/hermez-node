@@ -465,9 +465,8 @@ func TestMain(m *testing.M) {
 	}
 	bootForger := NextForger{
 		Coordinator: historydb.CoordinatorAPI{
-			Bidder: ethCommon.HexToAddress("0x0111111111111111111111111111111111111111"),
-			Forger: ethCommon.HexToAddress("0x0111111111111111111111111111111111111111"),
-			URL:    "https://bootCoordinator",
+			Forger: auctionVars.BootCoordinator,
+			URL:    auctionVars.BootCoordinatorURL,
 		},
 	}
 	// Set next forgers: set all as boot coordinator then replace the non boot coordinators
