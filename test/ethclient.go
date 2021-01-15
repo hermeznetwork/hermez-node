@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -179,7 +181,6 @@ func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool,
 	}
 
 	slotToForge := a.getSlotNumber(blockNum)
-	// fmt.Printf("DBG canForge slot: %v\n", slotToForge)
 	// Get the relativeBlock to check if the slotDeadline has been exceeded
 	relativeBlock := blockNum - (a.Constants.GenesisBlockNum + (slotToForge * int64(a.Constants.BlocksPerSlot)))
 
@@ -616,6 +617,38 @@ func (c *Client) EthChainID() (*big.Int, error) {
 	return c.chainID, nil
 }
 
+// EthPendingNonceAt returns the account nonce of the given account in the pending
+// state. This is the nonce that should be used for the next transaction.
+func (c *Client) EthPendingNonceAt(ctx context.Context, account ethCommon.Address) (uint64, error) {
+	// NOTE: For now Client doesn't simulate nonces
+	return 0, nil
+}
+
+// EthNonceAt returns the account nonce of the given account. The block number can
+// be nil, in which case the nonce is taken from the latest known block.
+func (c *Client) EthNonceAt(ctx context.Context, account ethCommon.Address, blockNumber *big.Int) (uint64, error) {
+	// NOTE: For now Client doesn't simulate nonces
+	return 0, nil
+}
+
+// EthSuggestGasPrice retrieves the currently suggested gas price to allow a
+// timely execution of a transaction.
+func (c *Client) EthSuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	// NOTE: For now Client doesn't simulate gasPrice
+	return big.NewInt(0), nil
+}
+
+// EthKeyStore returns the keystore in the Client
+func (c *Client) EthKeyStore() *ethKeystore.KeyStore {
+	return nil
+}
+
+// EthCall runs the transaction as a call (without paying) in the local node at
+// blockNum.
+func (c *Client) EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error) {
+	return nil, tracerr.Wrap(common.ErrTODO)
+}
+
 // EthLastBlock returns the last blockNum
 func (c *Client) EthLastBlock() (int64, error) {
 	c.rw.RLock()
@@ -912,7 +945,7 @@ func (c *Client) newTransaction(name string, value interface{}) *types.Transacti
 }
 
 // RollupForgeBatch is the interface to call the smart contract function
-func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs) (tx *types.Transaction, err error) {
+func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs, auth *bind.TransactOpts) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1822,7 +1855,7 @@ func (c *Client) CtlAddBlocks(blocks []common.BlockData) (err error) {
 				ProofA:      [2]*big.Int{},    // Intentionally empty
 				ProofB:      [2][2]*big.Int{}, // Intentionally empty
 				ProofC:      [2]*big.Int{},    // Intentionally empty
-			}); err != nil {
+			}, nil); err != nil {
 				return tracerr.Wrap(err)
 			}
 		}

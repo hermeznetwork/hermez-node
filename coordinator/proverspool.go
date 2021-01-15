@@ -22,8 +22,11 @@ func NewProversPool(maxServerProofs int) *ProversPool {
 }
 
 // Add a prover to the pool
-func (p *ProversPool) Add(serverProof prover.Client) {
-	p.pool <- serverProof
+func (p *ProversPool) Add(ctx context.Context, serverProof prover.Client) {
+	select {
+	case p.pool <- serverProof:
+	case <-ctx.Done():
+	}
 }
 
 // Get returns the next available prover

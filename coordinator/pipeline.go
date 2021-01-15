@@ -71,7 +71,7 @@ func NewPipeline(ctx context.Context,
 		if err := prover.WaitReady(ctx); err != nil {
 			log.Errorw("prover.WaitReady", "err", err)
 		} else {
-			proversPool.Add(prover)
+			proversPool.Add(ctx, prover)
 			proversPoolSize++
 		}
 	}
@@ -94,8 +94,11 @@ func NewPipeline(ctx context.Context,
 }
 
 // SetSyncStatsVars is a thread safe method to sets the synchronizer Stats
-func (p *Pipeline) SetSyncStatsVars(stats *synchronizer.Stats, vars *synchronizer.SCVariablesPtr) {
-	p.statsVarsCh <- statsVars{Stats: *stats, Vars: *vars}
+func (p *Pipeline) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats, vars *synchronizer.SCVariablesPtr) {
+	select {
+	case p.statsVarsCh <- statsVars{Stats: *stats, Vars: *vars}:
+	case <-ctx.Done():
+	}
 }
 
 // reset pipeline state
@@ -161,7 +164,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context, batchNum common.BatchNu
 	} else if err != nil {
 		log.Errorw("sendServerProof", "err", err)
 		batchInfo.ServerProof = nil
-		p.proversPool.Add(serverProof)
+		p.proversPool.Add(ctx, serverProof)
 		return nil, err
 	}
 	return batchInfo, nil
@@ -202,7 +205,10 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 					continue
 				} else {
 					p.batchNum = batchNum
-					batchChSentServerProof <- batchInfo
+					select {
+					case batchChSentServerProof <- batchInfo:
+					case <-p.ctx.Done():
+					}
 				}
 			}
 		}
@@ -219,16 +225,15 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 			case batchInfo := <-batchChSentServerProof:
 				err := p.waitServerProof(p.ctx, batchInfo)
 				// We are done with this serverProof, add it back to the pool
-				p.proversPool.Add(batchInfo.ServerProof)
+				p.proversPool.Add(p.ctx, batchInfo.ServerProof)
 				batchInfo.ServerProof = nil
 				if p.ctx.Err() != nil {
 					continue
-				}
-				if err != nil {
+				} else if err != nil {
 					log.Errorw("waitServerProof", "err", err)
 					continue
 				}
-				p.txManager.AddBatch(batchInfo)
+				p.txManager.AddBatch(p.ctx, batchInfo)
 			}
 		}
 	}()
@@ -366,6 +371,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	batchInfo.ZKInputs = zkInputs
 	batchInfo.Debug.Status = StatusForged
 	p.cfg.debugBatchStore(batchInfo)
+	log.Infow("Pipeline: batch forged internally", "batch", batchInfo.BatchNum)
 
 	return batchInfo, nil
 }
@@ -381,6 +387,7 @@ func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) er
 	batchInfo.ForgeBatchArgs = prepareForgeBatchArgs(batchInfo)
 	batchInfo.Debug.Status = StatusProof
 	p.cfg.debugBatchStore(batchInfo)
+	log.Infow("Pipeline: batch proof calculated", "batch", batchInfo.BatchNum)
 	return nil
 }
 

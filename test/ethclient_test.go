@@ -98,7 +98,7 @@ func TestClientAuction(t *testing.T) {
 	_, err := c.AuctionBidSimple(0, big.NewInt(1))
 	assert.Equal(t, errBidClosed, tracerr.Unwrap(err))
 
-	_, err = c.AuctionBidSimple(4322, big.NewInt(1))
+	_, err = c.AuctionBidSimple(4323, big.NewInt(1))
 	assert.Equal(t, errBidNotOpen, tracerr.Unwrap(err))
 
 	// 101 % 6 = 5;  defaultSlotSetBid[5] = 1500;  1500 + 10% = 1650

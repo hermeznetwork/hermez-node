@@ -81,7 +81,7 @@ type Coordinator struct {
 	provers          []prover.Client
 	consts           synchronizer.SCConsts
 	vars             synchronizer.SCVariables
-	stats            *synchronizer.Stats
+	stats            synchronizer.Stats
 	started          bool
 
 	cfg Config
@@ -153,15 +153,22 @@ func NewCoordinator(cfg Config,
 
 		purger: &purger,
 
-		// ethClient: ethClient,
-
 		msgCh: make(chan interface{}),
 		ctx:   ctx,
 		// wg
 		cancel: cancel,
 	}
-	txManager := NewTxManager(&cfg, ethClient, l2DB, &c)
+	ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, 1*time.Second)
+	defer ctxTimeoutCancel()
+	txManager, err := NewTxManager(ctxTimeout, &cfg, ethClient, l2DB, &c,
+		scConsts, initSCVars)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
 	c.txManager = txManager
+	// Set Eth LastBlockNum to -1 in stats so that stats.Synced() is
+	// guaranteed to return false before it's updated with a real stats
+	c.stats.Eth.LastBlock.Num = -1
 	return &c, nil
 }
 
@@ -191,8 +198,11 @@ type MsgStopPipeline struct {
 }
 
 // SendMsg is a thread safe method to pass a message to the Coordinator
-func (c *Coordinator) SendMsg(msg interface{}) {
-	c.msgCh <- msg
+func (c *Coordinator) SendMsg(ctx context.Context, msg interface{}) {
+	select {
+	case c.msgCh <- msg:
+	case <-ctx.Done():
+	}
 }
 
 func (c *Coordinator) syncSCVars(vars synchronizer.SCVariablesPtr) {
@@ -207,24 +217,42 @@ func (c *Coordinator) syncSCVars(vars synchronizer.SCVariablesPtr) {
 	}
 }
 
-func (c *Coordinator) canForge(stats *synchronizer.Stats) bool {
+func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.AuctionVariables,
+	currentSlot *common.Slot, nextSlot *common.Slot, addr ethCommon.Address, blockNum int64) bool {
+	var slot *common.Slot
+	if currentSlot.StartBlock <= blockNum && blockNum <= currentSlot.EndBlock {
+		slot = currentSlot
+	} else if nextSlot.StartBlock <= blockNum && blockNum <= nextSlot.EndBlock {
+		slot = nextSlot
+	} else {
+		log.Warnw("Coordinator: requested blockNum for canForge is outside slot",
+			"blockNum", blockNum, "currentSlot", currentSlot,
+			"nextSlot", nextSlot,
+		)
+		return false
+	}
 	anyoneForge := false
-	if !stats.Sync.Auction.CurrentSlot.ForgerCommitment &&
-		c.consts.Auction.RelativeBlock(stats.Eth.LastBlock.Num+1) >= int64(c.vars.Auction.SlotDeadline) {
+	if !slot.ForgerCommitment &&
+		auctionConstants.RelativeBlock(blockNum) >= int64(auctionVars.SlotDeadline) {
 		log.Debugw("Coordinator: anyone can forge in the current slot (slotDeadline passed)",
-			"block", stats.Eth.LastBlock.Num+1)
+			"block", blockNum)
 		anyoneForge = true
 	}
-	if stats.Sync.Auction.CurrentSlot.Forger == c.cfg.ForgerAddress || anyoneForge {
+	if slot.Forger == addr || anyoneForge {
 		return true
 	}
 	return false
 }
 
-func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) error {
-	c.txManager.SetLastBlock(stats.Eth.LastBlock.Num)
+func (c *Coordinator) canForge() bool {
+	blockNum := c.stats.Eth.LastBlock.Num + 1
+	return canForge(&c.consts.Auction, &c.vars.Auction,
+		&c.stats.Sync.Auction.CurrentSlot, &c.stats.Sync.Auction.NextSlot,
+		c.cfg.ForgerAddress, blockNum)
+}
 
-	canForge := c.canForge(stats)
+func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) error {
+	canForge := c.canForge()
 	if c.pipeline == nil {
 		if canForge {
 			log.Infow("Coordinator: forging state begin", "block",
@@ -274,22 +302,24 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 }
 
 func (c *Coordinator) handleMsgSyncBlock(ctx context.Context, msg *MsgSyncBlock) error {
-	c.stats = &msg.Stats
+	c.stats = msg.Stats
 	c.syncSCVars(msg.Vars)
+	c.txManager.SetSyncStatsVars(ctx, &msg.Stats, &msg.Vars)
 	if c.pipeline != nil {
-		c.pipeline.SetSyncStatsVars(&msg.Stats, &msg.Vars)
+		c.pipeline.SetSyncStatsVars(ctx, &msg.Stats, &msg.Vars)
 	}
 	if !c.stats.Synced() {
 		return nil
 	}
-	return c.syncStats(ctx, c.stats)
+	return c.syncStats(ctx, &c.stats)
 }
 
 func (c *Coordinator) handleReorg(ctx context.Context, msg *MsgSyncReorg) error {
-	c.stats = &msg.Stats
+	c.stats = msg.Stats
 	c.syncSCVars(msg.Vars)
+	c.txManager.SetSyncStatsVars(ctx, &msg.Stats, &msg.Vars)
 	if c.pipeline != nil {
-		c.pipeline.SetSyncStatsVars(&msg.Stats, &msg.Vars)
+		c.pipeline.SetSyncStatsVars(ctx, &msg.Stats, &msg.Vars)
 	}
 	if common.BatchNum(c.stats.Sync.LastBatch) < c.pipelineBatchNum {
 		// There's been a reorg and the batch from which the pipeline
@@ -373,11 +403,11 @@ func (c *Coordinator) Start() {
 				}
 				waitDuration = longWaitDuration
 			case <-time.After(waitDuration):
-				if c.stats == nil {
+				if !c.stats.Synced() {
 					waitDuration = longWaitDuration
 					continue
 				}
-				if err := c.syncStats(c.ctx, c.stats); c.ctx.Err() != nil {
+				if err := c.syncStats(c.ctx, &c.stats); c.ctx.Err() != nil {
 					continue
 				} else if err != nil {
 					log.Errorw("Coordinator.syncStats", "err", err)

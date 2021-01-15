@@ -429,10 +429,10 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 	return nil
 }
 
-func (n *Node) handleNewBlock(stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr,
+func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr,
 	batches []common.BatchData) {
 	if n.mode == ModeCoordinator {
-		n.coord.SendMsg(coordinator.MsgSyncBlock{
+		n.coord.SendMsg(ctx, coordinator.MsgSyncBlock{
 			Stats:   *stats,
 			Vars:    vars,
 			Batches: batches,
@@ -461,9 +461,9 @@ func (n *Node) handleNewBlock(stats *synchronizer.Stats, vars synchronizer.SCVar
 	}
 }
 
-func (n *Node) handleReorg(stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr) {
+func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr) {
 	if n.mode == ModeCoordinator {
-		n.coord.SendMsg(coordinator.MsgSyncReorg{
+		n.coord.SendMsg(ctx, coordinator.MsgSyncReorg{
 			Stats: *stats,
 			Vars:  vars,
 		})
@@ -491,7 +491,7 @@ func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
 		vars := n.sync.SCVars()
-		n.handleReorg(stats, vars)
+		n.handleReorg(ctx, stats, vars)
 		return nil, time.Duration(0), nil
 	} else if blockData != nil {
 		// case: new block
@@ -500,7 +500,7 @@ func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common
 			Auction:  blockData.Auction.Vars,
 			WDelayer: blockData.WDelayer.Vars,
 		}
-		n.handleNewBlock(stats, vars, blockData.Rollup.Batches)
+		n.handleNewBlock(ctx, stats, vars, blockData.Rollup.Batches)
 		return &blockData.Block, time.Duration(0), nil
 	} else {
 		// case: no block
@@ -519,7 +519,7 @@ func (n *Node) StartSynchronizer() {
 	// the last synced one) is synchronized
 	stats := n.sync.Stats()
 	vars := n.sync.SCVars()
-	n.handleNewBlock(stats, vars, []common.BatchData{})
+	n.handleNewBlock(n.ctx, stats, vars, []common.BatchData{})
 
 	n.wg.Add(1)
 	go func() {

@@ -119,10 +119,17 @@ func cmdRun(c *cli.Context) error {
 	// catch ^C to send the stop signal
 	ossig := make(chan os.Signal, 1)
 	signal.Notify(ossig, os.Interrupt)
+	const forceStopCount = 3
 	go func() {
+		n := 0
 		for sig := range ossig {
 			if sig == os.Interrupt {
+				log.Info("Received Interrupt Signal")
 				stopCh <- nil
+				n++
+				if n == forceStopCount {
+					log.Fatalf("Received %v Interrupt Signals", forceStopCount)
+				}
 			}
 		}
 	}()
