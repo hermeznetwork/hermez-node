@@ -1,7 +1,6 @@
 package batchbuilder
 
 import (
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
@@ -18,19 +17,17 @@ type ConfigCircuit struct {
 // BatchBuilder implements the batch builder type, which contains the
 // functionalities
 type BatchBuilder struct {
-	localStateDB   *statedb.LocalStateDB
-	configCircuits []ConfigCircuit
+	localStateDB *statedb.LocalStateDB
 }
 
 // ConfigBatch contains the batch configuration
 type ConfigBatch struct {
-	ForgerAddress     ethCommon.Address
 	TxProcessorConfig txprocessor.Config
 }
 
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset
 // method
-func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, configCircuits []ConfigCircuit, batchNum common.BatchNum, nLevels uint64) (*BatchBuilder, error) {
+func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, batchNum common.BatchNum, nLevels uint64) (*BatchBuilder, error) {
 	localStateDB, err := statedb.NewLocalStateDB(dbpath, 128, synchronizerStateDB,
 		statedb.TypeBatchBuilder, int(nLevels))
 	if err != nil {
@@ -38,8 +35,7 @@ func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, config
 	}
 
 	bb := BatchBuilder{
-		localStateDB:   localStateDB,
-		configCircuits: configCircuits,
+		localStateDB: localStateDB,
 	}
 
 	err = bb.Reset(batchNum, true)
@@ -56,8 +52,7 @@ func (bb *BatchBuilder) Reset(batchNum common.BatchNum, fromSynchronizer bool) e
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
 func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBatch, l1usertxs,
-	l1coordinatortxs []common.L1Tx, pooll2txs []common.PoolL2Tx,
-	tokenIDs []common.TokenID) (*common.ZKInputs, error) {
+	l1coordinatortxs []common.L1Tx, pooll2txs []common.PoolL2Tx) (*common.ZKInputs, error) {
 	bbStateDB := bb.localStateDB.StateDB
 	tp := txprocessor.NewTxProcessor(bbStateDB, configBatch.TxProcessorConfig)
 
