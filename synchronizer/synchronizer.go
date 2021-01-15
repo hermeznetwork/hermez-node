@@ -1080,7 +1080,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 		}
 		s.vars.Auction.DefaultSlotSetBid[evt.SlotSet] = evt.NewInitialMinBid
 		s.vars.Auction.DefaultSlotSetBidSlotNum = s.consts.Auction.SlotNum(blockNum) +
-			int64(s.vars.Auction.ClosedAuctionSlots) + 1
+			int64(s.vars.Auction.ClosedAuctionSlots)
 		varsUpdate = true
 	}
 

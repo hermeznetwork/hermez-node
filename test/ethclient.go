@@ -1429,11 +1429,11 @@ func (c *Client) AuctionBid(amount *big.Int, slot int64, bidAmount *big.Int,
 	nextBlock := c.nextBlock()
 	a := nextBlock.Auction
 
-	if slot < a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots) {
+	if slot <= a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots) {
 		return nil, tracerr.Wrap(errBidClosed)
 	}
 
-	if slot >= a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots)+int64(a.Vars.OpenAuctionSlots) {
+	if slot > a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots)+int64(a.Vars.OpenAuctionSlots) {
 		return nil, tracerr.Wrap(errBidNotOpen)
 	}
 
