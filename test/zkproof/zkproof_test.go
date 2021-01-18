@@ -11,6 +11,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/hermeznetwork/hermez-node/test/txsets"
@@ -26,9 +27,7 @@ const pollInterval = 200 * time.Millisecond
 func TestMain(m *testing.M) {
 	exitVal := 0
 	proofServerURL = os.Getenv("PROOF_SERVER_URL")
-	if proofServerURL != "" {
-		exitVal = m.Run()
-	}
+	exitVal = m.Run()
 	os.Exit(exitVal)
 }
 
@@ -38,7 +37,7 @@ const MaxL1Tx = 256
 const MaxFeeTx = 64
 const ChainID uint16 = 1
 
-var config = txprocessor.Config{
+var txprocConfig = txprocessor.Config{
 	NLevels:  uint32(NLevels),
 	MaxTx:    MaxTx,
 	MaxL1Tx:  MaxL1Tx,
@@ -46,19 +45,24 @@ var config = txprocessor.Config{
 	ChainID:  ChainID,
 }
 
-func initStateDB(t *testing.T) *statedb.StateDB {
+func initStateDB(t *testing.T, typ statedb.TypeStateDB) *statedb.StateDB {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, NLevels)
+	sdb, err := statedb.NewStateDB(dir, 128, typ, NLevels)
 	require.NoError(t, err)
 	return sdb
 }
 
-func sendProofAndCheckResp(t *testing.T, ptOut *txprocessor.ProcessTxOutput) {
+func sendProofAndCheckResp(t *testing.T, zki *common.ZKInputs) {
+	if proofServerURL == "" {
+		log.Debug("No PROOF_SERVER_URL defined, not using ProofServer")
+		return
+	}
+
 	// Store zkinputs json for debugging purposes
-	zkInputsJSON, err := json.Marshal(ptOut.ZKInputs)
+	zkInputsJSON, err := json.Marshal(zki)
 	require.NoError(t, err)
 	err = ioutil.WriteFile("/tmp/dbgZKInputs.json", zkInputsJSON, 0640) //nolint:gosec
 	require.NoError(t, err)
@@ -66,7 +70,7 @@ func sendProofAndCheckResp(t *testing.T, ptOut *txprocessor.ProcessTxOutput) {
 	proofServerClient := prover.NewProofServerClient(proofServerURL, pollInterval)
 	err = proofServerClient.WaitReady(context.Background())
 	require.NoError(t, err)
-	err = proofServerClient.CalculateProof(context.Background(), ptOut.ZKInputs)
+	err = proofServerClient.CalculateProof(context.Background(), zki)
 	require.NoError(t, err)
 	proof, pubInputs, err := proofServerClient.GetProof(context.Background())
 	require.NoError(t, err)
@@ -75,9 +79,9 @@ func sendProofAndCheckResp(t *testing.T, ptOut *txprocessor.ProcessTxOutput) {
 }
 
 func TestZKInputsEmpty(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 
 	coordIdxs := []common.Idx{}
 	l1UserTxs := []common.L1Tx{}
@@ -86,7 +90,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut) // test empty batch ZKInputs
+	sendProofAndCheckResp(t, ptOut.ZKInputs) // test empty batch ZKInputs
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs = txsets.GenerateTxsZKInputs0(t, ChainID)
 
@@ -99,79 +103,79 @@ func TestZKInputsEmpty(t *testing.T) {
 	l2Txs = []common.PoolL2Tx{}
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
-	sendProofAndCheckResp(t, ptOut) // test empty batch ZKInputs after a non-empty batch
+	sendProofAndCheckResp(t, ptOut.ZKInputs) // test empty batch ZKInputs after a non-empty batch
 }
 
 func TestZKInputs0(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs0(t, ChainID)
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 }
 func TestZKInputs1(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs1(t, ChainID)
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 }
 func TestZKInputs2(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs2(t, ChainID)
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 }
 func TestZKInputs3(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs3(t, ChainID)
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 }
 func TestZKInputs4(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs4(t, ChainID)
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 }
 
 func TestZKInputs5(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs5(t, ChainID)
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 }
 
 func TestZKInputs6(t *testing.T) {
-	sdb := initStateDB(t)
+	sdb := initStateDB(t, statedb.TypeBatchBuilder)
 
 	tc := til.NewContext(ChainID, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(txsets.SetBlockchainMinimumFlow0)
@@ -181,12 +185,12 @@ func TestZKInputs6(t *testing.T) {
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
 	tc.RestartNonces()
 
-	tp := txprocessor.NewTxProcessor(sdb, config)
+	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	// batch1
 	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch2
 	l1UserTxs := []common.L1Tx{}
@@ -194,7 +198,7 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch3
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
@@ -202,7 +206,7 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch4
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
@@ -210,7 +214,7 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch5
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
@@ -218,7 +222,7 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch6
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
@@ -226,10 +230,10 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch7
-	// simulate the PoolL2Txs of the batch6
+	// simulate the PoolL2Txs of the batch7
 	batchPoolL2 := `
 	Type: PoolL2
 	PoolTransferToEthAddr(1) A-B: 200 (126)
@@ -244,10 +248,10 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch8
-	// simulate the PoolL2Txs of the batch7
+	// simulate the PoolL2Txs of the batch8
 	batchPoolL2 = `
 	Type: PoolL2
 	PoolTransfer(0) A-B: 100 (126)
@@ -262,7 +266,7 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch9
 	// simulate the PoolL2Txs of the batch9
@@ -279,7 +283,7 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 
 	// batch10
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
@@ -288,5 +292,5 @@ func TestZKInputs6(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	sendProofAndCheckResp(t, ptOut)
+	sendProofAndCheckResp(t, ptOut.ZKInputs)
 }

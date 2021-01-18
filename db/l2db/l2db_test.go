@@ -131,7 +131,8 @@ func generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 			PoolTransfer(1) B-A: 8 (2)
 			PoolTransfer(2) B-A: 1 (1)
 			PoolTransfer(1) A-B: 3 (1)
-			PoolTransfer(2) B-A: 5 (2)
+			PoolTransferToEthAddr(2) B-A: 5 (2)
+			PoolTransferToBJJ(2) B-A: 5 (2)
 
 			PoolExit(1) A: 5 (2)
 			PoolExit(2) B: 3 (1)

@@ -348,11 +348,10 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 
 	// 4. Call BatchBuilder with TxSelector output
 	configBatch := &batchbuilder.ConfigBatch{
-		ForgerAddress:     p.cfg.ForgerAddress,
 		TxProcessorConfig: p.cfg.TxProcessorConfig,
 	}
 	zkInputs, err := p.batchBuilder.BuildBatch(coordIdxs, configBatch, l1UserTxsExtra,
-		l1CoordTxs, poolL2Txs, nil)
+		l1CoordTxs, poolL2Txs)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

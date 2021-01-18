@@ -674,7 +674,7 @@ func TestZKInputs6(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	tc := til.NewContext(0, common.RollupConstMaxL1UserTx)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(txsets.SetBlockchainMinimumFlow0)
 	require.NoError(t, err)
 

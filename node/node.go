@@ -228,7 +228,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			return nil, tracerr.Wrap(err)
 		}
 		batchBuilder, err := batchbuilder.NewBatchBuilder(cfg.Coordinator.BatchBuilder.Path,
-			stateDB, nil, 0, uint64(cfg.Coordinator.Circuit.NLevels))
+			stateDB, 0, uint64(cfg.Coordinator.Circuit.NLevels))
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
