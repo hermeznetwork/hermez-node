@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -37,13 +36,6 @@ type Period struct {
 	ToBlock       int64     `json:"toBlock"`
 	FromTimestamp time.Time `json:"fromTimestamp"`
 	ToTimestamp   time.Time `json:"toTimestamp"`
-}
-
-var bootCoordinator historydb.CoordinatorAPI = historydb.CoordinatorAPI{
-	ItemID: 0,
-	Bidder: ethCommon.HexToAddress("0x111111111111111111111111111111111111111"),
-	Forger: ethCommon.HexToAddress("0x111111111111111111111111111111111111111"),
-	URL:    "https://bootCoordinator",
 }
 
 func (a *API) getState(c *gin.Context) {
@@ -266,7 +258,10 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 		}
 		// If there is no bid, the coordinator that will forge is boot coordinator
 		if !foundForger {
-			nextForger.Coordinator = bootCoordinator
+			nextForger.Coordinator = historydb.CoordinatorAPI{
+				Forger: a.status.Auction.BootCoordinator,
+				URL:    a.status.Auction.BootCoordinatorURL,
+			}
 		}
 		nextForgers = append(nextForgers, nextForger)
 	}
