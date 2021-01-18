@@ -15,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -627,5 +628,48 @@ func TestAuth(t *testing.T) {
 		nameZone, offset := auths[i].Timestamp.Zone()
 		assert.Equal(t, "UTC", nameZone)
 		assert.Equal(t, 0, offset)
+	}
+}
+
+func TestAddGet(t *testing.T) {
+	err := prepareHistoryDB(historyDB)
+	if err != nil {
+		log.Error("Error prepare historyDB", err)
+	}
+	poolL2Txs, err := generatePoolL2Txs()
+	assert.NoError(t, err)
+
+	// We will work with only 3 txs
+	require.GreaterOrEqual(t, len(poolL2Txs), 3)
+	txs := poolL2Txs[:3]
+	// NOTE: By changing the tx fields, the signature will no longer be
+	// valid, but we are not checking the signautre here so it's OK.
+	// 0. Has ToIdx >= 256 && ToEthAddr == 0 && ToBJJ == 0
+	require.GreaterOrEqual(t, int(txs[0].ToIdx), 256)
+	txs[0].ToEthAddr = ethCommon.Address{}
+	txs[0].ToBJJ = babyjub.PublicKeyComp{}
+	// 1. Has ToIdx >= 256 && ToEthAddr != 0 && ToBJJ != 0
+	require.GreaterOrEqual(t, int(txs[1].ToIdx), 256)
+	require.NotEqual(t, txs[1].ToEthAddr, ethCommon.Address{})
+	require.NotEqual(t, txs[1].ToBJJ, babyjub.PublicKeyComp{})
+	// 2. Has ToIdx == 0 && ToEthAddr != 0 && ToBJJ != 0
+	txs[2].ToIdx = 0
+	require.NotEqual(t, txs[2].ToEthAddr, ethCommon.Address{})
+	require.NotEqual(t, txs[2].ToBJJ, babyjub.PublicKeyComp{})
+
+	for i := 0; i < len(txs); i++ {
+		require.NoError(t, txs[i].SetID())
+		require.NoError(t, l2DB.AddTxTest(&txs[i]))
+	}
+	// Verify that the inserts haven't altered any field (specially
+	// ToEthAddr and ToBJJ)
+	for i := 0; i < len(txs); i++ {
+		dbTx, err := l2DB.GetTx(txs[i].TxID)
+		require.NoError(t, err)
+		// Ignore Timestamp, AbsoluteFee, AbsoluteFeeUpdate
+		txs[i].Timestamp = dbTx.Timestamp
+		txs[i].AbsoluteFee = dbTx.AbsoluteFee
+		txs[i].AbsoluteFeeUpdate = dbTx.AbsoluteFeeUpdate
+		assert.Equal(t, txs[i], *dbTx)
 	}
 }

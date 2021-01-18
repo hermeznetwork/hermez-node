@@ -143,9 +143,9 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 }
 
 // selectPoolTxAPI select part of queries to get PoolL2TxRead
-const selectPoolTxAPI = `SELECT  tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.from_eth_addr, 
-tx_pool.from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.to_eth_addr, 
-tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
+const selectPoolTxAPI = `SELECT  tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
+tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
+tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
 tx_pool.state, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 

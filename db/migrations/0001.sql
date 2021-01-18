@@ -593,11 +593,13 @@ CREATE TABLE wdelayer_vars (
 CREATE TABLE tx_pool (
     tx_id BYTEA PRIMARY KEY,
     from_idx BIGINT NOT NULL,
-    from_eth_addr BYTEA,
-    from_bjj BYTEA,
+    effective_from_eth_addr BYTEA,
+    effective_from_bjj BYTEA,
     to_idx BIGINT,
     to_eth_addr BYTEA,
     to_bjj BYTEA,
+    effective_to_eth_addr BYTEA,
+    effective_to_bjj BYTEA,
     token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
     amount BYTEA NOT NULL,
     amount_f NUMERIC NOT NULL,
@@ -624,10 +626,13 @@ CREATE FUNCTION set_pool_tx()
 AS 
 $BODY$
 BEGIN
-    SELECT INTO NEW."from_eth_addr", NEW."from_bjj" eth_addr, bjj FROM account WHERE idx = NEW."from_idx";
+    SELECT INTO NEW."effective_from_eth_addr", NEW."effective_from_bjj" eth_addr, bjj FROM account WHERE idx = NEW."from_idx";
      -- Set to_{eth_addr,bjj}
     IF NEW.to_idx > 255 THEN
-        SELECT INTO NEW."to_eth_addr", NEW."to_bjj" eth_addr, bjj FROM account WHERE idx = NEW."to_idx";
+        SELECT INTO NEW."effective_to_eth_addr", NEW."effective_to_bjj" eth_addr, bjj FROM account WHERE idx = NEW."to_idx";
+    ELSE
+        NEW."effective_to_eth_addr" = NEW."to_eth_addr";
+        NEW."effective_to_bjj" = NEW."to_bjj";
     END IF;
     RETURN NEW;
 END;
