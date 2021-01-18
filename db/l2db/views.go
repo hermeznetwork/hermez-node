@@ -38,27 +38,27 @@ type PoolL2TxWrite struct {
 
 // PoolTxAPI represents a L2 Tx pool with extra metadata used by the API
 type PoolTxAPI struct {
-	TxID        common.TxID           `meddler:"tx_id"`
-	FromIdx     apitypes.HezIdx       `meddler:"from_idx"`
-	FromEthAddr *apitypes.HezEthAddr  `meddler:"from_eth_addr"`
-	FromBJJ     *apitypes.HezBJJ      `meddler:"from_bjj"`
-	ToIdx       *apitypes.HezIdx      `meddler:"to_idx"`
-	ToEthAddr   *apitypes.HezEthAddr  `meddler:"to_eth_addr"`
-	ToBJJ       *apitypes.HezBJJ      `meddler:"to_bjj"`
-	Amount      apitypes.BigIntStr    `meddler:"amount"`
-	Fee         common.FeeSelector    `meddler:"fee"`
-	Nonce       common.Nonce          `meddler:"nonce"`
-	State       common.PoolL2TxState  `meddler:"state"`
-	Signature   babyjub.SignatureComp `meddler:"signature"`
-	RqFromIdx   *apitypes.HezIdx      `meddler:"rq_from_idx"`
-	RqToIdx     *apitypes.HezIdx      `meddler:"rq_to_idx"`
-	RqToEthAddr *apitypes.HezEthAddr  `meddler:"rq_to_eth_addr"`
-	RqToBJJ     *apitypes.HezBJJ      `meddler:"rq_to_bjj"`
-	RqTokenID   *common.TokenID       `meddler:"rq_token_id"`
-	RqAmount    *apitypes.BigIntStr   `meddler:"rq_amount"`
-	RqFee       *common.FeeSelector   `meddler:"rq_fee"`
-	RqNonce     *common.Nonce         `meddler:"rq_nonce"`
-	Type        common.TxType         `meddler:"tx_type"`
+	TxID                 common.TxID           `meddler:"tx_id"`
+	FromIdx              apitypes.HezIdx       `meddler:"from_idx"`
+	EffectiveFromEthAddr *apitypes.HezEthAddr  `meddler:"effective_from_eth_addr"`
+	EffectiveFromBJJ     *apitypes.HezBJJ      `meddler:"effective_from_bjj"`
+	ToIdx                *apitypes.HezIdx      `meddler:"to_idx"`
+	EffectiveToEthAddr   *apitypes.HezEthAddr  `meddler:"effective_to_eth_addr"`
+	EffectiveToBJJ       *apitypes.HezBJJ      `meddler:"effective_to_bjj"`
+	Amount               apitypes.BigIntStr    `meddler:"amount"`
+	Fee                  common.FeeSelector    `meddler:"fee"`
+	Nonce                common.Nonce          `meddler:"nonce"`
+	State                common.PoolL2TxState  `meddler:"state"`
+	Signature            babyjub.SignatureComp `meddler:"signature"`
+	RqFromIdx            *apitypes.HezIdx      `meddler:"rq_from_idx"`
+	RqToIdx              *apitypes.HezIdx      `meddler:"rq_to_idx"`
+	RqToEthAddr          *apitypes.HezEthAddr  `meddler:"rq_to_eth_addr"`
+	RqToBJJ              *apitypes.HezBJJ      `meddler:"rq_to_bjj"`
+	RqTokenID            *common.TokenID       `meddler:"rq_token_id"`
+	RqAmount             *apitypes.BigIntStr   `meddler:"rq_amount"`
+	RqFee                *common.FeeSelector   `meddler:"rq_fee"`
+	RqNonce              *common.Nonce         `meddler:"rq_nonce"`
+	Type                 common.TxType         `meddler:"tx_type"`
 	// Extra read fileds
 	BatchNum         *common.BatchNum  `meddler:"batch_num"`
 	Timestamp        time.Time         `meddler:"timestamp,utctime"`
@@ -81,11 +81,11 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 		"id":                          tx.TxID,
 		"type":                        tx.Type,
 		"fromAccountIndex":            tx.FromIdx,
-		"fromHezEthereumAddress":      tx.FromEthAddr,
-		"fromBJJ":                     tx.FromBJJ,
+		"fromHezEthereumAddress":      tx.EffectiveFromEthAddr,
+		"fromBJJ":                     tx.EffectiveFromBJJ,
 		"toAccountIndex":              tx.ToIdx,
-		"toHezEthereumAddress":        tx.ToEthAddr,
-		"toBjj":                       tx.ToBJJ,
+		"toHezEthereumAddress":        tx.EffectiveToEthAddr,
+		"toBjj":                       tx.EffectiveToBJJ,
 		"amount":                      tx.Amount,
 		"fee":                         tx.Fee,
 		"nonce":                       tx.Nonce,
