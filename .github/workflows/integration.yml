@@ -1,0 +1,17 @@
+name: Integration testing
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  trigger-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: send event to integration-testing
+        run: |
+          curl -X POST https://api.github.com/repos/hermeznetwork/integration-testing/actions/workflows/update.yml/dispatches \
+          -H 'Accept: application/vnd.github.v3+json' \
+          -u ${{ secrets.INT_BOT_ACCESS_TOKEN }} \
+          --data '{"ref":"main","inputs": {"repository": "hermeznetwork/hermez-node"}}'
