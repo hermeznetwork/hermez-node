@@ -233,6 +233,22 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 	}
 
+	// remove repeated CoordIdxs that are for the same TokenID (use the
+	// first occurrence)
+	usedCoordTokenIDs := make(map[common.TokenID]bool)
+	var filteredCoordIdxs []common.Idx
+	for i := 0; i < len(coordIdxs); i++ {
+		accCoord, err := tp.s.GetAccount(coordIdxs[i])
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		if !usedCoordTokenIDs[accCoord.TokenID] {
+			usedCoordTokenIDs[accCoord.TokenID] = true
+			filteredCoordIdxs = append(filteredCoordIdxs, coordIdxs[i])
+		}
+	}
+	coordIdxs = filteredCoordIdxs
+
 	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
 	for _, idx := range coordIdxs {
 		tp.AccumulatedFees[idx] = big.NewInt(0)
