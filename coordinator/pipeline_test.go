@@ -291,7 +291,9 @@ func TestEthRollupForgeBatch(t *testing.T) {
 	batchInfo.PublicInputs = pubInputs
 
 	batchInfo.ForgeBatchArgs = prepareForgeBatchArgs(batchInfo)
-	_, err = client.RollupForgeBatch(batchInfo.ForgeBatchArgs)
+	auth, err := client.NewAuth()
+	require.NoError(t, err)
+	_, err = client.RollupForgeBatch(batchInfo.ForgeBatchArgs, auth)
 	require.NoError(t, err)
 	batchInfo.Proof = proof
 }

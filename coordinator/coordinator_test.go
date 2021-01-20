@@ -233,12 +233,17 @@ func TestCoordinatorFlow(t *testing.T) {
 	// Bid for slot 2 and 4
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
-	_, err = ethClient.AuctionBidSimple(2, big.NewInt(9999))
+	bid, ok := new(big.Int).SetString("11000000000000000000", 10)
+	if !ok {
+		panic("bad bid")
+	}
+	_, err = ethClient.AuctionBidSimple(3, bid)
 	require.NoError(t, err)
-	_, err = ethClient.AuctionBidSimple(4, big.NewInt(9999))
+	_, err = ethClient.AuctionBidSimple(5, bid)
 	require.NoError(t, err)
 
 	coord.Start()
+	ctx := context.Background()
 	time.Sleep(1 * time.Second)
 
 	waitForSlot := func(slot int64) {
@@ -259,9 +264,17 @@ func TestCoordinatorFlow(t *testing.T) {
 			stats.Sync.LastBatch = stats.Eth.LastBatch
 			canForge, err := ethClient.AuctionCanForge(forger, blockNum+1)
 			require.NoError(t, err)
+			var slot common.Slot
+			slotNum := ethClientSetup.AuctionConstants.SlotNum(blockNum + 1)
+			slot.StartBlock = ethClientSetup.AuctionConstants.GenesisBlockNum +
+				(slotNum)*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+			slot.EndBlock = ethClientSetup.AuctionConstants.GenesisBlockNum +
+				(slotNum+1)*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
 			if canForge {
-				stats.Sync.Auction.CurrentSlot.Forger = forger
+				slot.Forger = forger
 			}
+			stats.Sync.Auction.CurrentSlot = slot
+
 			// Copy stateDB to synchronizer if there was a new batch
 			source := fmt.Sprintf("%v/BatchNum%v", batchBuilderDBPath, stats.Sync.LastBatch)
 			dest := fmt.Sprintf("%v/BatchNum%v", syncDBPath, stats.Sync.LastBatch)
@@ -273,7 +286,7 @@ func TestCoordinatorFlow(t *testing.T) {
 					require.NoError(t, err)
 				}
 			}
-			coord.SendMsg(MsgSyncBlock{
+			coord.SendMsg(ctx, MsgSyncBlock{
 				Stats: stats,
 			})
 		}
@@ -329,7 +342,7 @@ func TestCoordCanForge(t *testing.T) {
 	if !ok {
 		panic("bad bid")
 	}
-	_, err = ethClient.AuctionBidSimple(2, bid)
+	_, err = ethClient.AuctionBidSimple(3, bid)
 	require.NoError(t, err)
 
 	modules2 := newTestModules(t)
@@ -343,28 +356,48 @@ func TestCoordCanForge(t *testing.T) {
 
 	var stats synchronizer.Stats
 
+	slots := [4]common.Slot{}
+	for i := 0; i < 4; i++ {
+		slots[i].StartBlock = ethClientSetup.AuctionConstants.GenesisBlockNum +
+			int64(i)*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+		slots[i].EndBlock = ethClientSetup.AuctionConstants.GenesisBlockNum +
+			int64(i+1)*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+		// Only slot 3 has Coordinator winner, the rest are BootCoordinator
+		if i == 3 {
+			slots[i].Forger = forger
+		} else {
+			slots[i].Forger = bootForger
+		}
+	}
+
 	// Slot 0.  No bid, so the winner is the boot coordinator
 	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum
 	stats.Sync.LastBlock = stats.Eth.LastBlock
-	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, false, coord.canForge(&stats))
-	assert.Equal(t, true, bootCoord.canForge(&stats))
+	stats.Sync.Auction.CurrentSlot = slots[0]
+	coord.stats = stats
+	bootCoord.stats = stats
+	assert.Equal(t, false, coord.canForge())
+	assert.Equal(t, true, bootCoord.canForge())
 
 	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
 	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
 		int64(ethClientSetup.AuctionVariables.SlotDeadline)
 	stats.Sync.LastBlock = stats.Eth.LastBlock
-	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, true, coord.canForge(&stats))
-	assert.Equal(t, true, bootCoord.canForge(&stats))
+	stats.Sync.Auction.CurrentSlot = slots[0]
+	coord.stats = stats
+	bootCoord.stats = stats
+	assert.Equal(t, true, coord.canForge())
+	assert.Equal(t, true, bootCoord.canForge())
 
-	// Slot 1. coordinator bid, so the winner is the coordinator
+	// Slot 3. coordinator bid, so the winner is the coordinator
 	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
-		1*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+		3*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
 	stats.Sync.LastBlock = stats.Eth.LastBlock
-	stats.Sync.Auction.CurrentSlot.Forger = forger
-	assert.Equal(t, true, coord.canForge(&stats))
-	assert.Equal(t, false, bootCoord.canForge(&stats))
+	stats.Sync.Auction.CurrentSlot = slots[3]
+	coord.stats = stats
+	bootCoord.stats = stats
+	assert.Equal(t, true, coord.canForge())
+	assert.Equal(t, false, bootCoord.canForge())
 }
 
 func TestCoordHandleMsgSyncBlock(t *testing.T) {
@@ -382,49 +415,67 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 	if !ok {
 		panic("bad bid")
 	}
-	_, err = ethClient.AuctionBidSimple(2, bid)
+	_, err = ethClient.AuctionBidSimple(3, bid)
 	require.NoError(t, err)
 
+	slots := [4]common.Slot{}
+	for i := 0; i < 4; i++ {
+		slots[i].StartBlock = ethClientSetup.AuctionConstants.GenesisBlockNum +
+			int64(i)*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+		slots[i].EndBlock = ethClientSetup.AuctionConstants.GenesisBlockNum +
+			int64(i+1)*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
+		// Only slot 3 has Coordinator winner, the rest are BootCoordinator
+		if i == 3 {
+			slots[i].Forger = forger
+		} else {
+			slots[i].Forger = bootForger
+		}
+	}
+
 	var msg MsgSyncBlock
-	stats := &msg.Stats
+	coord.stats = msg.Stats
 	ctx := context.Background()
 
 	// Slot 0.  No bid, so the winner is the boot coordinator
 	// pipelineStarted: false -> false
-	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum
-	stats.Sync.LastBlock = stats.Eth.LastBlock
-	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, false, coord.canForge(stats))
+	coord.stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum
+	coord.stats.Sync.LastBlock = coord.stats.Eth.LastBlock
+	coord.stats.Sync.Auction.CurrentSlot = slots[0]
+	assert.Equal(t, false, coord.canForge())
+	msg.Stats = coord.stats
 	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.Nil(t, coord.pipeline)
 
 	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
 	// pipelineStarted: false -> true
-	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+	coord.stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
 		int64(ethClientSetup.AuctionVariables.SlotDeadline)
-	stats.Sync.LastBlock = stats.Eth.LastBlock
-	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, true, coord.canForge(stats))
+	coord.stats.Sync.LastBlock = coord.stats.Eth.LastBlock
+	coord.stats.Sync.Auction.CurrentSlot = slots[0]
+	assert.Equal(t, true, coord.canForge())
+	msg.Stats = coord.stats
 	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.NotNil(t, coord.pipeline)
 
 	// Slot 0.  No bid, and we reach the deadline, so anyone can forge
 	// pipelineStarted: true -> true
-	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+	coord.stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
 		int64(ethClientSetup.AuctionVariables.SlotDeadline) + 1
-	stats.Sync.LastBlock = stats.Eth.LastBlock
-	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, true, coord.canForge(stats))
+	coord.stats.Sync.LastBlock = coord.stats.Eth.LastBlock
+	coord.stats.Sync.Auction.CurrentSlot = slots[0]
+	assert.Equal(t, true, coord.canForge())
+	msg.Stats = coord.stats
 	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.NotNil(t, coord.pipeline)
 
-	// Slot 0. No bid, so the winner is the boot coordinator
+	// Slot 1. No bid, so the winner is the boot coordinator
 	// pipelineStarted: true -> false
-	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
+	coord.stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
 		1*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
-	stats.Sync.LastBlock = stats.Eth.LastBlock
-	stats.Sync.Auction.CurrentSlot.Forger = bootForger
-	assert.Equal(t, false, coord.canForge(stats))
+	coord.stats.Sync.LastBlock = coord.stats.Eth.LastBlock
+	coord.stats.Sync.Auction.CurrentSlot = slots[1]
+	assert.Equal(t, false, coord.canForge())
+	msg.Stats = coord.stats
 	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.Nil(t, coord.pipeline)
 }
@@ -473,7 +524,7 @@ func TestCoordinatorStress(t *testing.T) {
 			require.NoError(t, err)
 			if blockData != nil {
 				stats := syn.Stats()
-				coord.SendMsg(MsgSyncBlock{
+				coord.SendMsg(ctx, MsgSyncBlock{
 					Stats:   *stats,
 					Batches: blockData.Rollup.Batches,
 					Vars: synchronizer.SCVariablesPtr{

@@ -37,6 +37,7 @@ type Stats struct {
 		LastForgeL1TxsNum int64
 		Auction           struct {
 			CurrentSlot common.Slot
+			NextSlot    common.Slot
 		}
 	}
 }
@@ -67,10 +68,11 @@ func NewStatsHolder(firstBlockNum int64, refreshPeriod time.Duration) *StatsHold
 	return &StatsHolder{Stats: stats}
 }
 
-// UpdateCurrentSlot updates the auction stats
-func (s *StatsHolder) UpdateCurrentSlot(slot common.Slot) {
+// UpdateCurrentNextSlot updates the auction stats
+func (s *StatsHolder) UpdateCurrentNextSlot(current *common.Slot, next *common.Slot) {
 	s.rw.Lock()
-	s.Sync.Auction.CurrentSlot = slot
+	s.Sync.Auction.CurrentSlot = *current
+	s.Sync.Auction.NextSlot = *next
 	s.rw.Unlock()
 }
 
@@ -128,6 +130,14 @@ func (s *StatsHolder) CopyStats() *Stats {
 	if s.Sync.Auction.CurrentSlot.DefaultSlotBid != nil {
 		sCopy.Sync.Auction.CurrentSlot.DefaultSlotBid =
 			common.CopyBigInt(s.Sync.Auction.CurrentSlot.DefaultSlotBid)
+	}
+	if s.Sync.Auction.NextSlot.BidValue != nil {
+		sCopy.Sync.Auction.NextSlot.BidValue =
+			common.CopyBigInt(s.Sync.Auction.NextSlot.BidValue)
+	}
+	if s.Sync.Auction.NextSlot.DefaultSlotBid != nil {
+		sCopy.Sync.Auction.NextSlot.DefaultSlotBid =
+			common.CopyBigInt(s.Sync.Auction.NextSlot.DefaultSlotBid)
 	}
 	s.rw.RUnlock()
 	return &sCopy
@@ -282,8 +292,39 @@ func (s *Synchronizer) SCVars() SCVariablesPtr {
 	}
 }
 
+// setSlotCoordinator queries the highest bidder of a slot in the HistoryDB to
+// determine the coordinator that can bid in a slot
+func (s *Synchronizer) setSlotCoordinator(slot *common.Slot) error {
+	bidCoord, err := s.historyDB.GetBestBidCoordinator(slot.SlotNum)
+	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+		return tracerr.Wrap(err)
+	}
+	if tracerr.Unwrap(err) == sql.ErrNoRows {
+		slot.BootCoord = true
+		slot.Forger = s.vars.Auction.BootCoordinator
+		slot.URL = s.vars.Auction.BootCoordinatorURL
+	} else if err == nil {
+		slot.BidValue = bidCoord.BidValue
+		slot.DefaultSlotBid = bidCoord.DefaultSlotSetBid[slot.SlotNum%6]
+		// Only if the highest bid value is greater/equal than
+		// the default slot bid, the bidder is the winner of
+		// the slot.  Otherwise the boot coordinator is the
+		// winner.
+		if slot.BidValue.Cmp(slot.DefaultSlotBid) >= 0 {
+			slot.Bidder = bidCoord.Bidder
+			slot.Forger = bidCoord.Forger
+			slot.URL = bidCoord.URL
+		} else {
+			slot.BootCoord = true
+			slot.Forger = s.vars.Auction.BootCoordinator
+			slot.URL = s.vars.Auction.BootCoordinatorURL
+		}
+	}
+	return nil
+}
+
 // firstBatchBlockNum is the blockNum of first batch in that block, if any
-func (s *Synchronizer) updateCurrentSlotIfSync(reset bool, firstBatchBlockNum *int64) error {
+func (s *Synchronizer) getCurrentSlot(reset bool, firstBatchBlockNum *int64) (*common.Slot, error) {
 	slot := common.Slot{
 		SlotNum:          s.stats.Sync.Auction.CurrentSlot.SlotNum,
 		ForgerCommitment: s.stats.Sync.Auction.CurrentSlot.ForgerCommitment,
@@ -294,7 +335,7 @@ func (s *Synchronizer) updateCurrentSlotIfSync(reset bool, firstBatchBlockNum *i
 	if reset {
 		dbFirstBatchBlockNum, err := s.historyDB.GetFirstBatchBlockNumBySlot(slotNum)
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
-			return tracerr.Wrap(fmt.Errorf("historyDB.GetFirstBatchBySlot: %w", err))
+			return nil, tracerr.Wrap(fmt.Errorf("historyDB.GetFirstBatchBySlot: %w", err))
 		} else if tracerr.Unwrap(err) == sql.ErrNoRows {
 			firstBatchBlockNum = nil
 		} else {
@@ -309,30 +350,8 @@ func (s *Synchronizer) updateCurrentSlotIfSync(reset bool, firstBatchBlockNum *i
 	slot.StartBlock, slot.EndBlock = s.consts.Auction.SlotBlocks(slot.SlotNum)
 	// If Synced, update the current coordinator
 	if s.stats.Synced() && blockNum >= s.consts.Auction.GenesisBlockNum {
-		bidCoord, err := s.historyDB.GetBestBidCoordinator(slot.SlotNum)
-		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
-			return tracerr.Wrap(err)
-		}
-		if tracerr.Unwrap(err) == sql.ErrNoRows {
-			slot.BootCoord = true
-			slot.Forger = s.vars.Auction.BootCoordinator
-			slot.URL = s.vars.Auction.BootCoordinatorURL
-		} else if err == nil {
-			slot.BidValue = bidCoord.BidValue
-			slot.DefaultSlotBid = bidCoord.DefaultSlotSetBid[slot.SlotNum%6]
-			// Only if the highest bid value is greater/equal than
-			// the default slot bid, the bidder is the winner of
-			// the slot.  Otherwise the boot coordinator is the
-			// winner.
-			if slot.BidValue.Cmp(slot.DefaultSlotBid) >= 0 {
-				slot.Bidder = bidCoord.Bidder
-				slot.Forger = bidCoord.Forger
-				slot.URL = bidCoord.URL
-			} else {
-				slot.BootCoord = true
-				slot.Forger = s.vars.Auction.BootCoordinator
-				slot.URL = s.vars.Auction.BootCoordinatorURL
-			}
+		if err := s.setSlotCoordinator(&slot); err != nil {
+			return nil, tracerr.Wrap(err)
 		}
 		if firstBatchBlockNum != nil &&
 			s.consts.Auction.RelativeBlock(*firstBatchBlockNum) <
@@ -344,15 +363,57 @@ func (s *Synchronizer) updateCurrentSlotIfSync(reset bool, firstBatchBlockNum *i
 		// BEGIN SANITY CHECK
 		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, blockNum)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
 		if !canForge {
-			return tracerr.Wrap(fmt.Errorf("Synchronized value of forger address for closed slot "+
+			return nil, tracerr.Wrap(fmt.Errorf("Synchronized value of forger address for closed slot "+
 				"differs from smart contract: %+v", slot))
 		}
 		// END SANITY CHECK
 	}
-	s.stats.UpdateCurrentSlot(slot)
+	return &slot, nil
+}
+
+func (s *Synchronizer) getNextSlot() (*common.Slot, error) {
+	// We want the next block because the current one is already mined
+	blockNum := s.stats.Sync.LastBlock.Num + 1
+	slotNum := s.consts.Auction.SlotNum(blockNum) + 1
+	slot := common.Slot{
+		SlotNum:          slotNum,
+		ForgerCommitment: false,
+	}
+	slot.StartBlock, slot.EndBlock = s.consts.Auction.SlotBlocks(slot.SlotNum)
+	// If Synced, update the current coordinator
+	if s.stats.Synced() && blockNum >= s.consts.Auction.GenesisBlockNum {
+		if err := s.setSlotCoordinator(&slot); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+
+		// TODO: Remove this SANITY CHECK once this code is tested enough
+		// BEGIN SANITY CHECK
+		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, slot.StartBlock)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		if !canForge {
+			return nil, tracerr.Wrap(fmt.Errorf("Synchronized value of forger address for closed slot "+
+				"differs from smart contract: %+v", slot))
+		}
+		// END SANITY CHECK
+	}
+	return &slot, nil
+}
+
+func (s *Synchronizer) updateCurrentNextSlotIfSync(reset bool, firstBatchBlockNum *int64) error {
+	current, err := s.getCurrentSlot(reset, firstBatchBlockNum)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	next, err := s.getNextSlot()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	s.stats.UpdateCurrentNextSlot(current, next)
 	return nil
 }
 
@@ -530,7 +591,7 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 	if len(rollupData.Batches) > 0 {
 		firstBatchBlockNum = &rollupData.Batches[0].Batch.EthBlockNum
 	}
-	if err := s.updateCurrentSlotIfSync(false, firstBatchBlockNum); err != nil {
+	if err := s.updateCurrentNextSlotIfSync(false, firstBatchBlockNum); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
@@ -680,7 +741,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 
 	s.stats.UpdateSync(block, &batchNum, &lastL1BatchBlockNum, lastForgeL1TxsNum)
 
-	if err := s.updateCurrentSlotIfSync(true, nil); err != nil {
+	if err := s.updateCurrentNextSlotIfSync(true, nil); err != nil {
 		return tracerr.Wrap(err)
 	}
 	return nil
@@ -1080,7 +1141,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 		}
 		s.vars.Auction.DefaultSlotSetBid[evt.SlotSet] = evt.NewInitialMinBid
 		s.vars.Auction.DefaultSlotSetBidSlotNum = s.consts.Auction.SlotNum(blockNum) +
-			int64(s.vars.Auction.ClosedAuctionSlots) + 1
+			int64(s.vars.Auction.ClosedAuctionSlots)
 		varsUpdate = true
 	}
 

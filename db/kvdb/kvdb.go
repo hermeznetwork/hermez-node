@@ -322,7 +322,6 @@ func (kvdb *KVDB) SetCurrentIdx(idx common.Idx) error {
 func (kvdb *KVDB) MakeCheckpoint() error {
 	// advance currentBatch
 	kvdb.CurrentBatch++
-	log.Debugw("Making KVDB checkpoint", "batch", kvdb.CurrentBatch)
 
 	checkpointPath := path.Join(kvdb.path, fmt.Sprintf("%s%d", PathBatchNum, kvdb.CurrentBatch))
 

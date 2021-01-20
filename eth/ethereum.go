@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
@@ -35,6 +36,12 @@ type EthereumInterface interface {
 
 	EthERC20Consts(ethCommon.Address) (*ERC20Consts, error)
 	EthChainID() (*big.Int, error)
+
+	EthPendingNonceAt(ctx context.Context, account ethCommon.Address) (uint64, error)
+	EthNonceAt(ctx context.Context, account ethCommon.Address, blockNumber *big.Int) (uint64, error)
+	EthSuggestGasPrice(ctx context.Context) (*big.Int, error)
+	EthKeyStore() *ethKeystore.KeyStore
+	EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error)
 }
 
 var (
@@ -116,6 +123,43 @@ func (c *EthereumClient) EthAddress() (*ethCommon.Address, error) {
 		return nil, tracerr.Wrap(ErrAccountNil)
 	}
 	return &c.account.Address, nil
+}
+
+// EthSuggestGasPrice retrieves the currently suggested gas price to allow a
+// timely execution of a transaction.
+func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	return c.client.SuggestGasPrice(ctx)
+}
+
+// EthKeyStore returns the keystore in the EthereumClient
+func (c *EthereumClient) EthKeyStore() *ethKeystore.KeyStore {
+	return c.ks
+}
+
+// NewAuth builds a new auth object to make a transaction
+func (c *EthereumClient) NewAuth() (*bind.TransactOpts, error) {
+	if c.account == nil {
+		return nil, tracerr.Wrap(ErrAccountNil)
+	}
+
+	gasPrice, err := c.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	inc := new(big.Int).Set(gasPrice)
+	inc.Div(inc, new(big.Int).SetUint64(c.config.GasPriceDiv))
+	gasPrice.Add(gasPrice, inc)
+	log.Debugw("Transaction metadata", "gasPrice", gasPrice)
+
+	auth, err := bind.NewKeyStoreTransactorWithChainID(c.ks, *c.account, c.chainID)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	auth.Value = big.NewInt(0) // in wei
+	auth.GasLimit = c.config.CallGasLimit
+	auth.GasPrice = gasPrice
+
+	return auth, nil
 }
 
 // CallAuth performs a Smart Contract method call that requires authorization.
@@ -249,4 +293,36 @@ func newCallOpts() *bind.CallOpts {
 	return &bind.CallOpts{
 		From: ethCommon.HexToAddress("0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"),
 	}
+}
+
+// EthPendingNonceAt returns the account nonce of the given account in the pending
+// state. This is the nonce that should be used for the next transaction.
+func (c *EthereumClient) EthPendingNonceAt(ctx context.Context,
+	account ethCommon.Address) (uint64, error) {
+	return c.client.PendingNonceAt(ctx, account)
+}
+
+// EthNonceAt returns the account nonce of the given account. The block number can
+// be nil, in which case the nonce is taken from the latest known block.
+func (c *EthereumClient) EthNonceAt(ctx context.Context,
+	account ethCommon.Address, blockNumber *big.Int) (uint64, error) {
+	return c.client.NonceAt(ctx, account, blockNumber)
+}
+
+// EthCall runs the transaction as a call (without paying) in the local node at
+// blockNum.
+func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
+	blockNum *big.Int) ([]byte, error) {
+	if c.account == nil {
+		return nil, tracerr.Wrap(ErrAccountNil)
+	}
+	msg := ethereum.CallMsg{
+		From:     c.account.Address,
+		To:       tx.To(),
+		Gas:      tx.Gas(),
+		GasPrice: tx.GasPrice(),
+		Value:    tx.Value(),
+		Data:     tx.Data(),
+	}
+	return c.client.CallContract(ctx, msg, blockNum)
 }

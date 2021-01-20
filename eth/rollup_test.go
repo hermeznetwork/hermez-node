@@ -169,7 +169,9 @@ func TestRollupForgeBatch(t *testing.T) {
 	args.ProofC[1] = big.NewInt(0)
 
 	argsForge = args
-	_, err = rollupClient.RollupForgeBatch(argsForge)
+	auth, err := rollupClient.client.NewAuth()
+	require.NoError(t, err)
+	_, err = rollupClient.RollupForgeBatch(argsForge, auth)
 	require.NoError(t, err)
 
 	currentBlockNum, err = rollupClient.client.EthLastBlock()
@@ -818,7 +820,9 @@ func TestRollupL1UserTxERC20PermitForceExit(t *testing.T) {
 
 func TestRollupForgeBatch2(t *testing.T) {
 	// Forge Batch 2
-	_, err := rollupClient.RollupForgeBatch(argsForge)
+	auth, err := rollupClient.client.NewAuth()
+	require.NoError(t, err)
+	_, err = rollupClient.RollupForgeBatch(argsForge, auth)
 	require.NoError(t, err)
 	currentBlockNum, err := rollupClient.client.EthLastBlock()
 	require.NoError(t, err)
@@ -871,7 +875,9 @@ func TestRollupForgeBatch2(t *testing.T) {
 
 	argsForge = args
 
-	_, err = rollupClient.RollupForgeBatch(argsForge)
+	auth, err = rollupClient.client.NewAuth()
+	require.NoError(t, err)
+	_, err = rollupClient.RollupForgeBatch(argsForge, auth)
 	require.NoError(t, err)
 
 	currentBlockNum, err = rollupClient.client.EthLastBlock()
