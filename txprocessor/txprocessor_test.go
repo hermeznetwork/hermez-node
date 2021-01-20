@@ -3,7 +3,6 @@ package txprocessor
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -463,7 +462,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	assert.Equal(t, 2, len(ptOut.ExitInfos)) // 2, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5'
+	assert.Equal(t, 1, len(ptOut.ExitInfos)) // 1, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5', and the 2 exit transactions get grouped under 1 ExitInfo
 	assert.Equal(t, 1, len(ptOut.CreatedAccounts))
 	assert.Equal(t, 4, len(ptOut.CollectedFees))
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(0)].String())
@@ -842,10 +841,8 @@ func TestTwoExits(t *testing.T) {
 	ptOuts := []*ProcessTxOutput{}
 	for _, block := range blocks {
 		for _, batch := range block.Rollup.Batches {
-			// fmt.Printf("Batch %v\n%#v\n", batch.Batch.BatchNum, batch.L1UserTxs)
 			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
 			require.NoError(t, err)
-			fmt.Printf("Exits (batch %v)\n%#v\n", batch.Batch.BatchNum, ptOut.ExitInfos)
 			ptOuts = append(ptOuts, ptOut)
 		}
 	}
