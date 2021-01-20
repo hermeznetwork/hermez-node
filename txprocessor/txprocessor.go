@@ -328,7 +328,8 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			if i < int(tp.config.MaxTx)-1 {
 				tp.zki.ISOutIdx[i] = tp.s.CurrentIdx().BigInt()
 				tp.zki.ISStateRoot[i] = tp.s.MT.Root().BigInt()
-				tp.zki.ISAccFeeOut[i] = formatAccumulatedFees(collectedFees, tp.zki.FeePlanTokens, coordIdxs)
+				tp.zki.ISAccFeeOut[i] = formatAccumulatedFees(collectedFees,
+					tp.zki.FeePlanTokens, coordIdxs)
 				tp.zki.ISExitRoot[i] = exitTree.Root().BigInt()
 			}
 			if i >= tp.i {
@@ -396,6 +397,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	// once all txs processed (exitTree root frozen), for each Exit,
 	// generate common.ExitInfo data
 	var exitInfos []common.ExitInfo
+	exitInfosByIdx := make(map[common.Idx]*common.ExitInfo)
 	for i := 0; i < nTx; i++ {
 		if !exits[i].exit {
 			continue
@@ -415,7 +417,12 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			MerkleProof: p,
 			Balance:     exitAccount.Balance,
 		}
-		exitInfos = append(exitInfos, ei)
+		if prevExit, ok := exitInfosByIdx[exitIdx]; !ok {
+			exitInfos = append(exitInfos, ei)
+			exitInfosByIdx[exitIdx] = &exitInfos[len(exitInfos)-1]
+		} else {
+			*prevExit = ei
+		}
 	}
 
 	if tp.s.Typ == statedb.TypeSynchronizer {

@@ -462,7 +462,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
-	assert.Equal(t, 2, len(ptOut.ExitInfos)) // 2, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5'
+	assert.Equal(t, 1, len(ptOut.ExitInfos)) // 1, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5', and the 2 exit transactions get grouped under 1 ExitInfo
 	assert.Equal(t, 1, len(ptOut.CreatedAccounts))
 	assert.Equal(t, 4, len(ptOut.CollectedFees))
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(0)].String())
@@ -788,4 +788,68 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	checkBalanceByIdx(t, tp.s, 257, "10")  // Coord0
 	checkBalanceByIdx(t, tp.s, 258, "100") // B
 	checkBalanceByIdx(t, tp.s, 259, "0")   // Coord0
+}
+
+func TestTwoExits(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer assert.NoError(t, os.RemoveAll(dir))
+
+	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32)
+	assert.NoError(t, err)
+
+	chainID := uint16(1)
+
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+
+	// Two exits for the same account.  The tx processor should output a
+	// single exit with the accumulated exit balance
+	set := `
+		Type: Blockchain
+
+		CreateAccountDeposit(0) A: 100
+
+		> batchL1 // freeze L1User{1}
+		> batchL1 // forge L1User{1}
+
+		ForceExit(0) A: 20
+		ForceExit(0) A: 20
+
+		> batchL1 // freeze L1User{2}
+		> batchL1 // forge L1User{2}
+		> block
+	`
+	blocks, err := tc.GenerateBlocks(set)
+	require.NoError(t, err)
+	err = tc.FillBlocksExtra(blocks, &til.ConfigExtra{})
+	require.NoError(t, err)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	require.NoError(t, err)
+
+	// Sanity check
+	require.Equal(t, 1, len(blocks[0].Rollup.Batches[1].L1UserTxs))
+	require.Equal(t, 2, len(blocks[0].Rollup.Batches[3].L1UserTxs))
+
+	config := Config{
+		NLevels:  32,
+		MaxFeeTx: 64,
+		MaxTx:    512,
+		MaxL1Tx:  16,
+		ChainID:  chainID,
+	}
+	tp := NewTxProcessor(sdb, config)
+	ptOuts := []*ProcessTxOutput{}
+	for _, block := range blocks {
+		for _, batch := range block.Rollup.Batches {
+			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			require.NoError(t, err)
+			ptOuts = append(ptOuts, ptOut)
+		}
+	}
+
+	assert.Equal(t, 1, len(ptOuts[3].ExitInfos))
+	assert.Equal(t, big.NewInt(40), ptOuts[3].ExitInfos[0].Balance)
+	acc, err := sdb.GetAccount(256)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(60), acc.Balance)
 }
