@@ -1134,7 +1134,6 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	} else if err != nil {
 		return exitAccount, false, tracerr.Wrap(err)
 	}
-	exitAccount.Nonce = exitAccount.Nonce + 1
 
 	// 1b. if idx already exist in exitTree:
 	if tp.zki != nil {

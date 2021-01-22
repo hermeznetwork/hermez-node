@@ -791,6 +791,9 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 }
 
 func TestTwoExits(t *testing.T) {
+	// In the first part we generate a batch with two force exits for the
+	// same account of 20 each.  The txprocessor output should be a single
+	// exitInfo with balance of 40.
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
@@ -852,4 +855,53 @@ func TestTwoExits(t *testing.T) {
 	acc, err := sdb.GetAccount(256)
 	require.NoError(t, err)
 	assert.Equal(t, big.NewInt(60), acc.Balance)
+
+	// In the second part we start a fresh statedb and generate a batch
+	// with one force exit for the same account as before.  The txprocessor
+	// output should be a single exitInfo with balance of 40, and the exit
+	// merkle tree proof should be equal to the previous one.
+
+	dir2, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer assert.NoError(t, os.RemoveAll(dir2))
+
+	sdb2, err := statedb.NewStateDB(dir2, 128, statedb.TypeSynchronizer, 32)
+	assert.NoError(t, err)
+
+	tc = til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+
+	// Single exit with balance of both exits in previous set.  The exit
+	// root should match.
+	set2 := `
+		Type: Blockchain
+
+		CreateAccountDeposit(0) A: 100
+
+		> batchL1 // freeze L1User{1}
+		> batchL1 // forge L1User{1}
+
+		ForceExit(0) A: 40
+
+		> batchL1 // freeze L1User{2}
+		> batchL1 // forge L1User{2}
+		> block
+	`
+	blocks, err = tc.GenerateBlocks(set2)
+	require.NoError(t, err)
+	err = tc.FillBlocksExtra(blocks, &til.ConfigExtra{})
+	require.NoError(t, err)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	require.NoError(t, err)
+
+	tp = NewTxProcessor(sdb2, config)
+	ptOuts2 := []*ProcessTxOutput{}
+	for _, block := range blocks {
+		for _, batch := range block.Rollup.Batches {
+			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			require.NoError(t, err)
+			ptOuts2 = append(ptOuts2, ptOut)
+		}
+	}
+
+	assert.Equal(t, ptOuts[3].ExitInfos[0].MerkleProof, ptOuts2[3].ExitInfos[0].MerkleProof)
 }
