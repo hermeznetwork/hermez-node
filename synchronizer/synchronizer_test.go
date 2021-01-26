@@ -408,9 +408,9 @@ func TestSyncGeneral(t *testing.T) {
 		ForceExit(1) B: 80
 		ForceTransfer(1) A-D: 100
 
-		Transfer(1) C-A: 100 (200)
-		Exit(1) C: 50 (200)
-		Exit(1) D: 30 (200)
+		Transfer(1) C-A: 100 (126)
+		Exit(1) C: 50 (100)
+		Exit(1) D: 30 (100)
 
 		> batchL1 // forge L1UserTxs{nil}, freeze defined L1UserTxs{3}
 		> batchL1 // forge L1UserTxs{3}, freeze defined L1UserTxs{nil}

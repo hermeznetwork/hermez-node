@@ -55,6 +55,18 @@ type ProcessTxOutput struct {
 	CollectedFees      map[common.TokenID]*big.Int
 }
 
+func newErrorNotEnoughBalance(tx common.Tx) error {
+	var msg error
+	if tx.IsL1 {
+		msg = fmt.Errorf("Invalid transaction, not enough balance on sender account. TxID: %s, TxType: %s, FromIdx: %d, ToIdx: %d, Amount: %d",
+			tx.TxID, tx.Type, tx.FromIdx, tx.ToIdx, tx.Amount)
+	} else {
+		msg = fmt.Errorf("Invalid transaction, not enough balance on sender account. TxID: %s, TxType: %s, FromIdx: %d, ToIdx: %d, Amount: %d, Fee: %d",
+			tx.TxID, tx.Type, tx.FromIdx, tx.ToIdx, tx.Amount, tx.Fee)
+	}
+	return tracerr.Wrap(msg)
+}
+
 // NewTxProcessor returns a new TxProcessor with the given *StateDB & Config
 func NewTxProcessor(sdb *statedb.StateDB, config Config) *TxProcessor {
 	return &TxProcessor{
@@ -769,6 +781,9 @@ func (tp *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	accSender.Balance = new(big.Int).Add(accSender.Balance, tx.EffectiveDepositAmount)
 	// subtract amount to the sender
 	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
+	if accSender.Balance.Cmp(big.NewInt(0)) == -1 { // balance<0
+		return newErrorNotEnoughBalance(tx.Tx())
+	}
 
 	// update sender account in localStateDB
 	p, err := tp.s.UpdateAccount(tx.FromIdx, accSender)
@@ -862,6 +877,9 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, feeAndAmount)
+		if accSender.Balance.Cmp(big.NewInt(0)) == -1 { // balance<0
+			return newErrorNotEnoughBalance(tx)
+		}
 
 		if _, ok := coordIdxsMap[accSender.TokenID]; ok {
 			accCoord, err := tp.s.GetAccount(coordIdxsMap[accSender.TokenID])
@@ -882,6 +900,9 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 	} else {
 		accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.Amount)
+		if accSender.Balance.Cmp(big.NewInt(0)) == -1 { // balance<0
+			return newErrorNotEnoughBalance(tx)
+		}
 	}
 
 	// update sender account in localStateDB
@@ -962,6 +983,9 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 
 	// subtract amount to the sender
 	accSender.Balance = new(big.Int).Sub(accSender.Balance, tx.EffectiveAmount)
+	if accSender.Balance.Cmp(big.NewInt(0)) == -1 { // balance<0
+		return newErrorNotEnoughBalance(tx.Tx())
+	}
 
 	// create Account of the Sender
 	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx()+1), accSender)
@@ -1057,6 +1081,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		feeAndAmount := new(big.Int).Add(tx.Amount, fee)
 		acc.Balance = new(big.Int).Sub(acc.Balance, feeAndAmount)
+		if acc.Balance.Cmp(big.NewInt(0)) == -1 { // balance<0
+			return nil, false, newErrorNotEnoughBalance(tx)
+		}
 
 		if _, ok := coordIdxsMap[acc.TokenID]; ok {
 			accCoord, err := tp.s.GetAccount(coordIdxsMap[acc.TokenID])
@@ -1078,6 +1105,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 	} else {
 		acc.Balance = new(big.Int).Sub(acc.Balance, tx.Amount)
+		if acc.Balance.Cmp(big.NewInt(0)) == -1 { // balance<0
+			return nil, false, newErrorNotEnoughBalance(tx)
+		}
 	}
 
 	p, err := tp.s.UpdateAccount(tx.FromIdx, acc)
@@ -1267,4 +1297,19 @@ func (tp *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 		tx.EffectiveAmount = big.NewInt(0)
 		return
 	}
+}
+
+// CheckEnoughBalance returns true if the sender of the transaction has enough
+// balance in the account to send the Amount+Fee
+func (tp *TxProcessor) CheckEnoughBalance(tx common.PoolL2Tx) bool {
+	acc, err := tp.s.GetAccount(tx.FromIdx)
+	if err != nil {
+		return false
+	}
+	fee, err := common.CalcFeeAmount(tx.Amount, tx.Fee)
+	if err != nil {
+		return false
+	}
+	feeAndAmount := new(big.Int).Add(tx.Amount, fee)
+	return acc.Balance.Cmp(feeAndAmount) != -1 // !=-1 balance<amount
 }
