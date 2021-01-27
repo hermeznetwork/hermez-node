@@ -13,12 +13,13 @@ func TestNewL2Tx(t *testing.T) {
 	l2Tx := &L2Tx{
 		FromIdx: 87654,
 		ToIdx:   300,
+		TokenID: 5,
 		Amount:  big.NewInt(4),
 		Nonce:   144,
 	}
 	l2Tx, err := NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x020000000156660000000090", l2Tx.TxID.String())
+	assert.Equal(t, "0x024f67ec893467419cdfacfc9152e55dc7ce16088952bf2b3442732fd046bd031c", l2Tx.TxID.String())
 }
 
 func TestL2TxByteParsers(t *testing.T) {

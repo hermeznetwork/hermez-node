@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -111,26 +112,39 @@ func (tx *L1Tx) SetType() error {
 // SetID sets the ID of the transaction.  For L1UserTx uses (ToForgeL1TxsNum,
 // Position), for L1CoordinatorTx uses (BatchNum, Position).
 func (tx *L1Tx) SetID() error {
+	var b []byte
 	if tx.UserOrigin {
 		if tx.ToForgeL1TxsNum == nil {
 			return tracerr.Wrap(fmt.Errorf("L1Tx.UserOrigin == true && L1Tx.ToForgeL1TxsNum == nil"))
 		}
 		tx.TxID[0] = TxIDPrefixL1UserTx
+
 		var toForgeL1TxsNumBytes [8]byte
 		binary.BigEndian.PutUint64(toForgeL1TxsNumBytes[:], uint64(*tx.ToForgeL1TxsNum))
-		copy(tx.TxID[1:9], toForgeL1TxsNumBytes[:])
+		b = append(b, toForgeL1TxsNumBytes[:]...)
 	} else {
 		if tx.BatchNum == nil {
 			return tracerr.Wrap(fmt.Errorf("L1Tx.UserOrigin == false && L1Tx.BatchNum == nil"))
 		}
 		tx.TxID[0] = TxIDPrefixL1CoordTx
+
 		var batchNumBytes [8]byte
 		binary.BigEndian.PutUint64(batchNumBytes[:], uint64(*tx.BatchNum))
-		copy(tx.TxID[1:9], batchNumBytes[:])
+		b = append(b, batchNumBytes[:]...)
 	}
 	var positionBytes [2]byte
 	binary.BigEndian.PutUint16(positionBytes[:], uint16(tx.Position))
-	copy(tx.TxID[9:11], positionBytes[:])
+	b = append(b, positionBytes[:]...)
+
+	// calculate hash
+	h := sha256.New()
+	_, err := h.Write(b[:])
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	r := h.Sum(nil)
+
+	copy(tx.TxID[1:], r)
 
 	return nil
 }

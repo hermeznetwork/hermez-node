@@ -29,7 +29,7 @@ func TestNewL1UserTx(t *testing.T) {
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x00000000000001e240004700", l1Tx.TxID.String())
+	assert.Equal(t, "0x00eb5e95e1ce5e9f6c4ed402d415e8d0bdd7664769cfd2064d28da04a2c76be432", l1Tx.TxID.String())
 }
 
 func TestNewL1CoordinatorTx(t *testing.T) {
@@ -46,7 +46,7 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x01000000000000cafe005800", l1Tx.TxID.String())
+	assert.Equal(t, "0x01b8ae2bf60cb8f7c2315a27f13c8863fa2370d15ccc2e68490e197030ba22b97e", l1Tx.TxID.String())
 }
 
 func TestL1TxCompressedData(t *testing.T) {
@@ -278,4 +278,70 @@ func TestL1CoordinatorTxByteParsersCompatibility(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, encodeData)
+}
+
+func TestL1TxID(t *testing.T) {
+	// L1UserTx
+	i64_1 := int64(1)
+	i64_2 := int64(2)
+	tx0 := L1Tx{
+		UserOrigin:      true,
+		ToForgeL1TxsNum: &i64_1,
+		Position:        1,
+	}
+	err := tx0.SetID()
+	require.NoError(t, err)
+	assert.Equal(t, TxIDPrefixL1UserTx, tx0.TxID[0])
+
+	// differ ToForgeL1TxsNum
+	tx1 := L1Tx{
+		UserOrigin:      true,
+		ToForgeL1TxsNum: &i64_2,
+		Position:        1,
+	}
+	err = tx1.SetID()
+	require.NoError(t, err)
+	assert.NotEqual(t, tx0.TxID, tx1.TxID)
+
+	// differ Position
+	tx1 = L1Tx{
+		UserOrigin:      true,
+		ToForgeL1TxsNum: &i64_1,
+		Position:        2,
+	}
+	err = tx1.SetID()
+	require.NoError(t, err)
+	assert.NotEqual(t, tx0.TxID, tx1.TxID)
+
+	// L1CoordinatorTx
+	bn1 := BatchNum(1)
+	bn2 := BatchNum(2)
+	tx0 = L1Tx{
+		UserOrigin: false,
+		BatchNum:   &bn1,
+		Position:   1,
+	}
+	err = tx0.SetID()
+	require.NoError(t, err)
+	assert.Equal(t, TxIDPrefixL1CoordTx, tx0.TxID[0])
+
+	// differ BatchNum
+	tx1 = L1Tx{
+		UserOrigin: false,
+		BatchNum:   &bn2,
+		Position:   1,
+	}
+	err = tx1.SetID()
+	require.NoError(t, err)
+	assert.NotEqual(t, tx0.TxID, tx1.TxID)
+
+	// differ Position
+	tx1 = L1Tx{
+		UserOrigin: false,
+		BatchNum:   &bn1,
+		Position:   2,
+	}
+	err = tx1.SetID()
+	require.NoError(t, err)
+	assert.NotEqual(t, tx0.TxID, tx1.TxID)
 }

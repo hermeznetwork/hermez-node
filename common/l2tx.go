@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 
@@ -66,18 +67,53 @@ func (tx *L2Tx) SetType() error {
 
 // SetID sets the ID of the transaction
 func (tx *L2Tx) SetID() error {
-	tx.TxID[0] = TxIDPrefixL2Tx
+	txID, err := tx.CalculateTxID()
+	if err != nil {
+		return err
+	}
+	tx.TxID = txID
+	return nil
+}
+
+// CalculateTxID returns the TxID of the transaction. This method is used to
+// set the TxID for L2Tx and for PoolL2Tx.
+func (tx L2Tx) CalculateTxID() ([TxIDLen]byte, error) {
+	var txID TxID
+	var b []byte
+	// FromIdx
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
-		return tracerr.Wrap(err)
+		return txID, tracerr.Wrap(err)
 	}
-	copy(tx.TxID[1:7], fromIdxBytes[:])
+	b = append(b, fromIdxBytes[:]...)
+	// TokenID
+	b = append(b, tx.TokenID.Bytes()[:]...)
+	// Amount
+	amountFloat16, err := NewFloat16(tx.Amount)
+	if err != nil {
+		return txID, tracerr.Wrap(fmt.Errorf("%s: %d", err, tx.Amount))
+	}
+	b = append(b, amountFloat16.Bytes()...)
+	// Nonce
 	nonceBytes, err := tx.Nonce.Bytes()
 	if err != nil {
-		return tracerr.Wrap(err)
+		return txID, tracerr.Wrap(err)
 	}
-	copy(tx.TxID[7:12], nonceBytes[:])
-	return nil
+	b = append(b, nonceBytes[:]...)
+	// Fee
+	b = append(b, byte(tx.Fee))
+
+	// calculate hash
+	h := sha256.New()
+	_, err = h.Write(b)
+	if err != nil {
+		return txID, tracerr.Wrap(err)
+	}
+	r := h.Sum(nil)
+
+	txID[0] = TxIDPrefixL2Tx
+	copy(txID[1:], r)
+	return txID, nil
 }
 
 // Tx returns a *Tx from the L2Tx

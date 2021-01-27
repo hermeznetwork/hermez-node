@@ -21,7 +21,7 @@ func TestNewPoolL2Tx(t *testing.T) {
 	}
 	poolL2Tx, err := NewPoolL2Tx(poolL2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x020000000156660000000090", poolL2Tx.TxID.String())
+	assert.Equal(t, "0x024f67ec893467419cdfacfc9152e55dc7ce16088952bf2b3442732fd046bd031c", poolL2Tx.TxID.String())
 }
 
 func TestTxCompressedData(t *testing.T) {
@@ -169,4 +169,54 @@ func TestDecompressEmptyBJJComp(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "2957874849018779266517920829765869116077630550401372566248359756137677864698", pk.X.String())
 	assert.Equal(t, "0", pk.Y.String())
+}
+
+func TestPoolL2TxID(t *testing.T) {
+	tx0 := PoolL2Tx{
+		FromIdx: 5,
+		ToIdx:   5,
+		Amount:  big.NewInt(5),
+		Fee:     126,
+		TokenID: 5,
+		Nonce:   5,
+	}
+	err := tx0.SetID()
+	require.NoError(t, err)
+
+	// differ TokenID
+	tx1 := PoolL2Tx{
+		FromIdx: 5,
+		ToIdx:   5,
+		Amount:  big.NewInt(5),
+		Fee:     126,
+		TokenID: 4,
+		Nonce:   5,
+	}
+	err = tx1.SetID()
+	require.NoError(t, err)
+	assert.NotEqual(t, tx0.TxID, tx1.TxID)
+	// differ Nonce
+	tx1 = PoolL2Tx{
+		FromIdx: 5,
+		ToIdx:   5,
+		Amount:  big.NewInt(5),
+		Fee:     126,
+		TokenID: 5,
+		Nonce:   4,
+	}
+	err = tx1.SetID()
+	require.NoError(t, err)
+	assert.NotEqual(t, tx0.TxID, tx1.TxID)
+	// differ Fee
+	tx1 = PoolL2Tx{
+		FromIdx: 5,
+		ToIdx:   5,
+		Amount:  big.NewInt(5),
+		Fee:     124,
+		TokenID: 5,
+		Nonce:   5,
+	}
+	err = tx1.SetID()
+	require.NoError(t, err)
+	assert.NotEqual(t, tx0.TxID, tx1.TxID)
 }

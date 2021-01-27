@@ -184,7 +184,7 @@ func TestPoolTxs(t *testing.T) {
 	// 400
 	// Wrong fee
 	badTx := tc.poolTxsToSend[0]
-	badTx.Amount = "99999999999999999999999"
+	badTx.Amount = "99950000000000000"
 	badTx.Fee = 255
 	jsonTxBytes, err := json.Marshal(badTx)
 	assert.NoError(t, err)
@@ -231,11 +231,11 @@ func TestPoolTxs(t *testing.T) {
 		)
 		assertPoolTx(t, tx, fetchedTx)
 	}
-	// 400
-	err = doBadReq("GET", endpoint+"0xG20000000156660000000090", nil, 400)
+	// 400, due invalid TxID
+	err = doBadReq("GET", endpoint+"0xG2241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 400)
 	assert.NoError(t, err)
-	// 404
-	err = doBadReq("GET", endpoint+"0x020000000156660000000090", nil, 404)
+	// 404, due inexistent TxID in DB
+	err = doBadReq("GET", endpoint+"0x02241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 404)
 	assert.NoError(t, err)
 }
 

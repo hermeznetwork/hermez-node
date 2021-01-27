@@ -370,7 +370,6 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 			}
 			tc.currBatch.L1Batch = true
 			if err := tc.setIdxs(); err != nil {
-				log.Error(err)
 				return nil, tracerr.Wrap(err)
 			}
 			toForgeL1TxsNum := int64(tc.openToForge)

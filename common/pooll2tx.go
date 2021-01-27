@@ -102,19 +102,13 @@ func (tx *PoolL2Tx) SetType() error {
 	return nil
 }
 
-// SetID sets the ID of the transaction.  Uses (FromIdx, Nonce).
+// SetID sets the ID of the transaction
 func (tx *PoolL2Tx) SetID() error {
-	tx.TxID[0] = TxIDPrefixL2Tx
-	fromIdxBytes, err := tx.FromIdx.Bytes()
+	txID, err := tx.L2Tx().CalculateTxID()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	copy(tx.TxID[1:7], fromIdxBytes[:])
-	nonceBytes, err := tx.Nonce.Bytes()
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	copy(tx.TxID[7:12], nonceBytes[:])
+	tx.TxID = txID
 	return nil
 }
 
