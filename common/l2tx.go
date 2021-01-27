@@ -10,16 +10,19 @@ import (
 // L2Tx is a struct that represents an already forged L2 tx
 type L2Tx struct {
 	// Stored in DB: mandatory fileds
-	TxID        TxID        `meddler:"id"`
-	BatchNum    BatchNum    `meddler:"batch_num"` // batchNum in which this tx was forged.
-	Position    int         `meddler:"position"`
-	FromIdx     Idx         `meddler:"from_idx"`
-	ToIdx       Idx         `meddler:"to_idx"`
-	Amount      *big.Int    `meddler:"amount,bigint"`
-	Fee         FeeSelector `meddler:"fee"`
-	Nonce       Nonce       `meddler:"nonce"`
-	Type        TxType      `meddler:"type"`
-	EthBlockNum int64       `meddler:"eth_block_num"` // Ethereum Block Number in which this L2Tx was added to the queue
+	TxID     TxID     `meddler:"id"`
+	BatchNum BatchNum `meddler:"batch_num"` // batchNum in which this tx was forged.
+	Position int      `meddler:"position"`
+	FromIdx  Idx      `meddler:"from_idx"`
+	ToIdx    Idx      `meddler:"to_idx"`
+	// TokenID is filled by the TxProcessor
+	TokenID TokenID     `meddler:"token_id"`
+	Amount  *big.Int    `meddler:"amount,bigint"`
+	Fee     FeeSelector `meddler:"fee"`
+	// Nonce is filled by the TxProcessor
+	Nonce       Nonce  `meddler:"nonce"`
+	Type        TxType `meddler:"type"`
+	EthBlockNum int64  `meddler:"eth_block_num"` // Ethereum Block Number in which this L2Tx was added to the queue
 }
 
 // NewL2Tx returns the given L2Tx with the TxId & Type parameters calculated
@@ -92,6 +95,7 @@ func (tx *L2Tx) Tx() *Tx {
 		Position:    tx.Position,
 		FromIdx:     tx.FromIdx,
 		ToIdx:       tx.ToIdx,
+		TokenID:     tx.TokenID,
 		Amount:      tx.Amount,
 		BatchNum:    batchNum,
 		EthBlockNum: tx.EthBlockNum,
@@ -107,6 +111,7 @@ func (tx L2Tx) PoolL2Tx() *PoolL2Tx {
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
 		ToIdx:   tx.ToIdx,
+		TokenID: tx.TokenID,
 		Amount:  tx.Amount,
 		Fee:     tx.Fee,
 		Nonce:   tx.Nonce,
@@ -134,6 +139,7 @@ func TxIDsFromL2Txs(txs []L2Tx) []TxID {
 }
 
 // BytesDataAvailability encodes a L2Tx into []byte for the Data Availability
+// [ fromIdx | toIdx | amountFloat16 | Fee ]
 func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 

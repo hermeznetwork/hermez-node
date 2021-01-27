@@ -205,6 +205,7 @@ func (tx L1Tx) TxCompressedData(chainID uint16) (*big.Int, error) {
 }
 
 // BytesDataAvailability encodes a L1Tx into []byte for the Data Availability
+// [ fromIdx | toIdx | amountFloat16 | Fee ]
 func (tx *L1Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 

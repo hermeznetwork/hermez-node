@@ -281,7 +281,8 @@ func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
 	return bi, nil
 }
 
-// HashToSign returns the computed Poseidon hash from the *PoolL2Tx that will be signed by the sender.
+// HashToSign returns the computed Poseidon hash from the *PoolL2Tx that will
+// be signed by the sender.
 func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 	toCompressedData, err := tx.TxCompressedData(chainID)
 	if err != nil {
@@ -331,6 +332,7 @@ func (tx PoolL2Tx) L2Tx() L2Tx {
 		TxID:    tx.TxID,
 		FromIdx: tx.FromIdx,
 		ToIdx:   toIdx,
+		TokenID: tx.TokenID,
 		Amount:  tx.Amount,
 		Fee:     tx.Fee,
 		Nonce:   tx.Nonce,
