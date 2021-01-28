@@ -195,3 +195,42 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 		assert.LessOrEqual(t, len(checkpoints), keep)
 	}
 }
+
+func TestGetCurrentIdx(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer require.NoError(t, os.RemoveAll(dir))
+
+	keep := 16
+	db, err := NewKVDB(dir, keep)
+	require.NoError(t, err)
+
+	idx, err := db.GetCurrentIdx()
+	require.NoError(t, err)
+	assert.Equal(t, common.Idx(255), idx)
+
+	db.Close()
+
+	db, err = NewKVDB(dir, keep)
+	require.NoError(t, err)
+
+	idx, err = db.GetCurrentIdx()
+	require.NoError(t, err)
+	assert.Equal(t, common.Idx(255), idx)
+
+	err = db.MakeCheckpoint()
+	require.NoError(t, err)
+
+	idx, err = db.GetCurrentIdx()
+	require.NoError(t, err)
+	assert.Equal(t, common.Idx(255), idx)
+
+	db.Close()
+
+	db, err = NewKVDB(dir, keep)
+	require.NoError(t, err)
+
+	idx, err = db.GetCurrentIdx()
+	require.NoError(t, err)
+	assert.Equal(t, common.Idx(255), idx)
+}

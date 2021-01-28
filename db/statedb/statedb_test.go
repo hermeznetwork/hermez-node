@@ -532,3 +532,38 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 		assert.LessOrEqual(t, len(checkpoints), keep)
 	}
 }
+
+func TestCurrentIdx(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer require.NoError(t, os.RemoveAll(dir))
+
+	keep := 16
+	sdb, err := NewStateDB(dir, keep, TypeSynchronizer, 32)
+	require.NoError(t, err)
+
+	idx := sdb.CurrentIdx()
+	assert.Equal(t, common.Idx(255), idx)
+
+	sdb.Close()
+
+	sdb, err = NewStateDB(dir, keep, TypeSynchronizer, 32)
+	require.NoError(t, err)
+
+	idx = sdb.CurrentIdx()
+	assert.Equal(t, common.Idx(255), idx)
+
+	err = sdb.MakeCheckpoint()
+	require.NoError(t, err)
+
+	idx = sdb.CurrentIdx()
+	assert.Equal(t, common.Idx(255), idx)
+
+	sdb.Close()
+
+	sdb, err = NewStateDB(dir, keep, TypeSynchronizer, 32)
+	require.NoError(t, err)
+
+	idx = sdb.CurrentIdx()
+	assert.Equal(t, common.Idx(255), idx)
+}
