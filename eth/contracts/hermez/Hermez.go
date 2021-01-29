@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/hermeznetwork/tracerr"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -28,7 +27,7 @@ var (
 )
 
 // HermezABI is the input ABI used to generate the binding from.
-const HermezABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"AddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"batchNum\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"l1UserTxsLen\",\"type\":\"uint16\"}],\"name\":\"ForgeBatch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"feeAddToken\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"withdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"InitializeHermezEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"queueIndex\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"position\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"l1UserTx\",\"type\":\"bytes\"}],\"name\":\"L1UserTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"SafeMode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"numBucket\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"}],\"name\":\"UpdateBucketWithdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"UpdateBucketsParameters\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"UpdateFeeAddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"UpdateForgeL1L2BatchTimeout\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"UpdateTokenExchange\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"UpdateWithdrawalDelay\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"WithdrawEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ABSOLUTE_MAX_L1L2BATCHTIMEOUT\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint48\",\"name\":\"fromIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"toIdx\",\"type\":\"uint48\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addL1Transaction\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"buckets\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"ceilUSD\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockWithdrawalRate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxWithdrawals\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"name\":\"exitNullifierMap\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"exitRootsMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"feeAddToken\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint48\",\"name\":\"newLastIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint256\",\"name\":\"newStRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newExitRoot\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"encodedL1CoordinatorTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"l1L2TxsData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"feeIdxCoordinator\",\"type\":\"bytes\"},{\"internalType\":\"uint8\",\"name\":\"verifierIdx\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"l1Batch\",\"type\":\"bool\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"}],\"name\":\"forgeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"forgeL1L2BatchTimeout\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezAuctionContract\",\"outputs\":[{\"internalType\":\"contractIHermezAuctionProtocol\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezGovernanceAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_verifiers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_verifiersParams\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"_withdrawVerifier\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezAuctionContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenHEZ\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"_forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_feeAddToken\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_poseidon2Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon3Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon4Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezGovernanceAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_withdrawalDelay\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"_withdrawDelayerContract\",\"type\":\"address\"}],\"name\":\"initializeHermez\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"}],\"name\":\"instantWithdrawalViewer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"l1L2TxsDataHashMap\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastForgedBatch\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastIdx\",\"outputs\":[{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastL1L2Batch\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"mapL1TxQueue\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1FillingQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1ToForgeQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registerTokensCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"rollupVerifiers\",\"outputs\":[{\"internalType\":\"contractVerifierRollupInterface\",\"name\":\"verifierInterface\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxTx\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nLevels\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safeMode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"stateRootMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenExchange\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenHEZ\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"updateBucketsParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"updateFeeAddToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"updateForgeL1L2BatchTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"updateTokenExchange\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"updateWithdrawalDelay\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawCircuit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawDelayerContract\",\"outputs\":[{\"internalType\":\"contractIWithdrawalDelayer\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint256[]\",\"name\":\"siblings\",\"type\":\"uint256[]\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawMerkleProof\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawVerifier\",\"outputs\":[{\"internalType\":\"contractVerifierWithdrawInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawalDelay\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const HermezABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"AddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"batchNum\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"l1UserTxsLen\",\"type\":\"uint16\"}],\"name\":\"ForgeBatch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"feeAddToken\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"withdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"InitializeHermezEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"queueIndex\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"position\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"l1UserTx\",\"type\":\"bytes\"}],\"name\":\"L1UserTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"SafeMode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"numBucket\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"}],\"name\":\"UpdateBucketWithdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"UpdateBucketsParameters\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"UpdateFeeAddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"UpdateForgeL1L2BatchTimeout\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"UpdateTokenExchange\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"UpdateWithdrawalDelay\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"WithdrawEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ABSOLUTE_MAX_L1L2BATCHTIMEOUT\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint48\",\"name\":\"fromIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"toIdx\",\"type\":\"uint48\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addL1Transaction\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"buckets\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"ceilUSD\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockWithdrawalRate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxWithdrawals\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"name\":\"exitNullifierMap\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"exitRootsMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"feeAddToken\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint48\",\"name\":\"newLastIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint256\",\"name\":\"newStRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newExitRoot\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"encodedL1CoordinatorTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"l1L2TxsData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"feeIdxCoordinator\",\"type\":\"bytes\"},{\"internalType\":\"uint8\",\"name\":\"verifierIdx\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"l1Batch\",\"type\":\"bool\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"}],\"name\":\"forgeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"forgeL1L2BatchTimeout\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezAuctionContract\",\"outputs\":[{\"internalType\":\"contractIHermezAuctionProtocol\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezGovernanceAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_verifiers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_verifiersParams\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"_withdrawVerifier\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezAuctionContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenHEZ\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"_forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_feeAddToken\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_poseidon2Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon3Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon4Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezGovernanceAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_withdrawalDelay\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"_withdrawDelayerContract\",\"type\":\"address\"}],\"name\":\"initializeHermez\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"}],\"name\":\"instantWithdrawalViewer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"l1L2TxsDataHashMap\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastForgedBatch\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastIdx\",\"outputs\":[{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastL1L2Batch\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"mapL1TxQueue\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1FillingQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1ToForgeQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registerTokensCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"rollupVerifiers\",\"outputs\":[{\"internalType\":\"contractVerifierRollupInterface\",\"name\":\"verifierInterface\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxTx\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nLevels\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rollupVerifiersLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safeMode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"stateRootMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenExchange\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenHEZ\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"updateBucketsParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"updateFeeAddToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"updateForgeL1L2BatchTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"updateTokenExchange\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"updateWithdrawalDelay\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawCircuit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawDelayerContract\",\"outputs\":[{\"internalType\":\"contractIWithdrawalDelayer\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint256[]\",\"name\":\"siblings\",\"type\":\"uint256[]\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawMerkleProof\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawVerifier\",\"outputs\":[{\"internalType\":\"contractVerifierWithdrawInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawalDelay\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // Hermez is an auto generated Go binding around an Ethereum contract.
 type Hermez struct {
@@ -93,7 +92,7 @@ type HermezTransactorRaw struct {
 func NewHermez(address common.Address, backend bind.ContractBackend) (*Hermez, error) {
 	contract, err := bindHermez(address, backend, backend, backend)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &Hermez{HermezCaller: HermezCaller{contract: contract}, HermezTransactor: HermezTransactor{contract: contract}, HermezFilterer: HermezFilterer{contract: contract}}, nil
 }
@@ -102,7 +101,7 @@ func NewHermez(address common.Address, backend bind.ContractBackend) (*Hermez, e
 func NewHermezCaller(address common.Address, caller bind.ContractCaller) (*HermezCaller, error) {
 	contract, err := bindHermez(address, caller, nil, nil)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezCaller{contract: contract}, nil
 }
@@ -111,7 +110,7 @@ func NewHermezCaller(address common.Address, caller bind.ContractCaller) (*Herme
 func NewHermezTransactor(address common.Address, transactor bind.ContractTransactor) (*HermezTransactor, error) {
 	contract, err := bindHermez(address, nil, transactor, nil)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezTransactor{contract: contract}, nil
 }
@@ -120,7 +119,7 @@ func NewHermezTransactor(address common.Address, transactor bind.ContractTransac
 func NewHermezFilterer(address common.Address, filterer bind.ContractFilterer) (*HermezFilterer, error) {
 	contract, err := bindHermez(address, nil, nil, filterer)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezFilterer{contract: contract}, nil
 }
@@ -129,7 +128,7 @@ func NewHermezFilterer(address common.Address, filterer bind.ContractFilterer) (
 func bindHermez(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(HermezABI))
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
@@ -180,12 +179,12 @@ func (_Hermez *HermezCaller) ABSOLUTEMAXL1L2BATCHTIMEOUT(opts *bind.CallOpts) (u
 	err := _Hermez.contract.Call(opts, &out, "ABSOLUTE_MAX_L1L2BATCHTIMEOUT")
 
 	if err != nil {
-		return *new(uint8), tracerr.Wrap(err)
+		return *new(uint8), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -230,7 +229,7 @@ func (_Hermez *HermezCaller) Buckets(opts *bind.CallOpts, arg0 *big.Int) (struct
 	outstruct.BlockWithdrawalRate = out[3].(*big.Int)
 	outstruct.MaxWithdrawals = out[4].(*big.Int)
 
-	return *outstruct, tracerr.Wrap(err)
+	return *outstruct, err
 
 }
 
@@ -268,12 +267,12 @@ func (_Hermez *HermezCaller) ExitNullifierMap(opts *bind.CallOpts, arg0 uint32, 
 	err := _Hermez.contract.Call(opts, &out, "exitNullifierMap", arg0, arg1)
 
 	if err != nil {
-		return *new(bool), tracerr.Wrap(err)
+		return *new(bool), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -299,12 +298,12 @@ func (_Hermez *HermezCaller) ExitRootsMap(opts *bind.CallOpts, arg0 uint32) (*bi
 	err := _Hermez.contract.Call(opts, &out, "exitRootsMap", arg0)
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -330,12 +329,12 @@ func (_Hermez *HermezCaller) FeeAddToken(opts *bind.CallOpts) (*big.Int, error) 
 	err := _Hermez.contract.Call(opts, &out, "feeAddToken")
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -361,12 +360,12 @@ func (_Hermez *HermezCaller) ForgeL1L2BatchTimeout(opts *bind.CallOpts) (uint8, 
 	err := _Hermez.contract.Call(opts, &out, "forgeL1L2BatchTimeout")
 
 	if err != nil {
-		return *new(uint8), tracerr.Wrap(err)
+		return *new(uint8), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -392,12 +391,12 @@ func (_Hermez *HermezCaller) HermezAuctionContract(opts *bind.CallOpts) (common.
 	err := _Hermez.contract.Call(opts, &out, "hermezAuctionContract")
 
 	if err != nil {
-		return *new(common.Address), tracerr.Wrap(err)
+		return *new(common.Address), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -423,12 +422,12 @@ func (_Hermez *HermezCaller) HermezGovernanceAddress(opts *bind.CallOpts) (commo
 	err := _Hermez.contract.Call(opts, &out, "hermezGovernanceAddress")
 
 	if err != nil {
-		return *new(common.Address), tracerr.Wrap(err)
+		return *new(common.Address), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -454,12 +453,12 @@ func (_Hermez *HermezCaller) InstantWithdrawalViewer(opts *bind.CallOpts, tokenA
 	err := _Hermez.contract.Call(opts, &out, "instantWithdrawalViewer", tokenAddress, amount)
 
 	if err != nil {
-		return *new(bool), tracerr.Wrap(err)
+		return *new(bool), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -485,12 +484,12 @@ func (_Hermez *HermezCaller) L1L2TxsDataHashMap(opts *bind.CallOpts, arg0 uint32
 	err := _Hermez.contract.Call(opts, &out, "l1L2TxsDataHashMap", arg0)
 
 	if err != nil {
-		return *new([32]byte), tracerr.Wrap(err)
+		return *new([32]byte), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -516,12 +515,12 @@ func (_Hermez *HermezCaller) LastForgedBatch(opts *bind.CallOpts) (uint32, error
 	err := _Hermez.contract.Call(opts, &out, "lastForgedBatch")
 
 	if err != nil {
-		return *new(uint32), tracerr.Wrap(err)
+		return *new(uint32), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -547,12 +546,12 @@ func (_Hermez *HermezCaller) LastIdx(opts *bind.CallOpts) (*big.Int, error) {
 	err := _Hermez.contract.Call(opts, &out, "lastIdx")
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -578,12 +577,12 @@ func (_Hermez *HermezCaller) LastL1L2Batch(opts *bind.CallOpts) (uint64, error) 
 	err := _Hermez.contract.Call(opts, &out, "lastL1L2Batch")
 
 	if err != nil {
-		return *new(uint64), tracerr.Wrap(err)
+		return *new(uint64), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -609,12 +608,12 @@ func (_Hermez *HermezCaller) MapL1TxQueue(opts *bind.CallOpts, arg0 uint32) ([]b
 	err := _Hermez.contract.Call(opts, &out, "mapL1TxQueue", arg0)
 
 	if err != nil {
-		return *new([]byte), tracerr.Wrap(err)
+		return *new([]byte), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -640,12 +639,12 @@ func (_Hermez *HermezCaller) NextL1FillingQueue(opts *bind.CallOpts) (uint32, er
 	err := _Hermez.contract.Call(opts, &out, "nextL1FillingQueue")
 
 	if err != nil {
-		return *new(uint32), tracerr.Wrap(err)
+		return *new(uint32), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -671,12 +670,12 @@ func (_Hermez *HermezCaller) NextL1ToForgeQueue(opts *bind.CallOpts) (uint32, er
 	err := _Hermez.contract.Call(opts, &out, "nextL1ToForgeQueue")
 
 	if err != nil {
-		return *new(uint32), tracerr.Wrap(err)
+		return *new(uint32), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -702,12 +701,12 @@ func (_Hermez *HermezCaller) RegisterTokensCount(opts *bind.CallOpts) (*big.Int,
 	err := _Hermez.contract.Call(opts, &out, "registerTokensCount")
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -746,7 +745,7 @@ func (_Hermez *HermezCaller) RollupVerifiers(opts *bind.CallOpts, arg0 *big.Int)
 	outstruct.MaxTx = out[1].(*big.Int)
 	outstruct.NLevels = out[2].(*big.Int)
 
-	return *outstruct, tracerr.Wrap(err)
+	return *outstruct, err
 
 }
 
@@ -772,6 +771,37 @@ func (_Hermez *HermezCallerSession) RollupVerifiers(arg0 *big.Int) (struct {
 	return _Hermez.Contract.RollupVerifiers(&_Hermez.CallOpts, arg0)
 }
 
+// RollupVerifiersLength is a free data retrieval call binding the contract method 0x7ba3a5e0.
+//
+// Solidity: function rollupVerifiersLength() view returns(uint256)
+func (_Hermez *HermezCaller) RollupVerifiersLength(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "rollupVerifiersLength")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// RollupVerifiersLength is a free data retrieval call binding the contract method 0x7ba3a5e0.
+//
+// Solidity: function rollupVerifiersLength() view returns(uint256)
+func (_Hermez *HermezSession) RollupVerifiersLength() (*big.Int, error) {
+	return _Hermez.Contract.RollupVerifiersLength(&_Hermez.CallOpts)
+}
+
+// RollupVerifiersLength is a free data retrieval call binding the contract method 0x7ba3a5e0.
+//
+// Solidity: function rollupVerifiersLength() view returns(uint256)
+func (_Hermez *HermezCallerSession) RollupVerifiersLength() (*big.Int, error) {
+	return _Hermez.Contract.RollupVerifiersLength(&_Hermez.CallOpts)
+}
+
 // StateRootMap is a free data retrieval call binding the contract method 0x9e00d7ea.
 //
 // Solidity: function stateRootMap(uint32 ) view returns(uint256)
@@ -780,12 +810,12 @@ func (_Hermez *HermezCaller) StateRootMap(opts *bind.CallOpts, arg0 uint32) (*bi
 	err := _Hermez.contract.Call(opts, &out, "stateRootMap", arg0)
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -811,12 +841,12 @@ func (_Hermez *HermezCaller) TokenExchange(opts *bind.CallOpts, arg0 common.Addr
 	err := _Hermez.contract.Call(opts, &out, "tokenExchange", arg0)
 
 	if err != nil {
-		return *new(uint64), tracerr.Wrap(err)
+		return *new(uint64), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -842,12 +872,12 @@ func (_Hermez *HermezCaller) TokenHEZ(opts *bind.CallOpts) (common.Address, erro
 	err := _Hermez.contract.Call(opts, &out, "tokenHEZ")
 
 	if err != nil {
-		return *new(common.Address), tracerr.Wrap(err)
+		return *new(common.Address), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -873,12 +903,12 @@ func (_Hermez *HermezCaller) TokenList(opts *bind.CallOpts, arg0 *big.Int) (comm
 	err := _Hermez.contract.Call(opts, &out, "tokenList", arg0)
 
 	if err != nil {
-		return *new(common.Address), tracerr.Wrap(err)
+		return *new(common.Address), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -904,12 +934,12 @@ func (_Hermez *HermezCaller) TokenMap(opts *bind.CallOpts, arg0 common.Address) 
 	err := _Hermez.contract.Call(opts, &out, "tokenMap", arg0)
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -935,12 +965,12 @@ func (_Hermez *HermezCaller) WithdrawDelayerContract(opts *bind.CallOpts) (commo
 	err := _Hermez.contract.Call(opts, &out, "withdrawDelayerContract")
 
 	if err != nil {
-		return *new(common.Address), tracerr.Wrap(err)
+		return *new(common.Address), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -966,12 +996,12 @@ func (_Hermez *HermezCaller) WithdrawVerifier(opts *bind.CallOpts) (common.Addre
 	err := _Hermez.contract.Call(opts, &out, "withdrawVerifier")
 
 	if err != nil {
-		return *new(common.Address), tracerr.Wrap(err)
+		return *new(common.Address), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -997,12 +1027,12 @@ func (_Hermez *HermezCaller) WithdrawalDelay(opts *bind.CallOpts) (uint64, error
 	err := _Hermez.contract.Call(opts, &out, "withdrawalDelay")
 
 	if err != nil {
-		return *new(uint64), tracerr.Wrap(err)
+		return *new(uint64), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -1358,7 +1388,7 @@ func (_Hermez *HermezFilterer) FilterAddToken(opts *bind.FilterOpts, tokenAddres
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "AddToken", tokenAddressRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezAddTokenIterator{contract: _Hermez.contract, event: "AddToken", logs: logs, sub: sub}, nil
 }
@@ -1375,7 +1405,7 @@ func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "AddToken", tokenAddressRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1385,19 +1415,19 @@ func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezAddToken)
 				if err := _Hermez.contract.UnpackLog(event, "AddToken", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -1411,7 +1441,7 @@ func (_Hermez *HermezFilterer) WatchAddToken(opts *bind.WatchOpts, sink chan<- *
 func (_Hermez *HermezFilterer) ParseAddToken(log types.Log) (*HermezAddToken, error) {
 	event := new(HermezAddToken)
 	if err := _Hermez.contract.UnpackLog(event, "AddToken", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -1503,7 +1533,7 @@ func (_Hermez *HermezFilterer) FilterForgeBatch(opts *bind.FilterOpts, batchNum 
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "ForgeBatch", batchNumRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezForgeBatchIterator{contract: _Hermez.contract, event: "ForgeBatch", logs: logs, sub: sub}, nil
 }
@@ -1520,7 +1550,7 @@ func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<-
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "ForgeBatch", batchNumRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1530,19 +1560,19 @@ func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<-
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezForgeBatch)
 				if err := _Hermez.contract.UnpackLog(event, "ForgeBatch", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -1556,7 +1586,7 @@ func (_Hermez *HermezFilterer) WatchForgeBatch(opts *bind.WatchOpts, sink chan<-
 func (_Hermez *HermezFilterer) ParseForgeBatch(log types.Log) (*HermezForgeBatch, error) {
 	event := new(HermezForgeBatch)
 	if err := _Hermez.contract.UnpackLog(event, "ForgeBatch", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -1644,7 +1674,7 @@ func (_Hermez *HermezFilterer) FilterInitializeHermezEvent(opts *bind.FilterOpts
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "InitializeHermezEvent")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezInitializeHermezEventIterator{contract: _Hermez.contract, event: "InitializeHermezEvent", logs: logs, sub: sub}, nil
 }
@@ -1656,7 +1686,7 @@ func (_Hermez *HermezFilterer) WatchInitializeHermezEvent(opts *bind.WatchOpts, 
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "InitializeHermezEvent")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1666,19 +1696,19 @@ func (_Hermez *HermezFilterer) WatchInitializeHermezEvent(opts *bind.WatchOpts, 
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezInitializeHermezEvent)
 				if err := _Hermez.contract.UnpackLog(event, "InitializeHermezEvent", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -1692,7 +1722,7 @@ func (_Hermez *HermezFilterer) WatchInitializeHermezEvent(opts *bind.WatchOpts, 
 func (_Hermez *HermezFilterer) ParseInitializeHermezEvent(log types.Log) (*HermezInitializeHermezEvent, error) {
 	event := new(HermezInitializeHermezEvent)
 	if err := _Hermez.contract.UnpackLog(event, "InitializeHermezEvent", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -1789,7 +1819,7 @@ func (_Hermez *HermezFilterer) FilterL1UserTxEvent(opts *bind.FilterOpts, queueI
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "L1UserTxEvent", queueIndexRule, positionRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezL1UserTxEventIterator{contract: _Hermez.contract, event: "L1UserTxEvent", logs: logs, sub: sub}, nil
 }
@@ -1810,7 +1840,7 @@ func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink cha
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "L1UserTxEvent", queueIndexRule, positionRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1820,19 +1850,19 @@ func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink cha
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezL1UserTxEvent)
 				if err := _Hermez.contract.UnpackLog(event, "L1UserTxEvent", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -1846,7 +1876,7 @@ func (_Hermez *HermezFilterer) WatchL1UserTxEvent(opts *bind.WatchOpts, sink cha
 func (_Hermez *HermezFilterer) ParseL1UserTxEvent(log types.Log) (*HermezL1UserTxEvent, error) {
 	event := new(HermezL1UserTxEvent)
 	if err := _Hermez.contract.UnpackLog(event, "L1UserTxEvent", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -1931,7 +1961,7 @@ func (_Hermez *HermezFilterer) FilterSafeMode(opts *bind.FilterOpts) (*HermezSaf
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "SafeMode")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezSafeModeIterator{contract: _Hermez.contract, event: "SafeMode", logs: logs, sub: sub}, nil
 }
@@ -1943,7 +1973,7 @@ func (_Hermez *HermezFilterer) WatchSafeMode(opts *bind.WatchOpts, sink chan<- *
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "SafeMode")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1953,19 +1983,19 @@ func (_Hermez *HermezFilterer) WatchSafeMode(opts *bind.WatchOpts, sink chan<- *
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezSafeMode)
 				if err := _Hermez.contract.UnpackLog(event, "SafeMode", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -1979,7 +2009,7 @@ func (_Hermez *HermezFilterer) WatchSafeMode(opts *bind.WatchOpts, sink chan<- *
 func (_Hermez *HermezFilterer) ParseSafeMode(log types.Log) (*HermezSafeMode, error) {
 	event := new(HermezSafeMode)
 	if err := _Hermez.contract.UnpackLog(event, "SafeMode", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -2076,7 +2106,7 @@ func (_Hermez *HermezFilterer) FilterUpdateBucketWithdraw(opts *bind.FilterOpts,
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateBucketWithdraw", numBucketRule, blockStampRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezUpdateBucketWithdrawIterator{contract: _Hermez.contract, event: "UpdateBucketWithdraw", logs: logs, sub: sub}, nil
 }
@@ -2097,7 +2127,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketWithdraw(opts *bind.WatchOpts, s
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateBucketWithdraw", numBucketRule, blockStampRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2107,19 +2137,19 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketWithdraw(opts *bind.WatchOpts, s
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateBucketWithdraw)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateBucketWithdraw", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -2133,7 +2163,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketWithdraw(opts *bind.WatchOpts, s
 func (_Hermez *HermezFilterer) ParseUpdateBucketWithdraw(log types.Log) (*HermezUpdateBucketWithdraw, error) {
 	event := new(HermezUpdateBucketWithdraw)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateBucketWithdraw", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -2219,7 +2249,7 @@ func (_Hermez *HermezFilterer) FilterUpdateBucketsParameters(opts *bind.FilterOp
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateBucketsParameters")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezUpdateBucketsParametersIterator{contract: _Hermez.contract, event: "UpdateBucketsParameters", logs: logs, sub: sub}, nil
 }
@@ -2231,7 +2261,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateBucketsParameters")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2241,19 +2271,19 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateBucketsParameters)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateBucketsParameters", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -2267,7 +2297,7 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts
 func (_Hermez *HermezFilterer) ParseUpdateBucketsParameters(log types.Log) (*HermezUpdateBucketsParameters, error) {
 	event := new(HermezUpdateBucketsParameters)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateBucketsParameters", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -2353,7 +2383,7 @@ func (_Hermez *HermezFilterer) FilterUpdateFeeAddToken(opts *bind.FilterOpts) (*
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateFeeAddToken")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezUpdateFeeAddTokenIterator{contract: _Hermez.contract, event: "UpdateFeeAddToken", logs: logs, sub: sub}, nil
 }
@@ -2365,7 +2395,7 @@ func (_Hermez *HermezFilterer) WatchUpdateFeeAddToken(opts *bind.WatchOpts, sink
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateFeeAddToken")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2375,19 +2405,19 @@ func (_Hermez *HermezFilterer) WatchUpdateFeeAddToken(opts *bind.WatchOpts, sink
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateFeeAddToken)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateFeeAddToken", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -2401,7 +2431,7 @@ func (_Hermez *HermezFilterer) WatchUpdateFeeAddToken(opts *bind.WatchOpts, sink
 func (_Hermez *HermezFilterer) ParseUpdateFeeAddToken(log types.Log) (*HermezUpdateFeeAddToken, error) {
 	event := new(HermezUpdateFeeAddToken)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateFeeAddToken", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -2487,7 +2517,7 @@ func (_Hermez *HermezFilterer) FilterUpdateForgeL1L2BatchTimeout(opts *bind.Filt
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateForgeL1L2BatchTimeout")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezUpdateForgeL1L2BatchTimeoutIterator{contract: _Hermez.contract, event: "UpdateForgeL1L2BatchTimeout", logs: logs, sub: sub}, nil
 }
@@ -2499,7 +2529,7 @@ func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.Watch
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateForgeL1L2BatchTimeout")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2509,19 +2539,19 @@ func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.Watch
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateForgeL1L2BatchTimeout)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateForgeL1L2BatchTimeout", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -2535,7 +2565,7 @@ func (_Hermez *HermezFilterer) WatchUpdateForgeL1L2BatchTimeout(opts *bind.Watch
 func (_Hermez *HermezFilterer) ParseUpdateForgeL1L2BatchTimeout(log types.Log) (*HermezUpdateForgeL1L2BatchTimeout, error) {
 	event := new(HermezUpdateForgeL1L2BatchTimeout)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateForgeL1L2BatchTimeout", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -2622,7 +2652,7 @@ func (_Hermez *HermezFilterer) FilterUpdateTokenExchange(opts *bind.FilterOpts) 
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateTokenExchange")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezUpdateTokenExchangeIterator{contract: _Hermez.contract, event: "UpdateTokenExchange", logs: logs, sub: sub}, nil
 }
@@ -2634,7 +2664,7 @@ func (_Hermez *HermezFilterer) WatchUpdateTokenExchange(opts *bind.WatchOpts, si
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateTokenExchange")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2644,19 +2674,19 @@ func (_Hermez *HermezFilterer) WatchUpdateTokenExchange(opts *bind.WatchOpts, si
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateTokenExchange)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateTokenExchange", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -2670,7 +2700,7 @@ func (_Hermez *HermezFilterer) WatchUpdateTokenExchange(opts *bind.WatchOpts, si
 func (_Hermez *HermezFilterer) ParseUpdateTokenExchange(log types.Log) (*HermezUpdateTokenExchange, error) {
 	event := new(HermezUpdateTokenExchange)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateTokenExchange", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -2756,7 +2786,7 @@ func (_Hermez *HermezFilterer) FilterUpdateWithdrawalDelay(opts *bind.FilterOpts
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateWithdrawalDelay")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezUpdateWithdrawalDelayIterator{contract: _Hermez.contract, event: "UpdateWithdrawalDelay", logs: logs, sub: sub}, nil
 }
@@ -2768,7 +2798,7 @@ func (_Hermez *HermezFilterer) WatchUpdateWithdrawalDelay(opts *bind.WatchOpts, 
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateWithdrawalDelay")
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2778,19 +2808,19 @@ func (_Hermez *HermezFilterer) WatchUpdateWithdrawalDelay(opts *bind.WatchOpts, 
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezUpdateWithdrawalDelay)
 				if err := _Hermez.contract.UnpackLog(event, "UpdateWithdrawalDelay", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -2804,7 +2834,7 @@ func (_Hermez *HermezFilterer) WatchUpdateWithdrawalDelay(opts *bind.WatchOpts, 
 func (_Hermez *HermezFilterer) ParseUpdateWithdrawalDelay(log types.Log) (*HermezUpdateWithdrawalDelay, error) {
 	event := new(HermezUpdateWithdrawalDelay)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateWithdrawalDelay", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -2905,7 +2935,7 @@ func (_Hermez *HermezFilterer) FilterWithdrawEvent(opts *bind.FilterOpts, idx []
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "WithdrawEvent", idxRule, numExitRootRule, instantWithdrawRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HermezWithdrawEventIterator{contract: _Hermez.contract, event: "WithdrawEvent", logs: logs, sub: sub}, nil
 }
@@ -2930,7 +2960,7 @@ func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink cha
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "WithdrawEvent", idxRule, numExitRootRule, instantWithdrawRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -2940,19 +2970,19 @@ func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink cha
 				// New log arrived, parse the event and forward to the user
 				event := new(HermezWithdrawEvent)
 				if err := _Hermez.contract.UnpackLog(event, "WithdrawEvent", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -2966,7 +2996,7 @@ func (_Hermez *HermezFilterer) WatchWithdrawEvent(opts *bind.WatchOpts, sink cha
 func (_Hermez *HermezFilterer) ParseWithdrawEvent(log types.Log) (*HermezWithdrawEvent, error) {
 	event := new(HermezWithdrawEvent)
 	if err := _Hermez.contract.UnpackLog(event, "WithdrawEvent", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil

@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/hermeznetwork/tracerr"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -93,7 +92,7 @@ type HEZTransactorRaw struct {
 func NewHEZ(address common.Address, backend bind.ContractBackend) (*HEZ, error) {
 	contract, err := bindHEZ(address, backend, backend, backend)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HEZ{HEZCaller: HEZCaller{contract: contract}, HEZTransactor: HEZTransactor{contract: contract}, HEZFilterer: HEZFilterer{contract: contract}}, nil
 }
@@ -102,7 +101,7 @@ func NewHEZ(address common.Address, backend bind.ContractBackend) (*HEZ, error) 
 func NewHEZCaller(address common.Address, caller bind.ContractCaller) (*HEZCaller, error) {
 	contract, err := bindHEZ(address, caller, nil, nil)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HEZCaller{contract: contract}, nil
 }
@@ -111,7 +110,7 @@ func NewHEZCaller(address common.Address, caller bind.ContractCaller) (*HEZCalle
 func NewHEZTransactor(address common.Address, transactor bind.ContractTransactor) (*HEZTransactor, error) {
 	contract, err := bindHEZ(address, nil, transactor, nil)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HEZTransactor{contract: contract}, nil
 }
@@ -120,7 +119,7 @@ func NewHEZTransactor(address common.Address, transactor bind.ContractTransactor
 func NewHEZFilterer(address common.Address, filterer bind.ContractFilterer) (*HEZFilterer, error) {
 	contract, err := bindHEZ(address, nil, nil, filterer)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HEZFilterer{contract: contract}, nil
 }
@@ -129,7 +128,7 @@ func NewHEZFilterer(address common.Address, filterer bind.ContractFilterer) (*HE
 func bindHEZ(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(HEZABI))
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
@@ -180,12 +179,12 @@ func (_HEZ *HEZCaller) EIP712DOMAINHASH(opts *bind.CallOpts) ([32]byte, error) {
 	err := _HEZ.contract.Call(opts, &out, "EIP712DOMAIN_HASH")
 
 	if err != nil {
-		return *new([32]byte), tracerr.Wrap(err)
+		return *new([32]byte), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -211,12 +210,12 @@ func (_HEZ *HEZCaller) NAMEHASH(opts *bind.CallOpts) ([32]byte, error) {
 	err := _HEZ.contract.Call(opts, &out, "NAME_HASH")
 
 	if err != nil {
-		return *new([32]byte), tracerr.Wrap(err)
+		return *new([32]byte), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -242,12 +241,12 @@ func (_HEZ *HEZCaller) PERMITTYPEHASH(opts *bind.CallOpts) ([32]byte, error) {
 	err := _HEZ.contract.Call(opts, &out, "PERMIT_TYPEHASH")
 
 	if err != nil {
-		return *new([32]byte), tracerr.Wrap(err)
+		return *new([32]byte), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -273,12 +272,12 @@ func (_HEZ *HEZCaller) TRANSFERWITHAUTHORIZATIONTYPEHASH(opts *bind.CallOpts) ([
 	err := _HEZ.contract.Call(opts, &out, "TRANSFER_WITH_AUTHORIZATION_TYPEHASH")
 
 	if err != nil {
-		return *new([32]byte), tracerr.Wrap(err)
+		return *new([32]byte), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -304,12 +303,12 @@ func (_HEZ *HEZCaller) VERSIONHASH(opts *bind.CallOpts) ([32]byte, error) {
 	err := _HEZ.contract.Call(opts, &out, "VERSION_HASH")
 
 	if err != nil {
-		return *new([32]byte), tracerr.Wrap(err)
+		return *new([32]byte), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -335,12 +334,12 @@ func (_HEZ *HEZCaller) Allowance(opts *bind.CallOpts, arg0 common.Address, arg1 
 	err := _HEZ.contract.Call(opts, &out, "allowance", arg0, arg1)
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -366,12 +365,12 @@ func (_HEZ *HEZCaller) AuthorizationState(opts *bind.CallOpts, arg0 common.Addre
 	err := _HEZ.contract.Call(opts, &out, "authorizationState", arg0, arg1)
 
 	if err != nil {
-		return *new(bool), tracerr.Wrap(err)
+		return *new(bool), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -397,12 +396,12 @@ func (_HEZ *HEZCaller) BalanceOf(opts *bind.CallOpts, arg0 common.Address) (*big
 	err := _HEZ.contract.Call(opts, &out, "balanceOf", arg0)
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -428,12 +427,12 @@ func (_HEZ *HEZCaller) Decimals(opts *bind.CallOpts) (uint8, error) {
 	err := _HEZ.contract.Call(opts, &out, "decimals")
 
 	if err != nil {
-		return *new(uint8), tracerr.Wrap(err)
+		return *new(uint8), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -459,12 +458,12 @@ func (_HEZ *HEZCaller) GetChainId(opts *bind.CallOpts) (*big.Int, error) {
 	err := _HEZ.contract.Call(opts, &out, "getChainId")
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -490,12 +489,12 @@ func (_HEZ *HEZCaller) InitialBalance(opts *bind.CallOpts) (*big.Int, error) {
 	err := _HEZ.contract.Call(opts, &out, "initialBalance")
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -521,12 +520,12 @@ func (_HEZ *HEZCaller) Name(opts *bind.CallOpts) (string, error) {
 	err := _HEZ.contract.Call(opts, &out, "name")
 
 	if err != nil {
-		return *new(string), tracerr.Wrap(err)
+		return *new(string), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -552,12 +551,12 @@ func (_HEZ *HEZCaller) Nonces(opts *bind.CallOpts, arg0 common.Address) (*big.In
 	err := _HEZ.contract.Call(opts, &out, "nonces", arg0)
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -583,12 +582,12 @@ func (_HEZ *HEZCaller) Symbol(opts *bind.CallOpts) (string, error) {
 	err := _HEZ.contract.Call(opts, &out, "symbol")
 
 	if err != nil {
-		return *new(string), tracerr.Wrap(err)
+		return *new(string), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -614,12 +613,12 @@ func (_HEZ *HEZCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	err := _HEZ.contract.Call(opts, &out, "totalSupply")
 
 	if err != nil {
-		return *new(*big.Int), tracerr.Wrap(err)
+		return *new(*big.Int), err
 	}
 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return out0, tracerr.Wrap(err)
+	return out0, err
 
 }
 
@@ -854,7 +853,7 @@ func (_HEZ *HEZFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Ad
 
 	logs, sub, err := _HEZ.contract.FilterLogs(opts, "Approval", ownerRule, spenderRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HEZApprovalIterator{contract: _HEZ.contract, event: "Approval", logs: logs, sub: sub}, nil
 }
@@ -875,7 +874,7 @@ func (_HEZ *HEZFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *HEZApp
 
 	logs, sub, err := _HEZ.contract.WatchLogs(opts, "Approval", ownerRule, spenderRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -885,19 +884,19 @@ func (_HEZ *HEZFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *HEZApp
 				// New log arrived, parse the event and forward to the user
 				event := new(HEZApproval)
 				if err := _HEZ.contract.UnpackLog(event, "Approval", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -911,7 +910,7 @@ func (_HEZ *HEZFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *HEZApp
 func (_HEZ *HEZFilterer) ParseApproval(log types.Log) (*HEZApproval, error) {
 	event := new(HEZApproval)
 	if err := _HEZ.contract.UnpackLog(event, "Approval", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -1007,7 +1006,7 @@ func (_HEZ *HEZFilterer) FilterAuthorizationUsed(opts *bind.FilterOpts, authoriz
 
 	logs, sub, err := _HEZ.contract.FilterLogs(opts, "AuthorizationUsed", authorizerRule, nonceRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HEZAuthorizationUsedIterator{contract: _HEZ.contract, event: "AuthorizationUsed", logs: logs, sub: sub}, nil
 }
@@ -1028,7 +1027,7 @@ func (_HEZ *HEZFilterer) WatchAuthorizationUsed(opts *bind.WatchOpts, sink chan<
 
 	logs, sub, err := _HEZ.contract.WatchLogs(opts, "AuthorizationUsed", authorizerRule, nonceRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1038,19 +1037,19 @@ func (_HEZ *HEZFilterer) WatchAuthorizationUsed(opts *bind.WatchOpts, sink chan<
 				// New log arrived, parse the event and forward to the user
 				event := new(HEZAuthorizationUsed)
 				if err := _HEZ.contract.UnpackLog(event, "AuthorizationUsed", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -1064,7 +1063,7 @@ func (_HEZ *HEZFilterer) WatchAuthorizationUsed(opts *bind.WatchOpts, sink chan<
 func (_HEZ *HEZFilterer) ParseAuthorizationUsed(log types.Log) (*HEZAuthorizationUsed, error) {
 	event := new(HEZAuthorizationUsed)
 	if err := _HEZ.contract.UnpackLog(event, "AuthorizationUsed", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
@@ -1161,7 +1160,7 @@ func (_HEZ *HEZFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Add
 
 	logs, sub, err := _HEZ.contract.FilterLogs(opts, "Transfer", fromRule, toRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return &HEZTransferIterator{contract: _HEZ.contract, event: "Transfer", logs: logs, sub: sub}, nil
 }
@@ -1182,7 +1181,7 @@ func (_HEZ *HEZFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *HEZTra
 
 	logs, sub, err := _HEZ.contract.WatchLogs(opts, "Transfer", fromRule, toRule)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		defer sub.Unsubscribe()
@@ -1192,19 +1191,19 @@ func (_HEZ *HEZFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *HEZTra
 				// New log arrived, parse the event and forward to the user
 				event := new(HEZTransfer)
 				if err := _HEZ.contract.UnpackLog(event, "Transfer", log); err != nil {
-					return tracerr.Wrap(err)
+					return err
 				}
 				event.Raw = log
 
 				select {
 				case sink <- event:
 				case err := <-sub.Err():
-					return tracerr.Wrap(err)
+					return err
 				case <-quit:
 					return nil
 				}
 			case err := <-sub.Err():
-				return tracerr.Wrap(err)
+				return err
 			case <-quit:
 				return nil
 			}
@@ -1218,7 +1217,7 @@ func (_HEZ *HEZFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *HEZTra
 func (_HEZ *HEZFilterer) ParseTransfer(log types.Log) (*HEZTransfer, error) {
 	event := new(HEZTransfer)
 	if err := _HEZ.contract.UnpackLog(event, "Transfer", log); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, err
 	}
 	event.Raw = log
 	return event, nil
