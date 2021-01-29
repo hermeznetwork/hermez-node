@@ -370,7 +370,6 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 			}
 			tc.currBatch.L1Batch = true
 			if err := tc.setIdxs(); err != nil {
-				log.Error(err)
 				return nil, tracerr.Wrap(err)
 			}
 			toForgeL1TxsNum := int64(tc.openToForge)
@@ -818,6 +817,7 @@ func (tc *Context) FillBlocksForgedL1UserTxs(blocks []common.BlockData) error {
 // - blocks[].Rollup.Batch.L2Txs[].TxID
 // - blocks[].Rollup.Batch.L2Txs[].Position
 // - blocks[].Rollup.Batch.L2Txs[].Nonce
+// - blocks[].Rollup.Batch.L2Txs[].TokenID
 // - blocks[].Rollup.Batch.ExitTree
 // - blocks[].Rollup.Batch.CreatedAccounts
 // - blocks[].Rollup.Batch.FeeIdxCoordinator
@@ -915,6 +915,7 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 				tx.Position = position
 				position++
 				tx.Nonce = tc.extra.nonces[tx.FromIdx]
+				tx.TokenID = tc.accountsByIdx[int(tx.FromIdx)].TokenID
 				tc.extra.nonces[tx.FromIdx]++
 				if err := tx.SetID(); err != nil {
 					return tracerr.Wrap(err)

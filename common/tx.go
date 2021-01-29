@@ -31,7 +31,7 @@ const (
 	TxIDPrefixL2Tx = byte(2)
 
 	// TxIDLen is the length of the TxID byte array
-	TxIDLen = 12
+	TxIDLen = 33
 )
 
 var (

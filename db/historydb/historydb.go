@@ -906,6 +906,7 @@ func (hdb *HistoryDB) addL2Txs(d meddler.DB, l2txs []common.L2Tx) error {
 			FromIdx:          &l2txs[i].FromIdx,
 			EffectiveFromIdx: &l2txs[i].FromIdx,
 			ToIdx:            l2txs[i].ToIdx,
+			TokenID:          l2txs[i].TokenID,
 			Amount:           l2txs[i].Amount,
 			AmountFloat:      amountFloat,
 			BatchNum:         &l2txs[i].BatchNum,
@@ -1278,8 +1279,8 @@ func (hdb *HistoryDB) GetAllL2Txs() ([]common.L2Tx, error) {
 	err := meddler.QueryAll(
 		hdb.db, &txs,
 		`SELECT tx.id, tx.batch_num, tx.position,
-		tx.from_idx, tx.to_idx, tx.amount, tx.fee, tx.nonce,
-		tx.type, tx.eth_block_num
+		tx.from_idx, tx.to_idx, tx.amount, tx.token_id,
+		tx.fee, tx.nonce, tx.type, tx.eth_block_num
 		FROM tx WHERE is_l1 = FALSE ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.L2Tx), tracerr.Wrap(err)

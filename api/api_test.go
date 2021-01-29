@@ -60,7 +60,7 @@ var SetBlockchain = `
 	// close Block:0, Batch:1
 	> batch
 
-	CreateAccountDeposit(0) A: 11111111100000000000
+	CreateAccountDeposit(0) A: 11100000000000000
 	CreateAccountDeposit(1) C: 22222222200000000000
 	CreateAccountCoordinator(0) C
 
@@ -89,8 +89,8 @@ var SetBlockchain = `
 
 	CreateAccountCoordinator(1) B
 
-	Transfer(1) A-B: 11111100000000000 (2)
-	Transfer(0) B-C: 22222200000000000 (3)
+	Transfer(1) A-B: 11100000000000000 (2)
+	Transfer(0) B-C: 22200000000000000 (3)
 
 	// close Block:0, Batch:7
 	> batchL1 // forge L1User{1}, forge L1Coord{2}, forge L2{2}
@@ -98,10 +98,10 @@ var SetBlockchain = `
 	Deposit(0) C: 66666666600000000000
 	DepositTransfer(0) C-D: 77777777700000000000, 12377777700000000000
 
-	Transfer(0) A-B: 33333300000000000 (111)
-	Transfer(0) C-A: 44444400000000000 (222)
-	Transfer(1) B-C: 55555500000000000 (123)
-	Exit(0) A: 66666600000000000 (44)
+	Transfer(0) A-B: 33350000000000000 (111)
+	Transfer(0) C-A: 44450000000000000 (222)
+	Transfer(1) B-C: 55550000000000000 (123)
+	Exit(0) A: 66650000000000000 (44)
 
 	ForceTransfer(0) D-B: 77777700000000000
 	ForceExit(0) B: 88888800000000000
@@ -110,8 +110,8 @@ var SetBlockchain = `
 	> batchL1
 	> block
 
-	Transfer(0) D-A: 99999900000000000 (77)
-	Transfer(0) B-D: 12312300000000000 (55)
+	Transfer(0) D-A: 99950000000000000 (77)
+	Transfer(0) B-D: 12300000000000000 (55)
 
 	// close Block:1, Batch:1
 	> batchL1

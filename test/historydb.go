@@ -282,7 +282,7 @@ func GenL2Txs(
 		amount := big.NewInt(int64(i + 1))
 		fee := common.FeeSelector(i % 256) //nolint:gomnd
 		tx := common.L2Tx{
-			TxID:        common.TxID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, byte(i)}), // only for testing purposes
+			TxID:        common.TxID([common.TxIDLen]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, byte(i)}), // only for testing purposes
 			BatchNum:    batches[i%len(batches)].BatchNum,
 			Position:    i - fromIdx,
 			Amount:      amount,

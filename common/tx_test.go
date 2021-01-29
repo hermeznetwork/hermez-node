@@ -21,8 +21,9 @@ func TestSignatureConstant(t *testing.T) {
 func TestTxIDScannerValue(t *testing.T) {
 	txid0 := &TxID{}
 	txid1 := &TxID{}
-	txid0B := [12]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
-	txid1B := [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	txid0B := [TxIDLen]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2}
+	txid1B := [TxIDLen]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
 	copy(txid0[:], txid0B[:])
 	copy(txid1[:], txid1B[:])
 
@@ -37,7 +38,7 @@ func TestTxIDScannerValue(t *testing.T) {
 }
 
 func TestTxIDMarshalers(t *testing.T) {
-	h := []byte("0x00000000000001e240004700")
+	h := []byte("0x02f8b4197b990fcef7ab11021675b4532e584b2c6b3f32562a5128ff00dceb9a5b")
 	var txid TxID
 	err := txid.UnmarshalText(h)
 	assert.NoError(t, err)
