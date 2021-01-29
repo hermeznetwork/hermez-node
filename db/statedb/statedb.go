@@ -341,6 +341,11 @@ func (s *StateDB) MTGetRoot() *big.Int {
 	return s.MT.Root().BigInt()
 }
 
+// Close the StateDB
+func (s *StateDB) Close() {
+	s.db.Close()
+}
+
 // LocalStateDB represents the local StateDB which allows to make copies from
 // the synchronizer StateDB, and is used by the tx-selector and the
 // batch-builder. LocalStateDB is an in-memory storage.

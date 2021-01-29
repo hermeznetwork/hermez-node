@@ -135,7 +135,7 @@ func (kvdb *KVDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 			return tracerr.Wrap(err)
 		}
 		kvdb.db = sto
-		kvdb.CurrentIdx = 255
+		kvdb.CurrentIdx = common.RollupConstReservedIDx // 255
 		kvdb.CurrentBatch = 0
 
 		return nil
@@ -204,7 +204,7 @@ func (kvdb *KVDB) ResetFromSynchronizer(batchNum common.BatchNum, synchronizerKV
 			return tracerr.Wrap(err)
 		}
 		kvdb.db = sto
-		kvdb.CurrentIdx = 255
+		kvdb.CurrentIdx = common.RollupConstReservedIDx // 255
 		kvdb.CurrentBatch = 0
 
 		return nil
@@ -286,7 +286,7 @@ func (kvdb *KVDB) setCurrentBatch() error {
 func (kvdb *KVDB) GetCurrentIdx() (common.Idx, error) {
 	idxBytes, err := kvdb.db.Get(keyCurrentIdx)
 	if tracerr.Unwrap(err) == db.ErrNotFound {
-		return 0, nil
+		return common.RollupConstReservedIDx, nil // 255, nil
 	}
 	if err != nil {
 		return 0, tracerr.Wrap(err)
@@ -441,4 +441,9 @@ func pebbleMakeCheckpoint(source, dest string) error {
 	}
 
 	return nil
+}
+
+// Close the DB
+func (kvdb *KVDB) Close() {
+	kvdb.db.Close()
 }
