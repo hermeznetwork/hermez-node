@@ -239,10 +239,15 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	var validTxs []common.PoolL2Tx
 	// iterate over l2TxsRaw
 	// - check Nonces
+	// - check enough Balance for the Amount+Fee
 	// - if needed, create new L1CoordinatorTxs for unexisting ToIdx
 	// 	- keep used accAuths
 	// - put the valid txs into validTxs array
 	for i := 0; i < len(l2Txs); i++ {
+		if !tp.CheckEnoughBalance(l2Txs[i]) {
+			// not valid Amount with current Balance
+			continue
+		}
 		// check if Nonce is correct
 		nonce := noncesMap[l2Txs[i].FromIdx]
 		if l2Txs[i].Nonce == nonce {
@@ -319,9 +324,9 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 
 	// get CoordIdxsMap for the TokenIDs
 	coordIdxsMap := make(map[common.TokenID]common.Idx)
-	for i := 0; i < len(l2Txs); i++ {
+	for i := 0; i < len(validTxs); i++ {
 		// get TokenID from tx.Sender
-		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
+		accSender, err := tp.StateDB().GetAccount(validTxs[i].FromIdx)
 		if err != nil {
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
@@ -330,7 +335,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 		coordIdx, err := txsel.getCoordIdx(tokenID)
 		if err != nil {
 			// if err is db.ErrNotFound, should not happen, as all
-			// the l2Txs.TokenID should have a CoordinatorIdx
+			// the validTxs.TokenID should have a CoordinatorIdx
 			// created in the DB at this point
 			return nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
@@ -352,8 +357,8 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	maxL2Txs := int(selectionConfig.TxProcessorConfig.MaxTx) -
 		len(l1UserTxs) - len(l1CoordinatorTxs)
 
-	selectedL2Txs := l2Txs
-	if len(l2Txs) > maxL2Txs {
+	selectedL2Txs := validTxs
+	if len(validTxs) > maxL2Txs {
 		selectedL2Txs = selectedL2Txs[:maxL2Txs]
 	}
 	var finalL2Txs []common.PoolL2Tx
