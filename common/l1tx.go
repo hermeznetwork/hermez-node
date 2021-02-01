@@ -1,13 +1,12 @@
 package common
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -137,14 +136,9 @@ func (tx *L1Tx) SetID() error {
 	b = append(b, positionBytes[:]...)
 
 	// calculate hash
-	h := sha256.New()
-	_, err := h.Write(b[:])
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	r := h.Sum(nil)
+	h := ethCrypto.Keccak256Hash(b).Bytes()
 
-	copy(tx.TxID[1:], r)
+	copy(tx.TxID[1:], h)
 
 	return nil
 }
@@ -369,7 +363,7 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 
 func signHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
-	return crypto.Keccak256([]byte(msg))
+	return ethCrypto.Keccak256([]byte(msg))
 }
 
 // L1CoordinatorTxFromBytes decodes a L1Tx from []byte
@@ -411,15 +405,15 @@ func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommo
 		signature = append(signature, s[:]...)
 		signature = append(signature, v)
 		hash := signHash(data)
-		pubKeyBytes, err := crypto.Ecrecover(hash, signature)
+		pubKeyBytes, err := ethCrypto.Ecrecover(hash, signature)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		pubKey, err := crypto.UnmarshalPubkey(pubKeyBytes)
+		pubKey, err := ethCrypto.UnmarshalPubkey(pubKeyBytes)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		tx.FromEthAddr = crypto.PubkeyToAddress(*pubKey)
+		tx.FromEthAddr = ethCrypto.PubkeyToAddress(*pubKey)
 	} else {
 		// L1Coordinator Babyjub
 		tx.FromEthAddr = RollupConstEthAddressInternalOnly

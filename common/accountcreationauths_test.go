@@ -51,7 +51,7 @@ func TestAccountCreationAuthSignVerify(t *testing.T) {
 
 func TestKeccak256JSComp(t *testing.T) {
 	// check keccak256 compatible with js version
-	h := ethCrypto.Keccak256Hash([]byte("test")).Bytes()
+	h := ethCrypto.Keccak256([]byte("test"))
 	assert.Equal(t, "9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658",
 		hex.EncodeToString(h))
 }
