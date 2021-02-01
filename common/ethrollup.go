@@ -40,8 +40,6 @@ const (
 	RollupConstMaxWithdrawalDelay = 2 * 7 * 24 * 60 * 60
 	// RollupConstExchangeMultiplier exchange multiplier
 	RollupConstExchangeMultiplier = 1e14
-	// LenVerifiers number of Rollup Smart Contract Verifiers
-	LenVerifiers = 1
 )
 
 var (

@@ -325,7 +325,7 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 // RollupForgeBatch is the interface to call the smart contract function
 func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs, auth *bind.TransactOpts) (tx *types.Transaction, err error) {
 	if auth == nil {
-		auth, err := c.client.NewAuth()
+		auth, err = c.client.NewAuth()
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +662,11 @@ func (c *RollupClient) RollupConstants() (rollupConstants *common.RollupConstant
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		for i := int64(0); i < int64(common.LenVerifiers); i++ {
+		rollupVerifiersLength, err := c.hermez.RollupVerifiersLength(c.opts)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		for i := int64(0); i < rollupVerifiersLength.Int64(); i++ {
 			var newRollupVerifier common.RollupVerifierStruct
 			rollupVerifier, err := c.hermez.RollupVerifiers(c.opts, big.NewInt(i))
 			if err != nil {
