@@ -1,10 +1,10 @@
 package common
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"math/big"
 
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -104,15 +104,10 @@ func (tx L2Tx) CalculateTxID() ([TxIDLen]byte, error) {
 	b = append(b, byte(tx.Fee))
 
 	// calculate hash
-	h := sha256.New()
-	_, err = h.Write(b)
-	if err != nil {
-		return txID, tracerr.Wrap(err)
-	}
-	r := h.Sum(nil)
+	h := ethCrypto.Keccak256Hash(b).Bytes()
 
 	txID[0] = TxIDPrefixL2Tx
-	copy(txID[1:], r)
+	copy(txID[1:], h)
 	return txID, nil
 }
 

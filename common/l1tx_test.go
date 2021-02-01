@@ -29,7 +29,7 @@ func TestNewL1UserTx(t *testing.T) {
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x00eb5e95e1ce5e9f6c4ed402d415e8d0bdd7664769cfd2064d28da04a2c76be432", l1Tx.TxID.String())
+	assert.Equal(t, "0x00a6cbae3b8661fb75b0919ca6605a02cfb04d9c6dd16870fa0fcdf01befa32768", l1Tx.TxID.String())
 }
 
 func TestNewL1CoordinatorTx(t *testing.T) {
@@ -46,7 +46,7 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x01b8ae2bf60cb8f7c2315a27f13c8863fa2370d15ccc2e68490e197030ba22b97e", l1Tx.TxID.String())
+	assert.Equal(t, "0x01274482d73df4dab34a1b6740adfca347a462513aa14e82f27b12f818d1b68c84", l1Tx.TxID.String())
 }
 
 func TestL1TxCompressedData(t *testing.T) {

@@ -17,14 +17,17 @@ import (
 const (
 	// NLeafElems is the number of elements for a leaf
 	NLeafElems = 4
-	// maxNonceValue is the maximum value that the Account.Nonce can have (40 bits: maxNonceValue=2**40-1)
+	// maxNonceValue is the maximum value that the Account.Nonce can have
+	// (40 bits: maxNonceValue=2**40-1)
 	maxNonceValue = 0xffffffffff
-	// maxBalanceBytes is the maximum bytes that can use the Account.Balance *big.Int
+	// maxBalanceBytes is the maximum bytes that can use the
+	// Account.Balance *big.Int
 	maxBalanceBytes = 24
 
 	// IdxBytesLen idx bytes
 	IdxBytesLen = 6
-	// maxIdxValue is the maximum value that Idx can have (48 bits: maxIdxValue=2**48-1)
+	// maxIdxValue is the maximum value that Idx can have (48 bits:
+	// maxIdxValue=2**48-1)
 	maxIdxValue = 0xffffffffffff
 
 	// UserThreshold determines the threshold from the User Idxs can be
@@ -85,7 +88,8 @@ func IdxFromBigInt(b *big.Int) (Idx, error) {
 	return Idx(uint64(b.Int64())), nil
 }
 
-// Nonce represents the nonce value in a uint64, which has the method Bytes that returns a byte array of length 5 (40 bits).
+// Nonce represents the nonce value in a uint64, which has the method Bytes
+// that returns a byte array of length 5 (40 bits).
 type Nonce uint64
 
 // Bytes returns a byte array of length 5 representing the Nonce
@@ -113,7 +117,9 @@ func NonceFromBytes(b [5]byte) Nonce {
 	return Nonce(nonce)
 }
 
-// Account is a struct that gives information of the holdings of an address and a specific token. Is the data structure that generates the Value stored in the leaf of the MerkleTree
+// Account is a struct that gives information of the holdings of an address and
+// a specific token. Is the data structure that generates the Value stored in
+// the leaf of the MerkleTree
 type Account struct {
 	Idx      Idx                   `meddler:"idx"`
 	TokenID  TokenID               `meddler:"token_id"`

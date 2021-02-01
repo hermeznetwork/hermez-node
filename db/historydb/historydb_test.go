@@ -484,16 +484,16 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, common.TxTypeCreateAccountDeposit, dbL1Txs[9].Type)
 
 	// Tx ID
-	assert.Equal(t, "0x00c4f3fb5c0f7f76b3fe0a74a6ae7472e6a5ef9d66db08df7d0a7e4980c578c55a", dbL1Txs[0].TxID.String())
-	assert.Equal(t, "0x00b0c7398bfd31f7a6c0b4d3f80c73cfe9cdb541bdb6eccc6b9097976f9535fb01", dbL1Txs[1].TxID.String())
-	assert.Equal(t, "0x00bc12304d5d1aca95c356394bfa2e331e4ccb21e250c6a7442d92e02371eca9ff", dbL1Txs[2].TxID.String())
-	assert.Equal(t, "0x0063077b5c07999b460aa31dc3ea300f5923afa08f117e8ed7476aae299ed4b74b", dbL1Txs[3].TxID.String())
-	assert.Equal(t, "0x003f8b27b160e7b98ee5275de5ace264ae45891ac219a1b7c03863b5a764176b03", dbL1Txs[4].TxID.String())
-	assert.Equal(t, "0x00937115a38e1c049aab568b3281e005c206a3e18e87400ce6c62c83599a3bafbd", dbL1Txs[5].TxID.String())
-	assert.Equal(t, "0x006118820894c0acdc230d65fe739a4082c9eed3be1f5020f544d855e36dc4eae6", dbL1Txs[6].TxID.String())
-	assert.Equal(t, "0x003e5aede622ad4ebbc436d178eb83d15f8b38614eda6e90b1acb88034a0eb177d", dbL1Txs[7].TxID.String())
-	assert.Equal(t, "0x007682bb57dfd4d2e98a5c7836d0dc92bee86edefad6db6ad123415991d79fd69d", dbL1Txs[8].TxID.String())
-	assert.Equal(t, "0x006d068c5ee574706ed23bc357390da1c5bc5e144f51a32dcd38faf50be60813d6", dbL1Txs[9].TxID.String())
+	assert.Equal(t, "0x00e979da4b80d60a17ce56fa19278c6f3a7e1b43359fb8a8ea46d0264de7d653ab", dbL1Txs[0].TxID.String())
+	assert.Equal(t, "0x00af9bf96eb60f2d618519402a2f6b07057a034fa2baefd379fe8e1c969f1c5cf4", dbL1Txs[1].TxID.String())
+	assert.Equal(t, "0x00a256ee191905243320ea830840fd666a73c7b4e6f89ce4bd47ddf998dfee627a", dbL1Txs[2].TxID.String())
+	assert.Equal(t, "0x00930696d03ae0a1e6150b6ccb88043cb539a4e06a7f8baf213029ce9a0600197e", dbL1Txs[3].TxID.String())
+	assert.Equal(t, "0x00de8e41d49f23832f66364e8702c4b78237eb0c95542a94d34188e51696e74fc8", dbL1Txs[4].TxID.String())
+	assert.Equal(t, "0x007a44d6d60b15f3789d4ff49d62377a70255bf13a8d42e41ef49bf4c7b77d2c1b", dbL1Txs[5].TxID.String())
+	assert.Equal(t, "0x00c33f316240f8d33a973db2d0e901e4ac1c96de30b185fcc6b63dac4d0e147bd4", dbL1Txs[6].TxID.String())
+	assert.Equal(t, "0x00b55f0882c5229d1be3d9d3c1a076290f249cd0bae5ae6e609234606befb91233", dbL1Txs[7].TxID.String())
+	assert.Equal(t, "0x009133d4c8a412ca45f50bccdbcfdb8393b0dd8efe953d0cc3bcc82796b7a581b6", dbL1Txs[8].TxID.String())
+	assert.Equal(t, "0x00f5e8ab141ac16d673e654ba7747c2f12e93ea2c50ba6c05563752ca531968c62", dbL1Txs[9].TxID.String())
 
 	// Tx From IDx
 	assert.Equal(t, common.Idx(0), dbL1Txs[0].FromIdx)
@@ -610,10 +610,10 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, common.TxTypeExit, dbL2Txs[3].Type)
 
 	// Tx ID
-	assert.Equal(t, "0x0216d6fd29ec664d30a5db5c11401b79624388acc1c8bdd7ec4d29c9fbc82e6bbd", dbL2Txs[0].TxID.String())
-	assert.Equal(t, "0x024a99c757c9ded6156cea463e9e7b1ebed51c323dae1f1dc1bea5068f5c688f3a", dbL2Txs[1].TxID.String())
-	assert.Equal(t, "0x0239d316ab550bf8ee20a48f9a89d511baa069207d24ccdc4cfcea0dc04e0659df", dbL2Txs[2].TxID.String())
-	assert.Equal(t, "0x02c7233141caf1f99d4d5d2013da01c709e73ee3c9b46f3d5635b02d14e6177a9d", dbL2Txs[3].TxID.String())
+	assert.Equal(t, "0x02d709307533c4e3c03f20751fc4d72bc18b225d14f9616525540a64342c7c350d", dbL2Txs[0].TxID.String())
+	assert.Equal(t, "0x02e88bc5503f282cca045847668511290e642410a459bb67b1fafcd1b6097c149c", dbL2Txs[1].TxID.String())
+	assert.Equal(t, "0x027911262b43315c0b24942a02fe228274b6e4d57a476bfcdd7a324b3091362c7d", dbL2Txs[2].TxID.String())
+	assert.Equal(t, "0x02f572b63f2a5c302e1b9337ea6944bfbac3d199e4ddd262b5a53759c72ec10ee6", dbL2Txs[3].TxID.String())
 
 	// Tx From and To IDx
 	assert.Equal(t, dbL2Txs[0].ToIdx, dbL2Txs[2].FromIdx)

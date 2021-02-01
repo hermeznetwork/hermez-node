@@ -21,7 +21,7 @@ func TestNewPoolL2Tx(t *testing.T) {
 	}
 	poolL2Tx, err := NewPoolL2Tx(poolL2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x024f67ec893467419cdfacfc9152e55dc7ce16088952bf2b3442732fd046bd031c", poolL2Tx.TxID.String())
+	assert.Equal(t, "0x02fb52b5d0b9ef2626c11701bb751b2720c76d59946b9a48146ac153bb6e63bf6a", poolL2Tx.TxID.String())
 }
 
 func TestTxCompressedData(t *testing.T) {
