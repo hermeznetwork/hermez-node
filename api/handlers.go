@@ -7,7 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/lib/pq"
 )
 
 const (
@@ -25,6 +27,9 @@ const (
 
 	// 2^64 /2 -1
 	maxInt64 = 9223372036854775807
+
+	// Error for duplicated key
+	errDuplicatedKey = "Item already exists"
 )
 
 var (
@@ -33,6 +38,15 @@ var (
 )
 
 func retSQLErr(err error, c *gin.Context) {
+	log.Warn("HTTP API SQL request error", "err", err)
+	if sqlErr, ok := tracerr.Unwrap(err).(*pq.Error); ok {
+		// https://www.postgresql.org/docs/current/errcodes-appendix.html
+		if sqlErr.Code == "23505" {
+			c.JSON(http.StatusInternalServerError, errorMsg{
+				Message: errDuplicatedKey,
+			})
+		}
+	}
 	if tracerr.Unwrap(err) == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, errorMsg{
 			Message: err.Error(),
@@ -45,6 +59,7 @@ func retSQLErr(err error, c *gin.Context) {
 }
 
 func retBadReq(err error, c *gin.Context) {
+	log.Warn("HTTP API Bad request error", "err", err)
 	c.JSON(http.StatusBadRequest, errorMsg{
 		Message: err.Error(),
 	})
