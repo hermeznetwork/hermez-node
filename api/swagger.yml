@@ -2193,6 +2193,11 @@ components:
           description: Recommended fee if the destination account of the transaction doesn't exist, but the coordinator has the ability to create a valid account associated to a BJJ public key controlled by the receiver. Note that these kind of accounts are not associated with an Ethereum address and therefore can only operate in L2. 
           minimum: 0
           example: 0.5
+      required:
+        - existingAccount
+        - createAccount
+        - createAccountInternal
+      additionalProperties: false
     Token:
       type: object
       description: Hermez Network compatible and registered token.
