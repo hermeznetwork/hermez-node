@@ -94,7 +94,7 @@ func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 			return
 		}
 		if err != nil {
-			log.Errorw("token price not updated (get error)",
+			log.Warnw("token price not updated (get error)",
 				"err", err, "token", tokenSymbol, "apiType", p.apiType)
 		}
 		if err = p.db.UpdateTokenValue(tokenSymbol, tokenPrice); err != nil {
