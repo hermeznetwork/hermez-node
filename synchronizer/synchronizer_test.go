@@ -17,6 +17,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/jinzhu/copier"
@@ -253,7 +254,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 	// Compare accounts from HistoryDB with StateDB (they should match)
 	dbAccounts, err := s.historyDB.GetAllAccounts()
 	require.NoError(t, err)
-	sdbAccounts, err := s.stateDB.GetAccounts()
+	sdbAccounts, err := s.stateDB.TestGetAccounts()
 	require.NoError(t, err)
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
 }
@@ -338,6 +339,7 @@ func TestSyncGeneral(t *testing.T) {
 	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
 		StatsRefreshPeriod: 0 * time.Second,
 	})
+	log.Error(err)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -651,7 +653,7 @@ func TestSyncGeneral(t *testing.T) {
 	// Accounts in HistoryDB and StateDB must be empty
 	dbAccounts, err := s.historyDB.GetAllAccounts()
 	require.NoError(t, err)
-	sdbAccounts, err := s.stateDB.GetAccounts()
+	sdbAccounts, err := s.stateDB.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
@@ -690,7 +692,7 @@ func TestSyncGeneral(t *testing.T) {
 	// Accounts in HistoryDB and StateDB is only 2 entries
 	dbAccounts, err = s.historyDB.GetAllAccounts()
 	require.NoError(t, err)
-	sdbAccounts, err = s.stateDB.GetAccounts()
+	sdbAccounts, err = s.stateDB.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)

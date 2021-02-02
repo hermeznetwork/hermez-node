@@ -55,7 +55,7 @@ func (a *DebugAPI) handleAccount(c *gin.Context) {
 		badReq(err, c)
 		return
 	}
-	account, err := a.stateDB.GetAccount(common.Idx(uri.Idx))
+	account, err := a.stateDB.LastGetAccount(common.Idx(uri.Idx))
 	if err != nil {
 		badReq(err, c)
 		return
@@ -64,8 +64,12 @@ func (a *DebugAPI) handleAccount(c *gin.Context) {
 }
 
 func (a *DebugAPI) handleAccounts(c *gin.Context) {
-	accounts, err := a.stateDB.GetAccounts()
-	if err != nil {
+	var accounts []common.Account
+	if err := a.stateDB.LastRead(func(sdb *statedb.Last) error {
+		var err error
+		accounts, err = sdb.GetAccounts()
+		return err
+	}); err != nil {
 		badReq(err, c)
 		return
 	}
@@ -73,7 +77,7 @@ func (a *DebugAPI) handleAccounts(c *gin.Context) {
 }
 
 func (a *DebugAPI) handleCurrentBatch(c *gin.Context) {
-	batchNum, err := a.stateDB.GetCurrentBatch()
+	batchNum, err := a.stateDB.LastGetCurrentBatch()
 	if err != nil {
 		badReq(err, c)
 		return
@@ -82,7 +86,11 @@ func (a *DebugAPI) handleCurrentBatch(c *gin.Context) {
 }
 
 func (a *DebugAPI) handleMTRoot(c *gin.Context) {
-	root := a.stateDB.MTGetRoot()
+	root, err := a.stateDB.LastMTGetRoot()
+	if err != nil {
+		badReq(err, c)
+		return
+	}
 	c.JSON(http.StatusOK, root)
 }
 

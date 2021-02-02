@@ -150,7 +150,7 @@ func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchr
 	require.Nil(t, err)
 	require.Equal(t, testTokensLen*testUsersLen, len(dbAccounts))
 
-	sdbAccounts, err := stateDB.GetAccounts()
+	sdbAccounts, err := stateDB.TestGetAccounts()
 	require.Nil(t, err)
 	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
 
@@ -200,12 +200,12 @@ PoolTransfer(0) User2-User3: 300 (126)
 	})
 	require.NoError(t, err)
 	// Sanity check
-	sdbAccounts, err := pipeline.txSelector.LocalAccountsDB().GetAccounts()
+	sdbAccounts, err := pipeline.txSelector.LocalAccountsDB().TestGetAccounts()
 	require.Nil(t, err)
 	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
 
 	// Sanity check
-	sdbAccounts, err = pipeline.batchBuilder.LocalStateDB().GetAccounts()
+	sdbAccounts, err = pipeline.batchBuilder.LocalStateDB().TestGetAccounts()
 	require.Nil(t, err)
 	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
 

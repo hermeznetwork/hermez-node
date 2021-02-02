@@ -43,10 +43,10 @@ func newAccount(t *testing.T, i int) *common.Account {
 func TestNewStateDBIntermediateState(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// test values
 	k0 := []byte("testkey0")
@@ -56,18 +56,25 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	// store some data
 	tx, err := sdb.db.DB().NewTx()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = tx.Put(k0, v0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = tx.Commit()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	v, err := sdb.db.DB().Get(k0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, v0, v)
 
-	// Close PebbleDB before creating a new StateDB
-	err = sdb.db.DB().Pebble().Close()
+	// k0 not yet in last
+	err = sdb.LastRead(func(sdb *Last) error {
+		_, err := sdb.DB().Get(k0)
+		assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
+		return nil
+	})
 	require.NoError(t, err)
+
+	// Close PebbleDB before creating a new StateDB
+	sdb.Close()
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey0'&'testvalue0' data)
@@ -78,54 +85,90 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 	assert.Nil(t, v)
 
+	// k0 not in last
+	err = sdb.LastRead(func(sdb *Last) error {
+		_, err := sdb.DB().Get(k0)
+		assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
+		return nil
+	})
+	require.NoError(t, err)
+
 	// store the same data from the beginning that has ben lost since last NewStateDB
 	tx, err = sdb.db.DB().NewTx()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = tx.Put(k0, v0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = tx.Commit()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	v, err = sdb.db.DB().Get(k0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, v0, v)
 
+	// k0 yet not in last
+	err = sdb.LastRead(func(sdb *Last) error {
+		_, err := sdb.DB().Get(k0)
+		assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
+		return nil
+	})
+	require.NoError(t, err)
+
 	// make checkpoints with the current state
-	bn, err := sdb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	bn, err := sdb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(0), bn)
 	err = sdb.db.MakeCheckpoint()
-	assert.NoError(t, err)
-	bn, err = sdb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	bn, err = sdb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(1), bn)
+
+	// k0 in last
+	err = sdb.LastRead(func(sdb *Last) error {
+		v, err := sdb.DB().Get(k0)
+		require.NoError(t, err)
+		assert.Equal(t, v0, v)
+		return nil
+	})
+	require.NoError(t, err)
 
 	// write more data
 	tx, err = sdb.db.DB().NewTx()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = tx.Put(k1, v1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	err = tx.Put(k0, v1) // overwrite k0 with v1
+	require.NoError(t, err)
 	err = tx.Commit()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	v, err = sdb.db.DB().Get(k1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, v1, v)
 
-	// Close PebbleDB before creating a new StateDB
-	err = sdb.db.DB().Pebble().Close()
+	err = sdb.LastRead(func(sdb *Last) error {
+		v, err := sdb.DB().Get(k0)
+		require.NoError(t, err)
+		assert.Equal(t, v0, v)
+		return nil
+	})
 	require.NoError(t, err)
+
+	// Close PebbleDB before creating a new StateDB
+	sdb.Close()
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey1'&'testvalue1' data)
 	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
 	require.NoError(t, err)
 
-	bn, err = sdb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	bn, err = sdb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(1), bn)
 
+	// we closed the db without doing a checkpoint after overwriting k0, so
+	// it's back to v0
 	v, err = sdb.db.DB().Get(k0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, v0, v)
 
 	v, err = sdb.db.DB().Get(k1)
@@ -137,10 +180,10 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 func TestStateDBWithoutMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// create test accounts
 	var accounts []*common.Account
@@ -157,20 +200,20 @@ func TestStateDBWithoutMT(t *testing.T) {
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
 		_, err = sdb.CreateAccount(accounts[i].Idx, accounts[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	for i := 0; i < len(accounts); i++ {
 		existingAccount := accounts[i].Idx
 		accGetted, err := sdb.GetAccount(existingAccount)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, accounts[i], accGetted)
 	}
 
 	// try already existing idx and get error
 	existingAccount := common.Idx(256)
 	_, err = sdb.GetAccount(existingAccount) // check that exist
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrAccountAlreadyExists, tracerr.Unwrap(err))
@@ -180,7 +223,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 		accounts[i].Nonce = accounts[i].Nonce + 1
 		existingAccount = common.Idx(i)
 		_, err = sdb.UpdateAccount(existingAccount, accounts[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	_, err = sdb.MTGetProof(common.Idx(1))
@@ -191,10 +234,10 @@ func TestStateDBWithoutMT(t *testing.T) {
 func TestStateDBWithMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// create test accounts
 	var accounts []*common.Account
@@ -210,33 +253,33 @@ func TestStateDBWithMT(t *testing.T) {
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
 		_, err = sdb.CreateAccount(accounts[i].Idx, accounts[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	for i := 0; i < len(accounts); i++ {
 		accGetted, err := sdb.GetAccount(accounts[i].Idx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, accounts[i], accGetted)
 	}
 
 	// try already existing idx and get error
 	_, err = sdb.GetAccount(common.Idx(256)) // check that exist
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrAccountAlreadyExists, tracerr.Unwrap(err))
 
 	_, err = sdb.MTGetProof(common.Idx(256))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// update accounts
 	for i := 0; i < len(accounts); i++ {
 		accounts[i].Nonce = accounts[i].Nonce + 1
 		_, err = sdb.UpdateAccount(accounts[i].Idx, accounts[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	a, err := sdb.GetAccount(common.Idx(256)) // check that account value has been updated
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, accounts[0].Nonce, a.Nonce)
 }
 
@@ -245,10 +288,13 @@ func TestStateDBWithMT(t *testing.T) {
 func TestCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "sdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
+	err = sdb.Reset(0)
+	require.NoError(t, err)
 
 	// create test accounts
 	var accounts []*common.Account
@@ -259,22 +305,33 @@ func TestCheckpoints(t *testing.T) {
 	// add test accounts
 	for i := 0; i < len(accounts); i++ {
 		_, err = sdb.CreateAccount(accounts[i].Idx, accounts[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
+	// account doesn't exist in Last checkpoint
+	_, err = sdb.LastGetAccount(accounts[0].Idx)
+	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 
 	// do checkpoints and check that currentBatch is correct
-	err = sdb.db.MakeCheckpoint()
-	assert.NoError(t, err)
-	cb, err := sdb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	err = sdb.MakeCheckpoint()
+	require.NoError(t, err)
+	cb, err := sdb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(1), cb)
 
-	for i := 1; i < 10; i++ {
-		err = sdb.db.MakeCheckpoint()
-		assert.NoError(t, err)
+	// account exists in Last checkpoint
+	accCur, err := sdb.GetAccount(accounts[0].Idx)
+	require.NoError(t, err)
+	accLast, err := sdb.LastGetAccount(accounts[0].Idx)
+	require.NoError(t, err)
+	assert.Equal(t, accounts[0], accLast)
+	assert.Equal(t, accCur, accLast)
 
-		cb, err = sdb.db.GetCurrentBatch()
-		assert.NoError(t, err)
+	for i := 1; i < 10; i++ {
+		err = sdb.MakeCheckpoint()
+		require.NoError(t, err)
+
+		cb, err = sdb.getCurrentBatch()
+		require.NoError(t, err)
 		assert.Equal(t, common.BatchNum(i+1), cb)
 	}
 
@@ -282,7 +339,7 @@ func TestCheckpoints(t *testing.T) {
 
 	// reset checkpoint
 	err = sdb.Reset(3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// check that reset can be repeated (as there exist the 'current' and
 	// 'BatchNum3', from where the 'current' is a copy)
@@ -290,21 +347,21 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	// check that currentBatch is as expected after Reset
-	cb, err = sdb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	cb, err = sdb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(3), cb)
 
 	// advance one checkpoint and check that currentBatch is fine
-	err = sdb.db.MakeCheckpoint()
-	assert.NoError(t, err)
-	cb, err = sdb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	err = sdb.MakeCheckpoint()
+	require.NoError(t, err)
+	cb, err = sdb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 
 	err = sdb.db.DeleteCheckpoint(common.BatchNum(1))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = sdb.db.DeleteCheckpoint(common.BatchNum(2))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = sdb.db.DeleteCheckpoint(common.BatchNum(1)) // does not exist, should return err
 	assert.NotNil(t, err)
 	err = sdb.db.DeleteCheckpoint(common.BatchNum(2)) // does not exist, should return err
@@ -313,43 +370,43 @@ func TestCheckpoints(t *testing.T) {
 	// Create a LocalStateDB from the initial StateDB
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dirLocal))
+	defer require.NoError(t, os.RemoveAll(dirLocal))
 	ldb, err := NewLocalStateDB(dirLocal, 128, sdb, TypeBatchBuilder, 32)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
 	err = ldb.Reset(4, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// check that currentBatch is 4 after the Reset
-	cb, err = ldb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	cb, err = ldb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb
-	err = ldb.db.MakeCheckpoint()
-	assert.NoError(t, err)
-	cb, err = ldb.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	err = ldb.MakeCheckpoint()
+	require.NoError(t, err)
+	cb, err = ldb.getCurrentBatch()
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(5), cb)
 
 	// Create a 2nd LocalStateDB from the initial StateDB
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dirLocal2))
+	defer require.NoError(t, os.RemoveAll(dirLocal2))
 	ldb2, err := NewLocalStateDB(dirLocal2, 128, sdb, TypeBatchBuilder, 32)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
 	err = ldb2.Reset(4, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// check that currentBatch is 4 after the Reset
 	cb, err = ldb2.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb2
 	err = ldb2.db.MakeCheckpoint()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cb, err = ldb2.db.GetCurrentBatch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(5), cb)
 
 	debug := false
@@ -365,7 +422,7 @@ func TestStateDBGetAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// create test accounts
 	var accounts []common.Account
@@ -380,14 +437,14 @@ func TestStateDBGetAccounts(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	dbAccounts, err := sdb.GetAccounts()
+	dbAccounts, err := sdb.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, accounts, dbAccounts)
 }
 
 func printCheckpoints(t *testing.T, path string) {
 	files, err := ioutil.ReadDir(path)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fmt.Println(path)
 	for _, f := range files {
@@ -409,7 +466,7 @@ func bigFromStr(h string, u int) *big.Int {
 func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
 	require.NoError(t, err)
@@ -483,7 +540,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 func TestListCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
 	require.NoError(t, err)
@@ -491,7 +548,7 @@ func TestListCheckpoints(t *testing.T) {
 	numCheckpoints := 16
 	// do checkpoints
 	for i := 0; i < numCheckpoints; i++ {
-		err = sdb.db.MakeCheckpoint()
+		err = sdb.MakeCheckpoint()
 		require.NoError(t, err)
 	}
 	list, err := sdb.db.ListCheckpoints()
@@ -515,7 +572,7 @@ func TestListCheckpoints(t *testing.T) {
 func TestDeleteOldCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	defer require.NoError(t, os.RemoveAll(dir))
 
 	keep := 16
 	sdb, err := NewStateDB(dir, keep, TypeSynchronizer, 32)
@@ -525,7 +582,7 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	// do checkpoints and check that we never have more than `keep`
 	// checkpoints
 	for i := 0; i < numCheckpoints; i++ {
-		err = sdb.db.MakeCheckpoint()
+		err = sdb.MakeCheckpoint()
 		require.NoError(t, err)
 		checkpoints, err := sdb.db.ListCheckpoints()
 		require.NoError(t, err)

@@ -170,7 +170,7 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 		return tracerr.Wrap(err)
 	}
 	// Get public key
-	account, err := a.s.GetAccount(poolTx.FromIdx)
+	account, err := a.s.LastGetAccount(poolTx.FromIdx)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}

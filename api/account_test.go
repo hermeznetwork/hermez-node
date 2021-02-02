@@ -10,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testAccount struct {
@@ -76,40 +77,40 @@ func TestGetAccounts(t *testing.T) {
 	// Filter by BJJ
 	path := fmt.Sprintf("%s?BJJ=%s&limit=%d", endpoint, tc.accounts[0].PublicKey, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Filter by ethAddr
 	path = fmt.Sprintf("%s?hezEthereumAddress=%s&limit=%d", endpoint, tc.accounts[3].EthAddr, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// both filters (incompatible)
 	path = fmt.Sprintf("%s?hezEthereumAddress=%s&BJJ=%s&limit=%d", endpoint, tc.accounts[0].EthAddr, tc.accounts[0].PublicKey, limit)
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fetchedAccounts = []testAccount{}
 	// Filter by token IDs
 	path = fmt.Sprintf("%s?tokenIds=%s&limit=%d", endpoint, stringIds, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Token Ids + bjj
 	path = fmt.Sprintf("%s?tokenIds=%s&BJJ=%s&limit=%d", endpoint, stringIds, tc.accounts[10].PublicKey, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// No filters (checks response content)
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, len(tc.accounts), len(fetchedAccounts))
 	for i := 0; i < len(fetchedAccounts); i++ {
 		fetchedAccounts[i].Token.ItemID = 0
@@ -132,7 +133,7 @@ func TestGetAccounts(t *testing.T) {
 		}
 	}
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testAccountsResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, len(reversedAccounts), len(fetchedAccounts))
 	for i := 0; i < len(fetchedAccounts); i++ {
 		reversedAccounts[i].Token.ItemID = 0
@@ -147,21 +148,21 @@ func TestGetAccounts(t *testing.T) {
 	// 400
 	path = fmt.Sprintf("%s?hezEthereumAddress=hez:0x123456", endpoint)
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test GetAccount
 	path = fmt.Sprintf("%s/%s", endpoint, fetchedAccounts[2].Idx)
 	account := testAccount{}
-	assert.NoError(t, doGoodReq("GET", path, nil, &account))
+	require.NoError(t, doGoodReq("GET", path, nil, &account))
 	account.Token.ItemID = 0
 	assert.Equal(t, fetchedAccounts[2], account)
 
 	// 400
 	path = fmt.Sprintf("%s/hez:12345", endpoint)
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// 404
 	path = fmt.Sprintf("%s/hez:10:12345", endpoint)
 	err = doBadReq("GET", path, nil, 404)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

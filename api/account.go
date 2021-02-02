@@ -6,6 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/tracerr"
 )
 
 func (a *API) getAccount(c *gin.Context) {
@@ -22,7 +24,7 @@ func (a *API) getAccount(c *gin.Context) {
 	}
 
 	// Get balance from stateDB
-	account, err := a.s.GetAccount(*idx)
+	account, err := a.s.LastGetAccount(*idx)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -56,19 +58,23 @@ func (a *API) getAccounts(c *gin.Context) {
 	}
 
 	// Get balances from stateDB
-	for x, apiAccount := range apiAccounts {
-		idx, err := stringToIdx(string(apiAccount.Idx), "Account Idx")
-		if err != nil {
-			retSQLErr(err, c)
-			return
+	if err := a.s.LastRead(func(sdb *statedb.Last) error {
+		for x, apiAccount := range apiAccounts {
+			idx, err := stringToIdx(string(apiAccount.Idx), "Account Idx")
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+			account, err := sdb.GetAccount(*idx)
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+			apiAccounts[x].Balance = apitypes.NewBigIntStr(account.Balance)
+			apiAccounts[x].Nonce = account.Nonce
 		}
-		account, err := a.s.GetAccount(*idx)
-		if err != nil {
-			retSQLErr(err, c)
-			return
-		}
-		apiAccounts[x].Balance = apitypes.NewBigIntStr(account.Balance)
-		apiAccounts[x].Nonce = account.Nonce
+		return nil
+	}); err != nil {
+		retSQLErr(err, c)
+		return
 	}
 
 	// Build succesfull response

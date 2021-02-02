@@ -11,6 +11,7 @@ import (
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-merkletree"
 	"github.com/iden3/go-merkletree/db"
+	"github.com/iden3/go-merkletree/db/pebble"
 )
 
 var (
@@ -58,11 +59,46 @@ type TypeStateDB string
 
 // StateDB represents the StateDB object
 type StateDB struct {
-	path string
-	Typ  TypeStateDB
-	db   *kvdb.KVDB
-	MT   *merkletree.MerkleTree
-	keep int
+	path    string
+	Typ     TypeStateDB
+	db      *kvdb.KVDB
+	nLevels int
+	MT      *merkletree.MerkleTree
+	keep    int
+}
+
+// Last offers a subset of view methods of the StateDB that can be
+// called via the LastRead method of StateDB in a thread-safe manner to obtain
+// a consistent view to the last batch of the StateDB.
+type Last struct {
+	db db.Storage
+}
+
+// GetAccount returns the account for the given Idx
+func (s *Last) GetAccount(idx common.Idx) (*common.Account, error) {
+	return GetAccountInTreeDB(s.db, idx)
+}
+
+// GetCurrentBatch returns the current BatchNum stored in Last.db
+func (s *Last) GetCurrentBatch() (common.BatchNum, error) {
+	cbBytes, err := s.db.Get(kvdb.KeyCurrentBatch)
+	if tracerr.Unwrap(err) == db.ErrNotFound {
+		return 0, nil
+	} else if err != nil {
+		return 0, tracerr.Wrap(err)
+	}
+	return common.BatchNumFromBytes(cbBytes)
+}
+
+// DB returns the underlying storage of Last
+func (s *Last) DB() db.Storage {
+	return s.db
+}
+
+// GetAccounts returns all the accounts in the db.  Use for debugging pruposes
+// only.
+func (s *Last) GetAccounts() ([]common.Account, error) {
+	return getAccounts(s.db)
 }
 
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
@@ -89,12 +125,70 @@ func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int) (*StateDB
 	}
 
 	return &StateDB{
-		path: pathDB,
-		db:   kv,
-		MT:   mt,
-		Typ:  typ,
-		keep: keep,
+		path:    pathDB,
+		db:      kv,
+		nLevels: nLevels,
+		MT:      mt,
+		Typ:     typ,
+		keep:    keep,
 	}, nil
+}
+
+// LastRead is a thread-safe method to query the last checkpoint of the StateDB
+// via the Last type methods
+func (s *StateDB) LastRead(fn func(sdbLast *Last) error) error {
+	return s.db.LastRead(
+		func(db *pebble.Storage) error {
+			return fn(&Last{
+				db: db,
+			})
+		},
+	)
+}
+
+// LastGetAccount is a thread-safe method to query an account in the last
+// checkpoint of the StateDB.
+func (s *StateDB) LastGetAccount(idx common.Idx) (*common.Account, error) {
+	var account *common.Account
+	if err := s.LastRead(func(sdb *Last) error {
+		var err error
+		account, err = sdb.GetAccount(idx)
+		return err
+	}); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return account, nil
+}
+
+// LastGetCurrentBatch is a thread-safe method to get the current BatchNum in
+// the last checkpoint of the StateDB.
+func (s *StateDB) LastGetCurrentBatch() (common.BatchNum, error) {
+	var batchNum common.BatchNum
+	if err := s.LastRead(func(sdb *Last) error {
+		var err error
+		batchNum, err = sdb.GetCurrentBatch()
+		return err
+	}); err != nil {
+		return 0, tracerr.Wrap(err)
+	}
+	return batchNum, nil
+}
+
+// LastMTGetRoot returns the root of the underlying Merkle Tree in the last
+// checkpoint of the StateDB.
+func (s *StateDB) LastMTGetRoot() (*big.Int, error) {
+	var root *big.Int
+	if err := s.LastRead(func(sdb *Last) error {
+		mt, err := merkletree.NewMerkleTree(sdb.DB().WithPrefix(PrefixKeyMT), s.nLevels)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		root = mt.Root().BigInt()
+		return nil
+	}); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return root, nil
 }
 
 // MakeCheckpoint does a checkpoint at the given batchNum in the defined path.
@@ -115,8 +209,8 @@ func (s *StateDB) CurrentIdx() common.Idx {
 	return s.db.CurrentIdx
 }
 
-// GetCurrentBatch returns the current BatchNum stored in the StateDB.db
-func (s *StateDB) GetCurrentBatch() (common.BatchNum, error) {
+// getCurrentBatch returns the current BatchNum stored in the StateDB.db
+func (s *StateDB) getCurrentBatch() (common.BatchNum, error) {
 	return s.db.GetCurrentBatch()
 }
 
@@ -157,33 +251,48 @@ func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
 	return GetAccountInTreeDB(s.db.DB(), idx)
 }
 
-// GetAccounts returns all the accounts in the db.  Use for debugging pruposes
-// only.
-func (s *StateDB) GetAccounts() ([]common.Account, error) {
-	idxDB := s.db.StorageWithPrefix(PrefixKeyIdx)
-	idxs := []common.Idx{}
-	// NOTE: Current implementation of Iterate in the pebble interface is
-	// not efficient, as it iterates over all keys.  Improve it following
-	// this example: https://github.com/cockroachdb/pebble/pull/923/files
+func accountsIter(db db.Storage, fn func(a *common.Account) (bool, error)) error {
+	idxDB := db.WithPrefix(PrefixKeyIdx)
 	if err := idxDB.Iterate(func(k []byte, v []byte) (bool, error) {
 		idx, err := common.IdxFromBytes(k)
 		if err != nil {
 			return false, tracerr.Wrap(err)
 		}
-		idxs = append(idxs, idx)
-		return true, nil
+		acc, err := GetAccountInTreeDB(db, idx)
+		if err != nil {
+			return false, tracerr.Wrap(err)
+		}
+		ok, err := fn(acc)
+		if err != nil {
+			return false, tracerr.Wrap(err)
+		}
+		return ok, nil
 	}); err != nil {
+		return tracerr.Wrap(err)
+	}
+	return nil
+}
+
+func getAccounts(db db.Storage) ([]common.Account, error) {
+	accs := []common.Account{}
+	if err := accountsIter(
+		db,
+		func(a *common.Account) (bool, error) {
+			accs = append(accs, *a)
+			return true, nil
+		},
+	); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	accs := []common.Account{}
-	for i := range idxs {
-		acc, err := s.GetAccount(idxs[i])
-		if err != nil {
-			return nil, tracerr.Wrap(err)
-		}
-		accs = append(accs, *acc)
-	}
 	return accs, nil
+}
+
+// TestGetAccounts returns all the accounts in the db.  Use only in tests.
+// Outside tests getting all the accounts is discouraged because it's an
+// expensive operation, but if you must do it, use `LastRead()` method to get a
+// thread-safe and consistent view of the stateDB.
+func (s *StateDB) TestGetAccounts() ([]common.Account, error) {
+	return getAccounts(s.db.DB())
 }
 
 // GetAccountInTreeDB is abstracted from StateDB to be used from StateDB and
@@ -334,11 +443,6 @@ func (s *StateDB) MTGetProof(idx common.Idx) (*merkletree.CircomVerifierProof, e
 		return nil, tracerr.Wrap(err)
 	}
 	return p, nil
-}
-
-// MTGetRoot returns the current root of the underlying Merkle Tree
-func (s *StateDB) MTGetRoot() *big.Int {
-	return s.MT.Root().BigInt()
 }
 
 // Close the StateDB
