@@ -40,6 +40,11 @@ type PoolL2Tx struct {
 	Fee       FeeSelector           `meddler:"fee"`
 	Nonce     Nonce                 `meddler:"nonce"` // effective 40 bits used
 	State     PoolL2TxState         `meddler:"state"`
+	// Info contains information about the status & State of the
+	// transaction. As for example, if the Tx has not been selected in the
+	// last batch due not enough Balance at the Sender account, this reason
+	// would appear at this parameter.
+	Info      string                `meddler:"info,zeroisnull"`
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized

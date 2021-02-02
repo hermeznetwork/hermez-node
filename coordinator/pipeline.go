@@ -293,6 +293,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	}
 
 	var poolL2Txs []common.PoolL2Tx
+	var discardedL2Txs []common.PoolL2Tx
 	var l1UserTxsExtra, l1CoordTxs []common.L1Tx
 	var auths [][]byte
 	var coordIdxs []common.Idx
@@ -316,14 +317,14 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		coordIdxs, auths, l1UserTxsExtra, l1CoordTxs, poolL2Txs, err =
+		coordIdxs, auths, l1UserTxsExtra, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
 			p.txSelector.GetL1L2TxSelection(selectionCfg, l1UserTxs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
-		coordIdxs, auths, l1CoordTxs, poolL2Txs, err =
+		coordIdxs, auths, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
 			p.txSelector.GetL2TxSelection(selectionCfg)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -339,6 +340,9 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	batchInfo.VerifierIdx = p.cfg.VerifierIdx
 
 	if err := p.l2DB.StartForging(common.TxIDsFromPoolL2Txs(poolL2Txs), batchInfo.BatchNum); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 

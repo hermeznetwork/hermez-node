@@ -1300,16 +1300,19 @@ func (tp *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 }
 
 // CheckEnoughBalance returns true if the sender of the transaction has enough
-// balance in the account to send the Amount+Fee
-func (tp *TxProcessor) CheckEnoughBalance(tx common.PoolL2Tx) bool {
+// balance in the account to send the Amount+Fee, and also returns the account
+// Balance and the Fee+Amount (which is used to give information about why the
+// transaction is not selected in case that this method returns false.
+func (tp *TxProcessor) CheckEnoughBalance(tx common.PoolL2Tx) (bool, *big.Int, *big.Int) {
 	acc, err := tp.s.GetAccount(tx.FromIdx)
 	if err != nil {
-		return false
+		return false, nil, nil
 	}
 	fee, err := common.CalcFeeAmount(tx.Amount, tx.Fee)
 	if err != nil {
-		return false
+		return false, nil, nil
 	}
 	feeAndAmount := new(big.Int).Add(tx.Amount, fee)
-	return acc.Balance.Cmp(feeAndAmount) != -1 // !=-1 balance<amount
+	return acc.Balance.Cmp(feeAndAmount) != -1, // !=-1 balance<amount
+		acc.Balance, feeAndAmount
 }

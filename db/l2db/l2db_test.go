@@ -162,6 +162,30 @@ func TestAddTxTest(t *testing.T) {
 		assert.Equal(t, 0, offset)
 	}
 }
+func TestUpdateTxsInfo(t *testing.T) {
+	err := prepareHistoryDB(historyDB)
+	if err != nil {
+		log.Error("Error prepare historyDB", err)
+	}
+	poolL2Txs, err := generatePoolL2Txs()
+	assert.NoError(t, err)
+	for i := range poolL2Txs {
+		err := l2DB.AddTxTest(&poolL2Txs[i])
+		require.NoError(t, err)
+
+		// once added, change the Info parameter
+		poolL2Txs[i].Info = "test"
+	}
+	// update the txs
+	err = l2DB.UpdateTxsInfo(poolL2Txs)
+	require.NoError(t, err)
+
+	for i := range poolL2Txs {
+		fetchedTx, err := l2DB.GetTx(poolL2Txs[i].TxID)
+		assert.NoError(t, err)
+		assert.Equal(t, "test", fetchedTx.Info)
+	}
+}
 
 func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
 	// Check that timestamp has been set within the last 3 seconds

@@ -23,7 +23,7 @@ type L2Tx struct {
 	// Nonce is filled by the TxProcessor
 	Nonce       Nonce  `meddler:"nonce"`
 	Type        TxType `meddler:"type"`
-	EthBlockNum int64  `meddler:"eth_block_num"` // Ethereum Block Number in which this L2Tx was added to the queue
+	EthBlockNum int64  `meddler:"eth_block_num"` // EthereumBlockNumber in which this L2Tx was added to the queue
 }
 
 // NewL2Tx returns the given L2Tx with the TxId & Type parameters calculated

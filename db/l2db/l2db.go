@@ -94,6 +94,37 @@ func (l2db *L2DB) AddTx(tx *PoolL2TxWrite) error {
 	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", tx))
 }
 
+// UpdateTxsInfo updates the parameter Info of the pool transactions
+func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
+	if len(txs) == 0 {
+		return nil
+	}
+	type txUpdate struct {
+		ID   common.TxID `db:"id"`
+		Info string      `db:"info"`
+	}
+	txUpdates := make([]txUpdate, len(txs))
+	for i := range txs {
+		txUpdates[i] = txUpdate{ID: txs[i].TxID, Info: txs[i].Info}
+	}
+	const query string = `
+		UPDATE tx_pool SET
+			info = tx_update.info
+		FROM (VALUES
+			(NULL::::BYTEA, NULL::::VARCHAR),
+			(:id, :info)
+		) as tx_update (id, info)
+		WHERE tx_pool.tx_id = tx_update.id;
+	`
+	if len(txUpdates) > 0 {
+		if _, err := sqlx.NamedExec(l2db.db, query, txUpdates); err != nil {
+			return tracerr.Wrap(err)
+		}
+	}
+
+	return nil
+}
+
 // AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
 // but in production txs will only be inserted through the API
 func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
@@ -146,7 +177,7 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 const selectPoolTxAPI = `SELECT  tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
 tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
@@ -155,7 +186,7 @@ FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
 const selectPoolTxCommon = `SELECT  tx_pool.tx_id, from_idx, to_idx, tx_pool.to_eth_addr, 
 tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.signature, tx_pool.timestamp, rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, rq_from_idx, 
 rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f AS fee_usd, token.usd_update  
