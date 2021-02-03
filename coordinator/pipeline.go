@@ -425,9 +425,10 @@ func prepareForgeBatchArgs(batchInfo *BatchInfo) *eth.RollupForgeBatchArgs {
 		VerifierIdx: batchInfo.VerifierIdx,
 		L1Batch:     batchInfo.L1Batch,
 		ProofA:      [2]*big.Int{proof.PiA[0], proof.PiA[1]},
+		// Implementation of the verifier need a swap on the proofB vector
 		ProofB: [2][2]*big.Int{
-			{proof.PiB[0][0], proof.PiB[0][1]},
-			{proof.PiB[1][0], proof.PiB[1][1]},
+			{proof.PiB[0][1], proof.PiB[0][0]},
+			{proof.PiB[1][1], proof.PiB[1][0]},
 		},
 		ProofC: [2]*big.Int{proof.PiC[0], proof.PiC[1]},
 	}
