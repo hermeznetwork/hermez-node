@@ -655,4 +655,10 @@ func (n *Node) Stop() {
 		log.Info("Stopping Coordinator...")
 		n.coord.Stop()
 	}
+	// Close kv DBs
+	n.sync.StateDB().Close()
+	if n.mode == ModeCoordinator {
+		n.coord.TxSelector().LocalAccountsDB().Close()
+		n.coord.BatchBuilder().LocalStateDB().Close()
+	}
 }

@@ -262,6 +262,11 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 	return s, s.init()
 }
 
+// StateDB returns the inner StateDB
+func (s *Synchronizer) StateDB() *statedb.StateDB {
+	return s.stateDB
+}
+
 // Stats returns a copy of the Synchronizer Stats.  It is safe to call Stats()
 // during a Sync call
 func (s *Synchronizer) Stats() *Stats {

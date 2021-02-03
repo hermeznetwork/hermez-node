@@ -172,6 +172,16 @@ func NewCoordinator(cfg Config,
 	return &c, nil
 }
 
+// TxSelector returns the inner TxSelector
+func (c *Coordinator) TxSelector() *txselector.TxSelector {
+	return c.txSelector
+}
+
+// BatchBuilder returns the inner BatchBuilder
+func (c *Coordinator) BatchBuilder() *batchbuilder.BatchBuilder {
+	return c.batchBuilder
+}
+
 func (c *Coordinator) newPipeline(ctx context.Context) (*Pipeline, error) {
 	return NewPipeline(ctx, c.cfg, c.historyDB, c.l2DB, c.txSelector,
 		c.batchBuilder, c.purger, c.txManager, c.provers, &c.consts)
