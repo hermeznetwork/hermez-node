@@ -177,7 +177,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 
 	log.Debug("block:0 batch:1")
 	l1UserTxs := []common.L1Tx{}
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
@@ -187,7 +187,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs = []common.L1Tx{}
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
@@ -197,7 +197,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
@@ -209,7 +209,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 
 	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
@@ -222,7 +222,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 
 	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
@@ -235,7 +235,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 
 	log.Debug("block:0 batch:6")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
@@ -268,7 +268,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.True(t, l2TxsFromDB[0].VerifySignature(chainID, tc.Users["A"].BJJ.Public().Compress()))
 	assert.True(t, l2TxsFromDB[1].VerifySignature(chainID, tc.Users["B"].BJJ.Public().Compress()))
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
-	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, []common.Idx{261, 262}, coordIdxs)
 	assert.Equal(t, txsel.coordAccount.AccountCreationAuth, accAuths[0])
@@ -314,7 +314,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.True(t, l2TxsFromDB[2].VerifySignature(chainID, tc.Users["B"].BJJ.Public().Compress()))
 	assert.True(t, l2TxsFromDB[3].VerifySignature(chainID, tc.Users["A"].BJJ.Public().Compress()))
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
-	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, []common.Idx{261, 262}, coordIdxs)
 	assert.Equal(t, 0, len(accAuths))
@@ -355,7 +355,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.True(t, l2TxsFromDB[0].VerifySignature(chainID, tc.Users["D"].BJJ.Public().Compress()))
 	assert.True(t, l2TxsFromDB[1].VerifySignature(chainID, tc.Users["B"].BJJ.Public().Compress()))
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
-	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, []common.Idx{262}, coordIdxs)
 	assert.Equal(t, 0, len(accAuths))
@@ -420,8 +420,12 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	}
 	// batch1
 	l1UserTxs := []common.L1Tx{}
-	_, _, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, _, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
+
+	expectedTxID0 := "0x0248bae02b5c8c3847d312bfac3a33ae790616e888f2f711f22aeaff007cde92c2" // 1st TransferToEthAddr
+	expectedTxID1 := "0x0249af018311a393c337ab9174ca2466cba489e49942b4ca4e5c530903671c4aef" // 1st Exit
+	expectedTxID2 := "0x0228b93a261a0cdc62f35588c03bd179d31a0807c28afffdb6a7aaf0c4f017e4cf" // 2nd TransferToEthAddr
 
 	// batch2
 	// prepare the PoolL2Txs
@@ -435,11 +439,14 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	addL2Txs(t, txsel, poolL2Txs)
 
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs)) // should be 0 as the 2 PoolL2Txs does not have enough funds
+	assert.Equal(t, 2, len(discardedL2Txs))
+	assert.Equal(t, expectedTxID0, discardedL2Txs[0].TxID.String())
+	assert.Equal(t, expectedTxID1, discardedL2Txs[1].TxID.String())
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
 
@@ -460,11 +467,15 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	addL2Txs(t, txsel, poolL2Txs)
 
 	l1UserTxs = []common.L1Tx{}
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 1, len(oL2Txs)) // see 'NOTE' at the beginning of 'batch3' of this test
+	assert.Equal(t, 2, len(discardedL2Txs))
+	assert.Equal(t, expectedTxID2, oL2Txs[0].TxID.String())
+	assert.Equal(t, expectedTxID0, discardedL2Txs[0].TxID.String())
+	assert.Equal(t, expectedTxID1, discardedL2Txs[1].TxID.String())
 	assert.Equal(t, common.TxTypeTransferToEthAddr, oL2Txs[0].Type)
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
@@ -473,11 +484,14 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	// make the selection of another batch, which should include the
 	// initial PoolExit, which now is valid as B has enough Balance
 	l1UserTxs = []common.L1Tx{}
-	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 1, len(discardedL2Txs))
+	assert.Equal(t, expectedTxID1, oL2Txs[0].TxID.String()) // the Exit that was not accepted at the batch2
+	assert.Equal(t, expectedTxID0, discardedL2Txs[0].TxID.String())
 	assert.Equal(t, common.TxTypeExit, oL2Txs[0].Type)
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)

@@ -49,6 +49,7 @@ type PoolTxAPI struct {
 	Fee                  common.FeeSelector    `meddler:"fee"`
 	Nonce                common.Nonce          `meddler:"nonce"`
 	State                common.PoolL2TxState  `meddler:"state"`
+	Info                 *string               `meddler:"info"`
 	Signature            babyjub.SignatureComp `meddler:"signature"`
 	RqFromIdx            *apitypes.HezIdx      `meddler:"rq_from_idx"`
 	RqToIdx              *apitypes.HezIdx      `meddler:"rq_to_idx"`
@@ -90,6 +91,7 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 		"fee":                         tx.Fee,
 		"nonce":                       tx.Nonce,
 		"state":                       tx.State,
+		"info":                        tx.Info,
 		"signature":                   tx.Signature,
 		"timestamp":                   tx.Timestamp,
 		"batchNum":                    tx.BatchNum,

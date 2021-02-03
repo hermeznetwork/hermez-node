@@ -606,6 +606,7 @@ CREATE TABLE tx_pool (
     fee SMALLINT NOT NULL,
     nonce BIGINT NOT NULL,
     state CHAR(4) NOT NULL,
+    info VARCHAR,
     signature BYTEA NOT NULL,
     timestamp TIMESTAMP WITHOUT TIME ZONE DEFAULT timezone('utc', now()),
     batch_num BIGINT,

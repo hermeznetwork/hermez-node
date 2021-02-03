@@ -152,7 +152,7 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 			l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[i].Batch.ForgeL1TxsNum])
 		}
 		// TxSelector select the transactions for the next Batch
-		coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+		coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 		require.NoError(t, err)
 		// BatchBuilder build Batch
 		zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -175,7 +175,7 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -183,6 +183,8 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 	assert.Equal(t, "7614010373759339299470010949167613050707822522530721724565424494781010548240", bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.LocalAccountsDB().CurrentBatch())
+	require.NoError(t, err)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
 
 	log.Debug("block:0 batch:8")
@@ -198,7 +200,7 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -206,6 +208,8 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 	assert.Equal(t, "21231789250434471575486264439945776732824482207853465397552873521865656677689", bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs), txsel.LocalAccountsDB().CurrentBatch())
+	require.NoError(t, err)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
 
 	log.Debug("(batch9) block:1 batch:1")
@@ -219,7 +223,7 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -228,12 +232,14 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs), txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	require.NoError(t, err)
 
 	log.Debug("(batch10) block:1 batch:2")
 	l2Txs = []common.PoolL2Tx{}
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -243,5 +249,7 @@ func TestTxSelectorBatchBuilderZKInputs(t *testing.T) {
 	assert.Equal(t, "11289313644810782435120113035387729451095637380468777086895109386127538554246", bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs), txsel.LocalAccountsDB().CurrentBatch())
+	require.NoError(t, err)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
 }

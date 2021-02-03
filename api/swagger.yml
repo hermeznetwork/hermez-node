@@ -1314,6 +1314,12 @@ components:
           $ref: '#/components/schemas/Nonce'
         state:
           $ref: '#/components/schemas/PoolL2TransactionState'
+        info:
+          type: string
+          description: "Info contains information about the status & State of the transaction. As for example, if the Tx has not been selected in the last batch due not enough Balance at the Sender account, this reason would appear at this parameter."
+          pattern: ".*"
+          example: "Tx not selected due not enough Balance at the sender."
+          nullable: true
         signature:
           allOf:
             - $ref: '#/components/schemas/BJJSignature'
@@ -1429,6 +1435,7 @@ components:
         - fee
         - nonce
         - state
+        - info
         - signature
         - timestamp
         - batchNum
