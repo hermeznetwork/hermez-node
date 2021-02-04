@@ -355,6 +355,10 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}
+	// Make a checkpoint to make the accounts available in Last
+	if err := api.s.MakeCheckpoint(); err != nil {
+		panic(err)
+	}
 
 	// Generate Coordinators and add them to HistoryDB
 	const nCoords = 10

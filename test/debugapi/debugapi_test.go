@@ -66,6 +66,9 @@ func TestDebugAPI(t *testing.T) {
 		_, err = sdb.CreateAccount(account.Idx, account)
 		require.Nil(t, err)
 	}
+	// Make a checkpoint (batchNum 2) to make the accounts available in Last
+	err = sdb.MakeCheckpoint()
+	require.Nil(t, err)
 
 	url := fmt.Sprintf("http://%v/debug/", addr)
 
@@ -73,7 +76,7 @@ func TestDebugAPI(t *testing.T) {
 	req, err := sling.New().Get(url).Path("sdb/batchnum").ReceiveSuccess(&batchNum)
 	require.Equal(t, http.StatusOK, req.StatusCode)
 	require.Nil(t, err)
-	assert.Equal(t, common.BatchNum(1), batchNum)
+	assert.Equal(t, common.BatchNum(2), batchNum)
 
 	var mtroot *big.Int
 	req, err = sling.New().Get(url).Path("sdb/mtroot").ReceiveSuccess(&mtroot)

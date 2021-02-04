@@ -176,7 +176,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
 	// check that there are no accounts
-	accs, err := sdb.GetAccounts()
+	accs, err := sdb.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(accs))
 
@@ -208,7 +208,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	rootNonZero := sdb.MT.Root()
 
 	// check that there is 1 account
-	accs, err = sdb.GetAccounts()
+	accs, err = sdb.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(accs))
 
@@ -234,7 +234,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
 	// check that there is still 1 account
-	accs, err = sdb.GetAccounts()
+	accs, err = sdb.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(accs))
 
