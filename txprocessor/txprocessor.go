@@ -360,35 +360,34 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	for _, idx := range coordIdxs {
 		accumulatedFee := tp.AccumulatedFees[idx]
 
-		cmp := accumulatedFee.Cmp(big.NewInt(0))
-		if cmp == 1 { // accumulatedFee>0
-			// send the fee to the Idx of the Coordinator for the TokenID
-			accCoord, err := tp.s.GetAccount(idx)
-			if err != nil {
-				log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
-				return nil, tracerr.Wrap(err)
+		// send the fee to the Idx of the Coordinator for the TokenID
+		// (even if the AccumulatedFee==0, as is how the zk circuit
+		// works)
+		accCoord, err := tp.s.GetAccount(idx)
+		if err != nil {
+			log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
+			return nil, tracerr.Wrap(err)
+		}
+		if tp.zki != nil {
+			tp.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
+			tp.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
+			coordBJJSign, coordBJJY := babyjub.UnpackSignY(accCoord.BJJ)
+			if coordBJJSign {
+				tp.zki.Sign3[iFee] = big.NewInt(1)
 			}
-			if tp.zki != nil {
-				tp.zki.TokenID3[iFee] = accCoord.TokenID.BigInt()
-				tp.zki.Nonce3[iFee] = accCoord.Nonce.BigInt()
-				coordBJJSign, coordBJJY := babyjub.UnpackSignY(accCoord.BJJ)
-				if coordBJJSign {
-					tp.zki.Sign3[iFee] = big.NewInt(1)
-				}
-				tp.zki.Ay3[iFee] = coordBJJY
-				tp.zki.Balance3[iFee] = accCoord.Balance
-				tp.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
-			}
-			accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
-			pFee, err := tp.s.UpdateAccount(idx, accCoord)
-			if err != nil {
-				log.Error(err)
-				return nil, tracerr.Wrap(err)
-			}
-			if tp.zki != nil {
-				tp.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
-				tp.zki.ISStateRootFee[iFee] = tp.s.MT.Root().BigInt()
-			}
+			tp.zki.Ay3[iFee] = coordBJJY
+			tp.zki.Balance3[iFee] = accCoord.Balance
+			tp.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
+		}
+		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
+		pFee, err := tp.s.UpdateAccount(idx, accCoord)
+		if err != nil {
+			log.Error(err)
+			return nil, tracerr.Wrap(err)
+		}
+		if tp.zki != nil {
+			tp.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
+			tp.zki.ISStateRootFee[iFee] = tp.s.MT.Root().BigInt()
 		}
 		iFee++
 	}
