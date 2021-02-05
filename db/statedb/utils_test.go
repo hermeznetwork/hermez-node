@@ -18,7 +18,7 @@ func TestGetIdx(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	assert.NoError(t, err)
 
 	var sk babyjub.PrivateKey

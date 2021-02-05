@@ -45,7 +45,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
 
 	// test values
@@ -78,7 +78,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey0'&'testvalue0' data)
-	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
+	sdb, err = NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
 	v, err = sdb.db.DB().Get(k0)
 	assert.NotNil(t, err)
@@ -158,7 +158,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 
 	// call NewStateDB which should get the db at the last checkpoint state
 	// executing a Reset (discarding the last 'testkey1'&'testvalue1' data)
-	sdb, err = NewStateDB(dir, 128, TypeTxSelector, 0)
+	sdb, err = NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
 
 	bn, err = sdb.getCurrentBatch()
@@ -182,7 +182,7 @@ func TestStateDBWithoutMT(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
 
 	// create test accounts
@@ -236,7 +236,7 @@ func TestStateDBWithMT(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	// create test accounts
@@ -290,7 +290,7 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	err = sdb.Reset(0)
@@ -335,7 +335,7 @@ func TestCheckpoints(t *testing.T) {
 		assert.Equal(t, common.BatchNum(i+1), cb)
 	}
 
-	// printCheckpoints(t, sdb.path)
+	// printCheckpoints(t, sdb.cfg.Path)
 
 	// reset checkpoint
 	err = sdb.Reset(3)
@@ -371,7 +371,7 @@ func TestCheckpoints(t *testing.T) {
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dirLocal))
-	ldb, err := NewLocalStateDB(dirLocal, 128, sdb, TypeBatchBuilder, 32)
+	ldb, err := NewLocalStateDB(Config{Path: dirLocal, Keep: 128, Type: TypeBatchBuilder, NLevels: 32}, sdb)
 	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
@@ -392,7 +392,7 @@ func TestCheckpoints(t *testing.T) {
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dirLocal2))
-	ldb2, err := NewLocalStateDB(dirLocal2, 128, sdb, TypeBatchBuilder, 32)
+	ldb2, err := NewLocalStateDB(Config{Path: dirLocal2, Keep: 128, Type: TypeBatchBuilder, NLevels: 32}, sdb)
 	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
@@ -409,9 +409,9 @@ func TestCheckpoints(t *testing.T) {
 
 	debug := false
 	if debug {
-		printCheckpoints(t, sdb.path)
-		printCheckpoints(t, ldb.path)
-		printCheckpoints(t, ldb2.path)
+		printCheckpoints(t, sdb.cfg.Path)
+		printCheckpoints(t, ldb.cfg.Path)
+		printCheckpoints(t, ldb2.cfg.Path)
 	}
 }
 
@@ -419,7 +419,7 @@ func TestStateDBGetAccounts(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 
-	sdb, err := NewStateDB(dir, 128, TypeTxSelector, 0)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
 
 	// create test accounts
@@ -466,7 +466,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	ay0 := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(253), nil), big.NewInt(1))
@@ -540,7 +540,7 @@ func TestListCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := NewStateDB(dir, 128, TypeSynchronizer, 32)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	numCheckpoints := 16
@@ -573,7 +573,7 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	defer require.NoError(t, os.RemoveAll(dir))
 
 	keep := 16
-	sdb, err := NewStateDB(dir, keep, TypeSynchronizer, 32)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	numCheckpoints := 32
@@ -594,7 +594,7 @@ func TestCurrentIdx(t *testing.T) {
 	defer require.NoError(t, os.RemoveAll(dir))
 
 	keep := 16
-	sdb, err := NewStateDB(dir, keep, TypeSynchronizer, 32)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	idx := sdb.CurrentIdx()
@@ -602,7 +602,7 @@ func TestCurrentIdx(t *testing.T) {
 
 	sdb.Close()
 
-	sdb, err = NewStateDB(dir, keep, TypeSynchronizer, 32)
+	sdb, err = NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	idx = sdb.CurrentIdx()
@@ -616,7 +616,7 @@ func TestCurrentIdx(t *testing.T) {
 
 	sdb.Close()
 
-	sdb, err = NewStateDB(dir, keep, TypeSynchronizer, 32)
+	sdb, err = NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	idx = sdb.CurrentIdx()
@@ -629,7 +629,7 @@ func TestResetFromBadCheckpoint(t *testing.T) {
 	defer require.NoError(t, os.RemoveAll(dir))
 
 	keep := 16
-	sdb, err := NewStateDB(dir, keep, TypeSynchronizer, 32)
+	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
 	err = sdb.MakeCheckpoint()

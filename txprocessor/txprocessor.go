@@ -127,7 +127,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 
 	exits := make([]processedExit, nTx)
 
-	if tp.s.Typ == statedb.TypeBatchBuilder {
+	if tp.s.Type() == statedb.TypeBatchBuilder {
 		tp.zki = common.NewZKInputs(tp.config.ChainID, tp.config.MaxTx, tp.config.MaxL1Tx,
 			tp.config.MaxFeeTx, tp.config.NLevels, (tp.s.CurrentBatch() + 1).BigInt())
 		tp.zki.OldLastIdx = tp.s.CurrentIdx().BigInt()
@@ -137,7 +137,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 
 	// TBD if ExitTree is only in memory or stored in disk, for the moment
 	// is only needed in memory
-	if tp.s.Typ == statedb.TypeSynchronizer || tp.s.Typ == statedb.TypeBatchBuilder {
+	if tp.s.Type() == statedb.TypeSynchronizer || tp.s.Type() == statedb.TypeBatchBuilder {
 		tmpDir, err := ioutil.TempDir("", "hermez-statedb-exittree")
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -166,7 +166,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		if tp.s.Typ == statedb.TypeSynchronizer {
+		if tp.s.Type() == statedb.TypeSynchronizer {
 			if createdAccount != nil {
 				createdAccounts = append(createdAccounts, *createdAccount)
 				l1usertxs[i].EffectiveFromIdx = createdAccount.Idx
@@ -195,7 +195,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 				tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
 			}
 		}
-		if tp.s.Typ == statedb.TypeSynchronizer || tp.s.Typ == statedb.TypeBatchBuilder {
+		if tp.s.Type() == statedb.TypeSynchronizer || tp.s.Type() == statedb.TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
 				exits[tp.i] = processedExit{
 					exit:    true,
@@ -217,7 +217,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		if exitIdx != nil {
 			log.Error("Unexpected Exit in L1CoordinatorTx")
 		}
-		if tp.s.Typ == statedb.TypeSynchronizer {
+		if tp.s.Type() == statedb.TypeSynchronizer {
 			if createdAccount != nil {
 				createdAccounts = append(createdAccounts, *createdAccount)
 				l1coordinatortxs[i].EffectiveFromIdx = createdAccount.Idx
@@ -276,7 +276,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	// collectedFees will contain the amount of fee collected for each
 	// TokenID
 	var collectedFees map[common.TokenID]*big.Int
-	if tp.s.Typ == statedb.TypeSynchronizer || tp.s.Typ == statedb.TypeBatchBuilder {
+	if tp.s.Type() == statedb.TypeSynchronizer || tp.s.Type() == statedb.TypeBatchBuilder {
 		collectedFees = make(map[common.TokenID]*big.Int)
 		for tokenID := range coordIdxsMap {
 			collectedFees[tokenID] = big.NewInt(0)
@@ -317,7 +317,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 				}
 			}
 		}
-		if tp.s.Typ == statedb.TypeSynchronizer || tp.s.Typ == statedb.TypeBatchBuilder {
+		if tp.s.Type() == statedb.TypeSynchronizer || tp.s.Type() == statedb.TypeBatchBuilder {
 			if exitIdx != nil && exitTree != nil {
 				exits[tp.i] = processedExit{
 					exit:    true,
@@ -401,7 +401,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 	}
 
-	if tp.s.Typ == statedb.TypeTxSelector {
+	if tp.s.Type() == statedb.TypeTxSelector {
 		return nil, nil
 	}
 
@@ -436,8 +436,8 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 	}
 
-	if tp.s.Typ == statedb.TypeSynchronizer {
-		// return exitInfos, createdAccounts and collectedFees, so Synchronizer will
+	if tp.s.Type() == statedb.TypeSynchronizer {
+		// retuTypeexitInfos, createdAccounts and collectedFees, so Synchronizer will
 		// be able to store it into HistoryDB for the concrete BatchNum
 		return &ProcessTxOutput{
 			ZKInputs:           nil,
@@ -588,7 +588,7 @@ func (tp *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L
 	}
 
 	var createdAccount *common.Account
-	if tp.s.Typ == statedb.TypeSynchronizer &&
+	if tp.s.Type() == statedb.TypeSynchronizer &&
 		(tx.Type == common.TxTypeCreateAccountDeposit ||
 			tx.Type == common.TxTypeCreateAccountDepositTransfer) {
 		var err error
@@ -612,8 +612,8 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 	var err error
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
 	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
-		if tp.s.Typ == statedb.TypeSynchronizer {
-			// this should never be reached
+		if tp.s.Type() == statedb.TypeSynchronizer {
+			// thisTypeould never be reached
 			log.Error("WARNING: In StateDB with Synchronizer mode L2.ToIdx can't be 0")
 			return nil, nil, false, tracerr.Wrap(fmt.Errorf("In StateDB with Synchronizer mode L2.ToIdx can't be 0"))
 		}
@@ -676,8 +676,8 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 	}
 
 	// if StateDB type==TypeSynchronizer, will need to add Nonce
-	if tp.s.Typ == statedb.TypeSynchronizer {
-		// as type==TypeSynchronizer, always tx.ToIdx!=0
+	if tp.s.Type() == statedb.TypeSynchronizer {
+		// as tType==TypeSynchronizer, always tx.ToIdx!=0
 		acc, err := tp.s.GetAccount(tx.FromIdx)
 		if err != nil {
 			log.Errorw("GetAccount", "fromIdx", tx.FromIdx, "err", err)
@@ -889,8 +889,8 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 			accumulated := tp.AccumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
 
-			if tp.s.Typ == statedb.TypeSynchronizer ||
-				tp.s.Typ == statedb.TypeBatchBuilder {
+			if tp.s.Type() == statedb.TypeSynchronizer ||
+				tp.s.Type() == statedb.TypeBatchBuilder {
 				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}
@@ -1094,8 +1094,8 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			accumulated := tp.AccumulatedFees[accCoord.Idx]
 			accumulated.Add(accumulated, fee)
 
-			if tp.s.Typ == statedb.TypeSynchronizer ||
-				tp.s.Typ == statedb.TypeBatchBuilder {
+			if tp.s.Type() == statedb.TypeSynchronizer ||
+				tp.s.Type() == statedb.TypeBatchBuilder {
 				collected := collectedFees[accCoord.TokenID]
 				collected.Add(collected, fee)
 			}

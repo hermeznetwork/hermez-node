@@ -28,12 +28,14 @@ func newStateDB(t *testing.T) *statedb.LocalStateDB {
 	syncDBPath, err := ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncStateDB, err := statedb.NewStateDB(syncDBPath, 128, statedb.TypeSynchronizer, 48)
+	syncStateDB, err := statedb.NewStateDB(statedb.Config{Path: syncDBPath, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 48})
 	assert.NoError(t, err)
 	stateDBPath, err := ioutil.TempDir("", "tmpStateDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, stateDBPath)
-	stateDB, err := statedb.NewLocalStateDB(stateDBPath, 128, syncStateDB, statedb.TypeTxSelector, 0)
+	stateDB, err := statedb.NewLocalStateDB(statedb.Config{Path: stateDBPath, Keep: 128,
+		Type: statedb.TypeTxSelector, NLevels: 0}, syncStateDB)
 	require.NoError(t, err)
 	return stateDB
 }

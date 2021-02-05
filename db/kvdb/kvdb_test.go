@@ -37,7 +37,7 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	db, err := NewKVDB(dir, 128)
+	db, err := NewKVDB(Config{Path: dir, Keep: 128})
 	require.NoError(t, err)
 
 	// add test key-values
@@ -72,7 +72,7 @@ func TestCheckpoints(t *testing.T) {
 	err = db.Reset(3)
 	require.NoError(t, err)
 
-	printCheckpoints(t, db.path)
+	printCheckpoints(t, db.cfg.Path)
 
 	// check that currentBatch is as expected after Reset
 	cb, err = db.GetCurrentBatch()
@@ -99,7 +99,7 @@ func TestCheckpoints(t *testing.T) {
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dirLocal))
-	ldb, err := NewKVDB(dirLocal, 128)
+	ldb, err := NewKVDB(Config{Path: dirLocal, Keep: 128})
 	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
@@ -120,7 +120,7 @@ func TestCheckpoints(t *testing.T) {
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dirLocal2))
-	ldb2, err := NewKVDB(dirLocal2, 128)
+	ldb2, err := NewKVDB(Config{Path: dirLocal2, Keep: 128})
 	require.NoError(t, err)
 
 	// get checkpoint 4 from sdb (StateDB) to ldb (LocalStateDB)
@@ -139,9 +139,9 @@ func TestCheckpoints(t *testing.T) {
 
 	debug := false
 	if debug {
-		printCheckpoints(t, db.path)
-		printCheckpoints(t, ldb.path)
-		printCheckpoints(t, ldb2.path)
+		printCheckpoints(t, db.cfg.Path)
+		printCheckpoints(t, ldb.cfg.Path)
+		printCheckpoints(t, ldb2.cfg.Path)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestListCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	defer require.NoError(t, os.RemoveAll(dir))
 
-	db, err := NewKVDB(dir, 128)
+	db, err := NewKVDB(Config{Path: dir, Keep: 128})
 	require.NoError(t, err)
 
 	numCheckpoints := 16
@@ -181,7 +181,7 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	defer require.NoError(t, os.RemoveAll(dir))
 
 	keep := 16
-	db, err := NewKVDB(dir, keep)
+	db, err := NewKVDB(Config{Path: dir, Keep: keep})
 	require.NoError(t, err)
 
 	numCheckpoints := 32
@@ -202,7 +202,7 @@ func TestGetCurrentIdx(t *testing.T) {
 	defer require.NoError(t, os.RemoveAll(dir))
 
 	keep := 16
-	db, err := NewKVDB(dir, keep)
+	db, err := NewKVDB(Config{Path: dir, Keep: keep})
 	require.NoError(t, err)
 
 	idx, err := db.GetCurrentIdx()
@@ -211,7 +211,7 @@ func TestGetCurrentIdx(t *testing.T) {
 
 	db.Close()
 
-	db, err = NewKVDB(dir, keep)
+	db, err = NewKVDB(Config{Path: dir, Keep: keep})
 	require.NoError(t, err)
 
 	idx, err = db.GetCurrentIdx()
@@ -227,7 +227,7 @@ func TestGetCurrentIdx(t *testing.T) {
 
 	db.Close()
 
-	db, err = NewKVDB(dir, keep)
+	db, err = NewKVDB(Config{Path: dir, Keep: keep})
 	require.NoError(t, err)
 
 	idx, err = db.GetCurrentIdx()

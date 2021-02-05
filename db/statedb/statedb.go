@@ -52,19 +52,40 @@ const (
 	// TypeBatchBuilder defines a StateDB used by the BatchBuilder, that
 	// generates the ExitTree and the ZKInput when processing the txs
 	TypeBatchBuilder = "batchbuilder"
+	// MaxNLevels is the maximum value of NLevels for the merkle tree,
+	// which comes from the fact that AccountIdx has 48 bits.
+	MaxNLevels = 48
 )
 
 // TypeStateDB determines the type of StateDB
 type TypeStateDB string
 
+// Config of the StateDB
+type Config struct {
+	// Path where the checkpoints will be stored
+	Path string
+	// Keep is the number of old checkpoints to keep.  If 0, all
+	// checkpoints are kept.
+	Keep int
+	// NoLast skips having an opened DB with a checkpoint to the last
+	// batchNum for thread-safe reads.
+	NoLast bool
+	// Type of StateDB (
+	Type TypeStateDB
+	// NLevels is the number of merkle tree levels in case the Type uses a
+	// merkle tree.  If the Type doesn't use a merkle tree, NLevels should
+	// be 0.
+	NLevels int
+	// At every checkpoint, check that there are no gaps between the
+	// checkpoints
+	noGapsCheck bool
+}
+
 // StateDB represents the StateDB object
 type StateDB struct {
-	path    string
-	Typ     TypeStateDB
-	db      *kvdb.KVDB
-	nLevels int
-	MT      *merkletree.MerkleTree
-	keep    int
+	cfg Config
+	db  *kvdb.KVDB
+	MT  *merkletree.MerkleTree
 }
 
 // Last offers a subset of view methods of the StateDB that can be
@@ -104,34 +125,38 @@ func (s *Last) GetAccounts() ([]common.Account, error) {
 // NewStateDB creates a new StateDB, allowing to use an in-memory or in-disk
 // storage.  Checkpoints older than the value defined by `keep` will be
 // deleted.
-func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int) (*StateDB, error) {
+// func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int) (*StateDB, error) {
+func NewStateDB(cfg Config) (*StateDB, error) {
 	var kv *kvdb.KVDB
 	var err error
 
-	kv, err = kvdb.NewKVDB(pathDB, keep)
+	kv, err = kvdb.NewKVDB(kvdb.Config{Path: cfg.Path, Keep: cfg.Keep,
+		NoGapsCheck: cfg.noGapsCheck, NoLast: cfg.NoLast})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 
 	var mt *merkletree.MerkleTree = nil
-	if typ == TypeSynchronizer || typ == TypeBatchBuilder {
-		mt, err = merkletree.NewMerkleTree(kv.StorageWithPrefix(PrefixKeyMT), nLevels)
+	if cfg.Type == TypeSynchronizer || cfg.Type == TypeBatchBuilder {
+		mt, err = merkletree.NewMerkleTree(kv.StorageWithPrefix(PrefixKeyMT), cfg.NLevels)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	}
-	if typ == TypeTxSelector && nLevels != 0 {
+	if cfg.Type == TypeTxSelector && cfg.NLevels != 0 {
 		return nil, tracerr.Wrap(fmt.Errorf("invalid StateDB parameters: StateDB type==TypeStateDB can not have nLevels!=0"))
 	}
 
 	return &StateDB{
-		path:    pathDB,
-		db:      kv,
-		nLevels: nLevels,
-		MT:      mt,
-		Typ:     typ,
-		keep:    keep,
+		cfg: cfg,
+		db:  kv,
+		MT:  mt,
 	}, nil
+}
+
+// Type returns the StateDB configured Type
+func (s *StateDB) Type() TypeStateDB {
+	return s.cfg.Type
 }
 
 // LastRead is a thread-safe method to query the last checkpoint of the StateDB
@@ -179,7 +204,7 @@ func (s *StateDB) LastGetCurrentBatch() (common.BatchNum, error) {
 func (s *StateDB) LastMTGetRoot() (*big.Int, error) {
 	var root *big.Int
 	if err := s.LastRead(func(sdb *Last) error {
-		mt, err := merkletree.NewMerkleTree(sdb.DB().WithPrefix(PrefixKeyMT), s.nLevels)
+		mt, err := merkletree.NewMerkleTree(sdb.DB().WithPrefix(PrefixKeyMT), s.cfg.NLevels)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -195,7 +220,7 @@ func (s *StateDB) LastMTGetRoot() (*big.Int, error) {
 // Internally this advances & stores the current BatchNum, and then stores a
 // Checkpoint of the current state of the StateDB.
 func (s *StateDB) MakeCheckpoint() error {
-	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch()+1, "type", s.Typ)
+	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch()+1, "type", s.cfg.Type)
 	return s.db.MakeCheckpoint()
 }
 
@@ -230,7 +255,7 @@ func (s *StateDB) SetCurrentIdx(idx common.Idx) error {
 // those checkpoints will remain in the storage, and eventually will be
 // deleted when MakeCheckpoint overwrites them.
 func (s *StateDB) Reset(batchNum common.BatchNum) error {
-	log.Debugw("Making StateDB Reset", "batch", batchNum, "type", s.Typ)
+	log.Debugw("Making StateDB Reset", "batch", batchNum, "type", s.cfg.Type)
 	if err := s.db.Reset(batchNum); err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -460,9 +485,10 @@ type LocalStateDB struct {
 // NewLocalStateDB returns a new LocalStateDB connected to the given
 // synchronizerDB.  Checkpoints older than the value defined by `keep` will be
 // deleted.
-func NewLocalStateDB(path string, keep int, synchronizerDB *StateDB, typ TypeStateDB,
-	nLevels int) (*LocalStateDB, error) {
-	s, err := NewStateDB(path, keep, typ, nLevels)
+func NewLocalStateDB(cfg Config, synchronizerDB *StateDB) (*LocalStateDB, error) {
+	cfg.noGapsCheck = true
+	cfg.NoLast = true
+	s, err := NewStateDB(cfg)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

@@ -50,7 +50,7 @@ func initStateDB(t *testing.T, typ statedb.TypeStateDB) *statedb.StateDB {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, typ, NLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128, Type: typ, NLevels: NLevels})
 	require.NoError(t, err)
 	return sdb
 }

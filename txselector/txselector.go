@@ -10,6 +10,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db/kvdb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -62,8 +63,14 @@ type TxSelector struct {
 // NewTxSelector returns a *TxSelector
 func NewTxSelector(coordAccount *CoordAccount, dbpath string,
 	synchronizerStateDB *statedb.StateDB, l2 *l2db.L2DB) (*TxSelector, error) {
-	localAccountsDB, err := statedb.NewLocalStateDB(dbpath, 128,
-		synchronizerStateDB, statedb.TypeTxSelector, 0) // without merkletree
+	localAccountsDB, err := statedb.NewLocalStateDB(
+		statedb.Config{
+			Path:    dbpath,
+			Keep:    kvdb.DefaultKeep,
+			Type:    statedb.TypeTxSelector,
+			NLevels: 0,
+		},
+		synchronizerStateDB) // without merkletree
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

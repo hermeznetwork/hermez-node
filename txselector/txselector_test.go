@@ -34,7 +34,8 @@ func initTest(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
-	syncStateDB, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0)
+	syncStateDB, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
