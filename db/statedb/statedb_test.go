@@ -116,7 +116,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	bn, err := sdb.getCurrentBatch()
 	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(0), bn)
-	err = sdb.db.MakeCheckpoint()
+	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
 	bn, err = sdb.getCurrentBatch()
 	require.NoError(t, err)
@@ -399,14 +399,12 @@ func TestCheckpoints(t *testing.T) {
 	err = ldb2.Reset(4, true)
 	require.NoError(t, err)
 	// check that currentBatch is 4 after the Reset
-	cb, err = ldb2.db.GetCurrentBatch()
-	require.NoError(t, err)
+	cb = ldb2.CurrentBatch()
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb2
-	err = ldb2.db.MakeCheckpoint()
+	err = ldb2.MakeCheckpoint()
 	require.NoError(t, err)
-	cb, err = ldb2.db.GetCurrentBatch()
-	require.NoError(t, err)
+	cb = ldb2.CurrentBatch()
 	assert.Equal(t, common.BatchNum(5), cb)
 
 	debug := false
@@ -623,4 +621,25 @@ func TestCurrentIdx(t *testing.T) {
 
 	idx = sdb.CurrentIdx()
 	assert.Equal(t, common.Idx(255), idx)
+}
+
+func TestResetFromBadCheckpoint(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer require.NoError(t, os.RemoveAll(dir))
+
+	keep := 16
+	sdb, err := NewStateDB(dir, keep, TypeSynchronizer, 32)
+	require.NoError(t, err)
+
+	err = sdb.MakeCheckpoint()
+	require.NoError(t, err)
+	err = sdb.MakeCheckpoint()
+	require.NoError(t, err)
+	err = sdb.MakeCheckpoint()
+	require.NoError(t, err)
+
+	// reset from a checkpoint that doesn't exist
+	err = sdb.Reset(10)
+	require.Error(t, err)
 }

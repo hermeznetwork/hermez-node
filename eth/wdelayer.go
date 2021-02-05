@@ -134,7 +134,7 @@ type WDelayerInterface interface {
 	WDelayerWithdrawal(owner, token ethCommon.Address) (*types.Transaction, error)
 	WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (*types.Transaction, error)
 
-	WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error)
+	WDelayerEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*WDelayerEvents, error)
 	WDelayerConstants() (*common.WDelayerConstants, error)
 	WDelayerEventInit() (*WDelayerEventInitialize, int64, error)
 }
@@ -424,40 +424,47 @@ func (c *WDelayerClient) WDelayerEventInit() (*WDelayerEventInitialize, int64, e
 }
 
 // WDelayerEventsByBlock returns the events in a block that happened in the
-// WDelayer Smart Contract and the blockHash where the eents happened.  If
-// there are no events in that block, blockHash is nil.
-func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents, *ethCommon.Hash, error) {
+// WDelayer Smart Contract.
+// To query by blockNum, set blockNum >= 0 and blockHash == nil.
+// To query by blockHash, set blockNum == -1 and blockHash != nil.
+// If there are no events in that block the result is nil.
+func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64,
+	blockHash *ethCommon.Hash) (*WDelayerEvents, error) {
 	var wdelayerEvents WDelayerEvents
-	var blockHash *ethCommon.Hash
 
+	var blockNumBigInt *big.Int
+	if blockNum >= 0 {
+		blockNumBigInt = big.NewInt(blockNum)
+	}
 	query := ethereum.FilterQuery{
-		FromBlock: big.NewInt(blockNum),
-		ToBlock:   big.NewInt(blockNum),
+		BlockHash: blockHash,
+		FromBlock: blockNumBigInt,
+		ToBlock:   blockNumBigInt,
 		Addresses: []ethCommon.Address{
 			c.address,
 		},
-		BlockHash: nil,
-		Topics:    [][]ethCommon.Hash{},
+		Topics: [][]ethCommon.Hash{},
 	}
 
 	logs, err := c.client.client.FilterLogs(context.Background(), query)
 	if err != nil {
-		return nil, nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(err)
 	}
-	if len(logs) > 0 {
-		blockHash = &logs[0].BlockHash
+	if len(logs) == 0 {
+		return nil, nil
 	}
+
 	for _, vLog := range logs {
-		if vLog.BlockHash != *blockHash {
+		if blockHash != nil && vLog.BlockHash != *blockHash {
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
-			return nil, nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
+			return nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
 		switch vLog.Topics[0] {
 		case logWDelayerDeposit:
 			var deposit WDelayerEventDeposit
 			err := c.contractAbi.UnpackIntoInterface(&deposit, "Deposit", vLog.Data)
 			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			deposit.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			deposit.Token = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -468,7 +475,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var withdraw WDelayerEventWithdraw
 			err := c.contractAbi.UnpackIntoInterface(&withdraw, "Withdraw", vLog.Data)
 			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			withdraw.Token = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			withdraw.Owner = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -482,7 +489,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var withdrawalDelay WDelayerEventNewWithdrawalDelay
 			err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay, "NewWithdrawalDelay", vLog.Data)
 			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			wdelayerEvents.NewWithdrawalDelay = append(wdelayerEvents.NewWithdrawalDelay, withdrawalDelay)
 
@@ -490,7 +497,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var escapeHatchWithdrawal WDelayerEventEscapeHatchWithdrawal
 			err := c.contractAbi.UnpackIntoInterface(&escapeHatchWithdrawal, "EscapeHatchWithdrawal", vLog.Data)
 			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			escapeHatchWithdrawal.Who = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			escapeHatchWithdrawal.To = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -501,7 +508,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var emergencyCouncil WDelayerEventNewEmergencyCouncil
 			err := c.contractAbi.UnpackIntoInterface(&emergencyCouncil, "NewEmergencyCouncil", vLog.Data)
 			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			wdelayerEvents.NewEmergencyCouncil = append(wdelayerEvents.NewEmergencyCouncil, emergencyCouncil)
 
@@ -509,10 +516,10 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64) (*WDelayerEvents,
 			var governanceAddress WDelayerEventNewHermezGovernanceAddress
 			err := c.contractAbi.UnpackIntoInterface(&governanceAddress, "NewHermezGovernanceAddress", vLog.Data)
 			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			wdelayerEvents.NewHermezGovernanceAddress = append(wdelayerEvents.NewHermezGovernanceAddress, governanceAddress)
 		}
 	}
-	return &wdelayerEvents, blockHash, nil
+	return &wdelayerEvents, nil
 }

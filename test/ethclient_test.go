@@ -130,7 +130,7 @@ func TestClientAuction(t *testing.T) {
 	blockNum, err := c.EthLastBlock()
 	require.Nil(t, err)
 
-	auctionEvents, _, err := c.AuctionEventsByBlock(blockNum)
+	auctionEvents, err := c.AuctionEventsByBlock(blockNum, nil)
 	require.Nil(t, err)
 	assert.Equal(t, 2, len(auctionEvents.NewBid))
 }
@@ -171,7 +171,7 @@ func TestClientRollup(t *testing.T) {
 
 	blockNum, err := c.EthLastBlock()
 	require.Nil(t, err)
-	rollupEvents, _, err := c.RollupEventsByBlock(blockNum)
+	rollupEvents, err := c.RollupEventsByBlock(blockNum, nil)
 	require.Nil(t, err)
 	assert.Equal(t, N, len(rollupEvents.L1UserTx))
 	assert.Equal(t, 1, len(rollupEvents.AddToken))
@@ -192,7 +192,7 @@ func TestClientRollup(t *testing.T) {
 
 	blockNumA, err := c.EthLastBlock()
 	require.Nil(t, err)
-	rollupEvents, hashA, err := c.RollupEventsByBlock(blockNumA)
+	rollupEvents, err = c.RollupEventsByBlock(blockNumA, nil)
 	require.Nil(t, err)
 	assert.Equal(t, 0, len(rollupEvents.L1UserTx))
 	assert.Equal(t, 0, len(rollupEvents.AddToken))
@@ -205,14 +205,14 @@ func TestClientRollup(t *testing.T) {
 
 	blockNumB, err := c.EthLastBlock()
 	require.Nil(t, err)
-	rollupEvents, hashB, err := c.RollupEventsByBlock(blockNumA)
+	rollupEventsB, err := c.RollupEventsByBlock(blockNumA, nil)
 	require.Nil(t, err)
-	assert.Equal(t, 0, len(rollupEvents.L1UserTx))
-	assert.Equal(t, 0, len(rollupEvents.AddToken))
-	assert.Equal(t, 0, len(rollupEvents.ForgeBatch))
+	assert.Equal(t, 0, len(rollupEventsB.L1UserTx))
+	assert.Equal(t, 0, len(rollupEventsB.AddToken))
+	assert.Equal(t, 0, len(rollupEventsB.ForgeBatch))
 
 	assert.Equal(t, blockNumA, blockNumB)
-	assert.NotEqual(t, hashA, hashB)
+	assert.NotEqual(t, rollupEvents, rollupEventsB)
 
 	// Forge again
 	rollupForgeBatchArgs0 := &eth.RollupForgeBatchArgs{
@@ -232,7 +232,7 @@ func TestClientRollup(t *testing.T) {
 
 	blockNum, err = c.EthLastBlock()
 	require.Nil(t, err)
-	rollupEvents, _, err = c.RollupEventsByBlock(blockNum)
+	rollupEvents, err = c.RollupEventsByBlock(blockNum, nil)
 	require.Nil(t, err)
 
 	rollupForgeBatchArgs1, sender, err := c.RollupForgeBatchArgs(rollupEvents.ForgeBatch[0].EthTxHash,

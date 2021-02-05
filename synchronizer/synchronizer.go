@@ -195,15 +195,16 @@ type Config struct {
 
 // Synchronizer implements the Synchronizer type
 type Synchronizer struct {
-	ethClient     eth.ClientInterface
-	consts        SCConsts
-	historyDB     *historydb.HistoryDB
-	stateDB       *statedb.StateDB
-	cfg           Config
-	initVars      SCVariables
-	startBlockNum int64
-	vars          SCVariables
-	stats         *StatsHolder
+	ethClient        eth.ClientInterface
+	consts           SCConsts
+	historyDB        *historydb.HistoryDB
+	stateDB          *statedb.StateDB
+	cfg              Config
+	initVars         SCVariables
+	startBlockNum    int64
+	vars             SCVariables
+	stats            *StatsHolder
+	resetStateFailed bool
 }
 
 // NewSynchronizer creates a new Synchronizer
@@ -445,8 +446,10 @@ func (s *Synchronizer) init() error {
 		lastBlock = lastSavedBlock
 	}
 	if err := s.resetState(lastBlock); err != nil {
+		s.resetStateFailed = true
 		return tracerr.Wrap(err)
 	}
+	s.resetStateFailed = false
 
 	log.Infow("Sync init block",
 		"syncLastBlock", s.stats.Sync.LastBlock,
@@ -462,16 +465,37 @@ func (s *Synchronizer) init() error {
 	return nil
 }
 
+func (s *Synchronizer) resetIntermediateState() error {
+	lastBlock, err := s.historyDB.GetLastBlock()
+	if tracerr.Unwrap(err) == sql.ErrNoRows {
+		lastBlock = &common.Block{}
+	} else if err != nil {
+		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastBlock: %w", err))
+	}
+	if err := s.resetState(lastBlock); err != nil {
+		s.resetStateFailed = true
+		return tracerr.Wrap(fmt.Errorf("resetState at block %v: %w", lastBlock.Num, err))
+	}
+	s.resetStateFailed = false
+	return nil
+}
+
 // Sync2 attems to synchronize an ethereum block starting from lastSavedBlock.
 // If lastSavedBlock is nil, the lastSavedBlock value is obtained from de DB.
 // If a block is synched, it will be returned and also stored in the DB.  If a
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
 // TODO: Be smart about locking: only lock during the read/write operations
-func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) (*common.BlockData, *int64, error) {
+func (s *Synchronizer) Sync2(ctx context.Context,
+	lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
+	if s.resetStateFailed {
+		if err := s.resetIntermediateState(); err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+	}
+
 	var nextBlockNum int64 // next block number to sync
 	if lastSavedBlock == nil {
-		var err error
 		// Get lastSavedBlock from History DB
 		lastSavedBlock, err = s.historyDB.GetLastBlock()
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
@@ -527,6 +551,20 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 		}
 	}
 
+	defer func() {
+		// If there was an error during sync, reset to the last block
+		// in the historyDB because the historyDB is written last in
+		// the Sync method and is the source of consistency.  This
+		// allows reseting the stateDB in the case a batch was
+		// processed but the historyDB block was not committed due to an
+		// error.
+		if err != nil {
+			if err2 := s.resetIntermediateState(); err2 != nil {
+				log.Errorw("sync revert", "err", err2)
+			}
+		}
+	}()
+
 	// Get data from the rollup contract
 	rollupData, err := s.rollupSync(ethBlock)
 	if err != nil {
@@ -564,14 +602,14 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 	}
 
 	// Group all the block data into the structs to save into HistoryDB
-	blockData := common.BlockData{
+	blockData = &common.BlockData{
 		Block:    *ethBlock,
 		Rollup:   *rollupData,
 		Auction:  *auctionData,
 		WDelayer: *wDelayerData,
 	}
 
-	err = s.historyDB.AddBlockSCData(&blockData)
+	err = s.historyDB.AddBlockSCData(blockData)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
@@ -613,7 +651,7 @@ func (s *Synchronizer) Sync2(ctx context.Context, lastSavedBlock *common.Block) 
 		)
 	}
 
-	return &blockData, nil, nil
+	return blockData, nil, nil
 }
 
 // reorg manages a reorg, updating History and State DB as needed.  Keeps
@@ -645,14 +683,15 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 	log.Debugw("Discarding blocks", "total", total, "from", uncleBlock.Num, "to", block.Num+1)
 
 	// Set History DB and State DB to the correct state
-	err := s.historyDB.Reorg(block.Num)
-	if err != nil {
+	if err := s.historyDB.Reorg(block.Num); err != nil {
 		return 0, tracerr.Wrap(err)
 	}
 
 	if err := s.resetState(block); err != nil {
+		s.resetStateFailed = true
 		return 0, tracerr.Wrap(err)
 	}
+	s.resetStateFailed = false
 
 	return block.Num, nil
 }
@@ -722,6 +761,11 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 		batchNum = 0
 	}
 
+	err = s.stateDB.Reset(batchNum)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("stateDB.Reset: %w", err))
+	}
+
 	lastL1BatchBlockNum, err := s.historyDB.GetLastL1BatchBlockNum()
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastL1BatchBlockNum: %w", err))
@@ -737,11 +781,6 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 	if tracerr.Unwrap(err) == sql.ErrNoRows || lastForgeL1TxsNum == nil {
 		n := int64(-1)
 		lastForgeL1TxsNum = &n
-	}
-
-	err = s.stateDB.Reset(batchNum)
-	if err != nil {
-		return tracerr.Wrap(fmt.Errorf("stateDB.Reset: %w", err))
 	}
 
 	s.stats.UpdateSync(block, &batchNum, &lastL1BatchBlockNum, lastForgeL1TxsNum)
@@ -761,18 +800,13 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 	// Get rollup events in the block, and make sure the block hash matches
 	// the expected one.
-	rollupEvents, blockHash, err := s.ethClient.RollupEventsByBlock(blockNum)
+	rollupEvents, err := s.ethClient.RollupEventsByBlock(blockNum, &ethBlock.Hash)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	// No events in this block
-	if blockHash == nil {
+	if rollupEvents == nil {
 		return &rollupData, nil
-	}
-	if *blockHash != ethBlock.Hash {
-		log.Errorw("Block hash mismatch in Rollup events", "expected", ethBlock.Hash.String(),
-			"got", blockHash.String())
-		return nil, tracerr.Wrap(eth.ErrBlockHashMismatchEvent)
 	}
 
 	var nextForgeL1TxsNum int64 // forgeL1TxsNum for the next L1Batch
@@ -801,7 +835,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		forgeBatchArgs, sender, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash,
 			evtForgeBatch.L1UserTxsLen)
 		if err != nil {
-			return nil, tracerr.Wrap(err)
+			return nil, tracerr.Wrap(fmt.Errorf("RollupForgeBatchArgs: %w", err))
 		}
 
 		batchNum := common.BatchNum(evtForgeBatch.BatchNum)
@@ -883,6 +917,10 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
+		}
+		if s.stateDB.CurrentBatch() != batchNum {
+			return nil, tracerr.Wrap(fmt.Errorf("stateDB.BatchNum (%v) != evtForgeBatch.BatchNum = (%v)",
+				s.stateDB.CurrentBatch(), batchNum))
 		}
 
 		// Transform processed PoolL2 txs to L2 and store in BatchData
@@ -1066,18 +1104,13 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	var auctionData = common.NewAuctionData()
 
 	// Get auction events in the block
-	auctionEvents, blockHash, err := s.ethClient.AuctionEventsByBlock(blockNum)
+	auctionEvents, err := s.ethClient.AuctionEventsByBlock(blockNum, &ethBlock.Hash)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	// No events in this block
-	if blockHash == nil {
+	if auctionEvents == nil {
 		return &auctionData, nil
-	}
-	if *blockHash != ethBlock.Hash {
-		log.Errorw("Block hash mismatch in Auction events", "expected", ethBlock.Hash.String(),
-			"got", blockHash.String())
-		return nil, tracerr.Wrap(eth.ErrBlockHashMismatchEvent)
 	}
 
 	// Get bids
@@ -1168,18 +1201,13 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 	wDelayerData := common.NewWDelayerData()
 
 	// Get wDelayer events in the block
-	wDelayerEvents, blockHash, err := s.ethClient.WDelayerEventsByBlock(blockNum)
+	wDelayerEvents, err := s.ethClient.WDelayerEventsByBlock(blockNum, &ethBlock.Hash)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	// No events in this block
-	if blockHash == nil {
+	if wDelayerEvents == nil {
 		return &wDelayerData, nil
-	}
-	if *blockHash != ethBlock.Hash {
-		log.Errorw("Block hash mismatch in WDelayer events", "expected", ethBlock.Hash.String(),
-			"got", blockHash.String())
-		return nil, tracerr.Wrap(eth.ErrBlockHashMismatchEvent)
 	}
 
 	for _, evt := range wDelayerEvents.Deposit {

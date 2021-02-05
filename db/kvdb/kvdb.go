@@ -61,13 +61,13 @@ func (k *Last) setNew() error {
 	defer k.rw.Unlock()
 	if k.db != nil {
 		k.db.Close()
+		k.db = nil
 	}
 	lastPath := path.Join(k.path, PathLast)
-	err := os.RemoveAll(lastPath)
-	if err != nil {
+	if err := os.RemoveAll(lastPath); err != nil {
 		return tracerr.Wrap(err)
 	}
-	db, err := pebble.NewPebbleStorage(path.Join(k.path, lastPath), false)
+	db, err := pebble.NewPebbleStorage(lastPath, false)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -80,6 +80,7 @@ func (k *Last) set(kvdb *KVDB, batchNum common.BatchNum) error {
 	defer k.rw.Unlock()
 	if k.db != nil {
 		k.db.Close()
+		k.db = nil
 	}
 	lastPath := path.Join(k.path, PathLast)
 	if err := kvdb.MakeCheckpointFromTo(batchNum, lastPath); err != nil {
@@ -96,7 +97,10 @@ func (k *Last) set(kvdb *KVDB, batchNum common.BatchNum) error {
 func (k *Last) close() {
 	k.rw.Lock()
 	defer k.rw.Unlock()
-	k.db.Close()
+	if k.db != nil {
+		k.db.Close()
+		k.db = nil
+	}
 }
 
 // NewKVDB creates a new KVDB, allowing to use an in-memory or in-disk storage.
@@ -166,14 +170,12 @@ func (kvdb *KVDB) Reset(batchNum common.BatchNum) error {
 func (kvdb *KVDB) reset(batchNum common.BatchNum, closeCurrent bool) error {
 	currentPath := path.Join(kvdb.path, PathCurrent)
 
-	if closeCurrent {
-		if err := kvdb.db.Pebble().Close(); err != nil {
-			return tracerr.Wrap(err)
-		}
+	if closeCurrent && kvdb.db != nil {
+		kvdb.db.Close()
+		kvdb.db = nil
 	}
 	// remove 'current'
-	err := os.RemoveAll(currentPath)
-	if err != nil {
+	if err := os.RemoveAll(currentPath); err != nil {
 		return tracerr.Wrap(err)
 	}
 	// remove all checkpoints > batchNum
@@ -249,13 +251,13 @@ func (kvdb *KVDB) ResetFromSynchronizer(batchNum common.BatchNum, synchronizerKV
 	}
 
 	currentPath := path.Join(kvdb.path, PathCurrent)
-	if err := kvdb.db.Pebble().Close(); err != nil {
-		return tracerr.Wrap(err)
+	if kvdb.db != nil {
+		kvdb.db.Close()
+		kvdb.db = nil
 	}
 
 	// remove 'current'
-	err := os.RemoveAll(currentPath)
-	if err != nil {
+	if err := os.RemoveAll(currentPath); err != nil {
 		return tracerr.Wrap(err)
 	}
 	// remove all checkpoints
@@ -394,8 +396,7 @@ func (kvdb *KVDB) MakeCheckpoint() error {
 
 	// if checkpoint BatchNum already exist in disk, delete it
 	if _, err := os.Stat(checkpointPath); !os.IsNotExist(err) {
-		err := os.RemoveAll(checkpointPath)
-		if err != nil {
+		if err := os.RemoveAll(checkpointPath); err != nil {
 			return tracerr.Wrap(err)
 		}
 	} else if err != nil && !os.IsNotExist(err) {
@@ -501,8 +502,7 @@ func (kvdb *KVDB) MakeCheckpointFromTo(fromBatchNum common.BatchNum, dest string
 func pebbleMakeCheckpoint(source, dest string) error {
 	// Remove dest folder (if it exists) before doing the checkpoint
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		err := os.RemoveAll(dest)
-		if err != nil {
+		if err := os.RemoveAll(dest); err != nil {
 			return tracerr.Wrap(err)
 		}
 	} else if err != nil && !os.IsNotExist(err) {
@@ -513,12 +513,7 @@ func pebbleMakeCheckpoint(source, dest string) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	defer func() {
-		errClose := sto.Pebble().Close()
-		if errClose != nil {
-			log.Errorw("Pebble.Close", "err", errClose)
-		}
-	}()
+	defer sto.Close()
 
 	// execute Checkpoint
 	err = sto.Pebble().Checkpoint(dest)
@@ -531,6 +526,9 @@ func pebbleMakeCheckpoint(source, dest string) error {
 
 // Close the DB
 func (kvdb *KVDB) Close() {
-	kvdb.db.Close()
+	if kvdb.db != nil {
+		kvdb.db.Close()
+		kvdb.db = nil
+	}
 	kvdb.last.close()
 }

@@ -254,7 +254,7 @@ type AuctionInterface interface {
 	//
 
 	AuctionConstants() (*common.AuctionConstants, error)
-	AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error)
+	AuctionEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*AuctionEvents, error)
 	AuctionEventInit() (*AuctionEventInitialize, int64, error)
 }
 
@@ -797,15 +797,22 @@ func (c *AuctionClient) AuctionEventInit() (*AuctionEventInitialize, int64, erro
 }
 
 // AuctionEventsByBlock returns the events in a block that happened in the
-// Auction Smart Contract and the blockHash where the eents happened.  If there
-// are no events in that block, blockHash is nil.
-func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *ethCommon.Hash, error) {
+// Auction Smart Contract.
+// To query by blockNum, set blockNum >= 0 and blockHash == nil.
+// To query by blockHash, set blockNum == -1 and blockHash != nil.
+// If there are no events in that block the result is nil.
+func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
+	blockHash *ethCommon.Hash) (*AuctionEvents, error) {
 	var auctionEvents AuctionEvents
-	var blockHash *ethCommon.Hash
 
+	var blockNumBigInt *big.Int
+	if blockNum >= 0 {
+		blockNumBigInt = big.NewInt(blockNum)
+	}
 	query := ethereum.FilterQuery{
-		FromBlock: big.NewInt(blockNum),
-		ToBlock:   big.NewInt(blockNum),
+		BlockHash: blockHash,
+		FromBlock: blockNumBigInt,
+		ToBlock:   blockNumBigInt,
 		Addresses: []ethCommon.Address{
 			c.address,
 		},
@@ -814,15 +821,16 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 
 	logs, err := c.client.client.FilterLogs(context.TODO(), query)
 	if err != nil {
-		return nil, nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(err)
 	}
-	if len(logs) > 0 {
-		blockHash = &logs[0].BlockHash
+	if len(logs) == 0 {
+		return nil, nil
 	}
+
 	for _, vLog := range logs {
-		if vLog.BlockHash != *blockHash {
+		if blockHash != nil && vLog.BlockHash != *blockHash {
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
-			return nil, nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
+			return nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
 		switch vLog.Topics[0] {
 		case logAuctionNewBid:
@@ -833,7 +841,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			}
 			var newBid AuctionEventNewBid
 			if err := c.contractAbi.UnpackIntoInterface(&auxNewBid, "NewBid", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			newBid.BidAmount = auxNewBid.BidAmount
 			newBid.Slot = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
@@ -842,19 +850,19 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionNewSlotDeadline:
 			var newSlotDeadline AuctionEventNewSlotDeadline
 			if err := c.contractAbi.UnpackIntoInterface(&newSlotDeadline, "NewSlotDeadline", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewSlotDeadline = append(auctionEvents.NewSlotDeadline, newSlotDeadline)
 		case logAuctionNewClosedAuctionSlots:
 			var newClosedAuctionSlots AuctionEventNewClosedAuctionSlots
 			if err := c.contractAbi.UnpackIntoInterface(&newClosedAuctionSlots, "NewClosedAuctionSlots", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewClosedAuctionSlots = append(auctionEvents.NewClosedAuctionSlots, newClosedAuctionSlots)
 		case logAuctionNewOutbidding:
 			var newOutbidding AuctionEventNewOutbidding
 			if err := c.contractAbi.UnpackIntoInterface(&newOutbidding, "NewOutbidding", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewOutbidding = append(auctionEvents.NewOutbidding, newOutbidding)
 		case logAuctionNewDonationAddress:
@@ -864,26 +872,26 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionNewBootCoordinator:
 			var newBootCoordinator AuctionEventNewBootCoordinator
 			if err := c.contractAbi.UnpackIntoInterface(&newBootCoordinator, "NewBootCoordinator", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			newBootCoordinator.NewBootCoordinator = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.NewBootCoordinator = append(auctionEvents.NewBootCoordinator, newBootCoordinator)
 		case logAuctionNewOpenAuctionSlots:
 			var newOpenAuctionSlots AuctionEventNewOpenAuctionSlots
 			if err := c.contractAbi.UnpackIntoInterface(&newOpenAuctionSlots, "NewOpenAuctionSlots", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewOpenAuctionSlots = append(auctionEvents.NewOpenAuctionSlots, newOpenAuctionSlots)
 		case logAuctionNewAllocationRatio:
 			var newAllocationRatio AuctionEventNewAllocationRatio
 			if err := c.contractAbi.UnpackIntoInterface(&newAllocationRatio, "NewAllocationRatio", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			auctionEvents.NewAllocationRatio = append(auctionEvents.NewAllocationRatio, newAllocationRatio)
 		case logAuctionSetCoordinator:
 			var setCoordinator AuctionEventSetCoordinator
 			if err := c.contractAbi.UnpackIntoInterface(&setCoordinator, "SetCoordinator", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			setCoordinator.BidderAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			setCoordinator.ForgerAddress = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -891,7 +899,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionNewForgeAllocated:
 			var newForgeAllocated AuctionEventNewForgeAllocated
 			if err := c.contractAbi.UnpackIntoInterface(&newForgeAllocated, "NewForgeAllocated", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			newForgeAllocated.Bidder = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			newForgeAllocated.Forger = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
@@ -904,7 +912,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 			}
 			var newDefaultSlotSetBid AuctionEventNewDefaultSlotSetBid
 			if err := c.contractAbi.UnpackIntoInterface(&auxNewDefaultSlotSetBid, "NewDefaultSlotSetBid", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			newDefaultSlotSetBid.NewInitialMinBid = auxNewDefaultSlotSetBid.NewInitialMinBid
 			newDefaultSlotSetBid.SlotSet = auxNewDefaultSlotSetBid.SlotSet.Int64()
@@ -917,11 +925,11 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64) (*AuctionEvents, *e
 		case logAuctionHEZClaimed:
 			var HEZClaimed AuctionEventHEZClaimed
 			if err := c.contractAbi.UnpackIntoInterface(&HEZClaimed, "HEZClaimed", vLog.Data); err != nil {
-				return nil, nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			HEZClaimed.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			auctionEvents.HEZClaimed = append(auctionEvents.HEZClaimed, HEZClaimed)
 		}
 	}
-	return &auctionEvents, blockHash, nil
+	return &auctionEvents, nil
 }
