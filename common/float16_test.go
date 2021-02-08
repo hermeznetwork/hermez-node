@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConversions(t *testing.T) {
+func TestConversionsFloat16(t *testing.T) {
 	testVector := map[Float16]string{
 		0x307B: "123000000",
 		0x1DC6: "454500",
@@ -32,14 +32,14 @@ func TestConversions(t *testing.T) {
 		bi.SetString(testVector[test], 10)
 
 		fl, err := NewFloat16(bi)
-		assert.Equal(t, nil, err)
+		assert.NoError(t, err)
 
 		fx2 := fl.BigInt()
 		assert.Equal(t, fx2.String(), testVector[test])
 	}
 }
 
-func TestFloorFix2Float(t *testing.T) {
+func TestFloorFix2FloatFloat16(t *testing.T) {
 	testVector := map[string]Float16{
 		"87999990000000000": 0x776f,
 		"87950000000000001": 0x776f,
@@ -57,10 +57,10 @@ func TestFloorFix2Float(t *testing.T) {
 	}
 }
 
-func TestConversionLosses(t *testing.T) {
+func TestConversionLossesFloat16(t *testing.T) {
 	a := big.NewInt(1000)
 	b, err := NewFloat16(a)
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	c := b.BigInt()
 	assert.Equal(t, c, a)
 

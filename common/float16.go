@@ -30,6 +30,7 @@ func (f16 Float16) Bytes() []byte {
 
 // Float16FromBytes returns a Float16 from a byte array of 2 bytes.
 func Float16FromBytes(b []byte) *Float16 {
+	// WARNING b[:2] for a b where len(b)<2 can break
 	f16 := Float16(binary.BigEndian.Uint16(b[:2]))
 	return &f16
 }
