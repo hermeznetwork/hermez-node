@@ -252,14 +252,37 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			MaxFeeTx: common.RollupConstMaxFeeIdxCoordinator,
 			MaxL1Tx:  common.RollupConstMaxL1Tx,
 		}
-		verifierIdx, err := scConsts.Rollup.FindVerifierIdx(
-			cfg.Coordinator.Circuit.MaxTx,
-			cfg.Coordinator.Circuit.NLevels,
-		)
-		if err != nil {
-			return nil, tracerr.Wrap(err)
+		var verifierIdx int
+		if cfg.Coordinator.Debug.RollupVerifierIndex == nil {
+			verifierIdx, err = scConsts.Rollup.FindVerifierIdx(
+				cfg.Coordinator.Circuit.MaxTx,
+				cfg.Coordinator.Circuit.NLevels,
+			)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			log.Infow("Found verifier that matches circuit config", "verifierIdx", verifierIdx)
+		} else {
+			verifierIdx = *cfg.Coordinator.Debug.RollupVerifierIndex
+			log.Infow("Using debug verifier index from config", "verifierIdx", verifierIdx)
+			if verifierIdx >= len(scConsts.Rollup.Verifiers) {
+				return nil, tracerr.Wrap(
+					fmt.Errorf("verifierIdx (%v) >= "+
+						"len(scConsts.Rollup.Verifiers) (%v)",
+						verifierIdx, len(scConsts.Rollup.Verifiers)))
+			}
+			verifier := scConsts.Rollup.Verifiers[verifierIdx]
+			if verifier.MaxTx != cfg.Coordinator.Circuit.MaxTx ||
+				verifier.NLevels != cfg.Coordinator.Circuit.NLevels {
+				return nil, tracerr.Wrap(
+					fmt.Errorf("Circuit config and verifier params don't match.  "+
+						"circuit.MaxTx = %v, circuit.NLevels = %v, "+
+						"verifier.MaxTx = %v, verifier.NLevels = %v",
+						cfg.Coordinator.Circuit.MaxTx, cfg.Coordinator.Circuit.NLevels,
+						verifier.MaxTx, verifier.NLevels,
+					))
+			}
 		}
-		log.Infow("Found verifier that matches circuit config", "verifierIdx", verifierIdx)
 
 		coord, err = coordinator.NewCoordinator(
 			coordinator.Config{

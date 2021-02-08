@@ -738,14 +738,14 @@ func (c *RollupClient) RollupEventInit() (*RollupEventInitialize, int64, error) 
 // RollupEventsByBlock returns the events in a block that happened in the
 // Rollup Smart Contract.
 // To query by blockNum, set blockNum >= 0 and blockHash == nil.
-// To query by blockHash, set blockNum == -1 and blockHash != nil.
+// To query by blockHash set blockHash != nil, and blockNum will be ignored.
 // If there are no events in that block the result is nil.
 func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 	blockHash *ethCommon.Hash) (*RollupEvents, error) {
 	var rollupEvents RollupEvents
 
 	var blockNumBigInt *big.Int
-	if blockNum >= 0 {
+	if blockHash == nil {
 		blockNumBigInt = big.NewInt(blockNum)
 	}
 	query := ethereum.FilterQuery{
