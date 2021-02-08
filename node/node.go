@@ -164,8 +164,12 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		return nil, tracerr.Wrap(fmt.Errorf("cfg.StateDB.Keep = %v < %v, which is unsafe",
 			cfg.StateDB.Keep, safeStateDBKeep))
 	}
-	stateDB, err := statedb.NewStateDB(cfg.StateDB.Path, cfg.StateDB.Keep,
-		statedb.TypeSynchronizer, 32)
+	stateDB, err := statedb.NewStateDB(statedb.Config{
+		Path:    cfg.StateDB.Path,
+		Keep:    cfg.StateDB.Keep,
+		Type:    statedb.TypeSynchronizer,
+		NLevels: statedb.MaxNLevels,
+	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

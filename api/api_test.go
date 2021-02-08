@@ -213,7 +213,7 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}()
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeTxSelector, 0)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128, Type: statedb.TypeTxSelector, NLevels: 0})
 	if err != nil {
 		panic(err)
 	}

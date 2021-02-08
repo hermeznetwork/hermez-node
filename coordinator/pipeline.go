@@ -200,15 +200,17 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				p.syncSCVars(statsVars.Vars)
 			case <-time.After(waitDuration):
 				batchNum = p.batchNum + 1
-				if batchInfo, err := p.handleForgeBatch(p.ctx, batchNum); err != nil {
+				batchInfo, err := p.handleForgeBatch(p.ctx, batchNum)
+				if p.ctx.Err() != nil {
+					continue
+				} else if err != nil {
 					waitDuration = p.cfg.SyncRetryInterval
 					continue
-				} else {
-					p.batchNum = batchNum
-					select {
-					case batchChSentServerProof <- batchInfo:
-					case <-p.ctx.Done():
-					}
+				}
+				p.batchNum = batchNum
+				select {
+				case batchChSentServerProof <- batchInfo:
+				case <-p.ctx.Done():
 				}
 			}
 		}

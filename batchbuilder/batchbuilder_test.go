@@ -15,7 +15,7 @@ func TestBatchBuilder(t *testing.T) {
 	require.Nil(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	synchDB, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 0)
+	synchDB, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128, Type: statedb.TypeBatchBuilder, NLevels: 0})
 	assert.Nil(t, err)
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")

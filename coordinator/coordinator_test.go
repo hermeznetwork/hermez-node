@@ -97,7 +97,8 @@ func newTestModules(t *testing.T) modules {
 	syncDBPath, err = ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
-	syncStateDB, err := statedb.NewStateDB(syncDBPath, 128, statedb.TypeSynchronizer, 48)
+	syncStateDB, err := statedb.NewStateDB(statedb.Config{Path: syncDBPath, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 48})
 	assert.NoError(t, err)
 
 	pass := os.Getenv("POSTGRES_PASS")

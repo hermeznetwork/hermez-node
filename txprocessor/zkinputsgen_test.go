@@ -41,7 +41,8 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -90,7 +91,8 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.Nil(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -149,7 +151,8 @@ func TestZKInputsEmpty(t *testing.T) {
 
 	nLevels := 16
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -266,7 +269,8 @@ func TestZKInputs0(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -322,7 +326,8 @@ func TestZKInputs1(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -385,7 +390,8 @@ func TestZKInputs2(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -456,7 +462,8 @@ func TestZKInputs3(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -527,7 +534,8 @@ func TestZKInputs4(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -598,7 +606,8 @@ func TestZKInputs5(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)
@@ -661,7 +670,8 @@ func TestZKInputs6(t *testing.T) {
 	defer assert.Nil(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	require.NoError(t, err)
 
 	chainID := uint16(0)

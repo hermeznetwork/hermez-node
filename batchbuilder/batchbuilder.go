@@ -2,6 +2,7 @@ package batchbuilder
 
 import (
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db/kvdb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
@@ -28,8 +29,14 @@ type ConfigBatch struct {
 // NewBatchBuilder constructs a new BatchBuilder, and executes the bb.Reset
 // method
 func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, batchNum common.BatchNum, nLevels uint64) (*BatchBuilder, error) {
-	localStateDB, err := statedb.NewLocalStateDB(dbpath, 128, synchronizerStateDB,
-		statedb.TypeBatchBuilder, int(nLevels))
+	localStateDB, err := statedb.NewLocalStateDB(
+		statedb.Config{
+			Path:    dbpath,
+			Keep:    kvdb.DefaultKeep,
+			Type:    statedb.TypeBatchBuilder,
+			NLevels: int(nLevels),
+		},
+		synchronizerStateDB)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

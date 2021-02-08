@@ -36,7 +36,8 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
 	set := `
@@ -212,7 +213,8 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
 	chainID := uint16(0)
@@ -358,7 +360,8 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
 	chainID := uint16(0)
@@ -489,7 +492,8 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	assert.NoError(t, err)
 
 	chainID := uint16(0)
@@ -580,7 +584,8 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	assert.NoError(t, err)
 
 	// same values than in the js test
@@ -631,7 +636,8 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir))
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, nLevels)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	assert.NoError(t, err)
 
 	users := txsets.GenerateJsUsers(t)
@@ -700,7 +706,8 @@ func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Contex
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeBatchBuilder, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	assert.NoError(t, err)
 
 	chainID := uint16(1)
@@ -798,7 +805,8 @@ func TestTwoExits(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
-	sdb, err := statedb.NewStateDB(dir, 128, statedb.TypeSynchronizer, 32)
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
 	chainID := uint16(1)
@@ -865,7 +873,8 @@ func TestTwoExits(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir2))
 
-	sdb2, err := statedb.NewStateDB(dir2, 128, statedb.TypeSynchronizer, 32)
+	sdb2, err := statedb.NewStateDB(statedb.Config{Path: dir2, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
 	tc = til.NewContext(chainID, common.RollupConstMaxL1UserTx)
