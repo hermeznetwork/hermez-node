@@ -1116,15 +1116,20 @@ func (c *Client) RollupConstants() (*common.RollupConstants, error) {
 }
 
 // RollupEventsByBlock returns the events in a block that happened in the Rollup Smart Contract
-func (c *Client) RollupEventsByBlock(blockNum int64) (*eth.RollupEvents, *ethCommon.Hash, error) {
+func (c *Client) RollupEventsByBlock(blockNum int64,
+	blockHash *ethCommon.Hash) (*eth.RollupEvents, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	block, ok := c.blocks[blockNum]
 	if !ok {
-		return nil, nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
+		return nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
 	}
-	return &block.Rollup.Events, &block.Eth.Hash, nil
+	if blockHash != nil && *blockHash != block.Eth.Hash {
+		return nil, tracerr.Wrap(fmt.Errorf("Hash mismatch, requested %v got %v",
+			blockHash, block.Eth.Hash))
+	}
+	return &block.Rollup.Events, nil
 }
 
 // RollupEventInit returns the initialize event with its corresponding block number
@@ -1573,15 +1578,20 @@ func (c *Client) AuctionConstants() (*common.AuctionConstants, error) {
 }
 
 // AuctionEventsByBlock returns the events in a block that happened in the Auction Smart Contract
-func (c *Client) AuctionEventsByBlock(blockNum int64) (*eth.AuctionEvents, *ethCommon.Hash, error) {
+func (c *Client) AuctionEventsByBlock(blockNum int64,
+	blockHash *ethCommon.Hash) (*eth.AuctionEvents, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	block, ok := c.blocks[blockNum]
 	if !ok {
-		return nil, nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
+		return nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
 	}
-	return &block.Auction.Events, &block.Eth.Hash, nil
+	if blockHash != nil && *blockHash != block.Eth.Hash {
+		return nil, tracerr.Wrap(fmt.Errorf("Hash mismatch, requested %v got %v",
+			blockHash, block.Eth.Hash))
+	}
+	return &block.Auction.Events, nil
 }
 
 // AuctionEventInit returns the initialize event with its corresponding block number
@@ -1789,15 +1799,20 @@ func (c *Client) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amou
 }
 
 // WDelayerEventsByBlock returns the events in a block that happened in the WDelayer Contract
-func (c *Client) WDelayerEventsByBlock(blockNum int64) (*eth.WDelayerEvents, *ethCommon.Hash, error) {
+func (c *Client) WDelayerEventsByBlock(blockNum int64,
+	blockHash *ethCommon.Hash) (*eth.WDelayerEvents, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	block, ok := c.blocks[blockNum]
 	if !ok {
-		return nil, nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
+		return nil, tracerr.Wrap(fmt.Errorf("Block %v doesn't exist", blockNum))
 	}
-	return &block.WDelayer.Events, &block.Eth.Hash, nil
+	if blockHash != nil && *blockHash != block.Eth.Hash {
+		return nil, tracerr.Wrap(fmt.Errorf("Hash mismatch, requested %v got %v",
+			blockHash, block.Eth.Hash))
+	}
+	return &block.WDelayer.Events, nil
 }
 
 // WDelayerConstants returns the Constants of the WDelayer Contract

@@ -230,8 +230,8 @@ func (s *StateDB) SetCurrentIdx(idx common.Idx) error {
 // those checkpoints will remain in the storage, and eventually will be
 // deleted when MakeCheckpoint overwrites them.
 func (s *StateDB) Reset(batchNum common.BatchNum) error {
-	err := s.db.Reset(batchNum)
-	if err != nil {
+	log.Debugw("Making StateDB Reset", "batch", batchNum, "type", s.Typ)
+	if err := s.db.Reset(batchNum); err != nil {
 		return tracerr.Wrap(err)
 	}
 	if s.MT != nil {
@@ -242,7 +242,6 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 		}
 		s.MT = mt
 	}
-	log.Debugw("Making StateDB Reset", "batch", batchNum)
 	return nil
 }
 
@@ -478,13 +477,13 @@ func NewLocalStateDB(path string, keep int, synchronizerDB *StateDB, typ TypeSta
 // If fromSynchronizer is false, get the state from LocalStateDB checkpoints.
 func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) error {
 	if fromSynchronizer {
-		err := l.db.ResetFromSynchronizer(batchNum, l.synchronizerStateDB.db)
-		if err != nil {
+		if err := l.db.ResetFromSynchronizer(batchNum, l.synchronizerStateDB.db); err != nil {
 			return tracerr.Wrap(err)
 		}
 		// open the MT for the current s.db
 		if l.MT != nil {
-			mt, err := merkletree.NewMerkleTree(l.db.StorageWithPrefix(PrefixKeyMT), l.MT.MaxLevels())
+			mt, err := merkletree.NewMerkleTree(l.db.StorageWithPrefix(PrefixKeyMT),
+				l.MT.MaxLevels())
 			if err != nil {
 				return tracerr.Wrap(err)
 			}
