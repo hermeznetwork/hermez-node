@@ -83,8 +83,15 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+	var apiConnCon *dbUtils.APIConnectionController
+	if cfg.API.Explorer || mode == ModeCoordinator {
+		apiConnCon = dbUtils.NewAPICnnectionController(
+			cfg.API.MaxSQLConnections,
+			cfg.API.SQLConnectionTimeout.Duration,
+		)
+	}
 
-	historyDB := historydb.NewHistoryDB(db)
+	historyDB := historydb.NewHistoryDB(db, apiConnCon)
 
 	ethClient, err := ethclient.Dial(cfg.Web3.URL)
 	if err != nil {
@@ -193,6 +200,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			cfg.Coordinator.L2DB.SafetyPeriod,
 			cfg.Coordinator.L2DB.MaxTxs,
 			cfg.Coordinator.L2DB.TTL.Duration,
+			apiConnCon,
 		)
 
 		// Unlock FeeAccount EthAddr in the keystore to generate the

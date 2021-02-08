@@ -38,7 +38,7 @@ func addTokens(t *testing.T, tc *til.Context, db *sqlx.DB) {
 		})
 	}
 
-	hdb := historydb.NewHistoryDB(db)
+	hdb := historydb.NewHistoryDB(db, nil)
 	assert.NoError(t, hdb.AddBlock(&common.Block{
 		Num: 1,
 	}))
@@ -75,7 +75,7 @@ func initTxSelector(t *testing.T, chainID uint16, hermezContractAddr ethCommon.A
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
-	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour)
+	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour, nil)
 
 	dir, err := ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)

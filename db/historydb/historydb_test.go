@@ -22,6 +22,7 @@ import (
 )
 
 var historyDB *HistoryDB
+var historyDBWithACC *HistoryDB
 
 // In order to run the test you need to run a Posgres DB with
 // a database named "history" that is accessible by
@@ -38,10 +39,12 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	historyDB = NewHistoryDB(db)
+	historyDB = NewHistoryDB(db, nil)
 	if err != nil {
 		panic(err)
 	}
+	apiConnCon := dbUtils.NewAPICnnectionController(1, time.Second)
+	historyDBWithACC = NewHistoryDB(db, apiConnCon)
 	// Run tests
 	result := m.Run()
 	// Close DB
@@ -85,7 +88,7 @@ func TestBlocks(t *testing.T) {
 		blocks...,
 	)
 	// Get all blocks from DB
-	fetchedBlocks, err := historyDB.GetBlocks(fromBlock, toBlock)
+	fetchedBlocks, err := historyDB.getBlocks(fromBlock, toBlock)
 	assert.Equal(t, len(blocks), len(fetchedBlocks))
 	// Compare generated vs getted blocks
 	assert.NoError(t, err)
@@ -245,9 +248,8 @@ func TestTokens(t *testing.T) {
 	err := historyDB.AddTokens(tokens)
 	assert.NoError(t, err)
 	tokens = append([]common.Token{ethToken}, tokens...)
-	limit := uint(10)
 	// Fetch tokens
-	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
+	fetchedTokens, err := historyDB.GetTokensTest()
 	assert.NoError(t, err)
 	// Compare fetched tokens vs generated tokens
 	// All the tokens should have USDUpdate setted by the DB trigger
@@ -267,7 +269,7 @@ func TestTokens(t *testing.T) {
 		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
 	}
 	// Fetch tokens
-	fetchedTokens, _, err = historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
+	fetchedTokens, err = historyDB.GetTokensTest()
 	assert.NoError(t, err)
 	// Compare fetched tokens vs generated tokens
 	// All the tokens should have USDUpdate setted by the DB trigger
@@ -302,9 +304,8 @@ func TestTokensUTF8(t *testing.T) {
 	assert.NoError(t, err)
 	// Work with nonUTFTokens as tokens one gets updated and non UTF-8 characters are lost
 	nonUTFTokens = append([]common.Token{ethToken}, nonUTFTokens...)
-	limit := uint(10)
 	// Fetch tokens
-	fetchedTokens, _, err := historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
+	fetchedTokens, err := historyDB.GetTokensTest()
 	assert.NoError(t, err)
 	// Compare fetched tokens vs generated tokens
 	// All the tokens should have USDUpdate setted by the DB trigger
@@ -324,7 +325,7 @@ func TestTokensUTF8(t *testing.T) {
 		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
 	}
 	// Fetch tokens
-	fetchedTokens, _, err = historyDB.GetTokens(nil, nil, "", nil, &limit, OrderAsc)
+	fetchedTokens, err = historyDB.GetTokensTest()
 	assert.NoError(t, err)
 	// Compare fetched tokens vs generated tokens
 	// All the tokens should have USDUpdate setted by the DB trigger
@@ -1087,9 +1088,8 @@ func TestAddEscapeHatchWithdrawals(t *testing.T) {
 	assert.Equal(t, escapeHatchWithdrawals, dbEscapeHatchWithdrawals)
 }
 
-func TestGetMetrics(t *testing.T) {
+func TestGetMetricsAPI(t *testing.T) {
 	test.WipeDB(historyDB.DB())
-
 	set := `
 		Type: Blockchain
 
@@ -1146,7 +1146,7 @@ func TestGetMetrics(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, err := historyDB.GetMetrics(common.BatchNum(numBatches))
+	res, err := historyDBWithACC.GetMetricsAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.Equal(t, float64(numTx)/float64(numBatches-1), res.TransactionsPerBatch)
@@ -1165,7 +1165,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, float64(0), res.AvgTransactionFee)
 }
 
-func TestGetMetricsMoreThan24Hours(t *testing.T) {
+func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 	test.WipeDB(historyDB.DB())
 
 	testUsersLen := 3
@@ -1226,7 +1226,7 @@ func TestGetMetricsMoreThan24Hours(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, err := historyDB.GetMetrics(common.BatchNum(numBatches))
+	res, err := historyDBWithACC.GetMetricsAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.Equal(t, math.Trunc((float64(numTx)/float64(numBatches-1))/0.001)*0.001, math.Trunc(res.TransactionsPerBatch/0.001)*0.001)
@@ -1245,15 +1245,15 @@ func TestGetMetricsMoreThan24Hours(t *testing.T) {
 	assert.Equal(t, float64(0), res.AvgTransactionFee)
 }
 
-func TestGetMetricsEmpty(t *testing.T) {
+func TestGetMetricsAPIEmpty(t *testing.T) {
 	test.WipeDB(historyDB.DB())
-	_, err := historyDB.GetMetrics(0)
+	_, err := historyDBWithACC.GetMetricsAPI(0)
 	assert.NoError(t, err)
 }
 
 func TestGetAvgTxFeeEmpty(t *testing.T) {
 	test.WipeDB(historyDB.DB())
-	_, err := historyDB.GetAvgTxFee()
+	_, err := historyDBWithACC.GetAvgTxFeeAPI()
 	assert.NoError(t, err)
 }
 

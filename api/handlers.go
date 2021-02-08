@@ -30,6 +30,12 @@ const (
 
 	// Error for duplicated key
 	errDuplicatedKey = "Item already exists"
+
+	// Error for timeout due to SQL connection
+	errSQLTimeout = "The node is under heavy preasure, please try again later"
+
+	// Error message returned when context reaches timeout
+	errCtxTimeout = "context deadline exceeded"
 )
 
 var (
@@ -38,16 +44,20 @@ var (
 )
 
 func retSQLErr(err error, c *gin.Context) {
-	log.Warn("HTTP API SQL request error", "err", err)
-	if sqlErr, ok := tracerr.Unwrap(err).(*pq.Error); ok {
+	log.Warnw("HTTP API SQL request error", "err", err)
+	errMsg := tracerr.Unwrap(err).Error()
+	if errMsg == errCtxTimeout {
+		c.JSON(http.StatusServiceUnavailable, errorMsg{
+			Message: errSQLTimeout,
+		})
+	} else if sqlErr, ok := tracerr.Unwrap(err).(*pq.Error); ok {
 		// https://www.postgresql.org/docs/current/errcodes-appendix.html
 		if sqlErr.Code == "23505" {
 			c.JSON(http.StatusInternalServerError, errorMsg{
 				Message: errDuplicatedKey,
 			})
 		}
-	}
-	if tracerr.Unwrap(err) == sql.ErrNoRows {
+	} else if tracerr.Unwrap(err) == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, errorMsg{
 			Message: err.Error(),
 		})
@@ -59,7 +69,7 @@ func retSQLErr(err error, c *gin.Context) {
 }
 
 func retBadReq(err error, c *gin.Context) {
-	log.Warn("HTTP API Bad request error", "err", err)
+	log.Warnw("HTTP API Bad request error", "err", err)
 	c.JSON(http.StatusBadRequest, errorMsg{
 		Message: err.Error(),
 	})

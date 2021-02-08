@@ -201,9 +201,14 @@ type Node struct {
 		// UpdateMetricsInterval is the interval between updates of the
 		// API metrics
 		UpdateMetricsInterval Duration
-		// UpdateMetricsInterval is the interval between updates of the
+		// UpdateRecommendedFeeInterval is the interval between updates of the
 		// recommended fees
 		UpdateRecommendedFeeInterval Duration
+		// Maximum concurrent connections allowed between API and SQL
+		MaxSQLConnections int `validate:"required"`
+		// SQLConnectionTimeout is the maximum amount of time that an API request
+		// can wait to stablish a SQL connection
+		SQLConnectionTimeout Duration
 	} `validate:"required"`
 	Debug struct {
 		// APIAddress is the address where the debugAPI will listen if

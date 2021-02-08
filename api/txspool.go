@@ -28,7 +28,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 		return
 	}
 	// Insert to DB
-	if err := a.l2.AddTx(writeTx); err != nil {
+	if err := a.l2.AddTxAPI(writeTx); err != nil {
 		retSQLErr(err, c)
 		return
 	}

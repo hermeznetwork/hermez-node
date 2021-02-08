@@ -34,7 +34,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 	}
 
 	// Fetch txs from historyDB
-	txs, pendingItems, err := a.h.GetHistoryTxs(
+	txs, pendingItems, err := a.h.GetTxsAPI(
 		addr, bjj, tokenID, idx, batchNum, txType, fromItem, limit, order,
 	)
 	if err != nil {
@@ -61,7 +61,7 @@ func (a *API) getHistoryTx(c *gin.Context) {
 		return
 	}
 	// Fetch tx from historyDB
-	tx, err := a.h.GetHistoryTx(txID)
+	tx, err := a.h.GetTxAPI(txID)
 	if err != nil {
 		retSQLErr(err, c)
 		return
