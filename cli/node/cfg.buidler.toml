@@ -96,3 +96,4 @@ Coordinator = true
 [Coordinator.Debug]
 BatchPath = "/tmp/iden3-test/hermez/batchesdebug"
 LightScrypt = true
+# RollupVerifierIndex = 0

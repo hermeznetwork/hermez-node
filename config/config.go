@@ -90,7 +90,6 @@ type Coordinator struct {
 	} `validate:"required"`
 	ServerProofs []ServerProof `validate:"required"`
 	Circuit      struct {
-		// VerifierIdx uint8  `validate:"required"`
 		// MaxTx is the maximum number of txs supported by the circuit
 		MaxTx int64 `validate:"required"`
 		// NLevels is the maximum number of merkle tree levels
@@ -132,6 +131,10 @@ type Coordinator struct {
 		// LightScrypt if set, uses light parameters for the ethereum
 		// keystore encryption algorithm.
 		LightScrypt bool
+		// RollupVerifierIndex is the index of the verifier to use in
+		// the Rollup smart contract.  The verifier chosen by index
+		// must match with the Circuit parameters.
+		RollupVerifierIndex *int
 	}
 }
 
