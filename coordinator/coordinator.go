@@ -348,12 +348,12 @@ func (c *Coordinator) handleReorg(ctx context.Context, msg *MsgSyncReorg) error 
 }
 
 func (c *Coordinator) handleStopPipeline(ctx context.Context, reason string) error {
-	if err := c.l2DB.Reorg(common.BatchNum(c.stats.Sync.LastBatch)); err != nil {
-		return tracerr.Wrap(err)
-	}
 	if c.pipeline != nil {
 		c.pipeline.Stop(c.ctx)
 		c.pipeline = nil
+	}
+	if err := c.l2DB.Reorg(common.BatchNum(c.stats.Sync.LastBatch)); err != nil {
+		return tracerr.Wrap(err)
 	}
 	if strings.Contains(reason, common.AuctionErrMsgCannotForge) { //nolint:staticcheck
 		// TODO: Check that we are in a slot in which we can't forge
