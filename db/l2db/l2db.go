@@ -346,9 +346,10 @@ func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []common.IdxNonce, batchNu
 // The state of the affected txs can change form Forged -> Pending or from Invalid -> Pending
 func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 	_, err := l2db.db.Exec(
-		`UPDATE tx_pool SET batch_num = NULL, state = $1 
-		WHERE (state = $2 OR state = $3) AND batch_num > $4`,
+		`UPDATE tx_pool SET batch_num = NULL, state = $1
+		WHERE (state = $2 OR state = $3 OR state = $4) AND batch_num > $5`,
 		common.PoolL2TxStatePending,
+		common.PoolL2TxStateForging,
 		common.PoolL2TxStateForged,
 		common.PoolL2TxStateInvalid,
 		lastValidBatch,
