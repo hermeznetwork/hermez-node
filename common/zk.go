@@ -112,7 +112,7 @@ type ZKInputs struct {
 	// NewAccount boolean (0/1) flag set 'true' when L1 tx creates a new
 	// account (fromIdx==0)
 	NewAccount []*big.Int `json:"newAccount"` // bool, len: [maxTx]
-	// DepositAmountF encoded as float16
+	// DepositAmountF encoded as float40
 	DepositAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [maxTx]
 	// FromEthAddr
 	FromEthAddr []*big.Int `json:"fromEthAddr"` // ethCommon.Address, len: [maxTx]

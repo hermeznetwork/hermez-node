@@ -21,80 +21,104 @@ func TestNewPoolL2Tx(t *testing.T) {
 	}
 	poolL2Tx, err := NewPoolL2Tx(poolL2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x02fb52b5d0b9ef2626c11701bb751b2720c76d59946b9a48146ac153bb6e63bf6a", poolL2Tx.TxID.String())
+	assert.Equal(t, "0x022669acda59b827d20ef5354a3eebd1dffb3972b0a6bf89d18bfd2efa0ab9f41e", poolL2Tx.TxID.String())
 }
 
-func TestTxCompressedData(t *testing.T) {
-	chainID := uint16(0)
-	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+func TestTxCompressedDataAndTxCompressedDataV2JSVectors(t *testing.T) {
+	// test vectors values generated from javascript implementation
+	var skPositive babyjub.PrivateKey // 'Positive' refers to the sign
+	_, err := hex.Decode(skPositive[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
+
+	var skNegative babyjub.PrivateKey // 'Negative' refers to the sign
+	_, err = hex.Decode(skNegative[:], []byte("0001020304050607080900010203040506070809000102030405060708090002"))
+	assert.NoError(t, err)
+
+	amount, ok := new(big.Int).SetString("343597383670000000000000000000000000000000", 10)
+	require.True(t, ok)
 	tx := PoolL2Tx{
-		FromIdx: 2,
-		ToIdx:   3,
-		Amount:  big.NewInt(4),
-		TokenID: 5,
-		Nonce:   6,
-		ToBJJ:   sk.Public().Compress(),
+		FromIdx: (1 << 48) - 1,
+		ToIdx:   (1 << 48) - 1,
+		Amount:  amount,
+		TokenID: (1 << 32) - 1,
+		Nonce:   (1 << 40) - 1,
+		Fee:     (1 << 3) - 1,
+		ToBJJ:   skPositive.Public().Compress(),
 	}
-	txCompressedData, err := tx.TxCompressedData(chainID)
-	assert.NoError(t, err)
-	// test vector value generated from javascript implementation
-	expectedStr := "1766847064778421992193717128424891165872736891548909569553540445094274575"
-	assert.Equal(t, expectedStr, txCompressedData.String())
-	assert.Equal(t, "010000000000060000000500040000000000030000000000020000c60be60f", hex.EncodeToString(txCompressedData.Bytes()))
-	// using a different chainID
-	txCompressedData, err = tx.TxCompressedData(uint16(100))
-	assert.NoError(t, err)
-	expectedStr = "1766847064778421992193717128424891165872736891548909569553540874591004175"
-	assert.Equal(t, expectedStr, txCompressedData.String())
-	assert.Equal(t, "010000000000060000000500040000000000030000000000020064c60be60f", hex.EncodeToString(txCompressedData.Bytes()))
-	txCompressedData, err = tx.TxCompressedData(uint16(65535))
-	assert.NoError(t, err)
-	expectedStr = "1766847064778421992193717128424891165872736891548909569553821915776017935"
-	assert.Equal(t, expectedStr, txCompressedData.String())
-	assert.Equal(t, "01000000000006000000050004000000000003000000000002ffffc60be60f", hex.EncodeToString(txCompressedData.Bytes()))
+	txCompressedData, err := tx.TxCompressedData(uint16((1 << 16) - 1))
+	require.NoError(t, err)
+	expectedStr := "0107ffffffffffffffffffffffffffffffffffffffffffffffc60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
+
+	txCompressedDataV2, err := tx.TxCompressedDataV2()
+	require.NoError(t, err)
+	expectedStr = "0107ffffffffffffffffffffffffffffffffffffffffffffffffffff"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedDataV2.Bytes()))
 
 	tx = PoolL2Tx{
-		RqFromIdx: 7,
-		RqToIdx:   8,
-		RqAmount:  big.NewInt(9),
-		RqTokenID: 10,
-		RqNonce:   11,
-		RqFee:     12,
-		RqToBJJ:   sk.Public().Compress(),
+		FromIdx: 0,
+		ToIdx:   0,
+		Amount:  big.NewInt(0),
+		TokenID: 0,
+		Nonce:   0,
+		Fee:     0,
+		ToBJJ:   skNegative.Public().Compress(),
 	}
-	rqTxCompressedData, err := tx.RqTxCompressedDataV2()
-	assert.NoError(t, err)
-	// test vector value generated from javascript implementation
-	expectedStr = "6571340879233176732837827812956721483162819083004853354503"
-	assert.Equal(t, expectedStr, rqTxCompressedData.String())
-	assert.Equal(t, "010c000000000b0000000a0009000000000008000000000007", hex.EncodeToString(rqTxCompressedData.Bytes()))
-}
+	txCompressedData, err = tx.TxCompressedData(uint16(0))
+	require.NoError(t, err)
+	expectedStr = "c60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
 
-func TestTxCompressedDataV2(t *testing.T) {
-	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.NoError(t, err)
-	tx := PoolL2Tx{
-		FromIdx: 7,
-		ToIdx:   8,
-		Amount:  big.NewInt(9),
-		TokenID: 10,
-		Nonce:   11,
-		Fee:     12,
-		ToBJJ:   sk.Public().Compress(),
+	txCompressedDataV2, err = tx.TxCompressedDataV2()
+	require.NoError(t, err)
+	assert.Equal(t, "0", txCompressedDataV2.String())
+
+	amount, ok = new(big.Int).SetString("63000000000000000", 10)
+	require.True(t, ok)
+	tx = PoolL2Tx{
+		FromIdx: 324,
+		ToIdx:   256,
+		Amount:  amount,
+		TokenID: 123,
+		Nonce:   76,
+		Fee:     214,
+		ToBJJ:   skNegative.Public().Compress(),
 	}
-	txCompressedData, err := tx.TxCompressedDataV2()
-	assert.NoError(t, err)
-	// test vector value generated from javascript implementation
-	expectedStr := "6571340879233176732837827812956721483162819083004853354503"
-	assert.Equal(t, expectedStr, txCompressedData.String())
-	expected, ok := new(big.Int).SetString(expectedStr, 10)
-	assert.True(t, ok)
+	txCompressedData, err = tx.TxCompressedData(uint16(1))
+	require.NoError(t, err)
+	expectedStr = "d6000000004c0000007b0000000001000000000001440001c60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
 
-	assert.Equal(t, expected.Bytes(), txCompressedData.Bytes())
-	assert.Equal(t, "010c000000000b0000000a0009000000000008000000000007", hex.EncodeToString(txCompressedData.Bytes()))
+	txCompressedDataV2, err = tx.TxCompressedDataV2()
+	require.NoError(t, err)
+	expectedStr = "d6000000004c0000007b3977825f00000000000100000000000144"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedDataV2.Bytes()))
+
+	tx = PoolL2Tx{
+		FromIdx: 1,
+		ToIdx:   2,
+		TokenID: 3,
+		Nonce:   4,
+		Fee:     5,
+		ToBJJ:   skNegative.Public().Compress(),
+	}
+	txCompressedData, err = tx.TxCompressedData(uint16(0))
+	require.NoError(t, err)
+	expectedStr = "050000000004000000030000000000020000000000010000c60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
+
+	tx = PoolL2Tx{
+		FromIdx: 2,
+		ToIdx:   3,
+		TokenID: 4,
+		Nonce:   5,
+		Fee:     6,
+		ToBJJ:   skPositive.Public().Compress(),
+	}
+	txCompressedData, err = tx.TxCompressedData(uint16(0))
+	require.NoError(t, err)
+	expectedStr = "01060000000005000000040000000000030000000000020000c60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
 }
 
 func TestRqTxCompressedDataV2(t *testing.T) {
@@ -113,19 +137,16 @@ func TestRqTxCompressedDataV2(t *testing.T) {
 	txCompressedData, err := tx.RqTxCompressedDataV2()
 	assert.NoError(t, err)
 	// test vector value generated from javascript implementation
-	expectedStr := "6571340879233176732837827812956721483162819083004853354503"
+	expectedStr := "110248805340524920412994530176819463725852160917809517418728390663"
 	assert.Equal(t, expectedStr, txCompressedData.String())
 	expected, ok := new(big.Int).SetString(expectedStr, 10)
 	assert.True(t, ok)
 	assert.Equal(t, expected.Bytes(), txCompressedData.Bytes())
-	assert.Equal(t, "010c000000000b0000000a0009000000000008000000000007", hex.EncodeToString(txCompressedData.Bytes()))
+	assert.Equal(t, "010c000000000b0000000a0000000009000000000008000000000007", hex.EncodeToString(txCompressedData.Bytes()))
 }
 
 func TestHashToSign(t *testing.T) {
 	chainID := uint16(0)
-	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
-	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		FromIdx:   2,
 		ToIdx:     3,
@@ -136,7 +157,7 @@ func TestHashToSign(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign(chainID)
 	assert.NoError(t, err)
-	assert.Equal(t, "1469900657138253851938022936440971384682713995864967090251961124784132925291", toSign.String())
+	assert.Equal(t, "2d49ce1d4136e06f64e3eb1f79a346e6ee3e93ceeac909a57806a8d87005c263", hex.EncodeToString(toSign.Bytes()))
 }
 
 func TestVerifyTxSignature(t *testing.T) {
@@ -156,7 +177,7 @@ func TestVerifyTxSignature(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign(chainID)
 	assert.NoError(t, err)
-	assert.Equal(t, "18645218094210271622244722988708640202588315450486586312909439859037906375295", toSign.String())
+	assert.Equal(t, "1571327027383224465388301747239444557034990637650927918405777653988509342917", toSign.String())
 
 	sig := sk.SignPoseidon(toSign)
 	tx.Signature = sig.Compress()

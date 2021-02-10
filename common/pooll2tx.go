@@ -36,7 +36,7 @@ type PoolL2Tx struct {
 	ToEthAddr ethCommon.Address     `meddler:"to_eth_addr,zeroisnull"`
 	ToBJJ     babyjub.PublicKeyComp `meddler:"to_bjj,zeroisnull"`
 	TokenID   TokenID               `meddler:"token_id"`
-	Amount    *big.Int              `meddler:"amount,bigint"` // TODO: change to float16
+	Amount    *big.Int              `meddler:"amount,bigint"` // TODO: change to float40
 	Fee       FeeSelector           `meddler:"fee"`
 	Nonce     Nonce                 `meddler:"nonce"` // effective 40 bits used
 	State     PoolL2TxState         `meddler:"state"`
@@ -53,7 +53,7 @@ type PoolL2Tx struct {
 	RqToEthAddr       ethCommon.Address     `meddler:"rq_to_eth_addr,zeroisnull"`
 	RqToBJJ           babyjub.PublicKeyComp `meddler:"rq_to_bjj,zeroisnull"`
 	RqTokenID         TokenID               `meddler:"rq_token_id,zeroisnull"`
-	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"` // TODO: change to float16
+	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"` // TODO: change to float40
 	RqFee             FeeSelector           `meddler:"rq_fee,zeroisnull"`
 	RqNonce           Nonce                 `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
@@ -122,18 +122,13 @@ func (tx *PoolL2Tx) SetID() error {
 // [ 8 bits  ] userFee // 1 byte
 // [ 40 bits ] nonce // 5 bytes
 // [ 32 bits ] tokenID // 4 bytes
-// [ 16 bits ] amountFloat16 // 2 bytes
 // [ 48 bits ] toIdx // 6 bytes
 // [ 48 bits ] fromIdx // 6 bytes
 // [ 16 bits ] chainId // 2 bytes
 // [ 32 bits ] signatureConstant // 4 bytes
 // Total bits compressed data:  241 bits // 31 bytes in *big.Int representation
 func (tx *PoolL2Tx) TxCompressedData(chainID uint16) (*big.Int, error) {
-	amountFloat16, err := NewFloat16(tx.Amount)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	var b [31]byte
+	var b [29]byte
 
 	toBJJSign := byte(0)
 	pkSign, _ := babyjub.UnpackSignY(tx.ToBJJ)
@@ -149,19 +144,18 @@ func (tx *PoolL2Tx) TxCompressedData(chainID uint16) (*big.Int, error) {
 	}
 	copy(b[2:7], nonceBytes[:])
 	copy(b[7:11], tx.TokenID.Bytes())
-	copy(b[11:13], amountFloat16.Bytes())
 	toIdxBytes, err := tx.ToIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[13:19], toIdxBytes[:])
+	copy(b[11:17], toIdxBytes[:])
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[19:25], fromIdxBytes[:])
-	binary.BigEndian.PutUint16(b[25:27], chainID)
-	copy(b[27:31], SignatureConstantBytes[:])
+	copy(b[17:23], fromIdxBytes[:])
+	binary.BigEndian.PutUint16(b[23:25], chainID)
+	copy(b[25:29], SignatureConstantBytes[:])
 
 	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
@@ -170,9 +164,9 @@ func (tx *PoolL2Tx) TxCompressedData(chainID uint16) (*big.Int, error) {
 // TxCompressedDataEmpty calculates the TxCompressedData of an empty
 // transaction
 func TxCompressedDataEmpty(chainID uint16) *big.Int {
-	var b [31]byte
-	binary.BigEndian.PutUint16(b[25:27], chainID)
-	copy(b[27:31], SignatureConstantBytes[:])
+	var b [29]byte
+	binary.BigEndian.PutUint16(b[23:25], chainID)
+	copy(b[25:29], SignatureConstantBytes[:])
 	bi := new(big.Int).SetBytes(b[:])
 	return bi
 }
@@ -182,7 +176,7 @@ func TxCompressedDataEmpty(chainID uint16) *big.Int {
 // [ 8 bits  ] userFee // 1 byte
 // [ 40 bits ] nonce // 5 bytes
 // [ 32 bits ] tokenID // 4 bytes
-// [ 16 bits ] amountFloat16 // 2 bytes
+// [ 40 bits ] amountFloat40 // 5 bytes
 // [ 48 bits ] toIdx // 6 bytes
 // [ 48 bits ] fromIdx // 6 bytes
 // Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
@@ -190,11 +184,16 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 	if tx.Amount == nil {
 		tx.Amount = big.NewInt(0)
 	}
-	amountFloat16, err := NewFloat16(tx.Amount)
+	amountFloat40, err := NewFloat40(tx.Amount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	var b [25]byte
+	amountFloat40Bytes, err := amountFloat40.Bytes()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+
+	var b [28]byte
 	toBJJSign := byte(0)
 	if tx.ToBJJ != EmptyBJJComp {
 		sign, _ := babyjub.UnpackSignY(tx.ToBJJ)
@@ -210,17 +209,17 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 	}
 	copy(b[2:7], nonceBytes[:])
 	copy(b[7:11], tx.TokenID.Bytes())
-	copy(b[11:13], amountFloat16.Bytes())
+	copy(b[11:16], amountFloat40Bytes)
 	toIdxBytes, err := tx.ToIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[13:19], toIdxBytes[:])
+	copy(b[16:22], toIdxBytes[:])
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[19:25], fromIdxBytes[:])
+	copy(b[22:28], fromIdxBytes[:])
 
 	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
@@ -236,7 +235,7 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 // [ 8 bits  ] rqUserFee // 1 byte
 // [ 40 bits ] rqNonce // 5 bytes
 // [ 32 bits ] rqTokenID // 4 bytes
-// [ 16 bits ] rqAmountFloat16 // 2 bytes
+// [ 40 bits ] rqAmountFloat40 // 5 bytes
 // [ 48 bits ] rqToIdx // 6 bytes
 // [ 48 bits ] rqFromIdx // 6 bytes
 // Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
@@ -244,11 +243,16 @@ func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
 	if tx.RqAmount == nil {
 		tx.RqAmount = big.NewInt(0)
 	}
-	amountFloat16, err := NewFloat16(tx.RqAmount)
+	amountFloat40, err := NewFloat40(tx.RqAmount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	var b [25]byte
+	amountFloat40Bytes, err := amountFloat40.Bytes()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+
+	var b [28]byte
 	rqToBJJSign := byte(0)
 	if tx.RqToBJJ != EmptyBJJComp {
 		sign, _ := babyjub.UnpackSignY(tx.RqToBJJ)
@@ -264,17 +268,17 @@ func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
 	}
 	copy(b[2:7], nonceBytes[:])
 	copy(b[7:11], tx.RqTokenID.Bytes())
-	copy(b[11:13], amountFloat16.Bytes())
+	copy(b[11:16], amountFloat40Bytes)
 	toIdxBytes, err := tx.RqToIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[13:19], toIdxBytes[:])
+	copy(b[16:22], toIdxBytes[:])
 	fromIdxBytes, err := tx.RqFromIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[19:25], fromIdxBytes[:])
+	copy(b[22:28], fromIdxBytes[:])
 
 	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
@@ -287,7 +291,22 @@ func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+
+	// e1: [5 bytes AmountFloat40 | 20 bytes ToEthAddr]
+	var e1B [25]byte
+	amountFloat40, err := NewFloat40(tx.Amount)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	amountFloat40Bytes, err := amountFloat40.Bytes()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	copy(e1B[0:5], amountFloat40Bytes)
 	toEthAddr := EthAddrToBigInt(tx.ToEthAddr)
+	copy(e1B[5:25], toEthAddr.Bytes())
+	e1 := new(big.Int).SetBytes(e1B[:])
+
 	rqToEthAddr := EthAddrToBigInt(tx.RqToEthAddr)
 
 	_, toBJJY := babyjub.UnpackSignY(tx.ToBJJ)
@@ -299,7 +318,7 @@ func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 
 	_, rqToBJJY := babyjub.UnpackSignY(tx.RqToBJJ)
 
-	return poseidon.Hash([]*big.Int{toCompressedData, toEthAddr, toBJJY, rqTxCompressedDataV2, rqToEthAddr, rqToBJJY})
+	return poseidon.Hash([]*big.Int{toCompressedData, e1, toBJJY, rqTxCompressedDataV2, rqToEthAddr, rqToBJJY})
 }
 
 // VerifySignature returns true if the signature verification is correct for the given PublicKeyComp

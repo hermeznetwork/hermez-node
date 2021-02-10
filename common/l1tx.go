@@ -11,13 +11,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-const (
-	// L1UserTxBytesLen is the length of the byte array that represents the L1Tx
-	L1UserTxBytesLen = 72
-	// L1CoordinatorTxBytesLen is the length of the byte array that represents the L1CoordinatorTx
-	L1CoordinatorTxBytesLen = 101
-)
-
 // L1Tx is a struct that represents a L1 tx
 type L1Tx struct {
 	// Stored in DB: mandatory fileds
@@ -179,45 +172,38 @@ func (tx L1Tx) Tx() Tx {
 // [ 8 bits  ] empty (userFee) // 1 byte
 // [ 40 bits ] empty (nonce) // 5 bytes
 // [ 32 bits ] tokenID // 4 bytes
-// [ 16 bits ] amountFloat16 // 2 bytes
 // [ 48 bits ] toIdx // 6 bytes
 // [ 48 bits ] fromIdx // 6 bytes
 // [ 16 bits ] chainId // 2 bytes
 // [ 32 bits ] empty (signatureConstant) // 4 bytes
-// Total bits compressed data:  241 bits // 31 bytes in *big.Int representation
+// Total bits compressed data:  225 bits // 29 bytes in *big.Int representation
 func (tx L1Tx) TxCompressedData(chainID uint16) (*big.Int, error) {
-	amountFloat16, err := NewFloat16(tx.Amount)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-
-	var b [31]byte
+	var b [29]byte
 	// b[0:7] empty: no ToBJJSign, no fee, no nonce
 	copy(b[7:11], tx.TokenID.Bytes())
-	copy(b[11:13], amountFloat16.Bytes())
 	toIdxBytes, err := tx.ToIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[13:19], toIdxBytes[:])
+	copy(b[11:17], toIdxBytes[:])
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[19:25], fromIdxBytes[:])
-	binary.BigEndian.PutUint16(b[25:27], chainID)
-	copy(b[27:31], SignatureConstantBytes[:])
+	copy(b[17:23], fromIdxBytes[:])
+	binary.BigEndian.PutUint16(b[23:25], chainID)
+	copy(b[25:29], SignatureConstantBytes[:])
 
 	bi := new(big.Int).SetBytes(b[:])
 	return bi, nil
 }
 
 // BytesDataAvailability encodes a L1Tx into []byte for the Data Availability
-// [ fromIdx | toIdx | amountFloat16 | Fee ]
+// [ fromIdx | toIdx | amountFloat40 | Fee ]
 func (tx *L1Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 
-	b := make([]byte, ((nLevels*2)+16+8)/8) //nolint:gomnd
+	b := make([]byte, ((nLevels*2)+40+8)/8) //nolint:gomnd
 
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
@@ -231,13 +217,17 @@ func (tx *L1Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	copy(b[idxLen:idxLen*2], toIdxBytes[6-idxLen:])
 
 	if tx.EffectiveAmount != nil {
-		amountFloat16, err := NewFloat16(tx.EffectiveAmount)
+		amountFloat40, err := NewFloat40(tx.EffectiveAmount)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		copy(b[idxLen*2:idxLen*2+2], amountFloat16.Bytes())
+		amountFloat40Bytes, err := amountFloat40.Bytes()
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		copy(b[idxLen*2:idxLen*2+5], amountFloat40Bytes)
 	}
-	// fee = 0 (as is L1Tx) b[10:11]
+	// fee = 0 (as is L1Tx)
 	return b[:], nil
 }
 
@@ -247,7 +237,7 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 
 	fromIdxBytes := b[0:idxLen]
 	toIdxBytes := b[idxLen : idxLen*2]
-	amountBytes := b[idxLen*2 : idxLen*2+2]
+	amountBytes := b[idxLen*2 : idxLen*2+5]
 
 	l1tx := L1Tx{}
 	fromIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(fromIdxBytes, 6))
@@ -260,8 +250,8 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	l1tx.ToIdx = toIdx
-	l1tx.EffectiveAmount = Float16FromBytes(amountBytes).BigInt()
-	return &l1tx, nil
+	l1tx.EffectiveAmount, err = Float40FromBytes(amountBytes).BigInt()
+	return &l1tx, err
 }
 
 // BytesGeneric returns the generic representation of a L1Tx. This method is
@@ -269,7 +259,7 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 // the L1TxData for the ZKInputs (at the HashGlobalInputs), using this method
 // for L1CoordinatorTxs & L1UserTxs (for the ZKInputs case).
 func (tx *L1Tx) BytesGeneric() ([]byte, error) {
-	var b [L1UserTxBytesLen]byte
+	var b [RollupConstL1UserTotalBytes]byte
 	copy(b[0:20], tx.FromEthAddr.Bytes())
 	if tx.FromBJJ != EmptyBJJComp {
 		pkCompL := tx.FromBJJ
@@ -281,22 +271,33 @@ func (tx *L1Tx) BytesGeneric() ([]byte, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	copy(b[52:58], fromIdxBytes[:])
-	depositAmountFloat16, err := NewFloat16(tx.DepositAmount)
+
+	depositAmountFloat40, err := NewFloat40(tx.DepositAmount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[58:60], depositAmountFloat16.Bytes())
-	amountFloat16, err := NewFloat16(tx.Amount)
+	depositAmountFloat40Bytes, err := depositAmountFloat40.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[60:62], amountFloat16.Bytes())
-	copy(b[62:66], tx.TokenID.Bytes())
+	copy(b[58:63], depositAmountFloat40Bytes)
+
+	amountFloat40, err := NewFloat40(tx.Amount)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	amountFloat40Bytes, err := amountFloat40.Bytes()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	copy(b[63:68], amountFloat40Bytes)
+
+	copy(b[68:72], tx.TokenID.Bytes())
 	toIdxBytes, err := tx.ToIdx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[66:72], toIdxBytes[:])
+	copy(b[72:78], toIdxBytes[:])
 	return b[:], nil
 }
 
@@ -313,7 +314,7 @@ func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, err
 	if tx.UserOrigin {
 		return nil, tracerr.Wrap(fmt.Errorf("Can not calculate BytesCoordinatorTx() for a L1UserTx"))
 	}
-	var b [L1CoordinatorTxBytesLen]byte
+	var b [RollupConstL1CoordinatorTotalBytes]byte
 	v := compressedSignatureBytes[64]
 	s := compressedSignatureBytes[32:64]
 	r := compressedSignatureBytes[0:32]
@@ -329,7 +330,7 @@ func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, err
 
 // L1UserTxFromBytes decodes a L1Tx from []byte
 func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
-	if len(b) != L1UserTxBytesLen {
+	if len(b) != RollupConstL1UserTotalBytes {
 		return nil, tracerr.Wrap(fmt.Errorf("Can not parse L1Tx bytes, expected length %d, current: %d", 68, len(b)))
 	}
 
@@ -347,13 +348,19 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	tx.FromIdx = fromIdx
-	tx.DepositAmount = Float16FromBytes(b[58:60]).BigInt()
-	tx.Amount = Float16FromBytes(b[60:62]).BigInt()
-	tx.TokenID, err = TokenIDFromBytes(b[62:66])
+	tx.DepositAmount, err = Float40FromBytes(b[58:63]).BigInt()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	tx.ToIdx, err = IdxFromBytes(b[66:72])
+	tx.Amount, err = Float40FromBytes(b[63:68]).BigInt()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	tx.TokenID, err = TokenIDFromBytes(b[68:72])
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	tx.ToIdx, err = IdxFromBytes(b[72:78])
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -368,7 +375,7 @@ func signHash(data []byte) []byte {
 
 // L1CoordinatorTxFromBytes decodes a L1Tx from []byte
 func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommon.Address) (*L1Tx, error) {
-	if len(b) != L1CoordinatorTxBytesLen {
+	if len(b) != RollupConstL1CoordinatorTotalBytes {
 		return nil, tracerr.Wrap(fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d", 101, len(b)))
 	}
 

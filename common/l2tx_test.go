@@ -19,7 +19,7 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err := NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x02fb52b5d0b9ef2626c11701bb751b2720c76d59946b9a48146ac153bb6e63bf6a", l2Tx.TxID.String())
+	assert.Equal(t, "0x022669acda59b827d20ef5354a3eebd1dffb3972b0a6bf89d18bfd2efa0ab9f41e", l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 87654,
@@ -30,7 +30,7 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x0276114a8f666fa1ff7dbf34b4a9da577808dc501e3b2760d01fe3ef5473f5737f", l2Tx.TxID.String())
+	assert.Equal(t, "0x029e7499a830f8f5eb17c07da48cf91415710f1bcbe0169d363ff91e81faf92fc2", l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 87654,
@@ -42,7 +42,7 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x025afb63126d3067f61f633d13e5a51da0551af3a4567a9af2db5321ed04214ff4", l2Tx.TxID.String())
+	assert.Equal(t, "0x0255c70ed20e1b8935232e1b9c5884dbcc88a6e1a3454d24f2d77252eb2bb0b64e", l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 87654,
@@ -54,7 +54,7 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x02cf390157041c3b1b59f0aaed4da464f0d0d48f1d026e46fd89c7fe1e5aed7fcf", l2Tx.TxID.String())
+	assert.Equal(t, "0x0206b372f967061d1148bbcff679de38120e075141a80a07326d0f514c2efc6ca9", l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 1,
@@ -66,7 +66,7 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x020ec18eaae67fcd545998841a9c4be09ee3083e12db6ae5e5213a2ecaaa52d5cf", l2Tx.TxID.String())
+	assert.Equal(t, "0x0236f7ea5bccf78ba60baf56c058d235a844f9b09259fd0efa4f5f72a7d4a26618", l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 999,
@@ -78,7 +78,7 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x02f036223e79fac776de107f50822552cc964ee9fc4caa304613285f6976bcc940", l2Tx.TxID.String())
+	assert.Equal(t, "0x02ac122f5b709ce190129fecbbe35bfd30c70e6433dbd85a8eb743d110906a1dc1", l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 4444,
@@ -90,25 +90,85 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x029c8aef9ef24531e4cf84e78cbab1018ba1626a5a10afb6b7c356be1b5c28e92c", l2Tx.TxID.String())
+	assert.Equal(t, "0x02c674951a81881b7bc50db3b9e5efd97ac88550c7426ac548720e5057cfba515a", l2Tx.TxID.String())
 }
 
 func TestL2TxByteParsers(t *testing.T) {
-	amount := new(big.Int)
-	amount.SetString("79000000", 10)
+	// test vectors values generated from javascript implementation
+	amount, ok := new(big.Int).SetString("343597383670000000000000000000000000000000", 10)
+	require.True(t, ok)
 	l2Tx := &L2Tx{
-		ToIdx:   256,
+		ToIdx:   (1 << 16) - 1,
+		FromIdx: (1 << 16) - 1,
 		Amount:  amount,
-		FromIdx: 257,
-		Fee:     201,
+		Fee:     (1 << 8) - 1,
 	}
-	// Data from the compatibility test
-	expected := "00000101000001002b16c9"
-	encodedData, err := l2Tx.BytesDataAvailability(32)
+	expected := "ffffffffffffffffffff"
+	encodedData, err := l2Tx.BytesDataAvailability(16)
 	require.NoError(t, err)
 	assert.Equal(t, expected, hex.EncodeToString(encodedData))
 
-	decodedData, err := L2TxFromBytesDataAvailability(encodedData, 32)
+	decodedData, err := L2TxFromBytesDataAvailability(encodedData, 16)
+	require.NoError(t, err)
+	assert.Equal(t, l2Tx, decodedData)
+
+	l2Tx = &L2Tx{
+		ToIdx:   (1 << 32) - 1,
+		FromIdx: (1 << 32) - 1,
+		Amount:  amount,
+		Fee:     (1 << 8) - 1,
+	}
+	expected = "ffffffffffffffffffffffffffff"
+	encodedData, err = l2Tx.BytesDataAvailability(32)
+	require.NoError(t, err)
+	assert.Equal(t, expected, hex.EncodeToString(encodedData))
+
+	decodedData, err = L2TxFromBytesDataAvailability(encodedData, 32)
+	require.NoError(t, err)
+	assert.Equal(t, l2Tx, decodedData)
+
+	l2Tx = &L2Tx{
+		ToIdx:   0,
+		FromIdx: 0,
+		Amount:  big.NewInt(0),
+		Fee:     0,
+	}
+	expected = "0000000000000000000000000000"
+	encodedData, err = l2Tx.BytesDataAvailability(32)
+	require.NoError(t, err)
+	assert.Equal(t, expected, hex.EncodeToString(encodedData))
+
+	decodedData, err = L2TxFromBytesDataAvailability(encodedData, 32)
+	require.NoError(t, err)
+	assert.Equal(t, l2Tx, decodedData)
+
+	l2Tx = &L2Tx{
+		ToIdx:   0,
+		FromIdx: 1061,
+		Amount:  big.NewInt(420000000000),
+		Fee:     127,
+	}
+	expected = "000004250000000010fa56ea007f"
+	encodedData, err = l2Tx.BytesDataAvailability(32)
+	require.NoError(t, err)
+	assert.Equal(t, expected, hex.EncodeToString(encodedData))
+
+	decodedData, err = L2TxFromBytesDataAvailability(encodedData, 32)
+	require.NoError(t, err)
+	assert.Equal(t, l2Tx, decodedData)
+
+	l2Tx = &L2Tx{
+		ToIdx:   256,
+		FromIdx: 257,
+		Amount:  big.NewInt(79000000),
+		Fee:     201,
+	}
+	expected = "00000101000001000004b571c0c9"
+	encodedData, err = l2Tx.BytesDataAvailability(32)
+	require.NoError(t, err)
+	assert.Equal(t, expected, hex.EncodeToString(encodedData))
+
+	decodedData, err = L2TxFromBytesDataAvailability(encodedData, 32)
 	require.NoError(t, err)
 	assert.Equal(t, l2Tx, decodedData)
 }

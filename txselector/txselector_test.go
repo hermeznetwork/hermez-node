@@ -424,9 +424,9 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	_, _, _, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 
-	expectedTxID0 := "0x0248bae02b5c8c3847d312bfac3a33ae790616e888f2f711f22aeaff007cde92c2" // 1st TransferToEthAddr
-	expectedTxID1 := "0x0249af018311a393c337ab9174ca2466cba489e49942b4ca4e5c530903671c4aef" // 1st Exit
-	expectedTxID2 := "0x0228b93a261a0cdc62f35588c03bd179d31a0807c28afffdb6a7aaf0c4f017e4cf" // 2nd TransferToEthAddr
+	expectedTxID0 := "0x028847b86613c0b70be18c8622119ed045b42e4e47d7938fa90bb3d1dc14928965" // 1st TransferToEthAddr
+	expectedTxID1 := "0x0200b18773dcf56f770d65870fb02041cb59a088fd35b7c3f3df69f8a250b99a42" // 1st Exit
+	expectedTxID2 := "0x029720ff506153f970f120ac638cd7ee759eeff2c2012e7634a78e4fdc05c04a90" // 2nd TransferToEthAddr
 
 	// batch2
 	// prepare the PoolL2Txs

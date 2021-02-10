@@ -2916,7 +2916,7 @@ components:
               example: 101
             l1UserTotalBytes:
               type: integer
-              description: Number of bytes that a L1 user transaction has ([20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx + [2 bytes] depositAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx).
+              description: Number of bytes that a L1 user transaction has ([20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx + [5 bytes] depositAmountFloat40 + [5 bytes] amountFloat40 + [4 bytes] tokenId + [6 bytes] toIdx).
               example: 72
             maxL1UserTx:
               type: integer

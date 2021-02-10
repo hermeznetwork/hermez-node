@@ -611,10 +611,10 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, common.TxTypeExit, dbL2Txs[3].Type)
 
 	// Tx ID
-	assert.Equal(t, "0x02d709307533c4e3c03f20751fc4d72bc18b225d14f9616525540a64342c7c350d", dbL2Txs[0].TxID.String())
-	assert.Equal(t, "0x02e88bc5503f282cca045847668511290e642410a459bb67b1fafcd1b6097c149c", dbL2Txs[1].TxID.String())
-	assert.Equal(t, "0x027911262b43315c0b24942a02fe228274b6e4d57a476bfcdd7a324b3091362c7d", dbL2Txs[2].TxID.String())
-	assert.Equal(t, "0x02f572b63f2a5c302e1b9337ea6944bfbac3d199e4ddd262b5a53759c72ec10ee6", dbL2Txs[3].TxID.String())
+	assert.Equal(t, "0x024e555248100b69a8aabf6d31719b9fe8a60dcc6c3407904a93c8d2d9ade18ee5", dbL2Txs[0].TxID.String())
+	assert.Equal(t, "0x021ae87ca34d50ff35d98dfc0d7c95f2bf2e4ffeebb82ea71f43a8b0dfa5d36d89", dbL2Txs[1].TxID.String())
+	assert.Equal(t, "0x024abce7f3f2382dc520ed557593f11dea1ee197e55b60402e664facc27aa19774", dbL2Txs[2].TxID.String())
+	assert.Equal(t, "0x02f921ad9e7a6e59606570fe12a7dde0e36014197de0363b9b45e5097d6f2b1dd0", dbL2Txs[3].TxID.String())
 
 	// Tx From and To IDx
 	assert.Equal(t, dbL2Txs[0].ToIdx, dbL2Txs[2].FromIdx)

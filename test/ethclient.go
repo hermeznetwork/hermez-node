@@ -797,11 +797,11 @@ func (c *Client) RollupL1UserTxERC20ETH(
 	cpy := c.nextBlock().copy()
 	defer func() { c.revertIfErr(err, cpy) }()
 
-	_, err = common.NewFloat16(amount)
+	_, err = common.NewFloat40(amount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	_, err = common.NewFloat16(depositAmount)
+	_, err = common.NewFloat40(depositAmount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

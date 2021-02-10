@@ -311,7 +311,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	assert.Equal(t, "8737171572459172806192626402462788826264011087579491137542380589998149683116", bb.LocalStateDB().MT.Root().BigInt().String())
 	h, err := zki.HashGlobalData()
 	require.NoError(t, err)
-	assert.Equal(t, "9971598169768987067017223790214537222850903267980994716992761290793474746117", h.String())
+	assert.Equal(t, "12174727174629825205577542675894290689387326670869871089988393208259924373499", h.String())
 	sendProofAndCheckResp(t, zki)
 
 	// batch3
@@ -334,7 +334,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	assert.Equal(t, "18306761925365215381387147754881756804475668085493847010988306480531520370130", bb.LocalStateDB().MT.Root().BigInt().String())
 	h, err = zki.HashGlobalData()
 	require.NoError(t, err)
-	assert.Equal(t, "7992262236065691439683036344554725221924027193771770363772735722054938818364", h.String())
+	assert.Equal(t, "16351950370739934361208977436603065280805499094788807090831605833717933916063", h.String())
 	assert.Equal(t, common.EthAddrToBigInt(tc.Users["Coord"].Addr), zki.EthAddr3[0])
 	assert.Equal(t, "0", zki.EthAddr3[1].String())
 	sendProofAndCheckResp(t, zki)

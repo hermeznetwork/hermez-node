@@ -24,8 +24,8 @@ const (
 	// RollupConstL1CoordinatorTotalBytes [4 bytes] token + [32 bytes] babyjub + [65 bytes] compressedSignature
 	RollupConstL1CoordinatorTotalBytes = 101
 	// RollupConstL1UserTotalBytes [20 bytes] fromEthAddr + [32 bytes] fromBjj-compressed + [6 bytes] fromIdx +
-	// [2 bytes] depositAmountFloat16 + [2 bytes] amountFloat16 + [4 bytes] tokenId + [6 bytes] toIdx
-	RollupConstL1UserTotalBytes = 72
+	// [5 bytes] depositAmountFloat40 + [5 bytes] amountFloat40 + [4 bytes] tokenId + [6 bytes] toIdx
+	RollupConstL1UserTotalBytes = 78
 	// RollupConstMaxL1UserTx Maximum L1-user transactions allowed to be queued in a batch
 	RollupConstMaxL1UserTx = 128
 	// RollupConstMaxL1Tx Maximum L1 transactions allowed to be queued in a batch

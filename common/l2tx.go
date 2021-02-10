@@ -89,11 +89,15 @@ func (tx L2Tx) CalculateTxID() ([TxIDLen]byte, error) {
 	// TokenID
 	b = append(b, tx.TokenID.Bytes()[:]...)
 	// Amount
-	amountFloat16, err := NewFloat16(tx.Amount)
+	amountFloat40, err := NewFloat40(tx.Amount)
 	if err != nil {
 		return txID, tracerr.Wrap(fmt.Errorf("%s: %d", err, tx.Amount))
 	}
-	b = append(b, amountFloat16.Bytes()...)
+	amountFloat40Bytes, err := amountFloat40.Bytes()
+	if err != nil {
+		return txID, tracerr.Wrap(err)
+	}
+	b = append(b, amountFloat40Bytes...)
 	// Nonce
 	nonceBytes, err := tx.Nonce.Bytes()
 	if err != nil {
@@ -170,11 +174,11 @@ func TxIDsFromL2Txs(txs []L2Tx) []TxID {
 }
 
 // BytesDataAvailability encodes a L2Tx into []byte for the Data Availability
-// [ fromIdx | toIdx | amountFloat16 | Fee ]
+// [ fromIdx | toIdx | amountFloat40 | Fee ]
 func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	idxLen := nLevels / 8 //nolint:gomnd
 
-	b := make([]byte, ((nLevels*2)+16+8)/8) //nolint:gomnd
+	b := make([]byte, ((nLevels*2)+40+8)/8) //nolint:gomnd
 
 	fromIdxBytes, err := tx.FromIdx.Bytes()
 	if err != nil {
@@ -188,13 +192,16 @@ func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	}
 	copy(b[idxLen:idxLen*2], toIdxBytes[6-idxLen:])
 
-	amountFloat16, err := NewFloat16(tx.Amount)
+	amountFloat40, err := NewFloat40(tx.Amount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-
-	copy(b[idxLen*2:idxLen*2+2], amountFloat16.Bytes())
-	b[idxLen*2+2] = byte(tx.Fee)
+	amountFloat40Bytes, err := amountFloat40.Bytes()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	copy(b[idxLen*2:idxLen*2+5], amountFloat40Bytes)
+	b[idxLen*2+5] = byte(tx.Fee)
 
 	return b[:], nil
 }
@@ -219,7 +226,10 @@ func L2TxFromBytesDataAvailability(b []byte, nLevels int) (*L2Tx, error) {
 		return nil, tracerr.Wrap(err)
 	}
 
-	tx.Amount = Float16FromBytes(b[idxLen*2 : idxLen*2+2]).BigInt()
-	tx.Fee = FeeSelector(b[idxLen*2+2])
+	tx.Amount, err = Float40FromBytes(b[idxLen*2 : idxLen*2+5]).BigInt()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	tx.Fee = FeeSelector(b[idxLen*2+5])
 	return tx, nil
 }

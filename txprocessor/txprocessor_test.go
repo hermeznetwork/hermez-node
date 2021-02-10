@@ -1,8 +1,6 @@
 package txprocessor
 
 import (
-	"encoding/binary"
-	"encoding/hex"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -642,17 +640,16 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 
 	users := txsets.GenerateJsUsers(t)
 
-	daMaxHex, err := hex.DecodeString("FFFF")
+	daMaxF40 := common.Float40(0xFFFFFFFFFF)
+	daMaxBI, err := daMaxF40.BigInt()
 	require.NoError(t, err)
-	daMaxF16 := common.Float16(binary.BigEndian.Uint16(daMaxHex))
-	daMaxBI := daMaxF16.BigInt()
-	assert.Equal(t, "10235000000000000000000000000000000", daMaxBI.String())
+	assert.Equal(t, "343597383670000000000000000000000000000000", daMaxBI.String())
 
-	daMax1Hex, err := hex.DecodeString("FFFE")
+	daMax1F40 := common.Float40(0xFFFFFFFFFE)
 	require.NoError(t, err)
-	daMax1F16 := common.Float16(binary.BigEndian.Uint16(daMax1Hex))
-	daMax1BI := daMax1F16.BigInt()
-	assert.Equal(t, "10225000000000000000000000000000000", daMax1BI.String())
+	daMax1BI, err := daMax1F40.BigInt()
+	require.NoError(t, err)
+	assert.Equal(t, "343597383660000000000000000000000000000000", daMax1BI.String())
 
 	l1Txs := []common.L1Tx{
 		{

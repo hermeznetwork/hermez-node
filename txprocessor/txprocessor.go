@@ -501,11 +501,11 @@ func (tp *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L
 		tp.zki.OnChain[tp.i] = big.NewInt(1)
 
 		// L1Txs
-		depositAmountF16, err := common.NewFloat16(tx.DepositAmount)
+		depositAmountF40, err := common.NewFloat40(tx.DepositAmount)
 		if err != nil {
 			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
-		tp.zki.DepositAmountF[tp.i] = big.NewInt(int64(depositAmountF16))
+		tp.zki.DepositAmountF[tp.i] = big.NewInt(int64(depositAmountF40))
 		tp.zki.FromEthAddr[tp.i] = common.EthAddrToBigInt(tx.FromEthAddr)
 		if tx.FromBJJ != common.EmptyBJJComp {
 			tp.zki.FromBJJCompressed[tp.i] = BJJCompressedTo256BigInts(tx.FromBJJ)
