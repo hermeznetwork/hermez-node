@@ -141,7 +141,7 @@ func (a *API) UpdateNetworkInfo(
 	a.status.Network.NextForgers = nextForgers
 
 	// Update buckets withdrawals
-	bucketsUpdate, err := a.h.GetBucketUpdates()
+	bucketsUpdate, err := a.h.GetBucketUpdatesAPI()
 	if tracerr.Unwrap(err) == sql.ErrNoRows {
 		bucketsUpdate = nil
 	} else if err != nil {
@@ -201,7 +201,7 @@ func (a *API) getNextForgers(lastBlock common.Block, currentSlot, lastClosedSlot
 		}}
 	} else {
 		// Get all the relevant updates from the DB
-		minBidInfo, err = a.h.GetAuctionVarsUntilSetSlotNum(lastClosedSlot, int(lastClosedSlot-currentSlot)+1)
+		minBidInfo, err = a.h.GetAuctionVarsUntilSetSlotNumAPI(lastClosedSlot, int(lastClosedSlot-currentSlot)+1)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -279,7 +279,7 @@ func (a *API) UpdateMetrics() error {
 	}
 	batchNum := a.status.Network.LastBatch.BatchNum
 	a.status.RUnlock()
-	metrics, err := a.h.GetMetrics(batchNum)
+	metrics, err := a.h.GetMetricsAPI(batchNum)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -293,7 +293,7 @@ func (a *API) UpdateMetrics() error {
 
 // UpdateRecommendedFee update Status.RecommendedFee information
 func (a *API) UpdateRecommendedFee() error {
-	feeExistingAccount, err := a.h.GetAvgTxFee()
+	feeExistingAccount, err := a.h.GetAvgTxFeeAPI()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}

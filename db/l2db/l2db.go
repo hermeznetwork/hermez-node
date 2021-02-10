@@ -25,17 +25,25 @@ type L2DB struct {
 	safetyPeriod common.BatchNum
 	ttl          time.Duration
 	maxTxs       uint32 // limit of txs that are accepted in the pool
+	apiConnCon   *db.APIConnectionController
 }
 
 // NewL2DB creates a L2DB.
 // To create it, it's needed db connection, safety period expressed in batches,
 // maxTxs that the DB should have and TTL (time to live) for pending txs.
-func NewL2DB(db *sqlx.DB, safetyPeriod common.BatchNum, maxTxs uint32, TTL time.Duration) *L2DB {
+func NewL2DB(
+	db *sqlx.DB,
+	safetyPeriod common.BatchNum,
+	maxTxs uint32,
+	TTL time.Duration,
+	apiConnCon *db.APIConnectionController,
+) *L2DB {
 	return &L2DB{
 		db:           db,
 		safetyPeriod: safetyPeriod,
 		ttl:          TTL,
 		maxTxs:       maxTxs,
+		apiConnCon:   apiConnCon,
 	}
 }
 
@@ -47,7 +55,6 @@ func (l2db *L2DB) DB() *sqlx.DB {
 
 // AddAccountCreationAuth inserts an account creation authorization into the DB
 func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error {
-	// return meddler.Insert(l2db.db, "account_creation_auth", auth)
 	_, err := l2db.db.Exec(
 		`INSERT INTO account_creation_auth (eth_addr, bjj, signature)
 		VALUES ($1, $2, $3);`,
@@ -59,16 +66,6 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 // GetAccountCreationAuth returns an account creation authorization from the DB
 func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.AccountCreationAuth, error) {
 	auth := new(common.AccountCreationAuth)
-	return auth, tracerr.Wrap(meddler.QueryRow(
-		l2db.db, auth,
-		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",
-		addr,
-	))
-}
-
-// GetAccountCreationAuthAPI returns an account creation authorization from the DB
-func (l2db *L2DB) GetAccountCreationAuthAPI(addr ethCommon.Address) (*AccountCreationAuthAPI, error) {
-	auth := new(AccountCreationAuthAPI)
 	return auth, tracerr.Wrap(meddler.QueryRow(
 		l2db.db, auth,
 		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",
@@ -173,16 +170,6 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", insertTx))
 }
 
-// selectPoolTxAPI select part of queries to get PoolL2TxRead
-const selectPoolTxAPI = `SELECT  tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
-tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
-tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
-hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
-tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
-token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
-FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
-
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
 const selectPoolTxCommon = `SELECT  tx_pool.tx_id, from_idx, to_idx, tx_pool.to_eth_addr, 
 tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
@@ -198,16 +185,6 @@ func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
 	return tx, tracerr.Wrap(meddler.QueryRow(
 		l2db.db, tx,
 		selectPoolTxCommon+"WHERE tx_id = $1;",
-		txID,
-	))
-}
-
-// GetTxAPI return the specified Tx in PoolTxAPI format
-func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
-	tx := new(PoolTxAPI)
-	return tx, tracerr.Wrap(meddler.QueryRow(
-		l2db.db, tx,
-		selectPoolTxAPI+"WHERE tx_id = $1;",
 		txID,
 	))
 }

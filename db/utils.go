@@ -1,16 +1,19 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math/big"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
+	"github.com/marusama/semaphore/v2"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 )
@@ -82,6 +85,32 @@ func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	return db, nil
+}
+
+// APIConnectionController is used to limit the SQL open connections used by the API
+type APIConnectionController struct {
+	smphr   semaphore.Semaphore
+	timeout time.Duration
+}
+
+// NewAPICnnectionController initialize APIConnectionController
+func NewAPICnnectionController(maxConnections int, timeout time.Duration) *APIConnectionController {
+	return &APIConnectionController{
+		smphr:   semaphore.New(maxConnections),
+		timeout: timeout,
+	}
+}
+
+// Acquire reserves a SQL connection. If the connection is not acquired
+// within the timeout, the function will return an error
+func (acc *APIConnectionController) Acquire() (context.CancelFunc, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), acc.timeout) //nolint:govet
+	return cancel, acc.smphr.Acquire(ctx, 1)
+}
+
+// Release frees a SQL connection
+func (acc *APIConnectionController) Release() {
+	acc.smphr.Release(1)
 }
 
 // initMeddler registers tags to be used to read/write from SQL DBs using meddler

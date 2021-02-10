@@ -26,7 +26,7 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 		return
 	}
 	// Insert to DB
-	if err := a.l2.AddAccountCreationAuth(commonAuth); err != nil {
+	if err := a.l2.AddAccountCreationAuthAPI(commonAuth); err != nil {
 		retSQLErr(err, c)
 		return
 	}

@@ -3,6 +3,8 @@ Address = "localhost:8086"
 Explorer = true
 UpdateMetricsInterval = "10s"
 UpdateRecommendedFeeInterval = "10s"
+MaxSQLConnections = 100
+SQLConnectionTimeout = "2s"
 
 [PriceUpdater]
 Interval = "10s"

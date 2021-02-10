@@ -21,6 +21,7 @@ import (
 )
 
 var l2DB *L2DB
+var l2DBWithACC *L2DB
 var historyDB *historydb.HistoryDB
 var tc *til.Context
 var tokens map[common.TokenID]historydb.TokenWithUSD
@@ -34,9 +35,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	l2DB = NewL2DB(db, 10, 1000, 24*time.Hour)
+	l2DB = NewL2DB(db, 10, 1000, 24*time.Hour, nil)
+	apiConnCon := dbUtils.NewAPICnnectionController(1, time.Second)
+	l2DBWithACC = NewL2DB(db, 10, 1000, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB())
-	historyDB = historydb.NewHistoryDB(db)
+	historyDB = historydb.NewHistoryDB(db, nil)
 	// Run tests
 	result := m.Run()
 	// Close DB
@@ -267,7 +270,7 @@ func TestStartForging(t *testing.T) {
 	assert.NoError(t, err)
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range startForgingTxIDs {
-		fetchedTx, err := l2DB.GetTxAPI(id)
+		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForging, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
@@ -312,7 +315,7 @@ func TestDoneForging(t *testing.T) {
 
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range doneForgingTxIDs {
-		fetchedTx, err := l2DB.GetTxAPI(id)
+		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForged, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
@@ -344,7 +347,7 @@ func TestInvalidate(t *testing.T) {
 	assert.NoError(t, err)
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range invalidTxIDs {
-		fetchedTx, err := l2DB.GetTxAPI(id)
+		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
@@ -385,7 +388,7 @@ func TestInvalidateOldNonces(t *testing.T) {
 	assert.NoError(t, err)
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range invalidTxIDs {
-		fetchedTx, err := l2DB.GetTxAPI(id)
+		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
 		require.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
@@ -460,13 +463,13 @@ func TestReorg(t *testing.T) {
 	err = l2DB.Reorg(lastValidBatch)
 	assert.NoError(t, err)
 	for _, id := range reorgedTxIDs {
-		tx, err := l2DB.GetTxAPI(id)
+		tx, err := l2DBWithACC.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Nil(t, tx.BatchNum)
 		assert.Equal(t, common.PoolL2TxStatePending, tx.State)
 	}
 	for _, id := range nonReorgedTxIDs {
-		fetchedTx, err := l2DB.GetTxAPI(id)
+		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, lastValidBatch, *fetchedTx.BatchNum)
 	}
@@ -537,13 +540,13 @@ func TestReorg2(t *testing.T) {
 	err = l2DB.Reorg(lastValidBatch)
 	assert.NoError(t, err)
 	for _, id := range reorgedTxIDs {
-		tx, err := l2DB.GetTxAPI(id)
+		tx, err := l2DBWithACC.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Nil(t, tx.BatchNum)
 		assert.Equal(t, common.PoolL2TxStatePending, tx.State)
 	}
 	for _, id := range nonReorgedTxIDs {
-		fetchedTx, err := l2DB.GetTxAPI(id)
+		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
 		assert.NoError(t, err)
 		assert.Equal(t, lastValidBatch, *fetchedTx.BatchNum)
 	}

@@ -97,12 +97,12 @@ func (a *API) getSlot(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	currentBlock, err := a.h.GetLastBlock()
+	currentBlock, err := a.h.GetLastBlockAPI()
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
-	auctionVars, err := a.h.GetAuctionVars()
+	auctionVars, err := a.h.GetAuctionVarsAPI()
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -200,12 +200,12 @@ func (a *API) getSlots(c *gin.Context) {
 		return
 	}
 
-	currentBlock, err := a.h.GetLastBlock()
+	currentBlock, err := a.h.GetLastBlockAPI()
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
-	auctionVars, err := a.h.GetAuctionVars()
+	auctionVars, err := a.h.GetAuctionVarsAPI()
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -220,13 +220,13 @@ func (a *API) getSlots(c *gin.Context) {
 			retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
 			return
 		} else if *finishedAuction {
-			currentBlock, err := a.h.GetLastBlock()
+			currentBlock, err := a.h.GetLastBlockAPI()
 			if err != nil {
 				retBadReq(err, c)
 				return
 			}
 			currentSlot := a.getCurrentSlot(currentBlock.Num)
-			auctionVars, err := a.h.GetAuctionVars()
+			auctionVars, err := a.h.GetAuctionVarsAPI()
 			if err != nil {
 				retBadReq(err, c)
 				return
