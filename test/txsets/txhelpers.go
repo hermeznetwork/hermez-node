@@ -142,10 +142,12 @@ func GenerateTxsZKInputs0(t *testing.T, chainID uint16) (users []til.User, coord
 	// same values than in the js test
 	users = GenerateJsUsers(t)
 
+	depositAmount, err := common.Float40(10400).BigInt()
+	require.Nil(t, err)
 	l1UserTxs = []common.L1Tx{
 		{
 			FromIdx:       0,
-			DepositAmount: big.NewInt(16000000),
+			DepositAmount: depositAmount,
 			Amount:        big.NewInt(0),
 			TokenID:       1,
 			FromBJJ:       users[0].BJJ.Public().Compress(),

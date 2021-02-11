@@ -18,6 +18,9 @@ const (
 	// maxFloat40Value is the maximum value that the Float40 can have
 	// (40 bits: maxFloat40Value=2**40-1)
 	maxFloat40Value = 0xffffffffff
+	// Float40BytesLength defines the length of the Float40 values
+	// represented as byte arrays
+	Float40BytesLength = 5
 )
 
 var (

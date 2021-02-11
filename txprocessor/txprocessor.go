@@ -515,6 +515,20 @@ func (tp *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L
 		if tp.i < len(tp.zki.ISOnChain) { // len(tp.zki.ISOnChain) == nTx
 			tp.zki.ISOnChain[tp.i] = big.NewInt(1)
 		}
+
+		if tx.Type == common.TxTypeForceTransfer ||
+			tx.Type == common.TxTypeDepositTransfer ||
+			tx.Type == common.TxTypeCreateAccountDepositTransfer ||
+			tx.Type == common.TxTypeForceExit {
+			// in the cases where at L1Tx there is usage of the
+			// Amount parameter, add it at the ZKInputs.AmountF
+			// slot
+			amountF40, err := common.NewFloat40(tx.Amount)
+			if err != nil {
+				return nil, nil, false, nil, tracerr.Wrap(err)
+			}
+			tp.zki.AmountF[tp.i] = big.NewInt(int64(amountF40))
+		}
 	}
 
 	switch tx.Type {
@@ -657,6 +671,11 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 		tp.zki.ToEthAddr[tp.i] = common.EthAddrToBigInt(tx.ToEthAddr)
 
 		tp.zki.OnChain[tp.i] = big.NewInt(0)
+		amountF40, err := common.NewFloat40(tx.Amount)
+		if err != nil {
+			return nil, nil, false, tracerr.Wrap(err)
+		}
+		tp.zki.AmountF[tp.i] = big.NewInt(int64(amountF40))
 		tp.zki.NewAccount[tp.i] = big.NewInt(0)
 
 		// L2Txs

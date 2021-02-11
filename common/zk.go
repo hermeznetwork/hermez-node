@@ -102,6 +102,8 @@ type ZKInputs struct {
 	ToBJJAy []*big.Int `json:"toBjjAy"` // big.Int, len: [maxTx]
 	// ToEthAddr
 	ToEthAddr []*big.Int `json:"toEthAddr"` // ethCommon.Address, len: [maxTx]
+	// AmountF encoded as float40
+	AmountF []*big.Int `json:"amountF"`
 
 	// OnChain determines if is L1 (1/true) or L2 (0/false)
 	OnChain []*big.Int `json:"onChain"` // bool, len: [maxTx]
@@ -113,7 +115,7 @@ type ZKInputs struct {
 	// account (fromIdx==0)
 	NewAccount []*big.Int `json:"newAccount"` // bool, len: [maxTx]
 	// DepositAmountF encoded as float40
-	DepositAmountF []*big.Int `json:"loadAmountF"` // uint16, len: [maxTx]
+	DepositAmountF []*big.Int `json:"loadAmountF"` // uint40, len: [maxTx]
 	// FromEthAddr
 	FromEthAddr []*big.Int `json:"fromEthAddr"` // ethCommon.Address, len: [maxTx]
 	// FromBJJCompressed boolean encoded where each value is a *big.Int
@@ -326,6 +328,7 @@ func NewZKInputs(chainID uint16, maxTx, maxL1Tx, maxFeeIdxs, nLevels uint32, cur
 	zki.AuxToIdx = newSlice(maxTx)
 	zki.ToBJJAy = newSlice(maxTx)
 	zki.ToEthAddr = newSlice(maxTx)
+	zki.AmountF = newSlice(maxTx)
 	zki.OnChain = newSlice(maxTx)
 	zki.NewAccount = newSlice(maxTx)
 
@@ -477,7 +480,7 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	b = append(b, newExitRoot...)
 
 	// [MAX_L1_TX * (2 * MAX_NLEVELS + 480) bits] L1TxsData
-	l1TxDataLen := (2*z.Metadata.MaxLevels + 480)
+	l1TxDataLen := (2*z.Metadata.MaxLevels + 528)
 	l1TxsDataLen := (z.Metadata.MaxL1Tx * l1TxDataLen)
 	l1TxsData := make([]byte, l1TxsDataLen/8) //nolint:gomnd
 	for i := 0; i < len(z.Metadata.L1TxsData); i++ {
@@ -496,7 +499,7 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 
 	// [MAX_TX*(2*NLevels + 24) bits] L2TxsData
 	var l2TxsData []byte
-	l2TxDataLen := 2*z.Metadata.NLevels + 24 //nolint:gomnd
+	l2TxDataLen := 2*z.Metadata.NLevels + 48 //nolint:gomnd
 	l2TxsDataLen := (z.Metadata.MaxTx * l2TxDataLen)
 	expectedL2TxsDataLen := l2TxsDataLen / 8 //nolint:gomnd
 	for i := 0; i < len(z.Metadata.L2TxsData); i++ {

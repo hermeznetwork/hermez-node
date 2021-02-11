@@ -15,7 +15,7 @@ import (
 type L1Tx struct {
 	// Stored in DB: mandatory fileds
 
-	// TxID (12 bytes) for L1Tx is:
+	// TxID (32 bytes) for L1Tx is the Keccak256 (ethereum) hash of:
 	// bytes:  |  1   |        8        |    2     |      1      |
 	// values: | type | ToForgeL1TxsNum | Position | 0 (padding) |
 	// where type:
@@ -225,7 +225,7 @@ func (tx *L1Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		copy(b[idxLen*2:idxLen*2+5], amountFloat40Bytes)
+		copy(b[idxLen*2:idxLen*2+Float40BytesLength], amountFloat40Bytes)
 	}
 	// fee = 0 (as is L1Tx)
 	return b[:], nil
@@ -237,7 +237,7 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 
 	fromIdxBytes := b[0:idxLen]
 	toIdxBytes := b[idxLen : idxLen*2]
-	amountBytes := b[idxLen*2 : idxLen*2+5]
+	amountBytes := b[idxLen*2 : idxLen*2+Float40BytesLength]
 
 	l1tx := L1Tx{}
 	fromIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(fromIdxBytes, 6))

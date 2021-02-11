@@ -939,7 +939,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, l1UserTxsL
 		FeeIdxCoordinator:     []common.Idx{},
 	}
 	nLevels := c.consts.Verifiers[rollupForgeBatchArgs.VerifierIdx].NLevels
-	lenL1L2TxsBytes := int((nLevels/8)*2 + 2 + 1)
+	lenL1L2TxsBytes := int((nLevels/8)*2 + common.Float40BytesLength + 1)
 	numBytesL1TxUser := int(l1UserTxsLen) * lenL1L2TxsBytes
 	numTxsL1Coord := len(aux.EncodedL1CoordinatorTx) / common.RollupConstL1CoordinatorTotalBytes
 	numBytesL1TxCoord := numTxsL1Coord * lenL1L2TxsBytes

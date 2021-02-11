@@ -200,8 +200,8 @@ func (tx L2Tx) BytesDataAvailability(nLevels uint32) ([]byte, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(b[idxLen*2:idxLen*2+5], amountFloat40Bytes)
-	b[idxLen*2+5] = byte(tx.Fee)
+	copy(b[idxLen*2:idxLen*2+Float40BytesLength], amountFloat40Bytes)
+	b[idxLen*2+Float40BytesLength] = byte(tx.Fee)
 
 	return b[:], nil
 }
@@ -226,10 +226,10 @@ func L2TxFromBytesDataAvailability(b []byte, nLevels int) (*L2Tx, error) {
 		return nil, tracerr.Wrap(err)
 	}
 
-	tx.Amount, err = Float40FromBytes(b[idxLen*2 : idxLen*2+5]).BigInt()
+	tx.Amount, err = Float40FromBytes(b[idxLen*2 : idxLen*2+Float40BytesLength]).BigInt()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	tx.Fee = FeeSelector(b[idxLen*2+5])
+	tx.Fee = FeeSelector(b[idxLen*2+Float40BytesLength])
 	return tx, nil
 }
