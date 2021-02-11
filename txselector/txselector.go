@@ -3,7 +3,6 @@ package txselector
 // current: very simple version of TxSelector
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"sort"
@@ -236,7 +235,8 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 			if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1UserTxs)-len(l1UserTxs) {
 				// discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs0[i].Info = "Tx not selected due the L2Tx depends on a L1CoordinatorTx and there is not enough space for L1Coordinator"
+				l2Txs0[i].Info = "Tx not selected because the L2Tx depends on a " +
+					"L1CoordinatorTx and there is not enough space for L1Coordinator"
 				discardedL2Txs = append(discardedL2Txs, l2Txs0[i])
 				continue
 			}
@@ -261,7 +261,9 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 			// not valid Amount with current Balance. Discard L2Tx,
 			// and update Info parameter of the tx, and add it to
 			// the discardedTxs array
-			l2Txs[i].Info = fmt.Sprintf("Tx not selected due not enough Balance at the sender. Current sender account Balance: %s, Amount+Fee: %s", balance.String(), feeAndAmount.String())
+			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not enough Balance at the sender. "+
+				"Current sender account Balance: %s, Amount+Fee: %s",
+				balance.String(), feeAndAmount.String())
 			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 			continue
 		}
@@ -273,7 +275,8 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 			// not valid Nonce at tx. Discard L2Tx, and update Info
 			// parameter of the tx, and add it to the discardedTxs
 			// array
-			l2Txs[i].Info = fmt.Sprintf("Tx not selected due not current Nonce. Tx.Nonce: %d, Account.Nonce: %d", l2Txs[i].Nonce, nonce)
+			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not current Nonce. "+
+				"Tx.Nonce: %d, Account.Nonce: %d", l2Txs[i].Nonce, nonce)
 			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 			continue
 		}
@@ -291,17 +294,30 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 				txsel.processTxToEthAddrBJJ(validTxs, selectionConfig,
 					len(l1UserTxs), l1CoordinatorTxs, positionL1, l2Txs[i])
 			if err != nil {
-				log.Debug(err)
+				log.Debugw("txsel.processTxToEthAddrBJJ", "err", err)
 				// Discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = fmt.Sprintf("Tx not selected (in processTxToEthAddrBJJ) due %s", err.Error())
+				l2Txs[i].Info = fmt.Sprintf("Tx not selected (in processTxToEthAddrBJJ) due to %s",
+					err.Error())
 				discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 				continue
 			}
-			if accAuth != nil && l1CoordinatorTx != nil {
-				accAuths = append(accAuths, accAuth.Signature)
-				l1CoordinatorTxs = append(l1CoordinatorTxs, *l1CoordinatorTx)
-				positionL1++
+			if l1CoordinatorTx != nil {
+				// If ToEthAddr == 0xff.. this means that we
+				// are handling a TransferToBJJ, which doesn't
+				// require an authorization because it doesn't
+				// contain a valid ethereum address.
+				// Otherwise only create the account if we have
+				// the corresponding authorization
+				if validL2Tx.ToEthAddr == common.FFAddr {
+					accAuths = append(accAuths, common.EmptyEthSignature)
+					l1CoordinatorTxs = append(l1CoordinatorTxs, *l1CoordinatorTx)
+					positionL1++
+				} else if accAuth != nil {
+					accAuths = append(accAuths, accAuth.Signature)
+					l1CoordinatorTxs = append(l1CoordinatorTxs, *l1CoordinatorTx)
+					positionL1++
+				}
 			}
 			if validL2Tx != nil {
 				validTxs = append(validTxs, *validL2Tx)
@@ -314,8 +330,8 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 					"ToIdx", l2Txs[i].ToIdx)
 				// Discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = fmt.Sprintf("Tx not selected due tx.ToIdx not found in StateDB. ToIdx: %d",
-					l2Txs[i].ToIdx)
+				l2Txs[i].Info = fmt.Sprintf("Tx not selected due to tx.ToIdx not found in StateDB. "+
+					"ToIdx: %d", l2Txs[i].ToIdx)
 				discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 				continue
 			}
@@ -327,7 +343,9 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 					// Discard L2Tx, and update Info
 					// parameter of the tx, and add it to
 					// the discardedTxs array
-					l2Txs[i].Info = fmt.Sprintf("Tx not selected due ToEthAddr does not correspond to the Account.EthAddr. tx.ToIdx: %d, tx.ToEthAddr: %s, account.EthAddr: %s",
+					l2Txs[i].Info = fmt.Sprintf("Tx not selected because ToEthAddr "+
+						"does not correspond to the Account.EthAddr. "+
+						"tx.ToIdx: %d, tx.ToEthAddr: %s, account.EthAddr: %s",
 						l2Txs[i].ToIdx, l2Txs[i].ToEthAddr, receiverAcc.EthAddr)
 					discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 					continue
@@ -341,7 +359,9 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 					// Discard L2Tx, and update Info
 					// parameter of the tx, and add it to
 					// the discardedTxs array
-					l2Txs[i].Info = fmt.Sprintf("Tx not selected due tx.ToBJJ does not correspond to the Account.BJJ. tx.ToIdx: %d, tx.ToEthAddr: %s, tx.ToBJJ: %s, account.BJJ: %s",
+					l2Txs[i].Info = fmt.Sprintf("Tx not selected because tx.ToBJJ "+
+						"does not correspond to the Account.BJJ. "+
+						"tx.ToIdx: %d, tx.ToEthAddr: %s, tx.ToBJJ: %s, account.BJJ: %s",
 						l2Txs[i].ToIdx, l2Txs[i].ToEthAddr, l2Txs[i].ToBJJ, receiverAcc.BJJ)
 					discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 					continue
@@ -415,7 +435,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 			log.Error(err)
 			// Discard L2Tx, and update Info parameter of the tx,
 			// and add it to the discardedTxs array
-			selectedL2Txs[i].Info = fmt.Sprintf("Tx not selected (in ProcessL2Tx) due %s", err.Error())
+			selectedL2Txs[i].Info = fmt.Sprintf("Tx not selected (in ProcessL2Tx) due to %s", err.Error())
 			discardedL2Txs = append(discardedL2Txs, selectedL2Txs[i])
 			continue
 		}
@@ -471,8 +491,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 
 	var l1CoordinatorTx *common.L1Tx
 	var accAuth *common.AccountCreationAuth
-	if !bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.EmptyAddr.Bytes()) &&
-		!bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.FFAddr.Bytes()) {
+	if l2Tx.ToEthAddr != common.EmptyAddr && l2Tx.ToEthAddr != common.FFAddr {
 		// case: ToEthAddr != 0x00 neither 0xff
 		if l2Tx.ToBJJ != common.EmptyBJJComp {
 			// case: ToBJJ!=0:
@@ -528,8 +547,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 			DepositAmount: big.NewInt(0),
 			Type:          common.TxTypeCreateAccountDeposit,
 		}
-	} else if bytes.Equal(l2Tx.ToEthAddr.Bytes(), common.FFAddr.Bytes()) &&
-		l2Tx.ToBJJ != common.EmptyBJJComp {
+	} else if l2Tx.ToEthAddr == common.FFAddr && l2Tx.ToBJJ != common.EmptyBJJComp {
 		// if idx exist for EthAddr&BJJ use it
 		_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2Tx.ToEthAddr, l2Tx.ToBJJ,
 			l2Tx.TokenID)
@@ -555,7 +573,8 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 	}
 	if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1UserTxs)-nL1UserTxs {
 		// L2Tx discarded
-		return nil, nil, nil, tracerr.Wrap(fmt.Errorf("L2Tx discarded due not slots for L1CoordinatorTx to create a new account for receiver of L2Tx"))
+		return nil, nil, nil, tracerr.Wrap(fmt.Errorf("L2Tx discarded due to no available slots " +
+			"for L1CoordinatorTx to create a new account for receiver of L2Tx"))
 	}
 
 	return &l2Tx, l1CoordinatorTx, accAuth, nil
@@ -564,7 +583,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, tokenID common.TokenID,
 	addr ethCommon.Address, bjj babyjub.PublicKeyComp) bool {
 	for i := 0; i < len(l1CoordinatorTxs); i++ {
-		if bytes.Equal(l1CoordinatorTxs[i].FromEthAddr.Bytes(), addr.Bytes()) &&
+		if l1CoordinatorTxs[i].FromEthAddr == addr &&
 			l1CoordinatorTxs[i].TokenID == tokenID &&
 			l1CoordinatorTxs[i].FromBJJ == bjj {
 			return true
