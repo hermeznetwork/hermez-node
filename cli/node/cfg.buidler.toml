@@ -53,6 +53,8 @@ SendBatchBlocksMarginCheck = 1
 ProofServerPollInterval = "1s"
 ForgeRetryInterval = "500ms"
 SyncRetryInterval = "1s"
+ForgeDelay = "10s"
+ForgeNoTxsDelay = "0s"
 
 [Coordinator.FeeAccount]
 Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"
@@ -83,16 +85,13 @@ MaxTx = 512
 NLevels = 32
 
 [Coordinator.EthClient]
-ReceiptTimeout      = "60s"
-ReceiptLoopInterval = "500ms"
 CheckLoopInterval = "500ms"
 Attempts = 4
 AttemptsDelay = "500ms"
 TxResendTimeout = "2m"
 NoReuseNonce = false
-CallGasLimit = 300000
-GasPriceDiv = 100
 MaxGasPrice = "5000000000"
+GasPriceIncPerc = 10
 
 [Coordinator.EthClient.Keystore]
 Path = "/tmp/iden3-test/hermez/ethkeystore"

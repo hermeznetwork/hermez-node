@@ -117,7 +117,16 @@ Generate a new BabyJubJub key pair:
 ./node --mode coord --cfg cfg.buidler.toml genbjj
 ```
 
-Wipe the entier SQL database (this will destroy all synchronized and pool data):
+Wipe the entier SQL database (this will destroy all synchronized and pool
+data):
 ```
 ./node --mode coord --cfg cfg.buidler.toml wipesql
+```
+
+Discard all synchronized blocks and associated state up to a given block
+number.  This command is useful in case the synchronizer reaches an invalid
+state and you want to roll back a few blocks and try again (maybe with some
+fixes in the code).
+```
+./node --mode coord --cfg cfg.buidler.toml discard --block 8061330
 ```

@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/config"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/node"
 	"github.com/hermeznetwork/tracerr"
@@ -23,6 +25,7 @@ const (
 	flagMode  = "mode"
 	flagSK    = "privatekey"
 	flagYes   = "yes"
+	flagBlock = "block"
 	modeSync  = "sync"
 	modeCoord = "coord"
 )
@@ -139,6 +142,47 @@ func cmdRun(c *cli.Context) error {
 	return nil
 }
 
+func cmdDiscard(c *cli.Context) error {
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	cfg := _cfg.node
+	blockNum := c.Int64(flagBlock)
+	log.Infof("Discarding all blocks up to block %v...", blockNum)
+
+	db, err := dbUtils.InitSQLDB(
+		cfg.PostgreSQL.Port,
+		cfg.PostgreSQL.Host,
+		cfg.PostgreSQL.User,
+		cfg.PostgreSQL.Password,
+		cfg.PostgreSQL.Name,
+	)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+	}
+	historyDB := historydb.NewHistoryDB(db, nil)
+	if err := historyDB.Reorg(blockNum); err != nil {
+		return tracerr.Wrap(fmt.Errorf("historyDB.Reorg: %w", err))
+	}
+	batchNum, err := historyDB.GetLastBatchNum()
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastBatchNum: %w", err))
+	}
+	l2DB := l2db.NewL2DB(
+		db,
+		cfg.Coordinator.L2DB.SafetyPeriod,
+		cfg.Coordinator.L2DB.MaxTxs,
+		cfg.Coordinator.L2DB.TTL.Duration,
+		nil,
+	)
+	if err := l2DB.Reorg(batchNum); err != nil {
+		return tracerr.Wrap(fmt.Errorf("l2DB.Reorg: %w", err))
+	}
+
+	return nil
+}
+
 // Config is the configuration of the hermez node execution
 type Config struct {
 	mode node.Mode
@@ -238,6 +282,18 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Run the hermez-node in the indicated mode",
 			Action:  cmdRun,
+		},
+		{
+			Name:    "discard",
+			Aliases: []string{},
+			Usage:   "Discard blocks up to a specified block number",
+			Action:  cmdDiscard,
+			Flags: []cli.Flag{
+				&cli.Int64Flag{
+					Name:     flagBlock,
+					Usage:    "last block number to keep",
+					Required: false,
+				}},
 		},
 	}
 
