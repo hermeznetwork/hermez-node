@@ -316,7 +316,7 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address, tokenHEZ
 	}
 	consts, err := c.RollupConstants()
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(fmt.Errorf("RollupConstants at %v: %w", address, err))
 	}
 	c.consts = consts
 	return c, nil

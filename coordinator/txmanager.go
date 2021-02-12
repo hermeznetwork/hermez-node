@@ -128,11 +128,14 @@ func (t *TxManager) NewAuth(ctx context.Context) (*bind.TransactOpts, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	inc := new(big.Int).Set(gasPrice)
-	// TODO: Replace this by a value of percentage
-	const gasPriceDiv = 100
-	inc.Div(inc, new(big.Int).SetUint64(gasPriceDiv))
-	gasPrice.Add(gasPrice, inc)
+	if t.cfg.GasPriceIncPerc != 0 {
+		inc := new(big.Int).Set(gasPrice)
+		inc.Mul(inc, new(big.Int).SetInt64(t.cfg.GasPriceIncPerc))
+		// nolint reason: to calculate percentages we use 100
+		inc.Div(inc, new(big.Int).SetUint64(100)) //nolint:gomnd
+		gasPrice.Add(gasPrice, inc)
+	}
+
 	// log.Debugw("TxManager: transaction metadata", "gasPrice", gasPrice)
 
 	auth, err := bind.NewKeyStoreTransactorWithChainID(t.ethClient.EthKeyStore(), t.account, t.chainID)
@@ -141,6 +144,13 @@ func (t *TxManager) NewAuth(ctx context.Context) (*bind.TransactOpts, error) {
 	}
 	auth.Value = big.NewInt(0) // in wei
 	// TODO: Calculate GasLimit based on the contents of the ForgeBatchArgs
+	// This requires a function that estimates the gas usage of the
+	// forgeBatch call based on the contents of the ForgeBatch args:
+	// - length of l2txs
+	// - length of l1Usertxs
+	// - length of l1CoordTxs with authorization signature
+	// - length of l1CoordTxs without authoriation signature
+	// - etc.
 	auth.GasLimit = 1000000
 	auth.GasPrice = gasPrice
 	auth.Nonce = nil

@@ -23,7 +23,9 @@ import (
 )
 
 var (
-	errLastL1BatchNotSynced = fmt.Errorf("last L1Batch not synced yet")
+	errLastL1BatchNotSynced  = fmt.Errorf("last L1Batch not synced yet")
+	errForgeNoTxsBeforeDelay = fmt.Errorf("no txs to forge and we haven't reached the forge no txs delay")
+	errForgeBeforeDelay      = fmt.Errorf("we haven't reached the forge delay")
 )
 
 const (
@@ -71,6 +73,15 @@ type Config struct {
 	// ForgeRetryInterval is the waiting interval between calls forge a
 	// batch after an error
 	ForgeRetryInterval time.Duration
+	// ForgeDelay is the delay after which a batch is forged if the slot is
+	// already committed.  If set to 0s, the coordinator will continuously
+	// forge at the maximum rate.
+	ForgeDelay time.Duration
+	// ForgeNoTxsDelay is the delay after which a batch is forged even if
+	// there are no txs to forge if the slot is already committed.  If set
+	// to 0s, the coordinator will continuously forge even if the batches
+	// are empty.
+	ForgeNoTxsDelay time.Duration
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval time.Duration
@@ -87,6 +98,10 @@ type Config struct {
 	// MaxGasPrice is the maximum gas price allowed for ethereum
 	// transactions
 	MaxGasPrice *big.Int
+	// GasPriceIncPerc is the percentage increase of gas price set in an
+	// ethereum transaction from the suggested gas price by the ehtereum
+	// node
+	GasPriceIncPerc int64
 	// TxManagerCheckInterval is the waiting interval between receipt
 	// checks of ethereum transactions in the TxManager
 	TxManagerCheckInterval time.Duration
@@ -344,15 +359,22 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 		} else if canForge {
 			log.Infow("Coordinator: forging state begin", "block",
 				stats.Eth.LastBlock.Num+1, "batch", stats.Sync.LastBatch.BatchNum)
-			batchNum := stats.Sync.LastBatch.BatchNum
-			if c.lastNonFailedBatchNum > batchNum {
-				batchNum = c.lastNonFailedBatchNum
+			fromBatch := fromBatch{
+				BatchNum:   stats.Sync.LastBatch.BatchNum,
+				ForgerAddr: stats.Sync.LastBatch.ForgerAddr,
+				StateRoot:  stats.Sync.LastBatch.StateRoot,
+			}
+			if c.lastNonFailedBatchNum > fromBatch.BatchNum {
+				fromBatch.BatchNum = c.lastNonFailedBatchNum
+				fromBatch.ForgerAddr = c.cfg.ForgerAddress
+				fromBatch.StateRoot = big.NewInt(0)
 			}
 			var err error
 			if c.pipeline, err = c.newPipeline(ctx); err != nil {
 				return tracerr.Wrap(err)
 			}
-			if err := c.pipeline.Start(batchNum, stats, &c.vars); err != nil {
+			c.pipelineFromBatch = fromBatch
+			if err := c.pipeline.Start(fromBatch.BatchNum, stats, &c.vars); err != nil {
 				c.pipeline = nil
 				return tracerr.Wrap(err)
 			}
@@ -398,7 +420,8 @@ func (c *Coordinator) handleReorg(ctx context.Context, msg *MsgSyncReorg) error 
 		c.pipeline.SetSyncStatsVars(ctx, &msg.Stats, &msg.Vars)
 	}
 	if c.stats.Sync.LastBatch.ForgerAddr != c.cfg.ForgerAddress &&
-		c.stats.Sync.LastBatch.StateRoot.Cmp(c.pipelineFromBatch.StateRoot) != 0 {
+		(c.stats.Sync.LastBatch.StateRoot == nil || c.pipelineFromBatch.StateRoot == nil ||
+			c.stats.Sync.LastBatch.StateRoot.Cmp(c.pipelineFromBatch.StateRoot) != 0) {
 		// There's been a reorg and the batch state root from which the
 		// pipeline was started has changed (probably because it was in
 		// a block that was discarded), and it was sent by a different

@@ -18,6 +18,19 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
+const (
+	// errStrUnknownBlock is the string returned by geth when querying an
+	// unknown block
+	errStrUnknownBlock = "unknown block"
+)
+
+var (
+	// ErrUnknownBlock is the error returned by the Synchronizer when a
+	// block is queried by hash but the ethereum node doesn't find it due
+	// to it being discarded from a reorg.
+	ErrUnknownBlock = fmt.Errorf("unknown block")
+)
+
 // Stats of the syncrhonizer
 type Stats struct {
 	Eth struct {
@@ -648,11 +661,6 @@ func (s *Synchronizer) Sync2(ctx context.Context,
 		return nil, nil, tracerr.Wrap(err)
 	}
 
-	log.Debugw("Synced block",
-		"syncLastBlockNum", s.stats.Sync.LastBlock.Num,
-		"syncBlocksPerc", s.stats.blocksPerc(),
-		"ethLastBlockNum", s.stats.Eth.LastBlock.Num,
-	)
 	for _, batchData := range rollupData.Batches {
 		log.Debugw("Synced batch",
 			"syncLastBatch", batchData.Batch.BatchNum,
@@ -660,6 +668,11 @@ func (s *Synchronizer) Sync2(ctx context.Context,
 			"ethLastBatch", s.stats.Eth.LastBatchNum,
 		)
 	}
+	log.Debugw("Synced block",
+		"syncLastBlockNum", s.stats.Sync.LastBlock.Num,
+		"syncBlocksPerc", s.stats.blocksPerc(),
+		"ethLastBlockNum", s.stats.Eth.LastBlock.Num,
+	)
 
 	return blockData, nil, nil
 }
@@ -811,7 +824,9 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 	// Get rollup events in the block, and make sure the block hash matches
 	// the expected one.
 	rollupEvents, err := s.ethClient.RollupEventsByBlock(blockNum, &ethBlock.Hash)
-	if err != nil {
+	if err != nil && err.Error() == errStrUnknownBlock {
+		return nil, tracerr.Wrap(ErrUnknownBlock)
+	} else if err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("RollupEventsByBlock: %w", err))
 	}
 	// No events in this block
@@ -1121,7 +1136,9 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 
 	// Get auction events in the block
 	auctionEvents, err := s.ethClient.AuctionEventsByBlock(blockNum, &ethBlock.Hash)
-	if err != nil {
+	if err != nil && err.Error() == errStrUnknownBlock {
+		return nil, tracerr.Wrap(ErrUnknownBlock)
+	} else if err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("AuctionEventsByBlock: %w", err))
 	}
 	// No events in this block
@@ -1218,7 +1235,9 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 
 	// Get wDelayer events in the block
 	wDelayerEvents, err := s.ethClient.WDelayerEventsByBlock(blockNum, &ethBlock.Hash)
-	if err != nil {
+	if err != nil && err.Error() == errStrUnknownBlock {
+		return nil, tracerr.Wrap(ErrUnknownBlock)
+	} else if err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("WDelayerEventsByBlock: %w", err))
 	}
 	// No events in this block

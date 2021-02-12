@@ -79,6 +79,15 @@ type Coordinator struct {
 	// ForgeRetryInterval is the waiting interval between calls forge a
 	// batch after an error
 	ForgeRetryInterval Duration `validate:"required"`
+	// ForgeDelay is the delay after which a batch is forged if the slot is
+	// already committed.  If set to 0s, the coordinator will continuously
+	// forge at the maximum rate.
+	ForgeDelay Duration `validate:"-"`
+	// ForgeNoTxsDelay is the delay after which a batch is forged even if
+	// there are no txs to forge if the slot is already committed.  If set
+	// to 0s, the coordinator will continuously forge even if the batches
+	// are empty.
+	ForgeNoTxsDelay Duration `validate:"-"`
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval Duration `validate:"required"`
@@ -133,15 +142,13 @@ type Coordinator struct {
 		NLevels int64 `validate:"required"`
 	} `validate:"required"`
 	EthClient struct {
-		// CallGasLimit is the default gas limit set for ethereum
-		// calls, except for methods  where a particular gas limit is
-		// harcoded because it's known to be a big value
-		CallGasLimit uint64 `validate:"required"`
 		// MaxGasPrice is the maximum gas price allowed for ethereum
 		// transactions
 		MaxGasPrice *big.Int `validate:"required"`
-		// GasPriceDiv is the gas price division
-		GasPriceDiv uint64 `validate:"required"`
+		// GasPriceIncPerc is the percentage increase of gas price set
+		// in an ethereum transaction from the suggested gas price by
+		// the ehtereum node
+		GasPriceIncPerc int64
 		// CheckLoopInterval is the waiting interval between receipt
 		// checks of ethereum transactions in the TxManager
 		CheckLoopInterval Duration `validate:"required"`
