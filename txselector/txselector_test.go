@@ -48,7 +48,7 @@ func initTest(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address
 		BJJ:                 coordUser.BJJ.Public().Compress(),
 		AccountCreationAuth: nil,
 	}
-	fmt.Printf("%v", coordAccount)
+	// fmt.Printf("%v\n", coordAccount)
 	auth := common.AccountCreationAuth{
 		EthAddr: coordUser.Addr,
 		BJJ:     coordUser.BJJ.Public().Compress(),
@@ -494,6 +494,137 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	assert.Equal(t, expectedTxID1, oL2Txs[0].TxID.String()) // the Exit that was not accepted at the batch2
 	assert.Equal(t, expectedTxID0, discardedL2Txs[0].TxID.String())
 	assert.Equal(t, common.TxTypeExit, oL2Txs[0].Type)
+	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
+	require.NoError(t, err)
+}
+
+func TestTransferToBjj(t *testing.T) {
+	set := `
+		Type: Blockchain
+		AddToken(1)
+
+		CreateAccountDeposit(0) Coord: 0
+		CreateAccountDeposit(0) A: 1000
+		CreateAccountDeposit(0) B: 1000
+		CreateAccountDeposit(1) B: 1000
+
+		> batchL1 // freeze L1User{1}
+		> batchL1 // forge L1User{1}
+		> block
+	`
+
+	chainID := uint16(0)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(set)
+	assert.NoError(t, err)
+
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+
+	// restart nonces of TilContext, as will be set by generating directly
+	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
+	tc.RestartNonces()
+
+	addTokens(t, tc, txsel.l2db.DB())
+
+	tpc := txprocessor.Config{
+		NLevels:  16,
+		MaxFeeTx: 10,
+		MaxTx:    20,
+		MaxL1Tx:  10,
+		ChainID:  chainID,
+	}
+	selectionConfig := &SelectionConfig{
+		MaxL1UserTxs:      5,
+		TxProcessorConfig: tpc,
+	}
+	// batch1 to create some accounts with positive balance
+	l1UserTxs := []common.L1Tx{}
+	_, _, _, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	require.NoError(t, err)
+
+	// Transfer is ToBJJ to a BJJ-only account that doesn't exist
+	// and the coordinator will create it via L1CoordTx.
+
+	batchPoolL2 := `
+	Type: PoolL2
+	PoolTransferToBJJ(0) A-B: 50 (126)
+	`
+	poolL2Txs, err := tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+
+	// add the PoolL2Txs to the l2DB
+	addL2Txs(t, txsel, poolL2Txs)
+
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	require.NoError(t, err)
+	assert.Equal(t, 4, len(oL1UserTxs))
+	// We expect the coordinator to add an L1CoordTx to create an account for the recipient of the l2tx
+	require.Equal(t, 1, len(oL1CoordTxs))
+	assert.Equal(t, poolL2Txs[0].ToEthAddr, oL1CoordTxs[0].FromEthAddr)
+	assert.Equal(t, poolL2Txs[0].ToBJJ, oL1CoordTxs[0].FromBJJ)
+	// fmt.Printf("DBG l1CoordTx[0]: %+v\n", oL1CoordTxs[0])
+	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 0, len(discardedL2Txs))
+	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
+	require.NoError(t, err)
+
+	// Now the BJJ-only account for B is already created, so the transfer
+	// happens without an L1CoordTx that creates the user account.
+
+	batchPoolL2 = `
+	Type: PoolL2
+	PoolTransferToBJJ(0) A-B: 50 (126)
+	`
+
+	poolL2Txs, err = tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+	addL2Txs(t, txsel, poolL2Txs)
+
+	l1UserTxs = []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	// Since the BJJ-only account B already exists, the coordinator doesn't add any L1CoordTxs
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 0, len(discardedL2Txs))
+	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
+	require.NoError(t, err)
+
+	// The transfer now is ToBJJ to a BJJ-only account that doesn't exist
+	// and the coordinator will create it via L1CoordTx.   Since it's a
+	// transfer of a token for which the coordinator doesn't have a fee
+	// account, another L1CoordTx will be created for the coordinator to
+	// receive the fees.
+
+	batchPoolL2 = `
+	Type: PoolL2
+	PoolTransferToBJJ(1) B-A: 50 (126)
+	`
+
+	poolL2Txs, err = tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+	addL2Txs(t, txsel, poolL2Txs)
+
+	l1UserTxs = []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	// We expect the coordinator to add an L1CoordTx to create an account
+	// to receive the fees by the coordinator and another one for the
+	// recipient of the l2tx
+	assert.Equal(t, 2, len(oL1CoordTxs))
+	// [0] Coordinator account cration for token 1
+	assert.Equal(t, tc.Users["Coord"].Addr, oL1CoordTxs[0].FromEthAddr)
+	// [1] User A BJJ-only account creation for token 1
+	assert.Equal(t, poolL2Txs[0].ToEthAddr, oL1CoordTxs[1].FromEthAddr)
+	assert.Equal(t, poolL2Txs[0].ToBJJ, oL1CoordTxs[1].FromBJJ)
+	assert.Equal(t, common.TokenID(1), oL1CoordTxs[1].TokenID)
+
+	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 0, len(discardedL2Txs))
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
 }

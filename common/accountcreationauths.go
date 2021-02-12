@@ -17,6 +17,11 @@ const AccountCreationAuthMsg = "I authorize this babyjubjub key for hermez rollu
 // EthMsgPrefix is the prefix for message signing at the Ethereum ecosystem
 const EthMsgPrefix = "\x19Ethereum Signed Message:\n"
 
+var (
+	// EmptyEthSignature is an ethereum signature of all zeroes
+	EmptyEthSignature = make([]byte, 65)
+)
+
 // AccountCreationAuth authorizations sent by users to the L2DB, to be used for
 // account creations when necessary
 type AccountCreationAuth struct {
