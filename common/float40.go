@@ -6,7 +6,6 @@
 package common
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"math/big"
@@ -24,8 +23,8 @@ const (
 )
 
 var (
-	// ErrFloat40Overflow is used when a given nonce overflows the maximum
-	// capacity of the Float40 (2**40-1)
+	// ErrFloat40Overflow is used when a given Float40 overflows the
+	// maximum capacity of the Float40 (2**40-1)
 	ErrFloat40Overflow = errors.New("Float40 overflow, max value: 2**40 -1")
 	// ErrFloat40E31 is used when the e > 31 when trying to convert a
 	// *big.Int to Float40
@@ -88,15 +87,14 @@ func NewFloat40(f *big.Int) (Float40, error) {
 	zero := big.NewInt(0)
 	ten := big.NewInt(10)
 	thres := big.NewInt(0x08_00_00_00_00)
-	for bytes.Equal(zero.Bytes(), new(big.Int).Mod(m, ten).Bytes()) &&
-		!bytes.Equal(zero.Bytes(), new(big.Int).Div(m, thres).Bytes()) {
+	for new(big.Int).Mod(m, ten).Cmp(zero) == 0 && m.Cmp(thres) >= 0 {
 		m = new(big.Int).Div(m, ten)
 		e = new(big.Int).Add(e, big.NewInt(1))
 	}
 	if e.Int64() > 31 {
 		return 0, ErrFloat40E31
 	}
-	if !bytes.Equal(zero.Bytes(), new(big.Int).Div(m, thres).Bytes()) {
+	if m.Cmp(thres) >= 0 {
 		return 0, ErrFloat40NotEnoughPrecission
 	}
 	r := new(big.Int).Add(m,

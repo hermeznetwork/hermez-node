@@ -36,7 +36,7 @@ type PoolL2Tx struct {
 	ToEthAddr ethCommon.Address     `meddler:"to_eth_addr,zeroisnull"`
 	ToBJJ     babyjub.PublicKeyComp `meddler:"to_bjj,zeroisnull"`
 	TokenID   TokenID               `meddler:"token_id"`
-	Amount    *big.Int              `meddler:"amount,bigint"` // TODO: change to float40
+	Amount    *big.Int              `meddler:"amount,bigint"`
 	Fee       FeeSelector           `meddler:"fee"`
 	Nonce     Nonce                 `meddler:"nonce"` // effective 40 bits used
 	State     PoolL2TxState         `meddler:"state"`
@@ -53,7 +53,7 @@ type PoolL2Tx struct {
 	RqToEthAddr       ethCommon.Address     `meddler:"rq_to_eth_addr,zeroisnull"`
 	RqToBJJ           babyjub.PublicKeyComp `meddler:"rq_to_bjj,zeroisnull"`
 	RqTokenID         TokenID               `meddler:"rq_token_id,zeroisnull"`
-	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"` // TODO: change to float40
+	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"`
 	RqFee             FeeSelector           `meddler:"rq_fee,zeroisnull"`
 	RqNonce           Nonce                 `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
@@ -126,7 +126,7 @@ func (tx *PoolL2Tx) SetID() error {
 // [ 48 bits ] fromIdx // 6 bytes
 // [ 16 bits ] chainId // 2 bytes
 // [ 32 bits ] signatureConstant // 4 bytes
-// Total bits compressed data:  241 bits // 31 bytes in *big.Int representation
+// Total bits compressed data:  225 bits // 29 bytes in *big.Int representation
 func (tx *PoolL2Tx) TxCompressedData(chainID uint16) (*big.Int, error) {
 	var b [29]byte
 
@@ -179,7 +179,7 @@ func TxCompressedDataEmpty(chainID uint16) *big.Int {
 // [ 40 bits ] amountFloat40 // 5 bytes
 // [ 48 bits ] toIdx // 6 bytes
 // [ 48 bits ] fromIdx // 6 bytes
-// Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
+// Total bits compressed data:  217 bits // 28 bytes in *big.Int representation
 func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 	if tx.Amount == nil {
 		tx.Amount = big.NewInt(0)
@@ -238,7 +238,7 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 // [ 40 bits ] rqAmountFloat40 // 5 bytes
 // [ 48 bits ] rqToIdx // 6 bytes
 // [ 48 bits ] rqFromIdx // 6 bytes
-// Total bits compressed data:  193 bits // 25 bytes in *big.Int representation
+// Total bits compressed data:  217 bits // 28 bytes in *big.Int representation
 func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
 	if tx.RqAmount == nil {
 		tx.RqAmount = big.NewInt(0)

@@ -103,7 +103,7 @@ type ZKInputs struct {
 	// ToEthAddr
 	ToEthAddr []*big.Int `json:"toEthAddr"` // ethCommon.Address, len: [maxTx]
 	// AmountF encoded as float40
-	AmountF []*big.Int `json:"amountF"`
+	AmountF []*big.Int `json:"amountF"` // uint40 len: [maxTx]
 
 	// OnChain determines if is L1 (1/true) or L2 (0/false)
 	OnChain []*big.Int `json:"onChain"` // bool, len: [maxTx]
@@ -479,7 +479,7 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	copy(newExitRoot, z.Metadata.NewExitRootRaw.Bytes())
 	b = append(b, newExitRoot...)
 
-	// [MAX_L1_TX * (2 * MAX_NLEVELS + 480) bits] L1TxsData
+	// [MAX_L1_TX * (2 * MAX_NLEVELS + 528) bits] L1TxsData
 	l1TxDataLen := (2*z.Metadata.MaxLevels + 528)
 	l1TxsDataLen := (z.Metadata.MaxL1Tx * l1TxDataLen)
 	l1TxsData := make([]byte, l1TxsDataLen/8) //nolint:gomnd
@@ -497,7 +497,7 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	}
 	b = append(b, l1TxsDataAvailability...)
 
-	// [MAX_TX*(2*NLevels + 24) bits] L2TxsData
+	// [MAX_TX*(2*NLevels + 48) bits] L2TxsData
 	var l2TxsData []byte
 	l2TxDataLen := 2*z.Metadata.NLevels + 48 //nolint:gomnd
 	l2TxsDataLen := (z.Metadata.MaxTx * l2TxDataLen)
