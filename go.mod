@@ -17,7 +17,6 @@ require (
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.8.0
-	github.com/marusama/semaphore/v2 v2.4.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/mitchellh/copystructure v1.0.0
@@ -29,5 +28,6 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	gopkg.in/go-playground/validator.v9 v9.29.1
 )
