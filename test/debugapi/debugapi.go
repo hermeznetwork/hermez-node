@@ -12,6 +12,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func handleNoRoute(c *gin.Context) {
@@ -106,6 +107,8 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 	api.NoRoute(handleNoRoute)
 	api.Use(cors.Default())
 	debugAPI := api.Group("/debug")
+
+	debugAPI.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	debugAPI.GET("sdb/batchnum", a.handleCurrentBatch)
 	debugAPI.GET("sdb/mtroot", a.handleMTRoot)

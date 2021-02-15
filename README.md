@@ -15,7 +15,7 @@ start PostgreSQL with docker easily this way (where `yourpasswordhere` should
 be your password):
 
 ```
-POSTGRES_PASS=yourpasswordhere sudo docker run --rm --name hermez-db-test -p 5432:5432 -e POSTGRES_DB=hermez -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD="$POSTGRES_PASS" -d postgres
+POSTGRES_PASS=yourpasswordhere; sudo docker run --rm --name hermez-db-test -p 5432:5432 -e POSTGRES_DB=hermez -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD="$POSTGRES_PASS" -d postgres
 ```
 
 Afterwards, run the tests with the password as env var:
