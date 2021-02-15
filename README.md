@@ -4,6 +4,10 @@ Go implementation of the Hermez node.
 
 ## Developing
 
+### Go version
+
+The `hermez-node` has been tested with go version 1.14
+
 ### Unit testing
 
 Running the unit tests requires a connection to a PostgreSQL database.  You can
