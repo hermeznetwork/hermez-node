@@ -13,9 +13,9 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
-	"github.com/marusama/semaphore/v2"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
+	"golang.org/x/sync/semaphore"
 )
 
 var migrations *migrate.PackrMigrationSource
@@ -89,14 +89,14 @@ func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 
 // APIConnectionController is used to limit the SQL open connections used by the API
 type APIConnectionController struct {
-	smphr   semaphore.Semaphore
+	smphr   *semaphore.Weighted
 	timeout time.Duration
 }
 
 // NewAPICnnectionController initialize APIConnectionController
 func NewAPICnnectionController(maxConnections int, timeout time.Duration) *APIConnectionController {
 	return &APIConnectionController{
-		smphr:   semaphore.New(maxConnections),
+		smphr:   semaphore.NewWeighted(int64(maxConnections)),
 		timeout: timeout,
 	}
 }
