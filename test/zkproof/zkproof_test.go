@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-const MaxTx = 376
+const MaxTx = 352
 const NLevels = 32
 const MaxL1Tx = 256
 const MaxFeeTx = 64
@@ -61,6 +61,7 @@ func sendProofAndCheckResp(t *testing.T, zki *common.ZKInputs) {
 		return
 	}
 
+	log.Infof("sending proof to %s", proofServerURL)
 	// Store zkinputs json for debugging purposes
 	zkInputsJSON, err := json.Marshal(zki)
 	require.NoError(t, err)

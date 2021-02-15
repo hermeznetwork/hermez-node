@@ -131,9 +131,9 @@ func TestRollupForgeBatch(t *testing.T) {
 	args.FeeIdxCoordinator = []common.Idx{} // When encoded, 64 times the 0 idx means that no idx to collect fees is specified.
 	l1CoordinatorBytes, err := hex.DecodeString("1c660323607bb113e586183609964a333d07ebe4bef3be82ec13af453bae9590bd7711cdb6abf42f176eadfbe5506fbef5e092e5543733f91b0061d9a7747fa10694a915a6470fa230de387b51e6f4db0b09787867778687b55197ad6d6a86eac000000001")
 	require.NoError(t, err)
-	numTxsL1 := len(l1CoordinatorBytes) / common.L1CoordinatorTxBytesLen
+	numTxsL1 := len(l1CoordinatorBytes) / common.RollupConstL1CoordinatorTotalBytes
 	for i := 0; i < numTxsL1; i++ {
-		bytesL1Coordinator := l1CoordinatorBytes[i*common.L1CoordinatorTxBytesLen : (i+1)*common.L1CoordinatorTxBytesLen]
+		bytesL1Coordinator := l1CoordinatorBytes[i*common.RollupConstL1CoordinatorTotalBytes : (i+1)*common.RollupConstL1CoordinatorTotalBytes]
 		var signature []byte
 		v := bytesL1Coordinator[0]
 		s := bytesL1Coordinator[1:33]

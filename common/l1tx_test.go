@@ -50,64 +50,110 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 }
 
 func TestL1TxCompressedData(t *testing.T) {
+	// test vectors values generated from javascript implementation (using
+	// PoolL2Tx values)
+	amount, ok := new(big.Int).SetString("343597383670000000000000000000000000000000", 10)
+	require.True(t, ok)
 	tx := L1Tx{
-		FromIdx: 2,
-		ToIdx:   3,
-		Amount:  big.NewInt(4),
-		TokenID: 5,
+		FromIdx: (1 << 48) - 1,
+		ToIdx:   (1 << 48) - 1,
+		Amount:  amount,
+		TokenID: (1 << 32) - 1,
 	}
-	chainID := uint16(0)
-	txCompressedData, err := tx.TxCompressedData(chainID)
+	txCompressedData, err := tx.TxCompressedData(uint16((1 << 16) - 1))
 	assert.NoError(t, err)
+	expectedStr := "ffffffffffffffffffffffffffffffffffffc60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
 
-	// test vector value generated from javascript implementation
-	expectedStr := "7307597389635308713748674793997299267459594577423"
-	assert.Equal(t, expectedStr, txCompressedData.String())
-	assert.Equal(t, "0500040000000000030000000000020000c60be60f", hex.EncodeToString(txCompressedData.Bytes()))
+	tx = L1Tx{
+		FromIdx: 0,
+		ToIdx:   0,
+		Amount:  big.NewInt(0),
+		TokenID: 0,
+	}
+	txCompressedData, err = tx.TxCompressedData(uint16(0))
+	assert.NoError(t, err)
+	expectedStr = "c60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
+
+	amount, ok = new(big.Int).SetString("63000000000000000", 10)
+	require.True(t, ok)
+	tx = L1Tx{
+		FromIdx: 324,
+		ToIdx:   256,
+		Amount:  amount,
+		TokenID: 123,
+	}
+	txCompressedData, err = tx.TxCompressedData(uint16(1))
+	assert.NoError(t, err)
+	expectedStr = "7b0000000001000000000001440001c60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
+
+	tx = L1Tx{
+		FromIdx: 1,
+		ToIdx:   2,
+		TokenID: 3,
+	}
+	txCompressedData, err = tx.TxCompressedData(uint16(0))
+	assert.NoError(t, err)
+	expectedStr = "030000000000020000000000010000c60be60f"
+	assert.Equal(t, expectedStr, hex.EncodeToString(txCompressedData.Bytes()))
 }
 
 func TestBytesDataAvailability(t *testing.T) {
+	// test vectors values generated from javascript implementation
+	amount, ok := new(big.Int).SetString("343597383670000000000000000000000000000000", 10)
+	require.True(t, ok)
 	tx := L1Tx{
-		FromIdx: 2,
-		ToIdx:   3,
-		Amount:  big.NewInt(4),
-		TokenID: 5,
+		ToIdx:           (1 << 16) - 1,
+		FromIdx:         (1 << 16) - 1,
+		EffectiveAmount: amount,
 	}
-	txCompressedData, err := tx.BytesDataAvailability(32)
+	txCompressedData, err := tx.BytesDataAvailability(16)
 	assert.NoError(t, err)
-	assert.Equal(t, "0000000200000003000000", hex.EncodeToString(txCompressedData))
-
-	tx = L1Tx{
-		FromIdx:         2,
-		ToIdx:           3,
-		EffectiveAmount: big.NewInt(4),
-		TokenID:         5,
-	}
-	txCompressedData, err = tx.BytesDataAvailability(32)
-	assert.NoError(t, err)
-	assert.Equal(t, "0000000200000003000400", hex.EncodeToString(txCompressedData))
-}
-
-func TestL1TxFromDataAvailability(t *testing.T) {
-	tx := L1Tx{
-		FromIdx: 2,
-		ToIdx:   3,
-		Amount:  big.NewInt(4),
-	}
-	txCompressedData, err := tx.BytesDataAvailability(32)
-	assert.NoError(t, err)
-	l1tx, err := L1TxFromDataAvailability(txCompressedData, 32)
+	assert.Equal(t, "ffffffffffffffffff00", hex.EncodeToString(txCompressedData))
+	l1tx, err := L1TxFromDataAvailability(txCompressedData, 16)
 	require.NoError(t, err)
 	assert.Equal(t, tx.FromIdx, l1tx.FromIdx)
 	assert.Equal(t, tx.ToIdx, l1tx.ToIdx)
+	assert.Equal(t, tx.EffectiveAmount, l1tx.EffectiveAmount)
 
 	tx = L1Tx{
-		FromIdx:         2,
-		ToIdx:           3,
-		EffectiveAmount: big.NewInt(4),
+		ToIdx:           (1 << 32) - 1,
+		FromIdx:         (1 << 32) - 1,
+		EffectiveAmount: amount,
 	}
 	txCompressedData, err = tx.BytesDataAvailability(32)
 	assert.NoError(t, err)
+	assert.Equal(t, "ffffffffffffffffffffffffff00", hex.EncodeToString(txCompressedData))
+	l1tx, err = L1TxFromDataAvailability(txCompressedData, 32)
+	require.NoError(t, err)
+	assert.Equal(t, tx.FromIdx, l1tx.FromIdx)
+	assert.Equal(t, tx.ToIdx, l1tx.ToIdx)
+	assert.Equal(t, tx.EffectiveAmount, l1tx.EffectiveAmount)
+
+	tx = L1Tx{
+		ToIdx:           0,
+		FromIdx:         0,
+		EffectiveAmount: big.NewInt(0),
+	}
+	txCompressedData, err = tx.BytesDataAvailability(32)
+	assert.NoError(t, err)
+	assert.Equal(t, "0000000000000000000000000000", hex.EncodeToString(txCompressedData))
+	l1tx, err = L1TxFromDataAvailability(txCompressedData, 32)
+	require.NoError(t, err)
+	assert.Equal(t, tx.FromIdx, l1tx.FromIdx)
+	assert.Equal(t, tx.ToIdx, l1tx.ToIdx)
+	assert.Equal(t, tx.EffectiveAmount, l1tx.EffectiveAmount)
+
+	tx = L1Tx{
+		ToIdx:           635,
+		FromIdx:         296,
+		EffectiveAmount: big.NewInt(1000000000000000000),
+	}
+	txCompressedData, err = tx.BytesDataAvailability(32)
+	assert.NoError(t, err)
+	assert.Equal(t, "000001280000027b42540be40000", hex.EncodeToString(txCompressedData))
 	l1tx, err = L1TxFromDataAvailability(txCompressedData, 32)
 	require.NoError(t, err)
 	assert.Equal(t, tx.FromIdx, l1tx.FromIdx)
@@ -172,12 +218,10 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 		UserOrigin:    true,
 	}
 
-	expected, err := utils.HexDecode("85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a000001c638db8be880f00020039c0000053cb88d")
-	require.NoError(t, err)
-
 	encodedData, err := l1Tx.BytesUser()
 	require.NoError(t, err)
-	assert.Equal(t, expected, encodedData)
+	expected := "85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a000001c638db52540be400459682f0000020039c0000053cb88d"
+	assert.Equal(t, expected, hex.EncodeToString(encodedData))
 }
 
 func TestL1CoordinatorTxByteParsers(t *testing.T) {
