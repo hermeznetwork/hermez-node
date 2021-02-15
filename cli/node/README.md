@@ -2,6 +2,10 @@
 
 This is the main cli for the node
 
+## Go version
+
+The `hermez-node` has been tested with go version 1.14
+
 ## Usage
 
 ```
@@ -65,29 +69,55 @@ when running the coordinator in sync mode
 - The node requires a PostgreSQL database.  The parameters of the server and
   database must be set in the `PostgreSQL` section.
 
+## Building
+
+*All commands assume you are at the `cli/node` directory.*
+
+Building the node requires using the packr utility to bundle the database
+migrations inside the resulting binary.  Install the packr utility with:
+```
+cd /tmp && go get -u github.com/gobuffalo/packr/v2/packr2 && cd -
+```
+
+Make sure your `$PATH` contains `$GOPATH/bin`, otherwise the packr utility will
+not be found.
+
+Now build the node executable:
+```
+cd ../../db && packr2 && cd -
+go build .
+cd ../../db && packr2 clean && cd -
+```
+
+The executable is `node`.
+
 ## Usage Examples
+
+The following commands assume you have built the node previously.  You can also
+run the following examples by replacing `./node` with `go run .` and executing
+them in the `cli/node` directory to build from source and run at the same time.
 
 Run the node in mode synchronizer:
 ```
-go run . --mode sync --cfg cfg.buidler.toml run
+./node --mode sync --cfg cfg.buidler.toml run
 ```
 
 Run the node in mode coordinator:
 ```
-go run . --mode coord --cfg cfg.buidler.toml run
+./node --mode coord --cfg cfg.buidler.toml run
 ```
 
 Import an ethereum private key into the keystore:
 ```
-go run . --mode coord --cfg cfg.buidler.toml importkey --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
+./node --mode coord --cfg cfg.buidler.toml importkey --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
 ```
 
 Generate a new BabyJubJub key pair:
 ```
-go run . --mode coord --cfg cfg.buidler.toml genbjj
+./node --mode coord --cfg cfg.buidler.toml genbjj
 ```
 
 Wipe the entier SQL database (this will destroy all synchronized and pool data):
 ```
-go run . --mode coord --cfg cfg.buidler.toml wipesql
+./node --mode coord --cfg cfg.buidler.toml wipesql
 ```
