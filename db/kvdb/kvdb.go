@@ -425,12 +425,13 @@ func (k *KVDB) MakeCheckpoint() error {
 	}
 
 	// if checkpoint BatchNum already exist in disk, delete it
-	if _, err := os.Stat(checkpointPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(checkpointPath); os.IsNotExist(err) {
+	} else if err != nil {
+		return tracerr.Wrap(err)
+	} else {
 		if err := os.RemoveAll(checkpointPath); err != nil {
 			return tracerr.Wrap(err)
 		}
-	} else if err != nil && !os.IsNotExist(err) {
-		return tracerr.Wrap(err)
 	}
 
 	// execute Checkpoint
@@ -451,12 +452,25 @@ func (k *KVDB) MakeCheckpoint() error {
 	return nil
 }
 
+// CheckpointExists returns true if the checkpoint exists
+func (k *KVDB) CheckpointExists(batchNum common.BatchNum) (bool, error) {
+	source := path.Join(k.cfg.Path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
+	if _, err := os.Stat(source); os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // DeleteCheckpoint removes if exist the checkpoint of the given batchNum
 func (k *KVDB) DeleteCheckpoint(batchNum common.BatchNum) error {
 	checkpointPath := path.Join(k.cfg.Path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
 
 	if _, err := os.Stat(checkpointPath); os.IsNotExist(err) {
 		return tracerr.Wrap(fmt.Errorf("Checkpoint with batchNum %d does not exist in DB", batchNum))
+	} else if err != nil {
+		return tracerr.Wrap(err)
 	}
 
 	return os.RemoveAll(checkpointPath)
@@ -520,6 +534,8 @@ func (k *KVDB) MakeCheckpointFromTo(fromBatchNum common.BatchNum, dest string) e
 	if _, err := os.Stat(source); os.IsNotExist(err) {
 		// if kvdb does not have checkpoint at batchNum, return err
 		return tracerr.Wrap(fmt.Errorf("Checkpoint \"%v\" does not exist", source))
+	} else if err != nil {
+		return tracerr.Wrap(err)
 	}
 	// By locking we allow calling MakeCheckpointFromTo from multiple
 	// places at the same time for the same stateDB.  This allows the
@@ -533,12 +549,13 @@ func (k *KVDB) MakeCheckpointFromTo(fromBatchNum common.BatchNum, dest string) e
 
 func pebbleMakeCheckpoint(source, dest string) error {
 	// Remove dest folder (if it exists) before doing the checkpoint
-	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+	if _, err := os.Stat(dest); os.IsNotExist(err) {
+	} else if err != nil {
+		return tracerr.Wrap(err)
+	} else {
 		if err := os.RemoveAll(dest); err != nil {
 			return tracerr.Wrap(err)
 		}
-	} else if err != nil && !os.IsNotExist(err) {
-		return tracerr.Wrap(err)
 	}
 
 	sto, err := pebble.NewPebbleStorage(source, false)

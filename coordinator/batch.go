@@ -47,6 +47,8 @@ type Debug struct {
 	MineBlockNum int64
 	// SendBlockNum is the blockNum when the batch was sent to ethereum
 	SendBlockNum int64
+	// ResendNum is the number of times the tx has been resent
+	ResendNum int
 	// LastScheduledL1BatchBlockNum is the blockNum when the last L1Batch
 	// was scheduled
 	LastScheduledL1BatchBlockNum int64
@@ -64,10 +66,17 @@ type Debug struct {
 	// StartToSendDelay is the delay between starting a batch and sending
 	// it to ethereum, in seconds
 	StartToSendDelay float64
+	// StartToMineDelay is the delay between starting a batch and having
+	// it mined in seconds
+	StartToMineDelay float64
+	// SendToMineDelay is the delay between sending a batch tx and having
+	// it mined in seconds
+	SendToMineDelay float64
 }
 
 // BatchInfo contans the Batch information
 type BatchInfo struct {
+	PipelineNum           int
 	BatchNum              common.BatchNum
 	ServerProof           prover.Client
 	ZKInputs              *common.ZKInputs
@@ -82,9 +91,16 @@ type BatchInfo struct {
 	CoordIdxs             []common.Idx
 	ForgeBatchArgs        *eth.RollupForgeBatchArgs
 	// FeesInfo
-	EthTx   *types.Transaction
-	Receipt *types.Receipt
-	Debug   Debug
+	EthTx    *types.Transaction
+	EthTxErr error
+	// SendTimestamp  the time of batch sent to ethereum
+	SendTimestamp time.Time
+	Receipt       *types.Receipt
+	// Fail is true if:
+	// - The receipt status is failed
+	// - A previous parent batch is failed
+	Fail  bool
+	Debug Debug
 }
 
 // DebugStore is a debug function to store the BatchInfo as a json text file in

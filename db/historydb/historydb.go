@@ -164,6 +164,19 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 	return nil
 }
 
+// GetBatch returns the batch with the given batchNum
+func (hdb *HistoryDB) GetBatch(batchNum common.BatchNum) (*common.Batch, error) {
+	var batch common.Batch
+	err := meddler.QueryRow(
+		hdb.db, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
+		batch.fees_collected, batch.fee_idxs_coordinator, batch.state_root,
+		batch.num_accounts, batch.last_idx, batch.exit_root, batch.forge_l1_txs_num,
+		batch.slot_num, batch.total_fees_usd FROM batch WHERE batch_num = $1;`,
+		batchNum,
+	)
+	return &batch, err
+}
+
 // GetAllBatches retrieve all batches from the DB
 func (hdb *HistoryDB) GetAllBatches() ([]common.Batch, error) {
 	var batches []*common.Batch
@@ -206,6 +219,18 @@ func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 	row := hdb.db.QueryRow("SELECT batch_num FROM batch ORDER BY batch_num DESC LIMIT 1;")
 	var batchNum common.BatchNum
 	return batchNum, tracerr.Wrap(row.Scan(&batchNum))
+}
+
+// GetLastBatch returns the last forged batch
+func (hdb *HistoryDB) GetLastBatch() (*common.Batch, error) {
+	var batch common.Batch
+	err := meddler.QueryRow(
+		hdb.db, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
+		batch.fees_collected, batch.fee_idxs_coordinator, batch.state_root,
+		batch.num_accounts, batch.last_idx, batch.exit_root, batch.forge_l1_txs_num,
+		batch.slot_num, batch.total_fees_usd FROM batch ORDER BY batch_num DESC LIMIT 1;`,
+	)
+	return &batch, err
 }
 
 // GetLastL1BatchBlockNum returns the blockNum of the latest forged l1Batch

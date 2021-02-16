@@ -498,11 +498,17 @@ func NewLocalStateDB(cfg Config, synchronizerDB *StateDB) (*LocalStateDB, error)
 	}, nil
 }
 
+// CheckpointExists returns true if the checkpoint exists
+func (l *LocalStateDB) CheckpointExists(batchNum common.BatchNum) (bool, error) {
+	return l.db.CheckpointExists(batchNum)
+}
+
 // Reset performs a reset in the LocaStateDB. If fromSynchronizer is true, it
 // gets the state from LocalStateDB.synchronizerStateDB for the given batchNum.
 // If fromSynchronizer is false, get the state from LocalStateDB checkpoints.
 func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) error {
 	if fromSynchronizer {
+		log.Debugw("Making StateDB ResetFromSynchronizer", "batch", batchNum, "type", l.cfg.Type)
 		if err := l.db.ResetFromSynchronizer(batchNum, l.synchronizerStateDB.db); err != nil {
 			return tracerr.Wrap(err)
 		}
