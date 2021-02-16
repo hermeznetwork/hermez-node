@@ -17,7 +17,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/jinzhu/copier"
@@ -321,6 +320,14 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB) {
 	return stateDB, historyDB
 }
 
+func newBigInt(s string) *big.Int {
+	v, ok := new(big.Int).SetString(s, 10)
+	if !ok {
+		panic(fmt.Errorf("Can't set big.Int from %s", s))
+	}
+	return v
+}
+
 func TestSyncGeneral(t *testing.T) {
 	//
 	// Setup
@@ -339,7 +346,6 @@ func TestSyncGeneral(t *testing.T) {
 	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
 		StatsRefreshPeriod: 0 * time.Second,
 	})
-	log.Error(err)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -434,12 +440,22 @@ func TestSyncGeneral(t *testing.T) {
 	require.Equal(t, 5, len(blocks[i].Rollup.L1UserTxs))
 	require.Equal(t, 2, len(blocks[i].Rollup.Batches))
 	require.Equal(t, 2, len(blocks[i].Rollup.Batches[0].L1CoordinatorTxs))
+	// Set StateRoots for batches manually (til doesn't set it)
+	blocks[i].Rollup.Batches[0].Batch.StateRoot =
+		newBigInt("18906357591508007884273218035694076596537737437965299189312069102730480717391")
+	blocks[i].Rollup.Batches[1].Batch.StateRoot =
+		newBigInt("9513185123401321669660637227182204000277156839501731093239187625486561933297")
 	// blocks 1 (blockNum=3)
 	i = 1
 	require.Equal(t, 3, int(blocks[i].Block.Num))
 	require.Equal(t, 5, len(blocks[i].Rollup.L1UserTxs))
 	require.Equal(t, 2, len(blocks[i].Rollup.Batches))
 	require.Equal(t, 3, len(blocks[i].Rollup.Batches[0].L2Txs))
+	// Set StateRoots for batches manually (til doesn't set it)
+	blocks[i].Rollup.Batches[0].Batch.StateRoot =
+		newBigInt("13060270878200012606074130020925677466793317216609491464427188889005039616594")
+	blocks[i].Rollup.Batches[1].Batch.StateRoot =
+		newBigInt("21427104994652624302859637783375978708867165042357535792408500519060088086054")
 
 	// Generate extra required data
 	ethAddTokens(blocks, client)
@@ -613,6 +629,12 @@ func TestSyncGeneral(t *testing.T) {
 	}
 	blocks, err = tc.GenerateBlocks(set2)
 	require.NoError(t, err)
+
+	// Set StateRoots for batches manually (til doesn't set it)
+	blocks[0].Rollup.Batches[0].Batch.StateRoot =
+		newBigInt("11218510534825843475100588932060366395781087435899915642332104464234485046683")
+	blocks[0].Rollup.Batches[1].Batch.StateRoot =
+		newBigInt("20283020730369146334077598087403837297563965802277806438205710455191646998983")
 
 	for i := 0; i < 4; i++ {
 		client.CtlRollback()

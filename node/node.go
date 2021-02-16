@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -301,6 +302,9 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 				SyncRetryInterval:      cfg.Coordinator.SyncRetryInterval.Duration,
 				EthClientAttempts:      cfg.Coordinator.EthClient.Attempts,
 				EthClientAttemptsDelay: cfg.Coordinator.EthClient.AttemptsDelay.Duration,
+				EthNoReuseNonce:        cfg.Coordinator.EthClient.NoReuseNonce,
+				EthTxResendTimeout:     cfg.Coordinator.EthClient.TxResendTimeout.Duration,
+				MaxGasPrice:            cfg.Coordinator.EthClient.MaxGasPrice,
 				TxManagerCheckInterval: cfg.Coordinator.EthClient.CheckLoopInterval.Duration,
 				DebugBatchPath:         cfg.Coordinator.Debug.BatchPath,
 				Purger: coordinator.PurgerCfg{
@@ -487,11 +491,15 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats, va
 		if stats.Synced() {
 			if err := n.nodeAPI.api.UpdateNetworkInfo(
 				stats.Eth.LastBlock, stats.Sync.LastBlock,
-				common.BatchNum(stats.Eth.LastBatch),
+				common.BatchNum(stats.Eth.LastBatchNum),
 				stats.Sync.Auction.CurrentSlot.SlotNum,
 			); err != nil {
 				log.Errorw("API.UpdateNetworkInfo", "err", err)
 			}
+		} else {
+			n.nodeAPI.api.UpdateNetworkInfoBlock(
+				stats.Eth.LastBlock, stats.Sync.LastBlock,
+			)
 		}
 	}
 }
@@ -573,7 +581,11 @@ func (n *Node) StartSynchronizer() {
 					if n.ctx.Err() != nil {
 						continue
 					}
-					log.Errorw("Synchronizer.Sync", "err", err)
+					if errors.Is(err, eth.ErrBlockHashMismatchEvent) {
+						log.Warnw("Synchronizer.Sync", "err", err)
+					} else {
+						log.Errorw("Synchronizer.Sync", "err", err)
+					}
 				}
 			}
 		}

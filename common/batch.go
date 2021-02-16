@@ -27,6 +27,24 @@ type Batch struct {
 	TotalFeesUSD       *float64             `meddler:"total_fees_usd"`
 }
 
+// NewEmptyBatch creates a new empty batch
+func NewEmptyBatch() *Batch {
+	return &Batch{
+		BatchNum:           0,
+		EthBlockNum:        0,
+		ForgerAddr:         ethCommon.Address{},
+		CollectedFees:      make(map[TokenID]*big.Int),
+		FeeIdxsCoordinator: make([]Idx, 0),
+		StateRoot:          big.NewInt(0),
+		NumAccounts:        0,
+		LastIdx:            0,
+		ExitRoot:           big.NewInt(0),
+		ForgeL1TxsNum:      nil,
+		SlotNum:            0,
+		TotalFeesUSD:       nil,
+	}
+}
+
 // BatchNum identifies a batch
 type BatchNum int64
 

@@ -54,7 +54,7 @@ func NewBatchBuilder(dbpath string, synchronizerStateDB *statedb.StateDB, batchN
 // copy of the rollup state from the Synchronizer at that `batchNum`, otherwise
 // it can just roll back the internal copy.
 func (bb *BatchBuilder) Reset(batchNum common.BatchNum, fromSynchronizer bool) error {
-	return bb.localStateDB.Reset(batchNum, fromSynchronizer)
+	return tracerr.Wrap(bb.localStateDB.Reset(batchNum, fromSynchronizer))
 }
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch

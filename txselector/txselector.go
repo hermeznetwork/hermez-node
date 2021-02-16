@@ -88,12 +88,8 @@ func (txsel *TxSelector) LocalAccountsDB() *statedb.LocalStateDB {
 
 // Reset tells the TxSelector to get it's internal AccountsDB
 // from the required `batchNum`
-func (txsel *TxSelector) Reset(batchNum common.BatchNum) error {
-	err := txsel.localAccountsDB.Reset(batchNum, true)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	return nil
+func (txsel *TxSelector) Reset(batchNum common.BatchNum, fromSynchronizer bool) error {
+	return tracerr.Wrap(txsel.localAccountsDB.Reset(batchNum, fromSynchronizer))
 }
 
 func (txsel *TxSelector) getCoordIdx(tokenID common.TokenID) (common.Idx, error) {

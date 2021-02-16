@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -51,6 +52,27 @@ type Coordinator struct {
 	// L1BatchTimeoutPerc is the portion of the range before the L1Batch
 	// timeout that will trigger a schedule to forge an L1Batch
 	L1BatchTimeoutPerc float64 `validate:"required"`
+	// StartSlotBlocksDelay is the number of blocks of delay to wait before
+	// starting the pipeline when we reach a slot in which we can forge.
+	StartSlotBlocksDelay int64
+	// ScheduleBatchBlocksAheadCheck is the number of blocks ahead in which
+	// the forger address is checked to be allowed to forge (apart from
+	// checking the next block), used to decide when to stop scheduling new
+	// batches (by stopping the pipeline).
+	// For example, if we are at block 10 and ScheduleBatchBlocksAheadCheck
+	// is 5, eventhough at block 11 we canForge, the pipeline will be
+	// stopped if we can't forge at block 15.
+	// This value should be the expected number of blocks it takes between
+	// scheduling a batch and having it mined.
+	ScheduleBatchBlocksAheadCheck int64
+	// SendBatchBlocksMarginCheck is the number of margin blocks ahead in
+	// which the coordinator is also checked to be allowed to forge, apart
+	// from the next block; used to decide when to stop sending batches to
+	// the smart contract.
+	// For example, if we are at block 10 and SendBatchBlocksMarginCheck is
+	// 5, eventhough at block 11 we canForge, the batch will be discarded
+	// if we can't forge at block 15.
+	SendBatchBlocksMarginCheck int64
 	// ProofServerPollInterval is the waiting interval between polling the
 	// ProofServer while waiting for a particular status
 	ProofServerPollInterval Duration `validate:"required"`
@@ -65,19 +87,33 @@ type Coordinator struct {
 		// SafetyPeriod is the number of batches after which
 		// non-pending L2Txs are deleted from the pool
 		SafetyPeriod common.BatchNum `validate:"required"`
-		// MaxTxs is the number of L2Txs that once reached triggers
-		// deletion of old L2Txs
+		// MaxTxs is the maximum number of pending L2Txs that can be
+		// stored in the pool.  Once this number of pending L2Txs is
+		// reached, inserts to the pool will be denied until some of
+		// the pending txs are forged.
 		MaxTxs uint32 `validate:"required"`
 		// TTL is the Time To Live for L2Txs in the pool.  Once MaxTxs
 		// L2Txs is reached, L2Txs older than TTL will be deleted.
 		TTL Duration `validate:"required"`
-		// PurgeBatchDelay is the delay between batches to purge outdated transactions
+		// PurgeBatchDelay is the delay between batches to purge
+		// outdated transactions.  Oudated L2Txs are those that have
+		// been forged or marked as invalid for longer than the
+		// SafetyPeriod and pending L2Txs that have been in the pool
+		// for longer than TTL once there are MaxTxs.
 		PurgeBatchDelay int64 `validate:"required"`
-		// InvalidateBatchDelay is the delay between batches to mark invalid transactions
+		// InvalidateBatchDelay is the delay between batches to mark
+		// invalid transactions due to nonce lower than the account
+		// nonce.
 		InvalidateBatchDelay int64 `validate:"required"`
-		// PurgeBlockDelay is the delay between blocks to purge outdated transactions
+		// PurgeBlockDelay is the delay between blocks to purge
+		// outdated transactions.  Oudated L2Txs are those that have
+		// been forged or marked as invalid for longer than the
+		// SafetyPeriod and pending L2Txs that have been in the pool
+		// for longer than TTL once there are MaxTxs.
 		PurgeBlockDelay int64 `validate:"required"`
-		// InvalidateBlockDelay is the delay between blocks to mark invalid transactions
+		// InvalidateBlockDelay is the delay between blocks to mark
+		// invalid transactions due to nonce lower than the account
+		// nonce.
 		InvalidateBlockDelay int64 `validate:"required"`
 	} `validate:"required"`
 	TxSelector struct {
@@ -101,6 +137,9 @@ type Coordinator struct {
 		// calls, except for methods  where a particular gas limit is
 		// harcoded because it's known to be a big value
 		CallGasLimit uint64 `validate:"required"`
+		// MaxGasPrice is the maximum gas price allowed for ethereum
+		// transactions
+		MaxGasPrice *big.Int `validate:"required"`
 		// GasPriceDiv is the gas price division
 		GasPriceDiv uint64 `validate:"required"`
 		// CheckLoopInterval is the waiting interval between receipt
@@ -112,6 +151,13 @@ type Coordinator struct {
 		// AttemptsDelay is delay between attempts do do an eth client
 		// RPC call
 		AttemptsDelay Duration `validate:"required"`
+		// TxResendTimeout is the timeout after which a non-mined
+		// ethereum transaction will be resent (reusing the nonce) with
+		// a newly calculated gas price
+		TxResendTimeout Duration `validate:"required"`
+		// NoReuseNonce disables reusing nonces of pending transactions for
+		// new replacement transactions
+		NoReuseNonce bool
 		// Keystore is the ethereum keystore where private keys are kept
 		Keystore struct {
 			// Path to the keystore

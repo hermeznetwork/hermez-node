@@ -25,6 +25,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func newBigInt(s string) *big.Int {
+	v, ok := new(big.Int).SetString(s, 10)
+	if !ok {
+		panic(fmt.Errorf("Can't set big.Int from %s", s))
+	}
+	return v
+}
+
 func TestPipelineShouldL1L2Batch(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
 	ethClientSetup.ChainID = big.NewInt(int64(chainID))
@@ -77,7 +85,7 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	//
 	// Scheduled L1Batch
 	//
-	pipeline.lastScheduledL1BatchBlockNum = startBlock
+	pipeline.state.lastScheduledL1BatchBlockNum = startBlock
 	stats.Sync.LastL1BatchBlock = startBlock - 10
 
 	// We are are one block before the timeout range * 0.5
@@ -128,6 +136,11 @@ func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchr
 	blocks, err := tc.GenerateBlocksFromInstructions(set)
 	require.NoError(t, err)
 	require.NotNil(t, blocks)
+	// Set StateRoots for batches manually (til doesn't set it)
+	blocks[0].Rollup.Batches[0].Batch.StateRoot =
+		newBigInt("0")
+	blocks[0].Rollup.Batches[1].Batch.StateRoot =
+		newBigInt("10941365282189107056349764238909072001483688090878331371699519307087372995595")
 
 	ethAddTokens(blocks, ethClient)
 	err = ethClient.CtlAddBlocks(blocks)
@@ -172,7 +185,7 @@ func TestPipelineForgeBatchWithTxs(t *testing.T) {
 	// users with positive balances
 	tilCtx := preloadSync(t, ethClient, sync, modules.historyDB, modules.stateDB)
 	syncStats := sync.Stats()
-	batchNum := common.BatchNum(syncStats.Sync.LastBatch)
+	batchNum := syncStats.Sync.LastBatch.BatchNum
 	syncSCVars := sync.SCVars()
 
 	pipeline, err := coord.newPipeline(ctx)
