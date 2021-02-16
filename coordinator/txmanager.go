@@ -416,7 +416,7 @@ func (q *Queue) Push(batchInfo *BatchInfo) {
 
 // Run the TxManager
 func (t *TxManager) Run(ctx context.Context) {
-	waitDuration := longWaitDuration
+	waitCh := time.After(longWaitDuration)
 
 	var statsVars statsVars
 	select {
@@ -471,11 +471,11 @@ func (t *TxManager) Run(ctx context.Context) {
 				continue
 			}
 			t.queue.Push(batchInfo)
-			waitDuration = t.cfg.TxManagerCheckInterval
-		case <-time.After(waitDuration):
+			waitCh = time.After(t.cfg.TxManagerCheckInterval)
+		case <-waitCh:
 			queuePosition, batchInfo := t.queue.Next()
 			if batchInfo == nil {
-				waitDuration = longWaitDuration
+				waitCh = time.After(longWaitDuration)
 				continue
 			}
 			if err := t.checkEthTransactionReceipt(ctx, batchInfo); ctx.Err() != nil {
