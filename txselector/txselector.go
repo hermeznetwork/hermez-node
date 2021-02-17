@@ -18,7 +18,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// txs implements the interface Sort for an array of Tx
+// txs implements the interface Sort for an array of Tx, and sorts the txs by
+// absolute fee
 type txs []common.PoolL2Tx
 
 func (t txs) Len() int {
@@ -590,11 +591,12 @@ func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, tokenID common.
 
 // getL2Profitable returns the profitable selection of L2Txssorted by Nonce
 func (txsel *TxSelector) getL2Profitable(l2Txs []common.PoolL2Tx, max uint32) []common.PoolL2Tx {
+	// Sort by absolute fee
 	sort.Sort(txs(l2Txs))
-	if len(l2Txs) < int(max) {
-		return l2Txs
+
+	if len(l2Txs) > int(max) {
+		l2Txs = l2Txs[:max]
 	}
-	l2Txs = l2Txs[:max]
 
 	// sort l2Txs by Nonce. This can be done in many different ways, what
 	// is needed is to output the l2Txs where the Nonce of l2Txs for each
