@@ -538,7 +538,8 @@ func TestTransferToBjj(t *testing.T) {
 		MaxL1UserTxs:      5,
 		TxProcessorConfig: tpc,
 	}
-	// batch1 to create some accounts with positive balance
+	// batch1 to freeze L1UserTxs that will create some accounts with
+	// positive balance
 	l1UserTxs := []common.L1Tx{}
 	_, _, _, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
@@ -624,6 +625,81 @@ func TestTransferToBjj(t *testing.T) {
 	assert.Equal(t, common.TokenID(1), oL1CoordTxs[1].TokenID)
 
 	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 0, len(discardedL2Txs))
+	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
+	require.NoError(t, err)
+}
+
+func TestTransferManyFromSameAccount(t *testing.T) {
+	set := `
+		Type: Blockchain
+
+		CreateAccountDeposit(0) Coord: 0
+		CreateAccountDeposit(0) A: 1000
+		CreateAccountDeposit(0) B: 1000
+
+		> batchL1 // freeze L1User{1}
+		> batchL1 // forge L1User{1}
+		> block
+	`
+
+	chainID := uint16(0)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(set)
+	assert.NoError(t, err)
+
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+
+	// restart nonces of TilContext, as will be set by generating directly
+	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
+	tc.RestartNonces()
+
+	tpc := txprocessor.Config{
+		NLevels:  16,
+		MaxFeeTx: 10,
+		MaxTx:    20,
+		MaxL1Tx:  10,
+		ChainID:  chainID,
+	}
+	selectionConfig := &SelectionConfig{
+		MaxL1UserTxs:      5,
+		TxProcessorConfig: tpc,
+	}
+	// batch1 to freeze L1UserTxs
+	l1UserTxs := []common.L1Tx{}
+	_, _, _, _, _, _, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	require.NoError(t, err)
+
+	// 8 transfers from the same account
+
+	batchPoolL2 := `
+	Type: PoolL2
+	PoolTransfer(0) A-B: 10 (126) // 1
+	PoolTransfer(0) A-B: 10 (126) // 2
+	PoolTransfer(0) A-B: 10 (126) // 3
+	PoolTransfer(0) A-B: 10 (126) // 4
+	PoolTransfer(0) A-B: 10 (126) // 5
+	PoolTransfer(0) A-B: 10 (126) // 6
+	PoolTransfer(0) A-B: 10 (126) // 7
+	PoolTransfer(0) A-B: 10 (126) // 8
+	`
+	poolL2Txs, err := tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+
+	// reorder poolL2Txs so that nonces are not sorted
+	poolL2Txs[0], poolL2Txs[7] = poolL2Txs[7], poolL2Txs[0]
+	poolL2Txs[1], poolL2Txs[6] = poolL2Txs[6], poolL2Txs[1]
+
+	// add the PoolL2Txs to the l2DB
+	addL2Txs(t, txsel, poolL2Txs)
+	// batch 2 to crate some accounts with positive balance, and do 8 L2Tx transfers from account A
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(oL1UserTxs))
+	require.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 8, len(oL2Txs))
 	assert.Equal(t, 0, len(discardedL2Txs))
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
