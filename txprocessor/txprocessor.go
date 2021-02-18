@@ -198,7 +198,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			}
 		}
 		if tp.s.Type() == statedb.TypeSynchronizer || tp.s.Type() == statedb.TypeBatchBuilder {
-			if exitIdx != nil && exitTree != nil {
+			if exitIdx != nil && exitTree != nil && exitAccount != nil {
 				exits[tp.i] = processedExit{
 					exit:    true,
 					newExit: newExit,
@@ -407,38 +407,38 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		return nil, nil
 	}
 
-	// once all txs processed (exitTree root frozen), for each Exit,
-	// generate common.ExitInfo data
-	var exitInfos []common.ExitInfo
-	exitInfosByIdx := make(map[common.Idx]*common.ExitInfo)
-	for i := 0; i < nTx; i++ {
-		if !exits[i].exit {
-			continue
-		}
-		exitIdx := exits[i].idx
-		exitAccount := exits[i].acc
-
-		// 0. generate MerkleProof
-		p, err := exitTree.GenerateSCVerifierProof(exitIdx.BigInt(), nil)
-		if err != nil {
-			return nil, tracerr.Wrap(err)
-		}
-
-		// 1. generate common.ExitInfo
-		ei := common.ExitInfo{
-			AccountIdx:  exitIdx,
-			MerkleProof: p,
-			Balance:     exitAccount.Balance,
-		}
-		if prevExit, ok := exitInfosByIdx[exitIdx]; !ok {
-			exitInfos = append(exitInfos, ei)
-			exitInfosByIdx[exitIdx] = &exitInfos[len(exitInfos)-1]
-		} else {
-			*prevExit = ei
-		}
-	}
-
 	if tp.s.Type() == statedb.TypeSynchronizer {
+		// once all txs processed (exitTree root frozen), for each Exit,
+		// generate common.ExitInfo data
+		var exitInfos []common.ExitInfo
+		exitInfosByIdx := make(map[common.Idx]*common.ExitInfo)
+		for i := 0; i < nTx; i++ {
+			if !exits[i].exit {
+				continue
+			}
+			exitIdx := exits[i].idx
+			exitAccount := exits[i].acc
+
+			// 0. generate MerkleProof
+			p, err := exitTree.GenerateSCVerifierProof(exitIdx.BigInt(), nil)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+
+			// 1. generate common.ExitInfo
+			ei := common.ExitInfo{
+				AccountIdx:  exitIdx,
+				MerkleProof: p,
+				Balance:     exitAccount.Balance,
+			}
+			if prevExit, ok := exitInfosByIdx[exitIdx]; !ok {
+				exitInfos = append(exitInfos, ei)
+				exitInfosByIdx[exitIdx] = &exitInfos[len(exitInfos)-1]
+			} else {
+				*prevExit = ei
+			}
+		}
+
 		// retuTypeexitInfos, createdAccounts and collectedFees, so Synchronizer will
 		// be able to store it into HistoryDB for the concrete BatchNum
 		return &ProcessTxOutput{
@@ -1141,6 +1141,11 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	if exitTree == nil {
 		return nil, false, nil
 	}
+	if tx.Amount.Cmp(big.NewInt(0)) == 0 { // Amount == 0
+		// if the Exit Amount==0, the Exit is not added to the ExitTree
+		return nil, false, nil
+	}
+
 	exitAccount, err := statedb.GetAccountInTreeDB(exitTree.DB(), tx.FromIdx)
 	if tracerr.Unwrap(err) == db.ErrNotFound {
 		// 1a. if idx does not exist in exitTree:
