@@ -658,7 +658,7 @@ func TestTransferManyFromSameAccount(t *testing.T) {
 	tpc := txprocessor.Config{
 		NLevels:  16,
 		MaxFeeTx: 10,
-		MaxTx:    20,
+		MaxTx:    10,
 		MaxL1Tx:  10,
 		ChainID:  chainID,
 	}
@@ -683,13 +683,17 @@ func TestTransferManyFromSameAccount(t *testing.T) {
 	PoolTransfer(0) A-B: 10 (126) // 6
 	PoolTransfer(0) A-B: 10 (126) // 7
 	PoolTransfer(0) A-B: 10 (126) // 8
+	PoolTransfer(0) A-B: 10 (126) // 9
+	PoolTransfer(0) A-B: 10 (126) // 10
+	PoolTransfer(0) A-B: 10 (126) // 11
 	`
 	poolL2Txs, err := tc.GeneratePoolL2Txs(batchPoolL2)
 	require.NoError(t, err)
+	require.Equal(t, 11, len(poolL2Txs))
 
 	// reorder poolL2Txs so that nonces are not sorted
 	poolL2Txs[0], poolL2Txs[7] = poolL2Txs[7], poolL2Txs[0]
-	poolL2Txs[1], poolL2Txs[6] = poolL2Txs[6], poolL2Txs[1]
+	poolL2Txs[1], poolL2Txs[10] = poolL2Txs[10], poolL2Txs[1]
 
 	// add the PoolL2Txs to the l2DB
 	addL2Txs(t, txsel, poolL2Txs)
@@ -699,8 +703,9 @@ func TestTransferManyFromSameAccount(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
-	assert.Equal(t, 8, len(oL2Txs))
-	assert.Equal(t, 0, len(discardedL2Txs))
+	assert.Equal(t, 7, len(oL2Txs))
+	assert.Equal(t, 1, len(discardedL2Txs))
+
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
 }

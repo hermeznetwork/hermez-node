@@ -327,7 +327,7 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs, auth *bind.T
 	if auth == nil {
 		auth, err = c.client.NewAuth()
 		if err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		auth.GasLimit = 1000000
 	}
@@ -393,7 +393,7 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs, auth *bind.T
 		l1CoordinatorBytes, l1l2TxData, feeIdxCoordinator, args.VerifierIdx, args.L1Batch,
 		args.ProofA, args.ProofB, args.ProofC)
 	if err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("Failed Hermez.ForgeBatch: %w", err))
+		return nil, tracerr.Wrap(fmt.Errorf("Hermez.ForgeBatch: %w", err))
 	}
 	return tx, nil
 }

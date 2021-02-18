@@ -2,9 +2,9 @@ package coordinator
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -206,22 +206,27 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 		}
 		// RollupForgeBatch() calls ethclient.SendTransaction()
 		ethTx, err = t.ethClient.RollupForgeBatch(batchInfo.ForgeBatchArgs, auth)
-		if errors.Is(err, core.ErrNonceTooLow) {
+		// We check the errors via strings because we match the
+		// definition of the error from geth, with the string returned
+		// via RPC obtained by the client.
+		if err == nil {
+			break
+		} else if strings.Contains(err.Error(), core.ErrNonceTooLow.Error()) {
 			log.Warnw("TxManager ethClient.RollupForgeBatch incrementing nonce",
 				"err", err, "nonce", auth.Nonce, "batchNum", batchInfo.BatchNum)
 			auth.Nonce.Add(auth.Nonce, big.NewInt(1))
 			attempt--
-		} else if errors.Is(err, core.ErrNonceTooHigh) {
+		} else if strings.Contains(err.Error(), core.ErrNonceTooHigh.Error()) {
 			log.Warnw("TxManager ethClient.RollupForgeBatch decrementing nonce",
 				"err", err, "nonce", auth.Nonce, "batchNum", batchInfo.BatchNum)
 			auth.Nonce.Sub(auth.Nonce, big.NewInt(1))
 			attempt--
-		} else if errors.Is(err, core.ErrUnderpriced) {
+		} else if strings.Contains(err.Error(), core.ErrReplaceUnderpriced.Error()) {
 			log.Warnw("TxManager ethClient.RollupForgeBatch incrementing gasPrice",
 				"err", err, "gasPrice", auth.GasPrice, "batchNum", batchInfo.BatchNum)
 			auth.GasPrice = addPerc(auth.GasPrice, 10)
 			attempt--
-		} else if errors.Is(err, core.ErrReplaceUnderpriced) {
+		} else if strings.Contains(err.Error(), core.ErrUnderpriced.Error()) {
 			log.Warnw("TxManager ethClient.RollupForgeBatch incrementing gasPrice",
 				"err", err, "gasPrice", auth.GasPrice, "batchNum", batchInfo.BatchNum)
 			auth.GasPrice = addPerc(auth.GasPrice, 10)
@@ -230,8 +235,6 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 			log.Errorw("TxManager ethClient.RollupForgeBatch",
 				"attempt", attempt, "err", err, "block", t.stats.Eth.LastBlock.Num+1,
 				"batchNum", batchInfo.BatchNum)
-		} else {
-			break
 		}
 		select {
 		case <-ctx.Done():
