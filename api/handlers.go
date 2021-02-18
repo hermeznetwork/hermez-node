@@ -10,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/lib/pq"
+	"github.com/russross/meddler"
 )
 
 const (
@@ -46,24 +47,33 @@ var (
 func retSQLErr(err error, c *gin.Context) {
 	log.Warnw("HTTP API SQL request error", "err", err)
 	errMsg := tracerr.Unwrap(err).Error()
+	retDupKey := func(errCode pq.ErrorCode) {
+		// https://www.postgresql.org/docs/current/errcodes-appendix.html
+		if errCode == "23505" {
+			c.JSON(http.StatusInternalServerError, errorMsg{
+				Message: errDuplicatedKey,
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, errorMsg{
+				Message: errMsg,
+			})
+		}
+	}
 	if errMsg == errCtxTimeout {
 		c.JSON(http.StatusServiceUnavailable, errorMsg{
 			Message: errSQLTimeout,
 		})
 	} else if sqlErr, ok := tracerr.Unwrap(err).(*pq.Error); ok {
-		// https://www.postgresql.org/docs/current/errcodes-appendix.html
-		if sqlErr.Code == "23505" {
-			c.JSON(http.StatusInternalServerError, errorMsg{
-				Message: errDuplicatedKey,
-			})
-		}
+		retDupKey(sqlErr.Code)
+	} else if sqlErr, ok := meddler.DriverErr(tracerr.Unwrap(err)); ok {
+		retDupKey(sqlErr.(*pq.Error).Code)
 	} else if tracerr.Unwrap(err) == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, errorMsg{
-			Message: err.Error(),
+			Message: errMsg,
 		})
 	} else {
 		c.JSON(http.StatusInternalServerError, errorMsg{
-			Message: err.Error(),
+			Message: errMsg,
 		})
 	}
 }
