@@ -324,5 +324,6 @@ func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
 		Value:    tx.Value(),
 		Data:     tx.Data(),
 	}
-	return c.client.CallContract(ctx, msg, blockNum)
+	result, err := c.client.CallContract(ctx, msg, blockNum)
+	return result, tracerr.Wrap(err)
 }

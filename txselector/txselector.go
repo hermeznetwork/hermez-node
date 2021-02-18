@@ -18,20 +18,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// txs implements the interface Sort for an array of Tx, and sorts the txs by
-// absolute fee
-type txs []common.PoolL2Tx
-
-func (t txs) Len() int {
-	return len(t)
-}
-func (t txs) Swap(i, j int) {
-	t[i], t[j] = t[j], t[i]
-}
-func (t txs) Less(i, j int) bool {
-	return t[i].AbsoluteFee > t[j].AbsoluteFee
-}
-
 // CoordAccount contains the data of the Coordinator account, that will be used
 // to create new transactions of CreateAccountDeposit type to add new TokenID
 // accounts for the Coordinator to receive the fees.
@@ -191,14 +177,16 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	}
 
 	// discardedL2Txs contains an array of the L2Txs that have not been selected in this Batch
-	var discardedL2Txs []common.PoolL2Tx
 
 	var l1CoordinatorTxs []common.L1Tx
 	positionL1 := len(l1UserTxs)
 	var accAuths [][]byte
 
 	// sort l2TxsRaw (cropping at MaxTx at this point)
-	l2Txs0 := txsel.getL2Profitable(l2TxsRaw, selectionConfig.TxProcessorConfig.MaxTx)
+	l2Txs0, discardedL2Txs := txsel.getL2Profitable(l2TxsRaw, selectionConfig.TxProcessorConfig.MaxTx)
+	for i := range discardedL2Txs {
+		discardedL2Txs[i].Info = "Tx not selected due to low absolute fee"
+	}
 
 	noncesMap := make(map[common.Idx]common.Nonce)
 	var l2Txs []common.PoolL2Tx
@@ -590,11 +578,22 @@ func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, tokenID common.
 }
 
 // getL2Profitable returns the profitable selection of L2Txssorted by Nonce
-func (txsel *TxSelector) getL2Profitable(l2Txs []common.PoolL2Tx, max uint32) []common.PoolL2Tx {
-	// Sort by absolute fee
-	sort.Sort(txs(l2Txs))
+func (txsel *TxSelector) getL2Profitable(l2Txs []common.PoolL2Tx, max uint32) ([]common.PoolL2Tx,
+	[]common.PoolL2Tx) {
+	// First sort by nonce so that txs from the same account are sorted so
+	// that they could be applied in succession.
+	sort.Slice(l2Txs, func(i, j int) bool {
+		return l2Txs[i].Nonce < l2Txs[j].Nonce
+	})
+	// Sort by absolute fee with SliceStable, so that txs with same
+	// AbsoluteFee are not rearranged and nonce order is kept in such case
+	sort.SliceStable(l2Txs, func(i, j int) bool {
+		return l2Txs[i].AbsoluteFee > l2Txs[j].AbsoluteFee
+	})
 
+	discardedL2Txs := []common.PoolL2Tx{}
 	if len(l2Txs) > int(max) {
+		discardedL2Txs = l2Txs[max:]
 		l2Txs = l2Txs[:max]
 	}
 
@@ -603,9 +602,9 @@ func (txsel *TxSelector) getL2Profitable(l2Txs []common.PoolL2Tx, max uint32) []
 	// Account is sorted, but the l2Txs can not be grouped by sender Account
 	// neither by Fee. This is because later on the Nonces will need to be
 	// sequential for the zkproof generation.
-	sort.SliceStable(l2Txs, func(i, j int) bool {
+	sort.Slice(l2Txs, func(i, j int) bool {
 		return l2Txs[i].Nonce < l2Txs[j].Nonce
 	})
 
-	return l2Txs
+	return l2Txs, discardedL2Txs
 }

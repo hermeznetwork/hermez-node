@@ -67,6 +67,11 @@ func Init(levelStr string, outputs []string) {
 
 func sprintStackTrace(st []tracerr.Frame) string {
 	builder := strings.Builder{}
+	// Skip deepest frame because it belongs to the go runtime and we don't
+	// care about it.
+	if len(st) > 0 {
+		st = st[:len(st)-1]
+	}
 	for _, f := range st {
 		builder.WriteString(fmt.Sprintf("\n%s:%d %s()", f.Path, f.Line, f.Func))
 	}
