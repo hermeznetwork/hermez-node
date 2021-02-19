@@ -61,7 +61,7 @@ func (hdb *HistoryDB) addBlocks(d meddler.DB, blocks []common.Block) error {
 			timestamp,
 			hash
 		) VALUES %s;`,
-		blocks[:],
+		blocks,
 	))
 }
 
@@ -273,7 +273,7 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO bid (slot_num, bid_value, eth_block_num, bidder_addr) VALUES %s;",
-		bids[:],
+		bids,
 	))
 }
 
@@ -324,7 +324,7 @@ func (hdb *HistoryDB) addCoordinators(d meddler.DB, coordinators []common.Coordi
 	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO coordinator (bidder_addr, forger_addr, eth_block_num, url) VALUES %s;",
-		coordinators[:],
+		coordinators,
 	))
 }
 
@@ -340,7 +340,7 @@ func (hdb *HistoryDB) addExitTree(d meddler.DB, exitTree []common.ExitInfo) erro
 		d,
 		"INSERT INTO exit_tree (batch_num, account_idx, merkle_proof, balance, "+
 			"instant_withdrawn, delayed_withdraw_request, delayed_withdrawn) VALUES %s;",
-		exitTree[:],
+		exitTree,
 	))
 }
 
@@ -443,7 +443,7 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 			symbol,
 			decimals
 		) VALUES %s;`,
-		tokens[:],
+		tokens,
 	))
 }
 
@@ -514,7 +514,7 @@ func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error
 			bjj,
 			eth_addr
 		) VALUES %s;`,
-		accounts[:],
+		accounts,
 	))
 }
 
@@ -646,7 +646,7 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			fee,
 			nonce
 		) VALUES %s;`,
-		txs[:],
+		txs,
 	))
 }
 
@@ -781,7 +781,7 @@ func (hdb *HistoryDB) addBucketUpdates(d meddler.DB, bucketUpdates []common.Buck
 		 	block_stamp,
 		 	withdrawals
 		) VALUES %s;`,
-		bucketUpdates[:],
+		bucketUpdates,
 	))
 }
 
@@ -813,7 +813,7 @@ func (hdb *HistoryDB) addTokenExchanges(d meddler.DB, tokenExchanges []common.To
     			eth_addr,
     			value_usd
 		) VALUES %s;`,
-		tokenExchanges[:],
+		tokenExchanges,
 	))
 }
 
@@ -841,7 +841,7 @@ func (hdb *HistoryDB) addEscapeHatchWithdrawals(d meddler.DB,
 			token_addr,
 			amount
 		) VALUES %s;`,
-		escapeHatchWithdrawals[:],
+		escapeHatchWithdrawals,
 	))
 }
 
