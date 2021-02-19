@@ -45,15 +45,16 @@ type Pipeline struct {
 	errAtBatchNum common.BatchNum
 	lastForgeTime time.Time
 
-	proversPool  *ProversPool
-	provers      []prover.Client
-	coord        *Coordinator
-	txManager    *TxManager
-	historyDB    *historydb.HistoryDB
-	l2DB         *l2db.L2DB
-	txSelector   *txselector.TxSelector
-	batchBuilder *batchbuilder.BatchBuilder
-	purger       *Purger
+	proversPool           *ProversPool
+	provers               []prover.Client
+	coord                 *Coordinator
+	txManager             *TxManager
+	historyDB             *historydb.HistoryDB
+	l2DB                  *l2db.L2DB
+	txSelector            *txselector.TxSelector
+	batchBuilder          *batchbuilder.BatchBuilder
+	mutexL2DBUpdateDelete *sync.Mutex
+	purger                *Purger
 
 	stats       synchronizer.Stats
 	vars        synchronizer.SCVariables
@@ -84,6 +85,7 @@ func NewPipeline(ctx context.Context,
 	l2DB *l2db.L2DB,
 	txSelector *txselector.TxSelector,
 	batchBuilder *batchbuilder.BatchBuilder,
+	mutexL2DBUpdateDelete *sync.Mutex,
 	purger *Purger,
 	coord *Coordinator,
 	txManager *TxManager,
@@ -104,19 +106,20 @@ func NewPipeline(ctx context.Context,
 		return nil, tracerr.Wrap(fmt.Errorf("no provers in the pool"))
 	}
 	return &Pipeline{
-		num:          num,
-		cfg:          cfg,
-		historyDB:    historyDB,
-		l2DB:         l2DB,
-		txSelector:   txSelector,
-		batchBuilder: batchBuilder,
-		provers:      provers,
-		proversPool:  proversPool,
-		purger:       purger,
-		coord:        coord,
-		txManager:    txManager,
-		consts:       *scConsts,
-		statsVarsCh:  make(chan statsVars, queueLen),
+		num:                   num,
+		cfg:                   cfg,
+		historyDB:             historyDB,
+		l2DB:                  l2DB,
+		txSelector:            txSelector,
+		batchBuilder:          batchBuilder,
+		provers:               provers,
+		proversPool:           proversPool,
+		mutexL2DBUpdateDelete: mutexL2DBUpdateDelete,
+		purger:                purger,
+		coord:                 coord,
+		txManager:             txManager,
+		consts:                *scConsts,
+		statsVarsCh:           make(chan statsVars, queueLen),
 	}, nil
 }
 
@@ -199,7 +202,9 @@ func (p *Pipeline) syncSCVars(vars synchronizer.SCVariablesPtr) {
 // and then waits for an available proof server and sends the zkInputs to it so
 // that the proof computation begins.
 func (p *Pipeline) handleForgeBatch(ctx context.Context, batchNum common.BatchNum) (*BatchInfo, error) {
+	p.mutexL2DBUpdateDelete.Lock()
 	batchInfo, err := p.forgeBatch(batchNum)
+	p.mutexL2DBUpdateDelete.Unlock()
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	} else if err != nil {

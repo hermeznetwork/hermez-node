@@ -73,24 +73,6 @@ func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.Accoun
 	))
 }
 
-// AddTx inserts a tx to the pool
-func (l2db *L2DB) AddTx(tx *PoolL2TxWrite) error {
-	row := l2db.db.QueryRow(
-		"SELECT COUNT(*) FROM tx_pool WHERE state = $1;",
-		common.PoolL2TxStatePending,
-	)
-	var totalTxs uint32
-	if err := row.Scan(&totalTxs); err != nil {
-		return tracerr.Wrap(err)
-	}
-	if totalTxs >= l2db.maxTxs {
-		return tracerr.New(
-			"The pool is at full capacity. More transactions are not accepted currently",
-		)
-	}
-	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", tx))
-}
-
 // UpdateTxsInfo updates the parameter Info of the pool transactions
 func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
 	if len(txs) == 0 {
@@ -351,6 +333,17 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 		common.PoolL2TxStatePending,
 		l2db.maxTxs,
 		time.Unix(now-int64(l2db.ttl.Seconds()), 0),
+	)
+	return tracerr.Wrap(err)
+}
+
+// PurgeByExternalDelete deletes all pending transactions marked with true in
+// the `external_delete` column.  An external process can set this column to
+// true to instruct the coordinator to delete the tx when possible.
+func (l2db *L2DB) PurgeByExternalDelete() error {
+	_, err := l2db.db.Exec(
+		`DELETE from tx_pool WHERE (external_delete = true AND state = $1);`,
+		common.PoolL2TxStatePending,
 	)
 	return tracerr.Wrap(err)
 }

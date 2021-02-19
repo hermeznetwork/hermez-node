@@ -27,6 +27,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
+	writeTx.ClientIP = c.ClientIP()
 	// Insert to DB
 	if err := a.l2.AddTxAPI(writeTx); err != nil {
 		retSQLErr(err, c)

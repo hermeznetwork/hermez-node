@@ -1,6 +1,7 @@
 package l2db
 
 import (
+	"database/sql"
 	"math"
 	"math/big"
 	"os"
@@ -699,5 +700,58 @@ func TestAddGet(t *testing.T) {
 		txs[i].AbsoluteFee = dbTx.AbsoluteFee
 		txs[i].AbsoluteFeeUpdate = dbTx.AbsoluteFeeUpdate
 		assert.Equal(t, txs[i], *dbTx)
+	}
+}
+
+func TestPurgeByExternalDelete(t *testing.T) {
+	err := prepareHistoryDB(historyDB)
+	if err != nil {
+		log.Error("Error prepare historyDB", err)
+	}
+	txs, err := generatePoolL2Txs()
+	assert.NoError(t, err)
+
+	// We will work with 8 txs
+	require.GreaterOrEqual(t, len(txs), 8)
+	txs = txs[:8]
+	for i := range txs {
+		require.NoError(t, l2DB.AddTxTest(&txs[i]))
+	}
+
+	// We will recreate this scenario:
+	// tx index, status , external_delete
+	// 0       , pending, false
+	// 1       , pending, false
+	// 2       , pending, true // will be deleted
+	// 3       , pending, true // will be deleted
+	// 4       , fging  , false
+	// 5       , fging  , false
+	// 6       , fging  , true
+	// 7       , fging  , true
+
+	require.NoError(t, l2DB.StartForging(
+		[]common.TxID{txs[4].TxID, txs[5].TxID, txs[6].TxID, txs[7].TxID},
+		1))
+	_, err = l2DB.db.Exec(
+		`UPDATE tx_pool SET external_delete = true WHERE
+			tx_id IN ($1, $2, $3, $4)
+		;`,
+		txs[2].TxID, txs[3].TxID, txs[6].TxID, txs[7].TxID,
+	)
+	require.NoError(t, err)
+	require.NoError(t, l2DB.PurgeByExternalDelete())
+
+	// Query txs that are have been not deleted
+	for _, i := range []int{0, 1, 4, 5, 6, 7} {
+		txID := txs[i].TxID
+		_, err := l2DB.GetTx(txID)
+		require.NoError(t, err)
+	}
+
+	// Query txs that have been deleted
+	for _, i := range []int{2, 3} {
+		txID := txs[i].TxID
+		_, err := l2DB.GetTx(txID)
+		require.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))
 	}
 }
