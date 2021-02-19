@@ -303,6 +303,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 				ForgeDelay:             cfg.Coordinator.ForgeDelay.Duration,
 				ForgeNoTxsDelay:        cfg.Coordinator.ForgeNoTxsDelay.Duration,
 				SyncRetryInterval:      cfg.Coordinator.SyncRetryInterval.Duration,
+				PurgeByExtDelInterval:  cfg.Coordinator.PurgeByExtDelInterval.Duration,
 				EthClientAttempts:      cfg.Coordinator.EthClient.Attempts,
 				EthClientAttemptsDelay: cfg.Coordinator.EthClient.AttemptsDelay.Duration,
 				EthNoReuseNonce:        cfg.Coordinator.EthClient.NoReuseNonce,

@@ -627,7 +627,9 @@ CREATE TABLE tx_pool (
     rq_amount BYTEA,
     rq_fee SMALLINT,
     rq_nonce BIGINT,
-    tx_type VARCHAR(40) NOT NULL
+    tx_type VARCHAR(40) NOT NULL,
+    client_ip VARCHAR,
+    external_delete BOOLEAN NOT NULL DEFAULT false
 );
 
 -- +migrate StatementBegin

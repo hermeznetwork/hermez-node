@@ -85,6 +85,10 @@ type Config struct {
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval time.Duration
+	// PurgeByExtDelInterval is the waiting interval between calls
+	// to the PurgeByExternalDelete function of the l2db which deletes
+	// pending txs externally marked by the column `external_delete`
+	PurgeByExtDelInterval time.Duration
 	// EthClientAttemptsDelay is delay between attempts do do an eth client
 	// RPC call
 	EthClientAttemptsDelay time.Duration
@@ -153,6 +157,15 @@ type Coordinator struct {
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 
+	// mutexL2DBUpdateDelete protects updates to the L2DB so that
+	// these two processes always happen exclusively:
+	// - Pipeline taking pending txs, running through the TxProcessor and
+	//   marking selected txs as forging
+	// - Coordinator deleting pending txs that have been marked with
+	//   `external_delete`.
+	// Without this mutex, the coordinator could delete a pending txs that
+	// has just been selected by the TxProcessor in the pipeline.
+	mutexL2DBUpdateDelete sync.Mutex
 	pipeline              *Pipeline
 	lastNonFailedBatchNum common.BatchNum
 
@@ -248,7 +261,8 @@ func (c *Coordinator) BatchBuilder() *batchbuilder.BatchBuilder {
 func (c *Coordinator) newPipeline(ctx context.Context) (*Pipeline, error) {
 	c.pipelineNum++
 	return NewPipeline(ctx, c.cfg, c.pipelineNum, c.historyDB, c.l2DB, c.txSelector,
-		c.batchBuilder, c.purger, c, c.txManager, c.provers, &c.consts)
+		c.batchBuilder, &c.mutexL2DBUpdateDelete, c.purger, c, c.txManager,
+		c.provers, &c.consts)
 }
 
 // MsgSyncBlock indicates an update to the Synchronizer stats
@@ -524,6 +538,24 @@ func (c *Coordinator) Start() {
 					continue
 				}
 				waitCh = time.After(longWaitDuration)
+			}
+		}
+	}()
+
+	c.wg.Add(1)
+	go func() {
+		for {
+			select {
+			case <-c.ctx.Done():
+				log.Info("Coordinator L2DB.PurgeByExternalDelete loop done")
+				c.wg.Done()
+				return
+			case <-time.After(c.cfg.PurgeByExtDelInterval):
+				c.mutexL2DBUpdateDelete.Lock()
+				if err := c.l2DB.PurgeByExternalDelete(); err != nil {
+					log.Errorw("L2DB.PurgeByExternalDelete", "err", err)
+				}
+				c.mutexL2DBUpdateDelete.Unlock()
 			}
 		}
 	}()

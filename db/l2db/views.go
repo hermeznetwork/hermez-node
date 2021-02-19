@@ -34,6 +34,7 @@ type PoolL2TxWrite struct {
 	RqFee       *common.FeeSelector    `meddler:"rq_fee"`
 	RqNonce     *common.Nonce          `meddler:"rq_nonce"`
 	Type        common.TxType          `meddler:"tx_type"`
+	ClientIP    string                 `meddler:"client_ip"`
 }
 
 // PoolTxAPI represents a L2 Tx pool with extra metadata used by the API

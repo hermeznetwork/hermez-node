@@ -91,6 +91,10 @@ type Coordinator struct {
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval Duration `validate:"required"`
+	// PurgeByExtDelInterval is the waiting interval between calls
+	// to the PurgeByExternalDelete function of the l2db which deletes
+	// pending txs externally marked by the column `external_delete`
+	PurgeByExtDelInterval Duration `validate:"required"`
 	// L2DB is the DB that holds the pool of L2Txs
 	L2DB struct {
 		// SafetyPeriod is the number of batches after which
