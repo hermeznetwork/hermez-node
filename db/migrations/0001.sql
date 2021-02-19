@@ -100,6 +100,15 @@ CREATE TABLE account (
     eth_addr BYTEA NOT NULL
 );
 
+CREATE TABLE account_update (
+    item_id SERIAL,
+    eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
+    batch_num BIGINT NOT NULL REFERENCES batch (batch_num) ON DELETE CASCADE,
+    idx BIGINT NOT NULL REFERENCES account (idx) ON DELETE CASCADE,
+    nonce BIGINT NOT NULL,
+    balance BYTEA NOT NULL
+);
+
 CREATE TABLE exit_tree (
     item_id SERIAL PRIMARY KEY,
     batch_num BIGINT REFERENCES batch (batch_num) ON DELETE CASCADE,
@@ -674,6 +683,7 @@ DROP TABLE token_exchange;
 DROP TABLE wdelayer_vars;
 DROP TABLE tx;
 DROP TABLE exit_tree;
+DROP TABLE account_update;
 DROP TABLE account;
 DROP TABLE token;
 DROP TABLE bid;

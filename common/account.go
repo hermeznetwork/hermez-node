@@ -263,3 +263,13 @@ type IdxNonce struct {
 	Idx   Idx   `db:"idx"`
 	Nonce Nonce `db:"nonce"`
 }
+
+// AccountUpdate represents an account balance and/or nonce update after a
+// processed batch
+type AccountUpdate struct {
+	EthBlockNum int64    `meddler:"eth_block_num"`
+	BatchNum    BatchNum `meddler:"batch_num"`
+	Idx         Idx      `meddler:"idx"`
+	Nonce       Nonce    `meddler:"nonce"`
+	Balance     *big.Int `meddler:"balance,bigint"`
+}

@@ -61,7 +61,7 @@ func (hdb *HistoryDB) addBlocks(d meddler.DB, blocks []common.Block) error {
 			timestamp,
 			hash
 		) VALUES %s;`,
-		blocks[:],
+		blocks,
 	))
 }
 
@@ -273,7 +273,7 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO bid (slot_num, bid_value, eth_block_num, bidder_addr) VALUES %s;",
-		bids[:],
+		bids,
 	))
 }
 
@@ -324,7 +324,7 @@ func (hdb *HistoryDB) addCoordinators(d meddler.DB, coordinators []common.Coordi
 	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO coordinator (bidder_addr, forger_addr, eth_block_num, url) VALUES %s;",
-		coordinators[:],
+		coordinators,
 	))
 }
 
@@ -340,7 +340,7 @@ func (hdb *HistoryDB) addExitTree(d meddler.DB, exitTree []common.ExitInfo) erro
 		d,
 		"INSERT INTO exit_tree (batch_num, account_idx, merkle_proof, balance, "+
 			"instant_withdrawn, delayed_withdraw_request, delayed_withdrawn) VALUES %s;",
-		exitTree[:],
+		exitTree,
 	))
 }
 
@@ -443,7 +443,7 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 			symbol,
 			decimals
 		) VALUES %s;`,
-		tokens[:],
+		tokens,
 	))
 }
 
@@ -514,7 +514,7 @@ func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error
 			bjj,
 			eth_addr
 		) VALUES %s;`,
-		accounts[:],
+		accounts,
 	))
 }
 
@@ -526,6 +526,37 @@ func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 		"SELECT idx, token_id, batch_num, bjj, eth_addr FROM account ORDER BY idx;",
 	)
 	return db.SlicePtrsToSlice(accs).([]common.Account), tracerr.Wrap(err)
+}
+
+// AddAccountUpdates inserts accUpdates into the DB
+func (hdb *HistoryDB) AddAccountUpdates(accUpdates []common.AccountUpdate) error {
+	return tracerr.Wrap(hdb.addAccountUpdates(hdb.db, accUpdates))
+}
+func (hdb *HistoryDB) addAccountUpdates(d meddler.DB, accUpdates []common.AccountUpdate) error {
+	if len(accUpdates) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
+		d,
+		`INSERT INTO account_update (
+			eth_block_num,
+			batch_num,
+			idx,
+			nonce,
+			balance
+		) VALUES %s;`,
+		accUpdates,
+	))
+}
+
+// GetAllAccountUpdates returns all the AccountUpdate from the DB
+func (hdb *HistoryDB) GetAllAccountUpdates() ([]common.AccountUpdate, error) {
+	var accUpdates []*common.AccountUpdate
+	err := meddler.QueryAll(
+		hdb.db, &accUpdates,
+		"SELECT eth_block_num, batch_num, idx, nonce, balance FROM account_update ORDER BY idx;",
+	)
+	return db.SlicePtrsToSlice(accUpdates).([]common.AccountUpdate), tracerr.Wrap(err)
 }
 
 // AddL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
@@ -646,7 +677,7 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			fee,
 			nonce
 		) VALUES %s;`,
-		txs[:],
+		txs,
 	))
 }
 
@@ -781,7 +812,7 @@ func (hdb *HistoryDB) addBucketUpdates(d meddler.DB, bucketUpdates []common.Buck
 		 	block_stamp,
 		 	withdrawals
 		) VALUES %s;`,
-		bucketUpdates[:],
+		bucketUpdates,
 	))
 }
 
@@ -813,7 +844,7 @@ func (hdb *HistoryDB) addTokenExchanges(d meddler.DB, tokenExchanges []common.To
     			eth_addr,
     			value_usd
 		) VALUES %s;`,
-		tokenExchanges[:],
+		tokenExchanges,
 	))
 }
 
@@ -841,7 +872,7 @@ func (hdb *HistoryDB) addEscapeHatchWithdrawals(d meddler.DB,
 			token_addr,
 			amount
 		) VALUES %s;`,
-		escapeHatchWithdrawals[:],
+		escapeHatchWithdrawals,
 	))
 }
 
@@ -1015,6 +1046,11 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 
 		// Add accounts
 		if err := hdb.addAccounts(txn, batch.CreatedAccounts); err != nil {
+			return tracerr.Wrap(err)
+		}
+
+		// Add accountBalances if it exists
+		if err := hdb.addAccountUpdates(txn, batch.UpdatedAccounts); err != nil {
 			return tracerr.Wrap(err)
 		}
 

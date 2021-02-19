@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"sort"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -1005,4 +1006,104 @@ func TestExitOf0Amount(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[7].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+}
+
+func TestUpdatedAccounts(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer assert.NoError(t, os.RemoveAll(dir))
+
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 32})
+	assert.NoError(t, err)
+
+	set := `
+Type: Blockchain
+AddToken(1)
+CreateAccountCoordinator(0) Coord // 256
+CreateAccountCoordinator(1) Coord // 257
+> batch // 1
+CreateAccountDeposit(0) A: 50 // 258
+CreateAccountDeposit(0) B: 60 // 259
+CreateAccountDeposit(1) A: 70 // 260
+CreateAccountDeposit(1) B: 80 // 261
+> batchL1 // 2
+> batchL1 // 3
+Transfer(0) A-B: 5 (126)
+> batch // 4
+Exit(1) B: 5 (126)
+> batch // 5
+> block
+	`
+
+	chainID := uint16(0)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(set)
+	require.NoError(t, err)
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		CoordUser:     "Coord",
+	}
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	require.NoError(t, err)
+	tc.FillBlocksL1UserTxsBatchNum(blocks)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	require.NoError(t, err)
+
+	require.Equal(t, 5, len(blocks[0].Rollup.Batches))
+
+	config := Config{
+		NLevels:  32,
+		MaxFeeTx: 64,
+		MaxTx:    512,
+		MaxL1Tx:  16,
+		ChainID:  chainID,
+	}
+	tp := NewTxProcessor(sdb, config)
+
+	sortedKeys := func(m map[common.Idx]*common.Account) []int {
+		keys := make([]int, 0)
+		for k := range m {
+			keys = append(keys, int(k))
+		}
+		sort.Ints(keys)
+		return keys
+	}
+
+	for _, batch := range blocks[0].Rollup.Batches {
+		l2Txs := common.L2TxsToPoolL2Txs(batch.L2Txs)
+		ptOut, err := tp.ProcessTxs(batch.Batch.FeeIdxsCoordinator, batch.L1UserTxs,
+			batch.L1CoordinatorTxs, l2Txs)
+		require.NoError(t, err)
+		switch batch.Batch.BatchNum {
+		case 1:
+			assert.Equal(t, 2, len(ptOut.UpdatedAccounts))
+			assert.Equal(t, []int{256, 257}, sortedKeys(ptOut.UpdatedAccounts))
+		case 2:
+			assert.Equal(t, 0, len(ptOut.UpdatedAccounts))
+			assert.Equal(t, []int{}, sortedKeys(ptOut.UpdatedAccounts))
+		case 3:
+			assert.Equal(t, 4, len(ptOut.UpdatedAccounts))
+			assert.Equal(t, []int{258, 259, 260, 261}, sortedKeys(ptOut.UpdatedAccounts))
+		case 4:
+			assert.Equal(t, 2+1, len(ptOut.UpdatedAccounts))
+			assert.Equal(t, []int{256, 258, 259}, sortedKeys(ptOut.UpdatedAccounts))
+		case 5:
+			assert.Equal(t, 1+1, len(ptOut.UpdatedAccounts))
+			assert.Equal(t, []int{257, 261}, sortedKeys(ptOut.UpdatedAccounts))
+		}
+		for idx, updAcc := range ptOut.UpdatedAccounts {
+			acc, err := sdb.GetAccount(idx)
+			require.NoError(t, err)
+			// If acc.Balance is 0, set it to 0 with big.NewInt so
+			// that the comparison succeeds.  Without this, the
+			// comparison will not succeed because acc.Balance is
+			// set from a slice, and thus the internal big.Int
+			// buffer is not nil (big.Int.abs)
+			if acc.Balance.BitLen() == 0 {
+				acc.Balance = big.NewInt(0)
+			}
+			assert.Equal(t, acc, updAcc)
+		}
+	}
 }

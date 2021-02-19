@@ -377,6 +377,22 @@ func TestAccounts(t *testing.T) {
 		accs[i].Balance = nil
 		assert.Equal(t, accs[i], acc)
 	}
+	// Test AccountBalances
+	accUpdates := make([]common.AccountUpdate, len(accs))
+	for i, acc := range accs {
+		accUpdates[i] = common.AccountUpdate{
+			EthBlockNum: batches[acc.BatchNum-1].EthBlockNum,
+			BatchNum:    acc.BatchNum,
+			Idx:         acc.Idx,
+			Nonce:       common.Nonce(i),
+			Balance:     big.NewInt(int64(i)),
+		}
+	}
+	err = historyDB.AddAccountUpdates(accUpdates)
+	require.NoError(t, err)
+	fetchedAccBalances, err := historyDB.GetAllAccountUpdates()
+	require.NoError(t, err)
+	assert.Equal(t, accUpdates, fetchedAccBalances)
 }
 
 func TestTxs(t *testing.T) {
@@ -1195,7 +1211,8 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
 
 	// Transfers
-	for x := 0; x < 6000; x++ {
+	const numBlocks int = 30
+	for x := 0; x < numBlocks; x++ {
 		set = append(set, til.Instruction{
 			Typ:           common.TxTypeTransfer,
 			TokenID:       common.TokenID(0),
@@ -1219,19 +1236,20 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
 	require.NoError(t, err)
 
-	const numBatches int = 6002
-	const numTx int = 6003
-	const blockNum = 6005 - 1
+	const numBatches int = 2 + numBlocks
+	const blockNum = 4 + numBlocks
 
 	// Sanity check
 	require.Equal(t, blockNum, len(blocks))
 
 	// Adding one batch per block
 	// batch frequency can be chosen
-	const frequency int = 15
+	const blockTime time.Duration = 3600 * time.Second
+	now := time.Now()
+	require.NoError(t, err)
 
 	for i := range blocks {
-		blocks[i].Block.Timestamp = time.Now().Add(-time.Second * time.Duration(frequency*(len(blocks)-i)))
+		blocks[i].Block.Timestamp = now.Add(-time.Duration(len(blocks)-1-i) * blockTime)
 		err = historyDB.AddBlockSCData(&blocks[i])
 		assert.NoError(t, err)
 	}
@@ -1239,16 +1257,10 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 	res, err := historyDBWithACC.GetMetricsAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
-	assert.Equal(t, math.Trunc((float64(numTx)/float64(numBatches-1))/0.001)*0.001, math.Trunc(res.TransactionsPerBatch/0.001)*0.001)
+	assert.InEpsilon(t, 1.0, res.TransactionsPerBatch, 0.1)
 
-	// Frequency is not exactly the desired one, some decimals may appear
-	assert.GreaterOrEqual(t, res.BatchFrequency, float64(frequency))
-	assert.Less(t, res.BatchFrequency, float64(frequency+1))
-	// Truncate frecuency into an int to do an exact check
-	assert.Equal(t, frequency, int(res.BatchFrequency))
-	// This may also be different in some decimals
-	// Truncate it to the third decimal to compare
-	assert.Equal(t, math.Trunc((float64(numTx)/float64(frequency*blockNum-frequency))/0.001)*0.001, math.Trunc(res.TransactionsPerSecond/0.001)*0.001)
+	assert.InEpsilon(t, res.BatchFrequency, float64(blockTime/time.Second), 0.1)
+	assert.InEpsilon(t, 1.0/float64(blockTime/time.Second), res.TransactionsPerSecond, 0.1)
 	assert.Equal(t, int64(3), res.TotalAccounts)
 	assert.Equal(t, int64(3), res.TotalBJJs)
 	// Til does not set fees

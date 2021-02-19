@@ -77,6 +77,7 @@ type BatchData struct {
 	L1CoordinatorTxs []L1Tx
 	L2Txs            []L2Tx
 	CreatedAccounts  []Account
+	UpdatedAccounts  []AccountUpdate
 	ExitTree         []ExitInfo
 	Batch            Batch
 }
