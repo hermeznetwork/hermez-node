@@ -27,6 +27,9 @@ type TxProcessor struct {
 	// AccumulatedFees contains the accumulated fees for each token (Coord
 	// Idx) in the processed batch
 	AccumulatedFees map[common.Idx]*big.Int
+	// updatedAccounts stores the last version of the account when it has
+	// been created/updated by any of the processed transactions.
+	updatedAccounts map[common.Idx]*common.Account
 	config          Config
 }
 
@@ -55,6 +58,9 @@ type ProcessTxOutput struct {
 	CreatedAccounts    []common.Account
 	CoordinatorIdxsMap map[common.TokenID]common.Idx
 	CollectedFees      map[common.TokenID]*big.Int
+	// UpdatedAccounts returns the current state of each account
+	// created/updated by any of the processed transactions.
+	UpdatedAccounts map[common.Idx]*common.Account
 }
 
 func newErrorNotEnoughBalance(tx common.Tx) error {
@@ -125,6 +131,10 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	}
 	if len(l1usertxs)+len(l1coordinatortxs) > int(tp.config.MaxL1Tx) {
 		return nil, tracerr.Wrap(fmt.Errorf("L1UserTx + L1CoordinatorTx (%d) can not be bigger than MaxL1Tx (%d)", len(l1usertxs)+len(l1coordinatortxs), tp.config.MaxTx))
+	}
+
+	if tp.s.Type() == statedb.TypeSynchronizer {
+		tp.updatedAccounts = make(map[common.Idx]*common.Account)
 	}
 
 	exits := make([]processedExit, nTx)
@@ -382,7 +392,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			tp.zki.EthAddr3[iFee] = common.EthAddrToBigInt(accCoord.EthAddr)
 		}
 		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
-		pFee, err := tp.s.UpdateAccount(idx, accCoord)
+		pFee, err := tp.updateAccount(idx, accCoord)
 		if err != nil {
 			log.Error(err)
 			return nil, tracerr.Wrap(err)
@@ -439,7 +449,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			}
 		}
 
-		// retuTypeexitInfos, createdAccounts and collectedFees, so Synchronizer will
+		// retun exitInfos, createdAccounts and collectedFees, so Synchronizer will
 		// be able to store it into HistoryDB for the concrete BatchNum
 		return &ProcessTxOutput{
 			ZKInputs:           nil,
@@ -447,6 +457,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			CreatedAccounts:    createdAccounts,
 			CoordinatorIdxsMap: coordIdxsMap,
 			CollectedFees:      collectedFees,
+			UpdatedAccounts:    tp.updatedAccounts,
 		}, nil
 	}
 
@@ -741,7 +752,7 @@ func (tp *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 		EthAddr: tx.FromEthAddr,
 	}
 
-	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx()+1), account)
+	p, err := tp.createAccount(common.Idx(tp.s.CurrentIdx()+1), account)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -776,6 +787,28 @@ func (tp *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 	return tp.s.SetCurrentIdx(tp.s.CurrentIdx() + 1)
 }
 
+// createAccount is a wrapper over the StateDB.CreateAccount method that also
+// stores the created account in the updatedAccounts map in case the StateDB is
+// of TypeSynchronizer
+func (tp *TxProcessor) createAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+	if tp.s.Type() == statedb.TypeSynchronizer {
+		account.Idx = idx
+		tp.updatedAccounts[idx] = account
+	}
+	return tp.s.CreateAccount(idx, account)
+}
+
+// updateAccount is a wrapper over the StateDB.UpdateAccount method that also
+// stores the updated account in the updatedAccounts map in case the StateDB is
+// of TypeSynchronizer
+func (tp *TxProcessor) updateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+	if tp.s.Type() == statedb.TypeSynchronizer {
+		account.Idx = idx
+		tp.updatedAccounts[idx] = account
+	}
+	return tp.s.UpdateAccount(idx, account)
+}
+
 // applyDeposit updates the balance in the account of the depositer, if
 // andTransfer parameter is set to true, the method will also apply the
 // Transfer of the L1Tx/DepositTransfer
@@ -806,7 +839,7 @@ func (tp *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) error {
 	}
 
 	// update sender account in localStateDB
-	p, err := tp.s.UpdateAccount(tx.FromIdx, accSender)
+	p, err := tp.updateAccount(tx.FromIdx, accSender)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -843,7 +876,7 @@ func (tp *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) error {
 		accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
 
 		// update receiver account in localStateDB
-		p, err := tp.s.UpdateAccount(tx.ToIdx, accReceiver)
+		p, err := tp.updateAccount(tx.ToIdx, accReceiver)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -926,7 +959,7 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 	}
 
 	// update sender account in localStateDB
-	pSender, err := tp.s.UpdateAccount(tx.FromIdx, accSender)
+	pSender, err := tp.updateAccount(tx.FromIdx, accSender)
 	if err != nil {
 		log.Error(err)
 		return tracerr.Wrap(err)
@@ -965,7 +998,7 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.Amount)
 
 	// update receiver account in localStateDB
-	pReceiver, err := tp.s.UpdateAccount(auxToIdx, accReceiver)
+	pReceiver, err := tp.updateAccount(auxToIdx, accReceiver)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -1008,7 +1041,7 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 	}
 
 	// create Account of the Sender
-	p, err := tp.s.CreateAccount(common.Idx(tp.s.CurrentIdx()+1), accSender)
+	p, err := tp.createAccount(common.Idx(tp.s.CurrentIdx()+1), accSender)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -1056,7 +1089,7 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 	accReceiver.Balance = new(big.Int).Add(accReceiver.Balance, tx.EffectiveAmount)
 
 	// update receiver account in localStateDB
-	p, err = tp.s.UpdateAccount(tx.ToIdx, accReceiver)
+	p, err = tp.updateAccount(tx.ToIdx, accReceiver)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -1130,7 +1163,7 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 	}
 
-	p, err := tp.s.UpdateAccount(tx.FromIdx, acc)
+	p, err := tp.updateAccount(tx.FromIdx, acc)
 	if err != nil {
 		return nil, false, tracerr.Wrap(err)
 	}

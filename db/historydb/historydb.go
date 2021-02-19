@@ -528,6 +528,37 @@ func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 	return db.SlicePtrsToSlice(accs).([]common.Account), tracerr.Wrap(err)
 }
 
+// AddAccountUpdates inserts accUpdates into the DB
+func (hdb *HistoryDB) AddAccountUpdates(accUpdates []common.AccountUpdate) error {
+	return tracerr.Wrap(hdb.addAccountUpdates(hdb.db, accUpdates))
+}
+func (hdb *HistoryDB) addAccountUpdates(d meddler.DB, accUpdates []common.AccountUpdate) error {
+	if len(accUpdates) == 0 {
+		return nil
+	}
+	return tracerr.Wrap(db.BulkInsert(
+		d,
+		`INSERT INTO account_update (
+			eth_block_num,
+			batch_num,
+			idx,
+			nonce,
+			balance
+		) VALUES %s;`,
+		accUpdates,
+	))
+}
+
+// GetAllAccountUpdates returns all the AccountUpdate from the DB
+func (hdb *HistoryDB) GetAllAccountUpdates() ([]common.AccountUpdate, error) {
+	var accUpdates []*common.AccountUpdate
+	err := meddler.QueryAll(
+		hdb.db, &accUpdates,
+		"SELECT eth_block_num, batch_num, idx, nonce, balance FROM account_update ORDER BY idx;",
+	)
+	return db.SlicePtrsToSlice(accUpdates).([]common.AccountUpdate), tracerr.Wrap(err)
+}
+
 // AddL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
@@ -1015,6 +1046,11 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 
 		// Add accounts
 		if err := hdb.addAccounts(txn, batch.CreatedAccounts); err != nil {
+			return tracerr.Wrap(err)
+		}
+
+		// Add accountBalances if it exists
+		if err := hdb.addAccountUpdates(txn, batch.UpdatedAccounts); err != nil {
 			return tracerr.Wrap(err)
 		}
 

@@ -377,6 +377,22 @@ func TestAccounts(t *testing.T) {
 		accs[i].Balance = nil
 		assert.Equal(t, accs[i], acc)
 	}
+	// Test AccountBalances
+	accUpdates := make([]common.AccountUpdate, len(accs))
+	for i, acc := range accs {
+		accUpdates[i] = common.AccountUpdate{
+			EthBlockNum: batches[acc.BatchNum-1].EthBlockNum,
+			BatchNum:    acc.BatchNum,
+			Idx:         acc.Idx,
+			Nonce:       common.Nonce(i),
+			Balance:     big.NewInt(int64(i)),
+		}
+	}
+	err = historyDB.AddAccountUpdates(accUpdates)
+	require.NoError(t, err)
+	fetchedAccBalances, err := historyDB.GetAllAccountUpdates()
+	require.NoError(t, err)
+	assert.Equal(t, accUpdates, fetchedAccBalances)
 }
 
 func TestTxs(t *testing.T) {

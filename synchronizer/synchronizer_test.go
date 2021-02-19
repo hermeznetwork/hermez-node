@@ -171,6 +171,8 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block, syncBloc
 			*exit = syncBatch.ExitTree[j]
 		}
 		assert.Equal(t, batch.Batch, syncBatch.Batch)
+		// Ignore updated accounts
+		syncBatch.UpdatedAccounts = nil
 		assert.Equal(t, batch, syncBatch)
 		assert.Equal(t, &batch.Batch, dbBatch) //nolint:gosec
 
@@ -344,7 +346,8 @@ func TestSyncGeneral(t *testing.T) {
 
 	// Create Synchronizer
 	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
-		StatsRefreshPeriod: 0 * time.Second,
+		StatsRefreshPeriod:  0 * time.Second,
+		StoreAccountUpdates: true,
 	})
 	require.NoError(t, err)
 
@@ -735,7 +738,8 @@ func TestSyncForgerCommitment(t *testing.T) {
 
 	// Create Synchronizer
 	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
-		StatsRefreshPeriod: 0 * time.Second,
+		StatsRefreshPeriod:  0 * time.Second,
+		StoreAccountUpdates: true,
 	})
 	require.NoError(t, err)
 
@@ -835,7 +839,8 @@ func TestSyncForgerCommitment(t *testing.T) {
 		syncCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
 
 		s2, err := NewSynchronizer(client, historyDB, stateDB, Config{
-			StatsRefreshPeriod: 0 * time.Second,
+			StatsRefreshPeriod:  0 * time.Second,
+			StoreAccountUpdates: true,
 		})
 		require.NoError(t, err)
 		stats = s2.Stats()

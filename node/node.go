@@ -183,8 +183,9 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB, synchronizer.Config{
-		StatsRefreshPeriod: cfg.Synchronizer.StatsRefreshPeriod.Duration,
-		ChainID:            chainIDU16,
+		StatsRefreshPeriod:  cfg.Synchronizer.StatsRefreshPeriod.Duration,
+		StoreAccountUpdates: cfg.Synchronizer.StoreAccountUpdates,
+		ChainID:             chainIDU16,
 	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
