@@ -911,3 +911,98 @@ func TestTwoExits(t *testing.T) {
 
 	assert.Equal(t, ptOuts[3].ExitInfos[0].MerkleProof, ptOuts2[3].ExitInfos[0].MerkleProof)
 }
+
+func TestExitOf0Amount(t *testing.T) {
+	// Test to check that when doing an Exit with amount 0 the Exit Root
+	// does not change (as there is no new Exit Leaf created)
+
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer assert.NoError(t, os.RemoveAll(dir))
+
+	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+		Type: statedb.TypeBatchBuilder, NLevels: 32})
+	assert.NoError(t, err)
+
+	chainID := uint16(1)
+
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+
+	set := `
+		Type: Blockchain
+
+		CreateAccountDeposit(0) A: 100
+		CreateAccountDeposit(0) B: 100
+
+		> batchL1 // batch1: freeze L1User{2}
+		> batchL1 // batch2: forge L1User{2}
+
+		ForceExit(0) A: 10
+		ForceExit(0) B: 0
+
+		> batchL1 // batch3: freeze L1User{2}
+		> batchL1 // batch4: forge L1User{2}
+
+		ForceExit(0) A: 10
+
+		> batchL1 // batch5: freeze L1User{1}
+		> batchL1 // batch6: forge L1User{1}
+
+		ForceExit(0) A: 0
+		> batchL1 // batch7: freeze L1User{1}
+		> batchL1 // batch8: forge L1User{1}
+		> block
+	`
+	blocks, err := tc.GenerateBlocks(set)
+	require.NoError(t, err)
+	err = tc.FillBlocksExtra(blocks, &til.ConfigExtra{})
+	require.NoError(t, err)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	require.NoError(t, err)
+
+	// Sanity check
+	require.Equal(t, 2, len(blocks[0].Rollup.Batches[1].L1UserTxs))
+	require.Equal(t, 2, len(blocks[0].Rollup.Batches[3].L1UserTxs))
+	require.Equal(t, big.NewInt(10), blocks[0].Rollup.Batches[3].L1UserTxs[0].Amount)
+	require.Equal(t, big.NewInt(0), blocks[0].Rollup.Batches[3].L1UserTxs[1].Amount)
+
+	config := Config{
+		NLevels:  32,
+		MaxFeeTx: 64,
+		MaxTx:    512,
+		MaxL1Tx:  16,
+		ChainID:  chainID,
+	}
+	tp := NewTxProcessor(sdb, config)
+
+	// For this test are only processed the batches with transactions:
+	// - Batch2, equivalent to Batches[1]
+	// - Batch4, equivalent to Batches[3]
+	// - Batch6, equivalent to Batches[5]
+	// - Batch8, equivalent to Batches[7]
+
+	// process Batch2:
+	_, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil)
+	require.NoError(t, err)
+	// process Batch4:
+	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "14329759303391468223438874789317921522067594445474390443816827472846339238908", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+	exitRootBatch4 := ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String()
+
+	// process Batch6:
+	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[5].L1UserTxs, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "14329759303391468223438874789317921522067594445474390443816827472846339238908", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+	// Expect that the ExitRoot for the Batch6 will be equal than for the
+	// Batch4, as the Batch4 & Batch6 have the same tx with Exit Amount=10,
+	// and Batch4 has a 2nd tx with Exit Amount=0.
+	assert.Equal(t, exitRootBatch4, ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+
+	// For the Batch8, as there is only 1 exit with Amount=0, the ExitRoot
+	// should be 0.
+	// process Batch8:
+	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[7].L1UserTxs, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+}
