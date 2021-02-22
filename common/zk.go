@@ -1,4 +1,4 @@
-// Package common contains all the common data structures used at the
+// Package common zk.go contains all the common data structures used at the
 // hermez-node, zk.go contains the zkSnark inputs used to generate the proof
 package common
 

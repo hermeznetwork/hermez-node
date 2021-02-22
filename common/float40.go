@@ -1,4 +1,4 @@
-// Package common Float40 provides methods to work with Hermez custom half
+// Package common float40.go provides methods to work with Hermez custom half
 // float precision, 40 bits, codification internally called Float40 has been
 // adopted to encode large integers. This is done in order to save bits when L2
 // transactions are published.

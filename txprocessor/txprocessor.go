@@ -1,3 +1,81 @@
+/*
+Package txprocessor is the module that takes the transactions from the input and
+processes them, updating the Balances and Nonces of the Accounts in the StateDB.
+
+It's a package used by 3 other different packages, and its behaviour will differ
+depending on the Type of the StateDB of the TxProcessor:
+
+- TypeSynchronizer:
+	- The StateDB contains the full State MerkleTree, where the leafs are
+	the accounts
+	- Updates the StateDB and as output returns: ExitInfos, CreatedAccounts,
+	CoordinatorIdxsMap, CollectedFees, UpdatedAccounts
+	- Internally computes the ExitTree
+- TypeTxSelector:
+	- The StateDB contains only the Accounts, which are the equivalent to
+	only the leafs of the State MerkleTree
+	- Updates the Accounts from the StateDB
+- TypeBatchBuilder:
+	- The StateDB contains the full State MerkleTree, where the leafs are
+	the accounts
+	- Updates the StateDB. As output returns: ZKInputs, CoordinatorIdxsMap
+	- Internally computes the ZKInputs
+
+Packages dependency overview:
+	Outputs: + ExitInfos              +                  +                       +
+		 | CreatedAccounts        |                  |                       |
+		 | CoordinatorIdxsMap     |                  |    ZKInputs           |
+		 | CollectedFees          |                  |    CoordinatorIdxsMap |
+		 | UpdatedAccounts        |                  |                       |
+		 +------------------------+----------------+ +-----------------------+
+
+		    +------------+           +----------+             +------------+
+		    |Synchronizer|           |TxSelector|             |BatchBuilder|
+		    +-----+------+           +-----+----+             +-----+------+
+			  |                        |                        |
+			  v                        v                        v
+		     TxProcessor              TxProcessor              TxProcessor
+			  +                        +                        +
+			  |                        |                        |
+		     +----+----+                   v                   +----+----+
+		     |         |                StateDB                |         |
+		     v         v                   +                   v         v
+		  StateDB  ExitTree                |                StateDB  ExitTree
+		     +                        +----+----+              +
+		     |                        |         |              |
+		+----+----+                   v         v         +----+----+
+		|         |                 KVDB  AccountsDB      |         |
+		v         v                                       v         v
+	      KVDB   MerkleTree                                 KVDB   MerkleTree
+
+The structure of the TxProcessor can be understand as:
+	- StateDB: where the Rollup state is stored. It contains the Accounts &
+	MerkleTree.
+	- Config: parameters of the configuration of the circuit
+	- ZKInputs: computed inputs for the circuit, depends on the Config parameters
+	- ExitTree: only in the TypeSynchronizer & TypeBatchBuilder, contains
+	the MerkleTree with the processed Exits of the Batch
+
+The main exposed method of the TxProcessor is `ProcessTxs`, which as general
+lines does:
+	- if type==(Synchronizer || BatchBuilder), creates an ephemeral ExitTree
+	- processes:
+		- L1UserTxs --> for each tx calls ProcessL1Tx()
+		- L1CoordinatorTxs --> for each tx calls ProcessL1Tx()
+		- L2Txs --> for each tx calls ProcessL2Tx()
+			- internally, it computes the Fees
+	- each transaction processment includes:
+		- updating the Account Balances (for sender & receiver, and in
+		case that there is fee, updates the fee receiver account)
+			- which includes updating the State MerkleTree (except
+			for the type==TxSelector, which only updates the
+			Accounts (leafs))
+		- in case of Synchronizer & BatchBuilder, updates the ExitTree
+		for the txs of type Exit (L1 & L2)
+		- in case of BatchBuilder, computes the ZKInputs while processing the txs
+	- if type==Synchronizer, once all the txs are processed, for each Exit
+	it generates the ExitInfo data
+*/
 package txprocessor
 
 import (
@@ -352,6 +430,8 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	}
 
 	if tp.zki != nil {
+		// Fill the empty slots in the ZKInputs remaining after
+		// processing all L1 & L2 txs
 		txCompressedDataEmpty := common.TxCompressedDataEmpty(tp.config.ChainID)
 		last := tp.i - 1
 		if tp.i == 0 {
