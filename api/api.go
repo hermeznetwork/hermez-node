@@ -9,7 +9,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
-	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -34,7 +33,6 @@ type Status struct {
 type API struct {
 	h             *historydb.HistoryDB
 	cg            *configAPI
-	s             *statedb.StateDB
 	l2            *l2db.L2DB
 	status        Status
 	chainID       uint16
@@ -46,7 +44,6 @@ func NewAPI(
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
-	sdb *statedb.StateDB,
 	l2db *l2db.L2DB,
 	config *Config,
 ) (*API, error) {
@@ -66,7 +63,6 @@ func NewAPI(
 			AuctionConstants:  config.AuctionConstants,
 			WDelayerConstants: config.WDelayerConstants,
 		},
-		s:             sdb,
 		l2:            l2db,
 		status:        Status{},
 		chainID:       config.ChainID,

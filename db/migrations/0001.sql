@@ -662,35 +662,35 @@ CREATE TABLE account_creation_auth (
 );
 
 -- +migrate Down
--- drop triggers
-DROP TRIGGER trigger_token_usd_update ON token;
-DROP TRIGGER trigger_set_tx ON tx;
-DROP TRIGGER trigger_forge_l1_txs ON batch;
-DROP TRIGGER trigger_set_pool_tx ON tx_pool;
--- drop functions
-DROP FUNCTION hez_idx;
-DROP FUNCTION set_token_usd_update;
-DROP FUNCTION fee_percentage;
-DROP FUNCTION set_tx;
-DROP FUNCTION forge_l1_user_txs;
-DROP FUNCTION set_pool_tx;
--- drop tables
-DROP TABLE account_creation_auth;
-DROP TABLE tx_pool;
-DROP TABLE auction_vars;
-DROP TABLE rollup_vars;
-DROP TABLE escape_hatch_withdrawal;
-DROP TABLE bucket_update;
-DROP TABLE token_exchange;
-DROP TABLE wdelayer_vars;
-DROP TABLE tx;
-DROP TABLE exit_tree;
-DROP TABLE account_update;
-DROP TABLE account;
-DROP TABLE token;
-DROP TABLE bid;
-DROP TABLE batch;
-DROP TABLE coordinator;
-DROP TABLE block;
--- drop sequences
-DROP SEQUENCE tx_item_id;
+-- triggers
+DROP TRIGGER IF EXISTS trigger_token_usd_update ON token;
+DROP TRIGGER IF EXISTS trigger_set_tx ON tx;
+DROP TRIGGER IF EXISTS trigger_forge_l1_txs ON batch;
+DROP TRIGGER IF EXISTS trigger_set_pool_tx ON tx_pool;
+-- functions
+DROP FUNCTION IF EXISTS hez_idx;
+DROP FUNCTION IF EXISTS set_token_usd_update;
+DROP FUNCTION IF EXISTS fee_percentage;
+DROP FUNCTION IF EXISTS set_tx;
+DROP FUNCTION IF EXISTS forge_l1_user_txs;
+DROP FUNCTION IF EXISTS set_pool_tx;
+-- drop tables IF EXISTS
+DROP TABLE IF EXISTS account_creation_auth;
+DROP TABLE IF EXISTS tx_pool;
+DROP TABLE IF EXISTS auction_vars;
+DROP TABLE IF EXISTS rollup_vars;
+DROP TABLE IF EXISTS escape_hatch_withdrawal;
+DROP TABLE IF EXISTS bucket_update;
+DROP TABLE IF EXISTS token_exchange;
+DROP TABLE IF EXISTS wdelayer_vars;
+DROP TABLE IF EXISTS tx;
+DROP TABLE IF EXISTS exit_tree;
+DROP TABLE IF EXISTS account_update;
+DROP TABLE IF EXISTS account;
+DROP TABLE IF EXISTS token;
+DROP TABLE IF EXISTS bid;
+DROP TABLE IF EXISTS batch;
+DROP TABLE IF EXISTS coordinator;
+DROP TABLE IF EXISTS block;
+-- sequences
+DROP SEQUENCE IF EXISTS tx_item_id;

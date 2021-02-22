@@ -32,7 +32,6 @@ URL = "http://localhost:8545"
 [Synchronizer]
 SyncLoopInterval = "1s"
 StatsRefreshPeriod = "1s"
-StoreAccountUpdates = true
 
 [SmartContracts]
 Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"

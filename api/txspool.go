@@ -170,13 +170,13 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	// Get public key
-	account, err := a.s.LastGetAccount(poolTx.FromIdx)
+	// Validate feeAmount
+	_, err = common.CalcFeeAmount(poolTx.Amount, poolTx.Fee)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	// Validate feeAmount
-	_, err = common.CalcFeeAmount(poolTx.Amount, poolTx.Fee)
+	// Get public key
+	account, err := a.h.GetCommonAccountAPI(poolTx.FromIdx)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
