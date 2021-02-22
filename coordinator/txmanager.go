@@ -231,7 +231,7 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 				"err", err, "gasPrice", auth.GasPrice, "batchNum", batchInfo.BatchNum)
 			auth.GasPrice = addPerc(auth.GasPrice, 10)
 			attempt--
-		} else if err != nil {
+		} else {
 			log.Errorw("TxManager ethClient.RollupForgeBatch",
 				"attempt", attempt, "err", err, "block", t.stats.Eth.LastBlock.Num+1,
 				"batchNum", batchInfo.BatchNum)
