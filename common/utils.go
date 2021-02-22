@@ -62,3 +62,17 @@ func RmEndingZeroes(siblings []*merkletree.Hash) []*merkletree.Hash {
 	}
 	return siblings[:pos]
 }
+
+// TokensToUSD is a helper function to calculate the USD value of a certain
+// amount of tokens considering the normalized token price (which is the price
+// commonly reported by exhanges)
+func TokensToUSD(amount *big.Int, decimals uint64, valueUSD float64) float64 {
+	amountF := new(big.Float).SetInt(amount)
+	// Divide by 10^decimals to normalize the amount
+	baseF := new(big.Float).SetInt(new(big.Int).Exp(
+		big.NewInt(10), big.NewInt(int64(decimals)), nil)) //nolint:gomnd
+	amountF.Mul(amountF, big.NewFloat(valueUSD))
+	amountF.Quo(amountF, baseF)
+	amountUSD, _ := amountF.Float64()
+	return amountUSD
+}

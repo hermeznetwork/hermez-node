@@ -173,6 +173,7 @@ func cmdDiscard(c *cli.Context) error {
 		db,
 		cfg.Coordinator.L2DB.SafetyPeriod,
 		cfg.Coordinator.L2DB.MaxTxs,
+		cfg.Coordinator.L2DB.MinFeeUSD,
 		cfg.Coordinator.L2DB.TTL.Duration,
 		nil,
 	)

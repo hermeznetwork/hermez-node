@@ -21,7 +21,7 @@ func newL2DB(t *testing.T) *l2db.L2DB {
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
 	test.WipeDB(db)
-	return l2db.NewL2DB(db, 10, 100, 24*time.Hour, nil)
+	return l2db.NewL2DB(db, 10, 100, 0.0, 24*time.Hour, nil)
 }
 
 func newStateDB(t *testing.T) *statedb.LocalStateDB {

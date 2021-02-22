@@ -221,7 +221,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	// L2DB
-	l2DB := l2db.NewL2DB(database, 10, 1000, 24*time.Hour, apiConnCon)
+	l2DB := l2db.NewL2DB(database, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 	// Config (smart contract constants)
 	chainID := uint16(0)
@@ -585,7 +585,7 @@ func TestTimeout(t *testing.T) {
 	hdbTO := historydb.NewHistoryDB(databaseTO, apiConnConTO)
 	require.NoError(t, err)
 	// L2DB
-	l2DBTO := l2db.NewL2DB(databaseTO, 10, 1000, 24*time.Hour, apiConnConTO)
+	l2DBTO := l2db.NewL2DB(databaseTO, 10, 1000, 0.0, 24*time.Hour, apiConnConTO)
 
 	// API
 	apiGinTO := gin.Default()

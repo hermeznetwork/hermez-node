@@ -29,7 +29,7 @@ func initTest(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
-	l2DB := l2db.NewL2DB(db, 10, 100, 24*time.Hour, nil)
+	l2DB := l2db.NewL2DB(db, 10, 100, 0.0, 24*time.Hour, nil)
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)

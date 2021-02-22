@@ -2,8 +2,7 @@ package l2db
 
 import (
 	"database/sql"
-	"math"
-	"math/big"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -21,12 +20,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var decimals = uint64(3)
+var tokenValue = 1.0 // The price update gives a value of 1.0 USD to the token
 var l2DB *L2DB
 var l2DBWithACC *L2DB
 var historyDB *historydb.HistoryDB
 var tc *til.Context
 var tokens map[common.TokenID]historydb.TokenWithUSD
-var tokensValue map[common.TokenID]float64
+
 var accs map[common.Idx]common.Account
 
 func TestMain(m *testing.M) {
@@ -36,9 +37,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	l2DB = NewL2DB(db, 10, 1000, 24*time.Hour, nil)
+	l2DB = NewL2DB(db, 10, 1000, 0.0, 24*time.Hour, nil)
 	apiConnCon := dbUtils.NewAPICnnectionController(1, time.Second)
-	l2DBWithACC = NewL2DB(db, 10, 1000, 24*time.Hour, apiConnCon)
+	l2DBWithACC = NewL2DB(db, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB())
 	historyDB = historydb.NewHistoryDB(db, nil)
 	// Run tests
@@ -59,10 +60,10 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 
 			AddToken(1)
 			AddToken(2)
-			CreateAccountDeposit(1) A: 2000
-			CreateAccountDeposit(2) A: 2000
-			CreateAccountDeposit(1) B: 1000
-			CreateAccountDeposit(2) B: 1000
+			CreateAccountDeposit(1) A: 20000
+			CreateAccountDeposit(2) A: 20000
+			CreateAccountDeposit(1) B: 10000
+			CreateAccountDeposit(2) B: 10000
 			> batchL1 
 			> batchL1
 			> block
@@ -83,15 +84,23 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	for i := range blocks {
+		block := &blocks[i]
+		for j := range block.Rollup.AddedTokens {
+			token := &block.Rollup.AddedTokens[j]
+			token.Name = fmt.Sprintf("Token %d", token.TokenID)
+			token.Symbol = fmt.Sprintf("TK%d", token.TokenID)
+			token.Decimals = decimals
+		}
+	}
+
 	tokens = make(map[common.TokenID]historydb.TokenWithUSD)
-	tokensValue = make(map[common.TokenID]float64)
+	// tokensValue = make(map[common.TokenID]float64)
 	accs = make(map[common.Idx]common.Account)
-	value := 5 * 5.389329
 	now := time.Now().UTC()
 	// Add all blocks except for the last one
 	for i := range blocks[:len(blocks)-1] {
-		err = historyDB.AddBlockSCData(&blocks[i])
-		if err != nil {
+		if err := historyDB.AddBlockSCData(&blocks[i]); err != nil {
 			return tracerr.Wrap(err)
 		}
 		for _, batch := range blocks[i].Rollup.Batches {
@@ -107,39 +116,38 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 				Name:        token.Name,
 				Symbol:      token.Symbol,
 				Decimals:    token.Decimals,
+				USD:         &tokenValue,
+				USDUpdate:   &now,
 			}
-			tokensValue[token.TokenID] = value / math.Pow(10, float64(token.Decimals))
-			readToken.USDUpdate = &now
-			readToken.USD = &value
 			tokens[token.TokenID] = readToken
-		}
-		// Set value to the tokens (tokens have no symbol)
-		tokenSymbol := ""
-		err := historyDB.UpdateTokenValue(tokenSymbol, value)
-		if err != nil {
-			return tracerr.Wrap(err)
+			// Set value to the tokens
+			err := historyDB.UpdateTokenValue(readToken.Symbol, *readToken.USD)
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
 		}
 	}
 	return nil
 }
 
 func generatePoolL2Txs() ([]common.PoolL2Tx, error) {
+	// Fee = 126 corresponds to ~10%
 	setPool := `
 			Type: PoolL2
-			PoolTransfer(1) A-B: 6 (4)
-			PoolTransfer(2) A-B: 3 (1)
-			PoolTransfer(1) B-A: 5 (2)
-			PoolTransfer(2) B-A: 10 (3)
-			PoolTransfer(1) A-B: 7 (2)
-			PoolTransfer(2) A-B: 2 (1)
-			PoolTransfer(1) B-A: 8 (2)
-			PoolTransfer(2) B-A: 1 (1)
-			PoolTransfer(1) A-B: 3 (1)
-			PoolTransferToEthAddr(2) B-A: 5 (2)
-			PoolTransferToBJJ(2) B-A: 5 (2)
+			PoolTransfer(1) A-B: 6000 (126)
+			PoolTransfer(2) A-B: 3000 (126)
+			PoolTransfer(1) B-A: 5000 (126)
+			PoolTransfer(2) B-A: 10000 (126)
+			PoolTransfer(1) A-B: 7000 (126)
+			PoolTransfer(2) A-B: 2000 (126)
+			PoolTransfer(1) B-A: 8000 (126)
+			PoolTransfer(2) B-A: 1000 (126)
+			PoolTransfer(1) A-B: 3000 (126)
+			PoolTransferToEthAddr(2) B-A: 5000 (126)
+			PoolTransferToBJJ(2) B-A: 5000 (126)
 
-			PoolExit(1) A: 5 (2)
-			PoolExit(2) B: 3 (1)
+			PoolExit(1) A: 5000 (126)
+			PoolExit(2) B: 3000 (126)
 		`
 	poolL2Txs, err := tc.GeneratePoolL2Txs(setPool)
 	if err != nil {
@@ -154,25 +162,74 @@ func TestAddTxTest(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		fetchedTx, err := l2DB.GetTx(poolL2Txs[i].TxID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assertTx(t, &poolL2Txs[i], fetchedTx)
 		nameZone, offset := fetchedTx.Timestamp.Zone()
 		assert.Equal(t, "UTC", nameZone)
 		assert.Equal(t, 0, offset)
 	}
 }
+
+func TestAddTxAPI(t *testing.T) {
+	err := prepareHistoryDB(historyDB)
+	if err != nil {
+		log.Error("Error prepare historyDB", err)
+	}
+
+	oldMaxTxs := l2DBWithACC.maxTxs
+	// set max number of pending txs that can be kept in the pool to 5
+	l2DBWithACC.maxTxs = 5
+
+	poolL2Txs, err := generatePoolL2Txs()
+	txs := make([]*PoolL2TxWrite, len(poolL2Txs))
+	for i := range poolL2Txs {
+		txs[i] = NewPoolL2TxWriteFromPoolL2Tx(&poolL2Txs[i])
+	}
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(poolL2Txs), 8)
+	for i := range txs[:5] {
+		err := l2DBWithACC.AddTxAPI(txs[i])
+		require.NoError(t, err)
+		fetchedTx, err := l2DB.GetTx(poolL2Txs[i].TxID)
+		require.NoError(t, err)
+		assertTx(t, &poolL2Txs[i], fetchedTx)
+		nameZone, offset := fetchedTx.Timestamp.Zone()
+		assert.Equal(t, "UTC", nameZone)
+		assert.Equal(t, 0, offset)
+	}
+	err = l2DBWithACC.AddTxAPI(txs[5])
+	assert.Equal(t, errPoolFull, tracerr.Unwrap(err))
+	// reset maxTxs to original value
+	l2DBWithACC.maxTxs = oldMaxTxs
+
+	// set minFeeUSD to a high value than the tx feeUSD to test the error
+	// of inserting a tx with lower than min fee
+	oldMinFeeUSD := l2DBWithACC.minFeeUSD
+	tx := txs[5]
+	feeAmount, err := common.CalcFeeAmount(tx.Amount, tx.Fee)
+	require.NoError(t, err)
+	feeAmountUSD := common.TokensToUSD(feeAmount, decimals, tokenValue)
+	// set minFeeUSD higher than the tx fee to trigger the error
+	l2DBWithACC.minFeeUSD = feeAmountUSD + 1
+	err = l2DBWithACC.AddTxAPI(tx)
+	require.Error(t, err)
+	assert.Regexp(t, "tx.feeUSD (.*) < minFeeUSD (.*)", err.Error())
+	// reset minFeeUSD to original value
+	l2DBWithACC.minFeeUSD = oldMinFeeUSD
+}
+
 func TestUpdateTxsInfo(t *testing.T) {
 	err := prepareHistoryDB(historyDB)
 	if err != nil {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
 		require.NoError(t, err)
@@ -186,7 +243,7 @@ func TestUpdateTxsInfo(t *testing.T) {
 
 	for i := range poolL2Txs {
 		fetchedTx, err := l2DB.GetTx(poolL2Txs[i].TxID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "test", fetchedTx.Info)
 	}
 }
@@ -204,9 +261,8 @@ func assertTx(t *testing.T, expected, actual *common.PoolL2Tx) {
 		assert.Less(t, token.USDUpdate.Unix()-3, actual.AbsoluteFeeUpdate.Unix())
 		expected.AbsoluteFeeUpdate = actual.AbsoluteFeeUpdate
 		// Set expected fee
-		f := new(big.Float).SetInt(expected.Amount)
-		amountF, _ := f.Float64()
-		expected.AbsoluteFee = *token.USD * amountF * expected.Fee.Percentage()
+		amountUSD := common.TokensToUSD(expected.Amount, token.Decimals, *token.USD)
+		expected.AbsoluteFee = amountUSD * expected.Fee.Percentage()
 		test.AssertUSD(t, &expected.AbsoluteFee, &actual.AbsoluteFee)
 	}
 	assert.Equal(t, expected, actual)
@@ -231,18 +287,27 @@ func TestGetPending(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var pendingTxs []*common.PoolL2Tx
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		pendingTxs = append(pendingTxs, &poolL2Txs[i])
 	}
 	fetchedTxs, err := l2DB.GetPendingTxs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
 	for i := range fetchedTxs {
 		assertTx(t, pendingTxs[i], &fetchedTxs[i])
+	}
+	// Check AbsoluteFee amount
+	for i := range fetchedTxs {
+		tx := &fetchedTxs[i]
+		feeAmount, err := common.CalcFeeAmount(tx.Amount, tx.Fee)
+		require.NoError(t, err)
+		feeAmountUSD := common.TokensToUSD(feeAmount,
+			tokens[tx.TokenID].Decimals, *tokens[tx.TokenID].USD)
+		assert.InEpsilon(t, feeAmountUSD, tx.AbsoluteFee, 0.01)
 	}
 }
 
@@ -254,13 +319,13 @@ func TestStartForging(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var startForgingTxIDs []common.TxID
 	randomizer := 0
 	// Add txs to DB
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if poolL2Txs[i].State == common.PoolL2TxStatePending && randomizer%2 == 0 {
 			startForgingTxIDs = append(startForgingTxIDs, poolL2Txs[i].TxID)
 		}
@@ -268,11 +333,11 @@ func TestStartForging(t *testing.T) {
 	}
 	// Start forging txs
 	err = l2DB.StartForging(startForgingTxIDs, fakeBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range startForgingTxIDs {
 		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForging, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
 	}
@@ -286,13 +351,13 @@ func TestDoneForging(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var startForgingTxIDs []common.TxID
 	randomizer := 0
 	// Add txs to DB
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if poolL2Txs[i].State == common.PoolL2TxStatePending && randomizer%2 == 0 {
 			startForgingTxIDs = append(startForgingTxIDs, poolL2Txs[i].TxID)
 		}
@@ -300,7 +365,7 @@ func TestDoneForging(t *testing.T) {
 	}
 	// Start forging txs
 	err = l2DB.StartForging(startForgingTxIDs, fakeBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var doneForgingTxIDs []common.TxID
 	randomizer = 0
@@ -312,12 +377,12 @@ func TestDoneForging(t *testing.T) {
 	}
 	// Done forging txs
 	err = l2DB.DoneForging(doneForgingTxIDs, fakeBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range doneForgingTxIDs {
 		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateForged, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
 	}
@@ -331,13 +396,13 @@ func TestInvalidate(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var invalidTxIDs []common.TxID
 	randomizer := 0
 	// Add txs to DB
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if poolL2Txs[i].State != common.PoolL2TxStateInvalid && randomizer%2 == 0 {
 			randomizer++
 			invalidTxIDs = append(invalidTxIDs, poolL2Txs[i].TxID)
@@ -345,11 +410,11 @@ func TestInvalidate(t *testing.T) {
 	}
 	// Invalidate txs
 	err = l2DB.InvalidateTxs(invalidTxIDs, fakeBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range invalidTxIDs {
 		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
 	}
@@ -363,7 +428,7 @@ func TestInvalidateOldNonces(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Update Accounts currentNonce
 	var updateAccounts []common.IdxNonce
 	var currentNonce = common.Nonce(1)
@@ -380,13 +445,13 @@ func TestInvalidateOldNonces(t *testing.T) {
 			invalidTxIDs = append(invalidTxIDs, poolL2Txs[i].TxID)
 		}
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	// sanity check
 	require.Greater(t, len(invalidTxIDs), 0)
 
 	err = l2DB.InvalidateOldNonces(updateAccounts, fakeBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Fetch txs and check that they've been updated correctly
 	for _, id := range invalidTxIDs {
 		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
@@ -408,7 +473,7 @@ func TestReorg(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	reorgedTxIDs := []common.TxID{}
 	nonReorgedTxIDs := []common.TxID{}
@@ -419,7 +484,7 @@ func TestReorg(t *testing.T) {
 	// Add txs to DB
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if poolL2Txs[i].State == common.PoolL2TxStatePending && randomizer%2 == 0 {
 			startForgingTxIDs = append(startForgingTxIDs, poolL2Txs[i].TxID)
 			allTxRandomize = append(allTxRandomize, poolL2Txs[i].TxID)
@@ -431,7 +496,7 @@ func TestReorg(t *testing.T) {
 	}
 	// Start forging txs
 	err = l2DB.StartForging(startForgingTxIDs, lastValidBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var doneForgingTxIDs []common.TxID
 	randomizer = 0
@@ -456,22 +521,22 @@ func TestReorg(t *testing.T) {
 
 	// Invalidate txs BEFORE reorgBatch --> nonReorg
 	err = l2DB.InvalidateTxs(invalidTxIDs, lastValidBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Done forging txs in reorgBatch --> Reorg
 	err = l2DB.DoneForging(doneForgingTxIDs, reorgBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = l2DB.Reorg(lastValidBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, id := range reorgedTxIDs {
 		tx, err := l2DBWithACC.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Nil(t, tx.BatchNum)
 		assert.Equal(t, common.PoolL2TxStatePending, tx.State)
 	}
 	for _, id := range nonReorgedTxIDs {
 		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, lastValidBatch, *fetchedTx.BatchNum)
 	}
 }
@@ -488,7 +553,7 @@ func TestReorg2(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	reorgedTxIDs := []common.TxID{}
 	nonReorgedTxIDs := []common.TxID{}
@@ -499,7 +564,7 @@ func TestReorg2(t *testing.T) {
 	// Add txs to DB
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if poolL2Txs[i].State == common.PoolL2TxStatePending && randomizer%2 == 0 {
 			startForgingTxIDs = append(startForgingTxIDs, poolL2Txs[i].TxID)
 			allTxRandomize = append(allTxRandomize, poolL2Txs[i].TxID)
@@ -511,7 +576,7 @@ func TestReorg2(t *testing.T) {
 	}
 	// Start forging txs
 	err = l2DB.StartForging(startForgingTxIDs, lastValidBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var doneForgingTxIDs []common.TxID
 	randomizer = 0
@@ -533,22 +598,22 @@ func TestReorg2(t *testing.T) {
 	}
 	// Done forging txs BEFORE reorgBatch --> nonReorg
 	err = l2DB.DoneForging(doneForgingTxIDs, lastValidBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Invalidate txs in reorgBatch --> Reorg
 	err = l2DB.InvalidateTxs(invalidTxIDs, reorgBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = l2DB.Reorg(lastValidBatch)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, id := range reorgedTxIDs {
 		tx, err := l2DBWithACC.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Nil(t, tx.BatchNum)
 		assert.Equal(t, common.PoolL2TxStatePending, tx.State)
 	}
 	for _, id := range nonReorgedTxIDs {
 		fetchedTx, err := l2DBWithACC.GetTxAPI(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, lastValidBatch, *fetchedTx.BatchNum)
 	}
 }
@@ -564,7 +629,7 @@ func TestPurge(t *testing.T) {
 	var poolL2Tx []common.PoolL2Tx
 	for i := 0; i < generateTx; i++ {
 		poolL2TxAux, err := generatePoolL2Txs()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		poolL2Tx = append(poolL2Tx, poolL2TxAux...)
 	}
 
@@ -591,7 +656,7 @@ func TestPurge(t *testing.T) {
 			deletedIDs = append(deletedIDs, poolL2Tx[i].TxID)
 		}
 		err := l2DB.AddTxTest(&tx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	// Set batchNum keeped txs
 	for i := range keepedIDs {
@@ -599,17 +664,17 @@ func TestPurge(t *testing.T) {
 			"UPDATE tx_pool SET batch_num = $1 WHERE tx_id = $2;",
 			safeBatchNum, keepedIDs[i],
 		)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	// Start forging txs and set batchNum
 	err = l2DB.StartForging(doneForgingTxIDs, toDeleteBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Done forging txs and set batchNum
 	err = l2DB.DoneForging(doneForgingTxIDs, toDeleteBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Invalidate txs and set batchNum
 	err = l2DB.InvalidateTxs(invalidTxIDs, toDeleteBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Update timestamp of afterTTL txs
 	deleteTimestamp := time.Unix(time.Now().UTC().Unix()-int64(l2DB.ttl.Seconds()+float64(4*time.Second)), 0)
 	for _, id := range afterTTLIDs {
@@ -618,12 +683,12 @@ func TestPurge(t *testing.T) {
 			"UPDATE tx_pool SET timestamp = $1, state = $2 WHERE tx_id = $3;",
 			deleteTimestamp, common.PoolL2TxStatePending, id,
 		)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	// Purge txs
 	err = l2DB.Purge(safeBatchNum)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Check results
 	for _, id := range deletedIDs {
 		_, err := l2DB.GetTx(id)
@@ -631,7 +696,7 @@ func TestPurge(t *testing.T) {
 	}
 	for _, id := range keepedIDs {
 		_, err := l2DB.GetTx(id)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 }
 
@@ -645,10 +710,10 @@ func TestAuth(t *testing.T) {
 	for i := 0; i < len(auths); i++ {
 		// Add to the DB
 		err := l2DB.AddAccountCreationAuth(auths[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		// Fetch from DB
 		auth, err := l2DB.GetAccountCreationAuth(auths[i].EthAddr)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		// Check fetched vs generated
 		assert.Equal(t, auths[i].EthAddr, auth.EthAddr)
 		assert.Equal(t, auths[i].BJJ, auth.BJJ)
@@ -666,7 +731,7 @@ func TestAddGet(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// We will work with only 3 txs
 	require.GreaterOrEqual(t, len(poolL2Txs), 3)
@@ -709,7 +774,7 @@ func TestPurgeByExternalDelete(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	txs, err := generatePoolL2Txs()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// We will work with 8 txs
 	require.GreaterOrEqual(t, len(txs), 8)

@@ -105,6 +105,10 @@ type Coordinator struct {
 		// reached, inserts to the pool will be denied until some of
 		// the pending txs are forged.
 		MaxTxs uint32 `validate:"required"`
+		// MinFeeUSD is the minimum fee in USD that a tx must pay in
+		// order to be accepted into the pool.  Txs with lower than
+		// minimum fee will be rejected at the API level.
+		MinFeeUSD float64
 		// TTL is the Time To Live for L2Txs in the pool.  Once MaxTxs
 		// L2Txs is reached, L2Txs older than TTL will be deleted.
 		TTL Duration `validate:"required"`
