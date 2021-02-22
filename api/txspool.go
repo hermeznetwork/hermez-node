@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 
@@ -179,6 +180,11 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	_, err = common.CalcFeeAmount(poolTx.Amount, poolTx.Fee)
 	if err != nil {
 		return tracerr.Wrap(err)
+	}
+	// Validate TokenID
+	if poolTx.TokenID != account.TokenID {
+		return tracerr.Wrap(fmt.Errorf("tx.TokenID (%v) != account.TokenID (%v)",
+			poolTx.TokenID, account.TokenID))
 	}
 	// Check signature
 	if !poolTx.VerifySignature(a.chainID, account.BJJ) {

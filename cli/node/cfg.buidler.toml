@@ -67,6 +67,7 @@ BJJ = "0x1b176232f78ba0d388ecc5f4896eca2d3b3d4f272092469f559247297f5c0c13"
 [Coordinator.L2DB]
 SafetyPeriod = 10
 MaxTxs       = 512
+MinFeeUSD    = 0.0
 TTL          = "24h"
 PurgeBatchDelay = 10
 InvalidateBatchDelay = 20

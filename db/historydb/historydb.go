@@ -447,7 +447,8 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 	))
 }
 
-// UpdateTokenValue updates the USD value of a token
+// UpdateTokenValue updates the USD value of a token.  Value is the price in
+// USD of a normalized token (1 token = 10^decimals units)
 func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error {
 	// Sanitize symbol
 	tokenSymbol = strings.ToValidUTF8(tokenSymbol, " ")

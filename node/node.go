@@ -205,6 +205,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			db,
 			cfg.Coordinator.L2DB.SafetyPeriod,
 			cfg.Coordinator.L2DB.MaxTxs,
+			cfg.Coordinator.L2DB.MinFeeUSD,
 			cfg.Coordinator.L2DB.TTL.Duration,
 			apiConnCon,
 		)

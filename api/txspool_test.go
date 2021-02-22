@@ -10,6 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // testPoolTxReceive is a struct to be used to assert the response
@@ -170,9 +171,9 @@ func TestPoolTxs(t *testing.T) {
 	fetchedTxID := common.TxID{}
 	for _, tx := range tc.poolTxsToSend {
 		jsonTxBytes, err := json.Marshal(tx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		jsonTxReader := bytes.NewReader(jsonTxBytes)
-		assert.NoError(
+		require.NoError(
 			t, doGoodReq(
 				"POST",
 				endpoint,
@@ -187,42 +188,42 @@ func TestPoolTxs(t *testing.T) {
 	badTx.Amount = "99950000000000000"
 	badTx.Fee = 255
 	jsonTxBytes, err := json.Marshal(badTx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	jsonTxReader := bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Wrong signature
 	badTx = tc.poolTxsToSend[0]
 	badTx.FromIdx = "hez:foo:1000"
 	jsonTxBytes, err = json.Marshal(badTx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Wrong to
 	badTx = tc.poolTxsToSend[0]
 	ethAddr := "hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 	badTx.ToEthAddr = &ethAddr
 	badTx.ToIdx = nil
 	jsonTxBytes, err = json.Marshal(badTx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Wrong rq
 	badTx = tc.poolTxsToSend[0]
 	rqFromIdx := "hez:foo:30"
 	badTx.RqFromIdx = &rqFromIdx
 	jsonTxBytes, err = json.Marshal(badTx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// GET
 	endpoint += "/"
 	for _, tx := range tc.poolTxsToReceive {
 		fetchedTx := testPoolTxReceive{}
-		assert.NoError(
+		require.NoError(
 			t, doGoodReq(
 				"GET",
 				endpoint+tx.TxID.String(),
@@ -233,10 +234,10 @@ func TestPoolTxs(t *testing.T) {
 	}
 	// 400, due invalid TxID
 	err = doBadReq("GET", endpoint+"0xG2241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// 404, due inexistent TxID in DB
 	err = doBadReq("GET", endpoint+"0x02241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 404)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func assertPoolTx(t *testing.T, expected, actual testPoolTxReceive) {

@@ -47,7 +47,7 @@ CREATE TABLE token (
     name VARCHAR(20) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
     decimals INT NOT NULL,
-    usd NUMERIC,
+    usd NUMERIC, -- value of a normalized token (1 token = 10^decimals units)
     usd_update TIMESTAMP WITHOUT TIME ZONE
 );
 

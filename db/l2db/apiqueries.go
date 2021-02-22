@@ -1,10 +1,16 @@
 package l2db
 
 import (
+	"fmt"
+
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/russross/meddler"
+)
+
+var (
+	errPoolFull = fmt.Errorf("the pool is at full capacity. More transactions are not accepted currently")
 )
 
 // AddAccountCreationAuthAPI inserts an account creation authorization into the DB
@@ -42,20 +48,54 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 		return tracerr.Wrap(err)
 	}
 	defer l2db.apiConnCon.Release()
-	row := l2db.db.QueryRow(
-		"SELECT COUNT(*) FROM tx_pool WHERE state = $1;",
-		common.PoolL2TxStatePending,
-	)
-	var totalTxs uint32
-	if err := row.Scan(&totalTxs); err != nil {
+
+	row := l2db.db.QueryRow(`SELECT
+		($1::NUMERIC * token.usd * fee_percentage($2::NUMERIC)) /
+			(10.0 ^ token.decimals::NUMERIC)
+		FROM token WHERE token.token_id = $3;`,
+		tx.AmountFloat, tx.Fee, tx.TokenID)
+	var feeUSD float64
+	if err := row.Scan(&feeUSD); err != nil {
 		return tracerr.Wrap(err)
 	}
-	if totalTxs >= l2db.maxTxs {
-		return tracerr.New(
-			"The pool is at full capacity. More transactions are not accepted currently",
-		)
+	if feeUSD < l2db.minFeeUSD {
+		return tracerr.Wrap(fmt.Errorf("tx.feeUSD (%v) < minFeeUSD (%v)",
+			feeUSD, l2db.minFeeUSD))
 	}
-	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", tx))
+
+	// Prepare insert SQL query argument parameters
+	namesPart, err := meddler.Default.ColumnsQuoted(tx, false)
+	if err != nil {
+		return err
+	}
+	valuesPart, err := meddler.Default.PlaceholdersString(tx, false)
+	if err != nil {
+		return err
+	}
+	values, err := meddler.Default.Values(tx, false)
+	if err != nil {
+		return err
+	}
+
+	q := fmt.Sprintf(
+		`INSERT INTO tx_pool (%s)
+		SELECT %s
+		WHERE (SELECT COUNT(*) FROM tx_pool WHERE state = $%v) < $%v;`,
+		namesPart, valuesPart,
+		len(values)+1, len(values)+2) //nolint:gomnd
+	values = append(values, common.PoolL2TxStatePending, l2db.maxTxs)
+	res, err := l2db.db.Exec(q, values...)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if rowsAffected == 0 {
+		return tracerr.Wrap(errPoolFull)
+	}
+	return nil
 }
 
 // selectPoolTxAPI select part of queries to get PoolL2TxRead

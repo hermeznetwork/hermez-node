@@ -25,6 +25,7 @@ type L2DB struct {
 	safetyPeriod common.BatchNum
 	ttl          time.Duration
 	maxTxs       uint32 // limit of txs that are accepted in the pool
+	minFeeUSD    float64
 	apiConnCon   *db.APIConnectionController
 }
 
@@ -35,6 +36,7 @@ func NewL2DB(
 	db *sqlx.DB,
 	safetyPeriod common.BatchNum,
 	maxTxs uint32,
+	minFeeUSD float64,
 	TTL time.Duration,
 	apiConnCon *db.APIConnectionController,
 ) *L2DB {
@@ -43,6 +45,7 @@ func NewL2DB(
 		safetyPeriod: safetyPeriod,
 		ttl:          TTL,
 		maxTxs:       maxTxs,
+		minFeeUSD:    minFeeUSD,
 		apiConnCon:   apiConnCon,
 	}
 }
@@ -104,9 +107,8 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
 	return nil
 }
 
-// AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
-// but in production txs will only be inserted through the API
-func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
+// NewPoolL2TxWriteFromPoolL2Tx creates a new PoolL2TxWrite from a PoolL2Tx
+func NewPoolL2TxWriteFromPoolL2Tx(tx *common.PoolL2Tx) *PoolL2TxWrite {
 	// transform tx from *common.PoolL2Tx to PoolL2TxWrite
 	insertTx := &PoolL2TxWrite{
 		TxID:      tx.TxID,
@@ -148,6 +150,13 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	f := new(big.Float).SetInt(tx.Amount)
 	amountF, _ := f.Float64()
 	insertTx.AmountFloat = amountF
+	return insertTx
+}
+
+// AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
+// but in production txs will only be inserted through the API
+func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
+	insertTx := NewPoolL2TxWriteFromPoolL2Tx(tx)
 	// insert tx
 	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", insertTx))
 }
@@ -158,7 +167,8 @@ tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce,
 tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, rq_from_idx, 
 rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
-fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f AS fee_usd, token.usd_update  
+(fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f) /
+	(10.0 ^ token.decimals::NUMERIC) AS fee_usd, token.usd_update
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
 // GetTx  return the specified Tx in common.PoolL2Tx format
