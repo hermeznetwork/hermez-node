@@ -64,7 +64,10 @@ func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBa
 	tp := txprocessor.NewTxProcessor(bbStateDB, configBatch.TxProcessorConfig)
 
 	ptOut, err := tp.ProcessTxs(coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs)
-	return ptOut.ZKInputs, tracerr.Wrap(err)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return ptOut.ZKInputs, nil
 }
 
 // LocalStateDB returns the underlying LocalStateDB
