@@ -649,6 +649,10 @@ func (n *Node) StartNodeAPI() {
 
 	n.wg.Add(1)
 	go func() {
+		// Do an initial update on startup
+		if err := n.nodeAPI.api.UpdateMetrics(); err != nil {
+			log.Errorw("API.UpdateMetrics", "err", err)
+		}
 		for {
 			select {
 			case <-n.ctx.Done():
@@ -665,6 +669,10 @@ func (n *Node) StartNodeAPI() {
 
 	n.wg.Add(1)
 	go func() {
+		// Do an initial update on startup
+		if err := n.nodeAPI.api.UpdateRecommendedFee(); err != nil {
+			log.Errorw("API.UpdateRecommendedFee", "err", err)
+		}
 		for {
 			select {
 			case <-n.ctx.Done():

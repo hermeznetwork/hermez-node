@@ -56,6 +56,12 @@ func (l2db *L2DB) DB() *sqlx.DB {
 	return l2db.db
 }
 
+// MinFeeUSD returns the minimum fee in USD that is required to accept txs into
+// the pool
+func (l2db *L2DB) MinFeeUSD() float64 {
+	return l2db.minFeeUSD
+}
+
 // AddAccountCreationAuth inserts an account creation authorization into the DB
 func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error {
 	_, err := l2db.db.Exec(
