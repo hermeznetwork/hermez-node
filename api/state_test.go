@@ -131,7 +131,7 @@ func TestUpdateNetworkInfo(t *testing.T) {
 func TestUpdateMetrics(t *testing.T) {
 	// Update Metrics needs api.status.Network.LastBatch.BatchNum to be updated
 	lastBlock := tc.blocks[3]
-	lastBatchNum := common.BatchNum(3)
+	lastBatchNum := common.BatchNum(12)
 	currentSlotNum := int64(1)
 	err := api.UpdateNetworkInfo(lastBlock, lastBlock, lastBatchNum, currentSlotNum)
 	assert.NoError(t, err)
@@ -162,7 +162,7 @@ func TestUpdateRecommendedFee(t *testing.T) {
 
 func TestGetState(t *testing.T) {
 	lastBlock := tc.blocks[3]
-	lastBatchNum := common.BatchNum(3)
+	lastBatchNum := common.BatchNum(12)
 	currentSlotNum := int64(1)
 	api.SetRollupVariables(tc.rollupVars)
 	api.SetWDelayerVariables(tc.wdelayerVars)

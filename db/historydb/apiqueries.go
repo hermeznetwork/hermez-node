@@ -952,11 +952,19 @@ func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, err
 	metricsTotals := &MetricsTotals{}
 	metrics := &Metrics{}
 	err = meddler.QueryRow(
-		hdb.dbRead, metricsTotals, `SELECT COUNT(tx.*) as total_txs,
-		COALESCE (MIN(tx.batch_num), 0) as batch_num, COALESCE (MIN(block.timestamp), 
-		NOW()) AS min_timestamp, COALESCE (MAX(block.timestamp), NOW()) AS max_timestamp
-		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
-		WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS';`)
+		hdb.dbRead, metricsTotals, `SELECT
+		COALESCE (MIN(batch.batch_num), 0) as batch_num,
+		COALESCE (MIN(block.timestamp), NOW()) AS min_timestamp, 
+		COALESCE (MAX(block.timestamp), NOW()) AS max_timestamp
+		FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
+		WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS' and batch.batch_num <= $1;`, lastBatchNum)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+
+	err = meddler.QueryRow(
+		hdb.dbRead, metricsTotals, `SELECT COUNT(*) as total_txs
+		FROM tx	WHERE tx.batch_num between $1 AND $2;`, metricsTotals.FirstBatchNum, lastBatchNum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -979,10 +987,11 @@ func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, err
 	err = meddler.QueryRow(
 		hdb.dbRead, metricsTotals, `SELECT COUNT(*) AS total_batches, 
 		COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
-		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
+		WHERE batch_num between $1 and $2;`, metricsTotals.FirstBatchNum, lastBatchNum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+
 	if metricsTotals.TotalBatches > 0 {
 		metrics.BatchFrequency = seconds / float64(metricsTotals.TotalBatches)
 	} else {
