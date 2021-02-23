@@ -662,12 +662,16 @@ func (s *Synchronizer) Sync2(ctx context.Context,
 	}
 
 	for _, batchData := range rollupData.Batches {
+		metricSyncedLastBatchNum.Set(float64(batchData.Batch.BatchNum))
+		metricEthLastBatchNum.Set(float64(s.stats.Eth.LastBatchNum))
 		log.Debugw("Synced batch",
 			"syncLastBatch", batchData.Batch.BatchNum,
 			"syncBatchesPerc", s.stats.batchesPerc(batchData.Batch.BatchNum),
 			"ethLastBatch", s.stats.Eth.LastBatchNum,
 		)
 	}
+	metricSyncedLastBlockNum.Set(float64(s.stats.Sync.LastBlock.Num))
+	metricEthLastBlockNum.Set(float64(s.stats.Eth.LastBlock.Num))
 	log.Debugw("Synced block",
 		"syncLastBlockNum", s.stats.Sync.LastBlock.Num,
 		"syncBlocksPerc", s.stats.blocksPerc(),

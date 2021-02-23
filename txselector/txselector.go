@@ -133,9 +133,11 @@ func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx,
 // included in the next batch.
 func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig) ([]common.Idx,
 	[][]byte, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
-	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs, discardedL2Txs, err :=
-		txsel.GetL1L2TxSelection(selectionConfig, []common.L1Tx{})
-	return coordIdxs, accCreationAuths, l1CoordinatorTxs, l2Txs, discardedL2Txs, tracerr.Wrap(err)
+	metricGetL2TxSelection.Inc()
+	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs,
+		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, []common.L1Tx{})
+	return coordIdxs, accCreationAuths, l1CoordinatorTxs, l2Txs,
+		discardedL2Txs, tracerr.Wrap(err)
 }
 
 // GetL1L2TxSelection returns the selection of L1 + L2 txs.
@@ -147,6 +149,16 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig) ([]c
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
 func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
+	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
+	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
+	metricGetL1L2TxSelection.Inc()
+	coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
+		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, l1UserTxs)
+	return coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
+		discardedL2Txs, tracerr.Wrap(err)
+}
+
+func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	// WIP.0: the TxSelector is not optimized and will need a redesign. The
@@ -451,6 +463,11 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
+
+	metricSelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
+	metricSelectedL1UserTxs.Set(float64(len(l1UserTxs)))
+	metricSelectedL2Txs.Set(float64(len(finalL2Txs)))
+	metricDiscardedL2Txs.Set(float64(len(discardedL2Txs)))
 
 	return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, finalL2Txs, discardedL2Txs, nil
 }
