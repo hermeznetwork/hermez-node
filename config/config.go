@@ -240,11 +240,6 @@ type Node struct {
 		// `Eth.LastBatch`).  This value only affects the reported % of
 		// synchronization of blocks and batches, nothing else.
 		StatsRefreshPeriod Duration `validate:"required"`
-		// StoreAccountUpdates when set to true makes the synchronizer
-		// store every account update in the account_update SQL table.
-		// This allows querying nonces and balances from the HistoryDB
-		// via SQL.
-		StoreAccountUpdates bool
 	} `validate:"required"`
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract

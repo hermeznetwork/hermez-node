@@ -239,8 +239,8 @@ type AccountAPI struct {
 	BatchNum         common.BatchNum     `meddler:"batch_num"`
 	PublicKey        apitypes.HezBJJ     `meddler:"bjj"`
 	EthAddr          apitypes.HezEthAddr `meddler:"eth_addr"`
-	Nonce            common.Nonce        `meddler:"-"` // max of 40 bits used
-	Balance          *apitypes.BigIntStr `meddler:"-"` // max of 192 bits used
+	Nonce            common.Nonce        `meddler:"nonce"`   // max of 40 bits used
+	Balance          *apitypes.BigIntStr `meddler:"balance"` // max of 192 bits used
 	TotalItems       uint64              `meddler:"total_items"`
 	FirstItem        uint64              `meddler:"first_item"`
 	LastItem         uint64              `meddler:"last_item"`

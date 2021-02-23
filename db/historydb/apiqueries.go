@@ -833,10 +833,18 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 	defer hdb.apiConnCon.Release()
 	account := &AccountAPI{}
 	err = meddler.QueryRow(hdb.db, account, `SELECT account.item_id, hez_idx(account.idx, 
-	token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
-	token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
-	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
-	FROM account INNER JOIN token ON account.token_id = token.token_id WHERE idx = $1;`, idx)
+		token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
+		token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
+		token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd,
+		token.usd_update, account_update.nonce, account_update.balance 
+		FROM account inner JOIN (
+			SELECT idx, nonce, balance 
+			FROM account_update
+			WHERE idx = $1
+			ORDER BY item_id DESC LIMIT 1
+		) AS account_update ON account_update.idx = account.idx 
+		INNER JOIN token ON account.token_id = token.token_id
+		WHERE account.idx = $1;`, idx)
 
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -864,8 +872,13 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	queryStr := `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, 
 	account.bjj, account.eth_addr, token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
-	COUNT(*) OVER() AS total_items
-	FROM account INNER JOIN token ON account.token_id = token.token_id `
+	account_update.nonce, account_update.balance, COUNT(*) OVER() AS total_items
+	FROM account inner JOIN (
+		SELECT DISTINCT idx,
+		first_value(nonce) over(partition by idx ORDER BY item_id DESC) as nonce,
+		first_value(balance) over(partition by idx ORDER BY item_id DESC) as balance
+		FROM account_update
+	) AS account_update ON account_update.idx = account.idx INNER JOIN token ON account.token_id = token.token_id `
 	// Apply filters
 	nextIsAnd := false
 	// ethAddr filter
@@ -1023,4 +1036,19 @@ func (hdb *HistoryDB) GetAvgTxFeeAPI() (float64, error) {
 	}
 
 	return avgTransactionFee, nil
+}
+
+// GetCommonAccountAPI returns the account associated to an account idx
+func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	account := &common.Account{}
+	err = meddler.QueryRow(
+		hdb.db, account, `SELECT * FROM account WHERE idx = $1;`, idx,
+	)
+	return account, tracerr.Wrap(err)
 }

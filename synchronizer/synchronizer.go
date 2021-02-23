@@ -206,9 +206,8 @@ type SCConsts struct {
 
 // Config is the Synchronizer configuration
 type Config struct {
-	StatsRefreshPeriod  time.Duration
-	StoreAccountUpdates bool
-	ChainID             uint16
+	StatsRefreshPeriod time.Duration
+	ChainID            uint16
 }
 
 // Synchronizer implements the Synchronizer type
@@ -994,19 +993,17 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		}
 		batchData.CreatedAccounts = processTxsOut.CreatedAccounts
 
-		if s.cfg.StoreAccountUpdates {
-			batchData.UpdatedAccounts = make([]common.AccountUpdate, 0,
-				len(processTxsOut.UpdatedAccounts))
-			for _, acc := range processTxsOut.UpdatedAccounts {
-				batchData.UpdatedAccounts = append(batchData.UpdatedAccounts,
-					common.AccountUpdate{
-						EthBlockNum: blockNum,
-						BatchNum:    batchNum,
-						Idx:         acc.Idx,
-						Nonce:       acc.Nonce,
-						Balance:     acc.Balance,
-					})
-			}
+		batchData.UpdatedAccounts = make([]common.AccountUpdate, 0,
+			len(processTxsOut.UpdatedAccounts))
+		for _, acc := range processTxsOut.UpdatedAccounts {
+			batchData.UpdatedAccounts = append(batchData.UpdatedAccounts,
+				common.AccountUpdate{
+					EthBlockNum: blockNum,
+					BatchNum:    batchNum,
+					Idx:         acc.Idx,
+					Nonce:       acc.Nonce,
+					Balance:     acc.Balance,
+				})
 		}
 
 		slotNum := int64(0)

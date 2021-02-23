@@ -22,7 +22,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
-	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
@@ -216,10 +215,6 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}()
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128, Type: statedb.TypeTxSelector, NLevels: 0})
-	if err != nil {
-		panic(err)
-	}
 	// L2DB
 	l2DB := l2db.NewL2DB(database, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
@@ -239,7 +234,6 @@ func TestMain(m *testing.M) {
 		true,
 		apiGin,
 		hdb,
-		sdb,
 		l2DB,
 		&_config,
 	)
@@ -348,19 +342,6 @@ func TestMain(m *testing.M) {
 			commonL1Txs = append(commonL1Txs, batch.L1UserTxs...)
 			commonL1Txs = append(commonL1Txs, batch.L1CoordinatorTxs...)
 		}
-	}
-
-	// lastBlockNum2 := blocksData[len(blocksData)-1].Block.EthBlockNum
-
-	// Add accounts to StateDB
-	for i := 0; i < len(commonAccounts); i++ {
-		if _, err := api.s.CreateAccount(commonAccounts[i].Idx, &commonAccounts[i]); err != nil {
-			panic(err)
-		}
-	}
-	// Make a checkpoint to make the accounts available in Last
-	if err := api.s.MakeCheckpoint(); err != nil {
-		panic(err)
 	}
 
 	// Generate Coordinators and add them to HistoryDB
@@ -529,13 +510,41 @@ func TestMain(m *testing.M) {
 	testTxs := genTestTxs(commonL1Txs, commonL2Txs, commonAccounts, testTokens, commonBlocks)
 	testBatches, testFullBatches := genTestBatches(commonBlocks, commonBatches, testTxs)
 	poolTxsToSend, poolTxsToReceive := genTestPoolTxs(commonPoolTxs, testTokens, commonAccounts)
+	// Add balance and nonce to historyDB
+	accounts := genTestAccounts(commonAccounts, testTokens)
+	accUpdates := []common.AccountUpdate{}
+	for i := 0; i < len(accounts); i++ {
+		balance := new(big.Int)
+		balance.SetString(string(*accounts[i].Balance), 10)
+		idx, err := stringToIdx(string(accounts[i].Idx), "foo")
+		if err != nil {
+			panic(err)
+		}
+		accUpdates = append(accUpdates, common.AccountUpdate{
+			EthBlockNum: 0,
+			BatchNum:    1,
+			Idx:         *idx,
+			Nonce:       0,
+			Balance:     balance,
+		})
+		accUpdates = append(accUpdates, common.AccountUpdate{
+			EthBlockNum: 0,
+			BatchNum:    1,
+			Idx:         *idx,
+			Nonce:       accounts[i].Nonce,
+			Balance:     balance,
+		})
+	}
+	if err := api.h.AddAccountUpdates(accUpdates); err != nil {
+		panic(err)
+	}
 	tc = testCommon{
 		blocks:           commonBlocks,
 		tokens:           testTokens,
 		batches:          testBatches,
 		fullBatches:      testFullBatches,
 		coordinators:     testCoords,
-		accounts:         genTestAccounts(commonAccounts, testTokens),
+		accounts:         accounts,
 		txs:              testTxs,
 		exits:            testExits,
 		poolTxsToSend:    poolTxsToSend,
@@ -612,7 +621,6 @@ func TestTimeout(t *testing.T) {
 		true,
 		apiGinTO,
 		hdbTO,
-		nil,
 		l2DBTO,
 		&_config,
 	)

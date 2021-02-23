@@ -346,8 +346,7 @@ func TestSyncGeneral(t *testing.T) {
 
 	// Create Synchronizer
 	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
-		StatsRefreshPeriod:  0 * time.Second,
-		StoreAccountUpdates: true,
+		StatsRefreshPeriod: 0 * time.Second,
 	})
 	require.NoError(t, err)
 
@@ -738,8 +737,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 
 	// Create Synchronizer
 	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
-		StatsRefreshPeriod:  0 * time.Second,
-		StoreAccountUpdates: true,
+		StatsRefreshPeriod: 0 * time.Second,
 	})
 	require.NoError(t, err)
 
@@ -839,8 +837,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 		syncCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
 
 		s2, err := NewSynchronizer(client, historyDB, stateDB, Config{
-			StatsRefreshPeriod:  0 * time.Second,
-			StoreAccountUpdates: true,
+			StatsRefreshPeriod: 0 * time.Second,
 		})
 		require.NoError(t, err)
 		stats = s2.Stats()
