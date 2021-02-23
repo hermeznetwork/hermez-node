@@ -27,30 +27,35 @@ const (
 
 // HistoryDB persist the historic of the rollup
 type HistoryDB struct {
-	db         *sqlx.DB
+	dbRead     *sqlx.DB
+	dbWrite    *sqlx.DB
 	apiConnCon *db.APIConnectionController
 }
 
 // NewHistoryDB initialize the DB
-func NewHistoryDB(db *sqlx.DB, apiConnCon *db.APIConnectionController) *HistoryDB {
-	return &HistoryDB{db: db, apiConnCon: apiConnCon}
+func NewHistoryDB(dbRead, dbWrite *sqlx.DB, apiConnCon *db.APIConnectionController) *HistoryDB {
+	return &HistoryDB{
+		dbRead:     dbRead,
+		dbWrite:    dbWrite,
+		apiConnCon: apiConnCon,
+	}
 }
 
 // DB returns a pointer to the L2DB.db. This method should be used only for
 // internal testing purposes.
 func (hdb *HistoryDB) DB() *sqlx.DB {
-	return hdb.db
+	return hdb.dbWrite
 }
 
 // AddBlock insert a block into the DB
-func (hdb *HistoryDB) AddBlock(block *common.Block) error { return hdb.addBlock(hdb.db, block) }
+func (hdb *HistoryDB) AddBlock(block *common.Block) error { return hdb.addBlock(hdb.dbWrite, block) }
 func (hdb *HistoryDB) addBlock(d meddler.DB, block *common.Block) error {
 	return tracerr.Wrap(meddler.Insert(d, "block", block))
 }
 
 // AddBlocks inserts blocks into the DB
 func (hdb *HistoryDB) AddBlocks(blocks []common.Block) error {
-	return tracerr.Wrap(hdb.addBlocks(hdb.db, blocks))
+	return tracerr.Wrap(hdb.addBlocks(hdb.dbWrite, blocks))
 }
 
 func (hdb *HistoryDB) addBlocks(d meddler.DB, blocks []common.Block) error {
@@ -69,7 +74,7 @@ func (hdb *HistoryDB) addBlocks(d meddler.DB, blocks []common.Block) error {
 func (hdb *HistoryDB) GetBlock(blockNum int64) (*common.Block, error) {
 	block := &common.Block{}
 	err := meddler.QueryRow(
-		hdb.db, block,
+		hdb.dbRead, block,
 		"SELECT * FROM block WHERE eth_block_num = $1;", blockNum,
 	)
 	return block, tracerr.Wrap(err)
@@ -79,7 +84,7 @@ func (hdb *HistoryDB) GetBlock(blockNum int64) (*common.Block, error) {
 func (hdb *HistoryDB) GetAllBlocks() ([]common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
-		hdb.db, &blocks,
+		hdb.dbRead, &blocks,
 		"SELECT * FROM block ORDER BY eth_block_num;",
 	)
 	return db.SlicePtrsToSlice(blocks).([]common.Block), tracerr.Wrap(err)
@@ -89,7 +94,7 @@ func (hdb *HistoryDB) GetAllBlocks() ([]common.Block, error) {
 func (hdb *HistoryDB) getBlocks(from, to int64) ([]common.Block, error) {
 	var blocks []*common.Block
 	err := meddler.QueryAll(
-		hdb.db, &blocks,
+		hdb.dbRead, &blocks,
 		"SELECT * FROM block WHERE $1 <= eth_block_num AND eth_block_num < $2 ORDER BY eth_block_num;",
 		from, to,
 	)
@@ -100,13 +105,13 @@ func (hdb *HistoryDB) getBlocks(from, to int64) ([]common.Block, error) {
 func (hdb *HistoryDB) GetLastBlock() (*common.Block, error) {
 	block := &common.Block{}
 	err := meddler.QueryRow(
-		hdb.db, block, "SELECT * FROM block ORDER BY eth_block_num DESC LIMIT 1;",
+		hdb.dbRead, block, "SELECT * FROM block ORDER BY eth_block_num DESC LIMIT 1;",
 	)
 	return block, tracerr.Wrap(err)
 }
 
 // AddBatch insert a Batch into the DB
-func (hdb *HistoryDB) AddBatch(batch *common.Batch) error { return hdb.addBatch(hdb.db, batch) }
+func (hdb *HistoryDB) AddBatch(batch *common.Batch) error { return hdb.addBatch(hdb.dbWrite, batch) }
 func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 	// Calculate total collected fees in USD
 	// Get IDs of collected tokens for fees
@@ -129,9 +134,9 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		query = hdb.db.Rebind(query)
+		query = hdb.dbWrite.Rebind(query)
 		if err := meddler.QueryAll(
-			hdb.db, &tokenPrices, query, args...,
+			hdb.dbWrite, &tokenPrices, query, args...,
 		); err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -153,7 +158,7 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 
 // AddBatches insert Bids into the DB
 func (hdb *HistoryDB) AddBatches(batches []common.Batch) error {
-	return tracerr.Wrap(hdb.addBatches(hdb.db, batches))
+	return tracerr.Wrap(hdb.addBatches(hdb.dbWrite, batches))
 }
 func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 	for i := 0; i < len(batches); i++ {
@@ -168,7 +173,7 @@ func (hdb *HistoryDB) addBatches(d meddler.DB, batches []common.Batch) error {
 func (hdb *HistoryDB) GetBatch(batchNum common.BatchNum) (*common.Batch, error) {
 	var batch common.Batch
 	err := meddler.QueryRow(
-		hdb.db, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
+		hdb.dbRead, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
 		batch.fees_collected, batch.fee_idxs_coordinator, batch.state_root,
 		batch.num_accounts, batch.last_idx, batch.exit_root, batch.forge_l1_txs_num,
 		batch.slot_num, batch.total_fees_usd FROM batch WHERE batch_num = $1;`,
@@ -181,7 +186,7 @@ func (hdb *HistoryDB) GetBatch(batchNum common.BatchNum) (*common.Batch, error) 
 func (hdb *HistoryDB) GetAllBatches() ([]common.Batch, error) {
 	var batches []*common.Batch
 	err := meddler.QueryAll(
-		hdb.db, &batches,
+		hdb.dbRead, &batches,
 		`SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr, batch.fees_collected,
 		 batch.fee_idxs_coordinator, batch.state_root, batch.num_accounts, batch.last_idx, batch.exit_root,
 		 batch.forge_l1_txs_num, batch.slot_num, batch.total_fees_usd FROM batch
@@ -194,7 +199,7 @@ func (hdb *HistoryDB) GetAllBatches() ([]common.Batch, error) {
 func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, error) {
 	var batches []*common.Batch
 	err := meddler.QueryAll(
-		hdb.db, &batches,
+		hdb.dbRead, &batches,
 		`SELECT batch_num, eth_block_num, forger_addr, fees_collected, fee_idxs_coordinator, 
 		state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num, total_fees_usd 
 		FROM batch WHERE $1 <= batch_num AND batch_num < $2 ORDER BY batch_num;`,
@@ -206,7 +211,7 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, erro
 // GetFirstBatchBlockNumBySlot returns the ethereum block number of the first
 // batch within a slot
 func (hdb *HistoryDB) GetFirstBatchBlockNumBySlot(slotNum int64) (int64, error) {
-	row := hdb.db.QueryRow(
+	row := hdb.dbRead.QueryRow(
 		`SELECT eth_block_num FROM batch
 		WHERE slot_num = $1 ORDER BY batch_num ASC LIMIT 1;`, slotNum,
 	)
@@ -216,7 +221,7 @@ func (hdb *HistoryDB) GetFirstBatchBlockNumBySlot(slotNum int64) (int64, error) 
 
 // GetLastBatchNum returns the BatchNum of the latest forged batch
 func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
-	row := hdb.db.QueryRow("SELECT batch_num FROM batch ORDER BY batch_num DESC LIMIT 1;")
+	row := hdb.dbRead.QueryRow("SELECT batch_num FROM batch ORDER BY batch_num DESC LIMIT 1;")
 	var batchNum common.BatchNum
 	return batchNum, tracerr.Wrap(row.Scan(&batchNum))
 }
@@ -225,7 +230,7 @@ func (hdb *HistoryDB) GetLastBatchNum() (common.BatchNum, error) {
 func (hdb *HistoryDB) GetLastBatch() (*common.Batch, error) {
 	var batch common.Batch
 	err := meddler.QueryRow(
-		hdb.db, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
+		hdb.dbRead, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
 		batch.fees_collected, batch.fee_idxs_coordinator, batch.state_root,
 		batch.num_accounts, batch.last_idx, batch.exit_root, batch.forge_l1_txs_num,
 		batch.slot_num, batch.total_fees_usd FROM batch ORDER BY batch_num DESC LIMIT 1;`,
@@ -235,7 +240,7 @@ func (hdb *HistoryDB) GetLastBatch() (*common.Batch, error) {
 
 // GetLastL1BatchBlockNum returns the blockNum of the latest forged l1Batch
 func (hdb *HistoryDB) GetLastL1BatchBlockNum() (int64, error) {
-	row := hdb.db.QueryRow(`SELECT eth_block_num FROM batch
+	row := hdb.dbRead.QueryRow(`SELECT eth_block_num FROM batch
 		WHERE forge_l1_txs_num IS NOT NULL
 		ORDER BY batch_num DESC LIMIT 1;`)
 	var blockNum int64
@@ -245,7 +250,7 @@ func (hdb *HistoryDB) GetLastL1BatchBlockNum() (int64, error) {
 // GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB from forged
 // batches.  If there's no batch in the DB (nil, nil) is returned.
 func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
-	row := hdb.db.QueryRow("SELECT MAX(forge_l1_txs_num) FROM batch;")
+	row := hdb.dbRead.QueryRow("SELECT MAX(forge_l1_txs_num) FROM batch;")
 	lastL1TxsNum := new(int64)
 	return lastL1TxsNum, tracerr.Wrap(row.Scan(&lastL1TxsNum))
 }
@@ -256,15 +261,15 @@ func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
 func (hdb *HistoryDB) Reorg(lastValidBlock int64) error {
 	var err error
 	if lastValidBlock < 0 {
-		_, err = hdb.db.Exec("DELETE FROM block;")
+		_, err = hdb.dbWrite.Exec("DELETE FROM block;")
 	} else {
-		_, err = hdb.db.Exec("DELETE FROM block WHERE eth_block_num > $1;", lastValidBlock)
+		_, err = hdb.dbWrite.Exec("DELETE FROM block WHERE eth_block_num > $1;", lastValidBlock)
 	}
 	return tracerr.Wrap(err)
 }
 
 // AddBids insert Bids into the DB
-func (hdb *HistoryDB) AddBids(bids []common.Bid) error { return hdb.addBids(hdb.db, bids) }
+func (hdb *HistoryDB) AddBids(bids []common.Bid) error { return hdb.addBids(hdb.dbWrite, bids) }
 func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	if len(bids) == 0 {
 		return nil
@@ -281,7 +286,7 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 func (hdb *HistoryDB) GetAllBids() ([]common.Bid, error) {
 	var bids []*common.Bid
 	err := meddler.QueryAll(
-		hdb.db, &bids,
+		hdb.dbRead, &bids,
 		`SELECT bid.slot_num, bid.bid_value, bid.eth_block_num, bid.bidder_addr FROM bid
 		ORDER BY item_id;`,
 	)
@@ -292,7 +297,7 @@ func (hdb *HistoryDB) GetAllBids() ([]common.Bid, error) {
 func (hdb *HistoryDB) GetBestBidCoordinator(slotNum int64) (*common.BidCoordinator, error) {
 	bidCoord := &common.BidCoordinator{}
 	err := meddler.QueryRow(
-		hdb.db, bidCoord,
+		hdb.dbRead, bidCoord,
 		`SELECT (
 			SELECT default_slot_set_bid
 			FROM auction_vars
@@ -315,7 +320,7 @@ func (hdb *HistoryDB) GetBestBidCoordinator(slotNum int64) (*common.BidCoordinat
 
 // AddCoordinators insert Coordinators into the DB
 func (hdb *HistoryDB) AddCoordinators(coordinators []common.Coordinator) error {
-	return tracerr.Wrap(hdb.addCoordinators(hdb.db, coordinators))
+	return tracerr.Wrap(hdb.addCoordinators(hdb.dbWrite, coordinators))
 }
 func (hdb *HistoryDB) addCoordinators(d meddler.DB, coordinators []common.Coordinator) error {
 	if len(coordinators) == 0 {
@@ -330,7 +335,7 @@ func (hdb *HistoryDB) addCoordinators(d meddler.DB, coordinators []common.Coordi
 
 // AddExitTree insert Exit tree into the DB
 func (hdb *HistoryDB) AddExitTree(exitTree []common.ExitInfo) error {
-	return tracerr.Wrap(hdb.addExitTree(hdb.db, exitTree))
+	return tracerr.Wrap(hdb.addExitTree(hdb.dbWrite, exitTree))
 }
 func (hdb *HistoryDB) addExitTree(d meddler.DB, exitTree []common.ExitInfo) error {
 	if len(exitTree) == 0 {
@@ -418,11 +423,13 @@ func (hdb *HistoryDB) updateExitTree(d sqlx.Ext, blockNum int64,
 
 // AddToken insert a token into the DB
 func (hdb *HistoryDB) AddToken(token *common.Token) error {
-	return tracerr.Wrap(meddler.Insert(hdb.db, "token", token))
+	return tracerr.Wrap(meddler.Insert(hdb.dbWrite, "token", token))
 }
 
 // AddTokens insert tokens into the DB
-func (hdb *HistoryDB) AddTokens(tokens []common.Token) error { return hdb.addTokens(hdb.db, tokens) }
+func (hdb *HistoryDB) AddTokens(tokens []common.Token) error {
+	return hdb.addTokens(hdb.dbWrite, tokens)
+}
 func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 	if len(tokens) == 0 {
 		return nil
@@ -453,7 +460,7 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error 
 	// Sanitize symbol
 	tokenSymbol = strings.ToValidUTF8(tokenSymbol, " ")
 
-	_, err := hdb.db.Exec(
+	_, err := hdb.dbWrite.Exec(
 		"UPDATE token SET usd = $1 WHERE symbol = $2;",
 		value, tokenSymbol,
 	)
@@ -464,7 +471,7 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error 
 func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenWithUSD, error) {
 	token := &TokenWithUSD{}
 	err := meddler.QueryRow(
-		hdb.db, token, `SELECT * FROM token WHERE token_id = $1;`, tokenID,
+		hdb.dbRead, token, `SELECT * FROM token WHERE token_id = $1;`, tokenID,
 	)
 	return token, tracerr.Wrap(err)
 }
@@ -473,7 +480,7 @@ func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenWithUSD, error) {
 func (hdb *HistoryDB) GetAllTokens() ([]TokenWithUSD, error) {
 	var tokens []*TokenWithUSD
 	err := meddler.QueryAll(
-		hdb.db, &tokens,
+		hdb.dbRead, &tokens,
 		"SELECT * FROM token ORDER BY token_id;",
 	)
 	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), tracerr.Wrap(err)
@@ -482,7 +489,7 @@ func (hdb *HistoryDB) GetAllTokens() ([]TokenWithUSD, error) {
 // GetTokenSymbols returns all the token symbols from the DB
 func (hdb *HistoryDB) GetTokenSymbols() ([]string, error) {
 	var tokenSymbols []string
-	rows, err := hdb.db.Query("SELECT symbol FROM token;")
+	rows, err := hdb.dbRead.Query("SELECT symbol FROM token;")
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -500,7 +507,7 @@ func (hdb *HistoryDB) GetTokenSymbols() ([]string, error) {
 
 // AddAccounts insert accounts into the DB
 func (hdb *HistoryDB) AddAccounts(accounts []common.Account) error {
-	return tracerr.Wrap(hdb.addAccounts(hdb.db, accounts))
+	return tracerr.Wrap(hdb.addAccounts(hdb.dbWrite, accounts))
 }
 func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error {
 	if len(accounts) == 0 {
@@ -523,7 +530,7 @@ func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error
 func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 	var accs []*common.Account
 	err := meddler.QueryAll(
-		hdb.db, &accs,
+		hdb.dbRead, &accs,
 		"SELECT idx, token_id, batch_num, bjj, eth_addr FROM account ORDER BY idx;",
 	)
 	return db.SlicePtrsToSlice(accs).([]common.Account), tracerr.Wrap(err)
@@ -531,7 +538,7 @@ func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
 
 // AddAccountUpdates inserts accUpdates into the DB
 func (hdb *HistoryDB) AddAccountUpdates(accUpdates []common.AccountUpdate) error {
-	return tracerr.Wrap(hdb.addAccountUpdates(hdb.db, accUpdates))
+	return tracerr.Wrap(hdb.addAccountUpdates(hdb.dbWrite, accUpdates))
 }
 func (hdb *HistoryDB) addAccountUpdates(d meddler.DB, accUpdates []common.AccountUpdate) error {
 	if len(accUpdates) == 0 {
@@ -554,7 +561,7 @@ func (hdb *HistoryDB) addAccountUpdates(d meddler.DB, accUpdates []common.Accoun
 func (hdb *HistoryDB) GetAllAccountUpdates() ([]common.AccountUpdate, error) {
 	var accUpdates []*common.AccountUpdate
 	err := meddler.QueryAll(
-		hdb.db, &accUpdates,
+		hdb.dbRead, &accUpdates,
 		"SELECT eth_block_num, batch_num, idx, nonce, balance FROM account_update ORDER BY idx;",
 	)
 	return db.SlicePtrsToSlice(accUpdates).([]common.AccountUpdate), tracerr.Wrap(err)
@@ -565,7 +572,7 @@ func (hdb *HistoryDB) GetAllAccountUpdates() ([]common.AccountUpdate, error) {
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
 // EffectiveAmount and EffectiveDepositAmount are seted with default values by the DB.
 func (hdb *HistoryDB) AddL1Txs(l1txs []common.L1Tx) error {
-	return tracerr.Wrap(hdb.addL1Txs(hdb.db, l1txs))
+	return tracerr.Wrap(hdb.addL1Txs(hdb.dbWrite, l1txs))
 }
 
 // addL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
@@ -619,7 +626,7 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 
 // AddL2Txs inserts L2 txs to the DB. TokenID, USD and FeeUSD will be set automatically before storing the tx.
 func (hdb *HistoryDB) AddL2Txs(l2txs []common.L2Tx) error {
-	return tracerr.Wrap(hdb.addL2Txs(hdb.db, l2txs))
+	return tracerr.Wrap(hdb.addL2Txs(hdb.dbWrite, l2txs))
 }
 
 // addL2Txs inserts L2 txs to the DB. TokenID, USD and FeeUSD will be set automatically before storing the tx.
@@ -686,7 +693,7 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 func (hdb *HistoryDB) GetAllExits() ([]common.ExitInfo, error) {
 	var exits []*common.ExitInfo
 	err := meddler.QueryAll(
-		hdb.db, &exits,
+		hdb.dbRead, &exits,
 		`SELECT exit_tree.batch_num, exit_tree.account_idx, exit_tree.merkle_proof,
 		exit_tree.balance, exit_tree.instant_withdrawn, exit_tree.delayed_withdraw_request,
 		exit_tree.delayed_withdrawn FROM exit_tree ORDER BY item_id;`,
@@ -698,7 +705,7 @@ func (hdb *HistoryDB) GetAllExits() ([]common.ExitInfo, error) {
 func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 	var txs []*common.L1Tx
 	err := meddler.QueryAll(
-		hdb.db, &txs, // Note that '\x' gets parsed as a big.Int with value = 0
+		hdb.dbRead, &txs, // Note that '\x' gets parsed as a big.Int with value = 0
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.effective_from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.amount_success THEN tx.amount ELSE '\x' END) AS effective_amount,
@@ -715,7 +722,7 @@ func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
 	// Since the query specifies that only coordinator txs are returned, it's safe to assume
 	// that returned txs will always have effective amounts
 	err := meddler.QueryAll(
-		hdb.db, &txs,
+		hdb.dbRead, &txs,
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.effective_from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, tx.amount AS effective_amount,
@@ -730,7 +737,7 @@ func (hdb *HistoryDB) GetAllL1CoordinatorTxs() ([]common.L1Tx, error) {
 func (hdb *HistoryDB) GetAllL2Txs() ([]common.L2Tx, error) {
 	var txs []*common.L2Tx
 	err := meddler.QueryAll(
-		hdb.db, &txs,
+		hdb.dbRead, &txs,
 		`SELECT tx.id, tx.batch_num, tx.position,
 		tx.from_idx, tx.to_idx, tx.amount, tx.token_id,
 		tx.fee, tx.nonce, tx.type, tx.eth_block_num
@@ -743,7 +750,7 @@ func (hdb *HistoryDB) GetAllL2Txs() ([]common.L2Tx, error) {
 func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error) {
 	var txs []*common.L1Tx
 	err := meddler.QueryAll(
-		hdb.db, &txs, // only L1 user txs can have batch_num set to null
+		hdb.dbRead, &txs, // only L1 user txs can have batch_num set to null
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
 		tx.amount, NULL AS effective_amount,
@@ -760,7 +767,7 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 
 // GetLastTxsPosition for a given to_forge_l1_txs_num
 func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {
-	row := hdb.db.QueryRow(
+	row := hdb.dbRead.QueryRow(
 		"SELECT position FROM tx WHERE to_forge_l1_txs_num = $1 ORDER BY position DESC;",
 		toForgeL1TxsNum,
 	)
@@ -774,15 +781,15 @@ func (hdb *HistoryDB) GetSCVars() (*common.RollupVariables, *common.AuctionVaria
 	var rollup common.RollupVariables
 	var auction common.AuctionVariables
 	var wDelayer common.WDelayerVariables
-	if err := meddler.QueryRow(hdb.db, &rollup,
+	if err := meddler.QueryRow(hdb.dbRead, &rollup,
 		"SELECT * FROM rollup_vars ORDER BY eth_block_num DESC LIMIT 1;"); err != nil {
 		return nil, nil, nil, tracerr.Wrap(err)
 	}
-	if err := meddler.QueryRow(hdb.db, &auction,
+	if err := meddler.QueryRow(hdb.dbRead, &auction,
 		"SELECT * FROM auction_vars ORDER BY eth_block_num DESC LIMIT 1;"); err != nil {
 		return nil, nil, nil, tracerr.Wrap(err)
 	}
-	if err := meddler.QueryRow(hdb.db, &wDelayer,
+	if err := meddler.QueryRow(hdb.dbRead, &wDelayer,
 		"SELECT * FROM wdelayer_vars ORDER BY eth_block_num DESC LIMIT 1;"); err != nil {
 		return nil, nil, nil, tracerr.Wrap(err)
 	}
@@ -827,7 +834,7 @@ func (hdb *HistoryDB) AddBucketUpdatesTest(d meddler.DB, bucketUpdates []common.
 func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
 	var bucketUpdates []*common.BucketUpdate
 	err := meddler.QueryAll(
-		hdb.db, &bucketUpdates,
+		hdb.dbRead, &bucketUpdates,
 		`SELECT eth_block_num, num_bucket, block_stamp, withdrawals  
 		FROM bucket_update ORDER BY item_id;`,
 	)
@@ -853,7 +860,7 @@ func (hdb *HistoryDB) addTokenExchanges(d meddler.DB, tokenExchanges []common.To
 func (hdb *HistoryDB) GetAllTokenExchanges() ([]common.TokenExchange, error) {
 	var tokenExchanges []*common.TokenExchange
 	err := meddler.QueryAll(
-		hdb.db, &tokenExchanges,
+		hdb.dbRead, &tokenExchanges,
 		"SELECT eth_block_num, eth_addr, value_usd FROM token_exchange ORDER BY item_id;",
 	)
 	return db.SlicePtrsToSlice(tokenExchanges).([]common.TokenExchange), tracerr.Wrap(err)
@@ -881,7 +888,7 @@ func (hdb *HistoryDB) addEscapeHatchWithdrawals(d meddler.DB,
 func (hdb *HistoryDB) GetAllEscapeHatchWithdrawals() ([]common.WDelayerEscapeHatchWithdrawal, error) {
 	var escapeHatchWithdrawals []*common.WDelayerEscapeHatchWithdrawal
 	err := meddler.QueryAll(
-		hdb.db, &escapeHatchWithdrawals,
+		hdb.dbRead, &escapeHatchWithdrawals,
 		"SELECT eth_block_num, who_addr, to_addr, token_addr, amount FROM escape_hatch_withdrawal ORDER BY item_id;",
 	)
 	return db.SlicePtrsToSlice(escapeHatchWithdrawals).([]common.WDelayerEscapeHatchWithdrawal),
@@ -894,7 +901,7 @@ func (hdb *HistoryDB) GetAllEscapeHatchWithdrawals() ([]common.WDelayerEscapeHat
 // exist in the smart contracts.
 func (hdb *HistoryDB) SetInitialSCVars(rollup *common.RollupVariables,
 	auction *common.AuctionVariables, wDelayer *common.WDelayerVariables) error {
-	txn, err := hdb.db.Beginx()
+	txn, err := hdb.dbWrite.Beginx()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -978,7 +985,7 @@ func (hdb *HistoryDB) setExtraInfoForgedL1UserTxs(d sqlx.Ext, txs []common.L1Tx)
 // the pagination system of the API/DB depends on this.  Within blocks, all
 // items should also be in the correct order (Accounts, Tokens, Txs, etc.)
 func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
-	txn, err := hdb.db.Beginx()
+	txn, err := hdb.dbWrite.Beginx()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -1136,7 +1143,7 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*CoordinatorAPI, error) {
 	coordinator := &CoordinatorAPI{}
 	err := meddler.QueryRow(
-		hdb.db, coordinator,
+		hdb.dbRead, coordinator,
 		"SELECT * FROM coordinator WHERE bidder_addr = $1 ORDER BY item_id DESC LIMIT 1;",
 		bidderAddr,
 	)
@@ -1145,14 +1152,14 @@ func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*Coordina
 
 // AddAuctionVars insert auction vars into the DB
 func (hdb *HistoryDB) AddAuctionVars(auctionVars *common.AuctionVariables) error {
-	return tracerr.Wrap(meddler.Insert(hdb.db, "auction_vars", auctionVars))
+	return tracerr.Wrap(meddler.Insert(hdb.dbWrite, "auction_vars", auctionVars))
 }
 
 // GetTokensTest used to get tokens in a testing context
 func (hdb *HistoryDB) GetTokensTest() ([]TokenWithUSD, error) {
 	tokens := []*TokenWithUSD{}
 	if err := meddler.QueryAll(
-		hdb.db, &tokens,
+		hdb.dbRead, &tokens,
 		"SELECT * FROM TOKEN",
 	); err != nil {
 		return nil, tracerr.Wrap(err)

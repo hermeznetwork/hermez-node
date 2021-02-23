@@ -215,17 +215,30 @@ type Node struct {
 		// Keep is the number of checkpoints to keep
 		Keep int `validate:"required"`
 	} `validate:"required"`
+	// It's possible to use diferentiated SQL connections for read/write.
+	// If the read configuration is not provided, the write one it's going to be used
+	// for both reads and writes
 	PostgreSQL struct {
-		// Port of the PostgreSQL server
-		Port int `validate:"required"`
-		// Host of the PostgreSQL server
-		Host string `validate:"required"`
-		// User of the PostgreSQL server
-		User string `validate:"required"`
-		// Password of the PostgreSQL server
-		Password string `validate:"required"`
-		// Name of the PostgreSQL server database
-		Name string `validate:"required"`
+		// Port of the PostgreSQL write server
+		PortWrite int `validate:"required"`
+		// Host of the PostgreSQL write server
+		HostWrite string `validate:"required"`
+		// User of the PostgreSQL write server
+		UserWrite string `validate:"required"`
+		// Password of the PostgreSQL write server
+		PasswordWrite string `validate:"required"`
+		// Name of the PostgreSQL write server database
+		NameWrite string `validate:"required"`
+		// Port of the PostgreSQL read server
+		PortRead int
+		// Host of the PostgreSQL read server
+		HostRead string
+		// User of the PostgreSQL read server
+		UserRead string
+		// Password of the PostgreSQL read server
+		PasswordRead string
+		// Name of the PostgreSQL read server database
+		NameRead string
 	} `validate:"required"`
 	Web3 struct {
 		// URL is the URL of the web3 ethereum-node RPC server

@@ -34,7 +34,7 @@ func (l2db *L2DB) GetAccountCreationAuthAPI(addr ethCommon.Address) (*AccountCre
 	defer l2db.apiConnCon.Release()
 	auth := new(AccountCreationAuthAPI)
 	return auth, tracerr.Wrap(meddler.QueryRow(
-		l2db.db, auth,
+		l2db.dbRead, auth,
 		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",
 		addr,
 	))
@@ -49,7 +49,7 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 	}
 	defer l2db.apiConnCon.Release()
 
-	row := l2db.db.QueryRow(`SELECT
+	row := l2db.dbRead.QueryRow(`SELECT
 		($1::NUMERIC * token.usd * fee_percentage($2::NUMERIC)) /
 			(10.0 ^ token.decimals::NUMERIC)
 		FROM token WHERE token.token_id = $3;`,
@@ -84,7 +84,7 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 		namesPart, valuesPart,
 		len(values)+1, len(values)+2) //nolint:gomnd
 	values = append(values, common.PoolL2TxStatePending, l2db.maxTxs)
-	res, err := l2db.db.Exec(q, values...)
+	res, err := l2db.dbWrite.Exec(q, values...)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -118,7 +118,7 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 	defer l2db.apiConnCon.Release()
 	tx := new(PoolTxAPI)
 	return tx, tracerr.Wrap(meddler.QueryRow(
-		l2db.db, tx,
+		l2db.dbRead, tx,
 		selectPoolTxAPI+"WHERE tx_id = $1;",
 		txID,
 	))

@@ -201,7 +201,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	apiConnCon := db.NewAPICnnectionController(1, time.Second)
-	hdb := historydb.NewHistoryDB(database, apiConnCon)
+	hdb := historydb.NewHistoryDB(database, database, apiConnCon)
 	if err != nil {
 		panic(err)
 	}
@@ -216,7 +216,7 @@ func TestMain(m *testing.M) {
 		}
 	}()
 	// L2DB
-	l2DB := l2db.NewL2DB(database, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
+	l2DB := l2db.NewL2DB(database, database, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 	// Config (smart contract constants)
 	chainID := uint16(0)
@@ -591,10 +591,10 @@ func TestTimeout(t *testing.T) {
 	databaseTO, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
 	apiConnConTO := db.NewAPICnnectionController(1, 100*time.Millisecond)
-	hdbTO := historydb.NewHistoryDB(databaseTO, apiConnConTO)
+	hdbTO := historydb.NewHistoryDB(databaseTO, databaseTO, apiConnConTO)
 	require.NoError(t, err)
 	// L2DB
-	l2DBTO := l2db.NewL2DB(databaseTO, 10, 1000, 1.0, 24*time.Hour, apiConnConTO)
+	l2DBTO := l2db.NewL2DB(databaseTO, databaseTO, 10, 1000, 1.0, 24*time.Hour, apiConnConTO)
 
 	// API
 	apiGinTO := gin.Default()

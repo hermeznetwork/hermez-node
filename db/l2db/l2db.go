@@ -21,7 +21,8 @@ import (
 // L2DB stores L2 txs and authorization registers received by the coordinator and keeps them until they are no longer relevant
 // due to them being forged or invalid after a safety period
 type L2DB struct {
-	db           *sqlx.DB
+	dbRead       *sqlx.DB
+	dbWrite      *sqlx.DB
 	safetyPeriod common.BatchNum
 	ttl          time.Duration
 	maxTxs       uint32 // limit of txs that are accepted in the pool
@@ -33,7 +34,7 @@ type L2DB struct {
 // To create it, it's needed db connection, safety period expressed in batches,
 // maxTxs that the DB should have and TTL (time to live) for pending txs.
 func NewL2DB(
-	db *sqlx.DB,
+	dbRead, dbWrite *sqlx.DB,
 	safetyPeriod common.BatchNum,
 	maxTxs uint32,
 	minFeeUSD float64,
@@ -41,7 +42,8 @@ func NewL2DB(
 	apiConnCon *db.APIConnectionController,
 ) *L2DB {
 	return &L2DB{
-		db:           db,
+		dbRead:       dbRead,
+		dbWrite:      dbWrite,
 		safetyPeriod: safetyPeriod,
 		ttl:          TTL,
 		maxTxs:       maxTxs,
@@ -53,7 +55,7 @@ func NewL2DB(
 // DB returns a pointer to the L2DB.db. This method should be used only for
 // internal testing purposes.
 func (l2db *L2DB) DB() *sqlx.DB {
-	return l2db.db
+	return l2db.dbWrite
 }
 
 // MinFeeUSD returns the minimum fee in USD that is required to accept txs into
@@ -64,7 +66,7 @@ func (l2db *L2DB) MinFeeUSD() float64 {
 
 // AddAccountCreationAuth inserts an account creation authorization into the DB
 func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error {
-	_, err := l2db.db.Exec(
+	_, err := l2db.dbWrite.Exec(
 		`INSERT INTO account_creation_auth (eth_addr, bjj, signature)
 		VALUES ($1, $2, $3);`,
 		auth.EthAddr, auth.BJJ, auth.Signature,
@@ -76,7 +78,7 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.AccountCreationAuth, error) {
 	auth := new(common.AccountCreationAuth)
 	return auth, tracerr.Wrap(meddler.QueryRow(
-		l2db.db, auth,
+		l2db.dbRead, auth,
 		"SELECT * FROM account_creation_auth WHERE eth_addr = $1;",
 		addr,
 	))
@@ -105,7 +107,7 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
 		WHERE tx_pool.tx_id = tx_update.id;
 	`
 	if len(txUpdates) > 0 {
-		if _, err := sqlx.NamedExec(l2db.db, query, txUpdates); err != nil {
+		if _, err := sqlx.NamedExec(l2db.dbWrite, query, txUpdates); err != nil {
 			return tracerr.Wrap(err)
 		}
 	}
@@ -164,7 +166,7 @@ func NewPoolL2TxWriteFromPoolL2Tx(tx *common.PoolL2Tx) *PoolL2TxWrite {
 func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	insertTx := NewPoolL2TxWriteFromPoolL2Tx(tx)
 	// insert tx
-	return tracerr.Wrap(meddler.Insert(l2db.db, "tx_pool", insertTx))
+	return tracerr.Wrap(meddler.Insert(l2db.dbWrite, "tx_pool", insertTx))
 }
 
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
@@ -181,7 +183,7 @@ FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
 	tx := new(common.PoolL2Tx)
 	return tx, tracerr.Wrap(meddler.QueryRow(
-		l2db.db, tx,
+		l2db.dbRead, tx,
 		selectPoolTxCommon+"WHERE tx_id = $1;",
 		txID,
 	))
@@ -191,7 +193,7 @@ func (l2db *L2DB) GetTx(txID common.TxID) (*common.PoolL2Tx, error) {
 func (l2db *L2DB) GetPendingTxs() ([]common.PoolL2Tx, error) {
 	var txs []*common.PoolL2Tx
 	err := meddler.QueryAll(
-		l2db.db, &txs,
+		l2db.dbRead, &txs,
 		selectPoolTxCommon+"WHERE state = $1",
 		common.PoolL2TxStatePending,
 	)
@@ -216,8 +218,8 @@ func (l2db *L2DB) StartForging(txIDs []common.TxID, batchNum common.BatchNum) er
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	query = l2db.db.Rebind(query)
-	_, err = l2db.db.Exec(query, args...)
+	query = l2db.dbWrite.Rebind(query)
+	_, err = l2db.dbWrite.Exec(query, args...)
 	return tracerr.Wrap(err)
 }
 
@@ -239,8 +241,8 @@ func (l2db *L2DB) DoneForging(txIDs []common.TxID, batchNum common.BatchNum) err
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	query = l2db.db.Rebind(query)
-	_, err = l2db.db.Exec(query, args...)
+	query = l2db.dbWrite.Rebind(query)
+	_, err = l2db.dbWrite.Exec(query, args...)
 	return tracerr.Wrap(err)
 }
 
@@ -261,8 +263,8 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	query = l2db.db.Rebind(query)
-	_, err = l2db.db.Exec(query, args...)
+	query = l2db.dbWrite.Rebind(query)
+	_, err = l2db.dbWrite.Exec(query, args...)
 	return tracerr.Wrap(err)
 }
 
@@ -270,7 +272,7 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 // of unique FromIdx
 func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
 	var idxs []common.Idx
-	rows, err := l2db.db.Query(`SELECT DISTINCT from_idx FROM tx_pool
+	rows, err := l2db.dbRead.Query(`SELECT DISTINCT from_idx FROM tx_pool
 		WHERE state = $1;`, common.PoolL2TxStatePending)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -311,7 +313,7 @@ func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []common.IdxNonce, batchNu
 	// named query which works with slices, and doens't handle an extra
 	// individual argument.
 	query := fmt.Sprintf(invalidateOldNoncesQuery, batchNum)
-	if _, err := sqlx.NamedExec(l2db.db, query, updatedAccounts); err != nil {
+	if _, err := sqlx.NamedExec(l2db.dbWrite, query, updatedAccounts); err != nil {
 		return tracerr.Wrap(err)
 	}
 	return nil
@@ -320,7 +322,7 @@ func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []common.IdxNonce, batchNu
 // Reorg updates the state of txs that were updated in a batch that has been discarted due to a blockchain reorg.
 // The state of the affected txs can change form Forged -> Pending or from Invalid -> Pending
 func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
-	_, err := l2db.db.Exec(
+	_, err := l2db.dbWrite.Exec(
 		`UPDATE tx_pool SET batch_num = NULL, state = $1
 		WHERE (state = $2 OR state = $3 OR state = $4) AND batch_num > $5`,
 		common.PoolL2TxStatePending,
@@ -336,7 +338,7 @@ func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 // it also deletes pending txs that have been in the L2DB for longer than the ttl if maxTxs has been exceeded
 func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 	now := time.Now().UTC().Unix()
-	_, err = l2db.db.Exec(
+	_, err = l2db.dbWrite.Exec(
 		`DELETE FROM tx_pool WHERE (
 			batch_num < $1 AND (state = $2 OR state = $3)
 		) OR (
@@ -357,7 +359,7 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 // the `external_delete` column.  An external process can set this column to
 // true to instruct the coordinator to delete the tx when possible.
 func (l2db *L2DB) PurgeByExternalDelete() error {
-	_, err := l2db.db.Exec(
+	_, err := l2db.dbWrite.Exec(
 		`DELETE from tx_pool WHERE (external_delete = true AND state = $1);`,
 		common.PoolL2TxStatePending,
 	)

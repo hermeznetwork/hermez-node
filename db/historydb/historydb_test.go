@@ -39,12 +39,12 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	historyDB = NewHistoryDB(db, nil)
+	historyDB = NewHistoryDB(db, db, nil)
 	if err != nil {
 		panic(err)
 	}
 	apiConnCon := dbUtils.NewAPICnnectionController(1, time.Second)
-	historyDBWithACC = NewHistoryDB(db, apiConnCon)
+	historyDBWithACC = NewHistoryDB(db, db, apiConnCon)
 	// Run tests
 	result := m.Run()
 	// Close DB
@@ -817,11 +817,11 @@ func TestSetExtraInfoForgedL1UserTxs(t *testing.T) {
 	}
 	// Add second batch to trigger the update of the batch_num,
 	// while avoiding the implicit call of setExtraInfoForgedL1UserTxs
-	err = historyDB.addBlock(historyDB.db, &blocks[1].Block)
+	err = historyDB.addBlock(historyDB.dbWrite, &blocks[1].Block)
 	require.NoError(t, err)
-	err = historyDB.addBatch(historyDB.db, &blocks[1].Rollup.Batches[0].Batch)
+	err = historyDB.addBatch(historyDB.dbWrite, &blocks[1].Rollup.Batches[0].Batch)
 	require.NoError(t, err)
-	err = historyDB.addAccounts(historyDB.db, blocks[1].Rollup.Batches[0].CreatedAccounts)
+	err = historyDB.addAccounts(historyDB.dbWrite, blocks[1].Rollup.Batches[0].CreatedAccounts)
 	require.NoError(t, err)
 
 	// Set the Effective{Amount,DepositAmount} of the L1UserTxs that are forged in the second block
@@ -831,7 +831,7 @@ func TestSetExtraInfoForgedL1UserTxs(t *testing.T) {
 	l1Txs[1].EffectiveAmount = big.NewInt(0)
 	l1Txs[2].EffectiveDepositAmount = big.NewInt(0)
 	l1Txs[2].EffectiveAmount = big.NewInt(0)
-	err = historyDB.setExtraInfoForgedL1UserTxs(historyDB.db, l1Txs)
+	err = historyDB.setExtraInfoForgedL1UserTxs(historyDB.dbWrite, l1Txs)
 	require.NoError(t, err)
 
 	dbL1Txs, err := historyDB.GetAllL1UserTxs()
@@ -918,10 +918,10 @@ func TestUpdateExitTree(t *testing.T) {
 		common.WithdrawInfo{Idx: 259, NumExitRoot: 3, InstantWithdraw: false,
 			Owner: tc.UsersByIdx[259].Addr, Token: tokenAddr},
 	)
-	err = historyDB.addBlock(historyDB.db, &block.Block)
+	err = historyDB.addBlock(historyDB.dbWrite, &block.Block)
 	require.NoError(t, err)
 
-	err = historyDB.updateExitTree(historyDB.db, block.Block.Num,
+	err = historyDB.updateExitTree(historyDB.dbWrite, block.Block.Num,
 		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
 	require.NoError(t, err)
 
@@ -951,10 +951,10 @@ func TestUpdateExitTree(t *testing.T) {
 			Token:  tokenAddr,
 			Amount: big.NewInt(80),
 		})
-	err = historyDB.addBlock(historyDB.db, &block.Block)
+	err = historyDB.addBlock(historyDB.dbWrite, &block.Block)
 	require.NoError(t, err)
 
-	err = historyDB.updateExitTree(historyDB.db, block.Block.Num,
+	err = historyDB.updateExitTree(historyDB.dbWrite, block.Block.Num,
 		block.Rollup.Withdrawals, block.WDelayer.Withdrawals)
 	require.NoError(t, err)
 
@@ -997,7 +997,7 @@ func TestGetBestBidCoordinator(t *testing.T) {
 			URL:         "bar",
 		},
 	}
-	err = historyDB.addCoordinators(historyDB.db, coords)
+	err = historyDB.addCoordinators(historyDB.dbWrite, coords)
 	require.NoError(t, err)
 
 	bids := []common.Bid{
@@ -1015,7 +1015,7 @@ func TestGetBestBidCoordinator(t *testing.T) {
 		},
 	}
 
-	err = historyDB.addBids(historyDB.db, bids)
+	err = historyDB.addBids(historyDB.dbWrite, bids)
 	require.NoError(t, err)
 
 	forger10, err := historyDB.GetBestBidCoordinator(10)
@@ -1053,7 +1053,7 @@ func TestAddBucketUpdates(t *testing.T) {
 			Withdrawals: big.NewInt(42),
 		},
 	}
-	err := historyDB.addBucketUpdates(historyDB.db, bucketUpdates)
+	err := historyDB.addBucketUpdates(historyDB.dbWrite, bucketUpdates)
 	require.NoError(t, err)
 	dbBucketUpdates, err := historyDB.GetAllBucketUpdates()
 	require.NoError(t, err)
@@ -1078,7 +1078,7 @@ func TestAddTokenExchanges(t *testing.T) {
 			ValueUSD:    67890,
 		},
 	}
-	err := historyDB.addTokenExchanges(historyDB.db, tokenExchanges)
+	err := historyDB.addTokenExchanges(historyDB.dbWrite, tokenExchanges)
 	require.NoError(t, err)
 	dbTokenExchanges, err := historyDB.GetAllTokenExchanges()
 	require.NoError(t, err)
@@ -1107,7 +1107,7 @@ func TestAddEscapeHatchWithdrawals(t *testing.T) {
 			Amount:      big.NewInt(20003),
 		},
 	}
-	err := historyDB.addEscapeHatchWithdrawals(historyDB.db, escapeHatchWithdrawals)
+	err := historyDB.addEscapeHatchWithdrawals(historyDB.dbWrite, escapeHatchWithdrawals)
 	require.NoError(t, err)
 	dbEscapeHatchWithdrawals, err := historyDB.GetAllEscapeHatchWithdrawals()
 	require.NoError(t, err)

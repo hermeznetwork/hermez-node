@@ -315,7 +315,7 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB) {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
-	historyDB := historydb.NewHistoryDB(db, nil)
+	historyDB := historydb.NewHistoryDB(db, db, nil)
 	// Clear DB
 	test.WipeDB(historyDB.DB())
 
