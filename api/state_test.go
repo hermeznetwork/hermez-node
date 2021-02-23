@@ -149,7 +149,11 @@ func TestUpdateMetrics(t *testing.T) {
 func TestUpdateRecommendedFee(t *testing.T) {
 	err := api.UpdateRecommendedFee()
 	assert.NoError(t, err)
-	assert.Greater(t, api.status.RecommendedFee.ExistingAccount, float64(0))
+	var minFeeUSD float64
+	if api.l2 != nil {
+		minFeeUSD = api.l2.MinFeeUSD()
+	}
+	assert.Greater(t, api.status.RecommendedFee.ExistingAccount, minFeeUSD)
 	assert.Equal(t, api.status.RecommendedFee.CreatesAccount,
 		api.status.RecommendedFee.ExistingAccount*createAccountExtraFeePercentage)
 	assert.Equal(t, api.status.RecommendedFee.CreatesAccountAndRegister,

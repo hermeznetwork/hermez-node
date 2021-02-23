@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"math/big"
 	"net/http"
 	"time"
@@ -297,10 +298,17 @@ func (a *API) UpdateRecommendedFee() error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	var minFeeUSD float64
+	if a.l2 != nil {
+		minFeeUSD = a.l2.MinFeeUSD()
+	}
 	a.status.Lock()
-	a.status.RecommendedFee.ExistingAccount = feeExistingAccount
-	a.status.RecommendedFee.CreatesAccount = createAccountExtraFeePercentage * feeExistingAccount
-	a.status.RecommendedFee.CreatesAccountAndRegister = createAccountInternalExtraFeePercentage * feeExistingAccount
+	a.status.RecommendedFee.ExistingAccount =
+		math.Max(feeExistingAccount, minFeeUSD)
+	a.status.RecommendedFee.CreatesAccount =
+		math.Max(createAccountExtraFeePercentage*feeExistingAccount, minFeeUSD)
+	a.status.RecommendedFee.CreatesAccountAndRegister =
+		math.Max(createAccountInternalExtraFeePercentage*feeExistingAccount, minFeeUSD)
 	a.status.Unlock()
 	return nil
 }

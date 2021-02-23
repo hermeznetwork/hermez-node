@@ -594,7 +594,7 @@ func TestTimeout(t *testing.T) {
 	hdbTO := historydb.NewHistoryDB(databaseTO, apiConnConTO)
 	require.NoError(t, err)
 	// L2DB
-	l2DBTO := l2db.NewL2DB(databaseTO, 10, 1000, 0.0, 24*time.Hour, apiConnConTO)
+	l2DBTO := l2db.NewL2DB(databaseTO, 10, 1000, 1.0, 24*time.Hour, apiConnConTO)
 
 	// API
 	apiGinTO := gin.Default()
