@@ -605,7 +605,7 @@ func (tp *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L
 
 		// execute exit flow
 		// coordIdxsMap is 'nil', as at L1Txs there is no L2 fees
-		exitAccount, newExit, err := tp.applyExit(nil, nil, exitTree, tx.Tx())
+		exitAccount, newExit, err := tp.applyExit(nil, nil, exitTree, tx.Tx(), tx.Amount)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, nil, tracerr.Wrap(err)
@@ -730,7 +730,7 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 	case common.TxTypeExit:
 		// execute exit flow
-		exitAccount, newExit, err := tp.applyExit(coordIdxsMap, collectedFees, exitTree, tx.Tx())
+		exitAccount, newExit, err := tp.applyExit(coordIdxsMap, collectedFees, exitTree, tx.Tx(), tx.Amount)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, tracerr.Wrap(err)
@@ -1104,7 +1104,7 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 // new Leaf in the ExitTree.
 func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	collectedFees map[common.TokenID]*big.Int, exitTree *merkletree.MerkleTree,
-	tx common.Tx) (*common.Account, bool, error) {
+	tx common.Tx, originalAmount *big.Int) (*common.Account, bool, error) {
 	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := tp.s.GetAccount(tx.FromIdx)
@@ -1174,7 +1174,17 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 	if exitTree == nil {
 		return nil, false, nil
 	}
-	if tx.Amount.Cmp(big.NewInt(0)) == 0 { // Amount == 0
+
+	// Do not add the Exit when Amount=0, not EffectiveAmount=0. In
+	// txprocessor.applyExit function, the tx.Amount is in reality the
+	// EffectiveAmount, that's why is used here the originalAmount
+	// parameter, which contains the real value of the tx.Amount (not
+	// tx.EffectiveAmount).  This is a particularity of the approach of the
+	// circuit, the idea will be in the future to update the circuit and
+	// when Amount>0 but EffectiveAmount=0, to not add the Exit in the
+	// Exits MerkleTree, but for the moment the Go code is adapted to the
+	// circuit.
+	if originalAmount.Cmp(big.NewInt(0)) == 0 { // Amount == 0
 		// if the Exit Amount==0, the Exit is not added to the ExitTree
 		return nil, false, nil
 	}
@@ -1187,6 +1197,8 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		exitAccount := &common.Account{
 			TokenID: acc.TokenID,
 			Nonce:   common.Nonce(0),
+			// as is a common.Tx, the Amount is already an
+			// EffectiveAmount
 			Balance: tx.Amount,
 			BJJ:     acc.BJJ,
 			EthAddr: acc.EthAddr,
@@ -1200,6 +1212,8 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 				tp.zki.Sign2[tp.i] = big.NewInt(1)
 			}
 			tp.zki.Ay2[tp.i] = accBJJY
+			// as is a common.Tx, the Amount is already an
+			// EffectiveAmount
 			tp.zki.Balance2[tp.i] = tx.Amount
 			tp.zki.EthAddr2[tp.i] = common.EthAddrToBigInt(acc.EthAddr)
 			// as Leaf didn't exist in the ExitTree, set NewExit[i]=1
