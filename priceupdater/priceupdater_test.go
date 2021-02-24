@@ -20,7 +20,7 @@ func TestPriceUpdater(t *testing.T) {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	assert.NoError(t, err)
-	historyDB := historydb.NewHistoryDB(db, nil)
+	historyDB := historydb.NewHistoryDB(db, db, nil)
 	// Clean DB
 	test.WipeDB(historyDB.DB())
 	// Populate DB

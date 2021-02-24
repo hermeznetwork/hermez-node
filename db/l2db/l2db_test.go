@@ -37,11 +37,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	l2DB = NewL2DB(db, 10, 1000, 0.0, 24*time.Hour, nil)
+	l2DB = NewL2DB(db, db, 10, 1000, 0.0, 24*time.Hour, nil)
 	apiConnCon := dbUtils.NewAPICnnectionController(1, time.Second)
-	l2DBWithACC = NewL2DB(db, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
+	l2DBWithACC = NewL2DB(db, db, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB())
-	historyDB = historydb.NewHistoryDB(db, nil)
+	historyDB = historydb.NewHistoryDB(db, db, nil)
 	// Run tests
 	result := m.Run()
 	// Close DB
@@ -660,7 +660,7 @@ func TestPurge(t *testing.T) {
 	}
 	// Set batchNum keeped txs
 	for i := range keepedIDs {
-		_, err = l2DB.db.Exec(
+		_, err = l2DB.dbWrite.Exec(
 			"UPDATE tx_pool SET batch_num = $1 WHERE tx_id = $2;",
 			safeBatchNum, keepedIDs[i],
 		)
@@ -679,7 +679,7 @@ func TestPurge(t *testing.T) {
 	deleteTimestamp := time.Unix(time.Now().UTC().Unix()-int64(l2DB.ttl.Seconds()+float64(4*time.Second)), 0)
 	for _, id := range afterTTLIDs {
 		// Set timestamp
-		_, err = l2DB.db.Exec(
+		_, err = l2DB.dbWrite.Exec(
 			"UPDATE tx_pool SET timestamp = $1, state = $2 WHERE tx_id = $3;",
 			deleteTimestamp, common.PoolL2TxStatePending, id,
 		)
@@ -797,7 +797,7 @@ func TestPurgeByExternalDelete(t *testing.T) {
 	require.NoError(t, l2DB.StartForging(
 		[]common.TxID{txs[4].TxID, txs[5].TxID, txs[6].TxID, txs[7].TxID},
 		1))
-	_, err = l2DB.db.Exec(
+	_, err = l2DB.dbWrite.Exec(
 		`UPDATE tx_pool SET external_delete = true WHERE
 			tx_id IN ($1, $2, $3, $4)
 		;`,

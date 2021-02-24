@@ -17,6 +17,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/node"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli/v2"
 )
 
@@ -90,11 +91,11 @@ func cmdWipeSQL(c *cli.Context) error {
 		}
 	}
 	db, err := dbUtils.ConnectSQLDB(
-		cfg.PostgreSQL.Port,
-		cfg.PostgreSQL.Host,
-		cfg.PostgreSQL.User,
-		cfg.PostgreSQL.Password,
-		cfg.PostgreSQL.Name,
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
 	)
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -151,17 +152,36 @@ func cmdDiscard(c *cli.Context) error {
 	blockNum := c.Int64(flagBlock)
 	log.Infof("Discarding all blocks up to block %v...", blockNum)
 
-	db, err := dbUtils.InitSQLDB(
-		cfg.PostgreSQL.Port,
-		cfg.PostgreSQL.Host,
-		cfg.PostgreSQL.User,
-		cfg.PostgreSQL.Password,
-		cfg.PostgreSQL.Name,
+	dbWrite, err := dbUtils.InitSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
 	)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
 	}
-	historyDB := historydb.NewHistoryDB(db, nil)
+	var dbRead *sqlx.DB
+	if cfg.PostgreSQL.HostRead == "" {
+		dbRead = dbWrite
+	} else if cfg.PostgreSQL.HostRead == cfg.PostgreSQL.HostWrite {
+		return tracerr.Wrap(fmt.Errorf(
+			"PostgreSQL.HostRead and PostgreSQL.HostWrite must be different",
+		))
+	} else {
+		dbRead, err = dbUtils.InitSQLDB(
+			cfg.PostgreSQL.PortRead,
+			cfg.PostgreSQL.HostRead,
+			cfg.PostgreSQL.UserRead,
+			cfg.PostgreSQL.PasswordRead,
+			cfg.PostgreSQL.NameRead,
+		)
+		if err != nil {
+			return tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+		}
+	}
+	historyDB := historydb.NewHistoryDB(dbRead, dbWrite, nil)
 	if err := historyDB.Reorg(blockNum); err != nil {
 		return tracerr.Wrap(fmt.Errorf("historyDB.Reorg: %w", err))
 	}
@@ -170,7 +190,7 @@ func cmdDiscard(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastBatchNum: %w", err))
 	}
 	l2DB := l2db.NewL2DB(
-		db,
+		dbRead, dbWrite,
 		cfg.Coordinator.L2DB.SafetyPeriod,
 		cfg.Coordinator.L2DB.MaxTxs,
 		cfg.Coordinator.L2DB.MinFeeUSD,

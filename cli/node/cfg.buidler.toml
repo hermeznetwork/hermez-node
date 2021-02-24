@@ -20,11 +20,16 @@ Path = "/tmp/iden3-test/hermez/statedb"
 Keep = 256
 
 [PostgreSQL]
-Port     = 5432
-Host     = "localhost"
-User     = "hermez"
-Password = "yourpasswordhere"
-Name     = "hermez"
+PortWrite     = 5432
+HostWrite     = "localhost"
+UserWrite     = "hermez"
+PasswordWrite = "yourpasswordhere"
+NameWrite     = "hermez"
+# PortRead     = 5432
+# HostRead     = "localhost"
+# UserRead     = "hermez"
+# PasswordRead = "yourpasswordhere"
+# NameRead     = "hermez"
 
 [Web3]
 URL = "http://localhost:8545"

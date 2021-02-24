@@ -34,7 +34,7 @@ func (hdb *HistoryDB) GetBatchAPI(batchNum common.BatchNum) (*BatchAPI, error) {
 	defer hdb.apiConnCon.Release()
 	batch := &BatchAPI{}
 	return batch, tracerr.Wrap(meddler.QueryRow(
-		hdb.db, batch,
+		hdb.dbRead, batch,
 		`SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
 		batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
 		batch.num_accounts, batch.exit_root, batch.forge_l1_txs_num, batch.slot_num,
@@ -133,10 +133,10 @@ func (hdb *HistoryDB) GetBatchesAPI(
 		queryStr += " DESC "
 	}
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
-	query = hdb.db.Rebind(queryStr)
+	query = hdb.dbRead.Rebind(queryStr)
 	// log.Debug(query)
 	batchPtrs := []*BatchAPI{}
-	if err := meddler.QueryAll(hdb.db, &batchPtrs, query, args...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &batchPtrs, query, args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	batches := db.SlicePtrsToSlice(batchPtrs).([]BatchAPI)
@@ -156,7 +156,7 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 	}
 	defer hdb.apiConnCon.Release()
 	err = meddler.QueryRow(
-		hdb.db, bid, `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url 
+		hdb.dbRead, bid, `SELECT bid.*, block.timestamp, coordinator.forger_addr, coordinator.url 
 		FROM bid INNER JOIN block ON bid.eth_block_num = block.eth_block_num
 		INNER JOIN (
 			SELECT bidder_addr, MAX(item_id) AS item_id FROM coordinator
@@ -212,9 +212,9 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 	if limit != nil {
 		queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 	}
-	query = hdb.db.Rebind(queryStr)
+	query = hdb.dbRead.Rebind(queryStr)
 	bidPtrs := []*BidAPI{}
-	if err := meddler.QueryAll(hdb.db, &bidPtrs, query, args...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &bidPtrs, query, args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	// log.Debug(query)
@@ -296,9 +296,9 @@ func (hdb *HistoryDB) GetBidsAPI(
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	query = hdb.db.Rebind(query)
+	query = hdb.dbRead.Rebind(query)
 	bids := []*BidAPI{}
-	if err := meddler.QueryAll(hdb.db, &bids, query, argsQ...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &bids, query, argsQ...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(bids) == 0 {
@@ -384,9 +384,9 @@ func (hdb *HistoryDB) GetTokensAPI(
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	query = hdb.db.Rebind(query)
+	query = hdb.dbRead.Rebind(query)
 	tokens := []*TokenWithUSD{}
-	if err := meddler.QueryAll(hdb.db, &tokens, query, argsQ...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &tokens, query, argsQ...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(tokens) == 0 {
@@ -408,7 +408,7 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 	defer hdb.apiConnCon.Release()
 	tx := &TxAPI{}
 	err = meddler.QueryRow(
-		hdb.db, tx, `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
+		hdb.dbRead, tx, `SELECT tx.item_id, tx.is_l1, tx.id, tx.type, tx.position, 
 		hez_idx(tx.effective_from_idx, token.symbol) AS from_idx, tx.from_eth_addr, tx.from_bjj,
 		hez_idx(tx.to_idx, token.symbol) AS to_idx, tx.to_eth_addr, tx.to_bjj,
 		tx.amount, tx.amount_success, tx.token_id, tx.amount_usd, 
@@ -541,10 +541,10 @@ func (hdb *HistoryDB) GetTxsAPI(
 		queryStr += " DESC "
 	}
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
-	query = hdb.db.Rebind(queryStr)
+	query = hdb.dbRead.Rebind(queryStr)
 	// log.Debug(query)
 	txsPtrs := []*TxAPI{}
-	if err := meddler.QueryAll(hdb.db, &txsPtrs, query, args...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &txsPtrs, query, args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	txs := db.SlicePtrsToSlice(txsPtrs).([]TxAPI)
@@ -564,7 +564,7 @@ func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, err
 	defer hdb.apiConnCon.Release()
 	exit := &ExitAPI{}
 	err = meddler.QueryRow(
-		hdb.db, exit, `SELECT exit_tree.item_id, exit_tree.batch_num,
+		hdb.dbRead, exit, `SELECT exit_tree.item_id, exit_tree.batch_num,
 		hez_idx(exit_tree.account_idx, token.symbol) AS account_idx,
 		account.bjj, account.eth_addr,
 		exit_tree.merkle_proof, exit_tree.balance, exit_tree.instant_withdrawn,
@@ -685,10 +685,10 @@ func (hdb *HistoryDB) GetExitsAPI(
 		queryStr += " DESC "
 	}
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
-	query = hdb.db.Rebind(queryStr)
+	query = hdb.dbRead.Rebind(queryStr)
 	// log.Debug(query)
 	exits := []*ExitAPI{}
-	if err := meddler.QueryAll(hdb.db, &exits, query, args...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &exits, query, args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(exits) == 0 {
@@ -707,7 +707,7 @@ func (hdb *HistoryDB) GetBucketUpdatesAPI() ([]BucketUpdateAPI, error) {
 	defer hdb.apiConnCon.Release()
 	var bucketUpdates []*BucketUpdateAPI
 	err = meddler.QueryAll(
-		hdb.db, &bucketUpdates,
+		hdb.dbRead, &bucketUpdates,
 		`SELECT num_bucket, withdrawals FROM bucket_update 
 		WHERE item_id in(SELECT max(item_id) FROM bucket_update 
 		group by num_bucket) 
@@ -772,10 +772,10 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(
 		queryStr += " DESC "
 	}
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
-	query = hdb.db.Rebind(queryStr)
+	query = hdb.dbRead.Rebind(queryStr)
 
 	coordinators := []*CoordinatorAPI{}
-	if err := meddler.QueryAll(hdb.db, &coordinators, query, args...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &coordinators, query, args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(coordinators) == 0 {
@@ -795,7 +795,7 @@ func (hdb *HistoryDB) GetAuctionVarsAPI() (*common.AuctionVariables, error) {
 	defer hdb.apiConnCon.Release()
 	auctionVars := &common.AuctionVariables{}
 	err = meddler.QueryRow(
-		hdb.db, auctionVars, `SELECT * FROM auction_vars;`,
+		hdb.dbRead, auctionVars, `SELECT * FROM auction_vars;`,
 	)
 	return auctionVars, tracerr.Wrap(err)
 }
@@ -816,7 +816,7 @@ func (hdb *HistoryDB) GetAuctionVarsUntilSetSlotNumAPI(slotNum int64, maxItems i
 		ORDER BY default_slot_set_bid_slot_num DESC
 		LIMIT $2;
 	`
-	err = meddler.QueryAll(hdb.db, &auctionVars, query, slotNum, maxItems)
+	err = meddler.QueryAll(hdb.dbRead, &auctionVars, query, slotNum, maxItems)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -832,7 +832,7 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 	}
 	defer hdb.apiConnCon.Release()
 	account := &AccountAPI{}
-	err = meddler.QueryRow(hdb.db, account, `SELECT account.item_id, hez_idx(account.idx, 
+	err = meddler.QueryRow(hdb.dbRead, account, `SELECT account.item_id, hez_idx(account.idx, 
 		token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
 		token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 		token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd,
@@ -927,10 +927,10 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	query = hdb.db.Rebind(query)
+	query = hdb.dbRead.Rebind(query)
 
 	accounts := []*AccountAPI{}
-	if err := meddler.QueryAll(hdb.db, &accounts, query, argsQ...); err != nil {
+	if err := meddler.QueryAll(hdb.dbRead, &accounts, query, argsQ...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	if len(accounts) == 0 {
@@ -952,7 +952,7 @@ func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, err
 	metricsTotals := &MetricsTotals{}
 	metrics := &Metrics{}
 	err = meddler.QueryRow(
-		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs,
+		hdb.dbRead, metricsTotals, `SELECT COUNT(tx.*) as total_txs,
 		COALESCE (MIN(tx.batch_num), 0) as batch_num, COALESCE (MIN(block.timestamp), 
 		NOW()) AS min_timestamp, COALESCE (MAX(block.timestamp), NOW()) AS max_timestamp
 		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
@@ -977,7 +977,7 @@ func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, err
 	}
 
 	err = meddler.QueryRow(
-		hdb.db, metricsTotals, `SELECT COUNT(*) AS total_batches, 
+		hdb.dbRead, metricsTotals, `SELECT COUNT(*) AS total_batches, 
 		COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
 		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
 	if err != nil {
@@ -994,7 +994,7 @@ func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, err
 		metrics.AvgTransactionFee = 0
 	}
 	err = meddler.QueryRow(
-		hdb.db, metrics,
+		hdb.dbRead, metrics,
 		`SELECT COUNT(*) AS total_bjjs, COUNT(DISTINCT(bjj)) AS total_accounts FROM account;`)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -1013,7 +1013,7 @@ func (hdb *HistoryDB) GetAvgTxFeeAPI() (float64, error) {
 	defer hdb.apiConnCon.Release()
 	metricsTotals := &MetricsTotals{}
 	err = meddler.QueryRow(
-		hdb.db, metricsTotals, `SELECT COUNT(tx.*) as total_txs, 
+		hdb.dbRead, metricsTotals, `SELECT COUNT(tx.*) as total_txs, 
 		COALESCE (MIN(tx.batch_num), 0) as batch_num 
 		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
 		WHERE block.timestamp >= NOW() - INTERVAL '1 HOURS';`)
@@ -1021,7 +1021,7 @@ func (hdb *HistoryDB) GetAvgTxFeeAPI() (float64, error) {
 		return 0, tracerr.Wrap(err)
 	}
 	err = meddler.QueryRow(
-		hdb.db, metricsTotals, `SELECT COUNT(*) AS total_batches, 
+		hdb.dbRead, metricsTotals, `SELECT COUNT(*) AS total_batches, 
 		COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
 		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
 	if err != nil {
@@ -1048,7 +1048,7 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 	defer hdb.apiConnCon.Release()
 	account := &common.Account{}
 	err = meddler.QueryRow(
-		hdb.db, account, `SELECT * FROM account WHERE idx = $1;`, idx,
+		hdb.dbRead, account, `SELECT * FROM account WHERE idx = $1;`, idx,
 	)
 	return account, tracerr.Wrap(err)
 }

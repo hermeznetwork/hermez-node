@@ -62,27 +62,47 @@ type Node struct {
 	sync *synchronizer.Synchronizer
 
 	// General
-	cfg     *config.Node
-	mode    Mode
-	sqlConn *sqlx.DB
-	ctx     context.Context
-	wg      sync.WaitGroup
-	cancel  context.CancelFunc
+	cfg          *config.Node
+	mode         Mode
+	sqlConnRead  *sqlx.DB
+	sqlConnWrite *sqlx.DB
+	ctx          context.Context
+	wg           sync.WaitGroup
+	cancel       context.CancelFunc
 }
 
 // NewNode creates a Node
 func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
-	db, err := dbUtils.InitSQLDB(
-		cfg.PostgreSQL.Port,
-		cfg.PostgreSQL.Host,
-		cfg.PostgreSQL.User,
-		cfg.PostgreSQL.Password,
-		cfg.PostgreSQL.Name,
+	dbWrite, err := dbUtils.InitSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
 	)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+	}
+	var dbRead *sqlx.DB
+	if cfg.PostgreSQL.HostRead == "" {
+		dbRead = dbWrite
+	} else if cfg.PostgreSQL.HostRead == cfg.PostgreSQL.HostWrite {
+		return nil, tracerr.Wrap(fmt.Errorf(
+			"PostgreSQL.HostRead and PostgreSQL.HostWrite must be different",
+		))
+	} else {
+		dbRead, err = dbUtils.InitSQLDB(
+			cfg.PostgreSQL.PortRead,
+			cfg.PostgreSQL.HostRead,
+			cfg.PostgreSQL.UserRead,
+			cfg.PostgreSQL.PasswordRead,
+			cfg.PostgreSQL.NameRead,
+		)
+		if err != nil {
+			return nil, tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+		}
 	}
 	var apiConnCon *dbUtils.APIConnectionController
 	if cfg.API.Explorer || mode == ModeCoordinator {
@@ -92,7 +112,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		)
 	}
 
-	historyDB := historydb.NewHistoryDB(db, apiConnCon)
+	historyDB := historydb.NewHistoryDB(dbRead, dbWrite, apiConnCon)
 
 	ethClient, err := ethclient.Dial(cfg.Web3.URL)
 	if err != nil {
@@ -201,7 +221,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	var l2DB *l2db.L2DB
 	if mode == ModeCoordinator {
 		l2DB = l2db.NewL2DB(
-			db,
+			dbRead, dbWrite,
 			cfg.Coordinator.L2DB.SafetyPeriod,
 			cfg.Coordinator.L2DB.MaxTxs,
 			cfg.Coordinator.L2DB.MinFeeUSD,
@@ -391,7 +411,8 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		sync:         sync,
 		cfg:          cfg,
 		mode:         mode,
-		sqlConn:      db,
+		sqlConnRead:  dbRead,
+		sqlConnWrite: dbWrite,
 		ctx:          ctx,
 		cancel:       cancel,
 	}, nil
