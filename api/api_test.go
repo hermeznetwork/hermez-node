@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -38,8 +39,8 @@ type Pendinger interface {
 	New() Pendinger
 }
 
-const apiPort = ":4010"
-const apiURL = "http://localhost" + apiPort + "/"
+const apiAddr = ":4010"
+const apiURL = "http://localhost" + apiAddr + "/"
 
 var SetBlockchain = `
 	Type: Blockchain
@@ -241,9 +242,14 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	// Start server
-	server := &http.Server{Addr: apiPort, Handler: apiGin}
+	listener, err := net.Listen("tcp", apiAddr) //nolint:gosec
+	if err != nil {
+		panic(err)
+	}
+	server := &http.Server{Handler: apiGin}
 	go func() {
-		if err := server.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
+		if err := server.Serve(listener); err != nil &&
+			tracerr.Unwrap(err) != http.ErrServerClosed {
 			panic(err)
 		}
 	}()
@@ -609,9 +615,12 @@ func TestTimeout(t *testing.T) {
 		<-finishWait
 	})
 	// Start server
-	serverTO := &http.Server{Addr: ":4444", Handler: apiGinTO}
+	serverTO := &http.Server{Handler: apiGinTO}
+	listener, err := net.Listen("tcp", ":4444") //nolint:gosec
+	require.NoError(t, err)
 	go func() {
-		if err := serverTO.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
+		if err := serverTO.Serve(listener); err != nil &&
+			tracerr.Unwrap(err) != http.ErrServerClosed {
 			require.NoError(t, err)
 		}
 	}()

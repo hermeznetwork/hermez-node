@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -202,16 +203,20 @@ func (s *Mock) Run(ctx context.Context) error {
 	apiGroup.POST("/cancel", s.handleCancel)
 
 	debugAPIServer := &http.Server{
-		Addr:    s.addr,
 		Handler: api,
 		// Use some hardcoded numberes that are suitable for testing
 		ReadTimeout:    30 * time.Second, //nolint:gomnd
 		WriteTimeout:   30 * time.Second, //nolint:gomnd
 		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
 	}
+	listener, err := net.Listen("tcp", s.addr)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Infof("prover.MockServer is ready at %v", s.addr)
 	go func() {
-		log.Infof("prover.MockServer is ready at %v", s.addr)
-		if err := debugAPIServer.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
+		if err := debugAPIServer.Serve(listener); err != nil &&
+			tracerr.Unwrap(err) != http.ErrServerClosed {
 			log.Fatalf("Listen: %s\n", err)
 		}
 	}()

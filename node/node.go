@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -444,16 +445,20 @@ func NewNodeAPI(
 // cancelation.
 func (a *NodeAPI) Run(ctx context.Context) error {
 	server := &http.Server{
-		Addr:    a.addr,
 		Handler: a.engine,
 		// TODO: Figure out best parameters for production
 		ReadTimeout:    30 * time.Second, //nolint:gomnd
 		WriteTimeout:   30 * time.Second, //nolint:gomnd
 		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
 	}
+	listener, err := net.Listen("tcp", a.addr)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Infof("NodeAPI is ready at %v", a.addr)
 	go func() {
-		log.Infof("NodeAPI is ready at %v", a.addr)
-		if err := server.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
+		if err := server.Serve(listener); err != nil &&
+			tracerr.Unwrap(err) != http.ErrServerClosed {
 			log.Fatalf("Listen: %s\n", err)
 		}
 	}()
