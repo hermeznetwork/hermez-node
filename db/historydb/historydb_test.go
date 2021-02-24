@@ -1175,16 +1175,12 @@ func TestGetMetricsAPI(t *testing.T) {
 	res, err := historyDBWithACC.GetMetricsAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
-	assert.Equal(t, float64(numTx)/float64(numBatches-1), res.TransactionsPerBatch)
+	assert.Equal(t, float64(numTx)/float64(numBatches), res.TransactionsPerBatch)
 
 	// Frequency is not exactly the desired one, some decimals may appear
-	assert.GreaterOrEqual(t, res.BatchFrequency, float64(frequency))
-	assert.Less(t, res.BatchFrequency, float64(frequency+1))
-	// Truncate frecuency into an int to do an exact check
-	assert.Equal(t, frequency, int(res.BatchFrequency))
-	// This may also be different in some decimals
-	// Truncate it to the third decimal to compare
-	assert.Equal(t, math.Trunc((float64(numTx)/float64(frequency*blockNum-frequency))/0.001)*0.001, math.Trunc(res.TransactionsPerSecond/0.001)*0.001)
+	// There is a -2 as time for first and last batch is not taken into account
+	assert.InEpsilon(t, float64(frequency)*float64(numBatches-2)/float64(numBatches), res.BatchFrequency, 0.01)
+	assert.InEpsilon(t, float64(numTx)/float64(frequency*blockNum-frequency), res.TransactionsPerSecond, 0.01)
 	assert.Equal(t, int64(3), res.TotalAccounts)
 	assert.Equal(t, int64(3), res.TotalBJJs)
 	// Til does not set fees
