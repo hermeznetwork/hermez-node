@@ -1018,22 +1018,22 @@ func TestUpdatedAccounts(t *testing.T) {
 	assert.NoError(t, err)
 
 	set := `
-Type: Blockchain
-AddToken(1)
-CreateAccountCoordinator(0) Coord // 256
-CreateAccountCoordinator(1) Coord // 257
-> batch // 1
-CreateAccountDeposit(0) A: 50 // 258
-CreateAccountDeposit(0) B: 60 // 259
-CreateAccountDeposit(1) A: 70 // 260
-CreateAccountDeposit(1) B: 80 // 261
-> batchL1 // 2
-> batchL1 // 3
-Transfer(0) A-B: 5 (126)
-> batch // 4
-Exit(1) B: 5 (126)
-> batch // 5
-> block
+		Type: Blockchain
+		AddToken(1)
+		CreateAccountCoordinator(0) Coord // 256
+		CreateAccountCoordinator(1) Coord // 257
+		> batch // 1
+		CreateAccountDeposit(0) A: 50 // 258
+		CreateAccountDeposit(0) B: 60 // 259
+		CreateAccountDeposit(1) A: 70 // 260
+		CreateAccountDeposit(1) B: 80 // 261
+		> batchL1 // 2
+		> batchL1 // 3
+		Transfer(0) A-B: 5 (126)
+		> batch // 4
+		Exit(1) B: 5 (126)
+		> batch // 5
+		> block
 	`
 
 	chainID := uint16(0)
