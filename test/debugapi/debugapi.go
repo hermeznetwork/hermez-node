@@ -2,6 +2,7 @@ package debugapi
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"time"
 
@@ -121,16 +122,20 @@ func (a *DebugAPI) Run(ctx context.Context) error {
 	debugAPI.GET("sync/stats", a.handleSyncStats)
 
 	debugAPIServer := &http.Server{
-		Addr:    a.addr,
 		Handler: api,
-		// Use some hardcoded numberes that are suitable for testing
+		// Use some hardcoded numbers that are suitable for testing
 		ReadTimeout:    30 * time.Second, //nolint:gomnd
 		WriteTimeout:   30 * time.Second, //nolint:gomnd
 		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
 	}
+	listener, err := net.Listen("tcp", a.addr)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Infof("DebugAPI is ready at %v", a.addr)
 	go func() {
-		log.Infof("DebugAPI is ready at %v", a.addr)
-		if err := debugAPIServer.ListenAndServe(); err != nil && tracerr.Unwrap(err) != http.ErrServerClosed {
+		if err := debugAPIServer.Serve(listener); err != nil &&
+			tracerr.Unwrap(err) != http.ErrServerClosed {
 			log.Fatalf("Listen: %s\n", err)
 		}
 	}()
