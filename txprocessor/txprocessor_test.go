@@ -795,7 +795,8 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	checkBalanceByIdx(t, tp.s, 259, "0")   // Coord0
 }
 
-func TestTwoExits(t *testing.T) {
+func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOutput,
+	[]*ProcessTxOutput, []*ProcessTxOutput) {
 	// In the first part we generate a batch with two force exits for the
 	// same account of 20 each.  The txprocessor output should be a single
 	// exitInfo with balance of 40.
@@ -803,8 +804,9 @@ func TestTwoExits(t *testing.T) {
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
 
+	nLevels := 16
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
-		Type: statedb.TypeSynchronizer, NLevels: 32})
+		Type: stateDBType, NLevels: nLevels})
 	assert.NoError(t, err)
 
 	chainID := uint16(1)
@@ -840,10 +842,10 @@ func TestTwoExits(t *testing.T) {
 	require.Equal(t, 2, len(blocks[0].Rollup.Batches[3].L1UserTxs))
 
 	config := Config{
-		NLevels:  32,
-		MaxFeeTx: 64,
-		MaxTx:    512,
-		MaxL1Tx:  16,
+		NLevels:  uint32(nLevels),
+		MaxTx:    3,
+		MaxL1Tx:  2,
+		MaxFeeTx: 2,
 		ChainID:  chainID,
 	}
 	tp := NewTxProcessor(sdb, config)
@@ -856,8 +858,6 @@ func TestTwoExits(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 1, len(ptOuts[3].ExitInfos))
-	assert.Equal(t, big.NewInt(40), ptOuts[3].ExitInfos[0].Balance)
 	acc, err := sdb.GetAccount(256)
 	require.NoError(t, err)
 	assert.Equal(t, big.NewInt(60), acc.Balance)
@@ -872,7 +872,7 @@ func TestTwoExits(t *testing.T) {
 	defer assert.NoError(t, os.RemoveAll(dir2))
 
 	sdb2, err := statedb.NewStateDB(statedb.Config{Path: dir2, Keep: 128,
-		Type: statedb.TypeSynchronizer, NLevels: 32})
+		Type: stateDBType, NLevels: nLevels})
 	assert.NoError(t, err)
 
 	tc = til.NewContext(chainID, common.RollupConstMaxL1UserTx)
@@ -910,7 +910,68 @@ func TestTwoExits(t *testing.T) {
 		}
 	}
 
+	// In the third part we start a fresh statedb and generate a batch with
+	// two force exit for the same account as before but where the 1st Exit
+	// is with all the amount, and the 2nd Exit is with more amount than
+	// the available balance.  The txprocessor output should be a single
+	// exitInfo with balance of 40, and the exit merkle tree proof should
+	// be equal to the previous ones.
+
+	dir3, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer assert.NoError(t, os.RemoveAll(dir3))
+
+	sdb3, err := statedb.NewStateDB(statedb.Config{Path: dir3, Keep: 128,
+		Type: stateDBType, NLevels: nLevels})
+	assert.NoError(t, err)
+
+	tc = til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+
+	// Single exit with balance of both exits in previous set.  The exit
+	// root should match.
+	set3 := `
+		Type: Blockchain
+
+		CreateAccountDeposit(0) A: 100
+
+		> batchL1 // freeze L1User{1}
+		> batchL1 // forge L1User{1}
+
+		ForceExit(0) A: 40
+		ForceExit(0) A: 100
+
+		> batchL1 // freeze L1User{2}
+		> batchL1 // forge L1User{2}
+		> block
+	`
+	blocks, err = tc.GenerateBlocks(set3)
+	require.NoError(t, err)
+	err = tc.FillBlocksExtra(blocks, &til.ConfigExtra{})
+	require.NoError(t, err)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	require.NoError(t, err)
+
+	tp = NewTxProcessor(sdb3, config)
+	ptOuts3 := []*ProcessTxOutput{}
+	for _, block := range blocks {
+		for _, batch := range block.Rollup.Batches {
+			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			require.NoError(t, err)
+			ptOuts3 = append(ptOuts3, ptOut)
+		}
+	}
+
+	return ptOuts, ptOuts2, ptOuts3
+}
+
+func TestTwoExitsSynchronizer(t *testing.T) {
+	ptOuts, ptOuts2, ptOuts3 := testTwoExits(t, statedb.TypeSynchronizer)
+
+	assert.Equal(t, 1, len(ptOuts[3].ExitInfos))
+	assert.Equal(t, big.NewInt(40), ptOuts[3].ExitInfos[0].Balance)
+
 	assert.Equal(t, ptOuts[3].ExitInfos[0].MerkleProof, ptOuts2[3].ExitInfos[0].MerkleProof)
+	assert.Equal(t, ptOuts[3].ExitInfos[0].MerkleProof, ptOuts3[3].ExitInfos[0].MerkleProof)
 }
 
 func TestExitOf0Amount(t *testing.T) {
