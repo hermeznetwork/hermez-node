@@ -271,7 +271,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 
 	p.wg.Add(1)
 	go func() {
-		waitCh := time.After(zeroDuration)
+		timer := time.NewTimer(zeroDuration)
 		for {
 			select {
 			case <-p.ctx.Done():
@@ -281,23 +281,21 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 			case statsVars := <-p.statsVarsCh:
 				p.stats = statsVars.Stats
 				p.syncSCVars(statsVars.Vars)
-			case <-waitCh:
+			case <-timer.C:
+				timer.Reset(p.cfg.ForgeRetryInterval)
 				// Once errAtBatchNum != 0, we stop forging
 				// batches because there's been an error and we
 				// wait for the pipeline to be stopped.
 				if p.getErrAtBatchNum() != 0 {
-					waitCh = time.After(p.cfg.ForgeRetryInterval)
 					continue
 				}
 				batchNum = p.state.batchNum + 1
 				batchInfo, err := p.handleForgeBatch(p.ctx, batchNum)
 				if p.ctx.Err() != nil {
-					waitCh = time.After(p.cfg.ForgeRetryInterval)
 					continue
 				} else if tracerr.Unwrap(err) == errLastL1BatchNotSynced ||
 					tracerr.Unwrap(err) == errForgeNoTxsBeforeDelay ||
 					tracerr.Unwrap(err) == errForgeBeforeDelay {
-					waitCh = time.After(p.cfg.ForgeRetryInterval)
 					continue
 				} else if err != nil {
 					p.setErrAtBatchNum(batchNum)
@@ -306,7 +304,6 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 							"Pipeline.handleForgBatch: %v", err),
 						FailedBatchNum: batchNum,
 					})
-					waitCh = time.After(p.cfg.ForgeRetryInterval)
 					continue
 				}
 				p.lastForgeTime = time.Now()
@@ -316,7 +313,10 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				case batchChSentServerProof <- batchInfo:
 				case <-p.ctx.Done():
 				}
-				waitCh = time.After(zeroDuration)
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(zeroDuration)
 			}
 		}
 	}()

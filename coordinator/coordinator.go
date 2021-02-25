@@ -508,7 +508,7 @@ func (c *Coordinator) Start() {
 
 	c.wg.Add(1)
 	go func() {
-		waitCh := time.After(longWaitDuration)
+		timer := time.NewTimer(longWaitDuration)
 		for {
 			select {
 			case <-c.ctx.Done():
@@ -520,24 +520,27 @@ func (c *Coordinator) Start() {
 					continue
 				} else if err != nil {
 					log.Errorw("Coordinator.handleMsg", "err", err)
-					waitCh = time.After(c.cfg.SyncRetryInterval)
+					if !timer.Stop() {
+						<-timer.C
+					}
+					timer.Reset(c.cfg.SyncRetryInterval)
 					continue
 				}
-				waitCh = time.After(longWaitDuration)
-			case <-waitCh:
+			case <-timer.C:
+				timer.Reset(longWaitDuration)
 				if !c.stats.Synced() {
-					waitCh = time.After(longWaitDuration)
 					continue
 				}
 				if err := c.syncStats(c.ctx, &c.stats); c.ctx.Err() != nil {
-					waitCh = time.After(longWaitDuration)
 					continue
 				} else if err != nil {
 					log.Errorw("Coordinator.syncStats", "err", err)
-					waitCh = time.After(c.cfg.SyncRetryInterval)
+					if !timer.Stop() {
+						<-timer.C
+					}
+					timer.Reset(c.cfg.SyncRetryInterval)
 					continue
 				}
-				waitCh = time.After(longWaitDuration)
 			}
 		}
 	}()
