@@ -358,6 +358,11 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 	var nodeAPI *NodeAPI
 	if cfg.API.Address != "" {
+		if cfg.Debug.GinDebugMode {
+			gin.SetMode(gin.DebugMode)
+		} else {
+			gin.SetMode(gin.ReleaseMode)
+		}
 		if cfg.API.UpdateMetricsInterval.Duration == 0 {
 			return nil, tracerr.Wrap(fmt.Errorf("invalid cfg.API.UpdateMetricsInterval: %v",
 				cfg.API.UpdateMetricsInterval.Duration))
