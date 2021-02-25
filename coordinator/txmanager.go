@@ -123,7 +123,7 @@ func (t *TxManager) syncSCVars(vars synchronizer.SCVariablesPtr) {
 }
 
 // NewAuth generates a new auth object for an ethereum transaction
-func (t *TxManager) NewAuth(ctx context.Context) (*bind.TransactOpts, error) {
+func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
 	gasPrice, err := t.ethClient.EthSuggestGasPrice(ctx)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -143,15 +143,12 @@ func (t *TxManager) NewAuth(ctx context.Context) (*bind.TransactOpts, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	auth.Value = big.NewInt(0) // in wei
-	// TODO: Calculate GasLimit based on the contents of the ForgeBatchArgs
-	// This requires a function that estimates the gas usage of the
-	// forgeBatch call based on the contents of the ForgeBatch args:
-	// - length of l2txs
-	// - length of l1Usertxs
-	// - length of l1CoordTxs with authorization signature
-	// - length of l1CoordTxs without authoriation signature
-	// - etc.
-	auth.GasLimit = 1000000
+
+	gasLimit := t.cfg.ForgeBatchGasCost.Fixed +
+		uint64(len(batchInfo.L1UserTxsExtra))*t.cfg.ForgeBatchGasCost.L1UserTx +
+		uint64(len(batchInfo.L1CoordTxs))*t.cfg.ForgeBatchGasCost.L1CoordTx +
+		uint64(len(batchInfo.L2Txs))*t.cfg.ForgeBatchGasCost.L2Tx
+	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 	auth.Nonce = nil
 
@@ -191,7 +188,7 @@ func addPerc(v *big.Int, p int64) *big.Int {
 func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchInfo, resend bool) error {
 	var ethTx *types.Transaction
 	var err error
-	auth, err := t.NewAuth(ctx)
+	auth, err := t.NewAuth(ctx, batchInfo)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
