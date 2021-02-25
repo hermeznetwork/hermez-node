@@ -230,6 +230,14 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			apiConnCon,
 		)
 
+		lastSyncedBatch, err := historyDB.GetLastBatchNum()
+		if err != nil {
+			return nil, err
+		}
+		if err := l2DB.Reorg(lastSyncedBatch); err != nil {
+			return nil, err
+		}
+
 		// Unlock FeeAccount EthAddr in the keystore to generate the
 		// account creation authorization
 		if !keyStore.HasAddress(cfg.Coordinator.FeeAccount.Address) {
