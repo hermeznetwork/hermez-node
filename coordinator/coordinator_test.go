@@ -517,7 +517,7 @@ func TestCoordinatorStress(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for {
-			blockData, _, err := syn.Sync2(ctx, nil)
+			blockData, _, err := syn.Sync(ctx, nil)
 			if ctx.Err() != nil {
 				wg.Done()
 				return
