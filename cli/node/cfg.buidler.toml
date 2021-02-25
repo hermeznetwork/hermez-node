@@ -14,6 +14,7 @@ Type = "bitfinexV2"
 [Debug]
 APIAddress = "localhost:12345"
 MeddlerLogs = true
+GinDebugMode = true
 
 [StateDB]
 Path = "/tmp/iden3-test/hermez/statedb"

@@ -306,6 +306,9 @@ type Node struct {
 		// MeddlerLogs enables meddler debug mode, where unused columns and struct
 		// fields will be logged
 		MeddlerLogs bool
+		// GinDebugMode sets Gin-Gonic (the web framework) to run in
+		// debug mode
+		GinDebugMode bool
 	}
 	Coordinator Coordinator `validate:"-"`
 }
