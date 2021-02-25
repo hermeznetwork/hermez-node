@@ -552,7 +552,7 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats, vars 
 // TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
 // don't have to pass it around.
 func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block, time.Duration, error) {
-	blockData, discarded, err := n.sync.Sync2(ctx, lastBlock)
+	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error

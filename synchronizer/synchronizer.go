@@ -503,13 +503,13 @@ func (s *Synchronizer) resetIntermediateState() error {
 	return nil
 }
 
-// Sync2 attems to synchronize an ethereum block starting from lastSavedBlock.
+// Sync attems to synchronize an ethereum block starting from lastSavedBlock.
 // If lastSavedBlock is nil, the lastSavedBlock value is obtained from de DB.
 // If a block is synched, it will be returned and also stored in the DB.  If a
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
 // TODO: Be smart about locking: only lock during the read/write operations
-func (s *Synchronizer) Sync2(ctx context.Context,
+func (s *Synchronizer) Sync(ctx context.Context,
 	lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
 	if s.resetStateFailed {
 		if err := s.resetIntermediateState(); err != nil {
