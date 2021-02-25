@@ -383,11 +383,23 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 				fromBatch.ForgerAddr = c.cfg.ForgerAddress
 				fromBatch.StateRoot = big.NewInt(0)
 			}
+			// Before starting the pipeline make sure we reset any
+			// l2tx from the pool that was forged in a batch that
+			// didn't end up being mined.  We are already doing
+			// this in handleStopPipeline, but we do it again as a
+			// failsafe in case the last synced batchnum is
+			// different than in the previous call to l2DB.Reorg,
+			// or in case the node was restarted when there was a
+			// started batch that included l2txs but was not mined.
+			if err := c.l2DB.Reorg(fromBatch.BatchNum); err != nil {
+				return tracerr.Wrap(err)
+			}
 			var err error
 			if c.pipeline, err = c.newPipeline(ctx); err != nil {
 				return tracerr.Wrap(err)
 			}
 			c.pipelineFromBatch = fromBatch
+			// Start the pipeline
 			if err := c.pipeline.Start(fromBatch.BatchNum, stats, &c.vars); err != nil {
 				c.pipeline = nil
 				return tracerr.Wrap(err)
