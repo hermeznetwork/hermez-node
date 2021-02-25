@@ -1329,13 +1329,6 @@ components:
           type: string
           description: Moment in which the transaction was added to the pool.
           format: date-time
-        batchNum:
-          type: integer
-          description: Identifier of a batch. Every new forged batch increases by one the batchNum, starting at 0.
-          minimum: 0
-          maximum: 4294967295
-          nullable: true
-          example: null
         requestFromAccountIndex:
           type: string
           description: >-
@@ -1390,7 +1383,6 @@ components:
           $ref: '#/components/schemas/Token'
       example:
         amount: '100000000000000'
-        batchNum: 
         fee: 0
         fromAccountIndex: hez:SCC:256
         fromBJJ: hez:r_trOasVEk0zNaalOoS9aLedu6mO7jI5XTIPu_zGXoyn
@@ -1438,7 +1430,6 @@ components:
         - info
         - signature
         - timestamp
-        - batchNum
         - requestFromAccountIndex
         - requestToAccountIndex
         - requestToHezEthereumAddress
@@ -2812,6 +2803,10 @@ components:
           type: number
           description: Average fee percentage paid for L2 transactions in the last 24 hours.
           example: 1.54
+        estimatedTimeToForgeL1:
+          type: number
+          description: Estimated time needed to forge a L1 transaction, from the time it's added on the smart contract, until it's actualy forged. In seconds.
+          example: 193.4
       additionalProperties: false
       required:
         - transactionsPerBatch
@@ -2820,6 +2815,7 @@ components:
         - totalAccounts
         - totalBJJs
         - avgTransactionFee
+        - estimatedTimeToForgeL1
     PendingItems:
       type: integer
       description: Amount of items that will be returned in subsequent calls to the endpoint, as long as they are done with same filters. When the value is 0 it means that all items have been sent.

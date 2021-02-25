@@ -73,7 +73,7 @@ func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
 	// If original Type doesn't match the correct one, return error
 	if txTypeOld != "" && txTypeOld != tx.Type {
 		return nil, tracerr.Wrap(fmt.Errorf("L2Tx.Type: %s, should be: %s",
-			tx.Type, txTypeOld))
+			txTypeOld, tx.Type))
 	}
 
 	txIDOld := tx.TxID
@@ -83,7 +83,7 @@ func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
 	// If original TxID doesn't match the correct one, return error
 	if txIDOld != (TxID{}) && txIDOld != tx.TxID {
 		return tx, tracerr.Wrap(fmt.Errorf("PoolL2Tx.TxID: %s, should be: %s",
-			tx.TxID.String(), txIDOld.String()))
+			txIDOld.String(), tx.TxID.String()))
 	}
 
 	return tx, nil

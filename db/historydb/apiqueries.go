@@ -1008,6 +1008,18 @@ func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, err
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+	err = meddler.QueryRow(
+		hdb.dbRead, metrics,
+		`SELECT COALESCE (AVG(EXTRACT(EPOCH FROM (forged.timestamp - added.timestamp))), 0) AS estimatedTimeToForgeL1 FROM tx
+		INNER JOIN block AS added ON tx.eth_block_num = added.eth_block_num
+		INNER JOIN batch AS forged_batch ON tx.batch_num = forged_batch.batch_num
+		INNER JOIN block AS forged ON forged_batch.eth_block_num = forged.eth_block_num
+		WHERE tx.batch_num between $1 and $2 AND tx.is_l1 AND tx.user_origin;`,
+		metricsTotals.FirstBatchNum, lastBatchNum,
+	)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
 
 	return metrics, nil
 }

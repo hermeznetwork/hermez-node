@@ -304,12 +304,13 @@ type BatchAPI struct {
 
 // Metrics define metrics of the network
 type Metrics struct {
-	TransactionsPerBatch  float64 `json:"transactionsPerBatch"`
-	BatchFrequency        float64 `json:"batchFrequency"`
-	TransactionsPerSecond float64 `json:"transactionsPerSecond"`
-	TotalAccounts         int64   `json:"totalAccounts" meddler:"total_accounts"`
-	TotalBJJs             int64   `json:"totalBJJs" meddler:"total_bjjs"`
-	AvgTransactionFee     float64 `json:"avgTransactionFee"`
+	TransactionsPerBatch   float64 `json:"transactionsPerBatch"`
+	BatchFrequency         float64 `json:"batchFrequency"`
+	TransactionsPerSecond  float64 `json:"transactionsPerSecond"`
+	TotalAccounts          int64   `json:"totalAccounts" meddler:"total_accounts"`
+	TotalBJJs              int64   `json:"totalBJJs" meddler:"total_bjjs"`
+	AvgTransactionFee      float64 `json:"avgTransactionFee"`
+	EstimatedTimeToForgeL1 float64 `json:"estimatedTimeToForgeL1" meddler:"estimatedTimeToForgeL1"`
 }
 
 // MetricsTotals is used to get temporal information from HistoryDB
