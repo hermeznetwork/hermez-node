@@ -1197,7 +1197,7 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		exitAccount := &common.Account{
 			TokenID: acc.TokenID,
 			Nonce:   common.Nonce(0),
-			// as is a common.Tx, the Amount is already an
+			// as is a common.Tx, the tx.Amount is already an
 			// EffectiveAmount
 			Balance: tx.Amount,
 			BJJ:     acc.BJJ,
@@ -1212,9 +1212,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 				tp.zki.Sign2[tp.i] = big.NewInt(1)
 			}
 			tp.zki.Ay2[tp.i] = accBJJY
-			// as is a common.Tx, the Amount is already an
-			// EffectiveAmount
-			tp.zki.Balance2[tp.i] = tx.Amount
+			// Balance2 contains the ExitLeaf Balance before the
+			// leaf update, which is 0
+			tp.zki.Balance2[tp.i] = big.NewInt(0)
 			tp.zki.EthAddr2[tp.i] = common.EthAddrToBigInt(acc.EthAddr)
 			// as Leaf didn't exist in the ExitTree, set NewExit[i]=1
 			tp.zki.NewExit[tp.i] = big.NewInt(1)
@@ -1248,7 +1248,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			tp.zki.Sign2[tp.i] = big.NewInt(1)
 		}
 		tp.zki.Ay2[tp.i] = accBJJY
-		tp.zki.Balance2[tp.i] = tx.Amount
+		// Balance2 contains the ExitLeaf Balance before the leaf
+		// update
+		tp.zki.Balance2[tp.i] = exitAccount.Balance
 		tp.zki.EthAddr2[tp.i] = common.EthAddrToBigInt(acc.EthAddr)
 	}
 
