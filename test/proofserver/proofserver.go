@@ -146,7 +146,7 @@ const longWaitDuration = 999 * time.Hour
 // const provingDuration = 2 * time.Second
 
 func (s *Mock) runProver(ctx context.Context) {
-	waitCh := time.After(longWaitDuration)
+	timer := time.NewTimer(longWaitDuration)
 	for {
 		select {
 		case <-ctx.Done():
@@ -154,21 +154,27 @@ func (s *Mock) runProver(ctx context.Context) {
 		case msg := <-s.msgCh:
 			switch msg.value {
 			case "cancel":
-				waitCh = time.After(longWaitDuration)
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(longWaitDuration)
 				s.Lock()
 				if !s.status.IsReady() {
 					s.status = prover.StatusCodeAborted
 				}
 				s.Unlock()
 			case "prove":
-				waitCh = time.After(s.provingDuration)
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(s.provingDuration)
 				s.Lock()
 				s.status = prover.StatusCodeBusy
 				s.Unlock()
 			}
 			msg.ackCh <- true
-		case <-waitCh:
-			waitCh = time.After(longWaitDuration)
+		case <-timer.C:
+			timer.Reset(longWaitDuration)
 			s.Lock()
 			if s.status != prover.StatusCodeBusy {
 				s.Unlock()

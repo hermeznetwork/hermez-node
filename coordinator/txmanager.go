@@ -419,8 +419,6 @@ func (q *Queue) Push(batchInfo *BatchInfo) {
 
 // Run the TxManager
 func (t *TxManager) Run(ctx context.Context) {
-	waitCh := time.After(longWaitDuration)
-
 	var statsVars statsVars
 	select {
 	case statsVars = <-t.statsVarsCh:
@@ -431,6 +429,7 @@ func (t *TxManager) Run(ctx context.Context) {
 	log.Infow("TxManager: received initial statsVars",
 		"block", t.stats.Eth.LastBlock.Num, "batch", t.stats.Eth.LastBatchNum)
 
+	timer := time.NewTimer(longWaitDuration)
 	for {
 		select {
 		case <-ctx.Done():
@@ -474,13 +473,17 @@ func (t *TxManager) Run(ctx context.Context) {
 				continue
 			}
 			t.queue.Push(batchInfo)
-			waitCh = time.After(t.cfg.TxManagerCheckInterval)
-		case <-waitCh:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(t.cfg.TxManagerCheckInterval)
+		case <-timer.C:
 			queuePosition, batchInfo := t.queue.Next()
 			if batchInfo == nil {
-				waitCh = time.After(longWaitDuration)
+				timer.Reset(longWaitDuration)
 				continue
 			}
+			timer.Reset(t.cfg.TxManagerCheckInterval)
 			if err := t.checkEthTransactionReceipt(ctx, batchInfo); ctx.Err() != nil {
 				continue
 			} else if err != nil { //nolint:staticcheck
