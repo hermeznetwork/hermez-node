@@ -95,7 +95,6 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 		"info":                        tx.Info,
 		"signature":                   tx.Signature,
 		"timestamp":                   tx.Timestamp,
-		"batchNum":                    tx.BatchNum,
 		"requestFromAccountIndex":     tx.RqFromIdx,
 		"requestToAccountIndex":       tx.RqToIdx,
 		"requestToHezEthereumAddress": tx.RqToEthAddr,
