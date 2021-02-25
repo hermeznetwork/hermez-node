@@ -336,6 +336,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 					PurgeBlockDelay:      cfg.Coordinator.L2DB.PurgeBlockDelay,
 					InvalidateBlockDelay: cfg.Coordinator.L2DB.InvalidateBlockDelay,
 				},
+				ForgeBatchGasCost: cfg.Coordinator.EthClient.ForgeBatchGasCost,
 				VerifierIdx:       uint8(verifierIdx),
 				TxProcessorConfig: txProcessorCfg,
 			},

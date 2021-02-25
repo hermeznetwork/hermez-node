@@ -104,6 +104,12 @@ GasPriceIncPerc = 10
 Path = "/tmp/iden3-test/hermez/ethkeystore"
 Password = "yourpasswordhere"
 
+[Coordinator.EthClient.ForgeBatchGasCost]
+Fixed = 500000
+L1UserTx = 8000
+L1CoordTx = 9000
+L2Tx = 1
+
 [Coordinator.API]
 Coordinator = true
 

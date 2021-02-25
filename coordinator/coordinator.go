@@ -11,6 +11,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/config"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
@@ -115,7 +116,10 @@ type Config struct {
 	Purger         PurgerCfg
 	// VerifierIdx is the index of the verifier contract registered in the
 	// smart contract
-	VerifierIdx       uint8
+	VerifierIdx uint8
+	// ForgeBatchGasCost contains the cost of each action in the
+	// ForgeBatch transaction.
+	ForgeBatchGasCost config.ForgeBatchGasCost
 	TxProcessorConfig txprocessor.Config
 }
 

@@ -35,6 +35,15 @@ type ServerProof struct {
 	URL string `validate:"required"`
 }
 
+// ForgeBatchGasCost is the costs associated to a ForgeBatch transaction, split
+// into different parts to be used in a formula.
+type ForgeBatchGasCost struct {
+	Fixed     uint64 `validate:"required"`
+	L1UserTx  uint64 `validate:"required"`
+	L1CoordTx uint64 `validate:"required"`
+	L2Tx      uint64 `validate:"required"`
+}
+
 // Coordinator is the coordinator specific configuration.
 type Coordinator struct {
 	// ForgerAddress is the address under which this coordinator is forging
@@ -180,6 +189,9 @@ type Coordinator struct {
 			// Password used to decrypt the keys in the keystore
 			Password string `validate:"required"`
 		} `validate:"required"`
+		// ForgeBatchGasCost contains the cost of each action in the
+		// ForgeBatch transaction.
+		ForgeBatchGasCost ForgeBatchGasCost `validate:"required"`
 	} `validate:"required"`
 	API struct {
 		// Coordinator enables the coordinator API endpoints
