@@ -2569,6 +2569,21 @@ components:
       description: List of next coordinators to forge.
       items: 
         $ref: '#/components/schemas/NextForger'
+    NodeConfig:
+      type: object
+      description: Configuration of the coordinator node. Note that this is specific for each coordinator.
+      properties:
+        forgeDelay:
+          type: number
+          description: |
+            Delay in seconds after which a batch is forged if the slot is
+            already committed. If set to 0s, the coordinator will continuously
+            forge at the maximum rate. Note that this is a configuration parameter of a node,
+            so each coordinator may have a different value.
+          example: 193.4
+      additionalProperties: false
+      required: 
+        - forgeDelay
     State:
       type: object
       description: Gobal variables of the network
@@ -2585,6 +2600,8 @@ components:
           $ref: '#/components/schemas/StateWithdrawDelayer'
         recommendedFee:
           $ref: '#/components/schemas/RecommendedFee'
+        nodeConfig:
+          $ref: '#/components/schemas/NodeConfig'
       additionalProperties: false
       required: 
         - network
@@ -2593,6 +2610,7 @@ components:
         - auction
         - withdrawalDelayer
         - recommendedFee
+        - nodeConfig
     StateNetwork:
       type: object
       description: Gobal statistics of the network

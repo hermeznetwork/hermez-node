@@ -24,6 +24,12 @@ type Network struct {
 	NextForgers   []NextForger        `json:"nextForgers"`
 }
 
+// NodeConfig is the configuration of the node that is exposed via API
+type NodeConfig struct {
+	// ForgeDelay in seconds
+	ForgeDelay float64 `json:"forgeDelay"`
+}
+
 // NextForger  is a representation of the information of a coordinator and the period will forge
 type NextForger struct {
 	Coordinator historydb.CoordinatorAPI `json:"coordinator"`
