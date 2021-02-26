@@ -39,7 +39,7 @@ func TestAccountCreationAuthSignVerify(t *testing.T) {
 	// Hash and sign manually and compare the generated signature
 	hash, err := a.HashToSign(chainID, hermezContractAddr)
 	require.NoError(t, err)
-	assert.Equal(t, "4f8df75e96fdce1ac90bb2f8d81c42047600f85bfcef80ce3b91c2a2afc58c1e",
+	assert.Equal(t, "9414667457e658dd31949b82996b75c65a055512244c3bbfd22ff56add02ba65",
 		hex.EncodeToString(hash))
 	sig, err := ethCrypto.Sign(hash, ethSk)
 	require.NoError(t, err)
@@ -75,9 +75,9 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		pkCompStr:          "21b0a1688b37f77b1d1d5539ec3b826db5ac78b2513f574a04c50a7d4f8246d7",
 		chainID:            uint16(4),
 		hermezContractAddr: "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
-		toHashExpected:     "19457468657265756d205369676e6564204d6573736167653a0a3132304920617574686f72697a65207468697320626162796a75626a7562206b657920666f72206865726d657a20726f6c6c7570206163636f756e74206372656174696f6e21b0a1688b37f77b1d1d5539ec3b826db5ac78b2513f574a04c50a7d4f8246d700047e5f4552091a69125d5dfcb7b8c2659029395bdf",
-		hashExpected:       "39afea52d843a4de905b6b5ebb0ee8c678141f711d96d9b429c4aec10ef9911f",
-		sigExpected:        "73d10d6ecf06ee8a5f60ac90f06b78bef9c650f414ba3ac73e176dc32e896159147457e9c86f0b4bd60fdaf2c0b2aec890a7df993d69a4805e242a6b845ebf231c",
+		toHashExpected:     "190189658bba487e11c7da602676ee32bc90b77d3f32a305b147e4f3c3b35f19672e5d84ccc38d0ab245c469b719549d837113465c2abf9972c49403ca6fd10ed3dc",
+		hashExpected:       "c56eba41e511df100c804c5c09288f35887efea4f033be956481af335df3bea2",
+		sigExpected:        "dbedcc5ce02db8f48afbdb2feba9a3a31848eaa8fca5f312ce37b01db45d2199208335330d4445bd2f51d1db68dbc0d0bf3585c4a07504b4efbe46a69eaae5a21b",
 	}
 	tv1 := testVector{
 		ethSk:              "0000000000000000000000000000000000000000000000000000000000000002",
@@ -85,9 +85,9 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		pkCompStr:          "093985b1993d9f743f9d7d943ed56f38601cb8b196db025f79650c4007c3054d",
 		chainID:            uint16(0),
 		hermezContractAddr: "0x2b5ad5c4795c026514f8317c7a215e218dccd6cf",
-		toHashExpected:     "19457468657265756d205369676e6564204d6573736167653a0a3132304920617574686f72697a65207468697320626162796a75626a7562206b657920666f72206865726d657a20726f6c6c7570206163636f756e74206372656174696f6e093985b1993d9f743f9d7d943ed56f38601cb8b196db025f79650c4007c3054d00002b5ad5c4795c026514f8317c7a215e218dccd6cf",
-		hashExpected:       "89a3895993a4736232212e59566294feb3da227af44375daf3307dcad5451d5d",
-		sigExpected:        "bb4156156c705494ad5f99030342c64657e51e2994750f92125717c40bf56ad632044aa6bd00979feea92c417b552401e65fe5f531f15010d9d1c278da8be1df1b",
+		toHashExpected:     "1901dafbc253dedf90d6421dc6e25d5d9efc6985133cb2a8d363d0a081a0e3eddddc65f603a88de36aaeabd3b4cf586538c7f3fd50c94780530a3707c8c14ad9fd11",
+		hashExpected:       "deb9afa479282cf27b442ce8ba86b19448aa87eacef691521a33db5d0feb9959",
+		sigExpected:        "6a0da90ba2d2b1be679a28ebe54ee03082d44b836087391cd7d2607c1e4dafe04476e6e88dccb8707c68312512f16c947524b35c80f26c642d23953e9bb84c701c",
 	}
 	tv2 := testVector{
 		ethSk:              "c5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122",
@@ -95,9 +95,9 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		pkCompStr:          "22870c1bcc451396202d62f566026eab8e438c6c91decf8ddf63a6c162619b52",
 		chainID:            uint16(31337), // =0x7a69
 		hermezContractAddr: "0xf4e77E5Da47AC3125140c470c71cBca77B5c638c",
-		toHashExpected:     "19457468657265756d205369676e6564204d6573736167653a0a3132304920617574686f72697a65207468697320626162796a75626a7562206b657920666f72206865726d657a20726f6c6c7570206163636f756e74206372656174696f6e22870c1bcc451396202d62f566026eab8e438c6c91decf8ddf63a6c162619b527a69f4e77e5da47ac3125140c470c71cbca77b5c638c",
-		hashExpected:       "4f6ead01278ba4597d4720e37482f585a713497cea994a95209f4c57a963b4a7",
-		sigExpected:        "43b5818802a137a72a190c1d8d767ca507f7a4804b1b69b5e055abf31f4f2b476c80bb1ba63260d95610f6f831420d32130e7f22fec5d76e16644ddfcedd0d441c",
+		toHashExpected:     "190167617949b934d7e01add4009cd3d47415a26727b7d6288e5dce33fb3721d5a1a9ce511b19b694c9aaf8183f4987ed752f24884c54c003d11daa2e98c7547a79e",
+		hashExpected:       "157b570c597e615b8356ce008ac39f43bc9b6d50080bc07d968031b9378acbbb",
+		sigExpected:        "a0766181102428b5672e523dc4b905c10ddf025c10dbd0b3534ef864632a14652737610041c670b302fc7dca28edd5d6eac42b72d69ce58da8ce21287b244e381b",
 	}
 	tvs = append(tvs, tv0)
 	tvs = append(tvs, tv1)
@@ -122,10 +122,10 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 			BJJ:     pkComp,
 		}
 
-		toHash := a.toHash(chainID, hermezContractAddr)
+		toHash, err := a.toHash(chainID, hermezContractAddr)
+		require.NoError(t, err)
 		assert.Equal(t, tv.toHashExpected,
 			hex.EncodeToString(toHash))
-		assert.Equal(t, 120+len(EthMsgPrefix)+len([]byte("120")), len(toHash))
 
 		msg, err := a.HashToSign(chainID, hermezContractAddr)
 		require.NoError(t, err)
