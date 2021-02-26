@@ -21,6 +21,7 @@ const (
 // Status define status of the network
 type Status struct {
 	sync.RWMutex
+	NodeConfig        NodeConfig                    `json:"nodeConfig"`
 	Network           Network                       `json:"network"`
 	Metrics           historydb.Metrics             `json:"metrics"`
 	Rollup            historydb.RollupVariablesAPI  `json:"rollup"`
@@ -46,6 +47,7 @@ func NewAPI(
 	hdb *historydb.HistoryDB,
 	l2db *l2db.L2DB,
 	config *Config,
+	nodeConfig *NodeConfig,
 ) (*API, error) {
 	// Check input
 	// TODO: is stateDB only needed for explorer endpoints or for both?
@@ -63,8 +65,10 @@ func NewAPI(
 			AuctionConstants:  config.AuctionConstants,
 			WDelayerConstants: config.WDelayerConstants,
 		},
-		l2:            l2db,
-		status:        Status{},
+		l2: l2db,
+		status: Status{
+			NodeConfig: *nodeConfig,
+		},
 		chainID:       config.ChainID,
 		hermezAddress: config.HermezAddress,
 	}

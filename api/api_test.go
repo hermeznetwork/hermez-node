@@ -237,6 +237,9 @@ func TestMain(m *testing.M) {
 		hdb,
 		l2DB,
 		&_config,
+		&NodeConfig{
+			ForgeDelay: 180,
+		},
 	)
 	if err != nil {
 		panic(err)
@@ -632,6 +635,9 @@ func TestTimeout(t *testing.T) {
 		hdbTO,
 		l2DBTO,
 		&_config,
+		&NodeConfig{
+			ForgeDelay: 180,
+		},
 	)
 	require.NoError(t, err)
 
