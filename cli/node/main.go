@@ -196,17 +196,7 @@ func cmdWipeSQL(c *cli.Context) error {
 	return nil
 }
 
-func cmdRun(c *cli.Context) error {
-	cfg, err := parseCli(c)
-	if err != nil {
-		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
-	}
-	node, err := node.NewNode(cfg.mode, cfg.node)
-	if err != nil {
-		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
-	}
-	node.Start()
-
+func waitSigInt() {
 	stopCh := make(chan interface{})
 
 	// catch ^C to send the stop signal
@@ -227,7 +217,36 @@ func cmdRun(c *cli.Context) error {
 		}
 	}()
 	<-stopCh
+}
+
+func cmdRun(c *cli.Context) error {
+	cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	node, err := node.NewNode(cfg.mode, cfg.node)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
+	}
+	node.Start()
+	waitSigInt()
 	node.Stop()
+
+	return nil
+}
+
+func cmdServeAPI(c *cli.Context) error {
+	cfg, err := parseCliAPIServer(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	srv, err := node.NewAPIServer(cfg.mode, cfg.server)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error starting api server: %w", err))
+	}
+	srv.Start()
+	waitSigInt()
+	srv.Stop()
 
 	return nil
 }
@@ -319,20 +338,59 @@ func getConfig(c *cli.Context) (*Config, error) {
 	var cfg Config
 	mode := c.String(flagMode)
 	nodeCfgPath := c.String(flagCfg)
-	if nodeCfgPath == "" {
-		return nil, tracerr.Wrap(fmt.Errorf("required flag \"%v\" not set", flagCfg))
-	}
 	var err error
 	switch mode {
 	case modeSync:
 		cfg.mode = node.ModeSynchronizer
-		cfg.node, err = config.LoadNode(nodeCfgPath)
+		cfg.node, err = config.LoadNode(nodeCfgPath, false)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	case modeCoord:
 		cfg.mode = node.ModeCoordinator
-		cfg.node, err = config.LoadCoordinator(nodeCfgPath)
+		cfg.node, err = config.LoadNode(nodeCfgPath, true)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	default:
+		return nil, tracerr.Wrap(fmt.Errorf("invalid mode \"%v\"", mode))
+	}
+
+	return &cfg, nil
+}
+
+// ConfigAPIServer is the configuration of the api server execution
+type ConfigAPIServer struct {
+	mode   node.Mode
+	server *config.APIServer
+}
+
+func parseCliAPIServer(c *cli.Context) (*ConfigAPIServer, error) {
+	cfg, err := getConfigAPIServer(c)
+	if err != nil {
+		if err := cli.ShowAppHelp(c); err != nil {
+			panic(err)
+		}
+		return nil, tracerr.Wrap(err)
+	}
+	return cfg, nil
+}
+
+func getConfigAPIServer(c *cli.Context) (*ConfigAPIServer, error) {
+	var cfg ConfigAPIServer
+	mode := c.String(flagMode)
+	nodeCfgPath := c.String(flagCfg)
+	var err error
+	switch mode {
+	case modeSync:
+		cfg.mode = node.ModeSynchronizer
+		cfg.server, err = config.LoadAPIServer(nodeCfgPath, false)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	case modeCoord:
+		cfg.mode = node.ModeCoordinator
+		cfg.server, err = config.LoadAPIServer(nodeCfgPath, true)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -397,6 +455,12 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Run the hermez-node in the indicated mode",
 			Action:  cmdRun,
+		},
+		{
+			Name:    "serveapi",
+			Aliases: []string{},
+			Usage:   "Serve the API only",
+			Action:  cmdServeAPI,
 		},
 		{
 			Name:    "discard",

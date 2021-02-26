@@ -183,28 +183,6 @@ type StartBlockNums struct {
 	WDelayer int64
 }
 
-// SCVariables joins all the smart contract variables in a single struct
-type SCVariables struct {
-	Rollup   common.RollupVariables   `validate:"required"`
-	Auction  common.AuctionVariables  `validate:"required"`
-	WDelayer common.WDelayerVariables `validate:"required"`
-}
-
-// SCVariablesPtr joins all the smart contract variables as pointers in a single
-// struct
-type SCVariablesPtr struct {
-	Rollup   *common.RollupVariables   `validate:"required"`
-	Auction  *common.AuctionVariables  `validate:"required"`
-	WDelayer *common.WDelayerVariables `validate:"required"`
-}
-
-// SCConsts joins all the smart contract constants in a single struct
-type SCConsts struct {
-	Rollup   common.RollupConstants
-	Auction  common.AuctionConstants
-	WDelayer common.WDelayerConstants
-}
-
 // Config is the Synchronizer configuration
 type Config struct {
 	StatsRefreshPeriod time.Duration
@@ -214,14 +192,14 @@ type Config struct {
 // Synchronizer implements the Synchronizer type
 type Synchronizer struct {
 	ethClient        eth.ClientInterface
-	consts           SCConsts
+	consts           common.SCConsts
 	historyDB        *historydb.HistoryDB
 	l2DB             *l2db.L2DB
 	stateDB          *statedb.StateDB
 	cfg              Config
-	initVars         SCVariables
+	initVars         common.SCVariables
 	startBlockNum    int64
-	vars             SCVariables
+	vars             common.SCVariables
 	stats            *StatsHolder
 	resetStateFailed bool
 }
@@ -244,7 +222,7 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 		return nil, tracerr.Wrap(fmt.Errorf("NewSynchronizer ethClient.WDelayerConstants(): %w",
 			err))
 	}
-	consts := SCConsts{
+	consts := common.SCConsts{
 		Rollup:   *rollupConstants,
 		Auction:  *auctionConstants,
 		WDelayer: *wDelayerConstants,
@@ -310,11 +288,11 @@ func (s *Synchronizer) WDelayerConstants() *common.WDelayerConstants {
 }
 
 // SCVars returns a copy of the Smart Contract Variables
-func (s *Synchronizer) SCVars() SCVariablesPtr {
-	return SCVariablesPtr{
-		Rollup:   s.vars.Rollup.Copy(),
-		Auction:  s.vars.Auction.Copy(),
-		WDelayer: s.vars.WDelayer.Copy(),
+func (s *Synchronizer) SCVars() *common.SCVariables {
+	return &common.SCVariables{
+		Rollup:   *s.vars.Rollup.Copy(),
+		Auction:  *s.vars.Auction.Copy(),
+		WDelayer: *s.vars.WDelayer.Copy(),
 	}
 }
 
@@ -727,7 +705,7 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 }
 
 func getInitialVariables(ethClient eth.ClientInterface,
-	consts *SCConsts) (*SCVariables, *StartBlockNums, error) {
+	consts *common.SCConsts) (*common.SCVariables, *StartBlockNums, error) {
 	rollupInit, rollupInitBlock, err := ethClient.RollupEventInit()
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("RollupEventInit: %w", err))
@@ -743,7 +721,7 @@ func getInitialVariables(ethClient eth.ClientInterface,
 	rollupVars := rollupInit.RollupVariables()
 	auctionVars := auctionInit.AuctionVariables(consts.Auction.InitialMinimalBidding)
 	wDelayerVars := wDelayerInit.WDelayerVariables()
-	return &SCVariables{
+	return &common.SCVariables{
 			Rollup:   *rollupVars,
 			Auction:  *auctionVars,
 			WDelayer: *wDelayerVars,

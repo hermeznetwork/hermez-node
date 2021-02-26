@@ -31,10 +31,10 @@ type TxManager struct {
 	batchCh   chan *BatchInfo
 	chainID   *big.Int
 	account   accounts.Account
-	consts    synchronizer.SCConsts
+	consts    common.SCConsts
 
 	stats       synchronizer.Stats
-	vars        synchronizer.SCVariables
+	vars        common.SCVariables
 	statsVarsCh chan statsVars
 
 	discardPipelineCh chan int // int refers to the pipelineNum
@@ -55,7 +55,7 @@ type TxManager struct {
 
 // NewTxManager creates a new TxManager
 func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterface, l2DB *l2db.L2DB,
-	coord *Coordinator, scConsts *synchronizer.SCConsts, initSCVars *synchronizer.SCVariables) (
+	coord *Coordinator, scConsts *common.SCConsts, initSCVars *common.SCVariables) (
 	*TxManager, error) {
 	chainID, err := ethClient.EthChainID()
 	if err != nil {
@@ -104,7 +104,7 @@ func (t *TxManager) AddBatch(ctx context.Context, batchInfo *BatchInfo) {
 
 // SetSyncStatsVars is a thread safe method to sets the synchronizer Stats
 func (t *TxManager) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats,
-	vars *synchronizer.SCVariablesPtr) {
+	vars *common.SCVariablesPtr) {
 	select {
 	case t.statsVarsCh <- statsVars{Stats: *stats, Vars: *vars}:
 	case <-ctx.Done():
@@ -120,7 +120,7 @@ func (t *TxManager) DiscardPipeline(ctx context.Context, pipelineNum int) {
 	}
 }
 
-func (t *TxManager) syncSCVars(vars synchronizer.SCVariablesPtr) {
+func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 	updateSCVars(&t.vars, vars)
 }
 

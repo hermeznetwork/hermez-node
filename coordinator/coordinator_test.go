@@ -188,12 +188,12 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		&prover.MockClient{Delay: 400 * time.Millisecond},
 	}
 
-	scConsts := &synchronizer.SCConsts{
+	scConsts := &common.SCConsts{
 		Rollup:   *ethClientSetup.RollupConstants,
 		Auction:  *ethClientSetup.AuctionConstants,
 		WDelayer: *ethClientSetup.WDelayerConstants,
 	}
-	initSCVars := &synchronizer.SCVariables{
+	initSCVars := &common.SCVariables{
 		Rollup:   *ethClientSetup.RollupVariables,
 		Auction:  *ethClientSetup.AuctionVariables,
 		WDelayer: *ethClientSetup.WDelayerVariables,
@@ -529,7 +529,7 @@ func TestCoordinatorStress(t *testing.T) {
 				coord.SendMsg(ctx, MsgSyncBlock{
 					Stats:   *stats,
 					Batches: blockData.Rollup.Batches,
-					Vars: synchronizer.SCVariablesPtr{
+					Vars: common.SCVariablesPtr{
 						Rollup:   blockData.Rollup.Vars,
 						Auction:  blockData.Auction.Vars,
 						WDelayer: blockData.WDelayer.Vars,

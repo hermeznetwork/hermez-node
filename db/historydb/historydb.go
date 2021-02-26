@@ -839,6 +839,18 @@ func (hdb *HistoryDB) GetAllBucketUpdates() ([]common.BucketUpdate, error) {
 	return db.SlicePtrsToSlice(bucketUpdates).([]common.BucketUpdate), tracerr.Wrap(err)
 }
 
+func (hdb *HistoryDB) getMinBidInfo(d meddler.DB,
+	currentSlot, lastClosedSlot int64) ([]MinBidInfo, error) {
+	minBidInfo := []*MinBidInfo{}
+	query := `
+		SELECT DISTINCT default_slot_set_bid, default_slot_set_bid_slot_num FROM auction_vars
+		WHERE default_slot_set_bid_slot_num < $1
+		ORDER BY default_slot_set_bid_slot_num DESC
+		LIMIT $2;`
+	err := meddler.QueryAll(d, &minBidInfo, query, lastClosedSlot, int(lastClosedSlot-currentSlot)+1)
+	return db.SlicePtrsToSlice(minBidInfo).([]MinBidInfo), tracerr.Wrap(err)
+}
+
 func (hdb *HistoryDB) addTokenExchanges(d meddler.DB, tokenExchanges []common.TokenExchange) error {
 	if len(tokenExchanges) == 0 {
 		return nil
@@ -1137,17 +1149,6 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	return tracerr.Wrap(txn.Commit())
 }
 
-// GetCoordinatorAPI returns a coordinator by its bidderAddr
-func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*CoordinatorAPI, error) {
-	coordinator := &CoordinatorAPI{}
-	err := meddler.QueryRow(
-		hdb.dbRead, coordinator,
-		"SELECT * FROM coordinator WHERE bidder_addr = $1 ORDER BY item_id DESC LIMIT 1;",
-		bidderAddr,
-	)
-	return coordinator, tracerr.Wrap(err)
-}
-
 // AddAuctionVars insert auction vars into the DB
 func (hdb *HistoryDB) AddAuctionVars(auctionVars *common.AuctionVariables) error {
 	return tracerr.Wrap(meddler.Insert(hdb.dbWrite, "auction_vars", auctionVars))
@@ -1166,4 +1167,61 @@ func (hdb *HistoryDB) GetTokensTest() ([]TokenWithUSD, error) {
 		return []TokenWithUSD{}, nil
 	}
 	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), nil
+}
+
+const (
+	// CreateAccountExtraFeePercentage is the multiplication factor over
+	// the average fee for CreateAccount that is applied to obtain the
+	// recommended fee for CreateAccount
+	CreateAccountExtraFeePercentage float64 = 2.5
+	// CreateAccountInternalExtraFeePercentage is the multiplication factor
+	// over the average fee for CreateAccountInternal that is applied to
+	// obtain the recommended fee for CreateAccountInternal
+	CreateAccountInternalExtraFeePercentage float64 = 2.0
+)
+
+// GetRecommendedFee returns the RecommendedFee information
+func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD float64) (*common.RecommendedFee, error) {
+	var recommendedFee common.RecommendedFee
+	// Get total txs and the batch of the first selected tx of the last hour
+	type totalTxsSinceBatchNum struct {
+		TotalTxs      int             `meddler:"total_txs"`
+		FirstBatchNum common.BatchNum `meddler:"batch_num"`
+	}
+	ttsbn := &totalTxsSinceBatchNum{}
+	if err := meddler.QueryRow(
+		hdb.dbRead, ttsbn, `SELECT COUNT(tx.*) as total_txs, 
+			COALESCE (MIN(tx.batch_num), 0) as batch_num 
+			FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
+			WHERE block.timestamp >= NOW() - INTERVAL '1 HOURS';`,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	// Get the amount of batches and acumulated fees for the last hour
+	type totalBatchesAndFee struct {
+		TotalBatches int     `meddler:"total_batches"`
+		TotalFees    float64 `meddler:"total_fees"`
+	}
+	tbf := &totalBatchesAndFee{}
+	if err := meddler.QueryRow(
+		hdb.dbRead, tbf, `SELECT COUNT(*) AS total_batches, 
+			COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
+			WHERE batch_num > $1;`, ttsbn.FirstBatchNum,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	// Update NodeInfo struct
+	var avgTransactionFee float64
+	if ttsbn.TotalTxs > 0 {
+		avgTransactionFee = tbf.TotalFees / float64(ttsbn.TotalTxs)
+	} else {
+		avgTransactionFee = 0
+	}
+	recommendedFee.ExistingAccount =
+		math.Max(avgTransactionFee, minFeeUSD)
+	recommendedFee.CreatesAccount =
+		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD)
+	recommendedFee.CreatesAccountInternal =
+		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD)
+	return &recommendedFee, nil
 }
