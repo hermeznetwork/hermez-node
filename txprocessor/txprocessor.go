@@ -1268,6 +1268,7 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		tp.zki.OldKey2[tp.i] = p.OldKey.BigInt()
 		tp.zki.OldValue2[tp.i] = p.OldValue.BigInt()
+		tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
 	}
 
 	return exitAccount, false, nil
