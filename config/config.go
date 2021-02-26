@@ -48,6 +48,10 @@ type ForgeBatchGasCost struct {
 type Coordinator struct {
 	// ForgerAddress is the address under which this coordinator is forging
 	ForgerAddress ethCommon.Address `validate:"required"`
+	// MinimumForgeAddressBalance is the minimum balance the forger address
+	// needs to start the coordinator in wei. Of set to 0, the coordinator
+	// will not check the balance before starting.
+	MinimumForgeAddressBalance *big.Int
 	// FeeAccount is the Hermez account that the coordinator uses to receive fees
 	FeeAccount struct {
 		// Address is the ethereum address of the account to receive fees
