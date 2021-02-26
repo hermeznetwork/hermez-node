@@ -8,6 +8,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth"
@@ -90,9 +91,9 @@ type BatchInfo struct {
 	L2Txs                 []common.L2Tx
 	CoordIdxs             []common.Idx
 	ForgeBatchArgs        *eth.RollupForgeBatchArgs
-	// FeesInfo
-	EthTx    *types.Transaction
-	EthTxErr error
+	Auth                  *bind.TransactOpts `json:"-"`
+	EthTx                 *types.Transaction
+	EthTxErr              error
 	// SendTimestamp  the time of batch sent to ethereum
 	SendTimestamp time.Time
 	Receipt       *types.Receipt
