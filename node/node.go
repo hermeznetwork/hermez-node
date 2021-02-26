@@ -137,6 +137,23 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		keyStore = ethKeystore.NewKeyStore(cfg.Coordinator.EthClient.Keystore.Path,
 			scryptN, scryptP)
 
+		balance, err := ethClient.BalanceAt(context.TODO(), cfg.Coordinator.ForgerAddress, nil)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+
+		minForgeBalance := cfg.Coordinator.MinimumForgeAddressBalance
+		if minForgeBalance != nil && balance.Cmp(minForgeBalance) == -1 {
+			return nil, tracerr.Wrap(fmt.Errorf(
+				"forger account balance is less than cfg.Coordinator.MinimumForgeAddressBalance: %v < %v",
+				balance.Int64(), minForgeBalance))
+		}
+		log.Infow("forger ethereum account balance",
+			"addr", cfg.Coordinator.ForgerAddress,
+			"balance", balance.Int64(),
+			"minForgeBalance", minForgeBalance.Int64(),
+		)
+
 		// Unlock Coordinator ForgerAddr in the keystore to make calls
 		// to ForgeBatch in the smart contract
 		if !keyStore.HasAddress(cfg.Coordinator.ForgerAddress) {
