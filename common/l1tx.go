@@ -368,18 +368,11 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 	return tx, nil
 }
 
-func signHash(data []byte) []byte {
-	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
-	return ethCrypto.Keccak256([]byte(msg))
-}
-
 // L1CoordinatorTxFromBytes decodes a L1Tx from []byte
 func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommon.Address) (*L1Tx, error) {
 	if len(b) != RollupConstL1CoordinatorTotalBytes {
 		return nil, tracerr.Wrap(fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d", 101, len(b)))
 	}
-
-	bytesMessage := []byte("I authorize this babyjubjub key for hermez rollup account creation")
 
 	tx := &L1Tx{
 		UserOrigin: false,
@@ -401,18 +394,20 @@ func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommo
 		// L1CoordinatorTX ETH
 		// Ethereum adds 27 to v
 		v = b[0] - byte(27) //nolint:gomnd
-		chainIDBytes := ethCommon.LeftPadBytes(chainID.Bytes(), 2)
-		var data []byte
-		data = append(data, bytesMessage...)
-		data = append(data, pkCompB...)
-		data = append(data, chainIDBytes[:]...)
-		data = append(data, hermezAddress.Bytes()...)
 		var signature []byte
 		signature = append(signature, r[:]...)
 		signature = append(signature, s[:]...)
 		signature = append(signature, v)
-		hash := signHash(data)
-		pubKeyBytes, err := ethCrypto.Ecrecover(hash, signature)
+
+		accCreationAuth := AccountCreationAuth{
+			BJJ: tx.FromBJJ,
+		}
+		h, err := accCreationAuth.HashToSign(uint16(chainID.Uint64()), hermezAddress)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+
+		pubKeyBytes, err := ethCrypto.Ecrecover(h, signature)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
