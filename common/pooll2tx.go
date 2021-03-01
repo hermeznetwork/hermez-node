@@ -16,7 +16,8 @@ import (
 // EmptyBJJComp contains the 32 byte array of a empty BabyJubJub PublicKey
 // Compressed. It is a valid point in the BabyJubJub curve, so does not give
 // errors when being decompressed.
-var EmptyBJJComp = babyjub.PublicKeyComp([32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+var EmptyBJJComp = babyjub.PublicKeyComp([32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the
 // coordinator that is waiting to be forged
@@ -318,7 +319,8 @@ func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 
 	_, rqToBJJY := babyjub.UnpackSignY(tx.RqToBJJ)
 
-	return poseidon.Hash([]*big.Int{toCompressedData, e1, toBJJY, rqTxCompressedDataV2, rqToEthAddr, rqToBJJY})
+	return poseidon.Hash([]*big.Int{toCompressedData, e1, toBJJY, rqTxCompressedDataV2,
+		rqToEthAddr, rqToBJJY})
 }
 
 // VerifySignature returns true if the signature verification is correct for the given PublicKeyComp

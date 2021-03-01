@@ -40,7 +40,8 @@ var EthToken common.Token = common.Token{
 // WARNING: the generators in this file doesn't necessary follow the protocol
 // they are intended to check that the parsers between struct <==> DB are correct
 
-// GenBlocks generates block from, to block numbers. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
+// GenBlocks generates block from, to block numbers. WARNING: This is meant for DB/API testing, and
+// may not be fully consistent with the protocol.
 func GenBlocks(from, to int64) []common.Block {
 	var blocks []common.Block
 	for i := from; i < to; i++ {
@@ -54,8 +55,10 @@ func GenBlocks(from, to int64) []common.Block {
 	return blocks
 }
 
-// GenTokens generates tokens. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenTokens(nTokens int, blocks []common.Block) (tokensToAddInDB []common.Token, ethToken common.Token) {
+// GenTokens generates tokens. WARNING: This is meant for DB/API testing, and may not be fully
+// consistent with the protocol.
+func GenTokens(nTokens int, blocks []common.Block) (tokensToAddInDB []common.Token,
+	ethToken common.Token) {
 	tokensToAddInDB = []common.Token{}
 	for i := 1; i < nTokens; i++ {
 		token := common.Token{
@@ -78,7 +81,8 @@ func GenTokens(nTokens int, blocks []common.Block) (tokensToAddInDB []common.Tok
 	}
 }
 
-// GenBatches generates batches. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
+// GenBatches generates batches. WARNING: This is meant for DB/API testing, and may not be fully
+// consistent with the protocol.
 func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 	batches := []common.Batch{}
 	collectedFees := make(map[common.TokenID]*big.Int)
@@ -108,8 +112,10 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 	return batches
 }
 
-// GenAccounts generates accounts. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
-func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAddr *ethCommon.Address, userBjj *babyjub.PublicKey, batches []common.Batch) []common.Account {
+// GenAccounts generates accounts. WARNING: This is meant for DB/API testing, and may not be fully
+// consistent with the protocol.
+func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token,
+	userAddr *ethCommon.Address, userBjj *babyjub.PublicKey, batches []common.Batch) []common.Account {
 	if totalAccounts < userAccounts {
 		panic("totalAccounts must be greater than userAccounts")
 	}
@@ -137,7 +143,8 @@ func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token, userAdd
 	return accs
 }
 
-// GenL1Txs generates L1 txs. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
+// GenL1Txs generates L1 txs. WARNING: This is meant for DB/API testing, and may not be fully
+// consistent with the protocol.
 func GenL1Txs(
 	fromIdx int,
 	totalTxs, nUserTxs int,
@@ -263,7 +270,8 @@ func setFromToAndAppend(
 	}
 }
 
-// GenL2Txs generates L2 txs. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
+// GenL2Txs generates L2 txs. WARNING: This is meant for DB/API testing, and may not be fully
+// consistent with the protocol.
 func GenL2Txs(
 	fromIdx int,
 	totalTxs, nUserTxs int,
@@ -282,7 +290,9 @@ func GenL2Txs(
 		amount := big.NewInt(int64(i + 1))
 		fee := common.FeeSelector(i % 256) //nolint:gomnd
 		tx := common.L2Tx{
-			TxID:        common.TxID([common.TxIDLen]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, byte(i)}), // only for testing purposes
+			// only for testing purposes
+			TxID: common.TxID([common.TxIDLen]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, byte(i)}),
 			BatchNum:    batches[i%len(batches)].BatchNum,
 			Position:    i - fromIdx,
 			Amount:      amount,
@@ -337,7 +347,8 @@ func GenL2Txs(
 	return userTxs, othersTxs
 }
 
-// GenCoordinators generates coordinators. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
+// GenCoordinators generates coordinators. WARNING: This is meant for DB/API testing, and may not be
+// fully consistent with the protocol.
 func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 	coords := []common.Coordinator{}
 	for i := 0; i < nCoords; i++ {
@@ -351,7 +362,8 @@ func GenCoordinators(nCoords int, blocks []common.Block) []common.Coordinator {
 	return coords
 }
 
-// GenBids generates bids. WARNING: This is meant for DB/API testing, and may not be fully consistent with the protocol.
+// GenBids generates bids. WARNING: This is meant for DB/API testing, and may not be fully
+// consistent with the protocol.
 func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []common.Bid {
 	bids := []common.Bid{}
 	for i := 0; i < nBids*2; i = i + 2 { //nolint:gomnd
@@ -373,7 +385,8 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 
 // GenExitTree generates an exitTree (as an array of Exits)
 //nolint:gomnd
-func GenExitTree(n int, batches []common.Batch, accounts []common.Account, blocks []common.Block) []common.ExitInfo {
+func GenExitTree(n int, batches []common.Batch, accounts []common.Account,
+	blocks []common.Block) []common.ExitInfo {
 	exitTree := make([]common.ExitInfo, n)
 	for i := 0; i < n; i++ {
 		exitTree[i] = common.ExitInfo{
@@ -412,7 +425,8 @@ func GenExitTree(n int, batches []common.Batch, accounts []common.Account, block
 	return exitTree
 }
 
-func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address, accs []common.Account) (*common.Account, error) {
+func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address,
+	accs []common.Account) (*common.Account, error) {
 	i := seed % len(accs)
 	firstI := i
 	for {

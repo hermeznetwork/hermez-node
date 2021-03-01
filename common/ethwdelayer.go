@@ -27,6 +27,7 @@ type WDelayerEscapeHatchWithdrawal struct {
 }
 
 // WDelayerVariables are the variables of the Withdrawal Delayer Smart Contract
+//nolint:lll
 type WDelayerVariables struct {
 	EthBlockNum int64 `json:"ethereumBlockNum" meddler:"eth_block_num"`
 	// HermezRollupAddress        ethCommon.Address `json:"hermezRollupAddress" meddler:"rollup_address"`

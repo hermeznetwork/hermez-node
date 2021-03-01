@@ -68,11 +68,13 @@ type AuctionVariables struct {
 	ClosedAuctionSlots uint16 `meddler:"closed_auction_slots" validate:"required"`
 	// Distance (#slots) to the farthest slot to which you can bid (30 days = 4320 slots )
 	OpenAuctionSlots uint16 `meddler:"open_auction_slots" validate:"required"`
-	// How the HEZ tokens deposited by the slot winner are distributed (Burn: 40% - Donation: 40% - HGT: 20%)
+	// How the HEZ tokens deposited by the slot winner are distributed (Burn: 40% - Donation:
+	// 40% - HGT: 20%)
 	AllocationRatio [3]uint16 `meddler:"allocation_ratio,json" validate:"required"`
 	// Minimum outbid (percentage) over the previous one to consider it valid
 	Outbidding uint16 `meddler:"outbidding" validate:"required"`
-	// Number of blocks at the end of a slot in which any coordinator can forge if the winner has not forged one before
+	// Number of blocks at the end of a slot in which any coordinator can forge if the winner
+	// has not forged one before
 	SlotDeadline uint8 `meddler:"slot_deadline" validate:"required"`
 }
 

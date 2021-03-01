@@ -17,7 +17,8 @@ import (
 var (
 	// ErrStateDBWithoutMT is used when a method that requires a MerkleTree
 	// is called in a StateDB that does not have a MerkleTree defined
-	ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a StateDB without MerkleTree")
+	ErrStateDBWithoutMT = errors.New(
+		"Can not call method to use MerkleTree in a StateDB without MerkleTree")
 
 	// ErrAccountAlreadyExists is used when CreateAccount is called and the
 	// Account already exists
@@ -28,7 +29,8 @@ var (
 	ErrIdxNotFound = errors.New("Idx can not be found")
 	// ErrGetIdxNoCase is used when trying to get the Idx from EthAddr &
 	// BJJ with not compatible combination
-	ErrGetIdxNoCase = errors.New("Can not get Idx due unexpected combination of ethereum Address & BabyJubJub PublicKey")
+	ErrGetIdxNoCase = errors.New(
+		"Can not get Idx due unexpected combination of ethereum Address & BabyJubJub PublicKey")
 
 	// PrefixKeyIdx is the key prefix for idx in the db
 	PrefixKeyIdx = []byte("i:")
@@ -144,7 +146,8 @@ func NewStateDB(cfg Config) (*StateDB, error) {
 		}
 	}
 	if cfg.Type == TypeTxSelector && cfg.NLevels != 0 {
-		return nil, tracerr.Wrap(fmt.Errorf("invalid StateDB parameters: StateDB type==TypeStateDB can not have nLevels!=0"))
+		return nil, tracerr.Wrap(
+			fmt.Errorf("invalid StateDB parameters: StateDB type==TypeStateDB can not have nLevels!=0"))
 	}
 
 	return &StateDB{
@@ -347,7 +350,8 @@ func GetAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 // CreateAccount creates a new Account in the StateDB for the given Idx.  If
 // StateDB.MT==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (
+	*merkletree.CircomProcessorProof, error) {
 	cpp, err := CreateAccountInTreeDB(s.db.DB(), s.MT, idx, account)
 	if err != nil {
 		return cpp, tracerr.Wrap(err)
@@ -361,7 +365,8 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (*merkl
 // from ExitTree.  Creates a new Account in the StateDB for the given Idx.  If
 // StateDB.MT==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
+	account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
@@ -410,7 +415,8 @@ func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 // UpdateAccount updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (
+	*merkletree.CircomProcessorProof, error) {
 	return UpdateAccountInTreeDB(s.db.DB(), s.MT, idx, account)
 }
 
@@ -418,7 +424,8 @@ func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (*merkl
 // from ExitTree.  Updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
+	account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: account.Bytes()
 	v, err := account.HashValue()
 	if err != nil {

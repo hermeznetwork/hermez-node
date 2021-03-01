@@ -13,7 +13,8 @@ import (
 
 func TestAccountCreationAuthSignVerify(t *testing.T) {
 	// Ethereum key
-	ethSk, err := ethCrypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
+	ethSk, err :=
+		ethCrypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
 	require.NoError(t, err)
 	ethAddr := ethCrypto.PubkeyToAddress(ethSk.PublicKey)
 
@@ -69,6 +70,7 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		sigExpected        string
 	}
 	var tvs []testVector
+	//nolint:lll
 	tv0 := testVector{
 		ethSk:              "0000000000000000000000000000000000000000000000000000000000000001",
 		expectedAddress:    "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
@@ -79,6 +81,7 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		hashExpected:       "c56eba41e511df100c804c5c09288f35887efea4f033be956481af335df3bea2",
 		sigExpected:        "dbedcc5ce02db8f48afbdb2feba9a3a31848eaa8fca5f312ce37b01db45d2199208335330d4445bd2f51d1db68dbc0d0bf3585c4a07504b4efbe46a69eaae5a21b",
 	}
+	//nolint:lll
 	tv1 := testVector{
 		ethSk:              "0000000000000000000000000000000000000000000000000000000000000002",
 		expectedAddress:    "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF",
@@ -89,6 +92,7 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		hashExpected:       "deb9afa479282cf27b442ce8ba86b19448aa87eacef691521a33db5d0feb9959",
 		sigExpected:        "6a0da90ba2d2b1be679a28ebe54ee03082d44b836087391cd7d2607c1e4dafe04476e6e88dccb8707c68312512f16c947524b35c80f26c642d23953e9bb84c701c",
 	}
+	//nolint:lll
 	tv2 := testVector{
 		ethSk:              "c5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122",
 		expectedAddress:    "0xc783df8a850f42e7F7e57013759C285caa701eB6",

@@ -18,7 +18,8 @@ func concatEthAddrTokenID(addr ethCommon.Address, tokenID common.TokenID) []byte
 	b = append(b[:], tokenID.Bytes()[:]...)
 	return b
 }
-func concatEthAddrBJJTokenID(addr ethCommon.Address, pk babyjub.PublicKeyComp, tokenID common.TokenID) []byte {
+func concatEthAddrBJJTokenID(addr ethCommon.Address, pk babyjub.PublicKeyComp,
+	tokenID common.TokenID) []byte {
 	pkComp := pk
 	var b []byte
 	b = append(b, addr.Bytes()...)
@@ -32,7 +33,8 @@ func concatEthAddrBJJTokenID(addr ethCommon.Address, pk babyjub.PublicKeyComp, t
 // - key: EthAddr & BabyJubJub PublicKey Compressed, value: idx
 // If Idx already exist for the given EthAddr & BJJ, the remaining Idx will be
 // always the smallest one.
-func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk babyjub.PublicKeyComp, tokenID common.TokenID) error {
+func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address,
+	pk babyjub.PublicKeyComp, tokenID common.TokenID) error {
 	oldIdx, err := s.GetIdxByEthAddrBJJ(addr, pk, tokenID)
 	if err == nil {
 		// EthAddr & BJJ already have an Idx
@@ -40,7 +42,8 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 		// if new idx is smaller, store the new one
 		// if new idx is bigger, don't store and return, as the used one will be the old
 		if idx >= oldIdx {
-			log.Debug("StateDB.setIdxByEthAddrBJJ: Idx not stored because there already exist a smaller Idx for the given EthAddr & BJJ")
+			log.Debug("StateDB.setIdxByEthAddrBJJ: Idx not stored because there " +
+				"already exist a smaller Idx for the given EthAddr & BJJ")
 			return nil
 		}
 	}
@@ -80,7 +83,8 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address, pk 
 // GetIdxByEthAddr returns the smallest Idx in the StateDB for the given
 // Ethereum Address. Will return common.Idx(0) and error in case that Idx is
 // not found in the StateDB.
-func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID) (common.Idx, error) {
+func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID) (common.Idx,
+	error) {
 	k := concatEthAddrTokenID(addr, tokenID)
 	b, err := s.db.DB().Get(append(PrefixKeyAddr, k...))
 	if err != nil {
@@ -116,18 +120,22 @@ func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk babyjub.PublicKe
 			return common.Idx(0), tracerr.Wrap(ErrIdxNotFound)
 		} else if err != nil {
 			return common.Idx(0),
-				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrIdxNotFound, addr.Hex(), pk, tokenID))
+				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d",
+					ErrIdxNotFound, addr.Hex(), pk, tokenID))
 		}
 		idx, err := common.IdxFromBytes(b)
 		if err != nil {
 			return common.Idx(0),
-				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", err, addr.Hex(), pk, tokenID))
+				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d",
+					err, addr.Hex(), pk, tokenID))
 		}
 		return idx, nil
 	}
 	// rest of cases (included case ToEthAddr==0) are not possible
 	return common.Idx(0),
-		tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d", ErrGetIdxNoCase, addr.Hex(), pk, tokenID))
+		tracerr.Wrap(
+			fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d",
+				ErrGetIdxNoCase, addr.Hex(), pk, tokenID))
 }
 
 // GetTokenIDsFromIdxs returns a map containing the common.TokenID with its
@@ -137,7 +145,9 @@ func (s *StateDB) GetTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]com
 	for i := 0; i < len(idxs); i++ {
 		a, err := s.GetAccount(idxs[i])
 		if err != nil {
-			return nil, tracerr.Wrap(fmt.Errorf("GetTokenIDsFromIdxs error on GetAccount with Idx==%d: %s", idxs[i], err.Error()))
+			return nil,
+				tracerr.Wrap(fmt.Errorf("GetTokenIDsFromIdxs error on GetAccount with Idx==%d: %s",
+					idxs[i], err.Error()))
 		}
 		m[a.TokenID] = idxs[i]
 	}

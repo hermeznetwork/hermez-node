@@ -72,12 +72,19 @@ func TestParseBlockchainTxs(t *testing.T) {
 	assert.Equal(t, TxTypeCreateAccountDepositCoordinator, instructions.instructions[7].Typ)
 	assert.Equal(t, TypeNewBatch, instructions.instructions[11].Typ)
 	assert.Equal(t, "Deposit(1)User0:20", instructions.instructions[16].raw())
-	assert.Equal(t, "Type: DepositTransfer, From: A, To: B, DepositAmount: 15, Amount: 10, Fee: 0, TokenID: 1\n", instructions.instructions[13].String())
-	assert.Equal(t, "Type: Transfer, From: User1, To: User0, Amount: 15, Fee: 1, TokenID: 3\n", instructions.instructions[19].String())
+	assert.Equal(t,
+		"Type: DepositTransfer, From: A, To: B, DepositAmount: 15, Amount: 10, Fee: 0, TokenID: 1\n",
+		instructions.instructions[13].String())
+	assert.Equal(t,
+		"Type: Transfer, From: User1, To: User0, Amount: 15, Fee: 1, TokenID: 3\n",
+		instructions.instructions[19].String())
 	assert.Equal(t, "Transfer(2)A-B:15(1)", instructions.instructions[15].raw())
-	assert.Equal(t, "Type: Transfer, From: A, To: B, Amount: 15, Fee: 1, TokenID: 2\n", instructions.instructions[15].String())
+	assert.Equal(t,
+		"Type: Transfer, From: A, To: B, Amount: 15, Fee: 1, TokenID: 2\n",
+		instructions.instructions[15].String())
 	assert.Equal(t, "Exit(1)A:5", instructions.instructions[24].raw())
-	assert.Equal(t, "Type: Exit, From: A, Amount: 5, TokenID: 1\n", instructions.instructions[24].String())
+	assert.Equal(t, "Type: Exit, From: A, Amount: 5, TokenID: 1\n",
+		instructions.instructions[24].String())
 }
 
 func TestParsePoolTxs(t *testing.T) {
@@ -158,7 +165,9 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Line 2: Transfer(1)A-B:10(256)\n, err: Fee 256 can not be bigger than 255", err.Error())
+	assert.Equal(t,
+		"Line 2: Transfer(1)A-B:10(256)\n, err: Fee 256 can not be bigger than 255",
+		err.Error())
 
 	// check that the PoolTransfer & Transfer are only accepted in the
 	// correct case case (PoolTxs/BlockchainTxs)
@@ -175,7 +184,9 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Line 2: PoolTransfer, err: Unexpected Blockchain tx type: PoolTransfer", err.Error())
+	assert.Equal(t,
+		"Line 2: PoolTransfer, err: Unexpected Blockchain tx type: PoolTransfer",
+		err.Error())
 
 	s = `
 		Type: Blockchain
@@ -183,7 +194,9 @@ func TestParseErrors(t *testing.T) {
 	`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Line 2: >, err: Unexpected '> btch', expected '> batch' or '> block'", err.Error())
+	assert.Equal(t,
+		"Line 2: >, err: Unexpected '> btch', expected '> batch' or '> block'",
+		err.Error())
 
 	// check definition of set Type
 	s = `PoolTransfer(1) A-B: 10 (1)`
@@ -193,17 +206,23 @@ func TestParseErrors(t *testing.T) {
 	s = `Type: PoolL1`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Line 1: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'", err.Error())
+	assert.Equal(t,
+		"Line 1: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'",
+		err.Error())
 	s = `Type: PoolL1
 		Type: Blockchain`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Line 1: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'", err.Error())
+	assert.Equal(t,
+		"Line 1: Type:, err: Invalid set type: 'PoolL1'. Valid set types: 'Blockchain', 'PoolL2'",
+		err.Error())
 	s = `Type: PoolL2
 		Type: Blockchain`
 	parser = newParser(strings.NewReader(s))
 	_, err = parser.parse()
-	assert.Equal(t, "Line 2: Instruction of 'Type: Blockchain' when there is already a previous instruction 'Type: PoolL2' defined", err.Error())
+	assert.Equal(t,
+		"Line 2: Instruction of 'Type: Blockchain' when there is already a previous "+
+			"instruction 'Type: PoolL2' defined", err.Error())
 
 	s = `Type: Blockchain
 		AddToken(1)

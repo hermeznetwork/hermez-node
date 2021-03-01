@@ -43,7 +43,8 @@ type PriceUpdater struct {
 }
 
 // NewPriceUpdater is the constructor for the updater
-func NewPriceUpdater(apiURL string, apiType APIType, db *historydb.HistoryDB) (*PriceUpdater, error) {
+func NewPriceUpdater(apiURL string, apiType APIType, db *historydb.HistoryDB) (*PriceUpdater,
+	error) {
 	tokenSymbols := []string{}
 	if !apiType.valid() {
 		return nil, tracerr.Wrap(fmt.Errorf("Invalid apiType: %v", apiType))
@@ -73,7 +74,8 @@ func getTokenPriceBitfinex(ctx context.Context, client *sling.Sling,
 	return state[6], nil
 }
 
-// UpdatePrices is triggered by the Coordinator, and internally will update the token prices in the db
+// UpdatePrices is triggered by the Coordinator, and internally will update the
+// token prices in the db
 func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 	tr := &http.Transport{
 		MaxIdleConns:       defaultMaxIdleConns,

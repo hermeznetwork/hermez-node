@@ -925,7 +925,8 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		}
 
 		// Transform L2 txs to PoolL2Txs
-		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData) // NOTE: This is a big ugly, find a better way
+		// NOTE: This is a big ugly, find a better way
+		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData)
 
 		if int(forgeBatchArgs.VerifierIdx) >= len(s.consts.Rollup.Verifiers) {
 			return nil, tracerr.Wrap(fmt.Errorf("forgeBatchArgs.VerifierIdx (%v) >= "+

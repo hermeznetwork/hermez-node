@@ -256,7 +256,8 @@ func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, []*big.Int, e
 		}
 		return &proof, pubInputs, nil
 	}
-	return nil, nil, tracerr.Wrap(fmt.Errorf("status != %v, status = %v", StatusCodeSuccess, status.Status))
+	return nil, nil, tracerr.Wrap(fmt.Errorf("status != %v, status = %v", StatusCodeSuccess,
+		status.Status))
 }
 
 // Cancel cancels any current proof computation

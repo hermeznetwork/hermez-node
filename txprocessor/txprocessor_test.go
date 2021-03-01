@@ -17,7 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func checkBalance(t *testing.T, tc *til.Context, sdb *statedb.StateDB, username string, tokenid int, expected string) {
+func checkBalance(t *testing.T, tc *til.Context, sdb *statedb.StateDB, username string,
+	tokenid int, expected string) {
 	idx := tc.Users[username].Accounts[common.TokenID(tokenid)].Idx
 	acc, err := sdb.GetAccount(idx)
 	require.NoError(t, err)
@@ -249,7 +250,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
-	assert.Equal(t, "13644148972047617726265275926674266298636745191961029124811988256139761111521", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"13644148972047617726265275926674266298636745191961029124811988256139761111521",
+		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
@@ -258,7 +261,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
-	assert.Equal(t, "12433441613247342495680642890662773367605896324555599297255745922589338651261", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
+		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
@@ -267,7 +272,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
-	assert.Equal(t, "12433441613247342495680642890662773367605896324555599297255745922589338651261", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
+		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:6")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
@@ -277,7 +284,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "A", 0, "600")
 	checkBalance(t, tc, sdb, "A", 1, "500")
 	checkBalance(t, tc, sdb, "B", 0, "400")
-	assert.Equal(t, "4191361650490017591061467288209836928064232431729236465872209988325272262963", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"4191361650490017591061467288209836928064232431729236465872209988325272262963",
+		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs := []common.Idx{261, 262}
 	log.Debug("block:0 batch:7")
@@ -293,7 +302,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "B", 1, "200")
 	checkBalance(t, tc, sdb, "C", 0, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
-	assert.Equal(t, "7614010373759339299470010949167613050707822522530721724565424494781010548240", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"7614010373759339299470010949167613050707822522530721724565424494781010548240",
+		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:8")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
@@ -309,7 +320,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 0, "45")
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
-	assert.Equal(t, "21231789250434471575486264439945776732824482207853465397552873521865656677689", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"21231789250434471575486264439945776732824482207853465397552873521865656677689",
+		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{262}
 	log.Debug("block:1 batch:1")
@@ -326,7 +339,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 0, "845")
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "470")
-	assert.Equal(t, "11289313644810782435120113035387729451095637380468777086895109386127538554246", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"11289313644810782435120113035387729451095637380468777086895109386127538554246",
+		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{}
 	log.Debug("block:1 batch:2")
@@ -334,7 +349,9 @@ func TestProcessTxsBalances(t *testing.T) {
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
 	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "10342681351319338354912862547249967104198317571995055517008223832276478908482", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"10342681351319338354912862547249967104198317571995055517008223832276478908482",
+		tp.s.MT.Root().BigInt().String())
 
 	// use Set of PoolL2 txs
 	poolL2Txs, err := tc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow1)
@@ -446,8 +463,8 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, common.Nonce(5), l2Txs[0].Nonce)
 	assert.Equal(t, common.Nonce(6), l2Txs[1].Nonce)
 	assert.Equal(t, common.Nonce(7), l2Txs[2].Nonce)
-
-	assert.Equal(t, 4, len(ptOut.ExitInfos)) // the 'ForceExit(1)' is not computed yet, as the batch is without L1UserTxs
+	// the 'ForceExit(1)' is not computed yet, as the batch is without L1UserTxs
+	assert.Equal(t, 4, len(ptOut.ExitInfos))
 	assert.Equal(t, 1, len(ptOut.CreatedAccounts))
 	assert.Equal(t, 4, len(ptOut.CollectedFees))
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(0)].String())
@@ -463,8 +480,10 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
 		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-
-	assert.Equal(t, 1, len(ptOut.ExitInfos)) // 1, as previous batch was without L1UserTxs, and has pending the 'ForceExit(1) A: 5', and the 2 exit transactions get grouped under 1 ExitInfo
+	// 1, as previous batch was without L1UserTxs, and has pending the
+	// 'ForceExit(1) A: 5', and the 2 exit transactions get grouped under 1
+	// ExitInfo
+	assert.Equal(t, 1, len(ptOut.ExitInfos))
 	assert.Equal(t, 1, len(ptOut.CreatedAccounts))
 	assert.Equal(t, 4, len(ptOut.CollectedFees))
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(0)].String())
@@ -526,7 +545,8 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 
 	log.Debug("block:0 batch:2")
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs,
+		blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
@@ -554,7 +574,8 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 
 	log.Debug("block:1 batch:2")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
+		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	acc, err = sdb.GetAccount(idxA1)
 	assert.NoError(t, err)
@@ -575,7 +596,9 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Equal(t, common.TokenID(1), acc.TokenID)
 	assert.Equal(t, "2", acc.Balance.String())
 
-	assert.Equal(t, "18894163991492573893706613133132363559300580460789469708968288074813925659539", sdb.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"18894163991492573893706613133132363559300580460789469708968288074813925659539",
+		sdb.MT.Root().BigInt().String())
 }
 
 func TestProcessTxsRootTestVectors(t *testing.T) {
@@ -588,7 +611,8 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	assert.NoError(t, err)
 
 	// same values than in the js test
-	bjj0, err := common.BJJFromStringWithChecksum("21b0a1688b37f77b1d1d5539ec3b826db5ac78b2513f574a04c50a7d4f8246d7")
+	bjj0, err := common.BJJFromStringWithChecksum(
+		"21b0a1688b37f77b1d1d5539ec3b826db5ac78b2513f574a04c50a7d4f8246d7")
 	assert.NoError(t, err)
 	l1Txs := []common.L1Tx{
 		{
@@ -626,7 +650,9 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	tp := NewTxProcessor(sdb, config)
 	_, err = tp.ProcessTxs(nil, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "9827704113668630072730115158977131501210702363656902211840117643154933433410", sdb.MT.Root().BigInt().String())
+	assert.Equal(t,
+		"9827704113668630072730115158977131501210702363656902211840117643154933433410",
+		sdb.MT.Root().BigInt().String())
 }
 
 func TestCreateAccountDepositMaxValue(t *testing.T) {
@@ -699,7 +725,8 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	assert.Equal(t, daMax1BI, acc.Balance)
 }
 
-func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Context, []common.BlockData) {
+func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Context,
+	[]common.BlockData) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
 	defer assert.NoError(t, os.RemoveAll(dir))
@@ -1049,13 +1076,17 @@ func TestExitOf0Amount(t *testing.T) {
 	// process Batch4:
 	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil)
 	require.NoError(t, err)
-	assert.Equal(t, "14329759303391468223438874789317921522067594445474390443816827472846339238908", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+	assert.Equal(t,
+		"14329759303391468223438874789317921522067594445474390443816827472846339238908",
+		ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	exitRootBatch4 := ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String()
 
 	// process Batch6:
 	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[5].L1UserTxs, nil, nil)
 	require.NoError(t, err)
-	assert.Equal(t, "14329759303391468223438874789317921522067594445474390443816827472846339238908", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+	assert.Equal(t,
+		"14329759303391468223438874789317921522067594445474390443816827472846339238908",
+		ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	// Expect that the ExitRoot for the Batch6 will be equal than for the
 	// Batch4, as the Batch4 & Batch6 have the same tx with Exit Amount=10,
 	// and Batch4 has a 2nd tx with Exit Amount=0.

@@ -64,16 +64,19 @@ type ClientConfig struct {
 }
 
 // NewClient creates a new Client to interact with Ethereum and the Hermez smart contracts.
-func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, cfg *ClientConfig) (*Client, error) {
+func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore,
+	cfg *ClientConfig) (*Client, error) {
 	ethereumClient, err := NewEthereumClient(client, account, ks, &cfg.Ethereum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	auctionClient, err := NewAuctionClient(ethereumClient, cfg.Auction.Address, cfg.Auction.TokenHEZ)
+	auctionClient, err := NewAuctionClient(ethereumClient, cfg.Auction.Address,
+		cfg.Auction.TokenHEZ)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	rollupClient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address, cfg.Auction.TokenHEZ)
+	rollupClient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address,
+		cfg.Auction.TokenHEZ)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

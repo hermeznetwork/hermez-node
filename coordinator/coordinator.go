@@ -25,8 +25,9 @@ import (
 
 var (
 	errLastL1BatchNotSynced  = fmt.Errorf("last L1Batch not synced yet")
-	errForgeNoTxsBeforeDelay = fmt.Errorf("no txs to forge and we haven't reached the forge no txs delay")
-	errForgeBeforeDelay      = fmt.Errorf("we haven't reached the forge delay")
+	errForgeNoTxsBeforeDelay = fmt.Errorf(
+		"no txs to forge and we haven't reached the forge no txs delay")
+	errForgeBeforeDelay = fmt.Errorf("we haven't reached the forge delay")
 )
 
 const (
@@ -473,7 +474,8 @@ func (c *Coordinator) handleReorg(ctx context.Context, msg *MsgSyncReorg) error 
 // handleStopPipeline handles stopping the pipeline.  If failedBatchNum is 0,
 // the next pipeline will start from the last state of the synchronizer,
 // otherwise, it will state from failedBatchNum-1.
-func (c *Coordinator) handleStopPipeline(ctx context.Context, reason string, failedBatchNum common.BatchNum) error {
+func (c *Coordinator) handleStopPipeline(ctx context.Context, reason string,
+	failedBatchNum common.BatchNum) error {
 	batchNum := c.stats.Sync.LastBatch.BatchNum
 	if failedBatchNum != 0 {
 		batchNum = failedBatchNum - 1

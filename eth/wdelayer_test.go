@@ -54,7 +54,8 @@ func TestWDelayerSetHermezGovernanceAddress(t *testing.T) {
 	require.Nil(t, err)
 	wdelayerEvents, err := wdelayerClientTest.WDelayerEventsByBlock(currentBlockNum, nil)
 	require.Nil(t, err)
-	assert.Equal(t, auxAddressConst, wdelayerEvents.NewHermezGovernanceAddress[0].NewHermezGovernanceAddress)
+	assert.Equal(t, auxAddressConst,
+		wdelayerEvents.NewHermezGovernanceAddress[0].NewHermezGovernanceAddress)
 	_, err = wdelayerClientAux.WDelayerTransferGovernance(governanceAddressConst)
 	require.Nil(t, err)
 	_, err = wdelayerClientTest.WDelayerClaimGovernance()
@@ -68,7 +69,8 @@ func TestWDelayerGetEmergencyCouncil(t *testing.T) {
 }
 
 func TestWDelayerSetEmergencyCouncil(t *testing.T) {
-	wdelayerClientEmergencyCouncil, err := NewWDelayerClient(ethereumClientEmergencyCouncil, wdelayerTestAddressConst)
+	wdelayerClientEmergencyCouncil, err := NewWDelayerClient(ethereumClientEmergencyCouncil,
+		wdelayerTestAddressConst)
 	require.Nil(t, err)
 	wdelayerClientAux, err := NewWDelayerClient(ethereumClientAux, wdelayerTestAddressConst)
 	require.Nil(t, err)
@@ -200,13 +202,18 @@ func TestWDelayerGetEmergencyModeStartingTime(t *testing.T) {
 func TestWDelayerEscapeHatchWithdrawal(t *testing.T) {
 	amount := new(big.Int)
 	amount.SetString("10000000000000000", 10)
-	wdelayerClientEmergencyCouncil, err := NewWDelayerClient(ethereumClientEmergencyCouncil, wdelayerTestAddressConst)
+	wdelayerClientEmergencyCouncil, err := NewWDelayerClient(ethereumClientEmergencyCouncil,
+		wdelayerTestAddressConst)
 	require.Nil(t, err)
-	_, err = wdelayerClientEmergencyCouncil.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHEZAddressConst, amount)
+	_, err =
+		wdelayerClientEmergencyCouncil.WDelayerEscapeHatchWithdrawal(governanceAddressConst,
+			tokenHEZAddressConst, amount)
 	require.Contains(t, err.Error(), "NO_MAX_EMERGENCY_MODE_TIME")
 	seconds := maxEmergencyModeTime.Seconds()
 	addTime(seconds, ethClientDialURL)
-	_, err = wdelayerClientEmergencyCouncil.WDelayerEscapeHatchWithdrawal(governanceAddressConst, tokenHEZAddressConst, amount)
+	_, err =
+		wdelayerClientEmergencyCouncil.WDelayerEscapeHatchWithdrawal(governanceAddressConst,
+			tokenHEZAddressConst, amount)
 	require.Nil(t, err)
 	currentBlockNum, err := wdelayerClientTest.client.EthLastBlock()
 	require.Nil(t, err)

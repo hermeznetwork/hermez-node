@@ -58,7 +58,8 @@ func TestAuctionConstants(t *testing.T) {
 func TestAuctionVariables(t *testing.T) {
 	INITMINBID := new(big.Int)
 	INITMINBID.SetString(minBidStr, 10)
-	defaultSlotSetBid := [6]*big.Int{INITMINBID, INITMINBID, INITMINBID, INITMINBID, INITMINBID, INITMINBID}
+	defaultSlotSetBid := [6]*big.Int{INITMINBID, INITMINBID, INITMINBID, INITMINBID, INITMINBID,
+		INITMINBID}
 
 	auctionVariables, err := auctionClientTest.AuctionVariables()
 	require.Nil(t, err)
@@ -132,7 +133,8 @@ func TestAuctionSetClosedAuctionSlots(t *testing.T) {
 	require.Nil(t, err)
 	auctionEvents, err := auctionClientTest.AuctionEventsByBlock(currentBlockNum, nil)
 	require.Nil(t, err)
-	assert.Equal(t, newClosedAuctionSlots, auctionEvents.NewClosedAuctionSlots[0].NewClosedAuctionSlots)
+	assert.Equal(t, newClosedAuctionSlots,
+		auctionEvents.NewClosedAuctionSlots[0].NewClosedAuctionSlots)
 	_, err = auctionClientTest.AuctionSetClosedAuctionSlots(closedAuctionSlots)
 	require.Nil(t, err)
 }
@@ -228,7 +230,8 @@ func TestAuctionSetBootCoordinator(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, newBootCoordinator, auctionEvents.NewBootCoordinator[0].NewBootCoordinator)
 	assert.Equal(t, newBootCoordinatorURL, auctionEvents.NewBootCoordinator[0].NewBootCoordinatorURL)
-	_, err = auctionClientTest.AuctionSetBootCoordinator(bootCoordinatorAddressConst, bootCoordinatorURL)
+	_, err = auctionClientTest.AuctionSetBootCoordinator(bootCoordinatorAddressConst,
+		bootCoordinatorURL)
 	require.Nil(t, err)
 }
 
@@ -342,7 +345,8 @@ func TestAuctionMultiBid(t *testing.T) {
 	budget := new(big.Int)
 	budget.SetString("45200000000000000000", 10)
 	bidderAddress := governanceAddressConst
-	_, err = auctionClientTest.AuctionMultiBid(budget, currentSlot+4, currentSlot+10, slotSet, maxBid, minBid, deadline)
+	_, err = auctionClientTest.AuctionMultiBid(budget, currentSlot+4, currentSlot+10, slotSet,
+		maxBid, minBid, deadline)
 	require.Nil(t, err)
 	currentBlockNum, err := auctionClientTest.client.EthLastBlock()
 	require.Nil(t, err)
@@ -383,7 +387,8 @@ func TestAuctionClaimHEZ(t *testing.T) {
 }
 
 func TestAuctionForge(t *testing.T) {
-	auctionClientTestHermez, err := NewAuctionClient(ethereumClientHermez, auctionTestAddressConst, tokenHEZ)
+	auctionClientTestHermez, err := NewAuctionClient(ethereumClientHermez,
+		auctionTestAddressConst, tokenHEZ)
 	require.Nil(t, err)
 	slotConst := 4
 	blockNum := int64(int(blocksPerSlot)*slotConst + int(genesisBlock))

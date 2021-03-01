@@ -72,7 +72,8 @@ func (idx Idx) BigInt() *big.Int {
 // IdxFromBytes returns Idx from a byte array
 func IdxFromBytes(b []byte) (Idx, error) {
 	if len(b) != IdxBytesLen {
-		return 0, tracerr.Wrap(fmt.Errorf("can not parse Idx, bytes len %d, expected %d", len(b), IdxBytesLen))
+		return 0, tracerr.Wrap(fmt.Errorf("can not parse Idx, bytes len %d, expected %d",
+			len(b), IdxBytesLen))
 	}
 	var idxBytes [8]byte
 	copy(idxBytes[2:], b[:])
@@ -194,7 +195,8 @@ func (a *Account) BigInts() ([NLeafElems]*big.Int, error) {
 	return e, nil
 }
 
-// HashValue returns the value of the Account, which is the Poseidon hash of its *big.Int representation
+// HashValue returns the value of the Account, which is the Poseidon hash of its
+// *big.Int representation
 func (a *Account) HashValue() (*big.Int, error) {
 	bi, err := a.BigInts()
 	if err != nil {

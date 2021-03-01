@@ -67,7 +67,8 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 }
 
 // GenAuths generates account creation authorizations
-func GenAuths(nAuths int, chainID uint16, hermezContractAddr ethCommon.Address) []*common.AccountCreationAuth {
+func GenAuths(nAuths int, chainID uint16,
+	hermezContractAddr ethCommon.Address) []*common.AccountCreationAuth {
 	auths := []*common.AccountCreationAuth{}
 	for i := 0; i < nAuths; i++ {
 		// Generate keys

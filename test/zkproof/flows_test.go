@@ -55,7 +55,8 @@ func addL2Txs(t *testing.T, l2DB *l2db.L2DB, poolL2Txs []common.PoolL2Tx) {
 	}
 }
 
-func addAccCreationAuth(t *testing.T, tc *til.Context, l2DB *l2db.L2DB, chainID uint16, hermezContractAddr ethCommon.Address, username string) []byte {
+func addAccCreationAuth(t *testing.T, tc *til.Context, l2DB *l2db.L2DB, chainID uint16,
+	hermezContractAddr ethCommon.Address, username string) []byte {
 	user := tc.Users[username]
 	auth := &common.AccountCreationAuth{
 		EthAddr: user.Addr,
@@ -71,7 +72,8 @@ func addAccCreationAuth(t *testing.T, tc *til.Context, l2DB *l2db.L2DB, chainID 
 	return auth.Signature
 }
 
-func initTxSelector(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address, coordUser *til.User) (*txselector.TxSelector, *l2db.L2DB, *statedb.StateDB) {
+func initTxSelector(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address,
+	coordUser *til.User) (*txselector.TxSelector, *l2db.L2DB, *statedb.StateDB) {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
@@ -145,7 +147,11 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	}
 
 	// loop over the first 6 batches
-	expectedRoots := []string{"0", "0", "13644148972047617726265275926674266298636745191961029124811988256139761111521", "12433441613247342495680642890662773367605896324555599297255745922589338651261", "12433441613247342495680642890662773367605896324555599297255745922589338651261", "4191361650490017591061467288209836928064232431729236465872209988325272262963"}
+	expectedRoots := []string{"0", "0",
+		"13644148972047617726265275926674266298636745191961029124811988256139761111521",
+		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
+		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
+		"4191361650490017591061467288209836928064232431729236465872209988325272262963"}
 	for i := 0; i < 6; i++ {
 		log.Debugf("block:0 batch:%d", i+1)
 		var l1UserTxs []common.L1Tx
@@ -153,7 +159,8 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 			l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[i].Batch.ForgeL1TxsNum])
 		}
 		// TxSelector select the transactions for the next Batch
-		coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+		coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
+			txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 		require.NoError(t, err)
 		// BatchBuilder build Batch
 		zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -176,14 +183,18 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
+		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "7614010373759339299470010949167613050707822522530721724565424494781010548240", bb.LocalStateDB().MT.Root().BigInt().String())
+	assert.Equal(t,
+		"7614010373759339299470010949167613050707822522530721724565424494781010548240",
+		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
-	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs), txsel.LocalAccountsDB().CurrentBatch())
+	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
+		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
 	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
@@ -201,14 +212,18 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
+		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "21231789250434471575486264439945776732824482207853465397552873521865656677689", bb.LocalStateDB().MT.Root().BigInt().String())
+	assert.Equal(t,
+		"21231789250434471575486264439945776732824482207853465397552873521865656677689",
+		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
-	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs), txsel.LocalAccountsDB().CurrentBatch())
+	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
+		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
 	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
@@ -224,14 +239,18 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
+		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "11289313644810782435120113035387729451095637380468777086895109386127538554246", bb.LocalStateDB().MT.Root().BigInt().String())
+	assert.Equal(t,
+		"11289313644810782435120113035387729451095637380468777086895109386127538554246",
+		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
-	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs), txsel.LocalAccountsDB().CurrentBatch())
+	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
+		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
 	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
@@ -240,16 +259,20 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l2Txs = []common.PoolL2Tx{}
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err = txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
+		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	// same root as previous batch, as the L1CoordinatorTxs created by the
 	// Til set is not created by the TxSelector in this test
-	assert.Equal(t, "11289313644810782435120113035387729451095637380468777086895109386127538554246", bb.LocalStateDB().MT.Root().BigInt().String())
+	assert.Equal(t,
+		"11289313644810782435120113035387729451095637380468777086895109386127538554246",
+		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
-	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs), txsel.LocalAccountsDB().CurrentBatch())
+	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
+		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
 	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
@@ -303,15 +326,20 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	// batch2
 	// TxSelector select the transactions for the next Batch
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err := txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
+		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "8737171572459172806192626402462788826264011087579491137542380589998149683116", bb.LocalStateDB().MT.Root().BigInt().String())
+	assert.Equal(t,
+		"8737171572459172806192626402462788826264011087579491137542380589998149683116",
+		bb.LocalStateDB().MT.Root().BigInt().String())
 	h, err := zki.HashGlobalData()
 	require.NoError(t, err)
-	assert.Equal(t, "18608843755023673022528019960628191162333429206359207449879743919826610006009", h.String())
+	assert.Equal(t,
+		"18608843755023673022528019960628191162333429206359207449879743919826610006009",
+		h.String())
 	sendProofAndCheckResp(t, zki)
 
 	// batch3
@@ -321,7 +349,8 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	l2Txs, err := tc.GeneratePoolL2Txs(batchPoolL2)
 	require.NoError(t, err)
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
-	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err := txsel.GetL1L2TxSelection(selectionConfig, nil)
+	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
+		txsel.GetL1L2TxSelection(selectionConfig, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(coordIdxs))
 	assert.Equal(t, 0, len(oL1UserTxs))
@@ -331,10 +360,14 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "18306761925365215381387147754881756804475668085493847010988306480531520370130", bb.LocalStateDB().MT.Root().BigInt().String())
+	assert.Equal(t,
+		"18306761925365215381387147754881756804475668085493847010988306480531520370130",
+		bb.LocalStateDB().MT.Root().BigInt().String())
 	h, err = zki.HashGlobalData()
 	require.NoError(t, err)
-	assert.Equal(t, "6651837443119278772088559395433504719862425648816904171510845286897104469889", h.String())
+	assert.Equal(t,
+		"6651837443119278772088559395433504719862425648816904171510845286897104469889",
+		h.String())
 	assert.Equal(t, common.EthAddrToBigInt(tc.Users["Coord"].Addr), zki.EthAddr3[0])
 	assert.Equal(t, "0", zki.EthAddr3[1].String())
 	sendProofAndCheckResp(t, zki)

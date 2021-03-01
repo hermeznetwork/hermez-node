@@ -161,7 +161,9 @@ func (tc *Context) GenerateBlocks(set string) ([]common.BlockData, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	if parsedSet.typ != SetTypeBlockchain {
-		return nil, tracerr.Wrap(fmt.Errorf("Expected set type: %s, found: %s", SetTypeBlockchain, parsedSet.typ))
+		return nil,
+			tracerr.Wrap(fmt.Errorf("Expected set type: %s, found: %s",
+				SetTypeBlockchain, parsedSet.typ))
 	}
 
 	tc.instructions = parsedSet.instructions
@@ -209,7 +211,9 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				TokenID:       inst.TokenID,
 				Amount:        big.NewInt(0),
 				DepositAmount: big.NewInt(0),
-				Type:          common.TxTypeCreateAccountDeposit, // as TxTypeCreateAccountDepositCoordinator is not valid oustide Til package
+				// as TxTypeCreateAccountDepositCoordinator is
+				// not valid oustide Til package
+				Type: common.TxTypeCreateAccountDeposit,
 			}
 			testTx := L1Tx{
 				lineNum:     inst.LineNum,
@@ -218,7 +222,8 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 			}
 
 			tc.currBatchTest.l1CoordinatorTxs = append(tc.currBatchTest.l1CoordinatorTxs, testTx)
-		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer: // tx source: L1UserTx
+		case common.TxTypeCreateAccountDeposit, common.TxTypeCreateAccountDepositTransfer:
+			// tx source: L1UserTx
 			if err := tc.checkIfTokenIsRegistered(inst); err != nil {
 				log.Error(err)
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
@@ -281,7 +286,8 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				Type:        common.TxTypeTransfer,
 				EthBlockNum: tc.blockNum,
 			}
-			tx.BatchNum = common.BatchNum(tc.currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
+			// when converted to PoolL2Tx BatchNum parameter is lost
+			tx.BatchNum = common.BatchNum(tc.currBatchNum)
 			testTx := L2Tx{
 				lineNum:     inst.LineNum,
 				fromIdxName: inst.From,
@@ -322,7 +328,8 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				Type:        common.TxTypeExit,
 				EthBlockNum: tc.blockNum,
 			}
-			tx.BatchNum = common.BatchNum(tc.currBatchNum) // when converted to PoolL2Tx BatchNum parameter is lost
+			// when converted to PoolL2Tx BatchNum parameter is lost
+			tx.BatchNum = common.BatchNum(tc.currBatchNum)
 			testTx := L2Tx{
 				lineNum:     inst.LineNum,
 				fromIdxName: inst.From,
@@ -395,7 +402,10 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				EthBlockNum: tc.blockNum,
 			}
 			if inst.TokenID != tc.LastRegisteredTokenID+1 {
-				return nil, tracerr.Wrap(fmt.Errorf("Line %d: AddToken TokenID should be sequential, expected TokenID: %d, defined TokenID: %d", inst.LineNum, tc.LastRegisteredTokenID+1, inst.TokenID))
+				return nil,
+					tracerr.Wrap(fmt.Errorf("Line %d: AddToken TokenID should be "+
+						"sequential, expected TokenID: %d, defined TokenID: %d",
+						inst.LineNum, tc.LastRegisteredTokenID+1, inst.TokenID))
 			}
 			tc.LastRegisteredTokenID++
 			tc.currBlock.Rollup.AddedTokens = append(tc.currBlock.Rollup.AddedTokens, newToken)
@@ -413,9 +423,13 @@ func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error
 	// for each batch.L1CoordinatorTxs of the Queues[ToForgeNum], calculate the Idx
 	for i := 0; i < len(txs); i++ {
 		tx := txs[i]
-		if tx.L1Tx.Type == common.TxTypeCreateAccountDeposit || tx.L1Tx.Type == common.TxTypeCreateAccountDepositTransfer {
-			if tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] != nil { // if account already exists, return error
-				return tracerr.Wrap(fmt.Errorf("Can not create same account twice (same User (%s) & same TokenID (%d)) (this is a design property of Til)", tx.fromIdxName, tx.L1Tx.TokenID))
+		if tx.L1Tx.Type == common.TxTypeCreateAccountDeposit ||
+			tx.L1Tx.Type == common.TxTypeCreateAccountDepositTransfer {
+			if tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] != nil {
+				// if account already exists, return error
+				return tracerr.Wrap(fmt.Errorf("Can not create same account twice "+
+					"(same User (%s) & same TokenID (%d)) (this is a design property of Til)",
+					tx.fromIdxName, tx.L1Tx.TokenID))
 			}
 			tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] = &Account{
 				Idx:      common.Idx(tc.idx),
@@ -423,7 +437,8 @@ func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error
 				Nonce:    common.Nonce(0),
 				BatchNum: tc.currBatchNum,
 			}
-			tc.l1CreatedAccounts[idxTokenIDToString(tx.fromIdxName, tx.L1Tx.TokenID)] = tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID]
+			tc.l1CreatedAccounts[idxTokenIDToString(tx.fromIdxName, tx.L1Tx.TokenID)] =
+				tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID]
 			tc.accountsByIdx[tc.idx] = tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID]
 			tc.UsersByIdx[tc.idx] = tc.Users[tx.fromIdxName]
 			tc.idx++
@@ -442,11 +457,15 @@ func (tc *Context) setIdxs() error {
 		testTx := &tc.currBatchTest.l2Txs[i]
 
 		if tc.Users[testTx.fromIdxName].Accounts[testTx.tokenID] == nil {
-			return tracerr.Wrap(fmt.Errorf("Line %d: %s from User %s for TokenID %d while account not created yet", testTx.lineNum, testTx.L2Tx.Type, testTx.fromIdxName, testTx.tokenID))
+			return tracerr.Wrap(fmt.Errorf("Line %d: %s from User %s for TokenID %d "+
+				"while account not created yet",
+				testTx.lineNum, testTx.L2Tx.Type, testTx.fromIdxName, testTx.tokenID))
 		}
 		if testTx.L2Tx.Type == common.TxTypeTransfer {
 			if _, ok := tc.l1CreatedAccounts[idxTokenIDToString(testTx.toIdxName, testTx.tokenID)]; !ok {
-				return tracerr.Wrap(fmt.Errorf("Line %d: Can not create Transfer for a non existing account. Batch %d, ToIdx name: %s, TokenID: %d", testTx.lineNum, tc.currBatchNum, testTx.toIdxName, testTx.tokenID))
+				return tracerr.Wrap(fmt.Errorf("Line %d: Can not create Transfer for a non "+
+					"existing account. Batch %d, ToIdx name: %s, TokenID: %d",
+					testTx.lineNum, tc.currBatchNum, testTx.toIdxName, testTx.tokenID))
 			}
 		}
 		tc.Users[testTx.fromIdxName].Accounts[testTx.tokenID].Nonce++
@@ -498,7 +517,8 @@ func (tc *Context) addToL1UserQueue(tx L1Tx) error {
 	tx.L1Tx.Position = len(tc.Queues[tc.openToForge])
 
 	// When an L1UserTx is generated, all idxs must be available (except when idx == 0 or idx == 1)
-	if tx.L1Tx.Type != common.TxTypeCreateAccountDeposit && tx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {
+	if tx.L1Tx.Type != common.TxTypeCreateAccountDeposit &&
+		tx.L1Tx.Type != common.TxTypeCreateAccountDepositTransfer {
 		tx.L1Tx.FromIdx = tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID].Idx
 	}
 	tx.L1Tx.FromEthAddr = tc.Users[tx.fromIdxName].Addr
@@ -530,14 +550,16 @@ func (tc *Context) addToL1UserQueue(tx L1Tx) error {
 
 func (tc *Context) checkIfAccountExists(tf string, inst Instruction) error {
 	if tc.Users[tf].Accounts[inst.TokenID] == nil {
-		return tracerr.Wrap(fmt.Errorf("%s at User: %s, for TokenID: %d, while account not created yet", inst.Typ, tf, inst.TokenID))
+		return tracerr.Wrap(fmt.Errorf("%s at User: %s, for TokenID: %d, while account not created yet",
+			inst.Typ, tf, inst.TokenID))
 	}
 	return nil
 }
 
 func (tc *Context) checkIfTokenIsRegistered(inst Instruction) error {
 	if inst.TokenID > tc.LastRegisteredTokenID {
-		return tracerr.Wrap(fmt.Errorf("Can not process %s: TokenID %d not registered, last registered TokenID: %d", inst.Typ, inst.TokenID, tc.LastRegisteredTokenID))
+		return tracerr.Wrap(fmt.Errorf("Can not process %s: TokenID %d not registered, "+
+			"last registered TokenID: %d", inst.Typ, inst.TokenID, tc.LastRegisteredTokenID))
 	}
 	return nil
 }
@@ -551,7 +573,8 @@ func (tc *Context) GeneratePoolL2Txs(set string) ([]common.PoolL2Tx, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	if parsedSet.typ != SetTypePoolL2 {
-		return nil, tracerr.Wrap(fmt.Errorf("Expected set type: %s, found: %s", SetTypePoolL2, parsedSet.typ))
+		return nil, tracerr.Wrap(fmt.Errorf("Expected set type: %s, found: %s",
+			SetTypePoolL2, parsedSet.typ))
 	}
 
 	tc.instructions = parsedSet.instructions
@@ -668,7 +691,9 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 			tx.Signature = sig.Compress()
 			txs = append(txs, tx)
 		default:
-			return nil, tracerr.Wrap(fmt.Errorf("Line %d: instruction type unrecognized: %s", inst.LineNum, inst.Typ))
+			return nil,
+				tracerr.Wrap(fmt.Errorf("Line %d: instruction type unrecognized: %s",
+					inst.LineNum, inst.Typ))
 		}
 	}
 

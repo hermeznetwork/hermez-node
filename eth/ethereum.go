@@ -64,7 +64,8 @@ type EthereumConfig struct {
 	GasPriceDiv  uint64
 }
 
-// EthereumClient is an ethereum client to call Smart Contract methods and check blockchain information.
+// EthereumClient is an ethereum client to call Smart Contract methods and check blockchain
+// information.
 type EthereumClient struct {
 	client  *ethclient.Client
 	chainID *big.Int
@@ -76,7 +77,8 @@ type EthereumClient struct {
 
 // NewEthereumClient creates a EthereumClient instance.  The account is not mandatory (it can
 // be nil).  If the account is nil, CallAuth will fail with ErrAccountNil.
-func NewEthereumClient(client *ethclient.Client, account *accounts.Account, ks *ethKeystore.KeyStore, config *EthereumConfig) (*EthereumClient, error) {
+func NewEthereumClient(client *ethclient.Client, account *accounts.Account,
+	ks *ethKeystore.KeyStore, config *EthereumConfig) (*EthereumClient, error) {
 	if config == nil {
 		config = &EthereumConfig{
 			CallGasLimit: defaultCallGasLimit,
@@ -166,7 +168,8 @@ func (c *EthereumClient) NewAuth() (*bind.TransactOpts, error) {
 // This call requires a valid account with Ether that can be spend during the
 // call.
 func (c *EthereumClient) CallAuth(gasLimit uint64,
-	fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
+	fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction,
+	error) {
 	if c.account == nil {
 		return nil, tracerr.Wrap(ErrAccountNil)
 	}
@@ -212,7 +215,8 @@ func (c *EthereumClient) Call(fn func(*ethclient.Client) error) error {
 }
 
 // EthTransactionReceipt returns the transaction receipt of the given txHash
-func (c *EthereumClient) EthTransactionReceipt(ctx context.Context, txHash ethCommon.Hash) (*types.Receipt, error) {
+func (c *EthereumClient) EthTransactionReceipt(ctx context.Context,
+	txHash ethCommon.Hash) (*types.Receipt, error) {
 	return c.client.TransactionReceipt(ctx, txHash)
 }
 
@@ -228,13 +232,15 @@ func (c *EthereumClient) EthLastBlock() (int64, error) {
 }
 
 // EthHeaderByNumber internally calls ethclient.Client HeaderByNumber
-// func (c *EthereumClient) EthHeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+// func (c *EthereumClient) EthHeaderByNumber(ctx context.Context, number *big.Int) (*types.Header,
+// 	error) {
 // 	return c.client.HeaderByNumber(ctx, number)
 // }
 
 // EthBlockByNumber internally calls ethclient.Client BlockByNumber and returns
 // *common.Block.  If number == -1, the latests known block is returned.
-func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*common.Block, error) {
+func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*common.Block,
+	error) {
 	blockNum := big.NewInt(number)
 	if number == -1 {
 		blockNum = nil

@@ -447,7 +447,8 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 			// send the fee to the Idx of the Coordinator for the TokenID
 			accCoord, err := txsel.localAccountsDB.GetAccount(idx)
 			if err != nil {
-				log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
+				log.Errorw("Can not distribute accumulated fees to coordinator "+
+					"account: No coord Idx to receive fee", "idx", idx)
 				return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 			}
 			accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
@@ -511,14 +512,19 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 			accAuth, err = txsel.l2db.GetAccountCreationAuth(l2Tx.ToEthAddr)
 			if err != nil {
 				// not found, l2Tx will not be added in the selection
-				return nil, nil, nil, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
-					l2Tx.ToIdx, l2Tx.ToEthAddr.Hex()))
+				return nil, nil, nil,
+					tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found "+
+						"in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
+						l2Tx.ToIdx, l2Tx.ToEthAddr.Hex()))
 			}
 			if accAuth.BJJ != l2Tx.ToBJJ {
 				// if AccountCreationAuth.BJJ is not the same
 				// than in the tx, tx is not accepted
-				return nil, nil, nil, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr & ToBJJ found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s, ToBJJ: %s",
-					l2Tx.ToIdx, l2Tx.ToEthAddr.Hex(), l2Tx.ToBJJ.String()))
+				return nil, nil, nil,
+					tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, "+
+						"neither ToEthAddr & ToBJJ found in AccountCreationAuths L2DB. "+
+						"ToIdx: %d, ToEthAddr: %s, ToBJJ: %s",
+						l2Tx.ToIdx, l2Tx.ToEthAddr.Hex(), l2Tx.ToBJJ.String()))
 			}
 		} else {
 			// case: ToBJJ==0:
@@ -534,8 +540,11 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 			accAuth, err = txsel.l2db.GetAccountCreationAuth(l2Tx.ToEthAddr)
 			if err != nil {
 				// not found, l2Tx will not be added in the selection
-				return nil, nil, nil, tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in StateDB, neither ToEthAddr found in AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
-					l2Tx.ToIdx, l2Tx.ToEthAddr))
+				return nil, nil, nil,
+					tracerr.Wrap(fmt.Errorf("invalid L2Tx: ToIdx not found in "+
+						"StateDB, neither ToEthAddr found in "+
+						"AccountCreationAuths L2DB. ToIdx: %d, ToEthAddr: %s",
+						l2Tx.ToIdx, l2Tx.ToEthAddr))
 			}
 		}
 		// create L1CoordinatorTx for the accountCreation

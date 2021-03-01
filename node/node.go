@@ -275,7 +275,8 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			BJJ:                 cfg.Coordinator.FeeAccount.BJJ,
 			AccountCreationAuth: auth.Signature,
 		}
-		txSelector, err := txselector.NewTxSelector(coordAccount, cfg.Coordinator.TxSelector.Path, stateDB, l2DB)
+		txSelector, err := txselector.NewTxSelector(coordAccount,
+			cfg.Coordinator.TxSelector.Path, stateDB, l2DB)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -523,8 +524,8 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 	return nil
 }
 
-func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr,
-	batches []common.BatchData) {
+func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
+	vars synchronizer.SCVariablesPtr, batches []common.BatchData) {
 	if n.mode == ModeCoordinator {
 		n.coord.SendMsg(ctx, coordinator.MsgSyncBlock{
 			Stats:   *stats,
@@ -559,7 +560,8 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats, va
 	}
 }
 
-func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats, vars synchronizer.SCVariablesPtr) {
+func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
+	vars synchronizer.SCVariablesPtr) {
 	if n.mode == ModeCoordinator {
 		n.coord.SendMsg(ctx, coordinator.MsgSyncReorg{
 			Stats: *stats,
@@ -579,7 +581,8 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats, vars 
 
 // TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
 // don't have to pass it around.
-func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block, time.Duration, error) {
+func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
+	time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
 	stats := n.sync.Stats()
 	if err != nil {

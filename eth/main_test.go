@@ -26,7 +26,8 @@ var (
 	mnemonic         = "explain tackle mirror kit van hammer degree position ginger unfair soup bonus"
 )
 
-func genAcc(w *hdwallet.Wallet, ks *keystore.KeyStore, i int) (*accounts.Account, ethCommon.Address) {
+func genAcc(w *hdwallet.Wallet, ks *keystore.KeyStore, i int) (*accounts.Account,
+	ethCommon.Address) {
 	path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%d", i))
 	account, err := w.Derive(path, false)
 	if err != nil {
@@ -111,7 +112,9 @@ func getEnvVariables() {
 	if err != nil {
 		log.Fatal(errEnvVar)
 	}
-	if auctionAddressStr == "" || auctionTestAddressStr == "" || tokenHEZAddressStr == "" || hermezRollupAddressStr == "" || wdelayerAddressStr == "" || wdelayerTestAddressStr == "" || genesisBlockEnv == "" {
+	if auctionAddressStr == "" || auctionTestAddressStr == "" || tokenHEZAddressStr == "" ||
+		hermezRollupAddressStr == "" || wdelayerAddressStr == "" || wdelayerTestAddressStr == "" ||
+		genesisBlockEnv == "" {
 		log.Fatal(errEnvVar)
 	}
 
@@ -189,7 +192,8 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 
-		ethereumClientEmergencyCouncil, err = NewEthereumClient(ethClient, emergencyCouncilAccount, ks, nil)
+		ethereumClientEmergencyCouncil, err = NewEthereumClient(ethClient,
+			emergencyCouncilAccount, ks, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
