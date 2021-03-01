@@ -720,6 +720,10 @@ func TestGetUnforgedL1UserTxs(t *testing.T) {
 	assert.Equal(t, 5, len(l1UserTxs))
 	assert.Equal(t, blocks[0].Rollup.L1UserTxs, l1UserTxs)
 
+	count, err := historyDB.GetUnforgedL1UserTxsCount()
+	require.NoError(t, err)
+	assert.Equal(t, 5, count)
+
 	// No l1UserTxs for this toForgeL1TxsNum
 	l1UserTxs, err = historyDB.GetUnforgedL1UserTxs(2)
 	require.NoError(t, err)

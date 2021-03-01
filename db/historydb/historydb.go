@@ -763,6 +763,16 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 	return db.SlicePtrsToSlice(txs).([]common.L1Tx), tracerr.Wrap(err)
 }
 
+// GetUnforgedL1UserTxsCount returns the count of unforged L1Txs (either in
+// open or frozen queues that are not yet forged)
+func (hdb *HistoryDB) GetUnforgedL1UserTxsCount() (int, error) {
+	row := hdb.dbRead.QueryRow(
+		`SELECT COUNT(*) FROM tx WHERE batch_num IS NULL;`,
+	)
+	var count int
+	return count, tracerr.Wrap(row.Scan(&count))
+}
+
 // TODO: Think about chaning all the queries that return a last value, to queries that return the next valid value.
 
 // GetLastTxsPosition for a given to_forge_l1_txs_num
