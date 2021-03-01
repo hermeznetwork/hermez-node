@@ -50,7 +50,7 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 	defer l2db.apiConnCon.Release()
 
 	row := l2db.dbRead.QueryRow(`SELECT
-		($1::NUMERIC * token.usd * fee_percentage($2::NUMERIC)) /
+		($1::NUMERIC * COALESCE(token.usd, 0) * fee_percentage($2::NUMERIC)) /
 			(10.0 ^ token.decimals::NUMERIC)
 		FROM token WHERE token.token_id = $3;`,
 		tx.AmountFloat, tx.Fee, tx.TokenID)
