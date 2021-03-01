@@ -462,17 +462,18 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 		noTxs := false
 		if len(l1UserTxsExtra) == 0 && len(l1CoordTxs) == 0 && len(poolL2Txs) == 0 {
 			if batchInfo.L1Batch {
-				// Query the L1UserTxs in the queue following
-				// the one we are trying to forge.
-				nextL1UserTxs, err := p.historyDB.GetUnforgedL1UserTxs(
-					p.state.lastForgeL1TxsNum + 1)
+				// Query the number of unforged L1UserTxs
+				// (either in a open queue or in a frozen
+				// not-yet-forged queue).
+				count, err := p.historyDB.GetUnforgedL1UserTxsCount()
 				if err != nil {
 					return nil, tracerr.Wrap(err)
 				}
 				// If there are future L1UserTxs, we forge a
-				// batch to advance the queues and forge the
-				// L1UserTxs in the future.  Otherwise, skip.
-				if len(nextL1UserTxs) == 0 {
+				// batch to advance the queues to be able to
+				// forge the L1UserTxs in the future.
+				// Otherwise, skip.
+				if count == 0 {
 					noTxs = true
 				}
 			} else {
