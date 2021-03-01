@@ -146,12 +146,12 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		if minForgeBalance != nil && balance.Cmp(minForgeBalance) == -1 {
 			return nil, tracerr.Wrap(fmt.Errorf(
 				"forger account balance is less than cfg.Coordinator.MinimumForgeAddressBalance: %v < %v",
-				balance.Int64(), minForgeBalance))
+				balance, minForgeBalance))
 		}
 		log.Infow("forger ethereum account balance",
 			"addr", cfg.Coordinator.ForgerAddress,
-			"balance", balance.Int64(),
-			"minForgeBalance", minForgeBalance.Int64(),
+			"balance", balance,
+			"minForgeBalance", minForgeBalance,
 		)
 
 		// Unlock Coordinator ForgerAddr in the keystore to make calls
