@@ -1010,7 +1010,8 @@ func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, err
 	}
 	err = meddler.QueryRow(
 		hdb.dbRead, metrics,
-		`SELECT COALESCE (AVG(EXTRACT(EPOCH FROM (forged.timestamp - added.timestamp))), 0) AS estimatedTimeToForgeL1 FROM tx
+		`SELECT COALESCE (AVG(EXTRACT(EPOCH FROM (forged.timestamp - added.timestamp))), 0)
+			AS estimated_time_to_forge_l1 FROM tx
 		INNER JOIN block AS added ON tx.eth_block_num = added.eth_block_num
 		INNER JOIN batch AS forged_batch ON tx.batch_num = forged_batch.batch_num
 		INNER JOIN block AS forged ON forged_batch.eth_block_num = forged.eth_block_num
@@ -1069,7 +1070,8 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 	defer hdb.apiConnCon.Release()
 	account := &common.Account{}
 	err = meddler.QueryRow(
-		hdb.dbRead, account, `SELECT * FROM account WHERE idx = $1;`, idx,
+		hdb.dbRead, account, `SELECT idx, token_id, batch_num, bjj, eth_addr
+		FROM account WHERE idx = $1;`, idx,
 	)
 	return account, tracerr.Wrap(err)
 }
