@@ -182,19 +182,29 @@ func addPerc(v *big.Int, p int64) *big.Int {
 	r.Mul(r, big.NewInt(p))
 	// nolint reason: to calculate percentages we divide by 100
 	r.Div(r, big.NewInt(100)) //nolit:gomnd
+	// If the increase is 0, force it to be 1 so that a gas increase
+	// doesn't result in the same value, making the transaction to be equal
+	// than before.
+	if r.Cmp(big.NewInt(0)) == 0 {
+		r = big.NewInt(1)
+	}
 	return r.Add(v, r)
 }
 
 func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchInfo, resend bool) error {
 	var ethTx *types.Transaction
 	var err error
-	auth, err := t.NewAuth(ctx, batchInfo)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	auth.Nonce = big.NewInt(int64(t.accNextNonce))
+	var auth *bind.TransactOpts
 	if resend {
-		auth.Nonce = big.NewInt(int64(batchInfo.EthTx.Nonce()))
+		auth = batchInfo.Auth
+		auth.GasPrice = addPerc(auth.GasPrice, 10)
+	} else {
+		auth, err = t.NewAuth(ctx, batchInfo)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		batchInfo.Auth = auth
+		auth.Nonce = big.NewInt(int64(t.accNextNonce))
 	}
 	for attempt := 0; attempt < t.cfg.EthClientAttempts; attempt++ {
 		if auth.GasPrice.Cmp(t.cfg.MaxGasPrice) > 0 {
