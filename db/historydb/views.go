@@ -310,7 +310,7 @@ type Metrics struct {
 	TotalAccounts          int64   `json:"totalAccounts" meddler:"total_accounts"`
 	TotalBJJs              int64   `json:"totalBJJs" meddler:"total_bjjs"`
 	AvgTransactionFee      float64 `json:"avgTransactionFee"`
-	EstimatedTimeToForgeL1 float64 `json:"estimatedTimeToForgeL1" meddler:"estimatedTimeToForgeL1"`
+	EstimatedTimeToForgeL1 float64 `json:"estimatedTimeToForgeL1" meddler:"estimated_time_to_forge_l1"`
 }
 
 // MetricsTotals is used to get temporal information from HistoryDB
