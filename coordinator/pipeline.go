@@ -124,7 +124,8 @@ func NewPipeline(ctx context.Context,
 }
 
 // SetSyncStatsVars is a thread safe method to sets the synchronizer Stats
-func (p *Pipeline) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats, vars *synchronizer.SCVariablesPtr) {
+func (p *Pipeline) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats,
+	vars *synchronizer.SCVariablesPtr) {
 	select {
 	case p.statsVarsCh <- statsVars{Stats: *stats, Vars: *vars}:
 	case <-ctx.Done():
@@ -500,7 +501,8 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	batchInfo.CoordIdxs = coordIdxs
 	batchInfo.VerifierIdx = p.cfg.VerifierIdx
 
-	if err := p.l2DB.StartForging(common.TxIDsFromPoolL2Txs(poolL2Txs), batchInfo.BatchNum); err != nil {
+	if err := p.l2DB.StartForging(common.TxIDsFromPoolL2Txs(poolL2Txs),
+		batchInfo.BatchNum); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs); err != nil {
@@ -544,7 +546,8 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 
 // waitServerProof gets the generated zkProof & sends it to the SmartContract
 func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) error {
-	proof, pubInputs, err := batchInfo.ServerProof.GetProof(ctx) // blocking call, until not resolved don't continue. Returns when the proof server has calculated the proof
+	proof, pubInputs, err := batchInfo.ServerProof.GetProof(ctx) // blocking call,
+	// until not resolved don't continue. Returns when the proof server has calculated the proof
 	if err != nil {
 		return tracerr.Wrap(err)
 	}

@@ -126,7 +126,8 @@ func newTestModules(t *testing.T) modules {
 	batchBuilderDBPath, err = ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, batchBuilderDBPath)
-	batchBuilder, err := batchbuilder.NewBatchBuilder(batchBuilderDBPath, syncStateDB, 0, uint64(nLevels))
+	batchBuilder, err := batchbuilder.NewBatchBuilder(batchBuilderDBPath, syncStateDB, 0,
+		uint64(nLevels))
 	assert.NoError(t, err)
 
 	return modules{

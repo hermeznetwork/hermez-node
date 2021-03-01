@@ -48,7 +48,8 @@ func (w *WDelayerBlock) addTransaction(tx *types.Transaction) *types.Transaction
 	return tx
 }
 
-func (w *WDelayerBlock) deposit(txHash ethCommon.Hash, owner, token ethCommon.Address, amount *big.Int) {
+func (w *WDelayerBlock) deposit(txHash ethCommon.Hash, owner, token ethCommon.Address,
+	amount *big.Int) {
 	w.Events.Deposit = append(w.Events.Deposit, eth.WDelayerEventDeposit{
 		Owner:            owner,
 		Token:            token,
@@ -182,7 +183,8 @@ func (a *AuctionBlock) canForge(forger ethCommon.Address, blockNum int64) (bool,
 
 	slotToForge := a.getSlotNumber(blockNum)
 	// Get the relativeBlock to check if the slotDeadline has been exceeded
-	relativeBlock := blockNum - (a.Constants.GenesisBlockNum + (slotToForge * int64(a.Constants.BlocksPerSlot)))
+	relativeBlock := blockNum - (a.Constants.GenesisBlockNum + (slotToForge *
+		int64(a.Constants.BlocksPerSlot)))
 
 	// If the closedMinBid is 0 it means that we have to take as minBid the
 	// one that is set for this slot set, otherwise the one that has been
@@ -281,10 +283,6 @@ type ClientSetup struct {
 // and 1 will be premined.
 //nolint:gomnd
 func NewClientSetupExample() *ClientSetup {
-	// rfield, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
-	// if !ok {
-	// 	panic("bad rfield")
-	// }
 	initialMinimalBidding, ok := new(big.Int).SetString("10000000000000000000", 10) // 10 * (1e18)
 	if !ok {
 		panic("bad initialMinimalBidding")
@@ -626,7 +624,8 @@ func (c *Client) EthPendingNonceAt(ctx context.Context, account ethCommon.Addres
 
 // EthNonceAt returns the account nonce of the given account. The block number can
 // be nil, in which case the nonce is taken from the latest known block.
-func (c *Client) EthNonceAt(ctx context.Context, account ethCommon.Address, blockNumber *big.Int) (uint64, error) {
+func (c *Client) EthNonceAt(ctx context.Context, account ethCommon.Address,
+	blockNumber *big.Int) (uint64, error) {
 	// NOTE: For now Client doesn't simulate nonces
 	return 0, nil
 }
@@ -645,7 +644,8 @@ func (c *Client) EthKeyStore() *ethKeystore.KeyStore {
 
 // EthCall runs the transaction as a call (without paying) in the local node at
 // blockNum.
-func (c *Client) EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error) {
+func (c *Client) EthCall(ctx context.Context, tx *types.Transaction,
+	blockNum *big.Int) ([]byte, error) {
 	return nil, tracerr.Wrap(common.ErrTODO)
 }
 
@@ -662,7 +662,8 @@ func (c *Client) EthLastBlock() (int64, error) {
 }
 
 // EthTransactionReceipt returns the transaction receipt of the given txHash
-func (c *Client) EthTransactionReceipt(ctx context.Context, txHash ethCommon.Hash) (*types.Receipt, error) {
+func (c *Client) EthTransactionReceipt(ctx context.Context,
+	txHash ethCommon.Hash) (*types.Receipt, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -778,7 +779,9 @@ var errTODO = fmt.Errorf("TODO: Not implemented yet")
 // }
 
 // RollupL1UserTxERC20Permit is the interface to call the smart contract function
-func (c *Client) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64, deadline *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, fromIdx int64,
+	depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64,
+	deadline *big.Int) (tx *types.Transaction, err error) {
 	log.Error("TODO")
 	return nil, tracerr.Wrap(errTODO)
 }
@@ -845,7 +848,9 @@ func (c *Client) RollupL1UserTxERC20ETH(
 }
 
 // RollupL1UserTxERC777 is the interface to call the smart contract function
-// func (c *Client) RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64, depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (*types.Transaction, error) {
+// func (c *Client) RollupL1UserTxERC777(fromBJJ *babyjub.PublicKey, fromIdx int64,
+// 	depositAmount *big.Int, amount *big.Int, tokenID uint32,
+//	toIdx int64) (*types.Transaction, error) {
 // 	log.Error("TODO")
 // 	return nil, errTODO
 // }
@@ -867,13 +872,17 @@ func (c *Client) RollupLastForgedBatch() (int64, error) {
 }
 
 // RollupWithdrawCircuit is the interface to call the smart contract function
-func (c *Client) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int, tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction, error) {
+func (c *Client) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int,
+	tokenID uint32, numExitRoot, idx int64, amount *big.Int,
+	instantWithdraw bool) (*types.Transaction, error) {
 	log.Error("TODO")
 	return nil, tracerr.Wrap(errTODO)
 }
 
 // RollupWithdrawMerkleProof is the interface to call the smart contract function
-func (c *Client) RollupWithdrawMerkleProof(babyPubKey babyjub.PublicKeyComp, tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int, instantWithdraw bool) (tx *types.Transaction, err error) {
+func (c *Client) RollupWithdrawMerkleProof(babyPubKey babyjub.PublicKeyComp,
+	tokenID uint32, numExitRoot, idx int64, amount *big.Int, siblings []*big.Int,
+	instantWithdraw bool) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -945,7 +954,8 @@ func (c *Client) newTransaction(name string, value interface{}) *types.Transacti
 }
 
 // RollupForgeBatch is the interface to call the smart contract function
-func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs, auth *bind.TransactOpts) (tx *types.Transaction, err error) {
+func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs,
+	auth *bind.TransactOpts) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -973,7 +983,8 @@ func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs, auth *bind.Tra
 
 	// TODO: If successful, store the tx in a successful array.
 	// TODO: If failed, store the tx in a failed array.
-	// TODO: Add method to move the tx to another block, reapply it there, and possibly go from successful to failed.
+	// TODO: Add method to move the tx to another block, reapply it there, and possibly go from
+	// successful to failed.
 
 	return c.addBatch(args)
 }
@@ -1018,7 +1029,8 @@ func (c *Client) addBatch(args *eth.RollupForgeBatchArgs) (*types.Transaction, e
 
 // RollupAddTokenSimple is a wrapper around RollupAddToken that automatically
 // sets `deadlie`.
-func (c *Client) RollupAddTokenSimple(tokenAddress ethCommon.Address, feeAddToken *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) RollupAddTokenSimple(tokenAddress ethCommon.Address,
+	feeAddToken *big.Int) (tx *types.Transaction, err error) {
 	return c.RollupAddToken(tokenAddress, feeAddToken, big.NewInt(9999)) //nolint:gomnd
 }
 
@@ -1039,13 +1051,16 @@ func (c *Client) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken *big
 		return nil, tracerr.Wrap(fmt.Errorf("Token %v already registered", tokenAddress))
 	}
 	if feeAddToken.Cmp(r.Vars.FeeAddToken) != 0 {
-		return nil, tracerr.Wrap(fmt.Errorf("Expected fee: %v but got: %v", r.Vars.FeeAddToken, feeAddToken))
+		return nil,
+			tracerr.Wrap(fmt.Errorf("Expected fee: %v but got: %v",
+				r.Vars.FeeAddToken, feeAddToken))
 	}
 
 	r.State.TokenMap[tokenAddress] = true
 	r.State.TokenList = append(r.State.TokenList, tokenAddress)
-	r.Events.AddToken = append(r.Events.AddToken, eth.RollupEventAddToken{TokenAddress: tokenAddress,
-		TokenID: uint32(len(r.State.TokenList) - 1)})
+	r.Events.AddToken = append(r.Events.AddToken, eth.RollupEventAddToken{
+		TokenAddress: tokenAddress,
+		TokenID:      uint32(len(r.State.TokenList) - 1)})
 	return r.addTransaction(c.newTransaction("addtoken", tokenAddress)), nil
 }
 
@@ -1059,7 +1074,8 @@ func (c *Client) RollupGetCurrentTokens() (*big.Int, error) {
 }
 
 // RollupUpdateForgeL1L2BatchTimeout is the interface to call the smart contract function
-func (c *Client) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (tx *types.Transaction, err error) {
+func (c *Client) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1078,7 +1094,8 @@ func (c *Client) RollupUpdateForgeL1L2BatchTimeout(newForgeL1Timeout int64) (tx 
 }
 
 // RollupUpdateFeeAddToken is the interface to call the smart contract function
-func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1092,7 +1109,8 @@ func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Tra
 }
 
 // RollupUpdateTokensHEZ is the interface to call the smart contract function
-// func (c *Client) RollupUpdateTokensHEZ(newTokenHEZ ethCommon.Address) (tx *types.Transaction, err error) {
+// func (c *Client) RollupUpdateTokensHEZ(newTokenHEZ ethCommon.Address) (tx *types.Transaction,
+// 	err error) {
 // 	c.rw.Lock()
 // 	defer c.rw.Unlock()
 // 	cpy := c.nextBlock().copy()
@@ -1103,7 +1121,8 @@ func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Tra
 // }
 
 // RollupUpdateGovernance is the interface to call the smart contract function
-// func (c *Client) RollupUpdateGovernance() (*types.Transaction, error) { // TODO (Not defined in Hermez.sol)
+// func (c *Client) RollupUpdateGovernance() (*types.Transaction, error) {
+// 	// TODO (Not defined in Hermez.sol)
 // 	return nil, errTODO
 // }
 
@@ -1142,8 +1161,10 @@ func (c *Client) RollupEventInit() (*eth.RollupEventInitialize, int64, error) {
 	}, 1, nil
 }
 
-// RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the Rollup Smart Contract in the given transaction
-func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash, l1UserTxsLen uint16) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
+// RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the Rollup Smart Contract
+// in the given transaction
+func (c *Client) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
+	l1UserTxsLen uint16) (*eth.RollupForgeBatchArgs, *ethCommon.Address, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
@@ -1182,7 +1203,8 @@ func (c *Client) AuctionGetSlotDeadline() (uint8, error) {
 }
 
 // AuctionSetOpenAuctionSlots is the interface to call the smart contract function
-func (c *Client) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (tx *types.Transaction, err error) {
+func (c *Client) AuctionSetOpenAuctionSlots(newOpenAuctionSlots uint16) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1210,7 +1232,8 @@ func (c *Client) AuctionGetOpenAuctionSlots() (uint16, error) {
 }
 
 // AuctionSetClosedAuctionSlots is the interface to call the smart contract function
-func (c *Client) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint16) (tx *types.Transaction, err error) {
+func (c *Client) AuctionSetClosedAuctionSlots(newClosedAuctionSlots uint16) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1256,7 +1279,8 @@ func (c *Client) AuctionGetOutbidding() (uint16, error) {
 }
 
 // AuctionSetAllocationRatio is the interface to call the smart contract function
-func (c *Client) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) (tx *types.Transaction, err error) {
+func (c *Client) AuctionSetAllocationRatio(newAllocationRatio [3]uint16) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1279,7 +1303,8 @@ func (c *Client) AuctionGetAllocationRatio() ([3]uint16, error) {
 }
 
 // AuctionSetDonationAddress is the interface to call the smart contract function
-func (c *Client) AuctionSetDonationAddress(newDonationAddress ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) AuctionSetDonationAddress(
+	newDonationAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1302,7 +1327,8 @@ func (c *Client) AuctionGetDonationAddress() (*ethCommon.Address, error) {
 }
 
 // AuctionSetBootCoordinator is the interface to call the smart contract function
-func (c *Client) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address, newBootCoordinatorURL string) (tx *types.Transaction, err error) {
+func (c *Client) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address,
+	newBootCoordinatorURL string) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1327,7 +1353,8 @@ func (c *Client) AuctionGetBootCoordinator() (*ethCommon.Address, error) {
 }
 
 // AuctionChangeDefaultSlotSetBid is the interface to call the smart contract function
-func (c *Client) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) AuctionChangeDefaultSlotSetBid(slotSet int64,
+	newInitialMinBid *big.Int) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1341,7 +1368,8 @@ func (c *Client) AuctionChangeDefaultSlotSetBid(slotSet int64, newInitialMinBid 
 }
 
 // AuctionSetCoordinator is the interface to call the smart contract function
-func (c *Client) AuctionSetCoordinator(forger ethCommon.Address, URL string) (tx *types.Transaction, err error) {
+func (c *Client) AuctionSetCoordinator(forger ethCommon.Address,
+	URL string) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1370,7 +1398,8 @@ func (c *Client) AuctionSetCoordinator(forger ethCommon.Address, URL string) (tx
 		ForgerAddress ethCommon.Address
 		URL           string
 	}
-	return a.addTransaction(c.newTransaction("registercoordinator", data{*c.addr, forger, URL})), nil
+	return a.addTransaction(c.newTransaction("registercoordinator", data{*c.addr, forger, URL})),
+		nil
 }
 
 // AuctionIsRegisteredCoordinator is the interface to call the smart contract function
@@ -1383,7 +1412,8 @@ func (c *Client) AuctionIsRegisteredCoordinator(forgerAddress ethCommon.Address)
 }
 
 // AuctionUpdateCoordinatorInfo is the interface to call the smart contract function
-func (c *Client) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address, newWithdrawAddress ethCommon.Address, newURL string) (tx *types.Transaction, err error) {
+func (c *Client) AuctionUpdateCoordinatorInfo(forgerAddress ethCommon.Address,
+	newWithdrawAddress ethCommon.Address, newURL string) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1443,12 +1473,14 @@ func (c *Client) AuctionGetSlotSet(slot int64) (*big.Int, error) {
 }
 
 // AuctionTokensReceived is the interface to call the smart contract function
-// func (c *Client) AuctionTokensReceived(operator, from, to ethCommon.Address, amount *big.Int, userData, operatorData []byte) error {
+// func (c *Client) AuctionTokensReceived(operator, from, to ethCommon.Address, amount *big.Int,
+// 	userData, operatorData []byte) error {
 // 	return errTODO
 // }
 
 // AuctionBidSimple is a wrapper around AuctionBid that automatically sets `amount` and `deadline`.
-func (c *Client) AuctionBidSimple(slot int64, bidAmount *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) AuctionBidSimple(slot int64, bidAmount *big.Int) (tx *types.Transaction,
+	err error) {
 	return c.AuctionBid(bidAmount, slot, bidAmount, big.NewInt(99999)) //nolint:gomnd
 }
 
@@ -1471,7 +1503,8 @@ func (c *Client) AuctionBid(amount *big.Int, slot int64, bidAmount *big.Int,
 		return nil, tracerr.Wrap(errBidClosed)
 	}
 
-	if slot > a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots)+int64(a.Vars.OpenAuctionSlots) {
+	if slot >
+		a.getCurrentSlotNumber()+int64(a.Vars.ClosedAuctionSlots)+int64(a.Vars.OpenAuctionSlots) {
 		return nil, tracerr.Wrap(errBidNotOpen)
 	}
 
@@ -1508,8 +1541,8 @@ func (c *Client) AuctionBid(amount *big.Int, slot int64, bidAmount *big.Int,
 
 // AuctionMultiBid is the interface to call the smart contract function.  This
 // implementation behaves as if any address has infinite tokens.
-func (c *Client) AuctionMultiBid(amount *big.Int, startingSlot int64, endingSlot int64, slotSet [6]bool,
-	maxBid, closedMinBid, deadline *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) AuctionMultiBid(amount *big.Int, startingSlot int64, endingSlot int64,
+	slotSet [6]bool, maxBid, closedMinBid, deadline *big.Int) (tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1623,7 +1656,8 @@ func (c *Client) WDelayerGetHermezGovernanceAddress() (*ethCommon.Address, error
 }
 
 // WDelayerTransferGovernance is the interface to call the smart contract function
-func (c *Client) WDelayerTransferGovernance(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) WDelayerTransferGovernance(newAddress ethCommon.Address) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1660,7 +1694,8 @@ func (c *Client) WDelayerGetEmergencyCouncil() (*ethCommon.Address, error) {
 }
 
 // WDelayerTransferEmergencyCouncil is the interface to call the smart contract function
-func (c *Client) WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (
+	tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1729,7 +1764,8 @@ func (c *Client) WDelayerEnableEmergencyMode() (tx *types.Transaction, err error
 }
 
 // WDelayerChangeWithdrawalDelay is the interface to call the smart contract function
-func (c *Client) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (tx *types.Transaction, err error) {
+func (c *Client) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1757,7 +1793,8 @@ func (c *Client) WDelayerDepositInfo(owner, token ethCommon.Address) (eth.Deposi
 }
 
 // WDelayerDeposit is the interface to call the smart contract function
-func (c *Client) WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int) (
+	tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1771,7 +1808,8 @@ func (c *Client) WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int
 }
 
 // WDelayerWithdrawal is the interface to call the smart contract function
-func (c *Client) WDelayerWithdrawal(owner, token ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *Client) WDelayerWithdrawal(owner, token ethCommon.Address) (tx *types.Transaction,
+	err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1785,7 +1823,8 @@ func (c *Client) WDelayerWithdrawal(owner, token ethCommon.Address) (tx *types.T
 }
 
 // WDelayerEscapeHatchWithdrawal is the interface to call the smart contract function
-func (c *Client) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (tx *types.Transaction, err error) {
+func (c *Client) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (
+	tx *types.Transaction, err error) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	cpy := c.nextBlock().copy()
@@ -1843,14 +1882,16 @@ func (c *Client) CtlAddBlocks(blocks []common.BlockData) (err error) {
 		rollup := nextBlock.Rollup
 		auction := nextBlock.Auction
 		for _, token := range block.Rollup.AddedTokens {
-			if _, err := c.RollupAddTokenSimple(token.EthAddr, rollup.Vars.FeeAddToken); err != nil {
+			if _, err := c.RollupAddTokenSimple(token.EthAddr,
+				rollup.Vars.FeeAddToken); err != nil {
 				return tracerr.Wrap(err)
 			}
 		}
 		for _, tx := range block.Rollup.L1UserTxs {
 			c.CtlSetAddr(tx.FromEthAddr)
-			if _, err := c.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx), tx.DepositAmount, tx.Amount,
-				uint32(tx.TokenID), int64(tx.ToIdx)); err != nil {
+			if _, err := c.RollupL1UserTxERC20ETH(tx.FromBJJ, int64(tx.FromIdx),
+				tx.DepositAmount, tx.Amount, uint32(tx.TokenID),
+				int64(tx.ToIdx)); err != nil {
 				return tracerr.Wrap(err)
 			}
 		}

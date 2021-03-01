@@ -51,7 +51,8 @@ func (txid *TxID) Scan(src interface{}) error {
 		return tracerr.Wrap(fmt.Errorf("can't scan %T into TxID", src))
 	}
 	if len(srcB) != TxIDLen {
-		return tracerr.Wrap(fmt.Errorf("can't scan []byte of len %d into TxID, need %d", len(srcB), TxIDLen))
+		return tracerr.Wrap(fmt.Errorf("can't scan []byte of len %d into TxID, need %d",
+			len(srcB), TxIDLen))
 	}
 	copy(txid[:], srcB)
 	return nil
@@ -102,13 +103,15 @@ func (txid *TxID) UnmarshalText(data []byte) error {
 type TxType string
 
 const (
-	// TxTypeExit represents L2->L1 token transfer.  A leaf for this account appears in the exit tree of the block
+	// TxTypeExit represents L2->L1 token transfer.  A leaf for this account appears in the exit
+	// tree of the block
 	TxTypeExit TxType = "Exit"
 	// TxTypeTransfer represents L2->L2 token transfer
 	TxTypeTransfer TxType = "Transfer"
 	// TxTypeDeposit represents L1->L2 transfer
 	TxTypeDeposit TxType = "Deposit"
-	// TxTypeCreateAccountDeposit represents creation of a new leaf in the state tree (newAcconut) + L1->L2 transfer
+	// TxTypeCreateAccountDeposit represents creation of a new leaf in the state tree
+	// (newAcconut) + L1->L2 transfer
 	TxTypeCreateAccountDeposit TxType = "CreateAccountDeposit"
 	// TxTypeCreateAccountDepositTransfer represents L1->L2 transfer + L2->L2 transfer
 	TxTypeCreateAccountDepositTransfer TxType = "CreateAccountDepositTransfer"
@@ -124,24 +127,31 @@ const (
 	TxTypeTransferToBJJ TxType = "TransferToBJJ"
 )
 
-// Tx is a struct used by the TxSelector & BatchBuilder as a generic type generated from L1Tx & PoolL2Tx
+// Tx is a struct used by the TxSelector & BatchBuilder as a generic type generated from L1Tx &
+// PoolL2Tx
 type Tx struct {
 	// Generic
-	IsL1        bool      `meddler:"is_l1"`
-	TxID        TxID      `meddler:"id"`
-	Type        TxType    `meddler:"type"`
-	Position    int       `meddler:"position"`
-	FromIdx     Idx       `meddler:"from_idx"`
-	ToIdx       Idx       `meddler:"to_idx"`
-	Amount      *big.Int  `meddler:"amount,bigint"`
-	AmountFloat float64   `meddler:"amount_f"`
-	TokenID     TokenID   `meddler:"token_id"`
-	USD         *float64  `meddler:"amount_usd"`
-	BatchNum    *BatchNum `meddler:"batch_num"`     // batchNum in which this tx was forged. If the tx is L2, this must be != 0
-	EthBlockNum int64     `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
+	IsL1        bool     `meddler:"is_l1"`
+	TxID        TxID     `meddler:"id"`
+	Type        TxType   `meddler:"type"`
+	Position    int      `meddler:"position"`
+	FromIdx     Idx      `meddler:"from_idx"`
+	ToIdx       Idx      `meddler:"to_idx"`
+	Amount      *big.Int `meddler:"amount,bigint"`
+	AmountFloat float64  `meddler:"amount_f"`
+	TokenID     TokenID  `meddler:"token_id"`
+	USD         *float64 `meddler:"amount_usd"`
+	// BatchNum in which this tx was forged. If the tx is L2, this must be != 0
+	BatchNum *BatchNum `meddler:"batch_num"`
+	// Ethereum Block Number in which this L1Tx was added to the queue
+	EthBlockNum int64 `meddler:"eth_block_num"`
 	// L1
-	ToForgeL1TxsNum    *int64                `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
-	UserOrigin         *bool                 `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
+	// ToForgeL1TxsNum in which the tx was forged / will be forged
+	ToForgeL1TxsNum *int64 `meddler:"to_forge_l1_txs_num"`
+	// UserOrigin is set to true if the tx was originated by a user, false if it was aoriginated
+	// by a coordinator. Note that this differ from the spec for implementation simplification
+	// purpposes
+	UserOrigin         *bool                 `meddler:"user_origin"`
 	FromEthAddr        ethCommon.Address     `meddler:"from_eth_addr"`
 	FromBJJ            babyjub.PublicKeyComp `meddler:"from_bjj"`
 	DepositAmount      *big.Int              `meddler:"deposit_amount,bigintnull"`

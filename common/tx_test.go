@@ -21,8 +21,10 @@ func TestSignatureConstant(t *testing.T) {
 func TestTxIDScannerValue(t *testing.T) {
 	txid0 := &TxID{}
 	txid1 := &TxID{}
-	txid0B := [TxIDLen]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2}
-	txid1B := [TxIDLen]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	txid0B := [TxIDLen]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2,
+		3, 4, 5, 6, 7, 8, 9, 0, 1, 2}
+	txid1B := [TxIDLen]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 	copy(txid0[:], txid0B[:])
 	copy(txid1[:], txid1B[:])

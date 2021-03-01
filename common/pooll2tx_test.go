@@ -21,17 +21,20 @@ func TestNewPoolL2Tx(t *testing.T) {
 	}
 	poolL2Tx, err := NewPoolL2Tx(poolL2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x022669acda59b827d20ef5354a3eebd1dffb3972b0a6bf89d18bfd2efa0ab9f41e", poolL2Tx.TxID.String())
+	assert.Equal(t, "0x022669acda59b827d20ef5354a3eebd1dffb3972b0a6bf89d18bfd2efa0ab9f41e",
+		poolL2Tx.TxID.String())
 }
 
 func TestTxCompressedDataAndTxCompressedDataV2JSVectors(t *testing.T) {
 	// test vectors values generated from javascript implementation
 	var skPositive babyjub.PrivateKey // 'Positive' refers to the sign
-	_, err := hex.Decode(skPositive[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	_, err := hex.Decode(skPositive[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
 
 	var skNegative babyjub.PrivateKey // 'Negative' refers to the sign
-	_, err = hex.Decode(skNegative[:], []byte("0001020304050607080900010203040506070809000102030405060708090002"))
+	_, err = hex.Decode(skNegative[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090002"))
 	assert.NoError(t, err)
 
 	amount, ok := new(big.Int).SetString("343597383670000000000000000000000000000000", 10)
@@ -123,7 +126,8 @@ func TestTxCompressedDataAndTxCompressedDataV2JSVectors(t *testing.T) {
 
 func TestRqTxCompressedDataV2(t *testing.T) {
 	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	_, err := hex.Decode(sk[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		RqFromIdx: 7,
@@ -142,7 +146,8 @@ func TestRqTxCompressedDataV2(t *testing.T) {
 	expected, ok := new(big.Int).SetString(expectedStr, 10)
 	assert.True(t, ok)
 	assert.Equal(t, expected.Bytes(), txCompressedData.Bytes())
-	assert.Equal(t, "010c000000000b0000000a0000000009000000000008000000000007", hex.EncodeToString(txCompressedData.Bytes()))
+	assert.Equal(t, "010c000000000b0000000a0000000009000000000008000000000007",
+		hex.EncodeToString(txCompressedData.Bytes()))
 }
 
 func TestHashToSign(t *testing.T) {
@@ -157,13 +162,15 @@ func TestHashToSign(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign(chainID)
 	assert.NoError(t, err)
-	assert.Equal(t, "2d49ce1d4136e06f64e3eb1f79a346e6ee3e93ceeac909a57806a8d87005c263", hex.EncodeToString(toSign.Bytes()))
+	assert.Equal(t, "2d49ce1d4136e06f64e3eb1f79a346e6ee3e93ceeac909a57806a8d87005c263",
+		hex.EncodeToString(toSign.Bytes()))
 }
 
 func TestVerifyTxSignature(t *testing.T) {
 	chainID := uint16(0)
 	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	_, err := hex.Decode(sk[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
 	tx := PoolL2Tx{
 		FromIdx:     2,
@@ -177,7 +184,9 @@ func TestVerifyTxSignature(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign(chainID)
 	assert.NoError(t, err)
-	assert.Equal(t, "1571327027383224465388301747239444557034990637650927918405777653988509342917", toSign.String())
+	assert.Equal(t,
+		"1571327027383224465388301747239444557034990637650927918405777653988509342917",
+		toSign.String())
 
 	sig := sk.SignPoseidon(toSign)
 	tx.Signature = sig.Compress()
@@ -188,7 +197,9 @@ func TestDecompressEmptyBJJComp(t *testing.T) {
 	pkComp := EmptyBJJComp
 	pk, err := pkComp.Decompress()
 	require.NoError(t, err)
-	assert.Equal(t, "2957874849018779266517920829765869116077630550401372566248359756137677864698", pk.X.String())
+	assert.Equal(t,
+		"2957874849018779266517920829765869116077630550401372566248359756137677864698",
+		pk.X.String())
 	assert.Equal(t, "0", pk.Y.String())
 }
 

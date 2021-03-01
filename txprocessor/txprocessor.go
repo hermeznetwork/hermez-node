@@ -66,10 +66,12 @@ type ProcessTxOutput struct {
 func newErrorNotEnoughBalance(tx common.Tx) error {
 	var msg error
 	if tx.IsL1 {
-		msg = fmt.Errorf("Invalid transaction, not enough balance on sender account. TxID: %s, TxType: %s, FromIdx: %d, ToIdx: %d, Amount: %d",
+		msg = fmt.Errorf("Invalid transaction, not enough balance on sender account. "+
+			"TxID: %s, TxType: %s, FromIdx: %d, ToIdx: %d, Amount: %d",
 			tx.TxID, tx.Type, tx.FromIdx, tx.ToIdx, tx.Amount)
 	} else {
-		msg = fmt.Errorf("Invalid transaction, not enough balance on sender account. TxID: %s, TxType: %s, FromIdx: %d, ToIdx: %d, Amount: %d, Fee: %d",
+		msg = fmt.Errorf("Invalid transaction, not enough balance on sender account. "+
+			"TxID: %s, TxType: %s, FromIdx: %d, ToIdx: %d, Amount: %d, Fee: %d",
 			tx.TxID, tx.Type, tx.FromIdx, tx.ToIdx, tx.Amount, tx.Fee)
 	}
 	return tracerr.Wrap(msg)
@@ -116,21 +118,28 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	var createdAccounts []common.Account
 
 	if tp.zki != nil {
-		return nil, tracerr.Wrap(errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty"))
+		return nil, tracerr.Wrap(
+			errors.New("Expected StateDB.zki==nil, something went wrong and it's not empty"))
 	}
 	defer tp.resetZKInputs()
 
 	if len(coordIdxs) >= int(tp.config.MaxFeeTx) {
-		return nil, tracerr.Wrap(fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)", len(coordIdxs), tp.config.MaxFeeTx))
+		return nil, tracerr.Wrap(
+			fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)",
+				len(coordIdxs), tp.config.MaxFeeTx))
 	}
 
 	nTx := len(l1usertxs) + len(l1coordinatortxs) + len(l2txs)
 
 	if nTx > int(tp.config.MaxTx) {
-		return nil, tracerr.Wrap(fmt.Errorf("L1UserTx + L1CoordinatorTx + L2Tx (%d) can not be bigger than MaxTx (%d)", nTx, tp.config.MaxTx))
+		return nil, tracerr.Wrap(
+			fmt.Errorf("L1UserTx + L1CoordinatorTx + L2Tx (%d) can not be bigger than MaxTx (%d)",
+				nTx, tp.config.MaxTx))
 	}
 	if len(l1usertxs)+len(l1coordinatortxs) > int(tp.config.MaxL1Tx) {
-		return nil, tracerr.Wrap(fmt.Errorf("L1UserTx + L1CoordinatorTx (%d) can not be bigger than MaxL1Tx (%d)", len(l1usertxs)+len(l1coordinatortxs), tp.config.MaxTx))
+		return nil,
+			tracerr.Wrap(fmt.Errorf("L1UserTx + L1CoordinatorTx (%d) can not be bigger than MaxL1Tx (%d)",
+				len(l1usertxs)+len(l1coordinatortxs), tp.config.MaxTx))
 	}
 
 	if tp.s.Type() == statedb.TypeSynchronizer {
@@ -377,7 +386,8 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		// works)
 		accCoord, err := tp.s.GetAccount(idx)
 		if err != nil {
-			log.Errorw("Can not distribute accumulated fees to coordinator account: No coord Idx to receive fee", "idx", idx)
+			log.Errorw("Can not distribute accumulated fees to coordinator account: "+
+				"No coord Idx to receive fee", "idx", idx)
 			return nil, tracerr.Wrap(err)
 		}
 		if tp.zki != nil {
@@ -483,7 +493,8 @@ func (tp *TxProcessor) getFeePlanTokens(coordIdxs []common.Idx) ([]*big.Int, err
 	for i := 0; i < len(coordIdxs); i++ {
 		acc, err := tp.s.GetAccount(coordIdxs[i])
 		if err != nil {
-			log.Errorf("could not get account to determine TokenID of CoordIdx %d not found: %s", coordIdxs[i], err.Error())
+			log.Errorf("could not get account to determine TokenID of CoordIdx %d not found: %s",
+				coordIdxs[i], err.Error())
 			return nil, tracerr.Wrap(err)
 		}
 		tBI = append(tBI, acc.TokenID.BigInt())
@@ -642,7 +653,8 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 		if tp.s.Type() == statedb.TypeSynchronizer {
 			// thisTypeould never be reached
 			log.Error("WARNING: In StateDB with Synchronizer mode L2.ToIdx can't be 0")
-			return nil, nil, false, tracerr.Wrap(fmt.Errorf("In StateDB with Synchronizer mode L2.ToIdx can't be 0"))
+			return nil, nil, false,
+				tracerr.Wrap(fmt.Errorf("In StateDB with Synchronizer mode L2.ToIdx can't be 0"))
 		}
 		// case when tx.Type== common.TxTypeTransferToEthAddr or common.TxTypeTransferToBJJ
 
@@ -730,7 +742,8 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 	case common.TxTypeExit:
 		// execute exit flow
-		exitAccount, newExit, err := tp.applyExit(coordIdxsMap, collectedFees, exitTree, tx.Tx(), tx.Amount)
+		exitAccount, newExit, err := tp.applyExit(coordIdxsMap, collectedFees, exitTree,
+			tx.Tx(), tx.Amount)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, false, tracerr.Wrap(err)
@@ -790,7 +803,8 @@ func (tp *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 // createAccount is a wrapper over the StateDB.CreateAccount method that also
 // stores the created account in the updatedAccounts map in case the StateDB is
 // of TypeSynchronizer
-func (tp *TxProcessor) createAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func (tp *TxProcessor) createAccount(idx common.Idx, account *common.Account) (
+	*merkletree.CircomProcessorProof, error) {
 	if tp.s.Type() == statedb.TypeSynchronizer {
 		account.Idx = idx
 		tp.updatedAccounts[idx] = account
@@ -801,7 +815,8 @@ func (tp *TxProcessor) createAccount(idx common.Idx, account *common.Account) (*
 // updateAccount is a wrapper over the StateDB.UpdateAccount method that also
 // stores the updated account in the updatedAccounts map in case the StateDB is
 // of TypeSynchronizer
-func (tp *TxProcessor) updateAccount(idx common.Idx, account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func (tp *TxProcessor) updateAccount(idx common.Idx, account *common.Account) (
+	*merkletree.CircomProcessorProof, error) {
 	if tp.s.Type() == statedb.TypeSynchronizer {
 		account.Idx = idx
 		tp.updatedAccounts[idx] = account
@@ -937,7 +952,9 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 		if _, ok := coordIdxsMap[accSender.TokenID]; ok {
 			accCoord, err := tp.s.GetAccount(coordIdxsMap[accSender.TokenID])
 			if err != nil {
-				return tracerr.Wrap(fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d", accSender.TokenID, coordIdxsMap[accSender.TokenID]))
+				return tracerr.Wrap(
+					fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d",
+						accSender.TokenID, coordIdxsMap[accSender.TokenID]))
 			}
 			// accumulate the fee for the Coord account
 			accumulated := tp.AccumulatedFees[accCoord.Idx]
@@ -1141,7 +1158,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		if _, ok := coordIdxsMap[acc.TokenID]; ok {
 			accCoord, err := tp.s.GetAccount(coordIdxsMap[acc.TokenID])
 			if err != nil {
-				return nil, false, tracerr.Wrap(fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d", acc.TokenID, coordIdxsMap[acc.TokenID]))
+				return nil, false, tracerr.Wrap(
+					fmt.Errorf("Can not use CoordIdx that does not exist in the tree. TokenID: %d, CoordIdx: %d",
+						acc.TokenID, coordIdxsMap[acc.TokenID]))
 			}
 
 			// accumulate the fee for the Coord account
@@ -1301,13 +1320,15 @@ func (tp *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 		// check if tx.TokenID==receiver.TokenID
 		accReceiver, err := tp.s.GetAccount(tx.ToIdx)
 		if err != nil {
-			log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: can not get account for tx.ToIdx: %d", tx.ToIdx)
+			log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: can not get account for tx.ToIdx: %d",
+				tx.ToIdx)
 			tx.EffectiveDepositAmount = big.NewInt(0)
 			tx.EffectiveAmount = big.NewInt(0)
 			return
 		}
 		if tx.TokenID != accReceiver.TokenID {
-			log.Debugf("EffectiveAmount = 0: tx TokenID (%d) != receiver account TokenID (%d)", tx.TokenID, accReceiver.TokenID)
+			log.Debugf("EffectiveAmount = 0: tx TokenID (%d) != receiver account TokenID (%d)",
+				tx.TokenID, accReceiver.TokenID)
 			tx.EffectiveAmount = big.NewInt(0)
 			return
 		}
@@ -1316,7 +1337,8 @@ func (tp *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 
 	accSender, err := tp.s.GetAccount(tx.FromIdx)
 	if err != nil {
-		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: can not get account for tx.FromIdx: %d", tx.FromIdx)
+		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: can not get account for tx.FromIdx: %d",
+			tx.FromIdx)
 		tx.EffectiveDepositAmount = big.NewInt(0)
 		tx.EffectiveAmount = big.NewInt(0)
 		return
@@ -1324,7 +1346,9 @@ func (tp *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 
 	// check that tx.TokenID corresponds to the Sender account TokenID
 	if tx.TokenID != accSender.TokenID {
-		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: tx.TokenID (%d) !=sender account TokenID (%d)", tx.TokenID, accSender.TokenID)
+		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: "+
+			"tx.TokenID (%d) !=sender account TokenID (%d)",
+			tx.TokenID, accSender.TokenID)
 		tx.EffectiveDepositAmount = big.NewInt(0)
 		tx.EffectiveAmount = big.NewInt(0)
 		return
@@ -1345,7 +1369,9 @@ func (tp *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 	// check that the tx.FromEthAddr is the same than the EthAddress of the
 	// Sender
 	if !bytes.Equal(tx.FromEthAddr.Bytes(), accSender.EthAddr.Bytes()) {
-		log.Debugf("EffectiveAmount = 0: tx.FromEthAddr (%s) must be the same EthAddr of the sender account by the Idx (%s)", tx.FromEthAddr.Hex(), accSender.EthAddr.Hex())
+		log.Debugf("EffectiveAmount = 0: tx.FromEthAddr (%s) must be the same EthAddr of "+
+			"the sender account by the Idx (%s)",
+			tx.FromEthAddr.Hex(), accSender.EthAddr.Hex())
 		tx.EffectiveAmount = big.NewInt(0)
 	}
 
@@ -1357,18 +1383,22 @@ func (tp *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 	// check that TokenID is the same for Sender & Receiver account
 	accReceiver, err := tp.s.GetAccount(tx.ToIdx)
 	if err != nil {
-		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: can not get account for tx.ToIdx: %d", tx.ToIdx)
+		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: can not get account for tx.ToIdx: %d",
+			tx.ToIdx)
 		tx.EffectiveDepositAmount = big.NewInt(0)
 		tx.EffectiveAmount = big.NewInt(0)
 		return
 	}
 	if accSender.TokenID != accReceiver.TokenID {
-		log.Debugf("EffectiveAmount = 0: sender account TokenID (%d) != receiver account TokenID (%d)", accSender.TokenID, accReceiver.TokenID)
+		log.Debugf("EffectiveAmount = 0: sender account TokenID (%d) != receiver account TokenID (%d)",
+			accSender.TokenID, accReceiver.TokenID)
 		tx.EffectiveAmount = big.NewInt(0)
 		return
 	}
 	if tx.TokenID != accReceiver.TokenID {
-		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: tx TokenID (%d) != receiver account TokenID (%d)", tx.TokenID, accReceiver.TokenID)
+		log.Debugf("EffectiveAmount & EffectiveDepositAmount = 0: "+
+			"tx TokenID (%d) != receiver account TokenID (%d)",
+			tx.TokenID, accReceiver.TokenID)
 		tx.EffectiveAmount = big.NewInt(0)
 		return
 	}

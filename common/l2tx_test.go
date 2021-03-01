@@ -19,7 +19,8 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err := NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x022669acda59b827d20ef5354a3eebd1dffb3972b0a6bf89d18bfd2efa0ab9f41e", l2Tx.TxID.String())
+	assert.Equal(t, "0x022669acda59b827d20ef5354a3eebd1dffb3972b0a6bf89d18bfd2efa0ab9f41e",
+		l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 87654,
@@ -30,7 +31,8 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x029e7499a830f8f5eb17c07da48cf91415710f1bcbe0169d363ff91e81faf92fc2", l2Tx.TxID.String())
+	assert.Equal(t, "0x029e7499a830f8f5eb17c07da48cf91415710f1bcbe0169d363ff91e81faf92fc2",
+		l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 87654,
@@ -42,7 +44,8 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x0255c70ed20e1b8935232e1b9c5884dbcc88a6e1a3454d24f2d77252eb2bb0b64e", l2Tx.TxID.String())
+	assert.Equal(t, "0x0255c70ed20e1b8935232e1b9c5884dbcc88a6e1a3454d24f2d77252eb2bb0b64e",
+		l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 87654,
@@ -54,7 +57,8 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x0206b372f967061d1148bbcff679de38120e075141a80a07326d0f514c2efc6ca9", l2Tx.TxID.String())
+	assert.Equal(t, "0x0206b372f967061d1148bbcff679de38120e075141a80a07326d0f514c2efc6ca9",
+		l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 1,
@@ -66,7 +70,8 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x0236f7ea5bccf78ba60baf56c058d235a844f9b09259fd0efa4f5f72a7d4a26618", l2Tx.TxID.String())
+	assert.Equal(t, "0x0236f7ea5bccf78ba60baf56c058d235a844f9b09259fd0efa4f5f72a7d4a26618",
+		l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 999,
@@ -78,7 +83,8 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x02ac122f5b709ce190129fecbbe35bfd30c70e6433dbd85a8eb743d110906a1dc1", l2Tx.TxID.String())
+	assert.Equal(t, "0x02ac122f5b709ce190129fecbbe35bfd30c70e6433dbd85a8eb743d110906a1dc1",
+		l2Tx.TxID.String())
 
 	l2Tx = &L2Tx{
 		FromIdx: 4444,
@@ -90,7 +96,8 @@ func TestNewL2Tx(t *testing.T) {
 	}
 	l2Tx, err = NewL2Tx(l2Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x02c674951a81881b7bc50db3b9e5efd97ac88550c7426ac548720e5057cfba515a", l2Tx.TxID.String())
+	assert.Equal(t, "0x02c674951a81881b7bc50db3b9e5efd97ac88550c7426ac548720e5057cfba515a",
+		l2Tx.TxID.String())
 }
 
 func TestL2TxByteParsers(t *testing.T) {

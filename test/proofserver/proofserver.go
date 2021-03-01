@@ -68,6 +68,7 @@ func (s *Mock) handleCancel(c *gin.Context) {
 	c.JSON(http.StatusOK, "OK")
 }
 
+//nolint:lll
 /* Status example from the real server proof:
 
 Status:

@@ -14,7 +14,8 @@ import (
 func addBlock(url string) {
 	method := "POST"
 
-	payload := strings.NewReader("{\n    \"jsonrpc\":\"2.0\",\n    \"method\":\"evm_mine\",\n    \"params\":[],\n    \"id\":1\n}")
+	payload := strings.NewReader(
+		"{\n    \"jsonrpc\":\"2.0\",\n    \"method\":\"evm_mine\",\n    \"params\":[],\n    \"id\":1\n}")
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
@@ -45,7 +46,9 @@ func addTime(seconds float64, url string) {
 	secondsStr := strconv.FormatFloat(seconds, 'E', -1, 32)
 
 	method := "POST"
-	payload := strings.NewReader("{\n    \"jsonrpc\":\"2.0\",\n    \"method\":\"evm_increaseTime\",\n    \"params\":[" + secondsStr + "],\n    \"id\":1\n}")
+	payload := strings.NewReader(
+		"{\n    \"jsonrpc\":\"2.0\",\n    \"method\":\"evm_increaseTime\",\n    \"params\":[" +
+			secondsStr + "],\n    \"id\":1\n}")
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
@@ -66,13 +69,16 @@ func addTime(seconds float64, url string) {
 	}()
 }
 
-func createPermitDigest(tokenAddr, owner, spender ethCommon.Address, chainID, value, nonce, deadline *big.Int, tokenName string) ([]byte, error) {
+func createPermitDigest(tokenAddr, owner, spender ethCommon.Address, chainID, value, nonce,
+	deadline *big.Int, tokenName string) ([]byte, error) {
 	// NOTE: We ignore hash.Write errors because we are writing to a memory
 	// buffer and don't expect any errors to occur.
-	abiPermit := []byte("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
+	abiPermit :=
+		[]byte("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
 	hashPermit := sha3.NewLegacyKeccak256()
 	hashPermit.Write(abiPermit) //nolint:errcheck,gosec
-	abiEIP712Domain := []byte("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+	abiEIP712Domain :=
+		[]byte("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
 	hashEIP712Domain := sha3.NewLegacyKeccak256()
 	hashEIP712Domain.Write(abiEIP712Domain) //nolint:errcheck,gosec
 	var encodeBytes []byte
@@ -124,7 +130,8 @@ func createPermitDigest(tokenAddr, owner, spender ethCommon.Address, chainID, va
 	return hashBytes2.Sum(nil), nil
 }
 
-func createPermit(owner, spender ethCommon.Address, amount, deadline *big.Int, digest, signature []byte) []byte {
+func createPermit(owner, spender ethCommon.Address, amount, deadline *big.Int, digest,
+	signature []byte) []byte {
 	r := signature[0:32]
 	s := signature[32:64]
 	v := signature[64] + byte(27) //nolint:gomnd

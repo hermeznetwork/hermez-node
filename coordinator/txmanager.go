@@ -55,7 +55,8 @@ type TxManager struct {
 
 // NewTxManager creates a new TxManager
 func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterface, l2DB *l2db.L2DB,
-	coord *Coordinator, scConsts *synchronizer.SCConsts, initSCVars *synchronizer.SCVariables) (*TxManager, error) {
+	coord *Coordinator, scConsts *synchronizer.SCConsts, initSCVars *synchronizer.SCVariables) (
+	*TxManager, error) {
 	chainID, err := ethClient.EthChainID()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -102,7 +103,8 @@ func (t *TxManager) AddBatch(ctx context.Context, batchInfo *BatchInfo) {
 }
 
 // SetSyncStatsVars is a thread safe method to sets the synchronizer Stats
-func (t *TxManager) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats, vars *synchronizer.SCVariablesPtr) {
+func (t *TxManager) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats,
+	vars *synchronizer.SCVariablesPtr) {
 	select {
 	case t.statsVarsCh <- statsVars{Stats: *stats, Vars: *vars}:
 	case <-ctx.Done():
@@ -185,7 +187,8 @@ func addPerc(v *big.Int, p int64) *big.Int {
 	return r.Add(v, r)
 }
 
-func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchInfo, resend bool) error {
+func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchInfo,
+	resend bool) error {
 	var ethTx *types.Transaction
 	var err error
 	auth, err := t.NewAuth(ctx, batchInfo)
@@ -265,7 +268,8 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 			t.lastSentL1BatchBlockNum = t.stats.Eth.LastBlock.Num + 1
 		}
 	}
-	if err := t.l2DB.DoneForging(common.TxIDsFromL2Txs(batchInfo.L2Txs), batchInfo.BatchNum); err != nil {
+	if err := t.l2DB.DoneForging(common.TxIDsFromL2Txs(batchInfo.L2Txs),
+		batchInfo.BatchNum); err != nil {
 		return tracerr.Wrap(err)
 	}
 	return nil
@@ -297,7 +301,9 @@ func (t *TxManager) checkEthTransactionReceipt(ctx context.Context, batchInfo *B
 		}
 	}
 	if err != nil {
-		return tracerr.Wrap(fmt.Errorf("reached max attempts for ethClient.EthTransactionReceipt: %w", err))
+		return tracerr.Wrap(
+			fmt.Errorf("reached max attempts for ethClient.EthTransactionReceipt: %w",
+				err))
 	}
 	batchInfo.Receipt = receipt
 	t.cfg.debugBatchStore(batchInfo)

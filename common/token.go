@@ -15,8 +15,9 @@ const tokenIDBytesLen = 4
 
 // Token is a struct that represents an Ethereum token that is supported in Hermez network
 type Token struct {
-	TokenID     TokenID           `json:"id" meddler:"token_id"`
-	EthBlockNum int64             `json:"ethereumBlockNum" meddler:"eth_block_num"` // Ethereum block number in which this token was registered
+	TokenID TokenID `json:"id" meddler:"token_id"`
+	// EthBlockNum indicates the Ethereum block number in which this token was registered
+	EthBlockNum int64             `json:"ethereumBlockNum" meddler:"eth_block_num"`
 	EthAddr     ethCommon.Address `json:"ethereumAddress" meddler:"eth_addr"`
 	Name        string            `json:"name" meddler:"name"`
 	Symbol      string            `json:"symbol" meddler:"symbol"`
@@ -48,7 +49,8 @@ func (t TokenID) BigInt() *big.Int {
 // TokenIDFromBytes returns TokenID from a byte array
 func TokenIDFromBytes(b []byte) (TokenID, error) {
 	if len(b) != tokenIDBytesLen {
-		return 0, tracerr.Wrap(fmt.Errorf("can not parse TokenID, bytes len %d, expected 4", len(b)))
+		return 0, tracerr.Wrap(fmt.Errorf("can not parse TokenID, bytes len %d, expected 4",
+			len(b)))
 	}
 	tid := binary.BigEndian.Uint32(b[:4])
 	return TokenID(tid), nil

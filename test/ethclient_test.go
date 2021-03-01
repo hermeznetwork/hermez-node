@@ -49,7 +49,9 @@ func TestClientEth(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, int64(0), block.Num)
 	assert.Equal(t, time.Unix(0, 0), block.Timestamp)
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", block.Hash.Hex())
+	assert.Equal(t,
+		"0x0000000000000000000000000000000000000000000000000000000000000000",
+		block.Hash.Hex())
 
 	// Mine some empty blocks
 

@@ -21,25 +21,33 @@ type L1Tx struct {
 	// where type:
 	// 	- L1UserTx: 0
 	// 	- L1CoordinatorTx: 1
-	TxID             TxID                  `meddler:"id"`
-	ToForgeL1TxsNum  *int64                `meddler:"to_forge_l1_txs_num"` // toForgeL1TxsNum in which the tx was forged / will be forged
-	Position         int                   `meddler:"position"`
-	UserOrigin       bool                  `meddler:"user_origin"`         // true if the tx was originated by a user, false if it was aoriginated by a coordinator. Note that this differ from the spec for implementation simplification purpposes
-	FromIdx          Idx                   `meddler:"from_idx,zeroisnull"` // FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount (deposit)
+	TxID TxID `meddler:"id"`
+	// ToForgeL1TxsNum indicates in which the tx was forged / will be forged
+	ToForgeL1TxsNum *int64 `meddler:"to_forge_l1_txs_num"`
+	Position        int    `meddler:"position"`
+	// UserOrigin is set to true if the tx was originated by a user, false if it was
+	// aoriginated by a coordinator. Note that this differ from the spec for implementation
+	// simplification purpposes
+	UserOrigin bool `meddler:"user_origin"`
+	// FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount
+	// (deposit)
+	FromIdx          Idx                   `meddler:"from_idx,zeroisnull"`
 	EffectiveFromIdx Idx                   `meddler:"effective_from_idx,zeroisnull"`
 	FromEthAddr      ethCommon.Address     `meddler:"from_eth_addr,zeroisnull"`
 	FromBJJ          babyjub.PublicKeyComp `meddler:"from_bjj,zeroisnull"`
-	ToIdx            Idx                   `meddler:"to_idx"` // ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	TokenID          TokenID               `meddler:"token_id"`
-	Amount           *big.Int              `meddler:"amount,bigint"`
+	// ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
+	ToIdx   Idx      `meddler:"to_idx"`
+	TokenID TokenID  `meddler:"token_id"`
+	Amount  *big.Int `meddler:"amount,bigint"`
 	// EffectiveAmount only applies to L1UserTx.
 	EffectiveAmount *big.Int `meddler:"effective_amount,bigintnull"`
 	DepositAmount   *big.Int `meddler:"deposit_amount,bigint"`
 	// EffectiveDepositAmount only applies to L1UserTx.
-	EffectiveDepositAmount *big.Int  `meddler:"effective_deposit_amount,bigintnull"`
-	EthBlockNum            int64     `meddler:"eth_block_num"` // Ethereum Block Number in which this L1Tx was added to the queue
-	Type                   TxType    `meddler:"type"`
-	BatchNum               *BatchNum `meddler:"batch_num"`
+	EffectiveDepositAmount *big.Int `meddler:"effective_deposit_amount,bigintnull"`
+	// Ethereum Block Number in which this L1Tx was added to the queue
+	EthBlockNum int64     `meddler:"eth_block_num"`
+	Type        TxType    `meddler:"type"`
+	BatchNum    *BatchNum `meddler:"batch_num"`
 }
 
 // NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated
@@ -331,7 +339,9 @@ func (tx *L1Tx) BytesCoordinatorTx(compressedSignatureBytes []byte) ([]byte, err
 // L1UserTxFromBytes decodes a L1Tx from []byte
 func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 	if len(b) != RollupConstL1UserTotalBytes {
-		return nil, tracerr.Wrap(fmt.Errorf("Can not parse L1Tx bytes, expected length %d, current: %d", 68, len(b)))
+		return nil,
+			tracerr.Wrap(fmt.Errorf("Can not parse L1Tx bytes, expected length %d, current: %d",
+				68, len(b)))
 	}
 
 	tx := &L1Tx{
@@ -369,9 +379,12 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 }
 
 // L1CoordinatorTxFromBytes decodes a L1Tx from []byte
-func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommon.Address) (*L1Tx, error) {
+func L1CoordinatorTxFromBytes(b []byte, chainID *big.Int, hermezAddress ethCommon.Address) (*L1Tx,
+	error) {
 	if len(b) != RollupConstL1CoordinatorTotalBytes {
-		return nil, tracerr.Wrap(fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d", 101, len(b)))
+		return nil, tracerr.Wrap(
+			fmt.Errorf("Can not parse L1CoordinatorTx bytes, expected length %d, current: %d",
+				101, len(b)))
 	}
 
 	tx := &L1Tx{

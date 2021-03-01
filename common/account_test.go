@@ -76,7 +76,8 @@ func TestNonceParser(t *testing.T) {
 
 func TestAccount(t *testing.T) {
 	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	_, err := hex.Decode(sk[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
 	pk := sk.Public()
 
@@ -115,7 +116,8 @@ func TestAccountLoop(t *testing.T) {
 	// check that for different deterministic BabyJubJub keys & random Address there is no problem
 	for i := 0; i < 256; i++ {
 		var sk babyjub.PrivateKey
-		_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+		_, err := hex.Decode(sk[:],
+			[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 		assert.NoError(t, err)
 		pk := sk.Public()
 
@@ -199,7 +201,8 @@ func bigFromStr(h string, u int) *big.Int {
 
 func TestAccountHashValue(t *testing.T) {
 	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	_, err := hex.Decode(sk[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
 	pk := sk.Public()
 
@@ -212,13 +215,16 @@ func TestAccountHashValue(t *testing.T) {
 	}
 	v, err := account.HashValue()
 	assert.NoError(t, err)
-	assert.Equal(t, "16297758255249203915951182296472515138555043617458222397753168518282206850764", v.String())
+	assert.Equal(t,
+		"16297758255249203915951182296472515138555043617458222397753168518282206850764",
+		v.String())
 }
 
 func TestAccountHashValueTestVectors(t *testing.T) {
 	// values from js test vectors
 	ay := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(253), nil), big.NewInt(1))
-	assert.Equal(t, "1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", (hex.EncodeToString(ay.Bytes())))
+	assert.Equal(t, "1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		(hex.EncodeToString(ay.Bytes())))
 	bjjPoint, err := babyjub.PointFromSignAndY(true, ay)
 	require.NoError(t, err)
 	bjj := babyjub.PublicKey(*bjjPoint)
@@ -236,16 +242,22 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "9444732965739290427391", e[0].String())
 	assert.Equal(t, "6277101735386680763835789423207666416102355444464034512895", e[1].String())
-	assert.Equal(t, "14474011154664524427946373126085988481658748083205070504932198000989141204991", e[2].String())
+	assert.Equal(t,
+		"14474011154664524427946373126085988481658748083205070504932198000989141204991",
+		e[2].String())
 	assert.Equal(t, "1461501637330902918203684832716283019655932542975", e[3].String())
 
 	h, err := poseidon.Hash(e[:])
 	assert.NoError(t, err)
-	assert.Equal(t, "4550823210217540218403400309533329186487982452461145263910122718498735057257", h.String())
+	assert.Equal(t,
+		"4550823210217540218403400309533329186487982452461145263910122718498735057257",
+		h.String())
 
 	v, err := account.HashValue()
 	assert.NoError(t, err)
-	assert.Equal(t, "4550823210217540218403400309533329186487982452461145263910122718498735057257", v.String())
+	assert.Equal(t,
+		"4550823210217540218403400309533329186487982452461145263910122718498735057257",
+		v.String())
 
 	// second account
 	ay = big.NewInt(0)
@@ -261,7 +273,9 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	}
 	v, err = account.HashValue()
 	assert.NoError(t, err)
-	assert.Equal(t, "7750253361301235345986002241352365187241910378619330147114280396816709365657", v.String())
+	assert.Equal(t,
+		"7750253361301235345986002241352365187241910378619330147114280396816709365657",
+		v.String())
 
 	// third account
 	ay = bigFromStr("21b0a1688b37f77b1d1d5539ec3b826db5ac78b2513f574a04c50a7d4f8246d7", 16)
@@ -279,11 +293,15 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "554050781187", e[0].String())
 	assert.Equal(t, "42000000000000000000", e[1].String())
-	assert.Equal(t, "15238403086306505038849621710779816852318505119327426213168494964113886299863", e[2].String())
+	assert.Equal(t,
+		"15238403086306505038849621710779816852318505119327426213168494964113886299863",
+		e[2].String())
 	assert.Equal(t, "935037732739828347587684875151694054123613453305", e[3].String())
 	v, err = account.HashValue()
 	assert.NoError(t, err)
-	assert.Equal(t, "10565754214047872850889045989683221123564392137456000481397520902594455245517", v.String())
+	assert.Equal(t,
+		"10565754214047872850889045989683221123564392137456000481397520902594455245517",
+		v.String())
 }
 
 func TestAccountErrNotInFF(t *testing.T) {
@@ -312,7 +330,8 @@ func TestAccountErrNotInFF(t *testing.T) {
 
 func TestAccountErrNumOverflowNonce(t *testing.T) {
 	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	_, err := hex.Decode(sk[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
 	pk := sk.Public()
 
@@ -339,7 +358,8 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 
 func TestAccountErrNumOverflowBalance(t *testing.T) {
 	var sk babyjub.PrivateKey
-	_, err := hex.Decode(sk[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	_, err := hex.Decode(sk[:],
+		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	assert.NoError(t, err)
 	pk := sk.Public()
 
@@ -351,14 +371,16 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 		BJJ:     pk.Compress(),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 	}
-	assert.Equal(t, "6277101735386680763835789423207666416102355444464034512895", account.Balance.String())
+	assert.Equal(t, "6277101735386680763835789423207666416102355444464034512895",
+		account.Balance.String())
 
 	_, err = account.Bytes()
 	assert.NoError(t, err)
 
 	// force value overflow
 	account.Balance = new(big.Int).Exp(big.NewInt(2), big.NewInt(192), nil)
-	assert.Equal(t, "6277101735386680763835789423207666416102355444464034512896", account.Balance.String())
+	assert.Equal(t, "6277101735386680763835789423207666416102355444464034512896",
+		account.Balance.String())
 	b, err := account.Bytes()
 	assert.NotNil(t, err)
 	assert.Equal(t, fmt.Errorf("%s Balance", ErrNumOverflow), tracerr.Unwrap(err))

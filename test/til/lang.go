@@ -310,7 +310,8 @@ func (p *parser) parseLine(setType setType) (*Instruction, error) {
 		} else if lit == "PoolL2" {
 			return &Instruction{Typ: "PoolL2"}, setTypeLine
 		} else {
-			return c, tracerr.Wrap(fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", lit))
+			return c,
+				tracerr.Wrap(fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", lit))
 		}
 	} else if lit == "AddToken" {
 		if err := p.expectChar(c, "("); err != nil {
@@ -391,7 +392,9 @@ func (p *parser) parseLine(setType setType) (*Instruction, error) {
 			return c, tracerr.Wrap(fmt.Errorf("Unexpected PoolL2 tx type: %s", lit))
 		}
 	} else {
-		return c, tracerr.Wrap(fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", setType))
+		return c,
+			tracerr.Wrap(fmt.Errorf("Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'",
+				setType))
 	}
 
 	if err := p.expectChar(c, "("); err != nil {
@@ -522,14 +525,18 @@ func (p *parser) parse() (*parsedSet, error) {
 		}
 		if tracerr.Unwrap(err) == setTypeLine {
 			if ps.typ != "" {
-				return ps, tracerr.Wrap(fmt.Errorf("Line %d: Instruction of 'Type: %s' when there is already a previous instruction 'Type: %s' defined", i, instruction.Typ, ps.typ))
+				return ps,
+					tracerr.Wrap(fmt.Errorf("Line %d: Instruction of 'Type: %s' when "+
+						"there is already a previous instruction 'Type: %s' defined",
+						i, instruction.Typ, ps.typ))
 			}
 			if instruction.Typ == "PoolL2" {
 				ps.typ = SetTypePoolL2
 			} else if instruction.Typ == "Blockchain" {
 				ps.typ = SetTypeBlockchain
 			} else {
-				log.Fatalf("Line %d: Invalid set type: '%s'. Valid set types: 'Blockchain', 'PoolL2'", i, instruction.Typ)
+				log.Fatalf("Line %d: Invalid set type: '%s'. Valid set types: "+
+					"'Blockchain', 'PoolL2'", i, instruction.Typ)
 			}
 			continue
 		}
@@ -552,7 +559,9 @@ func (p *parser) parse() (*parsedSet, error) {
 		}
 		ps.instructions = append(ps.instructions, *instruction)
 		users[instruction.From] = true
-		if instruction.Typ == common.TxTypeTransfer || instruction.Typ == common.TxTypeTransferToEthAddr || instruction.Typ == common.TxTypeTransferToBJJ { // type: Transfer
+		if instruction.Typ == common.TxTypeTransfer ||
+			instruction.Typ == common.TxTypeTransferToEthAddr ||
+			instruction.Typ == common.TxTypeTransferToBJJ { // type: Transfer
 			users[instruction.To] = true
 		}
 	}

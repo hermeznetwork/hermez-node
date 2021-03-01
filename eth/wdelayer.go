@@ -132,7 +132,8 @@ type WDelayerInterface interface {
 	WDelayerDepositInfo(owner, token ethCommon.Address) (depositInfo DepositState, err error)
 	WDelayerDeposit(onwer, token ethCommon.Address, amount *big.Int) (*types.Transaction, error)
 	WDelayerWithdrawal(owner, token ethCommon.Address) (*types.Transaction, error)
-	WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (*types.Transaction, error)
+	WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address,
+		amount *big.Int) (*types.Transaction, error)
 
 	WDelayerEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*WDelayerEvents, error)
 	WDelayerConstants() (*common.WDelayerConstants, error)
@@ -143,7 +144,8 @@ type WDelayerInterface interface {
 // Implementation
 //
 
-// WDelayerClient is the implementation of the interface to the WithdrawDelayer Smart Contract in ethereum.
+// WDelayerClient is the implementation of the interface to the WithdrawDelayer
+// Smart Contract in ethereum.
 type WDelayerClient struct {
 	client      *EthereumClient
 	address     ethCommon.Address
@@ -172,7 +174,8 @@ func NewWDelayerClient(client *EthereumClient, address ethCommon.Address) (*WDel
 }
 
 // WDelayerGetHermezGovernanceAddress is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetHermezGovernanceAddress() (hermezGovernanceAddress *ethCommon.Address, err error) {
+func (c *WDelayerClient) WDelayerGetHermezGovernanceAddress() (
+	hermezGovernanceAddress *ethCommon.Address, err error) {
 	var _hermezGovernanceAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_hermezGovernanceAddress, err = c.wdelayer.GetHermezGovernanceAddress(c.opts)
@@ -184,7 +187,8 @@ func (c *WDelayerClient) WDelayerGetHermezGovernanceAddress() (hermezGovernanceA
 }
 
 // WDelayerTransferGovernance is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerTransferGovernance(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *WDelayerClient) WDelayerTransferGovernance(newAddress ethCommon.Address) (
+	tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -210,7 +214,8 @@ func (c *WDelayerClient) WDelayerClaimGovernance() (tx *types.Transaction, err e
 }
 
 // WDelayerGetEmergencyCouncil is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetEmergencyCouncil() (emergencyCouncilAddress *ethCommon.Address, err error) {
+func (c *WDelayerClient) WDelayerGetEmergencyCouncil() (emergencyCouncilAddress *ethCommon.Address,
+	err error) {
 	var _emergencyCouncilAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_emergencyCouncilAddress, err = c.wdelayer.GetEmergencyCouncil(c.opts)
@@ -222,7 +227,8 @@ func (c *WDelayerClient) WDelayerGetEmergencyCouncil() (emergencyCouncilAddress 
 }
 
 // WDelayerTransferEmergencyCouncil is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *WDelayerClient) WDelayerTransferEmergencyCouncil(newAddress ethCommon.Address) (
+	tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -271,7 +277,8 @@ func (c *WDelayerClient) WDelayerGetWithdrawalDelay() (withdrawalDelay int64, er
 }
 
 // WDelayerGetEmergencyModeStartingTime is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerGetEmergencyModeStartingTime() (emergencyModeStartingTime int64, err error) {
+func (c *WDelayerClient) WDelayerGetEmergencyModeStartingTime() (emergencyModeStartingTime int64,
+	err error) {
 	var _emergencyModeStartingTime uint64
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_emergencyModeStartingTime, err = c.wdelayer.GetEmergencyModeStartingTime(c.opts)
@@ -296,7 +303,8 @@ func (c *WDelayerClient) WDelayerEnableEmergencyMode() (tx *types.Transaction, e
 }
 
 // WDelayerChangeWithdrawalDelay is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (tx *types.Transaction, err error) {
+func (c *WDelayerClient) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64) (
+	tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -309,7 +317,8 @@ func (c *WDelayerClient) WDelayerChangeWithdrawalDelay(newWithdrawalDelay uint64
 }
 
 // WDelayerDepositInfo is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerDepositInfo(owner, token ethCommon.Address) (depositInfo DepositState, err error) {
+func (c *WDelayerClient) WDelayerDepositInfo(owner, token ethCommon.Address) (
+	depositInfo DepositState, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		amount, depositTimestamp, err := c.wdelayer.DepositInfo(c.opts, owner, token)
 		depositInfo.Amount = amount
@@ -322,7 +331,8 @@ func (c *WDelayerClient) WDelayerDepositInfo(owner, token ethCommon.Address) (de
 }
 
 // WDelayerDeposit is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerDeposit(owner, token ethCommon.Address, amount *big.Int) (tx *types.Transaction, err error) {
+func (c *WDelayerClient) WDelayerDeposit(owner, token ethCommon.Address, amount *big.Int) (
+	tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -335,7 +345,8 @@ func (c *WDelayerClient) WDelayerDeposit(owner, token ethCommon.Address, amount 
 }
 
 // WDelayerWithdrawal is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerWithdrawal(owner, token ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *WDelayerClient) WDelayerWithdrawal(owner, token ethCommon.Address) (tx *types.Transaction,
+	err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -348,7 +359,8 @@ func (c *WDelayerClient) WDelayerWithdrawal(owner, token ethCommon.Address) (tx 
 }
 
 // WDelayerEscapeHatchWithdrawal is the interface to call the smart contract function
-func (c *WDelayerClient) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address, amount *big.Int) (tx *types.Transaction, err error) {
+func (c *WDelayerClient) WDelayerEscapeHatchWithdrawal(to, token ethCommon.Address,
+	amount *big.Int) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -384,14 +396,21 @@ func (c *WDelayerClient) WDelayerConstants() (constants *common.WDelayerConstant
 }
 
 var (
-	logWDelayerDeposit                    = crypto.Keccak256Hash([]byte("Deposit(address,address,uint192,uint64)"))
-	logWDelayerWithdraw                   = crypto.Keccak256Hash([]byte("Withdraw(address,address,uint192)"))
-	logWDelayerEmergencyModeEnabled       = crypto.Keccak256Hash([]byte("EmergencyModeEnabled()"))
-	logWDelayerNewWithdrawalDelay         = crypto.Keccak256Hash([]byte("NewWithdrawalDelay(uint64)"))
-	logWDelayerEscapeHatchWithdrawal      = crypto.Keccak256Hash([]byte("EscapeHatchWithdrawal(address,address,address,uint256)"))
-	logWDelayerNewEmergencyCouncil        = crypto.Keccak256Hash([]byte("NewEmergencyCouncil(address)"))
-	logWDelayerNewHermezGovernanceAddress = crypto.Keccak256Hash([]byte("NewHermezGovernanceAddress(address)"))
-	logWDelayerInitialize                 = crypto.Keccak256Hash([]byte(
+	logWDelayerDeposit = crypto.Keccak256Hash([]byte(
+		"Deposit(address,address,uint192,uint64)"))
+	logWDelayerWithdraw = crypto.Keccak256Hash([]byte(
+		"Withdraw(address,address,uint192)"))
+	logWDelayerEmergencyModeEnabled = crypto.Keccak256Hash([]byte(
+		"EmergencyModeEnabled()"))
+	logWDelayerNewWithdrawalDelay = crypto.Keccak256Hash([]byte(
+		"NewWithdrawalDelay(uint64)"))
+	logWDelayerEscapeHatchWithdrawal = crypto.Keccak256Hash([]byte(
+		"EscapeHatchWithdrawal(address,address,address,uint256)"))
+	logWDelayerNewEmergencyCouncil = crypto.Keccak256Hash([]byte(
+		"NewEmergencyCouncil(address)"))
+	logWDelayerNewHermezGovernanceAddress = crypto.Keccak256Hash([]byte(
+		"NewHermezGovernanceAddress(address)"))
+	logWDelayerInitialize = crypto.Keccak256Hash([]byte(
 		"InitializeWithdrawalDelayerEvent(uint64,address,address)"))
 )
 
@@ -483,42 +502,51 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64,
 
 		case logWDelayerEmergencyModeEnabled:
 			var emergencyModeEnabled WDelayerEventEmergencyModeEnabled
-			wdelayerEvents.EmergencyModeEnabled = append(wdelayerEvents.EmergencyModeEnabled, emergencyModeEnabled)
+			wdelayerEvents.EmergencyModeEnabled =
+				append(wdelayerEvents.EmergencyModeEnabled, emergencyModeEnabled)
 
 		case logWDelayerNewWithdrawalDelay:
 			var withdrawalDelay WDelayerEventNewWithdrawalDelay
-			err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay, "NewWithdrawalDelay", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay,
+				"NewWithdrawalDelay", vLog.Data)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
-			wdelayerEvents.NewWithdrawalDelay = append(wdelayerEvents.NewWithdrawalDelay, withdrawalDelay)
+			wdelayerEvents.NewWithdrawalDelay =
+				append(wdelayerEvents.NewWithdrawalDelay, withdrawalDelay)
 
 		case logWDelayerEscapeHatchWithdrawal:
 			var escapeHatchWithdrawal WDelayerEventEscapeHatchWithdrawal
-			err := c.contractAbi.UnpackIntoInterface(&escapeHatchWithdrawal, "EscapeHatchWithdrawal", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&escapeHatchWithdrawal,
+				"EscapeHatchWithdrawal", vLog.Data)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
 			escapeHatchWithdrawal.Who = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
 			escapeHatchWithdrawal.To = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
 			escapeHatchWithdrawal.Token = ethCommon.BytesToAddress(vLog.Topics[3].Bytes())
-			wdelayerEvents.EscapeHatchWithdrawal = append(wdelayerEvents.EscapeHatchWithdrawal, escapeHatchWithdrawal)
+			wdelayerEvents.EscapeHatchWithdrawal =
+				append(wdelayerEvents.EscapeHatchWithdrawal, escapeHatchWithdrawal)
 
 		case logWDelayerNewEmergencyCouncil:
 			var emergencyCouncil WDelayerEventNewEmergencyCouncil
-			err := c.contractAbi.UnpackIntoInterface(&emergencyCouncil, "NewEmergencyCouncil", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&emergencyCouncil,
+				"NewEmergencyCouncil", vLog.Data)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
-			wdelayerEvents.NewEmergencyCouncil = append(wdelayerEvents.NewEmergencyCouncil, emergencyCouncil)
+			wdelayerEvents.NewEmergencyCouncil =
+				append(wdelayerEvents.NewEmergencyCouncil, emergencyCouncil)
 
 		case logWDelayerNewHermezGovernanceAddress:
 			var governanceAddress WDelayerEventNewHermezGovernanceAddress
-			err := c.contractAbi.UnpackIntoInterface(&governanceAddress, "NewHermezGovernanceAddress", vLog.Data)
+			err := c.contractAbi.UnpackIntoInterface(&governanceAddress,
+				"NewHermezGovernanceAddress", vLog.Data)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
-			wdelayerEvents.NewHermezGovernanceAddress = append(wdelayerEvents.NewHermezGovernanceAddress, governanceAddress)
+			wdelayerEvents.NewHermezGovernanceAddress =
+				append(wdelayerEvents.NewHermezGovernanceAddress, governanceAddress)
 		}
 	}
 	return &wdelayerEvents, nil

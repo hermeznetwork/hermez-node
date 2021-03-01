@@ -181,7 +181,8 @@ Transfer(1) H-O: 5 (1)
 Transfer(1) I-H: 5 (1)
 Exit(1) A: 5 (1)
 
-// create CoordinatorTx CreateAccount for D, TokenId 2, used at SetPool0 for 'PoolTransfer(2) B-D: 3 (1)'
+// create CoordinatorTx CreateAccount for D, TokenId 2, used at SetPool0 for
+// 'PoolTransfer(2) B-D: 3 (1)'
 CreateAccountCoordinator(2) D
 
 > batchL1

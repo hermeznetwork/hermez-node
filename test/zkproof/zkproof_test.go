@@ -246,7 +246,8 @@ func TestZKInputs6(t *testing.T) {
 	coordIdxs := []common.Idx{261, 262}
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
-	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
+		blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -264,7 +265,8 @@ func TestZKInputs6(t *testing.T) {
 
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
-	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
+		blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -281,7 +283,8 @@ func TestZKInputs6(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
 	coordIdxs = []common.Idx{262}
-	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
+		blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -290,7 +293,8 @@ func TestZKInputs6(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = []common.PoolL2Tx{}
 	coordIdxs = []common.Idx{}
-	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
+		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)

@@ -29,7 +29,8 @@ func TestNewL1UserTx(t *testing.T) {
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x00a6cbae3b8661fb75b0919ca6605a02cfb04d9c6dd16870fa0fcdf01befa32768", l1Tx.TxID.String())
+	assert.Equal(t, "0x00a6cbae3b8661fb75b0919ca6605a02cfb04d9c6dd16870fa0fcdf01befa32768",
+		l1Tx.TxID.String())
 }
 
 func TestNewL1CoordinatorTx(t *testing.T) {
@@ -46,7 +47,8 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x01274482d73df4dab34a1b6740adfca347a462513aa14e82f27b12f818d1b68c84", l1Tx.TxID.String())
+	assert.Equal(t, "0x01274482d73df4dab34a1b6740adfca347a462513aa14e82f27b12f818d1b68c84",
+		l1Tx.TxID.String())
 }
 
 func TestL1TxCompressedData(t *testing.T) {
@@ -199,7 +201,8 @@ func TestL1userTxByteParsers(t *testing.T) {
 func TestL1TxByteParsersCompatibility(t *testing.T) {
 	// Data from compatibility test
 	var pkComp babyjub.PublicKeyComp
-	pkCompB, err := hex.DecodeString("0dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a")
+	pkCompB, err :=
+		hex.DecodeString("0dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a")
 	require.NoError(t, err)
 	pkCompL := SwapEndianness(pkCompB)
 	err = pkComp.UnmarshalText([]byte(hex.EncodeToString(pkCompL)))
@@ -220,7 +223,8 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 
 	encodedData, err := l1Tx.BytesUser()
 	require.NoError(t, err)
-	expected := "85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79ee1f41a7def613e73a20c32eece5a000001c638db52540be400459682f0000020039c0000053cb88d"
+	expected := "85dab5b9e2e361d0c208d77be90efcc0439b0a530dd02deb2c81068e7a0f7e327df80b4ab79e" +
+		"e1f41a7def613e73a20c32eece5a000001c638db52540be400459682f0000020039c0000053cb88d"
 	assert.Equal(t, expected, hex.EncodeToString(encodedData))
 }
 
@@ -228,7 +232,8 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	hermezAddress := ethCommon.HexToAddress("0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe")
 	chainID := big.NewInt(1337)
 
-	privateKey, err := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
+	privateKey, err :=
+		crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
 	require.NoError(t, err)
 
 	publicKey := privateKey.Public()
@@ -300,7 +305,8 @@ func TestL1CoordinatorTxByteParsersCompatibility(t *testing.T) {
 	signature = append(signature, v[:]...)
 
 	var pkComp babyjub.PublicKeyComp
-	pkCompB, err := hex.DecodeString("a2c2807ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c")
+	pkCompB, err :=
+		hex.DecodeString("a2c2807ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c")
 	require.NoError(t, err)
 	pkCompL := SwapEndianness(pkCompB)
 	err = pkComp.UnmarshalText([]byte(hex.EncodeToString(pkCompL)))
@@ -315,7 +321,9 @@ func TestL1CoordinatorTxByteParsersCompatibility(t *testing.T) {
 	encodeData, err := l1Tx.BytesCoordinatorTx(signature)
 	require.NoError(t, err)
 
-	expected, err := utils.HexDecode("1b186d7122ff7f654cfed3156719774898d573900c86599a885a706dbdffe5ea8cda71e5eb097e115405d84d1e7b464009b434b32c014a2df502d1f065ced8bc3ba2c2807ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c000000e7")
+	expected, err := utils.HexDecode("1b186d7122ff7f654cfed3156719774898d573900c86599a885a706" +
+		"dbdffe5ea8cda71e5eb097e115405d84d1e7b464009b434b32c014a2df502d1f065ced8bc3ba2c28" +
+		"07ee39c3b3378738cff85a46a9465bb8fcf44ea597c33da9719be7c259c000000e7")
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, encodeData)

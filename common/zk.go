@@ -130,8 +130,8 @@ type ZKInputs struct {
 	RqOffset []*big.Int `json:"rqOffset"` // uint8 (max 3 bits), len: [maxTx]
 
 	// transaction L2 request data
-	// RqTxCompressedDataV2
-	RqTxCompressedDataV2 []*big.Int `json:"rqTxCompressedDataV2"` // big.Int (max 251 bits), len: [maxTx]
+	// RqTxCompressedDataV2 big.Int (max 251 bits), len: [maxTx]
+	RqTxCompressedDataV2 []*big.Int `json:"rqTxCompressedDataV2"`
 	// RqToEthAddr
 	RqToEthAddr []*big.Int `json:"rqToEthAddr"` // ethCommon.Address, len: [maxTx]
 	// RqToBJJAy
@@ -301,7 +301,8 @@ func (z ZKInputs) MarshalJSON() ([]byte, error) {
 }
 
 // NewZKInputs returns a pointer to an initialized struct of ZKInputs
-func NewZKInputs(chainID uint16, maxTx, maxL1Tx, maxFeeIdxs, nLevels uint32, currentNumBatch *big.Int) *ZKInputs {
+func NewZKInputs(chainID uint16, maxTx, maxL1Tx, maxFeeIdxs, nLevels uint32,
+	currentNumBatch *big.Int) *ZKInputs {
 	zki := &ZKInputs{}
 	zki.Metadata.MaxFeeIdxs = maxFeeIdxs
 	zki.Metadata.MaxLevels = uint32(48) //nolint:gomnd
@@ -480,7 +481,7 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 	b = append(b, newExitRoot...)
 
 	// [MAX_L1_TX * (2 * MAX_NLEVELS + 528) bits] L1TxsData
-	l1TxDataLen := (2*z.Metadata.MaxLevels + 528)
+	l1TxDataLen := (2*z.Metadata.MaxLevels + 528) //nolint:gomnd
 	l1TxsDataLen := (z.Metadata.MaxL1Tx * l1TxDataLen)
 	l1TxsData := make([]byte, l1TxsDataLen/8) //nolint:gomnd
 	for i := 0; i < len(z.Metadata.L1TxsData); i++ {
@@ -506,11 +507,14 @@ func (z ZKInputs) ToHashGlobalData() ([]byte, error) {
 		l2TxsData = append(l2TxsData, z.Metadata.L2TxsData[i]...)
 	}
 	if len(l2TxsData) > int(expectedL2TxsDataLen) {
-		return nil, tracerr.Wrap(fmt.Errorf("len(l2TxsData): %d, expected: %d", len(l2TxsData), expectedL2TxsDataLen))
+		return nil, tracerr.Wrap(fmt.Errorf("len(l2TxsData): %d, expected: %d",
+			len(l2TxsData), expectedL2TxsDataLen))
 	}
 
 	b = append(b, l2TxsData...)
-	l2TxsPadding := make([]byte, (int(z.Metadata.MaxTx)-len(z.Metadata.L1TxsDataAvailability)-len(z.Metadata.L2TxsData))*int(l2TxDataLen)/8) //nolint:gomnd
+	l2TxsPadding := make([]byte,
+		(int(z.Metadata.MaxTx)-len(z.Metadata.L1TxsDataAvailability)-
+			len(z.Metadata.L2TxsData))*int(l2TxDataLen)/8) //nolint:gomnd
 	b = append(b, l2TxsPadding...)
 
 	// [NLevels * MAX_TOKENS_FEE bits] feeTxsData

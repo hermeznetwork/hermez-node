@@ -21,9 +21,10 @@ type L2Tx struct {
 	Amount  *big.Int    `meddler:"amount,bigint"`
 	Fee     FeeSelector `meddler:"fee"`
 	// Nonce is filled by the TxProcessor
-	Nonce       Nonce  `meddler:"nonce"`
-	Type        TxType `meddler:"type"`
-	EthBlockNum int64  `meddler:"eth_block_num"` // EthereumBlockNumber in which this L2Tx was added to the queue
+	Nonce Nonce  `meddler:"nonce"`
+	Type  TxType `meddler:"type"`
+	// EthBlockNum in which this L2Tx was added to the queue
+	EthBlockNum int64 `meddler:"eth_block_num"`
 }
 
 // NewL2Tx returns the given L2Tx with the TxId & Type parameters calculated
