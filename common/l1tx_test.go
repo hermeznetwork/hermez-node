@@ -227,7 +227,6 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	hermezAddress := ethCommon.HexToAddress("0xD6C850aeBFDC46D7F4c207e445cC0d6B0919BDBe")
 	chainID := big.NewInt(1337)
-	chainIDBytes := ethCommon.LeftPadBytes(chainID.Bytes(), 2)
 
 	privateKey, err := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
 	require.NoError(t, err)
@@ -245,18 +244,16 @@ func TestL1CoordinatorTxByteParsers(t *testing.T) {
 	pkCompL := []byte("56ca90f80d7c374ae7485e9bcc47d4ac399460948da6aeeb899311097925a72c")
 	err = pkComp.UnmarshalText(pkCompL)
 	require.NoError(t, err)
-	bytesMessage1 := []byte("\x19Ethereum Signed Message:\n120")
-	bytesMessage2 := []byte("I authorize this babyjubjub key for hermez rollup account creation")
 
-	babyjubB := SwapEndianness(pkComp[:])
-	var data []byte
-	data = append(data, bytesMessage1...)
-	data = append(data, bytesMessage2...)
-	data = append(data, babyjubB[:]...)
-	data = append(data, chainIDBytes...)
-	data = append(data, hermezAddress.Bytes()...)
-	hash := crypto.Keccak256Hash(data)
-	signature, err := crypto.Sign(hash.Bytes(), privateKey)
+	accCreationAuth := AccountCreationAuth{
+		EthAddr: fromEthAddr,
+		BJJ:     pkComp,
+	}
+
+	h, err := accCreationAuth.HashToSign(uint16(chainID.Uint64()), hermezAddress)
+	require.NoError(t, err)
+
+	signature, err := crypto.Sign(h, privateKey)
 	require.NoError(t, err)
 	// Ethereum adds 27 to v
 	v := int(signature[64])
