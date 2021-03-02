@@ -107,10 +107,10 @@ Path = "/tmp/iden3-test/hermez/ethkeystore"
 Password = "yourpasswordhere"
 
 [Coordinator.EthClient.ForgeBatchGasCost]
-Fixed = 500000
-L1UserTx = 8000
-L1CoordTx = 9000
-L2Tx = 1
+Fixed = 600000
+L1UserTx = 15000
+L1CoordTx = 8000
+L2Tx = 250
 
 [Coordinator.API]
 Coordinator = true
