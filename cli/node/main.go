@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db/kvdb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/node"
@@ -72,6 +75,86 @@ func cmdImportKey(c *cli.Context) error {
 	return nil
 }
 
+func resetStateDBs(cfg *Config, batchNum common.BatchNum) error {
+	log.Infof("Reset Synchronizer StateDB to batchNum %v...", batchNum)
+
+	// Manually make a checkpoint from batchNum to current to force current
+	// to be a valid checkpoint.  This is useful because in case of a
+	// crash, current can be corrupted and the first thing that
+	// `kvdb.NewKVDB` does is read the current checkpoint, which wouldn't
+	// succeed in case of corruption.
+	dbPath := cfg.node.StateDB.Path
+	source := path.Join(dbPath, fmt.Sprintf("%s%d", kvdb.PathBatchNum, batchNum))
+	current := path.Join(dbPath, kvdb.PathCurrent)
+	last := path.Join(dbPath, kvdb.PathLast)
+	if err := os.RemoveAll(last); err != nil {
+		return tracerr.Wrap(fmt.Errorf("os.RemoveAll: %w", err))
+	}
+	if batchNum == 0 {
+		if err := os.RemoveAll(current); err != nil {
+			return tracerr.Wrap(fmt.Errorf("os.RemoveAll: %w", err))
+		}
+	} else {
+		if err := kvdb.PebbleMakeCheckpoint(source, current); err != nil {
+			return tracerr.Wrap(fmt.Errorf("kvdb.PebbleMakeCheckpoint: %w", err))
+		}
+	}
+	db, err := kvdb.NewKVDB(kvdb.Config{
+		Path:        dbPath,
+		NoGapsCheck: true,
+		NoLast:      true,
+	})
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("kvdb.NewKVDB: %w", err))
+	}
+	if err := db.Reset(batchNum); err != nil {
+		return tracerr.Wrap(fmt.Errorf("db.Reset: %w", err))
+	}
+
+	if cfg.mode == node.ModeCoordinator {
+		log.Infof("Wipe Coordinator StateDBs...")
+
+		// We wipe the Coordinator StateDBs entirely (by deleting
+		// current and resetting to batchNum 0) because the Coordinator
+		// StateDBs are always reset from Synchronizer when the
+		// coordinator pipeline starts.
+		dbPath := cfg.node.Coordinator.TxSelector.Path
+		current := path.Join(dbPath, kvdb.PathCurrent)
+		if err := os.RemoveAll(current); err != nil {
+			return tracerr.Wrap(fmt.Errorf("os.RemoveAll: %w", err))
+		}
+		db, err := kvdb.NewKVDB(kvdb.Config{
+			Path:        dbPath,
+			NoGapsCheck: true,
+			NoLast:      true,
+		})
+		if err != nil {
+			return tracerr.Wrap(fmt.Errorf("kvdb.NewKVDB: %w", err))
+		}
+		if err := db.Reset(0); err != nil {
+			return tracerr.Wrap(fmt.Errorf("db.Reset: %w", err))
+		}
+
+		dbPath = cfg.node.Coordinator.BatchBuilder.Path
+		current = path.Join(dbPath, kvdb.PathCurrent)
+		if err := os.RemoveAll(current); err != nil {
+			return tracerr.Wrap(fmt.Errorf("os.RemoveAll: %w", err))
+		}
+		db, err = kvdb.NewKVDB(kvdb.Config{
+			Path:        dbPath,
+			NoGapsCheck: true,
+			NoLast:      true,
+		})
+		if err != nil {
+			return tracerr.Wrap(fmt.Errorf("statedb.NewKVDB: %w", err))
+		}
+		if err := db.Reset(0); err != nil {
+			return tracerr.Wrap(fmt.Errorf("db.Reset: %w", err))
+		}
+	}
+	return nil
+}
+
 func cmdWipeSQL(c *cli.Context) error {
 	_cfg, err := parseCli(c)
 	if err != nil {
@@ -80,7 +163,8 @@ func cmdWipeSQL(c *cli.Context) error {
 	cfg := _cfg.node
 	yes := c.Bool(flagYes)
 	if !yes {
-		fmt.Print("*WARNING* Are you sure you want to delete the SQL DB? [y/N]: ")
+		fmt.Print("*WARNING* Are you sure you want to delete " +
+			"the SQL DB and StateDBs? [y/N]: ")
 		var input string
 		if _, err := fmt.Scanln(&input); err != nil {
 			return tracerr.Wrap(err)
@@ -102,7 +186,12 @@ func cmdWipeSQL(c *cli.Context) error {
 	}
 	log.Info("Wiping SQL DB...")
 	if err := dbUtils.MigrationsDown(db.DB); err != nil {
-		return tracerr.Wrap(err)
+		return tracerr.Wrap(fmt.Errorf("dbUtils.MigrationsDown: %w", err))
+	}
+
+	log.Info("Wiping StateDBs...")
+	if err := resetStateDBs(_cfg, 0); err != nil {
+		return tracerr.Wrap(fmt.Errorf("resetStateDBs: %w", err))
 	}
 	return nil
 }
@@ -201,6 +290,11 @@ func cmdDiscard(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("l2DB.Reorg: %w", err))
 	}
 
+	log.Info("Resetting StateDBs...")
+	if err := resetStateDBs(_cfg, batchNum); err != nil {
+		return tracerr.Wrap(fmt.Errorf("resetStateDBs: %w", err))
+	}
+
 	return nil
 }
 
@@ -288,7 +382,7 @@ func main() {
 		{
 			Name:    "wipesql",
 			Aliases: []string{},
-			Usage: "Wipe the SQL DB (HistoryDB and L2DB), " +
+			Usage: "Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, " +
 				"leaving the DB in a clean state",
 			Action: cmdWipeSQL,
 			Flags: []cli.Flag{
