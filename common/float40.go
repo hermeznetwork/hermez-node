@@ -32,6 +32,8 @@ var (
 	// ErrFloat40NotEnoughPrecission is used when the given *big.Int can
 	// not be represented as Float40 due not enough precission
 	ErrFloat40NotEnoughPrecission = errors.New("Float40 error, not enough precission")
+
+	thres = big.NewInt(0x08_00_00_00_00)
 )
 
 // Float40 represents a float in a 64 bit format
@@ -68,7 +70,7 @@ func (f40 Float40) BigInt() (*big.Int, error) {
 	var f40Uint64 uint64 = uint64(f40) & 0x00_00_00_FF_FF_FF_FF_FF
 	f40Bytes, err := f40.Bytes()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	e := f40Bytes[0] & 0xF8 >> 3      // take first 5 bits
@@ -79,25 +81,48 @@ func (f40 Float40) BigInt() (*big.Int, error) {
 	return r, nil
 }
 
-// NewFloat40 encodes a *big.Int integer as a Float40, returning error in case
-// of loss during the encoding.
-func NewFloat40(f *big.Int) (Float40, error) {
+// newFloat40ME takes a *big.Int integer and returns the m (mantissa) & e
+// (exponent) from the Float40 representation
+func newFloat40ME(f *big.Int) (*big.Int, *big.Int) {
 	m := f
 	e := big.NewInt(0)
 	zero := big.NewInt(0)
 	ten := big.NewInt(10)
-	thres := big.NewInt(0x08_00_00_00_00)
 	for new(big.Int).Mod(m, ten).Cmp(zero) == 0 && m.Cmp(thres) >= 0 {
 		m = new(big.Int).Div(m, ten)
 		e = new(big.Int).Add(e, big.NewInt(1))
 	}
+	return m, e
+}
+
+// NewFloat40 encodes a *big.Int integer as a Float40, returning error in case
+// of loss during the encoding.
+func NewFloat40(f *big.Int) (Float40, error) {
+	m, e := newFloat40ME(f)
 	if e.Int64() > 31 {
-		return 0, ErrFloat40E31
+		return 0, tracerr.Wrap(ErrFloat40E31)
 	}
 	if m.Cmp(thres) >= 0 {
-		return 0, ErrFloat40NotEnoughPrecission
+		return 0, tracerr.Wrap(ErrFloat40NotEnoughPrecission)
 	}
 	r := new(big.Int).Add(m,
 		new(big.Int).Mul(e, thres))
+	return Float40(r.Uint64()), nil
+}
+
+// NewFloat40Floor encodes a *big.Int integer as a Float40, rounding down in
+// case of loss during the encoding. It returns an error in case that the number
+// is too big (e>31). Warning: this method should not be used inside the
+// hermez-node, it's a helper for external usage to generate valid Float40
+// values.
+func NewFloat40Floor(f *big.Int) (Float40, error) {
+	m, e := newFloat40ME(f)
+	if e.Int64() > 31 {
+		return 0, tracerr.Wrap(ErrFloat40E31)
+	}
+
+	r := new(big.Int).Add(m,
+		new(big.Int).Mul(e, thres))
+
 	return Float40(r.Uint64()), nil
 }

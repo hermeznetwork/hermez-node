@@ -210,7 +210,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 		return nil, ctx.Err()
 	} else if err != nil {
 		log.Errorw("proversPool.Get", "err", err)
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	defer func() {
 		// If we encounter any error (notice that this function returns
@@ -240,7 +240,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 		} else {
 			log.Errorw("forgeBatch", "err", err)
 		}
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	// 3. Send the ZKInputs to the proof server
@@ -249,7 +249,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 		return nil, ctx.Err()
 	} else if err != nil {
 		log.Errorw("sendServerProof", "err", err)
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	return batchInfo, nil
 }
@@ -427,7 +427,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 
 	// If we haven't reached the ForgeDelay, skip forging the batch
 	if slotCommitted && now.Sub(p.lastForgeTime) < p.cfg.ForgeDelay {
-		return nil, errForgeBeforeDelay
+		return nil, tracerr.Wrap(errForgeBeforeDelay)
 	}
 
 	// 1. Decide if we forge L2Tx or L1+L2Tx
@@ -485,7 +485,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 			if err := p.txSelector.Reset(batchInfo.BatchNum-1, false); err != nil {
 				return nil, tracerr.Wrap(err)
 			}
-			return nil, errForgeNoTxsBeforeDelay
+			return nil, tracerr.Wrap(errForgeNoTxsBeforeDelay)
 		}
 	}
 

@@ -268,7 +268,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		if err := auth.Sign(func(msg []byte) ([]byte, error) {
 			return keyStore.SignHash(feeAccount, msg)
 		}, chainIDU16, cfg.SmartContracts.Rollup); err != nil {
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		coordAccount := &txselector.CoordAccount{
 			Addr:                cfg.Coordinator.FeeAccount.Address,
