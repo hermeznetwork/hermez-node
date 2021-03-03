@@ -179,7 +179,7 @@ func (hdb *HistoryDB) GetBatch(batchNum common.BatchNum) (*common.Batch, error) 
 		batch.slot_num, batch.total_fees_usd FROM batch WHERE batch_num = $1;`,
 		batchNum,
 	)
-	return &batch, err
+	return &batch, tracerr.Wrap(err)
 }
 
 // GetAllBatches retrieve all batches from the DB
@@ -235,7 +235,7 @@ func (hdb *HistoryDB) GetLastBatch() (*common.Batch, error) {
 		batch.num_accounts, batch.last_idx, batch.exit_root, batch.forge_l1_txs_num,
 		batch.slot_num, batch.total_fees_usd FROM batch ORDER BY batch_num DESC LIMIT 1;`,
 	)
-	return &batch, err
+	return &batch, tracerr.Wrap(err)
 }
 
 // GetLastL1BatchBlockNum returns the blockNum of the latest forged l1Batch

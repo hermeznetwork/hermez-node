@@ -458,7 +458,7 @@ func (k *KVDB) CheckpointExists(batchNum common.BatchNum) (bool, error) {
 	if _, err := os.Stat(source); os.IsNotExist(err) {
 		return false, nil
 	} else if err != nil {
-		return false, err
+		return false, tracerr.Wrap(err)
 	}
 	return true, nil
 }

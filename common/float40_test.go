@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hermeznetwork/tracerr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,44 @@ func TestExpectError(t *testing.T) {
 		bi, ok := new(big.Int).SetString(test, 10)
 		require.True(t, ok)
 		_, err := NewFloat40(bi)
-		assert.Equal(t, testVector[test], err)
+		assert.Equal(t, testVector[test], tracerr.Unwrap(err))
+	}
+}
+
+func TestNewFloat40Floor(t *testing.T) {
+	testVector := map[string][]uint64{
+		// []int contains [Float40 value, Flot40 Floor value], when
+		// Float40 value is expected to be 0, is because is expected to
+		// be an error
+		"9922334455000000000000000000000000000000":   {1040714485495, 1040714485495},
+		"9922334455000000000000000000000000000001":   {0, 6846188881046405121},
+		"9922334454999999999999999999999999999999":   {0, 6846188881046405119},
+		"42949672950000000000000000000000000000000":  {1069446856703, 1069446856703},
+		"99223344556573838487575":                    {0, 16754928163869896727},
+		"992233445500000000000000000000000000000000": {0, 0},
+		"343597383670000000000000000000000000000000": {1099511627775, 1099511627775},
+		"343597383680000000000000000000000000000000": {0, 1099511627776},
+		"343597383690000000000000000000000000000000": {0, 1099511627777},
+		"343597383700000000000000000000000000000000": {0, 0},
+	}
+	for test := range testVector {
+		bi, ok := new(big.Int).SetString(test, 10)
+		require.True(t, ok)
+		f40, err := NewFloat40(bi)
+		if f40 == 0 {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, testVector[test][0], uint64(f40))
+
+		f40, err = NewFloat40Floor(bi)
+		if f40 == 0 {
+			assert.Equal(t, ErrFloat40E31, tracerr.Unwrap(err))
+		} else {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, testVector[test][1], uint64(f40))
 	}
 }
 

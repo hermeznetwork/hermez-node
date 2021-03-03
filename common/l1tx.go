@@ -259,7 +259,7 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 	}
 	l1tx.ToIdx = toIdx
 	l1tx.EffectiveAmount, err = Float40FromBytes(amountBytes).BigInt()
-	return &l1tx, err
+	return &l1tx, tracerr.Wrap(err)
 }
 
 // BytesGeneric returns the generic representation of a L1Tx. This method is

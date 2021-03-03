@@ -67,7 +67,7 @@ func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterfac
 	}
 	accNonce, err := ethClient.EthNonceAt(ctx, *address, nil)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	log.Infow("TxManager started", "nonce", accNonce)
 	return &TxManager{
