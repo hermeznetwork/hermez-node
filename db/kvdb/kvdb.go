@@ -544,10 +544,12 @@ func (k *KVDB) MakeCheckpointFromTo(fromBatchNum common.BatchNum, dest string) e
 	// synchronizer to the same batchNum
 	k.m.Lock()
 	defer k.m.Unlock()
-	return pebbleMakeCheckpoint(source, dest)
+	return PebbleMakeCheckpoint(source, dest)
 }
 
-func pebbleMakeCheckpoint(source, dest string) error {
+// PebbleMakeCheckpoint is a hepler function to make a pebble checkpoint from
+// source to dest.
+func PebbleMakeCheckpoint(source, dest string) error {
 	// Remove dest folder (if it exists) before doing the checkpoint
 	if _, err := os.Stat(dest); os.IsNotExist(err) {
 	} else if err != nil {
