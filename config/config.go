@@ -101,6 +101,9 @@ type Coordinator struct {
 	// to 0s, the coordinator will continuously forge even if the batches
 	// are empty.
 	ForgeNoTxsDelay Duration `validate:"-"`
+	// MustForgeAtSlotDeadline enables the coordinator to forge slots if
+	// the empty slots reach the slot deadline.
+	MustForgeAtSlotDeadline bool
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval Duration `validate:"required"`
