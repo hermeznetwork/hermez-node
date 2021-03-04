@@ -101,6 +101,8 @@ func (tx *PoolL2Tx) SetType() error {
 			tx.Type = TxTypeTransferToBJJ
 		} else if tx.ToEthAddr != FFAddr && tx.ToEthAddr != EmptyAddr {
 			tx.Type = TxTypeTransferToEthAddr
+		} else {
+			return tracerr.Wrap(errors.New("malformed transaction"))
 		}
 	} else {
 		return tracerr.Wrap(errors.New("malformed transaction"))
