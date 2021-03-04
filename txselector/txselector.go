@@ -27,16 +27,6 @@ type CoordAccount struct {
 	AccountCreationAuth []byte // signature in byte array format
 }
 
-// SelectionConfig contains the parameters of configuration of the selection of
-// transactions for the next batch
-type SelectionConfig struct {
-	// MaxL1UserTxs is the maximum L1-user-tx for a batch
-	MaxL1UserTxs uint64
-
-	// TxProcessorConfig contains the config for ProcessTxs
-	TxProcessorConfig txprocessor.Config
-}
-
 // TxSelector implements all the functionalities to select the txs for the next
 // batch
 type TxSelector struct {
@@ -131,7 +121,7 @@ func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx,
 // but there is a transactions to them and the authorization of account
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
-func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig) ([]common.Idx,
+func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config) ([]common.Idx,
 	[][]byte, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	metricGetL2TxSelection.Inc()
 	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs,
@@ -148,7 +138,7 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig *SelectionConfig) ([]c
 // but there is a transactions to them and the authorization of account
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
-func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
+func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	metricGetL1L2TxSelection.Inc()
@@ -158,7 +148,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig *SelectionConfig,
 		discardedL2Txs, tracerr.Wrap(err)
 }
 
-func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
+func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	// WIP.0: the TxSelector is not optimized and will need a redesign. The
@@ -177,7 +167,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 	}
 
 	txselStateDB := txsel.localAccountsDB.StateDB
-	tp := txprocessor.NewTxProcessor(txselStateDB, selectionConfig.TxProcessorConfig)
+	tp := txprocessor.NewTxProcessor(txselStateDB, selectionConfig)
 
 	// Process L1UserTxs
 	for i := 0; i < len(l1UserTxs); i++ {
@@ -188,16 +178,16 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 		}
 	}
 
-	// discardedL2Txs contains an array of the L2Txs that have not been selected in this Batch
-
 	var l1CoordinatorTxs []common.L1Tx
 	positionL1 := len(l1UserTxs)
 	var accAuths [][]byte
 
-	// sort l2TxsRaw (cropping at MaxTx at this point)
-	l2Txs0, discardedL2Txs := txsel.getL2Profitable(l2TxsRaw, selectionConfig.TxProcessorConfig.MaxTx)
+	// Sort l2TxsRaw (cropping at MaxTx at this point).
+	// discardedL2Txs contains an array of the L2Txs that have not been
+	// selected in this Batch.
+	l2Txs0, discardedL2Txs := txsel.getL2Profitable(l2TxsRaw, selectionConfig.MaxTx)
 	for i := range discardedL2Txs {
-		discardedL2Txs[i].Info = "Tx not selected due to low absolute fee"
+		discardedL2Txs[i].Info = "Tx not selected due to low absolute fee (does not fit inside the profitable set)"
 	}
 
 	noncesMap := make(map[common.Idx]common.Nonce)
@@ -229,7 +219,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 		}
 		if newL1CoordTx != nil {
 			// if there is no space for the L1CoordinatorTx, discard the L2Tx
-			if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1UserTxs)-len(l1UserTxs) {
+			if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1Tx)-len(l1UserTxs) {
 				// discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
 				l2Txs0[i].Info = "Tx not selected because the L2Tx depends on a " +
@@ -266,9 +256,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 		}
 		// check if Nonce is correct
 		nonce := noncesMap[l2Txs[i].FromIdx]
-		if l2Txs[i].Nonce == nonce {
-			noncesMap[l2Txs[i].FromIdx]++
-		} else {
+		if l2Txs[i].Nonce != nonce {
 			// not valid Nonce at tx. Discard L2Tx, and update Info
 			// parameter of the tx, and add it to the discardedTxs
 			// array
@@ -371,6 +359,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 			// valid txs (of Exit type)
 			validTxs = append(validTxs, l2Txs[i])
 		}
+		noncesMap[l2Txs[i].FromIdx]++
 	}
 
 	// Process L1CoordinatorTxs
@@ -413,7 +402,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 	})
 
 	// get most profitable L2-tx
-	maxL2Txs := int(selectionConfig.TxProcessorConfig.MaxTx) -
+	maxL2Txs := int(selectionConfig.MaxTx) -
 		len(l1UserTxs) - len(l1CoordinatorTxs)
 
 	selectedL2Txs := validTxs
@@ -427,14 +416,10 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 			// the error can be due not valid tx data, or due other
 			// cases (such as StateDB error). At this initial
 			// version of the TxSelector, we discard the L2Tx and
-			// log the error, assuming that this will be iterated
-			// in a near future.
-			log.Error(err)
-			// Discard L2Tx, and update Info parameter of the tx,
-			// and add it to the discardedTxs array
-			selectedL2Txs[i].Info = fmt.Sprintf("Tx not selected (in ProcessL2Tx) due to %s", err.Error())
-			discardedL2Txs = append(discardedL2Txs, selectedL2Txs[i])
-			continue
+			// log the error, assuming that this will be iterated in
+			// a near future.
+			return nil, nil, nil, nil, nil, nil,
+				tracerr.Wrap(fmt.Errorf("TxSelector: txprocessor.ProcessL2Tx: %w", err))
 		}
 		finalL2Txs = append(finalL2Txs, selectedL2Txs[i])
 	}
@@ -480,7 +465,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig *SelectionConfig,
 // l1CoordinatorTxs array, and then the PoolL2Tx is added into the validTxs
 // array.
 func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
-	selectionConfig *SelectionConfig, nL1UserTxs int, l1CoordinatorTxs []common.L1Tx,
+	selectionConfig txprocessor.Config, nL1UserTxs int, l1CoordinatorTxs []common.L1Tx,
 	positionL1 int, l2Tx common.PoolL2Tx) (*common.PoolL2Tx, *common.L1Tx,
 	*common.AccountCreationAuth, error) {
 	// if L2Tx needs a new L1CoordinatorTx of CreateAccount type, and a
@@ -582,7 +567,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 			Type:          common.TxTypeCreateAccountDeposit,
 		}
 	}
-	if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1UserTxs)-nL1UserTxs {
+	if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1Tx)-nL1UserTxs {
 		// L2Tx discarded
 		return nil, nil, nil, tracerr.Wrap(fmt.Errorf("L2Tx discarded due to no available slots " +
 			"for L1CoordinatorTx to create a new account for receiver of L2Tx"))

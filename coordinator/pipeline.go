@@ -407,11 +407,6 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	batchInfo.Debug.StartTimestamp = now
 	batchInfo.Debug.StartBlockNum = p.stats.Eth.LastBlock.Num + 1
 
-	selectionCfg := &txselector.SelectionConfig{
-		MaxL1UserTxs:      common.RollupConstMaxL1UserTx,
-		TxProcessorConfig: p.cfg.TxProcessorConfig,
-	}
-
 	var poolL2Txs []common.PoolL2Tx
 	var discardedL2Txs []common.PoolL2Tx
 	var l1UserTxsExtra, l1CoordTxs []common.L1Tx
@@ -442,14 +437,14 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 			return nil, tracerr.Wrap(err)
 		}
 		coordIdxs, auths, l1UserTxsExtra, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
-			p.txSelector.GetL1L2TxSelection(selectionCfg, l1UserTxs)
+			p.txSelector.GetL1L2TxSelection(p.cfg.TxProcessorConfig, l1UserTxs)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
 	} else {
 		// 2b: only L2 txs
 		coordIdxs, auths, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
-			p.txSelector.GetL2TxSelection(selectionCfg)
+			p.txSelector.GetL2TxSelection(p.cfg.TxProcessorConfig)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}

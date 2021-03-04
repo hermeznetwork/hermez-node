@@ -137,10 +137,6 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	// add tokens to HistoryDB to avoid breaking FK constrains
 	addTokens(t, tc, l2DBTxSel.DB())
 
-	selectionConfig := &txselector.SelectionConfig{
-		MaxL1UserTxs:      100, // TODO
-		TxProcessorConfig: txprocConfig,
-	}
 	configBatch := &batchbuilder.ConfigBatch{
 		// ForgerAddress:
 		TxProcessorConfig: txprocConfig,
@@ -160,7 +156,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 		}
 		// TxSelector select the transactions for the next Batch
 		coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
-			txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+			txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
 		require.NoError(t, err)
 		// BatchBuilder build Batch
 		zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -184,7 +180,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
-		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -213,7 +209,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
-		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -240,7 +236,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
-		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -260,7 +256,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
-		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -315,10 +311,6 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	// add tokens to HistoryDB to avoid breaking FK constrains
 	addTokens(t, tc, l2DBTxSel.DB())
 
-	selectionConfig := &txselector.SelectionConfig{
-		MaxL1UserTxs:      100,
-		TxProcessorConfig: txprocConfig,
-	}
 	configBatch := &batchbuilder.ConfigBatch{
 		TxProcessorConfig: txprocConfig,
 	}
@@ -327,7 +319,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	// TxSelector select the transactions for the next Batch
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
-		txsel.GetL1L2TxSelection(selectionConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -350,7 +342,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	require.NoError(t, err)
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
-		txsel.GetL1L2TxSelection(selectionConfig, nil)
+		txsel.GetL1L2TxSelection(txprocConfig, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(coordIdxs))
 	assert.Equal(t, 0, len(oL1UserTxs))
