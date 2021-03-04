@@ -340,6 +340,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 
 			tp.zki.ISOutIdx[tp.i] = tp.s.CurrentIdx().BigInt()
 			tp.zki.ISStateRoot[tp.i] = tp.s.MT.Root().BigInt()
+			tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
 			tp.i++
 		}
 	}
@@ -1333,7 +1334,7 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		return exitAccount, true, nil
 	} else if err != nil {
-		return exitAccount, false, tracerr.Wrap(err)
+		return nil, false, tracerr.Wrap(err)
 	}
 
 	// 1b. if idx already exist in exitTree:
