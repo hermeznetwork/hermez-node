@@ -218,7 +218,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	assert.NoError(t, err)
 
 	chainID := uint16(0)
-	// generate test transactions from test.SetBlockchain0 code
+	// generate test transactions from test.SetBlockchainMinimumFlow0 code
 	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	blocks, err := tc.GenerateBlocks(txsets.SetBlockchainMinimumFlow0)
 	require.NoError(t, err)
@@ -288,7 +288,7 @@ func TestProcessTxsBalances(t *testing.T) {
 		"9061858435528794221929846392270405504056106238451760714188625065949729889651",
 		tp.s.MT.Root().BigInt().String())
 
-	coordIdxs := []common.Idx{261, 262}
+	coordIdxs := []common.Idx{261, 263}
 	log.Debug("block:0 batch:7")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[6].L2Txs)
@@ -303,7 +303,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 0, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
 	assert.Equal(t,
-		"3844339393304253264418296322137281996442345663805792718218845145754742722151",
+		"4392049343656836675348565048374261353937130287163762821533580216441778455298",
 		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:8")
@@ -321,7 +321,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
 	assert.Equal(t,
-		"2537294203394018451170116789946369404362093672592091326351037700505720139801",
+		"8905191229562583213069132470917469035834300549892959854483573322676101624713",
 		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{262}
@@ -330,8 +330,8 @@ func TestProcessTxsBalances(t *testing.T) {
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[0].L2Txs)
 	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "Coord", 0, "75")
 	checkBalance(t, tc, sdb, "Coord", 1, "30")
+	checkBalance(t, tc, sdb, "Coord", 0, "35")
 	checkBalance(t, tc, sdb, "A", 0, "730")
 	checkBalance(t, tc, sdb, "A", 1, "280")
 	checkBalance(t, tc, sdb, "B", 0, "380")
@@ -340,7 +340,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "470")
 	assert.Equal(t,
-		"13463929859122729344499006353544877221550995454069650137270994940730475267399",
+		"12063160053709941400160547588624831667157042937323422396363359123696668555050",
 		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{}
@@ -350,7 +350,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"21058792089669864857092637997959333050678445584244682889041632034478049099916",
+		"20375835796927052406196249140510136992262283055544831070430919054949353249481",
 		tp.s.MT.Root().BigInt().String())
 
 	// use Set of PoolL2 txs
@@ -359,8 +359,8 @@ func TestProcessTxsBalances(t *testing.T) {
 
 	_, err = tp.ProcessTxs(coordIdxs, []common.L1Tx{}, []common.L1Tx{}, poolL2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "Coord", 0, "75")
 	checkBalance(t, tc, sdb, "Coord", 1, "30")
+	checkBalance(t, tc, sdb, "Coord", 0, "35")
 	checkBalance(t, tc, sdb, "A", 0, "510")
 	checkBalance(t, tc, sdb, "A", 1, "170")
 	checkBalance(t, tc, sdb, "B", 0, "480")
