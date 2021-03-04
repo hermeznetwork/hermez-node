@@ -42,7 +42,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type txsResponse struct {
 		Txs          []historydb.TxAPI `json:"transactions"`
 		PendingItems uint64            `json:"pendingItems"`
@@ -66,6 +66,6 @@ func (a *API) getHistoryTx(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
-	// Build succesfull response
+	// Build successful response
 	c.JSON(http.StatusOK, tx)
 }

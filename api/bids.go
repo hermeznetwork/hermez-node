@@ -34,7 +34,7 @@ func (a *API) getBids(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type bidsResponse struct {
 		Bids         []historydb.BidAPI `json:"bids"`
 		PendingItems uint64             `json:"pendingItems"`

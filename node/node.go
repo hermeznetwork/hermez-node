@@ -107,7 +107,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 	var apiConnCon *dbUtils.APIConnectionController
 	if cfg.API.Explorer || mode == ModeCoordinator {
-		apiConnCon = dbUtils.NewAPICnnectionController(
+		apiConnCon = dbUtils.NewAPIConnectionController(
 			cfg.API.MaxSQLConnections,
 			cfg.API.SQLConnectionTimeout.Duration,
 		)
@@ -491,8 +491,8 @@ func NewNodeAPI(
 	}, nil
 }
 
-// Run starts the http server of the NodeAPI.  To stop it, pass a context with
-// cancelation.
+// Run starts the http server of the NodeAPI.  To stop it, pass a context
+// with cancellation.
 func (a *NodeAPI) Run(ctx context.Context) error {
 	server := &http.Server{
 		Handler: a.engine,

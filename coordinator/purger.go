@@ -14,7 +14,7 @@ import (
 // PurgerCfg is the purger configuration
 type PurgerCfg struct {
 	// PurgeBatchDelay is the delay between batches to purge outdated
-	// transactions.  Oudated L2Txs are those that have been forged or
+	// transactions. Outdated L2Txs are those that have been forged or
 	// marked as invalid for longer than the SafetyPeriod and pending L2Txs
 	// that have been in the pool for longer than TTL once there are
 	// MaxTxs.
@@ -23,7 +23,7 @@ type PurgerCfg struct {
 	// transactions due to nonce lower than the account nonce.
 	InvalidateBatchDelay int64
 	// PurgeBlockDelay is the delay between blocks to purge outdated
-	// transactions.  Oudated L2Txs are those that have been forged or
+	// transactions. Outdated L2Txs are those that have been forged or
 	// marked as invalid for longer than the SafetyPeriod and pending L2Txs
 	// that have been in the pool for longer than TTL once there are
 	// MaxTxs.

@@ -455,7 +455,7 @@ func TestGetHistoryTx(t *testing.T) {
 	// 400, due invalid TxID
 	err := doBadReq("GET", endpoint+"0x001", nil, 400)
 	assert.NoError(t, err)
-	// 404, due inexistent TxID in DB
+	// 404, due nonexistent TxID in DB
 	err = doBadReq("GET", endpoint+"0x00eb5e95e1ce5e9f6c4ed402d415e8d0bdd7664769cfd2064d28da04a2c76be432", nil, 404)
 	assert.NoError(t, err)
 }

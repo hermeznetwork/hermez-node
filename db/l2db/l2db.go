@@ -310,7 +310,7 @@ func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []common.IdxNonce, batchNu
 		return nil
 	}
 	// Fill the batch_num in the query with Sprintf because we are using a
-	// named query which works with slices, and doens't handle an extra
+	// named query which works with slices, and doesn't handle an extra
 	// individual argument.
 	query := fmt.Sprintf(invalidateOldNoncesQuery, batchNum)
 	if _, err := sqlx.NamedExec(l2db.dbWrite, query, updatedAccounts); err != nil {

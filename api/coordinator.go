@@ -32,7 +32,7 @@ func (a *API) getCoordinators(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type coordinatorsResponse struct {
 		Coordinators []historydb.CoordinatorAPI `json:"coordinators"`
 		PendingItems uint64                     `json:"pendingItems"`

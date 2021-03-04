@@ -235,7 +235,7 @@ func (p *ProofServerClient) CalculateProof(ctx context.Context, zkInputs *common
 	return tracerr.Wrap(p.apiInput(ctx, zkInputs))
 }
 
-// GetProof retreives the Proof and Public Data (public inputs) from the
+// GetProof retrieves the Proof and Public Data (public inputs) from the
 // ServerProof, blocking until the proof is ready.
 func (p *ProofServerClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	if err := p.WaitReady(ctx); err != nil {
@@ -298,7 +298,7 @@ func (p *MockClient) CalculateProof(ctx context.Context, zkInputs *common.ZKInpu
 	return nil
 }
 
-// GetProof retreives the Proof from the ServerProof
+// GetProof retrieves the Proof from the ServerProof
 func (p *MockClient) GetProof(ctx context.Context) (*Proof, []*big.Int, error) {
 	// Simulate a delay
 	select {

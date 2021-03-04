@@ -34,7 +34,7 @@ type Slot struct {
 	// BatchesLen       int
 	BidValue  *big.Int
 	BootCoord bool
-	// Bidder, Forer and URL correspond to the winner of the slot (which is
+	// Bidder, Forger and URL correspond to the winner of the slot (which is
 	// not always the highest bidder).  These are the values of the
 	// coordinator that is able to forge exclusively before the deadline.
 	Bidder ethCommon.Address

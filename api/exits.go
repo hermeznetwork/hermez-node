@@ -43,7 +43,7 @@ func (a *API) getExits(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type exitsResponse struct {
 		Exits        []historydb.ExitAPI `json:"exits"`
 		PendingItems uint64              `json:"pendingItems"`
@@ -72,6 +72,6 @@ func (a *API) getExit(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
-	// Build succesfull response
+	// Build successful response
 	c.JSON(http.StatusOK, exit)
 }

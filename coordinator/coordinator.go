@@ -54,7 +54,7 @@ type Config struct {
 	// checking the next block), used to decide when to stop scheduling new
 	// batches (by stopping the pipeline).
 	// For example, if we are at block 10 and ScheduleBatchBlocksAheadCheck
-	// is 5, eventhough at block 11 we canForge, the pipeline will be
+	// is 5, even though at block 11 we canForge, the pipeline will be
 	// stopped if we can't forge at block 15.
 	// This value should be the expected number of blocks it takes between
 	// scheduling a batch and having it mined.
@@ -64,7 +64,7 @@ type Config struct {
 	// from the next block; used to decide when to stop sending batches to
 	// the smart contract.
 	// For example, if we are at block 10 and SendBatchBlocksMarginCheck is
-	// 5, eventhough at block 11 we canForge, the batch will be discarded
+	// 5, even though at block 11 we canForge, the batch will be discarded
 	// if we can't forge at block 15.
 	// This value should be the expected number of blocks it takes between
 	// sending a batch and having it mined.

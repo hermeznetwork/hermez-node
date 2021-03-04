@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// maxLimit is the max permited items to be returned in paginated responses
+	// maxLimit is the max permitted items to be returned in paginated responses
 	maxLimit uint = 2049
 
 	// dfltOrder indicates how paginated endpoints are ordered if not specified
@@ -40,8 +40,8 @@ const (
 )
 
 var (
-	// ErrNillBidderAddr is used when a nil bidderAddr is received in the getCoordinator method
-	ErrNillBidderAddr = errors.New("biderAddr can not be nil")
+	// ErrNilBidderAddr is used when a nil bidderAddr is received in the getCoordinator method
+	ErrNilBidderAddr = errors.New("biderAddr can not be nil")
 )
 
 func retSQLErr(err error, c *gin.Context) {

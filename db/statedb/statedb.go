@@ -510,7 +510,7 @@ func (l *LocalStateDB) CheckpointExists(batchNum common.BatchNum) (bool, error) 
 	return l.db.CheckpointExists(batchNum)
 }
 
-// Reset performs a reset in the LocaStateDB. If fromSynchronizer is true, it
+// Reset performs a reset in the LocalStateDB. If fromSynchronizer is true, it
 // gets the state from LocalStateDB.synchronizerStateDB for the given batchNum.
 // If fromSynchronizer is false, get the state from LocalStateDB checkpoints.
 func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) error {

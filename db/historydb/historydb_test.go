@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	apiConnCon := dbUtils.NewAPICnnectionController(1, time.Second)
+	apiConnCon := dbUtils.NewAPIConnectionController(1, time.Second)
 	historyDBWithACC = NewHistoryDB(db, db, apiConnCon)
 	// Run tests
 	result := m.Run()

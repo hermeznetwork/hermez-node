@@ -235,7 +235,7 @@ func TestPoolTxs(t *testing.T) {
 	// 400, due invalid TxID
 	err = doBadReq("GET", endpoint+"0xG2241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 400)
 	require.NoError(t, err)
-	// 404, due inexistent TxID in DB
+	// 404, due nonexistent TxID in DB
 	err = doBadReq("GET", endpoint+"0x02241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 404)
 	require.NoError(t, err)
 }

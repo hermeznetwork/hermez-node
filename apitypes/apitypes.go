@@ -91,7 +91,7 @@ func (c *CollectedFees) UnmarshalJSON(text []byte) error {
 	return nil
 }
 
-// HezEthAddr is used to scan/value Ethereum Address directly into strings that follow the Ethereum address hez fotmat (^hez:0x[a-fA-F0-9]{40}$) from/to sql DBs.
+// HezEthAddr is used to scan/value Ethereum Address directly into strings that follow the Ethereum address hez format (^hez:0x[a-fA-F0-9]{40}$) from/to sql DBs.
 // It assumes that Ethereum Address are inserted/fetched to/from the DB using the default Scan/Value interface
 type HezEthAddr string
 
@@ -143,7 +143,7 @@ func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// HezBJJ is used to scan/value *babyjub.PublicKeyComp directly into strings that follow the BJJ public key hez fotmat (^hez:[A-Za-z0-9_-]{44}$) from/to sql DBs.
+// HezBJJ is used to scan/value *babyjub.PublicKeyComp directly into strings that follow the BJJ public key hez format (^hez:[A-Za-z0-9_-]{44}$) from/to sql DBs.
 // It assumes that *babyjub.PublicKeyComp are inserted/fetched to/from the DB using the default Scan/Value interface
 type HezBJJ string
 
@@ -216,7 +216,7 @@ func (b HezBJJ) Value() (driver.Value, error) {
 // StrHezBJJ is used to unmarshal HezBJJ directly into an alias of babyjub.PublicKeyComp
 type StrHezBJJ babyjub.PublicKeyComp
 
-// UnmarshalText unmarshals a StrHezBJJ
+// UnmarshalText unmarshalls a StrHezBJJ
 func (s *StrHezBJJ) UnmarshalText(text []byte) error {
 	bjj, err := hezStrToBJJ(string(text))
 	if err != nil {
@@ -226,8 +226,8 @@ func (s *StrHezBJJ) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// HezIdx is used to value common.Idx directly into strings that follow the Idx key hez fotmat (hez:tokenSymbol:idx) to sql DBs.
-// Note that this can only be used to insert to DB since there is no way to automaticaly read from the DB since it needs the tokenSymbol
+// HezIdx is used to value common.Idx directly into strings that follow the Idx key hez format (hez:tokenSymbol:idx) to sql DBs.
+// Note that this can only be used to insert to DB since there is no way to automatically read from the DB since it needs the tokenSymbol
 type HezIdx string
 
 // StrHezIdx is used to unmarshal HezIdx directly into an alias of common.Idx

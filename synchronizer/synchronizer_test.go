@@ -823,7 +823,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 
 	// Store ForgerComitmnent observed at every block by the live synchronizer
 	syncCommitment := map[int64]bool{}
-	// Store ForgerComitmnent observed at every block by a syncrhonizer that is restarted
+	// Store ForgerComitmnent observed at every block by a synchronizer that is restarted
 	syncRestartedCommitment := map[int64]bool{}
 	for _, block := range blocks {
 		// Add block data to the smart contracts

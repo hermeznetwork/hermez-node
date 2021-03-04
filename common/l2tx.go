@@ -10,7 +10,7 @@ import (
 
 // L2Tx is a struct that represents an already forged L2 tx
 type L2Tx struct {
-	// Stored in DB: mandatory fileds
+	// Stored in DB: mandatory fields
 	TxID     TxID     `meddler:"id"`
 	BatchNum BatchNum `meddler:"batch_num"` // batchNum in which this tx was forged.
 	Position int      `meddler:"position"`

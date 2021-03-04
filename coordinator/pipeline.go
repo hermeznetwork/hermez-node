@@ -504,7 +504,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 		return nil, tracerr.Wrap(err)
 	}
 
-	// Invalidate transactions that become invalid beause of
+	// Invalidate transactions that become invalid because of
 	// the poolL2Txs selected.  Will mark as invalid the txs that have a
 	// (fromIdx, nonce) which already appears in the selected txs (includes
 	// all the nonces smaller than the current one)

@@ -44,7 +44,7 @@ func (a *API) getAccounts(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type accountResponse struct {
 		Accounts     []historydb.AccountAPI `json:"accounts"`
 		PendingItems uint64                 `json:"pendingItems"`

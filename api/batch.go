@@ -52,7 +52,7 @@ func (a *API) getBatches(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type batchesResponse struct {
 		Batches      []historydb.BatchAPI `json:"batches"`
 		PendingItems uint64               `json:"pendingItems"`

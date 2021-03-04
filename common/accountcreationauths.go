@@ -84,7 +84,7 @@ func (a *AccountCreationAuth) toHash(chainID uint16,
 	return rawData, nil
 }
 
-// HashToSign returns the hash to be signed by the Etherum address to authorize
+// HashToSign returns the hash to be signed by the Ethereum address to authorize
 // the account creation, which follows the EIP-712 encoding
 func (a *AccountCreationAuth) HashToSign(chainID uint16,
 	hermezContractAddr ethCommon.Address) ([]byte, error) {
@@ -96,9 +96,9 @@ func (a *AccountCreationAuth) HashToSign(chainID uint16,
 }
 
 // Sign signs the account creation authorization message using the provided
-// `signHash` function, and stores the signaure in `a.Signature`.  `signHash`
+// `signHash` function, and stores the signature in `a.Signature`.  `signHash`
 // should do an ethereum signature using the account corresponding to
-// `a.EthAddr`.  The `signHash` function is used to make signig flexible: in
+// `a.EthAddr`.  The `signHash` function is used to make signing flexible: in
 // tests we sign directly using the private key, outside tests we sign using
 // the keystore (which never exposes the private key). Sign follows the EIP-712
 // encoding.

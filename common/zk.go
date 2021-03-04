@@ -67,7 +67,7 @@ type ZKInputs struct {
 
 	// accumulate fees
 	// FeePlanTokens contains all the tokenIDs for which the fees are being
-	// accumulated and those fees accoumulated will be paid to the FeeIdxs
+	// accumulated and those fees accumulated will be paid to the FeeIdxs
 	// array.  The order of FeeIdxs & FeePlanTokens & State3 must match.
 	// Coordinator fees are processed correlated such as:
 	// [FeePlanTokens[i], FeeIdxs[i]]
