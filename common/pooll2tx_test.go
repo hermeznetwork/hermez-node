@@ -193,6 +193,33 @@ func TestVerifyTxSignature(t *testing.T) {
 	assert.True(t, tx.VerifySignature(chainID, sk.Public().Compress()))
 }
 
+func TestVerifyTxSignatureEthAddrWith0(t *testing.T) {
+	chainID := uint16(5)
+	var sk babyjub.PrivateKey
+	_, err := hex.Decode(sk[:],
+		[]byte("02f0b4f87065af3797aaaf934e8b5c31563c17f2272fa71bd0146535bfbb4184"))
+	assert.NoError(t, err)
+	tx := PoolL2Tx{
+		FromIdx:   10659,
+		ToIdx:     0,
+		ToEthAddr: ethCommon.HexToAddress("0x0004308BD15Ead4F1173624dC289DBdcC806a309"),
+		Amount:    big.NewInt(5000),
+		TokenID:   0,
+		Nonce:     946,
+		Fee:       231,
+	}
+	toSign, err := tx.HashToSign(chainID)
+	assert.NoError(t, err)
+
+	sig := sk.SignPoseidon(toSign)
+	assert.Equal(t,
+		"93ce988ecac87908513648d0d021d8ad56d3b504eb38204200f07a8f6c20551de9951397d3051143d4c71203205f8849cd7382d2bcf4bd10092c1e052bb40d01",
+		sig.Compress().String(),
+	)
+	tx.Signature = sig.Compress()
+	assert.True(t, tx.VerifySignature(chainID, sk.Public().Compress()))
+}
+
 func TestDecompressEmptyBJJComp(t *testing.T) {
 	pkComp := EmptyBJJComp
 	pk, err := pkComp.Decompress()

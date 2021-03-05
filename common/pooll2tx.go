@@ -304,10 +304,8 @@ func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	copy(e1B[0:5], amountFloat40Bytes)
-	toEthAddr := EthAddrToBigInt(tx.ToEthAddr)
-	copy(e1B[5:25], toEthAddr.Bytes())
+	copy(e1B[5:25], tx.ToEthAddr[:])
 	e1 := new(big.Int).SetBytes(e1B[:])
-
 	rqToEthAddr := EthAddrToBigInt(tx.RqToEthAddr)
 
 	_, toBJJY := babyjub.UnpackSignY(tx.ToBJJ)
