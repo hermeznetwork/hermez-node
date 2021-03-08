@@ -81,9 +81,9 @@ func (f40 Float40) BigInt() (*big.Int, error) {
 	return r, nil
 }
 
-// newFloat40ME takes a *big.Int integer and returns the m (mantissa) & e
-// (exponent) from the Float40 representation
-func newFloat40ME(f *big.Int) (*big.Int, *big.Int) {
+// NewFloat40 encodes a *big.Int integer as a Float40, returning error in case
+// of loss during the encoding.
+func NewFloat40(f *big.Int) (Float40, error) {
 	m := f
 	e := big.NewInt(0)
 	zero := big.NewInt(0)
@@ -92,13 +92,6 @@ func newFloat40ME(f *big.Int) (*big.Int, *big.Int) {
 		m = new(big.Int).Div(m, ten)
 		e = new(big.Int).Add(e, big.NewInt(1))
 	}
-	return m, e
-}
-
-// NewFloat40 encodes a *big.Int integer as a Float40, returning error in case
-// of loss during the encoding.
-func NewFloat40(f *big.Int) (Float40, error) {
-	m, e := newFloat40ME(f)
 	if e.Int64() > 31 {
 		return 0, tracerr.Wrap(ErrFloat40E31)
 	}
@@ -116,7 +109,14 @@ func NewFloat40(f *big.Int) (Float40, error) {
 // hermez-node, it's a helper for external usage to generate valid Float40
 // values.
 func NewFloat40Floor(f *big.Int) (Float40, error) {
-	m, e := newFloat40ME(f)
+	m := f
+	e := big.NewInt(0)
+	// zero := big.NewInt(0)
+	ten := big.NewInt(10)
+	for m.Cmp(thres) >= 0 {
+		m = new(big.Int).Div(m, ten)
+		e = new(big.Int).Add(e, big.NewInt(1))
+	}
 	if e.Int64() > 31 {
 		return 0, tracerr.Wrap(ErrFloat40E31)
 	}
