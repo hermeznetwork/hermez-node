@@ -2,10 +2,15 @@ package api
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
+	"math/big"
 	"testing"
 	"time"
 
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -256,4 +261,74 @@ func assertPoolTx(t *testing.T, expected, actual testPoolTxReceive) {
 		expected.Token.USDUpdate = actual.Token.USDUpdate
 	}
 	assert.Equal(t, expected, actual)
+}
+
+// TestAllTosNull test that the API doesn't accept txs with all the TOs set to null (to eth, to bjj, to idx)
+func TestAllTosNull(t *testing.T) {
+	// Generate account:
+	// Ethereum private key
+	var key ecdsa.PrivateKey
+	key.D = big.NewInt(int64(4444)) // only for testing
+	key.PublicKey.X, key.PublicKey.Y = ethCrypto.S256().ScalarBaseMult(key.D.Bytes())
+	key.Curve = ethCrypto.S256()
+	addr := ethCrypto.PubkeyToAddress(key.PublicKey)
+	// BJJ private key
+	var sk babyjub.PrivateKey
+	var iBytes [8]byte
+	binary.LittleEndian.PutUint64(iBytes[:], 4444)
+	copy(sk[:], iBytes[:]) // only for testing
+	account := common.Account{
+		Idx:      4444,
+		TokenID:  0,
+		BatchNum: 1,
+		BJJ:      sk.Public().Compress(),
+		EthAddr:  addr,
+		Nonce:    0,
+		Balance:  big.NewInt(1000000),
+	}
+	// Add account to history DB (required to verify signature)
+	err := api.h.AddAccounts([]common.Account{account})
+	assert.NoError(t, err)
+	// Genrate tx with all tos set to nil (to eth, to bjj, to idx)
+	tx := common.PoolL2Tx{
+		FromIdx: account.Idx,
+		TokenID: account.TokenID,
+		Amount:  big.NewInt(1000),
+		Fee:     200,
+		Nonce:   0,
+	}
+	// Set idx and type manually, and check that the function doesn't allow it
+	_, err = common.NewPoolL2Tx(&tx)
+	assert.Error(t, err)
+	tx.Type = common.TxTypeTransfer
+	var txID common.TxID
+	txIDRaw, err := hex.DecodeString("02e66e24f7f25272906647c8fd1d7fe8acf3cf3e9b38ffc9f94bbb5090dc275073")
+	assert.NoError(t, err)
+	copy(txID[:], txIDRaw)
+	tx.TxID = txID
+	// Sign tx
+	toSign, err := tx.HashToSign(0)
+	assert.NoError(t, err)
+	sig := sk.SignPoseidon(toSign)
+	tx.Signature = sig.Compress()
+	// Transform common.PoolL2Tx ==> testPoolTxSend
+	txToSend := testPoolTxSend{
+		TxID:      tx.TxID,
+		Type:      tx.Type,
+		TokenID:   tx.TokenID,
+		FromIdx:   idxToHez(tx.FromIdx, "ETH"),
+		Amount:    tx.Amount.String(),
+		Fee:       tx.Fee,
+		Nonce:     tx.Nonce,
+		Signature: tx.Signature,
+	}
+	// Send tx to the API
+	jsonTxBytes, err := json.Marshal(txToSend)
+	require.NoError(t, err)
+	jsonTxReader := bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", apiURL+"transactions-pool", jsonTxReader, 400)
+	require.NoError(t, err)
+	// Clean historyDB: the added account shouldn't be there for other tests
+	_, err = api.h.DB().DB.Exec("delete from account where idx = 4444")
+	assert.NoError(t, err)
 }
