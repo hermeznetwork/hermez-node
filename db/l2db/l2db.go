@@ -74,6 +74,16 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 	return tracerr.Wrap(err)
 }
 
+// AddManyAccountCreationAuth inserts a batch of accounts creation authorization
+// if not exist into the DB
+func (l2db *L2DB) AddManyAccountCreationAuth(auths []common.AccountCreationAuth) error {
+	_, err := sqlx.NamedExec(l2db.dbWrite,
+		`INSERT INTO account_creation_auth (eth_addr, bjj, signature)
+				VALUES (:ethaddr, :bjj, :signature) 
+				ON CONFLICT (eth_addr) DO NOTHING`, auths)
+	return tracerr.Wrap(err)
+}
+
 // GetAccountCreationAuth returns an account creation authorization from the DB
 func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.AccountCreationAuth, error) {
 	auth := new(common.AccountCreationAuth)

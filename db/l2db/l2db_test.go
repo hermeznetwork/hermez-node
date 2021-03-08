@@ -725,6 +725,43 @@ func TestAuth(t *testing.T) {
 	}
 }
 
+func TestManyAuth(t *testing.T) {
+	test.WipeDB(l2DB.DB())
+	const nAuths = 5
+	chainID := uint16(0)
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	// Generate authorizations
+	genAuths := test.GenAuths(nAuths, chainID, hermezContractAddr)
+	auths := make([]common.AccountCreationAuth, len(genAuths))
+	// Convert to a non-pointer slice
+	for i := 0; i < len(genAuths); i++ {
+		auths[i] = *genAuths[i]
+	}
+
+	// Add a duplicate one to check the not exist condition
+	err := l2DB.AddAccountCreationAuth(genAuths[0])
+	require.NoError(t, err)
+
+	// Add to the DB
+	err = l2DB.AddManyAccountCreationAuth(auths)
+	require.NoError(t, err)
+
+	// Assert the result
+	for i := 0; i < len(auths); i++ {
+		// Fetch from DB
+		auth, err := l2DB.GetAccountCreationAuth(auths[i].EthAddr)
+		require.NoError(t, err)
+		// Check fetched vs generated
+		assert.Equal(t, auths[i].EthAddr, auth.EthAddr)
+		assert.Equal(t, auths[i].BJJ, auth.BJJ)
+		assert.Equal(t, auths[i].Signature, auth.Signature)
+		assert.Equal(t, auths[i].Timestamp.Unix(), auths[i].Timestamp.Unix())
+		nameZone, offset := auths[i].Timestamp.Zone()
+		assert.Equal(t, "UTC", nameZone)
+		assert.Equal(t, 0, offset)
+	}
+}
+
 func TestAddGet(t *testing.T) {
 	err := prepareHistoryDB(historyDB)
 	if err != nil {
