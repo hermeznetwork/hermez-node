@@ -10,6 +10,8 @@ SQLConnectionTimeout = "2s"
 Interval = "10s"
 URL = "https://api-pub.bitfinex.com/v2/"
 Type = "bitfinexV2"
+# URL = "https://api.coingecko.com/api/v3/"
+# Type = "coingeckoV3"
 
 [Debug]
 APIAddress = "localhost:12345"

@@ -147,6 +147,12 @@ type txWrite struct {
 	Nonce *common.Nonce       `meddler:"nonce"`
 }
 
+// TokenSymbolAndAddr token representation with only Eth addr and symbol
+type TokenSymbolAndAddr struct {
+	Symbol string            `meddler:"symbol"`
+	Addr   ethCommon.Address `meddler:"eth_addr"`
+}
+
 // TokenWithUSD add USD info to common.Token
 type TokenWithUSD struct {
 	ItemID      uint64            `json:"itemId" meddler:"item_id"`

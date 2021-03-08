@@ -486,23 +486,14 @@ func (hdb *HistoryDB) GetAllTokens() ([]TokenWithUSD, error) {
 	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), tracerr.Wrap(err)
 }
 
-// GetTokenSymbols returns all the token symbols from the DB
-func (hdb *HistoryDB) GetTokenSymbols() ([]string, error) {
-	var tokenSymbols []string
-	rows, err := hdb.dbRead.Query("SELECT symbol FROM token;")
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	defer db.RowsClose(rows)
-	sym := new(string)
-	for rows.Next() {
-		err = rows.Scan(sym)
-		if err != nil {
-			return nil, tracerr.Wrap(err)
-		}
-		tokenSymbols = append(tokenSymbols, *sym)
-	}
-	return tokenSymbols, nil
+// GetTokenSymbolsAndAddrs returns all the token symbols and addresses from the DB
+func (hdb *HistoryDB) GetTokenSymbolsAndAddrs() ([]TokenSymbolAndAddr, error) {
+	var tokens []*TokenSymbolAndAddr
+	err := meddler.QueryAll(
+		hdb.dbRead, &tokens,
+		"SELECT symbol, eth_addr FROM token;",
+	)
+	return db.SlicePtrsToSlice(tokens).([]TokenSymbolAndAddr), tracerr.Wrap(err)
 }
 
 // AddAccounts insert accounts into the DB
