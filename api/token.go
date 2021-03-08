@@ -53,7 +53,7 @@ func (a *API) getTokens(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type tokensResponse struct {
 		Tokens       []historydb.TokenWithUSD `json:"tokens"`
 		PendingItems uint64                   `json:"pendingItems"`

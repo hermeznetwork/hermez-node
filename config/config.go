@@ -73,7 +73,7 @@ type Coordinator struct {
 	// checking the next block), used to decide when to stop scheduling new
 	// batches (by stopping the pipeline).
 	// For example, if we are at block 10 and ScheduleBatchBlocksAheadCheck
-	// is 5, eventhough at block 11 we canForge, the pipeline will be
+	// is 5, even though at block 11 we canForge, the pipeline will be
 	// stopped if we can't forge at block 15.
 	// This value should be the expected number of blocks it takes between
 	// scheduling a batch and having it mined.
@@ -83,7 +83,7 @@ type Coordinator struct {
 	// from the next block; used to decide when to stop sending batches to
 	// the smart contract.
 	// For example, if we are at block 10 and SendBatchBlocksMarginCheck is
-	// 5, eventhough at block 11 we canForge, the batch will be discarded
+	// 5, even though at block 11 we canForge, the batch will be discarded
 	// if we can't forge at block 15.
 	SendBatchBlocksMarginCheck int64
 	// ProofServerPollInterval is the waiting interval between polling the
@@ -126,7 +126,7 @@ type Coordinator struct {
 		// L2Txs is reached, L2Txs older than TTL will be deleted.
 		TTL Duration `validate:"required"`
 		// PurgeBatchDelay is the delay between batches to purge
-		// outdated transactions.  Oudated L2Txs are those that have
+		// outdated transactions. Outdated L2Txs are those that have
 		// been forged or marked as invalid for longer than the
 		// SafetyPeriod and pending L2Txs that have been in the pool
 		// for longer than TTL once there are MaxTxs.
@@ -136,7 +136,7 @@ type Coordinator struct {
 		// nonce.
 		InvalidateBatchDelay int64 `validate:"required"`
 		// PurgeBlockDelay is the delay between blocks to purge
-		// outdated transactions.  Oudated L2Txs are those that have
+		// outdated transactions. Outdated L2Txs are those that have
 		// been forged or marked as invalid for longer than the
 		// SafetyPeriod and pending L2Txs that have been in the pool
 		// for longer than TTL once there are MaxTxs.
@@ -168,7 +168,7 @@ type Coordinator struct {
 		MaxGasPrice *big.Int `validate:"required"`
 		// GasPriceIncPerc is the percentage increase of gas price set
 		// in an ethereum transaction from the suggested gas price by
-		// the ehtereum node
+		// the ethereum node
 		GasPriceIncPerc int64
 		// CheckLoopInterval is the waiting interval between receipt
 		// checks of ethereum transactions in the TxManager

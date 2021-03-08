@@ -50,19 +50,19 @@ func parsePagination(c querier) (fromItem *uint, order string, limit *uint, err 
 	return fromItem, order, limit, nil
 }
 
-// nolint reason: res may be not overwriten
+// nolint reason: res may be not overwritten
 func parseQueryUint(name string, dflt *uint, min, max uint, c querier) (*uint, error) { //nolint:SA4009
 	str := c.Query(name)
 	return stringToUint(str, name, dflt, min, max)
 }
 
-// nolint reason: res may be not overwriten
+// nolint reason: res may be not overwritten
 func parseQueryInt64(name string, dflt *int64, min, max int64, c querier) (*int64, error) { //nolint:SA4009
 	str := c.Query(name)
 	return stringToInt64(str, name, dflt, min, max)
 }
 
-// nolint reason: res may be not overwriten
+// nolint reason: res may be not overwritten
 func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolint:SA4009
 	str := c.Query(name)
 	if str == "" {
@@ -295,13 +295,13 @@ func parseParamIdx(c paramer) (*common.Idx, error) {
 	return stringToIdx(idxStr, name)
 }
 
-// nolint reason: res may be not overwriten
+// nolint reason: res may be not overwritten
 func parseParamUint(name string, dflt *uint, min, max uint, c paramer) (*uint, error) { //nolint:SA4009
 	str := c.Param(name)
 	return stringToUint(str, name, dflt, min, max)
 }
 
-// nolint reason: res may be not overwriten
+// nolint reason: res may be not overwritten
 func parseParamInt64(name string, dflt *int64, min, max int64, c paramer) (*int64, error) { //nolint:SA4009
 	str := c.Param(name)
 	return stringToInt64(str, name, dflt, min, max)

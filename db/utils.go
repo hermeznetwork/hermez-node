@@ -93,8 +93,8 @@ type APIConnectionController struct {
 	timeout time.Duration
 }
 
-// NewAPICnnectionController initialize APIConnectionController
-func NewAPICnnectionController(maxConnections int, timeout time.Duration) *APIConnectionController {
+// NewAPIConnectionController initialize APIConnectionController
+func NewAPIConnectionController(maxConnections int, timeout time.Duration) *APIConnectionController {
 	return &APIConnectionController{
 		smphr:   semaphore.NewWeighted(int64(maxConnections)),
 		timeout: timeout,

@@ -503,7 +503,7 @@ func (t *TxManager) Run(ctx context.Context) {
 				// Our ethNode is giving an error different
 				// than "not found" when getting the receipt
 				// for the transaction, so we can't figure out
-				// if it was not mined, mined and succesfull or
+				// if it was not mined, mined and successful or
 				// mined and failed.  This could be due to the
 				// ethNode failure.
 				t.coord.SendMsg(ctx, MsgStopPipeline{
@@ -568,7 +568,7 @@ func (t *TxManager) removeBadBatchInfos(ctx context.Context) error {
 			// Our ethNode is giving an error different
 			// than "not found" when getting the receipt
 			// for the transaction, so we can't figure out
-			// if it was not mined, mined and succesfull or
+			// if it was not mined, mined and successful or
 			// mined and failed.  This could be due to the
 			// ethNode failure.
 			next++

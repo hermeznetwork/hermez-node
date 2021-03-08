@@ -201,7 +201,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	apiConnCon := db.NewAPICnnectionController(1, time.Second)
+	apiConnCon := db.NewAPIConnectionController(1, time.Second)
 	hdb := historydb.NewHistoryDB(database, database, apiConnCon)
 	if err != nil {
 		panic(err)
@@ -260,7 +260,7 @@ func TestMain(m *testing.M) {
 	// Reset DB
 	test.WipeDB(api.h.DB())
 
-	// Genratre blockchain data with til
+	// Generate blockchain data with til
 	tcc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
 	tilCfgExtra := til.ConfigExtra{
 		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
@@ -512,7 +512,7 @@ func TestMain(m *testing.M) {
 		WithdrawalDelay: uint64(3000),
 	}
 
-	// Generate test data, as expected to be received/sended from/to the API
+	// Generate test data, as expected to be received/sent from/to the API
 	testCoords := genTestCoordinators(commonCoords)
 	testBids := genTestBids(commonBlocks, testCoords, bids)
 	testExits := genTestExits(commonExitTree, testTokens, commonAccounts)
@@ -599,7 +599,7 @@ func TestTimeout(t *testing.T) {
 	pass := os.Getenv("POSTGRES_PASS")
 	databaseTO, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
-	apiConnConTO := db.NewAPICnnectionController(1, 100*time.Millisecond)
+	apiConnConTO := db.NewAPIConnectionController(1, 100*time.Millisecond)
 	hdbTO := historydb.NewHistoryDB(databaseTO, databaseTO, apiConnConTO)
 	require.NoError(t, err)
 	// L2DB

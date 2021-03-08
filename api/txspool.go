@@ -51,7 +51,7 @@ func (a *API) getPoolTx(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
-	// Build succesfull response
+	// Build successful response
 	c.JSON(http.StatusOK, tx)
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-// SlotAPI is a repesentation of a slot information
+// SlotAPI is a representation of a slot information
 type SlotAPI struct {
 	ItemID      uint64            `json:"itemId"`
 	SlotNum     int64             `json:"slotNum"`
@@ -316,7 +316,7 @@ func (a *API) getSlots(c *gin.Context) {
 		return
 	}
 
-	// Build succesfull response
+	// Build successful response
 	type slotsResponse struct {
 		Slots        []SlotAPI `json:"slots"`
 		PendingItems uint64    `json:"pendingItems"`

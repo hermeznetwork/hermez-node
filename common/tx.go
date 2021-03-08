@@ -88,7 +88,7 @@ func (txid TxID) MarshalText() ([]byte, error) {
 	return []byte(txid.String()), nil
 }
 
-// UnmarshalText unmarshals a TxID
+// UnmarshalText unmarshalls a TxID
 func (txid *TxID) UnmarshalText(data []byte) error {
 	idStr := string(data)
 	id, err := NewTxIDFromString(idStr)

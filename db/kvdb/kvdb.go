@@ -316,7 +316,7 @@ func (k *KVDB) ResetFromSynchronizer(batchNum common.BatchNum, synchronizerKVDB 
 
 	checkpointPath := path.Join(k.cfg.Path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))
 
-	// copy synchronizer'BatchNumX' to 'BatchNumX'
+	// copy synchronizer 'BatchNumX' to 'BatchNumX'
 	if err := synchronizerKVDB.MakeCheckpointFromTo(batchNum, checkpointPath); err != nil {
 		return tracerr.Wrap(err)
 	}

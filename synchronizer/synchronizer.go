@@ -31,7 +31,7 @@ var (
 	ErrUnknownBlock = fmt.Errorf("unknown block")
 )
 
-// Stats of the syncrhonizer
+// Stats of the synchronizer
 type Stats struct {
 	Eth struct {
 		RefreshPeriod time.Duration
@@ -347,7 +347,7 @@ func (s *Synchronizer) setSlotCoordinator(slot *common.Slot) error {
 }
 
 // updateCurrentSlot updates the slot with information of the current slot.
-// The information abouth which coordinator is allowed to forge is only updated
+// The information about which coordinator is allowed to forge is only updated
 // when we are Synced.
 // hasBatch is true when the last synced block contained at least one batch.
 func (s *Synchronizer) updateCurrentSlot(slot *common.Slot, reset bool, hasBatch bool) error {
@@ -400,7 +400,7 @@ func (s *Synchronizer) updateCurrentSlot(slot *common.Slot, reset bool, hasBatch
 }
 
 // updateNextSlot updates the slot with information of the next slot.
-// The information abouth which coordinator is allowed to forge is only updated
+// The information about which coordinator is allowed to forge is only updated
 // when we are Synced.
 func (s *Synchronizer) updateNextSlot(slot *common.Slot) error {
 	// We want the next block because the current one is already mined
@@ -503,9 +503,9 @@ func (s *Synchronizer) resetIntermediateState() error {
 	return nil
 }
 
-// Sync attems to synchronize an ethereum block starting from lastSavedBlock.
+// Sync attempts to synchronize an ethereum block starting from lastSavedBlock.
 // If lastSavedBlock is nil, the lastSavedBlock value is obtained from de DB.
-// If a block is synched, it will be returned and also stored in the DB.  If a
+// If a block is synced, it will be returned and also stored in the DB.  If a
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
 // TODO: Be smart about locking: only lock during the read/write operations
@@ -558,7 +558,7 @@ func (s *Synchronizer) Sync(ctx context.Context,
 		"ethLastBlock", s.stats.Eth.LastBlock,
 	)
 
-	// Check that the obtianed ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
+	// Check that the obtained ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
 	if lastSavedBlock != nil {
 		if lastSavedBlock.Hash != ethBlock.ParentHash {
 			// Reorg detected
@@ -578,7 +578,7 @@ func (s *Synchronizer) Sync(ctx context.Context,
 		// If there was an error during sync, reset to the last block
 		// in the historyDB because the historyDB is written last in
 		// the Sync method and is the source of consistency.  This
-		// allows reseting the stateDB in the case a batch was
+		// allows resetting the stateDB in the case a batch was
 		// processed but the historyDB block was not committed due to an
 		// error.
 		if err != nil {
@@ -818,7 +818,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 	return nil
 }
 
-// rollupSync retreives all the Rollup Smart Contract Data that happened at
+// rollupSync retrieves all the Rollup Smart Contract Data that happened at
 // ethBlock.blockNum with ethBlock.Hash.
 func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, error) {
 	blockNum := ethBlock.Num

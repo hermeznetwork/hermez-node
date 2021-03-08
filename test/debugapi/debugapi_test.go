@@ -51,7 +51,7 @@ func TestDebugAPI(t *testing.T) {
 	require.Nil(t, err)
 
 	addr := "localhost:12345"
-	// We won't test the sync/stats endpoint, so we can se the Syncrhonizer to nil
+	// We won't test the sync/stats endpoint, so we can se the synchronizer to nil
 	debugAPI := NewDebugAPI(addr, sdb, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
