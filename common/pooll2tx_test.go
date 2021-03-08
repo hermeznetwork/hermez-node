@@ -162,7 +162,7 @@ func TestHashToSign(t *testing.T) {
 	}
 	toSign, err := tx.HashToSign(chainID)
 	assert.NoError(t, err)
-	assert.Equal(t, "2d49ce1d4136e06f64e3eb1f79a346e6ee3e93ceeac909a57806a8d87005c263",
+	assert.Equal(t, "0b8abaf6b7933464e4450df2514da8b72606c02bf7f89bf6e54816fbda9d9d57",
 		hex.EncodeToString(toSign.Bytes()))
 }
 
@@ -185,7 +185,7 @@ func TestVerifyTxSignature(t *testing.T) {
 	toSign, err := tx.HashToSign(chainID)
 	assert.NoError(t, err)
 	assert.Equal(t,
-		"1571327027383224465388301747239444557034990637650927918405777653988509342917",
+		"3144939470626721092564692894890580265754250231349521601298746071096761507003",
 		toSign.String())
 
 	sig := sk.SignPoseidon(toSign)
@@ -213,7 +213,7 @@ func TestVerifyTxSignatureEthAddrWith0(t *testing.T) {
 
 	sig := sk.SignPoseidon(toSign)
 	assert.Equal(t,
-		"93ce988ecac87908513648d0d021d8ad56d3b504eb38204200f07a8f6c20551de9951397d3051143d4c71203205f8849cd7382d2bcf4bd10092c1e052bb40d01",
+		"f208b8298d5f37148ac3c0c03703272ea47b9f836851bcf8dd5f7e4e3b336ca1d2f6e92ad85dc25f174daf7a0abfd5f71dead3f059b783f4c4b2f56a18a47000",
 		sig.Compress().String(),
 	)
 	tx.Signature = sig.Compress()
