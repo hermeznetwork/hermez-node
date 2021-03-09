@@ -8,10 +8,31 @@ SQLConnectionTimeout = "2s"
 
 [PriceUpdater]
 Interval = "10s"
-URL = "https://api-pub.bitfinex.com/v2/"
-Type = "bitfinexV2"
-# URL = "https://api.coingecko.com/api/v3/"
-# Type = "coingeckoV3"
+URLBitfinexV2 = "https://api-pub.bitfinex.com/v2/"
+URLCoinGeckoV3 = "https://api.coingecko.com/api/v3/"
+# Available update methods:
+# - coingeckoV3 (recommended): get price by SC addr using coingecko API
+# - bitfinexV2: get price by token symbol using bitfinex API
+# - static (recommended for blacklisting tokens): use the given StaticValue to set the price (if not provided 0 will be used)
+# - ignore: don't update the price leave it as it is on the DB
+DefaultUpdateMethod = "coingeckoV3" # Update method used for all the tokens registered on the network, and not listed in [[PriceUpdater.TokensConfig]]
+[[PriceUpdater.TokensConfig]]
+UpdateMethod = "bitfinexV2"
+Symbol = "USDT"
+Addr = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+[[PriceUpdater.TokensConfig]]
+UpdateMethod = "coingeckoV3"
+Symbol = "ETH"
+Addr = "0x0000000000000000000000000000000000000000"
+[[PriceUpdater.TokensConfig]]
+UpdateMethod = "static"
+Symbol = "UNI"
+Addr = "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
+StaticValue = 30.12
+[[PriceUpdater.TokensConfig]]
+UpdateMethod = "ignore"
+Symbol = "SUSHI"
+Addr = "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2"
 
 [Debug]
 APIAddress = "localhost:12345"

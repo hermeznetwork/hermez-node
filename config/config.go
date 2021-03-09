@@ -9,6 +9,7 @@ import (
 	"github.com/BurntSushi/toml"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"gopkg.in/go-playground/validator.v9"
@@ -219,11 +220,15 @@ type Coordinator struct {
 type Node struct {
 	PriceUpdater struct {
 		// Interval between price updater calls
-		Interval Duration `valudate:"required"`
-		// URL of the token prices provider
-		URL string `valudate:"required"`
-		// Type of the API of the token prices provider
-		Type string `valudate:"required"`
+		Interval Duration `validate:"required"`
+		// URLBitfinexV2 is the URL of bitfinex V2 API
+		URLBitfinexV2 string `validate:"required"`
+		// URLCoinGeckoV3 is the URL of coingecko V3 API
+		URLCoinGeckoV3 string `validate:"required"`
+		// DefaultUpdateMethod to get token prices
+		DefaultUpdateMethod priceupdater.UpdateMethodType `validate:"required"`
+		// TokensConfig to specify how each token get it's price updated
+		TokensConfig []priceupdater.TokenConfig
 	} `validate:"required"`
 	StateDB struct {
 		// Path where the synchronizer StateDB is stored

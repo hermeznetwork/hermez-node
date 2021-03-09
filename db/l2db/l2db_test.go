@@ -121,7 +121,7 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 			}
 			tokens[token.TokenID] = readToken
 			// Set value to the tokens
-			err := historyDB.UpdateTokenValue(readToken.Symbol, *readToken.USD)
+			err := historyDB.UpdateTokenValue(readToken.EthAddr, *readToken.USD)
 			if err != nil {
 				return tracerr.Wrap(err)
 			}

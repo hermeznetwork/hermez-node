@@ -166,7 +166,7 @@ func TestBatches(t *testing.T) {
 			if i%2 != 0 {
 				// Set value to the token
 				value := (float64(i) + 5) * 5.389329
-				assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
+				assert.NoError(t, historyDB.UpdateTokenValue(token.EthAddr, value))
 				tokensValue[token.TokenID] = value / math.Pow(10, float64(token.Decimals))
 			}
 		}
@@ -276,7 +276,7 @@ func TestTokens(t *testing.T) {
 	// Update token value
 	for i, token := range tokens {
 		value := 1.01 * float64(i)
-		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
+		assert.NoError(t, historyDB.UpdateTokenValue(token.EthAddr, value))
 	}
 	// Fetch tokens
 	fetchedTokens, err = historyDB.GetTokensTest()
@@ -302,7 +302,7 @@ func TestTokensUTF8(t *testing.T) {
 	// Generate fake tokens
 	const nTokens = 5
 	tokens, ethToken := test.GenTokens(nTokens, blocks)
-	nonUTFTokens := make([]common.Token, len(tokens)+1)
+	nonUTFTokens := make([]common.Token, len(tokens))
 	// Force token.name and token.symbol to be non UTF-8 Strings
 	for i, token := range tokens {
 		token.Name = fmt.Sprint("NON-UTF8-NAME-\xc5-", i)
@@ -332,7 +332,7 @@ func TestTokensUTF8(t *testing.T) {
 	// Update token value
 	for i, token := range nonUTFTokens {
 		value := 1.01 * float64(i)
-		assert.NoError(t, historyDB.UpdateTokenValue(token.Symbol, value))
+		assert.NoError(t, historyDB.UpdateTokenValue(token.EthAddr, value))
 	}
 	// Fetch tokens
 	fetchedTokens, err = historyDB.GetTokensTest()

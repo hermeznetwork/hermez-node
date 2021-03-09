@@ -306,7 +306,7 @@ func TestMain(m *testing.M) {
 		USD:         &ethUSD,
 		USDUpdate:   &ethNow,
 	})
-	err = api.h.UpdateTokenValue(test.EthToken.Symbol, ethUSD)
+	err = api.h.UpdateTokenValue(common.EmptyAddr, ethUSD)
 	if err != nil {
 		panic(err)
 	}
@@ -333,7 +333,7 @@ func TestMain(m *testing.M) {
 			token.USD = &value
 			token.USDUpdate = &now
 			// Set value in DB
-			err = api.h.UpdateTokenValue(token.Symbol, value)
+			err = api.h.UpdateTokenValue(token.EthAddr, value)
 			if err != nil {
 				panic(err)
 			}
