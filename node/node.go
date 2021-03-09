@@ -220,7 +220,19 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		return nil, tracerr.Wrap(err)
 	}
 
-	sync, err := synchronizer.NewSynchronizer(client, historyDB, stateDB, synchronizer.Config{
+	var l2DB *l2db.L2DB
+	if mode == ModeCoordinator {
+		l2DB = l2db.NewL2DB(
+			dbRead, dbWrite,
+			cfg.Coordinator.L2DB.SafetyPeriod,
+			cfg.Coordinator.L2DB.MaxTxs,
+			cfg.Coordinator.L2DB.MinFeeUSD,
+			cfg.Coordinator.L2DB.TTL.Duration,
+			apiConnCon,
+		)
+	}
+
+	sync, err := synchronizer.NewSynchronizer(client, historyDB, l2DB, stateDB, synchronizer.Config{
 		StatsRefreshPeriod: cfg.Synchronizer.StatsRefreshPeriod.Duration,
 		ChainID:            chainIDU16,
 	})
@@ -236,17 +248,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 
 	var coord *coordinator.Coordinator
-	var l2DB *l2db.L2DB
 	if mode == ModeCoordinator {
-		l2DB = l2db.NewL2DB(
-			dbRead, dbWrite,
-			cfg.Coordinator.L2DB.SafetyPeriod,
-			cfg.Coordinator.L2DB.MaxTxs,
-			cfg.Coordinator.L2DB.MinFeeUSD,
-			cfg.Coordinator.L2DB.TTL.Duration,
-			apiConnCon,
-		)
-
 		// Unlock FeeAccount EthAddr in the keystore to generate the
 		// account creation authorization
 		if !keyStore.HasAddress(cfg.Coordinator.FeeAccount.Address) {

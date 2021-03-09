@@ -15,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/test"
@@ -303,7 +304,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB) {
+func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB, *l2db.L2DB) {
 	// Int State DB
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
@@ -321,7 +322,10 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB) {
 	// Clear DB
 	test.WipeDB(historyDB.DB())
 
-	return stateDB, historyDB
+	// Init L2 DB
+	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 24*time.Hour, nil)
+
+	return stateDB, historyDB, l2DB
 }
 
 func newBigInt(s string) *big.Int {
@@ -337,7 +341,7 @@ func TestSyncGeneral(t *testing.T) {
 	// Setup
 	//
 
-	stateDB, historyDB := newTestModules(t)
+	stateDB, historyDB, l2DB := newTestModules(t)
 
 	// Init eth client
 	var timer timer
@@ -347,7 +351,7 @@ func TestSyncGeneral(t *testing.T) {
 	client := test.NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 
 	// Create Synchronizer
-	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
+	s, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
 		StatsRefreshPeriod: 0 * time.Second,
 	})
 	require.NoError(t, err)
@@ -727,7 +731,7 @@ func TestSyncGeneral(t *testing.T) {
 }
 
 func TestSyncForgerCommitment(t *testing.T) {
-	stateDB, historyDB := newTestModules(t)
+	stateDB, historyDB, l2DB := newTestModules(t)
 
 	// Init eth client
 	var timer timer
@@ -740,7 +744,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 	client := test.NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
 
 	// Create Synchronizer
-	s, err := NewSynchronizer(client, historyDB, stateDB, Config{
+	s, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
 		StatsRefreshPeriod: 0 * time.Second,
 	})
 	require.NoError(t, err)
@@ -840,7 +844,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 		require.True(t, stats.Synced())
 		syncCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
 
-		s2, err := NewSynchronizer(client, historyDB, stateDB, Config{
+		s2, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
 			StatsRefreshPeriod: 0 * time.Second,
 		})
 		require.NoError(t, err)

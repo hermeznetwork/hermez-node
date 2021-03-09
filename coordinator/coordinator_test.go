@@ -206,7 +206,7 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 
 func newTestSynchronizer(t *testing.T, ethClient *test.Client, ethClientSetup *test.ClientSetup,
 	modules modules) *synchronizer.Synchronizer {
-	sync, err := synchronizer.NewSynchronizer(ethClient, modules.historyDB, modules.stateDB,
+	sync, err := synchronizer.NewSynchronizer(ethClient, modules.historyDB, modules.l2DB, modules.stateDB,
 		synchronizer.Config{
 			StatsRefreshPeriod: 0 * time.Second,
 		})

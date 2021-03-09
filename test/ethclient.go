@@ -1897,12 +1897,16 @@ func (c *Client) CtlAddBlocks(blocks []common.BlockData) (err error) {
 		}
 		c.CtlSetAddr(auction.Vars.BootCoordinator)
 		for _, batch := range block.Rollup.Batches {
+			auths := make([][]byte, len(batch.L1CoordinatorTxs))
+			for i := range auths {
+				auths[i] = make([]byte, 65)
+			}
 			if _, err := c.RollupForgeBatch(&eth.RollupForgeBatchArgs{
 				NewLastIdx:            batch.Batch.LastIdx,
 				NewStRoot:             batch.Batch.StateRoot,
 				NewExitRoot:           batch.Batch.ExitRoot,
 				L1CoordinatorTxs:      batch.L1CoordinatorTxs,
-				L1CoordinatorTxsAuths: [][]byte{}, // Intentionally empty
+				L1CoordinatorTxsAuths: auths,
 				L2TxsData:             batch.L2Txs,
 				FeeIdxCoordinator:     batch.Batch.FeeIdxsCoordinator,
 				// Circuit selector

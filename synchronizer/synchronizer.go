@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -215,6 +216,7 @@ type Synchronizer struct {
 	ethClient        eth.ClientInterface
 	consts           SCConsts
 	historyDB        *historydb.HistoryDB
+	l2DB             *l2db.L2DB
 	stateDB          *statedb.StateDB
 	cfg              Config
 	initVars         SCVariables
@@ -226,7 +228,7 @@ type Synchronizer struct {
 
 // NewSynchronizer creates a new Synchronizer
 func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.HistoryDB,
-	stateDB *statedb.StateDB, cfg Config) (*Synchronizer, error) {
+	l2DB *l2db.L2DB, stateDB *statedb.StateDB, cfg Config) (*Synchronizer, error) {
 	auctionConstants, err := ethClient.AuctionConstants()
 	if err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("NewSynchronizer ethClient.AuctionConstants(): %w",
@@ -271,6 +273,7 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 		ethClient:     ethClient,
 		consts:        consts,
 		historyDB:     historyDB,
+		l2DB:          l2DB,
 		stateDB:       stateDB,
 		cfg:           cfg,
 		initVars:      *initVars,
@@ -657,7 +660,7 @@ func (s *Synchronizer) Sync(ctx context.Context,
 	if len(rollupData.Batches) > 0 {
 		hasBatch = true
 	}
-	if err := s.updateCurrentNextSlotIfSync(false, hasBatch); err != nil {
+	if err = s.updateCurrentNextSlotIfSync(false, hasBatch); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
@@ -895,6 +898,9 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 			position = len(l1UserTxs)
 		}
+
+		l1TxsAuth := make([]common.AccountCreationAuth,
+			0, len(forgeBatchArgs.L1CoordinatorTxsAuths))
 		// Get L1 Coordinator Txs
 		for i := range forgeBatchArgs.L1CoordinatorTxs {
 			l1CoordinatorTx := forgeBatchArgs.L1CoordinatorTxs[i]
@@ -910,7 +916,28 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 			batchData.L1CoordinatorTxs = append(batchData.L1CoordinatorTxs, *l1Tx)
 			position++
+
+			// Create a slice of account creation auth to be
+			// inserted later if not exists
+			if l1CoordinatorTx.FromEthAddr != common.RollupConstEthAddressInternalOnly {
+				l1CoordinatorTxAuth := forgeBatchArgs.L1CoordinatorTxsAuths[i]
+				l1TxsAuth = append(l1TxsAuth, common.AccountCreationAuth{
+					EthAddr:   l1CoordinatorTx.FromEthAddr,
+					BJJ:       l1CoordinatorTx.FromBJJ,
+					Signature: l1CoordinatorTxAuth,
+				})
+			}
+
 			// fmt.Println("DGB l1coordtx")
+		}
+
+		// Insert the slice of account creation auth
+		// only if the node run as a coordinator
+		if s.l2DB != nil && len(l1TxsAuth) > 0 {
+			err = s.l2DB.AddManyAccountCreationAuth(l1TxsAuth)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
 		}
 
 		// Insert all the txs forged in this batch (l1UserTxs,
