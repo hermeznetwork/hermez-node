@@ -11,8 +11,8 @@ require (
 	github.com/gin-gonic/gin v1.5.0
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/hermeznetwork/tracerr v0.3.1-0.20210120162744-5da60b576169
-	github.com/iden3/go-iden3-crypto v0.0.6-0.20201221160344-58e589b6eb4c
-	github.com/iden3/go-merkletree v0.0.0-20210119155851-bb53e6ad1a12
+	github.com/iden3/go-iden3-crypto v0.0.6-0.20210308142348-8f85683b2cef
+	github.com/iden3/go-merkletree v0.0.0-20210308143313-8b63ca866189
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0

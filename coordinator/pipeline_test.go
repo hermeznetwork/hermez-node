@@ -140,7 +140,7 @@ func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchr
 	blocks[0].Rollup.Batches[0].Batch.StateRoot =
 		newBigInt("0")
 	blocks[0].Rollup.Batches[1].Batch.StateRoot =
-		newBigInt("10941365282189107056349764238909072001483688090878331371699519307087372995595")
+		newBigInt("6860514559199319426609623120853503165917774887908204288119245630904770452486")
 
 	ethAddTokens(blocks, ethClient)
 	err = ethClient.CtlAddBlocks(blocks)

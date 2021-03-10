@@ -85,7 +85,7 @@ func TestDebugAPI(t *testing.T) {
 	require.Nil(t, err)
 	// Testing against a hardcoded value obtained by running the test and
 	// printing the value previously.
-	assert.Equal(t, "21765339739823365993496282904432398015268846626944509989242908567129545640185",
+	assert.Equal(t, "5705124827515775272209811244650636195377535115082365089650934878384850534213",
 		mtroot.String())
 
 	var accountAPI common.Account

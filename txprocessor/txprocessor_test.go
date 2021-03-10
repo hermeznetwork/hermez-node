@@ -251,7 +251,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	assert.Equal(t,
-		"13644148972047617726265275926674266298636745191961029124811988256139761111521",
+		"10303926118213025243660668481827257778714122989909761705455084995854999537039",
 		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:4")
@@ -262,7 +262,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
 	assert.Equal(t,
-		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
+		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
 		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:5")
@@ -273,7 +273,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
 	assert.Equal(t,
-		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
+		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
 		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:6")
@@ -285,7 +285,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "A", 1, "500")
 	checkBalance(t, tc, sdb, "B", 0, "400")
 	assert.Equal(t,
-		"4191361650490017591061467288209836928064232431729236465872209988325272262963",
+		"9061858435528794221929846392270405504056106238451760714188625065949729889651",
 		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs := []common.Idx{261, 262}
@@ -303,7 +303,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 0, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
 	assert.Equal(t,
-		"7614010373759339299470010949167613050707822522530721724565424494781010548240",
+		"3844339393304253264418296322137281996442345663805792718218845145754742722151",
 		tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:8")
@@ -321,7 +321,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "800")
 	assert.Equal(t,
-		"21231789250434471575486264439945776732824482207853465397552873521865656677689",
+		"2537294203394018451170116789946369404362093672592091326351037700505720139801",
 		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{262}
@@ -340,7 +340,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "470")
 	assert.Equal(t,
-		"11289313644810782435120113035387729451095637380468777086895109386127538554246",
+		"13463929859122729344499006353544877221550995454069650137270994940730475267399",
 		tp.s.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{}
@@ -350,7 +350,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"10342681351319338354912862547249967104198317571995055517008223832276478908482",
+		"21058792089669864857092637997959333050678445584244682889041632034478049099916",
 		tp.s.MT.Root().BigInt().String())
 
 	// use Set of PoolL2 txs
@@ -597,7 +597,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Equal(t, "2", acc.Balance.String())
 
 	assert.Equal(t,
-		"18894163991492573893706613133132363559300580460789469708968288074813925659539",
+		"18702154359941252155463263732782081721632595649781775986280568467618682348921",
 		sdb.MT.Root().BigInt().String())
 }
 
@@ -651,7 +651,7 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	_, err = tp.ProcessTxs(nil, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"9827704113668630072730115158977131501210702363656902211840117643154933433410",
+		"16181420716631932805604732887923905079487577323947343079740042260791593140221",
 		sdb.MT.Root().BigInt().String())
 }
 
@@ -1077,7 +1077,7 @@ func TestExitOf0Amount(t *testing.T) {
 	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"14329759303391468223438874789317921522067594445474390443816827472846339238908",
+		"17688031540912620894848983912708704736922099609001460827147265569563156468242",
 		ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	exitRootBatch4 := ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String()
 
@@ -1085,7 +1085,7 @@ func TestExitOf0Amount(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[5].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"14329759303391468223438874789317921522067594445474390443816827472846339238908",
+		"17688031540912620894848983912708704736922099609001460827147265569563156468242",
 		ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	// Expect that the ExitRoot for the Batch6 will be equal than for the
 	// Batch4, as the Batch4 & Batch6 have the same tx with Exit Amount=10,

@@ -144,10 +144,10 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 
 	// loop over the first 6 batches
 	expectedRoots := []string{"0", "0",
-		"13644148972047617726265275926674266298636745191961029124811988256139761111521",
-		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
-		"12433441613247342495680642890662773367605896324555599297255745922589338651261",
-		"4191361650490017591061467288209836928064232431729236465872209988325272262963"}
+		"10303926118213025243660668481827257778714122989909761705455084995854999537039",
+		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
+		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
+		"9061858435528794221929846392270405504056106238451760714188625065949729889651"}
 	for i := 0; i < 6; i++ {
 		log.Debugf("block:0 batch:%d", i+1)
 		var l1UserTxs []common.L1Tx
@@ -186,7 +186,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"7614010373759339299470010949167613050707822522530721724565424494781010548240",
+		"3844339393304253264418296322137281996442345663805792718218845145754742722151",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
@@ -215,7 +215,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"21231789250434471575486264439945776732824482207853465397552873521865656677689",
+		"2537294203394018451170116789946369404362093672592091326351037700505720139801",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
@@ -242,7 +242,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"11289313644810782435120113035387729451095637380468777086895109386127538554246",
+		"13463929859122729344499006353544877221550995454069650137270994940730475267399",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
@@ -264,7 +264,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	// same root as previous batch, as the L1CoordinatorTxs created by the
 	// Til set is not created by the TxSelector in this test
 	assert.Equal(t,
-		"11289313644810782435120113035387729451095637380468777086895109386127538554246",
+		"13463929859122729344499006353544877221550995454069650137270994940730475267399",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
@@ -325,12 +325,12 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"8737171572459172806192626402462788826264011087579491137542380589998149683116",
+		"3050252508378236752695438107925920517579600844238792454632938959089837319058",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	h, err := zki.HashGlobalData()
 	require.NoError(t, err)
 	assert.Equal(t,
-		"18608843755023673022528019960628191162333429206359207449879743919826610006009",
+		"136173330006576039857485697813777018179965431269591881328654192642028135989",
 		h.String())
 	sendProofAndCheckResp(t, zki)
 
@@ -353,12 +353,12 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"18306761925365215381387147754881756804475668085493847010988306480531520370130",
+		"2941150582529643425331223235752941075548157545257982041291886277157404095484",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	h, err = zki.HashGlobalData()
 	require.NoError(t, err)
 	assert.Equal(t,
-		"6651837443119278772088559395433504719862425648816904171510845286897104469889",
+		"11526955144859107275861838429358092025337347677758832533226842081116224550335",
 		h.String())
 	assert.Equal(t, common.EthAddrToBigInt(tc.Users["Coord"].Addr), zki.EthAddr3[0])
 	assert.Equal(t, "0", zki.EthAddr3[1].String())
