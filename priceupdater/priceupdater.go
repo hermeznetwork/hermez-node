@@ -20,57 +20,107 @@ const (
 	defaultIdleConnTimeout = 2 * time.Second
 )
 
-// APIType defines the token exchange API
-type APIType string
+// UpdateMethodType defines the token price update mechanism
+type UpdateMethodType string
 
 const (
-	// APITypeBitFinexV2 is the http API used by bitfinex V2
-	APITypeBitFinexV2 APIType = "bitfinexV2"
-	// APITypeCoingeckoV3 is the http API used by copingecko V3
-	APITypeCoingeckoV3 APIType = "coingeckoV3"
+	// UpdateMethodTypeBitFinexV2 is the http API used by bitfinex V2
+	UpdateMethodTypeBitFinexV2 UpdateMethodType = "bitfinexV2"
+	// UpdateMethodTypeCoingeckoV3 is the http API used by copingecko V3
+	UpdateMethodTypeCoingeckoV3 UpdateMethodType = "coingeckoV3"
+	// UpdateMethodTypeStatic is the value given by the configuration
+	UpdateMethodTypeStatic UpdateMethodType = "static"
+	// UpdateMethodTypeIgnore indicates to not update the value, to set value 0
+	// it's better to use UpdateMethodTypeStatic
+	UpdateMethodTypeIgnore UpdateMethodType = "ignore"
 )
 
-func (t *APIType) valid() bool {
+func (t *UpdateMethodType) valid() bool {
 	switch *t {
-	case APITypeBitFinexV2:
+	case UpdateMethodTypeBitFinexV2:
 		return true
-	case APITypeCoingeckoV3:
+	case UpdateMethodTypeCoingeckoV3:
+		return true
+	case UpdateMethodTypeStatic:
+		return true
+	case UpdateMethodTypeIgnore:
 		return true
 	default:
 		return false
 	}
 }
 
+// TokenConfig specifies how a single token get its price updated
+type TokenConfig struct {
+	UpdateMethod UpdateMethodType
+	StaticValue  float64 // required by UpdateMethodTypeStatic
+	Symbol       string
+	Addr         ethCommon.Address
+}
+
+func (t *TokenConfig) valid() bool {
+	if (t.Addr == common.EmptyAddr && t.Symbol != "ETH") ||
+		(t.Symbol == "" && t.UpdateMethod == UpdateMethodTypeBitFinexV2) {
+		return false
+	}
+	return t.UpdateMethod.valid()
+}
+
 // PriceUpdater definition
 type PriceUpdater struct {
-	db      *historydb.HistoryDB
-	apiURL  string
-	apiType APIType
-	tokens  []historydb.TokenSymbolAndAddr
+	db                  *historydb.HistoryDB
+	defaultUpdateMethod UpdateMethodType
+	tokensList          []historydb.TokenSymbolAndAddr
+	tokensConfig        map[ethCommon.Address]TokenConfig
+	clientCoingeckoV3   *sling.Sling
+	clientBitfinexV2    *sling.Sling
 }
 
 // NewPriceUpdater is the constructor for the updater
-func NewPriceUpdater(apiURL string, apiType APIType, db *historydb.HistoryDB) (*PriceUpdater,
-	error) {
-	if !apiType.valid() {
-		return nil, tracerr.Wrap(fmt.Errorf("Invalid apiType: %v", apiType))
+func NewPriceUpdater(
+	defaultUpdateMethodType UpdateMethodType,
+	tokensConfig []TokenConfig,
+	db *historydb.HistoryDB,
+	bitfinexV2URL, coingeckoV3URL string,
+) (*PriceUpdater, error) {
+	// Validate params
+	if !defaultUpdateMethodType.valid() || defaultUpdateMethodType == UpdateMethodTypeStatic {
+		return nil, tracerr.Wrap(
+			fmt.Errorf("Invalid defaultUpdateMethodType: %v", defaultUpdateMethodType),
+		)
 	}
+	tokensConfigMap := make(map[ethCommon.Address]TokenConfig)
+	for _, t := range tokensConfig {
+		if !t.valid() {
+			return nil, tracerr.Wrap(fmt.Errorf("Invalid tokensConfig, wrong entry: %+v", t))
+		}
+		tokensConfigMap[t.Addr] = t
+	}
+	// Init
+	tr := &http.Transport{
+		MaxIdleConns:       defaultMaxIdleConns,
+		IdleConnTimeout:    defaultIdleConnTimeout,
+		DisableCompression: true,
+	}
+	httpClient := &http.Client{Transport: tr}
 	return &PriceUpdater{
-		db:      db,
-		apiURL:  apiURL,
-		apiType: apiType,
-		tokens:  []historydb.TokenSymbolAndAddr{},
+		db:                  db,
+		defaultUpdateMethod: defaultUpdateMethodType,
+		tokensList:          []historydb.TokenSymbolAndAddr{},
+		tokensConfig:        tokensConfigMap,
+		clientCoingeckoV3:   sling.New().Base(coingeckoV3URL).Client(httpClient),
+		clientBitfinexV2:    sling.New().Base(bitfinexV2URL).Client(httpClient),
 	}, nil
 }
 
-func getTokenPriceBitfinex(ctx context.Context, client *sling.Sling,
-	tokenSymbol string) (float64, error) {
+func (p *PriceUpdater) getTokenPriceBitfinex(ctx context.Context, tokenSymbol string) (float64, error) {
 	state := [10]float64{}
-	req, err := client.New().Get("ticker/t" + tokenSymbol + "USD").Request()
+	url := "ticker/t" + tokenSymbol + "USD"
+	req, err := p.clientBitfinexV2.New().Get(url).Request()
 	if err != nil {
 		return 0, tracerr.Wrap(err)
 	}
-	res, err := client.Do(req.WithContext(ctx), &state, nil)
+	res, err := p.clientBitfinexV2.Do(req.WithContext(ctx), &state, nil)
 	if err != nil {
 		return 0, tracerr.Wrap(err)
 	}
@@ -80,8 +130,7 @@ func getTokenPriceBitfinex(ctx context.Context, client *sling.Sling,
 	return state[6], nil
 }
 
-func getTokenPriceCoingecko(ctx context.Context, client *sling.Sling,
-	tokenAddr ethCommon.Address) (float64, error) {
+func (p *PriceUpdater) getTokenPriceCoingecko(ctx context.Context, tokenAddr ethCommon.Address) (float64, error) {
 	responseObject := make(map[string]map[string]float64)
 	var url string
 	var id string
@@ -93,11 +142,11 @@ func getTokenPriceCoingecko(ctx context.Context, client *sling.Sling,
 		url = "simple/token_price/ethereum?contract_addresses=" +
 			id + "&vs_currencies=usd"
 	}
-	req, err := client.New().Get(url).Request()
+	req, err := p.clientCoingeckoV3.New().Get(url).Request()
 	if err != nil {
 		return 0, tracerr.Wrap(err)
 	}
-	res, err := client.Do(req.WithContext(ctx), &responseObject, nil)
+	res, err := p.clientCoingeckoV3.Do(req.WithContext(ctx), &responseObject, nil)
 	if err != nil {
 		return 0, tracerr.Wrap(err)
 	}
@@ -114,43 +163,50 @@ func getTokenPriceCoingecko(ctx context.Context, client *sling.Sling,
 // UpdatePrices is triggered by the Coordinator, and internally will update the
 // token prices in the db
 func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
-	tr := &http.Transport{
-		MaxIdleConns:       defaultMaxIdleConns,
-		IdleConnTimeout:    defaultIdleConnTimeout,
-		DisableCompression: true,
-	}
-	httpClient := &http.Client{Transport: tr}
-	client := sling.New().Base(p.apiURL).Client(httpClient)
-
-	for _, token := range p.tokens {
+	for _, token := range p.tokensConfig {
 		var tokenPrice float64
 		var err error
-		switch p.apiType {
-		case APITypeBitFinexV2:
-			tokenPrice, err = getTokenPriceBitfinex(ctx, client, token.Symbol)
-		case APITypeCoingeckoV3:
-			tokenPrice, err = getTokenPriceCoingecko(ctx, client, token.Addr)
+		switch token.UpdateMethod {
+		case UpdateMethodTypeBitFinexV2:
+			tokenPrice, err = p.getTokenPriceBitfinex(ctx, token.Symbol)
+		case UpdateMethodTypeCoingeckoV3:
+			tokenPrice, err = p.getTokenPriceCoingecko(ctx, token.Addr)
+		case UpdateMethodTypeStatic:
+			tokenPrice = token.StaticValue
+		case UpdateMethodTypeIgnore:
+			continue
 		}
 		if ctx.Err() != nil {
 			return
 		}
 		if err != nil {
 			log.Warnw("token price not updated (get error)",
-				"err", err, "token", token.Symbol, "apiType", p.apiType)
+				"err", err, "token", token.Symbol, "updateMethod", token.UpdateMethod)
 		}
-		if err = p.db.UpdateTokenValue(token.Symbol, tokenPrice); err != nil {
+		if err = p.db.UpdateTokenValue(token.Addr, tokenPrice); err != nil {
 			log.Errorw("token price not updated (db error)",
-				"err", err, "token", token.Symbol, "apiType", p.apiType)
+				"err", err, "token", token.Symbol, "updateMethod", token.UpdateMethod)
 		}
 	}
 }
 
 // UpdateTokenList get the registered token symbols from HistoryDB
 func (p *PriceUpdater) UpdateTokenList() error {
-	tokens, err := p.db.GetTokenSymbolsAndAddrs()
+	dbTokens, err := p.db.GetTokenSymbolsAndAddrs()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	p.tokens = tokens
+	// For each token from the DB
+	for _, dbToken := range dbTokens {
+		// If the token doesn't exists in the config list,
+		// add it with default update emthod
+		if _, ok := p.tokensConfig[dbToken.Addr]; !ok {
+			p.tokensConfig[dbToken.Addr] = TokenConfig{
+				UpdateMethod: p.defaultUpdateMethod,
+				Symbol:       dbToken.Symbol,
+				Addr:         dbToken.Addr,
+			}
+		}
+	}
 	return nil
 }

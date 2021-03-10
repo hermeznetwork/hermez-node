@@ -456,13 +456,10 @@ func (hdb *HistoryDB) addTokens(d meddler.DB, tokens []common.Token) error {
 
 // UpdateTokenValue updates the USD value of a token.  Value is the price in
 // USD of a normalized token (1 token = 10^decimals units)
-func (hdb *HistoryDB) UpdateTokenValue(tokenSymbol string, value float64) error {
-	// Sanitize symbol
-	tokenSymbol = strings.ToValidUTF8(tokenSymbol, " ")
-
+func (hdb *HistoryDB) UpdateTokenValue(tokenAddr ethCommon.Address, value float64) error {
 	_, err := hdb.dbWrite.Exec(
-		"UPDATE token SET usd = $1 WHERE symbol = $2;",
-		value, tokenSymbol,
+		"UPDATE token SET usd = $1 WHERE eth_addr = $2;",
+		value, tokenAddr,
 	)
 	return tracerr.Wrap(err)
 }
@@ -1161,7 +1158,7 @@ func (hdb *HistoryDB) GetTokensTest() ([]TokenWithUSD, error) {
 	tokens := []*TokenWithUSD{}
 	if err := meddler.QueryAll(
 		hdb.dbRead, &tokens,
-		"SELECT * FROM TOKEN",
+		"SELECT * FROM token ORDER BY token_id ASC",
 	); err != nil {
 		return nil, tracerr.Wrap(err)
 	}

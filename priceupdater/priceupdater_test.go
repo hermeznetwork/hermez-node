@@ -16,7 +16,9 @@ import (
 
 var historyDB *historydb.HistoryDB
 
-func TestMain(m *testing.M) {
+const usdtAddr = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+
+func TestPriceUpdaterBitfinex(t *testing.T) {
 	// Init DB
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
@@ -29,60 +31,113 @@ func TestMain(m *testing.M) {
 	// Populate DB
 	// Gen blocks and add them to DB
 	blocks := test.GenBlocks(1, 2)
-	err = historyDB.AddBlocks(blocks)
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, historyDB.AddBlocks(blocks))
 	// Gen tokens and add them to DB
-	tokens := []common.Token{}
-	tokens = append(tokens, common.Token{
-		TokenID:     1,
-		EthBlockNum: blocks[0].Num,
-		EthAddr:     ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f"),
-		Name:        "DAI",
-		Symbol:      "DAI",
-		Decimals:    18,
-	})
-	err = historyDB.AddTokens(tokens)
-	if err != nil {
-		panic(err)
+	tokens := []common.Token{
+		{
+			TokenID:     1,
+			EthBlockNum: blocks[0].Num,
+			EthAddr:     ethCommon.HexToAddress("0x1"),
+			Name:        "DAI",
+			Symbol:      "DAI",
+			Decimals:    18,
+		}, // Used to test get by SC addr
+		{
+			TokenID:     2,
+			EthBlockNum: blocks[0].Num,
+			EthAddr:     ethCommon.HexToAddress(usdtAddr),
+			Name:        "Tether",
+			Symbol:      "USDT",
+			Decimals:    18,
+		}, // Used to test get by token symbol
+		{
+			TokenID:     3,
+			EthBlockNum: blocks[0].Num,
+			EthAddr:     ethCommon.HexToAddress("0x2"),
+			Name:        "FOO",
+			Symbol:      "FOO",
+			Decimals:    18,
+		}, // Used to test ignore
+		{
+			TokenID:     4,
+			EthBlockNum: blocks[0].Num,
+			EthAddr:     ethCommon.HexToAddress("0x3"),
+			Name:        "BAR",
+			Symbol:      "BAR",
+			Decimals:    18,
+		}, // Used to test static
+		{
+			TokenID:     5,
+			EthBlockNum: blocks[0].Num,
+			EthAddr:     ethCommon.HexToAddress("0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"),
+			Name:        "Uniswap",
+			Symbol:      "UNI",
+			Decimals:    18,
+		}, // Used to test default
+	}
+	require.NoError(t, historyDB.AddTokens(tokens)) // ETH token exist in DB by default
+	// Update token price used to test ignore
+	ignoreValue := 44.44
+	require.NoError(t, historyDB.UpdateTokenValue(tokens[2].EthAddr, ignoreValue))
+
+	// Prepare token config
+	staticValue := 0.12345
+	tc := []TokenConfig{
+		// ETH and UNI tokens use default method
+		{ // DAI uses SC addr
+			UpdateMethod: UpdateMethodTypeBitFinexV2,
+			Addr:         ethCommon.HexToAddress("0x1"),
+			Symbol:       "DAI",
+		},
+		{ // USDT uses symbol
+			UpdateMethod: UpdateMethodTypeCoingeckoV3,
+			Addr:         ethCommon.HexToAddress(usdtAddr),
+		},
+		{ // FOO uses ignore
+			UpdateMethod: UpdateMethodTypeIgnore,
+			Addr:         ethCommon.HexToAddress("0x2"),
+		},
+		{ // BAR uses static
+			UpdateMethod: UpdateMethodTypeStatic,
+			Addr:         ethCommon.HexToAddress("0x3"),
+			StaticValue:  staticValue,
+		},
 	}
 
-	result := m.Run()
-	os.Exit(result)
-}
-
-func TestPriceUpdaterBitfinex(t *testing.T) {
+	bitfinexV2URL := "https://api-pub.bitfinex.com/v2/"
+	coingeckoV3URL := "https://api.coingecko.com/api/v3/"
 	// Init price updater
-	pu, err := NewPriceUpdater("https://api-pub.bitfinex.com/v2/", APITypeBitFinexV2, historyDB)
+	pu, err := NewPriceUpdater(
+		UpdateMethodTypeCoingeckoV3,
+		tc,
+		historyDB,
+		bitfinexV2URL,
+		coingeckoV3URL,
+	)
 	require.NoError(t, err)
 	// Update token list
-	assert.NoError(t, pu.UpdateTokenList())
+	require.NoError(t, pu.UpdateTokenList())
 	// Update prices
 	pu.UpdatePrices(context.Background())
-	assertTokenHasPriceAndClean(t)
-}
 
-func TestPriceUpdaterCoingecko(t *testing.T) {
-	// Init price updater
-	pu, err := NewPriceUpdater("https://api.coingecko.com/api/v3/", APITypeCoingeckoV3, historyDB)
-	require.NoError(t, err)
-	// Update token list
-	assert.NoError(t, pu.UpdateTokenList())
-	// Update prices
-	pu.UpdatePrices(context.Background())
-	assertTokenHasPriceAndClean(t)
-}
-
-func assertTokenHasPriceAndClean(t *testing.T) {
-	// Check that prices have been updated
+	// Check results: get tokens from DB
 	fetchedTokens, err := historyDB.GetTokensTest()
 	require.NoError(t, err)
-	// TokenID 0 (ETH) is always on the DB
-	assert.Equal(t, 2, len(fetchedTokens))
-	for _, token := range fetchedTokens {
-		require.NotNil(t, token.USD)
-		require.NotNil(t, token.USDUpdate)
-		assert.Greater(t, *token.USD, 0.0)
-	}
+	// Check that tokens that are updated via API have value:
+	// ETH
+	require.NotNil(t, fetchedTokens[0].USDUpdate)
+	assert.Greater(t, *fetchedTokens[0].USD, 0.0)
+	// DAI
+	require.NotNil(t, fetchedTokens[1].USDUpdate)
+	assert.Greater(t, *fetchedTokens[1].USD, 0.0)
+	// USDT
+	require.NotNil(t, fetchedTokens[2].USDUpdate)
+	assert.Greater(t, *fetchedTokens[2].USD, 0.0)
+	// UNI
+	require.NotNil(t, fetchedTokens[5].USDUpdate)
+	assert.Greater(t, *fetchedTokens[5].USD, 0.0)
+	// Check ignored token
+	assert.Equal(t, ignoreValue, *fetchedTokens[3].USD)
+	// Check static value
+	assert.Equal(t, staticValue, *fetchedTokens[4].USD)
 }

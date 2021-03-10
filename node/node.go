@@ -425,8 +425,13 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	if cfg.Debug.APIAddress != "" {
 		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB, sync)
 	}
-	priceUpdater, err := priceupdater.NewPriceUpdater(cfg.PriceUpdater.URL,
-		priceupdater.APIType(cfg.PriceUpdater.Type), historyDB)
+	priceUpdater, err := priceupdater.NewPriceUpdater(
+		cfg.PriceUpdater.DefaultUpdateMethod,
+		cfg.PriceUpdater.TokensConfig,
+		historyDB,
+		cfg.PriceUpdater.URLBitfinexV2,
+		cfg.PriceUpdater.URLCoinGeckoV3,
+	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
