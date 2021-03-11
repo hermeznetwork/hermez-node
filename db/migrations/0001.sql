@@ -677,12 +677,22 @@ CREATE TABLE node_info (
 );
 INSERT INTO node_info(item_id) VALUES (1); -- Always have a single row that we will update
 
+CREATE VIEW account_state AS SELECT DISTINCT idx,
+first_value(nonce) OVER w AS nonce,
+first_value(balance) OVER w AS balance,
+first_value(eth_block_num) OVER w AS eth_block_num,
+first_value(batch_num) OVER w AS batch_num
+FROM account_update
+window w AS (partition by idx ORDER BY item_id desc);
+
 -- +migrate Down
 -- triggers
 DROP TRIGGER IF EXISTS trigger_token_usd_update ON token;
 DROP TRIGGER IF EXISTS trigger_set_tx ON tx;
 DROP TRIGGER IF EXISTS trigger_forge_l1_txs ON batch;
 DROP TRIGGER IF EXISTS trigger_set_pool_tx ON tx_pool;
+-- drop views IF EXISTS
+DROP VIEW IF EXISTS account_state;
 -- functions
 DROP FUNCTION IF EXISTS hez_idx;
 DROP FUNCTION IF EXISTS set_token_usd_update;
