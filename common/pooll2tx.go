@@ -97,7 +97,7 @@ func (tx *PoolL2Tx) SetType() error {
 	} else if tx.ToIdx == 1 {
 		tx.Type = TxTypeExit
 	} else if tx.ToIdx == 0 {
-		if tx.ToBJJ != EmptyBJJComp && tx.ToEthAddr == FFAddr {
+		if tx.ToBJJ != EmptyBJJComp {
 			tx.Type = TxTypeTransferToBJJ
 		} else if tx.ToEthAddr != FFAddr && tx.ToEthAddr != EmptyAddr {
 			tx.Type = TxTypeTransferToEthAddr
