@@ -608,7 +608,7 @@ func (t *TxManager) removeBadBatchInfos(ctx context.Context) error {
 func (t *TxManager) canForgeAt(blockNum int64) bool {
 	return canForge(&t.consts.Auction, &t.vars.Auction,
 		&t.stats.Sync.Auction.CurrentSlot, &t.stats.Sync.Auction.NextSlot,
-		t.cfg.ForgerAddress, blockNum)
+		t.cfg.ForgerAddress, blockNum, t.stats.Sync.LastL1BatchBlock)
 }
 
 func (t *TxManager) mustL1L2Batch(blockNum int64) bool {
