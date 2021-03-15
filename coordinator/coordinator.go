@@ -318,7 +318,7 @@ func (c *Coordinator) syncSCVars(vars synchronizer.SCVariablesPtr) {
 }
 
 func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.AuctionVariables,
-	currentSlot *common.Slot, nextSlot *common.Slot, addr ethCommon.Address, blockNum int64, lastL1BatchBlock int64) bool {
+	currentSlot *common.Slot, nextSlot *common.Slot, addr ethCommon.Address, blockNum int64, lastBatchBlock int64) bool {
 	if blockNum < auctionConstants.GenesisBlockNum {
 		log.Infow("canForge: requested blockNum is < genesis", "blockNum", blockNum,
 			"genesis", auctionConstants.GenesisBlockNum)
@@ -338,14 +338,14 @@ func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.Auc
 	}
 	anyoneForge := false
 	if !slot.ForgerCommitment &&
-		lastL1BatchBlock < slot.StartBlock &&
+		lastBatchBlock < slot.StartBlock &&
 		auctionConstants.RelativeBlock(blockNum) >= int64(auctionVars.SlotDeadline) {
 		log.Debugw("canForge: anyone can forge in the current slot (slotDeadline passed)",
 			"block", blockNum,
 			"relativeBlock", auctionConstants.RelativeBlock(blockNum),
 			"slot.StartBlock", slot.StartBlock,
 			"SlotNum", slot.SlotNum,
-			"lastL1BatchBlock", lastL1BatchBlock,
+			"lastBatchBlock", lastBatchBlock,
 		)
 		anyoneForge = true
 	}
@@ -359,14 +359,14 @@ func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.Auc
 func (c *Coordinator) canForgeAt(blockNum int64) bool {
 	return canForge(&c.consts.Auction, &c.vars.Auction,
 		&c.stats.Sync.Auction.CurrentSlot, &c.stats.Sync.Auction.NextSlot,
-		c.cfg.ForgerAddress, blockNum, c.stats.Sync.LastL1BatchBlock)
+		c.cfg.ForgerAddress, blockNum, c.stats.Sync.LastBatch.EthBlockNum)
 }
 
 func (c *Coordinator) canForge() bool {
 	blockNum := c.stats.Eth.LastBlock.Num + 1
 	return canForge(&c.consts.Auction, &c.vars.Auction,
 		&c.stats.Sync.Auction.CurrentSlot, &c.stats.Sync.Auction.NextSlot,
-		c.cfg.ForgerAddress, blockNum, c.stats.Sync.LastL1BatchBlock)
+		c.cfg.ForgerAddress, blockNum, c.stats.Sync.LastBatch.EthBlockNum)
 }
 
 func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) error {
