@@ -732,13 +732,13 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
 	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
 		if tp.s.Type() == statedb.TypeSynchronizer {
-			// thisTypeould never be reached
+			// this in TypeSynchronizer should never be reached
 			log.Error("WARNING: In StateDB with Synchronizer mode L2.ToIdx can't be 0")
 			return nil, nil, false,
 				tracerr.Wrap(fmt.Errorf("In StateDB with Synchronizer mode L2.ToIdx can't be 0"))
 		}
-		// case when tx.Type== common.TxTypeTransferToEthAddr or common.TxTypeTransferToBJJ
-
+		// case when tx.Type == common.TxTypeTransferToEthAddr or
+		// common.TxTypeTransferToBJJ:
 		accSender, err := tp.s.GetAccount(tx.FromIdx)
 		if err != nil {
 			return nil, nil, false, tracerr.Wrap(err)

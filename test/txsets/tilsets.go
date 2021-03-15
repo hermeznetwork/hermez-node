@@ -212,6 +212,17 @@ PoolTransferToBJJ(1) A-C: 3 (1)
 // SetBlockchainMinimumFlow0 contains a set of transactions with a minimal flow
 var SetBlockchainMinimumFlow0 = `
 Type: Blockchain
+// Idxs:
+// 	256: A(0)
+// 	257: C(1)
+// 	258: A(1)
+// 	259: B(0)
+// 	260: D(0)
+// 	261: Coord(1)
+// 	262: Coord(0)
+// 	263: B(1)
+// 	264: C(0)
+// 	265: F(0)
 
 AddToken(1)
 
@@ -255,10 +266,11 @@ CreateAccountDeposit(0) D: 800
 //     C(0): 0
 
 // Coordinator creates needed accounts to receive Fees
-CreateAccountCoordinator(1) Coord
-CreateAccountCoordinator(0) Coord
 // Coordinator creates needed 'To' accounts for the L2Txs
+// sorted in the way that the TxSelector creates them
+CreateAccountCoordinator(1) Coord
 CreateAccountCoordinator(1) B
+CreateAccountCoordinator(0) Coord
 CreateAccountCoordinator(0) C
 
 
