@@ -378,9 +378,9 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, int64(1), stats.Eth.LastBlock.Num)
 	assert.Equal(t, int64(1), stats.Sync.LastBlock.Num)
 	vars := s.SCVars()
-	assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
-	assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
-	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
+	assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
+	assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
+	assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
 
 	dbBlocks, err := s.historyDB.GetAllBlocks()
 	require.NoError(t, err)
@@ -541,9 +541,9 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, int64(4), stats.Eth.LastBlock.Num)
 	assert.Equal(t, int64(4), stats.Sync.LastBlock.Num)
 	vars = s.SCVars()
-	assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
-	assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
-	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
+	assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
+	assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
+	assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
 
 	dbExits, err := s.historyDB.GetAllExits()
 	require.NoError(t, err)
@@ -673,9 +673,9 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, false, stats.Synced())
 	assert.Equal(t, int64(6), stats.Eth.LastBlock.Num)
 	vars = s.SCVars()
-	assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
-	assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
-	assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
+	assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
+	assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
+	assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
 
 	// At this point, the DB only has data up to block 1
 	dbBlock, err := s.historyDB.GetLastBlock()
@@ -712,9 +712,9 @@ func TestSyncGeneral(t *testing.T) {
 		}
 
 		vars = s.SCVars()
-		assert.Equal(t, clientSetup.RollupVariables, vars.Rollup)
-		assert.Equal(t, clientSetup.AuctionVariables, vars.Auction)
-		assert.Equal(t, clientSetup.WDelayerVariables, vars.WDelayer)
+		assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
+		assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
+		assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
 	}
 
 	dbBlock, err = s.historyDB.GetLastBlock()

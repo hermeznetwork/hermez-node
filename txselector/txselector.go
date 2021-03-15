@@ -148,17 +148,37 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 		discardedL2Txs, tracerr.Wrap(err)
 }
 
+// getL1L2TxSelection returns the selection of L1 + L2 txs.
+// It returns: the CoordinatorIdxs used to receive the fees of the selected
+// L2Txs. An array of bytearrays with the signatures of the
+// AccountCreationAuthorization of the accounts of the users created by the
+// Coordinator with L1CoordinatorTxs of those accounts that does not exist yet
+// but there is a transactions to them and the authorization of account
+// creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
+// included in the next batch.
 func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	// WIP.0: the TxSelector is not optimized and will need a redesign. The
 	// current version is implemented in order to have a functional
-	// implementation that can be used asap.
-	//
-	// WIP.1: this method uses a 'cherry-pick' of internal calls of the
-	// StateDB, a refactor of the StateDB to reorganize it internally is
-	// planned once the main functionallities are covered, with that
-	// refactor the TxSelector will be updated also.
+	// implementation that can be used ASAP.
+
+	// Steps of this method:
+	// - getPendingTxs
+	// - ProcessL1Txs
+	// - getProfitable (sort by fee & nonce)
+	// - loop over l2Txs
+	//         - Fill tx.TokenID tx.Nonce
+	//         - Check enough Balance on sender
+	//         - Check Nonce
+	//         - Create CoordAccount L1CoordTx for TokenID if needed
+	//                 - & ProcessL1Tx of L1CoordTx
+	//         - Check validity of receiver Account for ToEthAddr / ToBJJ
+	//         - Create UserAccount L1CoordTx if needed (and possible)
+	//         - If everything is fine, store l2Tx to validTxs & update NoncesMap
+	// - Prepare coordIdxsMap & AccumulatedFees
+	// - Distribute AccumulatedFees to CoordIdxs
+	// - MakeCheckpoint
 
 	// get pending l2-tx from tx-pool
 	l2TxsRaw, err := txsel.l2db.GetPendingTxs()
@@ -185,25 +205,62 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	// Sort l2TxsRaw (cropping at MaxTx at this point).
 	// discardedL2Txs contains an array of the L2Txs that have not been
 	// selected in this Batch.
-	l2Txs0, discardedL2Txs := txsel.getL2Profitable(l2TxsRaw, selectionConfig.MaxTx)
+	l2Txs, discardedL2Txs := txsel.getL2Profitable(l2TxsRaw, selectionConfig.MaxTx-uint32(len(l1UserTxs)))
 	for i := range discardedL2Txs {
-		discardedL2Txs[i].Info = "Tx not selected due to low absolute fee (does not fit inside the profitable set)"
+		discardedL2Txs[i].Info =
+			"Tx not selected due to low absolute fee (does not fit inside the profitable set)"
 	}
 
-	noncesMap := make(map[common.Idx]common.Nonce)
-	var l2Txs []common.PoolL2Tx
-	// iterate over l2Txs
-	// - if tx.TokenID does not exist at CoordsIdxDB
-	// 	- create new L1CoordinatorTx creating a CoordAccount, for
-	// 	Coordinator to receive the fee of the new TokenID
-	for i := 0; i < len(l2Txs0); i++ {
-		accSender, err := tp.StateDB().GetAccount(l2Txs0[i].FromIdx)
+	var validTxs []common.PoolL2Tx
+	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
+	// Iterate over l2Txs
+	// - check Nonces
+	// - check enough Balance for the Amount+Fee
+	// - if needed, create new L1CoordinatorTxs for unexisting ToIdx
+	// 	- keep used accAuths
+	// - put the valid txs into validTxs array
+	for i := 0; i < len(l2Txs); i++ {
+		// Check if there is space for more L2Txs in the selection
+		maxL2Txs := int(selectionConfig.MaxTx) -
+			len(l1UserTxs) - len(l1CoordinatorTxs)
+		if len(validTxs) >= maxL2Txs {
+			// no more available slots for L2Txs
+			l2Txs[i].Info =
+				"Tx not selected due not available slots for L2Txs"
+			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+			continue
+		}
+
+		// get Nonce & TokenID from the Account by l2Tx.FromIdx
+		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
-		l2Txs0[i].TokenID = accSender.TokenID
-		// populate the noncesMap used at the next iteration
-		noncesMap[l2Txs0[i].FromIdx] = accSender.Nonce
+		l2Txs[i].TokenID = accSender.TokenID
+
+		// Check enough Balance on sender
+		enoughBalance, balance, feeAndAmount := tp.CheckEnoughBalance(l2Txs[i])
+		if !enoughBalance {
+			// not valid Amount with current Balance. Discard L2Tx,
+			// and update Info parameter of the tx, and add it to
+			// the discardedTxs array
+			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not enough Balance at the sender. "+
+				"Current sender account Balance: %s, Amount+Fee: %s",
+				balance.String(), feeAndAmount.String())
+			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+			continue
+		}
+
+		// Check if Nonce is correct
+		if l2Txs[i].Nonce != accSender.Nonce {
+			// not valid Nonce at tx. Discard L2Tx, and update Info
+			// parameter of the tx, and add it to the discardedTxs
+			// array
+			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not current Nonce. "+
+				"Tx.Nonce: %d, Account.Nonce: %d", l2Txs[i].Nonce, accSender.Nonce)
+			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+			continue
+		}
 
 		// if TokenID does not exist yet, create new L1CoordinatorTx to
 		// create the CoordinatorAccount for that TokenID, to receive
@@ -218,52 +275,27 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
 		if newL1CoordTx != nil {
-			// if there is no space for the L1CoordinatorTx, discard the L2Tx
-			if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1Tx)-len(l1UserTxs) {
+			// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
+			// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
+			if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1Tx)-len(l1UserTxs) ||
+				len(l1CoordinatorTxs)+1 >= int(selectionConfig.MaxTx)-len(l1UserTxs) {
 				// discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs0[i].Info = "Tx not selected because the L2Tx depends on a " +
+				l2Txs[i].Info = "Tx not selected because the L2Tx depends on a " +
 					"L1CoordinatorTx and there is not enough space for L1Coordinator"
-				discardedL2Txs = append(discardedL2Txs, l2Txs0[i])
+				discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 				continue
 			}
 			// increase positionL1
 			positionL1++
 			l1CoordinatorTxs = append(l1CoordinatorTxs, *newL1CoordTx)
 			accAuths = append(accAuths, txsel.coordAccount.AccountCreationAuth)
-		}
-		l2Txs = append(l2Txs, l2Txs0[i])
-	}
 
-	var validTxs []common.PoolL2Tx
-	// iterate over l2TxsRaw
-	// - check Nonces
-	// - check enough Balance for the Amount+Fee
-	// - if needed, create new L1CoordinatorTxs for unexisting ToIdx
-	// 	- keep used accAuths
-	// - put the valid txs into validTxs array
-	for i := 0; i < len(l2Txs); i++ {
-		enoughBalance, balance, feeAndAmount := tp.CheckEnoughBalance(l2Txs[i])
-		if !enoughBalance {
-			// not valid Amount with current Balance. Discard L2Tx,
-			// and update Info parameter of the tx, and add it to
-			// the discardedTxs array
-			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not enough Balance at the sender. "+
-				"Current sender account Balance: %s, Amount+Fee: %s",
-				balance.String(), feeAndAmount.String())
-			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
-			continue
-		}
-		// check if Nonce is correct
-		nonce := noncesMap[l2Txs[i].FromIdx]
-		if l2Txs[i].Nonce != nonce {
-			// not valid Nonce at tx. Discard L2Tx, and update Info
-			// parameter of the tx, and add it to the discardedTxs
-			// array
-			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not current Nonce. "+
-				"Tx.Nonce: %d, Account.Nonce: %d", l2Txs[i].Nonce, nonce)
-			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
-			continue
+			// process the L1CoordTx
+			_, _, _, _, err := tp.ProcessL1Tx(nil, newL1CoordTx)
+			if err != nil {
+				return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
+			}
 		}
 
 		// If tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB,
@@ -287,7 +319,19 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 				discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 				continue
 			}
-			if l1CoordinatorTx != nil {
+			// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
+			// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
+			if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1Tx)-len(l1UserTxs) ||
+				len(l1CoordinatorTxs)+1 >= int(selectionConfig.MaxTx)-len(l1UserTxs) {
+				// discard L2Tx, and update Info parameter of
+				// the tx, and add it to the discardedTxs array
+				l2Txs[i].Info = "Tx not selected because the L2Tx depends on a " +
+					"L1CoordinatorTx and there is not enough space for L1Coordinator"
+				discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+				continue
+			}
+
+			if l1CoordinatorTx != nil && validL2Tx != nil {
 				// If ToEthAddr == 0xff.. this means that we
 				// are handling a TransferToBJJ, which doesn't
 				// require an authorization because it doesn't
@@ -303,9 +347,16 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 					l1CoordinatorTxs = append(l1CoordinatorTxs, *l1CoordinatorTx)
 					positionL1++
 				}
+
+				// process the L1CoordTx
+				_, _, _, _, err := tp.ProcessL1Tx(nil, l1CoordinatorTx)
+				if err != nil {
+					return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
+				}
 			}
-			if validL2Tx != nil {
-				validTxs = append(validTxs, *validL2Tx)
+			if validL2Tx == nil {
+				discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+				continue
 			}
 		} else if l2Txs[i].ToIdx >= common.IdxUserThreshold {
 			receiverAcc, err := txsel.localAccountsDB.GetAccount(l2Txs[i].ToIdx)
@@ -352,23 +403,41 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 					continue
 				}
 			}
-
-			// Account found in the DB, include the l2Tx in the selection
-			validTxs = append(validTxs, l2Txs[i])
-		} else if l2Txs[i].ToIdx == common.Idx(1) {
-			// valid txs (of Exit type)
-			validTxs = append(validTxs, l2Txs[i])
 		}
-		noncesMap[l2Txs[i].FromIdx]++
-	}
 
-	// Process L1CoordinatorTxs
-	for i := 0; i < len(l1CoordinatorTxs); i++ {
-		_, _, _, _, err := tp.ProcessL1Tx(nil, &l1CoordinatorTxs[i])
+		// get CoordIdxsMap for the TokenID of the current l2Txs[i]
+		// get TokenID from tx.Sender account
+		tokenID := accSender.TokenID
+		coordIdx, err := txsel.getCoordIdx(tokenID)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
+			// if err is db.ErrNotFound, should not happen, as all
+			// the validTxs.TokenID should have a CoordinatorIdx
+			// created in the DB at this point
+			return nil, nil, nil, nil, nil, nil,
+				tracerr.Wrap(fmt.Errorf("Could not get CoordIdx for TokenID=%d, "+
+					"due: %s", tokenID, err))
 		}
-	}
+		// prepare temp coordIdxsMap & AccumulatedFees for the call to
+		// ProcessL2Tx
+		coordIdxsMap := map[common.TokenID]common.Idx{tokenID: coordIdx}
+		// tp.AccumulatedFees = make(map[common.Idx]*big.Int)
+		if _, ok := tp.AccumulatedFees[coordIdx]; !ok {
+			tp.AccumulatedFees[coordIdx] = big.NewInt(0)
+		}
+
+		_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
+		if err != nil {
+			log.Debugw("txselector.getL1L2TxSelection at ProcessL2Tx", "err", err)
+			// Discard L2Tx, and update Info parameter of the tx,
+			// and add it to the discardedTxs array
+			l2Txs[i].Info = fmt.Sprintf("Tx not selected (in ProcessL2Tx) due to %s",
+				err.Error())
+			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+			continue
+		}
+
+		validTxs = append(validTxs, l2Txs[i])
+	} // after this loop, no checks to discard txs should be done
 
 	// get CoordIdxsMap for the TokenIDs
 	coordIdxsMap := make(map[common.TokenID]common.Idx)
@@ -391,38 +460,13 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	}
 
 	var coordIdxs []common.Idx
-	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
 	for _, idx := range coordIdxsMap {
-		tp.AccumulatedFees[idx] = big.NewInt(0)
 		coordIdxs = append(coordIdxs, idx)
 	}
 	// sort CoordIdxs
 	sort.SliceStable(coordIdxs, func(i, j int) bool {
 		return coordIdxs[i] < coordIdxs[j]
 	})
-
-	// get most profitable L2-tx
-	maxL2Txs := int(selectionConfig.MaxTx) -
-		len(l1UserTxs) - len(l1CoordinatorTxs)
-
-	selectedL2Txs := validTxs
-	if len(validTxs) > maxL2Txs {
-		selectedL2Txs = selectedL2Txs[:maxL2Txs]
-	}
-	var finalL2Txs []common.PoolL2Tx
-	for i := 0; i < len(selectedL2Txs); i++ {
-		_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &selectedL2Txs[i])
-		if err != nil {
-			// the error can be due not valid tx data, or due other
-			// cases (such as StateDB error). At this initial
-			// version of the TxSelector, we discard the L2Tx and
-			// log the error, assuming that this will be iterated in
-			// a near future.
-			return nil, nil, nil, nil, nil, nil,
-				tracerr.Wrap(fmt.Errorf("TxSelector: txprocessor.ProcessL2Tx: %w", err))
-		}
-		finalL2Txs = append(finalL2Txs, selectedL2Txs[i])
-	}
 
 	// distribute the AccumulatedFees from the processed L2Txs into the
 	// Coordinator Idxs
@@ -452,10 +496,11 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 
 	metricSelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
 	metricSelectedL1UserTxs.Set(float64(len(l1UserTxs)))
-	metricSelectedL2Txs.Set(float64(len(finalL2Txs)))
+	metricSelectedL2Txs.Set(float64(len(validTxs)))
 	metricDiscardedL2Txs.Set(float64(len(discardedL2Txs)))
 
-	return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, finalL2Txs, discardedL2Txs, nil
+	// return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, validTxs, discardedL2Txs, nil
+	return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, validTxs, discardedL2Txs, nil
 }
 
 // processTxsToEthAddrBJJ process the common.PoolL2Tx in the case where
@@ -567,7 +612,10 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 			Type:          common.TxTypeCreateAccountDeposit,
 		}
 	}
-	if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1Tx)-nL1UserTxs {
+	// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
+	// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
+	if len(l1CoordinatorTxs) >= int(selectionConfig.MaxL1Tx)-nL1UserTxs ||
+		len(l1CoordinatorTxs)+1 >= int(selectionConfig.MaxTx)-nL1UserTxs {
 		// L2Tx discarded
 		return nil, nil, nil, tracerr.Wrap(fmt.Errorf("L2Tx discarded due to no available slots " +
 			"for L1CoordinatorTx to create a new account for receiver of L2Tx"))

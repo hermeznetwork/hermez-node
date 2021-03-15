@@ -159,14 +159,15 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 	deleteme = append(deleteme, debugBatchPath)
 
 	conf := Config{
-		ForgerAddress:          forgerAddr,
-		ConfirmBlocks:          5,
-		L1BatchTimeoutPerc:     0.5,
-		EthClientAttempts:      5,
-		SyncRetryInterval:      400 * time.Microsecond,
-		EthClientAttemptsDelay: 100 * time.Millisecond,
-		TxManagerCheckInterval: 300 * time.Millisecond,
-		DebugBatchPath:         debugBatchPath,
+		ForgerAddress:           forgerAddr,
+		ConfirmBlocks:           5,
+		L1BatchTimeoutPerc:      0.5,
+		EthClientAttempts:       5,
+		SyncRetryInterval:       400 * time.Microsecond,
+		EthClientAttemptsDelay:  100 * time.Millisecond,
+		TxManagerCheckInterval:  300 * time.Millisecond,
+		DebugBatchPath:          debugBatchPath,
+		MustForgeAtSlotDeadline: true,
 		Purger: PurgerCfg{
 			PurgeBatchDelay:      10,
 			PurgeBlockDelay:      10,
@@ -188,12 +189,12 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		&prover.MockClient{Delay: 400 * time.Millisecond},
 	}
 
-	scConsts := &synchronizer.SCConsts{
+	scConsts := &common.SCConsts{
 		Rollup:   *ethClientSetup.RollupConstants,
 		Auction:  *ethClientSetup.AuctionConstants,
 		WDelayer: *ethClientSetup.WDelayerConstants,
 	}
-	initSCVars := &synchronizer.SCVariables{
+	initSCVars := &common.SCVariables{
 		Rollup:   *ethClientSetup.RollupVariables,
 		Auction:  *ethClientSetup.AuctionVariables,
 		WDelayer: *ethClientSetup.WDelayerVariables,
@@ -391,6 +392,10 @@ func TestCoordCanForge(t *testing.T) {
 	assert.Equal(t, true, coord.canForge())
 	assert.Equal(t, true, bootCoord.canForge())
 
+	// Anyone can forge but the node MustForgeAtSlotDeadline as set as false
+	coord.cfg.MustForgeAtSlotDeadline = false
+	assert.Equal(t, false, coord.canForge())
+
 	// Slot 3. coordinator bid, so the winner is the coordinator
 	stats.Eth.LastBlock.Num = ethClientSetup.AuctionConstants.GenesisBlockNum +
 		3*int64(ethClientSetup.AuctionConstants.BlocksPerSlot)
@@ -529,7 +534,7 @@ func TestCoordinatorStress(t *testing.T) {
 				coord.SendMsg(ctx, MsgSyncBlock{
 					Stats:   *stats,
 					Batches: blockData.Rollup.Batches,
-					Vars: synchronizer.SCVariablesPtr{
+					Vars: common.SCVariablesPtr{
 						Rollup:   blockData.Rollup.Vars,
 						Auction:  blockData.Auction.Vars,
 						WDelayer: blockData.WDelayer.Vars,

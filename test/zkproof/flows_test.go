@@ -186,7 +186,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"3844339393304253264418296322137281996442345663805792718218845145754742722151",
+		"4392049343656836675348565048374261353937130287163762821533580216441778455298",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
@@ -215,7 +215,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"2537294203394018451170116789946369404362093672592091326351037700505720139801",
+		"8905191229562583213069132470917469035834300549892959854483573322676101624713",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
@@ -242,7 +242,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"13463929859122729344499006353544877221550995454069650137270994940730475267399",
+		"20593679664586247774284790801579542411781976279024409415159440382607791042723",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
@@ -264,7 +264,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	// same root as previous batch, as the L1CoordinatorTxs created by the
 	// Til set is not created by the TxSelector in this test
 	assert.Equal(t,
-		"13463929859122729344499006353544877221550995454069650137270994940730475267399",
+		"20593679664586247774284790801579542411781976279024409415159440382607791042723",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),

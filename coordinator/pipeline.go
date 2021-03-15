@@ -22,7 +22,7 @@ import (
 
 type statsVars struct {
 	Stats synchronizer.Stats
-	Vars  synchronizer.SCVariablesPtr
+	Vars  common.SCVariablesPtr
 }
 
 type state struct {
@@ -36,7 +36,7 @@ type state struct {
 type Pipeline struct {
 	num    int
 	cfg    Config
-	consts synchronizer.SCConsts
+	consts common.SCConsts
 
 	// state
 	state         state
@@ -57,7 +57,7 @@ type Pipeline struct {
 	purger                *Purger
 
 	stats       synchronizer.Stats
-	vars        synchronizer.SCVariables
+	vars        common.SCVariables
 	statsVarsCh chan statsVars
 
 	ctx    context.Context
@@ -90,7 +90,7 @@ func NewPipeline(ctx context.Context,
 	coord *Coordinator,
 	txManager *TxManager,
 	provers []prover.Client,
-	scConsts *synchronizer.SCConsts,
+	scConsts *common.SCConsts,
 ) (*Pipeline, error) {
 	proversPool := NewProversPool(len(provers))
 	proversPoolSize := 0
@@ -125,7 +125,7 @@ func NewPipeline(ctx context.Context,
 
 // SetSyncStatsVars is a thread safe method to sets the synchronizer Stats
 func (p *Pipeline) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats,
-	vars *synchronizer.SCVariablesPtr) {
+	vars *common.SCVariablesPtr) {
 	select {
 	case p.statsVarsCh <- statsVars{Stats: *stats, Vars: *vars}:
 	case <-ctx.Done():
@@ -134,7 +134,7 @@ func (p *Pipeline) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Sta
 
 // reset pipeline state
 func (p *Pipeline) reset(batchNum common.BatchNum,
-	stats *synchronizer.Stats, vars *synchronizer.SCVariables) error {
+	stats *synchronizer.Stats, vars *common.SCVariables) error {
 	p.state = state{
 		batchNum:                     batchNum,
 		lastForgeL1TxsNum:            stats.Sync.LastForgeL1TxsNum,
@@ -195,7 +195,7 @@ func (p *Pipeline) reset(batchNum common.BatchNum,
 	return nil
 }
 
-func (p *Pipeline) syncSCVars(vars synchronizer.SCVariablesPtr) {
+func (p *Pipeline) syncSCVars(vars common.SCVariablesPtr) {
 	updateSCVars(&p.vars, vars)
 }
 
@@ -256,7 +256,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 
 // Start the forging pipeline
 func (p *Pipeline) Start(batchNum common.BatchNum,
-	stats *synchronizer.Stats, vars *synchronizer.SCVariables) error {
+	stats *synchronizer.Stats, vars *common.SCVariables) error {
 	if p.started {
 		log.Fatal("Pipeline already started")
 	}
@@ -389,6 +389,14 @@ func (p *Pipeline) sendServerProof(ctx context.Context, batchInfo *BatchInfo) er
 	return nil
 }
 
+// check if we reach the ForgeDelay or not before batch forging
+func (p *Pipeline) preForgeBatchCheck(slotCommitted bool, now time.Time) error {
+	if slotCommitted && now.Sub(p.lastForgeTime) < p.cfg.ForgeDelay {
+		return errForgeBeforeDelay
+	}
+	return nil
+}
+
 // forgeBatch forges the batchNum batch.
 func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, err error) {
 	// remove transactions from the pool that have been there for too long
@@ -414,15 +422,15 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	var coordIdxs []common.Idx
 
 	// Check if the slot is not yet fulfilled
-	slotCommitted := false
+	slotCommitted := p.cfg.IgnoreSlotCommitment
 	if p.stats.Sync.Auction.CurrentSlot.ForgerCommitment ||
 		p.stats.Sync.Auction.CurrentSlot.SlotNum == p.state.lastSlotForged {
 		slotCommitted = true
 	}
 
 	// If we haven't reached the ForgeDelay, skip forging the batch
-	if slotCommitted && now.Sub(p.lastForgeTime) < p.cfg.ForgeDelay {
-		return nil, tracerr.Wrap(errForgeBeforeDelay)
+	if err = p.preForgeBatchCheck(slotCommitted, now); err != nil {
+		return nil, tracerr.Wrap(err)
 	}
 
 	// 1. Decide if we forge L2Tx or L1+L2Tx
@@ -454,34 +462,8 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	// If there are no txs to forge, no l1UserTxs in the open queue to
 	// freeze, and we haven't reached the ForgeNoTxsDelay, skip forging the
 	// batch.
-	if slotCommitted && now.Sub(p.lastForgeTime) < p.cfg.ForgeNoTxsDelay {
-		noTxs := false
-		if len(l1UserTxsExtra) == 0 && len(l1CoordTxs) == 0 && len(poolL2Txs) == 0 {
-			if batchInfo.L1Batch {
-				// Query the number of unforged L1UserTxs
-				// (either in a open queue or in a frozen
-				// not-yet-forged queue).
-				count, err := p.historyDB.GetUnforgedL1UserTxsCount()
-				if err != nil {
-					return nil, tracerr.Wrap(err)
-				}
-				// If there are future L1UserTxs, we forge a
-				// batch to advance the queues to be able to
-				// forge the L1UserTxs in the future.
-				// Otherwise, skip.
-				if count == 0 {
-					noTxs = true
-				}
-			} else {
-				noTxs = true
-			}
-		}
-		if noTxs {
-			if err := p.txSelector.Reset(batchInfo.BatchNum-1, false); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			return nil, tracerr.Wrap(errForgeNoTxsBeforeDelay)
-		}
+	if err = p.postForgeBatchCheck(slotCommitted, now, l1UserTxsExtra, l1CoordTxs, poolL2Txs, batchInfo); err != nil {
+		return nil, tracerr.Wrap(err)
 	}
 
 	if batchInfo.L1Batch {
@@ -537,6 +519,41 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	p.state.lastSlotForged = p.stats.Sync.Auction.CurrentSlot.SlotNum
 
 	return batchInfo, nil
+}
+
+// check if there is no txs to forge, no l1UserTxs in the open queue to freeze and we haven't reached the ForgeNoTxsDelay
+func (p *Pipeline) postForgeBatchCheck(slotCommitted bool, now time.Time, l1UserTxsExtra, l1CoordTxs []common.L1Tx,
+	poolL2Txs []common.PoolL2Tx, batchInfo *BatchInfo) error {
+	if slotCommitted && now.Sub(p.lastForgeTime) < p.cfg.ForgeNoTxsDelay {
+		noTxs := false
+		if len(l1UserTxsExtra) == 0 && len(l1CoordTxs) == 0 && len(poolL2Txs) == 0 {
+			if batchInfo.L1Batch {
+				// Query the number of unforged L1UserTxs
+				// (either in a open queue or in a frozen
+				// not-yet-forged queue).
+				count, err := p.historyDB.GetUnforgedL1UserTxsCount()
+				if err != nil {
+					return err
+				}
+				// If there are future L1UserTxs, we forge a
+				// batch to advance the queues to be able to
+				// forge the L1UserTxs in the future.
+				// Otherwise, skip.
+				if count == 0 {
+					noTxs = true
+				}
+			} else {
+				noTxs = true
+			}
+		}
+		if noTxs {
+			if err := p.txSelector.Reset(batchInfo.BatchNum-1, false); err != nil {
+				return err
+			}
+			return errForgeNoTxsBeforeDelay
+		}
+	}
+	return nil
 }
 
 // waitServerProof gets the generated zkProof & sends it to the SmartContract
