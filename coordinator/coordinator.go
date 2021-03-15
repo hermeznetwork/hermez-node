@@ -153,8 +153,8 @@ type Coordinator struct {
 	pipelineNum       int       // Pipeline sequential number.  The first pipeline is 1
 	pipelineFromBatch fromBatch // batch from which we started the pipeline
 	provers           []prover.Client
-	consts            synchronizer.SCConsts
-	vars              synchronizer.SCVariables
+	consts            common.SCConsts
+	vars              common.SCVariables
 	stats             synchronizer.Stats
 	started           bool
 
@@ -194,8 +194,8 @@ func NewCoordinator(cfg Config,
 	batchBuilder *batchbuilder.BatchBuilder,
 	serverProofs []prover.Client,
 	ethClient eth.ClientInterface,
-	scConsts *synchronizer.SCConsts,
-	initSCVars *synchronizer.SCVariables,
+	scConsts *common.SCConsts,
+	initSCVars *common.SCVariables,
 ) (*Coordinator, error) {
 	// nolint reason: hardcoded `1.0`, by design the percentage can't be over 100%
 	if cfg.L1BatchTimeoutPerc >= 1.0 { //nolint:gomnd
@@ -284,13 +284,13 @@ type MsgSyncBlock struct {
 	Batches []common.BatchData
 	// Vars contains each Smart Contract variables if they are updated, or
 	// nil if they haven't changed.
-	Vars synchronizer.SCVariablesPtr
+	Vars common.SCVariablesPtr
 }
 
 // MsgSyncReorg indicates a reorg
 type MsgSyncReorg struct {
 	Stats synchronizer.Stats
-	Vars  synchronizer.SCVariablesPtr
+	Vars  common.SCVariablesPtr
 }
 
 // MsgStopPipeline indicates a signal to reset the pipeline
@@ -309,7 +309,7 @@ func (c *Coordinator) SendMsg(ctx context.Context, msg interface{}) {
 	}
 }
 
-func updateSCVars(vars *synchronizer.SCVariables, update synchronizer.SCVariablesPtr) {
+func updateSCVars(vars *common.SCVariables, update common.SCVariablesPtr) {
 	if update.Rollup != nil {
 		vars.Rollup = *update.Rollup
 	}
@@ -321,7 +321,7 @@ func updateSCVars(vars *synchronizer.SCVariables, update synchronizer.SCVariable
 	}
 }
 
-func (c *Coordinator) syncSCVars(vars synchronizer.SCVariablesPtr) {
+func (c *Coordinator) syncSCVars(vars common.SCVariablesPtr) {
 	updateSCVars(&c.vars, vars)
 }
 

@@ -206,11 +206,7 @@ PoolTransfer(0) User2-User3: 300 (126)
 		require.NoError(t, err)
 	}
 
-	err = pipeline.reset(batchNum, syncStats, &synchronizer.SCVariables{
-		Rollup:   *syncSCVars.Rollup,
-		Auction:  *syncSCVars.Auction,
-		WDelayer: *syncSCVars.WDelayer,
-	})
+	err = pipeline.reset(batchNum, syncStats, syncSCVars)
 	require.NoError(t, err)
 	// Sanity check
 	sdbAccounts, err := pipeline.txSelector.LocalAccountsDB().TestGetAccounts()

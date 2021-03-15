@@ -1,8 +1,11 @@
 package historydb
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
+	"math/big"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -32,9 +35,18 @@ func (hdb *HistoryDB) GetBatchAPI(batchNum common.BatchNum) (*BatchAPI, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	defer hdb.apiConnCon.Release()
+	return hdb.getBatchAPI(hdb.dbRead, batchNum)
+}
+
+// GetBatchInternalAPI return the batch with the given batchNum
+func (hdb *HistoryDB) GetBatchInternalAPI(batchNum common.BatchNum) (*BatchAPI, error) {
+	return hdb.getBatchAPI(hdb.dbRead, batchNum)
+}
+
+func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*BatchAPI, error) {
 	batch := &BatchAPI{}
 	return batch, tracerr.Wrap(meddler.QueryRow(
-		hdb.dbRead, batch,
+		d, batch,
 		`SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
 		batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
 		batch.num_accounts, batch.exit_root, batch.forge_l1_txs_num, batch.slot_num,
@@ -180,6 +192,14 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 		return nil, 0, tracerr.Wrap(err)
 	}
 	defer hdb.apiConnCon.Release()
+	return hdb.getBestBidsAPI(hdb.dbRead, minSlotNum, maxSlotNum, bidderAddr, limit, order)
+}
+func (hdb *HistoryDB) getBestBidsAPI(
+	d meddler.DB,
+	minSlotNum, maxSlotNum *int64,
+	bidderAddr *ethCommon.Address,
+	limit *uint, order string,
+) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	// JOIN the best bid of each slot with the latest update of each coordinator
@@ -214,7 +234,7 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 	}
 	query = hdb.dbRead.Rebind(queryStr)
 	bidPtrs := []*BidAPI{}
-	if err := meddler.QueryAll(hdb.dbRead, &bidPtrs, query, args...); err != nil {
+	if err := meddler.QueryAll(d, &bidPtrs, query, args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	// log.Debug(query)
@@ -697,25 +717,6 @@ func (hdb *HistoryDB) GetExitsAPI(
 	return db.SlicePtrsToSlice(exits).([]ExitAPI), exits[0].TotalItems - uint64(len(exits)), nil
 }
 
-// GetBucketUpdatesAPI retrieves latest values for each bucket
-func (hdb *HistoryDB) GetBucketUpdatesAPI() ([]BucketUpdateAPI, error) {
-	cancel, err := hdb.apiConnCon.Acquire()
-	defer cancel()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	defer hdb.apiConnCon.Release()
-	var bucketUpdates []*BucketUpdateAPI
-	err = meddler.QueryAll(
-		hdb.dbRead, &bucketUpdates,
-		`SELECT num_bucket, withdrawals FROM bucket_update 
-		WHERE item_id in(SELECT max(item_id) FROM bucket_update 
-		group by num_bucket) 
-		ORDER BY num_bucket ASC;`,
-	)
-	return db.SlicePtrsToSlice(bucketUpdates).([]BucketUpdateAPI), tracerr.Wrap(err)
-}
-
 // GetCoordinatorsAPI returns a list of coordinators from the DB and pagination info
 func (hdb *HistoryDB) GetCoordinatorsAPI(
 	bidderAddr, forgerAddr *ethCommon.Address,
@@ -798,29 +799,6 @@ func (hdb *HistoryDB) GetAuctionVarsAPI() (*common.AuctionVariables, error) {
 		hdb.dbRead, auctionVars, `SELECT * FROM auction_vars;`,
 	)
 	return auctionVars, tracerr.Wrap(err)
-}
-
-// GetAuctionVarsUntilSetSlotNumAPI returns all the updates of the auction vars
-// from the last entry in which DefaultSlotSetBidSlotNum <= slotNum
-func (hdb *HistoryDB) GetAuctionVarsUntilSetSlotNumAPI(slotNum int64, maxItems int) ([]MinBidInfo, error) {
-	cancel, err := hdb.apiConnCon.Acquire()
-	defer cancel()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	defer hdb.apiConnCon.Release()
-	auctionVars := []*MinBidInfo{}
-	query := `
-		SELECT DISTINCT default_slot_set_bid, default_slot_set_bid_slot_num FROM auction_vars
-		WHERE default_slot_set_bid_slot_num < $1
-		ORDER BY default_slot_set_bid_slot_num DESC
-		LIMIT $2;
-	`
-	err = meddler.QueryAll(hdb.dbRead, &auctionVars, query, slotNum, maxItems)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	return db.SlicePtrsToSlice(auctionVars).([]MinBidInfo), nil
 }
 
 // GetAccountAPI returns an account by its index
@@ -941,125 +919,6 @@ func (hdb *HistoryDB) GetAccountsAPI(
 		accounts[0].TotalItems - uint64(len(accounts)), nil
 }
 
-// GetMetricsAPI returns metrics
-func (hdb *HistoryDB) GetMetricsAPI(lastBatchNum common.BatchNum) (*Metrics, error) {
-	cancel, err := hdb.apiConnCon.Acquire()
-	defer cancel()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	defer hdb.apiConnCon.Release()
-	metricsTotals := &MetricsTotals{}
-	metrics := &Metrics{}
-	err = meddler.QueryRow(
-		hdb.dbRead, metricsTotals, `SELECT
-		COALESCE (MIN(batch.batch_num), 0) as batch_num,
-		COALESCE (MIN(block.timestamp), NOW()) AS min_timestamp, 
-		COALESCE (MAX(block.timestamp), NOW()) AS max_timestamp
-		FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
-		WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS' and batch.batch_num <= $1;`, lastBatchNum)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-
-	err = meddler.QueryRow(
-		hdb.dbRead, metricsTotals, `SELECT COUNT(*) as total_txs
-		FROM tx	WHERE tx.batch_num between $1 AND $2;`, metricsTotals.FirstBatchNum, lastBatchNum)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-
-	seconds := metricsTotals.MaxTimestamp.Sub(metricsTotals.MinTimestamp).Seconds()
-	// Avoid dividing by 0
-	if seconds == 0 {
-		seconds++
-	}
-
-	metrics.TransactionsPerSecond = float64(metricsTotals.TotalTransactions) / seconds
-
-	if (lastBatchNum - metricsTotals.FirstBatchNum) > 0 {
-		metrics.TransactionsPerBatch = float64(metricsTotals.TotalTransactions) /
-			float64(lastBatchNum-metricsTotals.FirstBatchNum+1)
-	} else {
-		metrics.TransactionsPerBatch = float64(0)
-	}
-
-	err = meddler.QueryRow(
-		hdb.dbRead, metricsTotals, `SELECT COUNT(*) AS total_batches, 
-		COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
-		WHERE batch_num between $1 and $2;`, metricsTotals.FirstBatchNum, lastBatchNum)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-
-	if metricsTotals.TotalBatches > 0 {
-		metrics.BatchFrequency = seconds / float64(metricsTotals.TotalBatches)
-	} else {
-		metrics.BatchFrequency = 0
-	}
-	if metricsTotals.TotalTransactions > 0 {
-		metrics.AvgTransactionFee = metricsTotals.TotalFeesUSD / float64(metricsTotals.TotalTransactions)
-	} else {
-		metrics.AvgTransactionFee = 0
-	}
-	err = meddler.QueryRow(
-		hdb.dbRead, metrics,
-		`SELECT COUNT(*) AS total_bjjs, COUNT(DISTINCT(bjj)) AS total_accounts FROM account;`)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	err = meddler.QueryRow(
-		hdb.dbRead, metrics,
-		`SELECT COALESCE (AVG(EXTRACT(EPOCH FROM (forged.timestamp - added.timestamp))), 0)
-			AS estimated_time_to_forge_l1 FROM tx
-		INNER JOIN block AS added ON tx.eth_block_num = added.eth_block_num
-		INNER JOIN batch AS forged_batch ON tx.batch_num = forged_batch.batch_num
-		INNER JOIN block AS forged ON forged_batch.eth_block_num = forged.eth_block_num
-		WHERE tx.batch_num between $1 and $2 AND tx.is_l1 AND tx.user_origin;`,
-		metricsTotals.FirstBatchNum, lastBatchNum,
-	)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-
-	return metrics, nil
-}
-
-// GetAvgTxFeeAPI returns average transaction fee of the last 1h
-func (hdb *HistoryDB) GetAvgTxFeeAPI() (float64, error) {
-	cancel, err := hdb.apiConnCon.Acquire()
-	defer cancel()
-	if err != nil {
-		return 0, tracerr.Wrap(err)
-	}
-	defer hdb.apiConnCon.Release()
-	metricsTotals := &MetricsTotals{}
-	err = meddler.QueryRow(
-		hdb.dbRead, metricsTotals, `SELECT COUNT(tx.*) as total_txs, 
-		COALESCE (MIN(tx.batch_num), 0) as batch_num 
-		FROM tx INNER JOIN block ON tx.eth_block_num = block.eth_block_num
-		WHERE block.timestamp >= NOW() - INTERVAL '1 HOURS';`)
-	if err != nil {
-		return 0, tracerr.Wrap(err)
-	}
-	err = meddler.QueryRow(
-		hdb.dbRead, metricsTotals, `SELECT COUNT(*) AS total_batches, 
-		COALESCE (SUM(total_fees_usd), 0) AS total_fees FROM batch 
-		WHERE batch_num > $1;`, metricsTotals.FirstBatchNum)
-	if err != nil {
-		return 0, tracerr.Wrap(err)
-	}
-
-	var avgTransactionFee float64
-	if metricsTotals.TotalTransactions > 0 {
-		avgTransactionFee = metricsTotals.TotalFeesUSD / float64(metricsTotals.TotalTransactions)
-	} else {
-		avgTransactionFee = 0
-	}
-
-	return avgTransactionFee, nil
-}
-
 // GetCommonAccountAPI returns the account associated to an account idx
 func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
@@ -1074,4 +933,254 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 		FROM account WHERE idx = $1;`, idx,
 	)
 	return account, tracerr.Wrap(err)
+}
+
+// GetCoordinatorAPI returns a coordinator by its bidderAddr
+func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*CoordinatorAPI, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	return hdb.getCoordinatorAPI(hdb.dbRead, bidderAddr)
+}
+
+func (hdb *HistoryDB) getCoordinatorAPI(d meddler.DB, bidderAddr ethCommon.Address) (*CoordinatorAPI, error) {
+	coordinator := &CoordinatorAPI{}
+	err := meddler.QueryRow(
+		d, coordinator,
+		"SELECT * FROM coordinator WHERE bidder_addr = $1 ORDER BY item_id DESC LIMIT 1;",
+		bidderAddr,
+	)
+	return coordinator, tracerr.Wrap(err)
+}
+
+// GetNodeInfoAPI retusnt he NodeInfo
+func (hdb *HistoryDB) GetNodeInfoAPI() (*NodeInfo, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	return hdb.GetNodeInfo()
+}
+
+// GetBucketUpdatesInternalAPI returns the latest bucket updates
+func (hdb *HistoryDB) GetBucketUpdatesInternalAPI() ([]BucketUpdateAPI, error) {
+	var bucketUpdates []*BucketUpdateAPI
+	err := meddler.QueryAll(
+		hdb.dbRead, &bucketUpdates,
+		`SELECT num_bucket, withdrawals FROM bucket_update 
+			WHERE item_id in(SELECT max(item_id) FROM bucket_update 
+			group by num_bucket) 
+			ORDER BY num_bucket ASC;`,
+	)
+	return db.SlicePtrsToSlice(bucketUpdates).([]BucketUpdateAPI), tracerr.Wrap(err)
+}
+
+// GetNextForgersInternalAPI returns next forgers
+func (hdb *HistoryDB) GetNextForgersInternalAPI(auctionVars *common.AuctionVariables,
+	auctionConsts *common.AuctionConstants,
+	lastBlock common.Block, currentSlot, lastClosedSlot int64) ([]NextForgerAPI, error) {
+	secondsPerBlock := int64(15) //nolint:gomnd
+	// currentSlot and lastClosedSlot included
+	limit := uint(lastClosedSlot - currentSlot + 1)
+	bids, _, err := hdb.getBestBidsAPI(hdb.dbRead, &currentSlot, &lastClosedSlot, nil, &limit, "ASC")
+	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+		return nil, tracerr.Wrap(err)
+	}
+	nextForgers := []NextForgerAPI{}
+	// Get min bid info
+	var minBidInfo []MinBidInfo
+	if currentSlot >= auctionVars.DefaultSlotSetBidSlotNum {
+		// All min bids can be calculated with the last update of AuctionVariables
+
+		minBidInfo = []MinBidInfo{{
+			DefaultSlotSetBid:        auctionVars.DefaultSlotSetBid,
+			DefaultSlotSetBidSlotNum: auctionVars.DefaultSlotSetBidSlotNum,
+		}}
+	} else {
+		// Get all the relevant updates from the DB
+		minBidInfo, err = hdb.getMinBidInfo(hdb.dbRead, currentSlot, lastClosedSlot)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	}
+	// Create nextForger for each slot
+	for i := currentSlot; i <= lastClosedSlot; i++ {
+		fromBlock := i*int64(auctionConsts.BlocksPerSlot) +
+			auctionConsts.GenesisBlockNum
+		toBlock := (i+1)*int64(auctionConsts.BlocksPerSlot) +
+			auctionConsts.GenesisBlockNum - 1
+		nextForger := NextForgerAPI{
+			Period: Period{
+				SlotNum:   i,
+				FromBlock: fromBlock,
+				ToBlock:   toBlock,
+				FromTimestamp: lastBlock.Timestamp.Add(time.Second *
+					time.Duration(secondsPerBlock*(fromBlock-lastBlock.Num))),
+				ToTimestamp: lastBlock.Timestamp.Add(time.Second *
+					time.Duration(secondsPerBlock*(toBlock-lastBlock.Num))),
+			},
+		}
+		foundForger := false
+		// If there is a bid for a slot, get forger (coordinator)
+		for j := range bids {
+			slotNum := bids[j].SlotNum
+			if slotNum == i {
+				// There's a bid for the slot
+				// Check if the bid is greater than the minimum required
+				for i := 0; i < len(minBidInfo); i++ {
+					// Find the most recent update
+					if slotNum >= minBidInfo[i].DefaultSlotSetBidSlotNum {
+						// Get min bid
+						minBidSelector := slotNum % int64(len(auctionVars.DefaultSlotSetBid))
+						minBid := minBidInfo[i].DefaultSlotSetBid[minBidSelector]
+						// Check if the bid has beaten the minimum
+						bid, ok := new(big.Int).SetString(string(bids[j].BidValue), 10)
+						if !ok {
+							return nil, tracerr.New("Wrong bid value, error parsing it as big.Int")
+						}
+						if minBid.Cmp(bid) == 1 {
+							// Min bid is greater than bid, the slot will be forged by boot coordinator
+							break
+						}
+						foundForger = true
+						break
+					}
+				}
+				if !foundForger { // There is no bid or it's smaller than the minimum
+					break
+				}
+				coordinator, err := hdb.getCoordinatorAPI(hdb.dbRead, bids[j].Bidder)
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				nextForger.Coordinator = *coordinator
+				break
+			}
+		}
+		// If there is no bid, the coordinator that will forge is boot coordinator
+		if !foundForger {
+			nextForger.Coordinator = CoordinatorAPI{
+				Forger: auctionVars.BootCoordinator,
+				URL:    auctionVars.BootCoordinatorURL,
+			}
+		}
+		nextForgers = append(nextForgers, nextForger)
+	}
+	return nextForgers, nil
+}
+
+// GetMetricsInternalAPI returns the MetricsAPI
+func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*MetricsAPI, error) {
+	var metrics MetricsAPI
+	// Get the first and last batch of the last 24h and their timestamps
+	// if u.state.Network.LastBatch == nil {
+	// 	return &metrics, nil
+	// }
+	type period struct {
+		FromBatchNum  common.BatchNum `meddler:"from_batch_num"`
+		FromTimestamp time.Time       `meddler:"from_timestamp"`
+		ToBatchNum    common.BatchNum `meddler:"-"`
+		ToTimestamp   time.Time       `meddler:"to_timestamp"`
+	}
+	p := &period{
+		ToBatchNum: lastBatchNum,
+	}
+	if err := meddler.QueryRow(
+		hdb.dbRead, p, `SELECT
+			COALESCE (MIN(batch.batch_num), 0) as from_batch_num,
+			COALESCE (MIN(block.timestamp), NOW()) AS from_timestamp, 
+			COALESCE (MAX(block.timestamp), NOW()) AS to_timestamp
+			FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
+			WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS';`,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	// Get the amount of txs of that period
+	row := hdb.dbRead.QueryRow(
+		`SELECT COUNT(*) as total_txs FROM tx WHERE tx.batch_num between $1 AND $2;`,
+		p.FromBatchNum, p.ToBatchNum,
+	)
+	var nTxs int
+	if err := row.Scan(&nTxs); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	// Set txs/s
+	seconds := p.ToTimestamp.Sub(p.FromTimestamp).Seconds()
+	if seconds == 0 { // Avoid dividing by 0
+		seconds++
+	}
+	metrics.TransactionsPerSecond = float64(nTxs) / seconds
+	// Set txs/batch
+	nBatches := p.ToBatchNum - p.FromBatchNum + 1
+	if nBatches == 0 { // Avoid dividing by 0
+		nBatches++
+	}
+	if (p.ToBatchNum - p.FromBatchNum) > 0 {
+		fmt.Printf("DBG ntxs: %v, nBatches: %v\n", nTxs, nBatches)
+		metrics.TransactionsPerBatch = float64(nTxs) /
+			float64(nBatches)
+	} else {
+		metrics.TransactionsPerBatch = 0
+	}
+	// Get total fee of that period
+	row = hdb.dbRead.QueryRow(
+		`SELECT COALESCE (SUM(total_fees_usd), 0) FROM batch WHERE batch_num between $1 AND $2;`,
+		p.FromBatchNum, p.ToBatchNum,
+	)
+	var totalFee float64
+	if err := row.Scan(&totalFee); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	// Set batch frequency
+	metrics.BatchFrequency = seconds / float64(nBatches)
+	if nTxs > 0 {
+		metrics.AvgTransactionFee = totalFee / float64(nTxs)
+	} else {
+		metrics.AvgTransactionFee = 0
+	}
+	// Get and set amount of registered accounts
+	type registeredAccounts struct {
+		TotalIdx int64 `meddler:"total_idx"`
+		TotalBJJ int64 `meddler:"total_bjj"`
+	}
+	ra := &registeredAccounts{}
+	if err := meddler.QueryRow(
+		hdb.dbRead, ra,
+		`SELECT COUNT(*) AS total_bjj, COUNT(DISTINCT(bjj)) AS total_idx FROM account;`,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	metrics.TotalAccounts = ra.TotalIdx
+	metrics.TotalBJJs = ra.TotalBJJ
+	// Get and set estimated time to forge L1 tx
+	row = hdb.dbRead.QueryRow(
+		`SELECT COALESCE (AVG(EXTRACT(EPOCH FROM (forged.timestamp - added.timestamp))), 0) FROM tx
+			INNER JOIN block AS added ON tx.eth_block_num = added.eth_block_num
+			INNER JOIN batch AS forged_batch ON tx.batch_num = forged_batch.batch_num
+			INNER JOIN block AS forged ON forged_batch.eth_block_num = forged.eth_block_num
+			WHERE tx.batch_num between $1 and $2 AND tx.is_l1 AND tx.user_origin;`,
+		p.FromBatchNum, p.ToBatchNum,
+	)
+	var timeToForgeL1 float64
+	if err := row.Scan(&timeToForgeL1); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	metrics.EstimatedTimeToForgeL1 = timeToForgeL1
+	return &metrics, nil
+}
+
+// GetStateAPI returns the StateAPI
+func (hdb *HistoryDB) GetStateAPI() (*StateAPI, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	return hdb.getStateAPI(hdb.dbRead)
 }

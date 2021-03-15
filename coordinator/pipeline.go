@@ -22,7 +22,7 @@ import (
 
 type statsVars struct {
 	Stats synchronizer.Stats
-	Vars  synchronizer.SCVariablesPtr
+	Vars  common.SCVariablesPtr
 }
 
 type state struct {
@@ -36,7 +36,7 @@ type state struct {
 type Pipeline struct {
 	num    int
 	cfg    Config
-	consts synchronizer.SCConsts
+	consts common.SCConsts
 
 	// state
 	state         state
@@ -57,7 +57,7 @@ type Pipeline struct {
 	purger                *Purger
 
 	stats       synchronizer.Stats
-	vars        synchronizer.SCVariables
+	vars        common.SCVariables
 	statsVarsCh chan statsVars
 
 	ctx    context.Context
@@ -90,7 +90,7 @@ func NewPipeline(ctx context.Context,
 	coord *Coordinator,
 	txManager *TxManager,
 	provers []prover.Client,
-	scConsts *synchronizer.SCConsts,
+	scConsts *common.SCConsts,
 ) (*Pipeline, error) {
 	proversPool := NewProversPool(len(provers))
 	proversPoolSize := 0
@@ -125,7 +125,7 @@ func NewPipeline(ctx context.Context,
 
 // SetSyncStatsVars is a thread safe method to sets the synchronizer Stats
 func (p *Pipeline) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Stats,
-	vars *synchronizer.SCVariablesPtr) {
+	vars *common.SCVariablesPtr) {
 	select {
 	case p.statsVarsCh <- statsVars{Stats: *stats, Vars: *vars}:
 	case <-ctx.Done():
@@ -134,7 +134,7 @@ func (p *Pipeline) SetSyncStatsVars(ctx context.Context, stats *synchronizer.Sta
 
 // reset pipeline state
 func (p *Pipeline) reset(batchNum common.BatchNum,
-	stats *synchronizer.Stats, vars *synchronizer.SCVariables) error {
+	stats *synchronizer.Stats, vars *common.SCVariables) error {
 	p.state = state{
 		batchNum:                     batchNum,
 		lastForgeL1TxsNum:            stats.Sync.LastForgeL1TxsNum,
@@ -195,7 +195,7 @@ func (p *Pipeline) reset(batchNum common.BatchNum,
 	return nil
 }
 
-func (p *Pipeline) syncSCVars(vars synchronizer.SCVariablesPtr) {
+func (p *Pipeline) syncSCVars(vars common.SCVariablesPtr) {
 	updateSCVars(&p.vars, vars)
 }
 
@@ -256,7 +256,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 
 // Start the forging pipeline
 func (p *Pipeline) Start(batchNum common.BatchNum,
-	stats *synchronizer.Stats, vars *synchronizer.SCVariables) error {
+	stats *synchronizer.Stats, vars *common.SCVariables) error {
 	if p.started {
 		log.Fatal("Pipeline already started")
 	}

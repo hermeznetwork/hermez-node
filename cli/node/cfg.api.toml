@@ -1,0 +1,24 @@
+[API]
+Address = "localhost:8386"
+Explorer = true
+MaxSQLConnections = 10
+SQLConnectionTimeout = "2s"
+
+[PostgreSQL]
+PortWrite     = 5432
+HostWrite     = "localhost"
+UserWrite     = "hermez"
+PasswordWrite = "yourpasswordhere"
+NameWrite     = "hermez"
+
+[Coordinator.L2DB]
+SafetyPeriod = 10
+MaxTxs       = 512
+TTL          = "24h"
+PurgeBatchDelay = 10
+InvalidateBatchDelay = 20
+PurgeBlockDelay = 10
+InvalidateBlockDelay = 20
+
+[Coordinator.API]
+Coordinator = true

@@ -1176,7 +1176,7 @@ func TestGetMetricsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, err := historyDBWithACC.GetMetricsAPI(common.BatchNum(numBatches))
+	res, err := historyDB.GetMetricsInternalAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.Equal(t, float64(numTx)/float64(numBatches), res.TransactionsPerBatch)
@@ -1254,7 +1254,7 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, err := historyDBWithACC.GetMetricsAPI(common.BatchNum(numBatches))
+	res, err := historyDBWithACC.GetMetricsInternalAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.InEpsilon(t, 1.0, res.TransactionsPerBatch, 0.1)
@@ -1269,13 +1269,7 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 
 func TestGetMetricsAPIEmpty(t *testing.T) {
 	test.WipeDB(historyDB.DB())
-	_, err := historyDBWithACC.GetMetricsAPI(0)
-	assert.NoError(t, err)
-}
-
-func TestGetAvgTxFeeEmpty(t *testing.T) {
-	test.WipeDB(historyDB.DB())
-	_, err := historyDBWithACC.GetAvgTxFeeAPI()
+	_, err := historyDBWithACC.GetMetricsInternalAPI(0)
 	assert.NoError(t, err)
 }
 
@@ -1463,4 +1457,66 @@ func setTestBlocks(from, to int64) []common.Block {
 		panic(err)
 	}
 	return blocks
+}
+
+func TestNodeInfo(t *testing.T) {
+	test.WipeDB(historyDB.DB())
+
+	err := historyDB.SetStateInternalAPI(&StateAPI{})
+	require.NoError(t, err)
+
+	clientSetup := test.NewClientSetupExample()
+	constants := &Constants{
+		SCConsts: common.SCConsts{
+			Rollup:   *clientSetup.RollupConstants,
+			Auction:  *clientSetup.AuctionConstants,
+			WDelayer: *clientSetup.WDelayerConstants,
+		},
+		ChainID:       42,
+		HermezAddress: clientSetup.AuctionConstants.HermezRollup,
+	}
+	err = historyDB.SetConstants(constants)
+	require.NoError(t, err)
+
+	// Test parameters
+	stateAPI := &StateAPI{
+		NodePublicConfig: NodePublicConfig{
+			ForgeDelay: 3.1,
+		},
+		Network: NetworkAPI{
+			LastEthBlock:  12,
+			LastSyncBlock: 34,
+		},
+		Metrics: MetricsAPI{
+			TransactionsPerBatch: 1.1,
+			TotalAccounts:        42,
+		},
+		Rollup:            *NewRollupVariablesAPI(clientSetup.RollupVariables),
+		Auction:           *NewAuctionVariablesAPI(clientSetup.AuctionVariables),
+		WithdrawalDelayer: *clientSetup.WDelayerVariables,
+		RecommendedFee: common.RecommendedFee{
+			ExistingAccount: 0.15,
+		},
+	}
+	err = historyDB.SetStateInternalAPI(stateAPI)
+	require.NoError(t, err)
+
+	nodeConfig := &NodeConfig{
+		MaxPoolTxs: 123,
+		MinFeeUSD:  0.5,
+	}
+	err = historyDB.SetNodeConfig(nodeConfig)
+	require.NoError(t, err)
+
+	dbConstants, err := historyDB.GetConstants()
+	require.NoError(t, err)
+	assert.Equal(t, constants, dbConstants)
+
+	dbNodeConfig, err := historyDB.GetNodeConfig()
+	require.NoError(t, err)
+	assert.Equal(t, nodeConfig, dbNodeConfig)
+
+	dbStateAPI, err := historyDB.getStateAPI(historyDB.dbRead)
+	require.NoError(t, err)
+	assert.Equal(t, stateAPI, dbStateAPI)
 }

@@ -45,6 +45,13 @@ type ForgeBatchGasCost struct {
 	L2Tx      uint64 `validate:"required"`
 }
 
+// CoordinatorAPI specifies the configuration parameters of the API in mode
+// coordinator
+type CoordinatorAPI struct {
+	// Coordinator enables the coordinator API endpoints
+	Coordinator bool
+}
+
 // Coordinator is the coordinator specific configuration.
 type Coordinator struct {
 	// ForgerAddress is the address under which this coordinator is forging
@@ -206,10 +213,7 @@ type Coordinator struct {
 		// ForgeBatch transaction.
 		ForgeBatchGasCost ForgeBatchGasCost `validate:"required"`
 	} `validate:"required"`
-	API struct {
-		// Coordinator enables the coordinator API endpoints
-		Coordinator bool
-	} `validate:"required"`
+	API   CoordinatorAPI `validate:"required"`
 	Debug struct {
 		// BatchPath if set, specifies the path where batchInfo is stored
 		// in JSON in every step/update of the pipeline
@@ -222,6 +226,45 @@ type Coordinator struct {
 		// must match with the Circuit parameters.
 		RollupVerifierIndex *int
 	}
+}
+
+// PostgreSQL is the postgreSQL configuration parameters.  It's possible to use
+// diferentiated SQL connections for read/write.  If the read configuration is
+// not provided, the write one it's going to be used for both reads and writes
+type PostgreSQL struct {
+	// Port of the PostgreSQL write server
+	PortWrite int `validate:"required"`
+	// Host of the PostgreSQL write server
+	HostWrite string `validate:"required"`
+	// User of the PostgreSQL write server
+	UserWrite string `validate:"required"`
+	// Password of the PostgreSQL write server
+	PasswordWrite string `validate:"required"`
+	// Name of the PostgreSQL write server database
+	NameWrite string `validate:"required"`
+	// Port of the PostgreSQL read server
+	PortRead int
+	// Host of the PostgreSQL read server
+	HostRead string
+	// User of the PostgreSQL read server
+	UserRead string
+	// Password of the PostgreSQL read server
+	PasswordRead string
+	// Name of the PostgreSQL read server database
+	NameRead string
+}
+
+// NodeDebug specifies debug configuration parameters
+type NodeDebug struct {
+	// APIAddress is the address where the debugAPI will listen if
+	// set
+	APIAddress string
+	// MeddlerLogs enables meddler debug mode, where unused columns and struct
+	// fields will be logged
+	MeddlerLogs bool
+	// GinDebugMode sets Gin-Gonic (the web framework) to run in
+	// debug mode
+	GinDebugMode bool
 }
 
 // Node is the hermez node configuration.
@@ -244,32 +287,8 @@ type Node struct {
 		// Keep is the number of checkpoints to keep
 		Keep int `validate:"required"`
 	} `validate:"required"`
-	// It's possible to use diferentiated SQL connections for read/write.
-	// If the read configuration is not provided, the write one it's going to be used
-	// for both reads and writes
-	PostgreSQL struct {
-		// Port of the PostgreSQL write server
-		PortWrite int `validate:"required"`
-		// Host of the PostgreSQL write server
-		HostWrite string `validate:"required"`
-		// User of the PostgreSQL write server
-		UserWrite string `validate:"required"`
-		// Password of the PostgreSQL write server
-		PasswordWrite string `validate:"required"`
-		// Name of the PostgreSQL write server database
-		NameWrite string `validate:"required"`
-		// Port of the PostgreSQL read server
-		PortRead int
-		// Host of the PostgreSQL read server
-		HostRead string
-		// User of the PostgreSQL read server
-		UserRead string
-		// Password of the PostgreSQL read server
-		PasswordRead string
-		// Name of the PostgreSQL read server database
-		NameRead string
-	} `validate:"required"`
-	Web3 struct {
+	PostgreSQL PostgreSQL `validate:"required"`
+	Web3       struct {
 		// URL is the URL of the web3 ethereum-node RPC server
 		URL string `validate:"required"`
 	} `validate:"required"`
@@ -299,6 +318,7 @@ type Node struct {
 		// TokenHEZ address
 		TokenHEZName string `validate:"required"`
 	} `validate:"required"`
+	// API specifies the configuration parameters of the API
 	API struct {
 		// Address where the API will listen if set
 		Address string
@@ -316,18 +336,43 @@ type Node struct {
 		// can wait to stablish a SQL connection
 		SQLConnectionTimeout Duration
 	} `validate:"required"`
-	Debug struct {
-		// APIAddress is the address where the debugAPI will listen if
-		// set
-		APIAddress string
-		// MeddlerLogs enables meddler debug mode, where unused columns and struct
-		// fields will be logged
-		MeddlerLogs bool
-		// GinDebugMode sets Gin-Gonic (the web framework) to run in
-		// debug mode
-		GinDebugMode bool
-	}
+	Debug       NodeDebug   `validate:"required"`
 	Coordinator Coordinator `validate:"-"`
+}
+
+// APIServer is the api server configuration parameters
+type APIServer struct {
+	// NodeAPI specifies the configuration parameters of the API
+	API struct {
+		// Address where the API will listen if set
+		Address string `validate:"required"`
+		// Explorer enables the Explorer API endpoints
+		Explorer bool
+		// Maximum concurrent connections allowed between API and SQL
+		MaxSQLConnections int `validate:"required"`
+		// SQLConnectionTimeout is the maximum amount of time that an API request
+		// can wait to stablish a SQL connection
+		SQLConnectionTimeout Duration
+	} `validate:"required"`
+	PostgreSQL  PostgreSQL `validate:"required"`
+	Coordinator struct {
+		API struct {
+			// Coordinator enables the coordinator API endpoints
+			Coordinator bool
+		} `validate:"required"`
+		L2DB struct {
+			// MaxTxs is the maximum number of pending L2Txs that can be
+			// stored in the pool.  Once this number of pending L2Txs is
+			// reached, inserts to the pool will be denied until some of
+			// the pending txs are forged.
+			MaxTxs uint32 `validate:"required"`
+			// MinFeeUSD is the minimum fee in USD that a tx must pay in
+			// order to be accepted into the pool.  Txs with lower than
+			// minimum fee will be rejected at the API level.
+			MinFeeUSD float64
+		} `validate:"required"`
+	}
+	Debug NodeDebug `validate:"required"`
 }
 
 // Load loads a generic config.
@@ -343,8 +388,8 @@ func Load(path string, cfg interface{}) error {
 	return nil
 }
 
-// LoadCoordinator loads the Coordinator configuration from path.
-func LoadCoordinator(path string) (*Node, error) {
+// LoadNode loads the Node configuration from path.
+func LoadNode(path string, coordinator bool) (*Node, error) {
 	var cfg Node
 	if err := Load(path, &cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error loading node configuration file: %w", err))
@@ -353,21 +398,28 @@ func LoadCoordinator(path string) (*Node, error) {
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
-	if err := validate.Struct(cfg.Coordinator); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
+	if coordinator {
+		if err := validate.Struct(cfg.Coordinator); err != nil {
+			return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
+		}
 	}
 	return &cfg, nil
 }
 
-// LoadNode loads the Node configuration from path.
-func LoadNode(path string) (*Node, error) {
-	var cfg Node
+// LoadAPIServer loads the APIServer configuration from path.
+func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
+	var cfg APIServer
 	if err := Load(path, &cfg); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("error loading node configuration file: %w", err))
+		return nil, tracerr.Wrap(fmt.Errorf("error loading apiServer configuration file: %w", err))
 	}
 	validate := validator.New()
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
+	}
+	if coordinator {
+		if err := validate.Struct(cfg.Coordinator); err != nil {
+			return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
+		}
 	}
 	return &cfg, nil
 }
