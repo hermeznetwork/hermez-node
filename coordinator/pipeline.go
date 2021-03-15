@@ -414,7 +414,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo, e
 	var coordIdxs []common.Idx
 
 	// Check if the slot is not yet fulfilled
-	slotCommitted := false
+	slotCommitted := p.cfg.IgnoreSlotCommitment
 	if p.stats.Sync.Auction.CurrentSlot.ForgerCommitment ||
 		p.stats.Sync.Auction.CurrentSlot.SlotNum == p.state.lastSlotForged {
 		slotCommitted = true

@@ -84,6 +84,14 @@ type Config struct {
 	// to 0s, the coordinator will continuously forge even if the batches
 	// are empty.
 	ForgeNoTxsDelay time.Duration
+	// MustForgeAtSlotDeadline enables the coordinator to forge slots if
+	// the empty slots reach the slot deadline.
+	MustForgeAtSlotDeadline bool
+	// IgnoreSlotCommitment disables forcing the coordinator to forge a
+	// slot immediately when the slot is not committed. If set to false,
+	// the coordinator will immediately forge a batch at the beginning of
+	// a slot if it's the slot winner.
+	IgnoreSlotCommitment bool
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval time.Duration
@@ -318,7 +326,8 @@ func (c *Coordinator) syncSCVars(vars synchronizer.SCVariablesPtr) {
 }
 
 func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.AuctionVariables,
-	currentSlot *common.Slot, nextSlot *common.Slot, addr ethCommon.Address, blockNum int64) bool {
+	currentSlot *common.Slot, nextSlot *common.Slot, addr ethCommon.Address, blockNum int64,
+	mustForgeAtDeadline bool) bool {
 	if blockNum < auctionConstants.GenesisBlockNum {
 		log.Infow("canForge: requested blockNum is < genesis", "blockNum", blockNum,
 			"genesis", auctionConstants.GenesisBlockNum)
@@ -343,7 +352,7 @@ func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.Auc
 			"block", blockNum)
 		anyoneForge = true
 	}
-	if slot.Forger == addr || anyoneForge {
+	if slot.Forger == addr || (anyoneForge && mustForgeAtDeadline) {
 		return true
 	}
 	log.Debugw("canForge: can't forge", "slot.Forger", slot.Forger)
@@ -353,14 +362,14 @@ func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.Auc
 func (c *Coordinator) canForgeAt(blockNum int64) bool {
 	return canForge(&c.consts.Auction, &c.vars.Auction,
 		&c.stats.Sync.Auction.CurrentSlot, &c.stats.Sync.Auction.NextSlot,
-		c.cfg.ForgerAddress, blockNum)
+		c.cfg.ForgerAddress, blockNum, c.cfg.MustForgeAtSlotDeadline)
 }
 
 func (c *Coordinator) canForge() bool {
 	blockNum := c.stats.Eth.LastBlock.Num + 1
 	return canForge(&c.consts.Auction, &c.vars.Auction,
 		&c.stats.Sync.Auction.CurrentSlot, &c.stats.Sync.Auction.NextSlot,
-		c.cfg.ForgerAddress, blockNum)
+		c.cfg.ForgerAddress, blockNum, c.cfg.MustForgeAtSlotDeadline)
 }
 
 func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) error {
