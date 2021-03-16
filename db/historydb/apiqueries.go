@@ -1138,8 +1138,17 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 	}
 	// Set batch frequency
 	metrics.BatchFrequency = seconds / float64(nBatches)
-	if nTxs > 0 {
-		metrics.AvgTransactionFee = totalFee / float64(nTxs)
+	// Set avg transaction fee (only L2 txs have fee)
+	row = hdb.dbRead.QueryRow(
+		`SELECT COUNT(*) as total_txs FROM tx WHERE tx.batch_num between $1 AND $2 AND NOT is_l1;`,
+		p.FromBatchNum, p.ToBatchNum,
+	)
+	var nL2Txs int
+	if err := row.Scan(&nL2Txs); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if nL2Txs > 0 {
+		metrics.AvgTransactionFee = totalFee / float64(nL2Txs)
 	} else {
 		metrics.AvgTransactionFee = 0
 	}
