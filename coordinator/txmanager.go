@@ -147,7 +147,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	auth.Value = big.NewInt(0) // in wei
 
 	gasLimit := t.cfg.ForgeBatchGasCost.Fixed +
-		uint64(len(batchInfo.L1UserTxsExtra))*t.cfg.ForgeBatchGasCost.L1UserTx +
+		uint64(len(batchInfo.L1UserTxs))*t.cfg.ForgeBatchGasCost.L1UserTx +
 		uint64(len(batchInfo.L1CoordTxs))*t.cfg.ForgeBatchGasCost.L1CoordTx +
 		uint64(len(batchInfo.L2Txs))*t.cfg.ForgeBatchGasCost.L2Tx
 	auth.GasLimit = gasLimit

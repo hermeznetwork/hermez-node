@@ -367,6 +367,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 				ForgeDelay:              cfg.Coordinator.ForgeDelay.Duration,
 				MustForgeAtSlotDeadline: cfg.Coordinator.MustForgeAtSlotDeadline,
 				IgnoreSlotCommitment:    cfg.Coordinator.IgnoreSlotCommitment,
+				ForgeOncePerSlotIfTxs:   cfg.Coordinator.ForgeOncePerSlotIfTxs,
 				ForgeNoTxsDelay:         cfg.Coordinator.ForgeNoTxsDelay.Duration,
 				SyncRetryInterval:       cfg.Coordinator.SyncRetryInterval.Duration,
 				PurgeByExtDelInterval:   cfg.Coordinator.PurgeByExtDelInterval.Duration,
