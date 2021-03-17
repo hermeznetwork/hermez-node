@@ -354,15 +354,13 @@ func (s *Synchronizer) updateCurrentSlot(slot *common.Slot, reset bool, hasBatch
 	}
 	slot.SlotNum = slotNum
 	slot.StartBlock, slot.EndBlock = s.consts.Auction.SlotBlocks(slot.SlotNum)
+	if hasBatch && s.consts.Auction.RelativeBlock(firstBatchBlockNum) < int64(s.vars.Auction.SlotDeadline) {
+		slot.ForgerCommitment = true
+	}
 	// If Synced, update the current coordinator
 	if s.stats.Synced() && blockNum >= s.consts.Auction.GenesisBlockNum {
 		if err := s.setSlotCoordinator(slot); err != nil {
 			return tracerr.Wrap(err)
-		}
-		if hasBatch &&
-			s.consts.Auction.RelativeBlock(firstBatchBlockNum) <
-				int64(s.vars.Auction.SlotDeadline) {
-			slot.ForgerCommitment = true
 		}
 
 		// TODO: Remove this SANITY CHECK once this code is tested enough
