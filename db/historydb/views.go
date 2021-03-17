@@ -289,23 +289,24 @@ func (account AccountAPI) MarshalJSON() ([]byte, error) {
 // BatchAPI is a representation of a batch with additional information
 // required by the API, and extracted by joining block table
 type BatchAPI struct {
-	ItemID        uint64                 `json:"itemId" meddler:"item_id"`
-	BatchNum      common.BatchNum        `json:"batchNum" meddler:"batch_num"`
-	EthBlockNum   int64                  `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	EthBlockHash  ethCommon.Hash         `json:"ethereumBlockHash" meddler:"hash"`
-	Timestamp     time.Time              `json:"timestamp" meddler:"timestamp,utctime"`
-	ForgerAddr    ethCommon.Address      `json:"forgerAddr" meddler:"forger_addr"`
-	CollectedFees apitypes.CollectedFees `json:"collectedFees" meddler:"fees_collected,json"`
-	TotalFeesUSD  *float64               `json:"historicTotalCollectedFeesUSD" meddler:"total_fees_usd"`
-	StateRoot     apitypes.BigIntStr     `json:"stateRoot" meddler:"state_root"`
-	NumAccounts   int                    `json:"numAccounts" meddler:"num_accounts"`
-	ExitRoot      apitypes.BigIntStr     `json:"exitRoot" meddler:"exit_root"`
-	ForgeL1TxsNum *int64                 `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
-	SlotNum       int64                  `json:"slotNum" meddler:"slot_num"`
-	ForgedTxs     int                    `json:"forgedTransactions" meddler:"forged_txs"`
-	TotalItems    uint64                 `json:"-" meddler:"total_items"`
-	FirstItem     uint64                 `json:"-" meddler:"first_item"`
-	LastItem      uint64                 `json:"-" meddler:"last_item"`
+	ItemID           uint64                      `json:"itemId" meddler:"item_id"`
+	BatchNum         common.BatchNum             `json:"batchNum" meddler:"batch_num"`
+	EthBlockNum      int64                       `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	EthBlockHash     ethCommon.Hash              `json:"ethereumBlockHash" meddler:"hash"`
+	Timestamp        time.Time                   `json:"timestamp" meddler:"timestamp,utctime"`
+	ForgerAddr       ethCommon.Address           `json:"forgerAddr" meddler:"forger_addr"`
+	CollectedFeesDB  map[common.TokenID]*big.Int `json:"-" meddler:"fees_collected,json"`
+	CollectedFeesAPI apitypes.CollectedFeesAPI   `json:"collectedFees" meddler:"-"`
+	TotalFeesUSD     *float64                    `json:"historicTotalCollectedFeesUSD" meddler:"total_fees_usd"`
+	StateRoot        apitypes.BigIntStr          `json:"stateRoot" meddler:"state_root"`
+	NumAccounts      int                         `json:"numAccounts" meddler:"num_accounts"`
+	ExitRoot         apitypes.BigIntStr          `json:"exitRoot" meddler:"exit_root"`
+	ForgeL1TxsNum    *int64                      `json:"forgeL1TransactionsNum" meddler:"forge_l1_txs_num"`
+	SlotNum          int64                       `json:"slotNum" meddler:"slot_num"`
+	ForgedTxs        int                         `json:"forgedTransactions" meddler:"forged_txs"`
+	TotalItems       uint64                      `json:"-" meddler:"total_items"`
+	FirstItem        uint64                      `json:"-" meddler:"first_item"`
+	LastItem         uint64                      `json:"-" meddler:"last_item"`
 }
 
 // MetricsAPI define metrics of the network

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -1479,6 +1480,10 @@ func TestNodeInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test parameters
+	var f64 float64 = 1.2
+	var i64 int64 = 8888
+	addr := ethCommon.HexToAddress("0x1234")
+	hash := ethCommon.HexToHash("0x5678")
 	stateAPI := &StateAPI{
 		NodePublicConfig: NodePublicConfig{
 			ForgeDelay: 3.1,
@@ -1486,6 +1491,56 @@ func TestNodeInfo(t *testing.T) {
 		Network: NetworkAPI{
 			LastEthBlock:  12,
 			LastSyncBlock: 34,
+			LastBatch: &BatchAPI{
+				ItemID:       123,
+				BatchNum:     456,
+				EthBlockNum:  789,
+				EthBlockHash: hash,
+				Timestamp:    time.Now(),
+				ForgerAddr:   addr,
+				// CollectedFeesDB: map[common.TokenID]*big.Int{
+				// 	0: big.NewInt(11111),
+				// 	1: big.NewInt(21111),
+				// 	2: big.NewInt(31111),
+				// },
+				CollectedFeesAPI: apitypes.CollectedFeesAPI(map[common.TokenID]apitypes.BigIntStr{
+					0: apitypes.BigIntStr("11111"),
+					1: apitypes.BigIntStr("21111"),
+					2: apitypes.BigIntStr("31111"),
+				}),
+				TotalFeesUSD:  &f64,
+				StateRoot:     apitypes.BigIntStr("1234"),
+				NumAccounts:   11,
+				ExitRoot:      apitypes.BigIntStr("5678"),
+				ForgeL1TxsNum: &i64,
+				SlotNum:       44,
+				ForgedTxs:     23,
+				TotalItems:    0,
+				FirstItem:     0,
+				LastItem:      0,
+			},
+			CurrentSlot: 22,
+			NextForgers: []NextForgerAPI{
+				{
+					Coordinator: CoordinatorAPI{
+						ItemID:      111,
+						Bidder:      addr,
+						Forger:      addr,
+						EthBlockNum: 566,
+						URL:         "asd",
+						TotalItems:  0,
+						FirstItem:   0,
+						LastItem:    0,
+					},
+					Period: Period{
+						SlotNum:       33,
+						FromBlock:     55,
+						ToBlock:       66,
+						FromTimestamp: time.Now(),
+						ToTimestamp:   time.Now(),
+					},
+				},
+			},
 		},
 		Metrics: MetricsAPI{
 			TransactionsPerBatch: 1.1,
@@ -1518,5 +1573,14 @@ func TestNodeInfo(t *testing.T) {
 
 	dbStateAPI, err := historyDB.getStateAPI(historyDB.dbRead)
 	require.NoError(t, err)
+	assert.Equal(t, stateAPI.Network.LastBatch.Timestamp.Unix(),
+		dbStateAPI.Network.LastBatch.Timestamp.Unix())
+	dbStateAPI.Network.LastBatch.Timestamp = stateAPI.Network.LastBatch.Timestamp
+	assert.Equal(t, stateAPI.Network.NextForgers[0].Period.FromTimestamp.Unix(),
+		dbStateAPI.Network.NextForgers[0].Period.FromTimestamp.Unix())
+	dbStateAPI.Network.NextForgers[0].Period.FromTimestamp = stateAPI.Network.NextForgers[0].Period.FromTimestamp
+	assert.Equal(t, stateAPI.Network.NextForgers[0].Period.ToTimestamp.Unix(),
+		dbStateAPI.Network.NextForgers[0].Period.ToTimestamp.Unix())
+	dbStateAPI.Network.NextForgers[0].Period.ToTimestamp = stateAPI.Network.NextForgers[0].Period.ToTimestamp
 	assert.Equal(t, stateAPI, dbStateAPI)
 }

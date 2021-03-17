@@ -7,10 +7,12 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testBatch struct {
@@ -20,7 +22,7 @@ type testBatch struct {
 	EthBlockHash  ethCommon.Hash            `json:"ethereumBlockHash"`
 	Timestamp     time.Time                 `json:"timestamp"`
 	ForgerAddr    ethCommon.Address         `json:"forgerAddr"`
-	CollectedFees map[common.TokenID]string `json:"collectedFees"`
+	CollectedFees apitypes.CollectedFeesAPI `json:"collectedFees"`
 	TotalFeesUSD  *float64                  `json:"historicTotalCollectedFeesUSD"`
 	StateRoot     string                    `json:"stateRoot"`
 	NumAccounts   int                       `json:"numAccounts"`
@@ -73,9 +75,9 @@ func genTestBatches(
 		if !found {
 			panic("block not found")
 		}
-		collectedFees := make(map[common.TokenID]string)
+		collectedFees := apitypes.CollectedFeesAPI(make(map[common.TokenID]apitypes.BigIntStr))
 		for k, v := range cBatches[i].CollectedFees {
-			collectedFees[k] = v.String()
+			collectedFees[k] = *apitypes.NewBigIntStr(v)
 		}
 		forgedTxs := 0
 		for _, tx := range txs {
@@ -132,7 +134,7 @@ func TestGetBatches(t *testing.T) {
 	limit := 3
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assertBatches(t, tc.batches, fetchedBatches)
 
 	// minBatchNum
@@ -141,7 +143,7 @@ func TestGetBatches(t *testing.T) {
 	minBatchNum := tc.batches[len(tc.batches)/2].BatchNum
 	path = fmt.Sprintf("%s?minBatchNum=%d&limit=%d", endpoint, minBatchNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	minBatchNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
 		if tc.batches[i].BatchNum > minBatchNum {
@@ -156,7 +158,7 @@ func TestGetBatches(t *testing.T) {
 	maxBatchNum := tc.batches[len(tc.batches)/2].BatchNum
 	path = fmt.Sprintf("%s?maxBatchNum=%d&limit=%d", endpoint, maxBatchNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	maxBatchNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
 		if tc.batches[i].BatchNum < maxBatchNum {
@@ -171,7 +173,7 @@ func TestGetBatches(t *testing.T) {
 	slotNum := tc.batches[len(tc.batches)/2].SlotNum
 	path = fmt.Sprintf("%s?slotNum=%d&limit=%d", endpoint, slotNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	slotNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
 		if tc.batches[i].SlotNum == slotNum {
@@ -186,7 +188,7 @@ func TestGetBatches(t *testing.T) {
 	forgerAddr := tc.batches[len(tc.batches)/2].ForgerAddr
 	path = fmt.Sprintf("%s?forgerAddr=%s&limit=%d", endpoint, forgerAddr.String(), limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	forgerAddrBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
 		if tc.batches[i].ForgerAddr == forgerAddr {
@@ -200,7 +202,7 @@ func TestGetBatches(t *testing.T) {
 	limit = 6
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err = doGoodReqPaginated(path, historydb.OrderDesc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	flippedBatches := []testBatch{}
 	for i := len(tc.batches) - 1; i >= 0; i-- {
 		flippedBatches = append(flippedBatches, tc.batches[i])
@@ -214,7 +216,7 @@ func TestGetBatches(t *testing.T) {
 	minBatchNum = tc.batches[len(tc.batches)/4].BatchNum
 	path = fmt.Sprintf("%s?minBatchNum=%d&maxBatchNum=%d&limit=%d", endpoint, minBatchNum, maxBatchNum, limit)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	minMaxBatchNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
 		if tc.batches[i].BatchNum < maxBatchNum && tc.batches[i].BatchNum > minBatchNum {
@@ -227,25 +229,25 @@ func TestGetBatches(t *testing.T) {
 	fetchedBatches = []testBatch{}
 	path = fmt.Sprintf("%s?slotNum=%d&minBatchNum=%d", endpoint, 1, 25)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assertBatches(t, []testBatch{}, fetchedBatches)
 
 	// 400
 	// Invalid minBatchNum
 	path = fmt.Sprintf("%s?minBatchNum=%d", endpoint, -2)
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Invalid forgerAddr
 	path = fmt.Sprintf("%s?forgerAddr=%s", endpoint, "0xG0000001")
 	err = doBadReq("GET", path, nil, 400)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetBatch(t *testing.T) {
 	endpoint := apiURL + "batches/"
 	for _, batch := range tc.batches {
 		fetchedBatch := testBatch{}
-		assert.NoError(
+		require.NoError(
 			t, doGoodReq(
 				"GET",
 				endpoint+strconv.Itoa(int(batch.BatchNum)),
@@ -255,16 +257,16 @@ func TestGetBatch(t *testing.T) {
 		assertBatch(t, batch, fetchedBatch)
 	}
 	// 400
-	assert.NoError(t, doBadReq("GET", endpoint+"foo", nil, 400))
+	require.NoError(t, doBadReq("GET", endpoint+"foo", nil, 400))
 	// 404
-	assert.NoError(t, doBadReq("GET", endpoint+"99999", nil, 404))
+	require.NoError(t, doBadReq("GET", endpoint+"99999", nil, 404))
 }
 
 func TestGetFullBatch(t *testing.T) {
 	endpoint := apiURL + "full-batches/"
 	for _, fullBatch := range tc.fullBatches {
 		fetchedFullBatch := testFullBatch{}
-		assert.NoError(
+		require.NoError(
 			t, doGoodReq(
 				"GET",
 				endpoint+strconv.Itoa(int(fullBatch.Batch.BatchNum)),
@@ -275,9 +277,9 @@ func TestGetFullBatch(t *testing.T) {
 		assertTxs(t, fullBatch.Txs, fetchedFullBatch.Txs)
 	}
 	// 400
-	assert.NoError(t, doBadReq("GET", endpoint+"foo", nil, 400))
+	require.NoError(t, doBadReq("GET", endpoint+"foo", nil, 400))
 	// 404
-	assert.NoError(t, doBadReq("GET", endpoint+"99999", nil, 404))
+	require.NoError(t, doBadReq("GET", endpoint+"99999", nil, 404))
 }
 
 func assertBatches(t *testing.T, expected, actual []testBatch) {
