@@ -26,11 +26,13 @@ import (
 )
 
 func initTest(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address,
-	coordUser *til.User) *TxSelector {
+	coordUser *til.User) (*TxSelector, *historydb.HistoryDB) {
 	pass := os.Getenv("POSTGRES_PASS")
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
 	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 24*time.Hour, nil)
+
+	historyDB := historydb.NewHistoryDB(db, db, nil)
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
@@ -65,7 +67,7 @@ func initTest(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address
 
 	test.WipeDB(txsel.l2db.DB())
 
-	return txsel
+	return txsel, historyDB
 }
 
 func addAccCreationAuth(t *testing.T, tc *til.Context, txsel *TxSelector, chainID uint16,
@@ -157,7 +159,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.NoError(t, err)
 
 	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
-	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+	txsel, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
 
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
@@ -417,7 +419,7 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	assert.NoError(t, err)
 
 	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
-	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+	txsel, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
 
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
@@ -470,11 +472,6 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	tc.RestartNonces()
 
 	// batch3
-	// NOTE: this batch will result with 1 L2Tx, as the PoolExit tx is not
-	// possible, as the PoolTransferToEthAddr is not processed yet when
-	// checking availability of PoolExit.  This, in a near-future iteration
-	// of the TxSelector will return the 2 transactions as valid and
-	// selected, as the TxSelector will handle this kind of combinations.
 	batchPoolL2 = `
 	Type: PoolL2
 	PoolTransferToEthAddr(0) A-B: 50 (126)`
@@ -488,11 +485,11 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
-	assert.Equal(t, 1, len(oL2Txs)) // see 'NOTE' at the beginning of 'batch3' of this test
-	assert.Equal(t, 2, len(discardedL2Txs))
+	assert.Equal(t, 2, len(oL2Txs))
+	assert.Equal(t, 1, len(discardedL2Txs))
 	assert.Equal(t, expectedTxID2, oL2Txs[0].TxID.String())
+	assert.Equal(t, expectedTxID1, oL2Txs[1].TxID.String())
 	assert.Equal(t, expectedTxID0, discardedL2Txs[0].TxID.String())
-	assert.Equal(t, expectedTxID1, discardedL2Txs[1].TxID.String())
 	assert.Equal(t, common.TxTypeTransferToEthAddr, oL2Txs[0].Type)
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.localAccountsDB.CurrentBatch())
@@ -507,12 +504,8 @@ func TestPoolL2TxsWithoutEnoughBalance(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
-	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, 1, len(discardedL2Txs))
-	// the Exit that was not accepted at the batch2
-	assert.Equal(t, expectedTxID1, oL2Txs[0].TxID.String())
-	assert.Equal(t, expectedTxID0, discardedL2Txs[0].TxID.String())
-	assert.Equal(t, common.TxTypeExit, oL2Txs[0].Type)
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
@@ -539,7 +532,7 @@ func TestTransferToBjj(t *testing.T) {
 	assert.NoError(t, err)
 
 	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
-	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+	txsel, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
 
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
@@ -670,7 +663,7 @@ func TestTransferManyFromSameAccount(t *testing.T) {
 	assert.NoError(t, err)
 
 	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
-	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+	txsel, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
 
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
@@ -752,7 +745,7 @@ func TestPoolL2TxInvalidNonces(t *testing.T) {
 	assert.NoError(t, err)
 
 	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
-	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+	txsel, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
 
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
@@ -865,7 +858,7 @@ func TestProcessL2Selection(t *testing.T) {
 	assert.NoError(t, err)
 
 	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
-	txsel := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+	txsel, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
 
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
@@ -920,4 +913,128 @@ func TestProcessL2Selection(t *testing.T) {
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
+}
+
+func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
+	// This test recreates the case where there are
+
+	set := `
+		Type: Blockchain
+
+		CreateAccountDeposit(0) Coord: 0
+		CreateAccountDeposit(0) A: 100
+		CreateAccountDeposit(0) B: 0
+
+		> batchL1 // Batch1: freeze L1User{3}
+		> batchL1 // Batch2: forge L1User{3}
+		> block
+	`
+
+	chainID := uint16(0)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	tilCfgExtra := til.ConfigExtra{
+		BootCoordAddr: ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E0A9f2"),
+		CoordUser:     "Coord",
+	}
+	blocks, err := tc.GenerateBlocks(set)
+	require.NoError(t, err)
+	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
+	require.NoError(t, err)
+	err = tc.FillBlocksForgedL1UserTxs(blocks)
+	require.NoError(t, err)
+
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	txsel, historyDB := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+
+	// Insert blocks into DB
+	for i := range blocks {
+		err = historyDB.AddBlockSCData(&blocks[i])
+		assert.NoError(t, err)
+	}
+
+	err = historyDB.UpdateTokenValue(common.EmptyAddr, 1000)
+	require.NoError(t, err)
+
+	// restart nonces of TilContext, as will be set by generating directly
+	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
+	tc.RestartNonces()
+
+	tpc := txprocessor.Config{
+		NLevels:  16,
+		MaxFeeTx: 5,
+		MaxTx:    5,
+		MaxL1Tx:  3,
+		ChainID:  chainID,
+	}
+	// batch1 to freeze L1UserTxs
+	l1UserTxs := []common.L1Tx{}
+	_, _, _, _, _, _, err = txsel.GetL1L2TxSelection(tpc, l1UserTxs)
+	require.NoError(t, err)
+
+	// batch 2 to crate the accounts (from L1UserTxs)
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
+
+	// select L1 & L2 txs
+	_, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(oL1UserTxs))
+	require.Equal(t, 0, len(oL1CoordTxs))
+	require.Equal(t, 0, len(oL2Txs))
+	require.Equal(t, 0, len(discardedL2Txs))
+	require.Equal(t, 0, len(accAuths))
+
+	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
+		txsel.localAccountsDB.CurrentBatch())
+	require.NoError(t, err)
+
+	// batch 3. The A-B txs have lower fee, but are the only ones possible
+	// with the current Accounts Balances, as the B-A tx of amount 40 will
+	// not be included as will be processed first when there is not enough
+	// balance at B (processed first as the TxSelector sorts by Fee and then
+	// by Nonce).
+	batchPoolL2 := `
+	Type: PoolL2
+	PoolTransfer(0) B-A: 40 (130) // B-A txs are only possible once A-B txs are processed
+	PoolTransfer(0) B-A: 1 (126)
+	PoolTransfer(0) B-A: 1 (126)
+	PoolTransfer(0) B-A: 1 (126)
+	PoolTransfer(0) B-A: 1 (126)
+	PoolTransfer(0) B-A: 1 (126)
+	PoolTransfer(0) B-A: 1 (126)
+	PoolTransfer(0) B-A: 1 (126)
+	PoolTransfer(0) A-B: 20 (20)
+	PoolTransfer(0) A-B: 25 (150)
+	PoolTransfer(0) A-B: 20 (20)
+	`
+	poolL2Txs, err := tc.GeneratePoolL2Txs(batchPoolL2)
+	require.NoError(t, err)
+	require.Equal(t, 11, len(poolL2Txs))
+	// add the PoolL2Txs to the l2DB
+	addL2Txs(t, txsel, poolL2Txs)
+	l1UserTxs = []common.L1Tx{}
+	_, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs)
+	require.NoError(t, err)
+
+	require.Equal(t, 0, len(oL1UserTxs))
+	require.Equal(t, 0, len(oL1CoordTxs))
+	require.Equal(t, 3, len(oL2Txs))         // the 3 txs A-B
+	require.Equal(t, 8, len(discardedL2Txs)) // the 8 txs B-A
+	require.Equal(t, 0, len(accAuths))
+
+	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
+		txsel.localAccountsDB.CurrentBatch())
+	require.NoError(t, err)
+
+	// batch 4. In this Batch, account B has enough balance to send the txs
+	_, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs)
+	require.NoError(t, err)
+
+	require.Equal(t, 0, len(oL1UserTxs))
+	require.Equal(t, 0, len(oL1CoordTxs))
+	require.Equal(t, 5, len(oL2Txs))
+	require.Equal(t, 3, len(discardedL2Txs))
+	require.Equal(t, 0, len(accAuths))
 }
