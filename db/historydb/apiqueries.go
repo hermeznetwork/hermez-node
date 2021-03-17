@@ -8,6 +8,7 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
@@ -45,7 +46,7 @@ func (hdb *HistoryDB) GetBatchInternalAPI(batchNum common.BatchNum) (*BatchAPI, 
 
 func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*BatchAPI, error) {
 	batch := &BatchAPI{}
-	return batch, tracerr.Wrap(meddler.QueryRow(
+	if err := meddler.QueryRow(
 		d, batch,
 		`SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
 		batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
@@ -54,7 +55,11 @@ func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*Batc
 	    COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs
 	    FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
 	 	WHERE batch_num = $1;`, batchNum,
-	))
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	batch.CollectedFeesAPI = apitypes.NewCollectedFeesAPI(batch.CollectedFeesDB)
+	return batch, nil
 }
 
 // GetBatchesAPI return the batches applying the given filters
@@ -154,6 +159,9 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	batches := db.SlicePtrsToSlice(batchPtrs).([]BatchAPI)
 	if len(batches) == 0 {
 		return batches, 0, nil
+	}
+	for i := range batches {
+		batches[i].CollectedFeesAPI = apitypes.NewCollectedFeesAPI(batches[i].CollectedFeesDB)
 	}
 	return batches, batches[0].TotalItems - uint64(len(batches)), nil
 }

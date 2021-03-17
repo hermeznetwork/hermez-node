@@ -4,6 +4,7 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/russross/meddler"
@@ -124,6 +125,10 @@ func (hdb *HistoryDB) getStateAPI(d meddler.DB) (*StateAPI, error) {
 
 // SetStateInternalAPI sets the StateAPI
 func (hdb *HistoryDB) SetStateInternalAPI(stateAPI *StateAPI) error {
+	if stateAPI.Network.LastBatch != nil {
+		stateAPI.Network.LastBatch.CollectedFeesAPI =
+			apitypes.NewCollectedFeesAPI(stateAPI.Network.LastBatch.CollectedFeesDB)
+	}
 	_stateAPI := struct {
 		StateAPI *StateAPI `meddler:"state,json"`
 	}{stateAPI}

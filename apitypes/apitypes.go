@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -73,22 +72,16 @@ func (s *StrBigInt) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// CollectedFees is used to retrieve common.batch.CollectedFee from the DB
-type CollectedFees map[common.TokenID]BigIntStr
+// CollectedFeesAPI is send common.batch.CollectedFee through the API
+type CollectedFeesAPI map[common.TokenID]BigIntStr
 
-// UnmarshalJSON unmarshals a json representation of map[common.TokenID]*big.Int
-func (c *CollectedFees) UnmarshalJSON(text []byte) error {
-	bigIntMap := make(map[common.TokenID]*big.Int)
-	if err := json.Unmarshal(text, &bigIntMap); err != nil {
-		return tracerr.Wrap(err)
+// NewCollectedFeesAPI creates a new CollectedFeesAPI from a *big.Int map
+func NewCollectedFeesAPI(m map[common.TokenID]*big.Int) CollectedFeesAPI {
+	c := CollectedFeesAPI(make(map[common.TokenID]BigIntStr))
+	for k, v := range m {
+		c[k] = *NewBigIntStr(v)
 	}
-	*c = CollectedFees(make(map[common.TokenID]BigIntStr))
-	for k, v := range bigIntMap {
-		bStr := NewBigIntStr(v)
-		(CollectedFees(*c)[k]) = *bStr
-	}
-	// *c = CollectedFees(bStrMap)
-	return nil
+	return c
 }
 
 // HezEthAddr is used to scan/value Ethereum Address directly into strings that follow the Ethereum address hez format (^hez:0x[a-fA-F0-9]{40}$) from/to sql DBs.
