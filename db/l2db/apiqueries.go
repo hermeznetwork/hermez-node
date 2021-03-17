@@ -80,7 +80,7 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 	q := fmt.Sprintf(
 		`INSERT INTO tx_pool (%s)
 		SELECT %s
-		WHERE (SELECT COUNT(*) FROM tx_pool WHERE state = $%v) < $%v;`,
+		WHERE (SELECT COUNT(*) FROM tx_pool WHERE state = $%v AND NOT external_delete) < $%v;`,
 		namesPart, valuesPart,
 		len(values)+1, len(values)+2) //nolint:gomnd
 	values = append(values, common.PoolL2TxStatePending, l2db.maxTxs)

@@ -1121,7 +1121,6 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 		nBatches++
 	}
 	if (p.ToBatchNum - p.FromBatchNum) > 0 {
-		fmt.Printf("DBG ntxs: %v, nBatches: %v\n", nTxs, nBatches)
 		metrics.TransactionsPerBatch = float64(nTxs) /
 			float64(nBatches)
 	} else {

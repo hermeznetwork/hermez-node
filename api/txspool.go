@@ -179,7 +179,7 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	// Get public key
 	account, err := a.h.GetCommonAccountAPI(poolTx.FromIdx)
 	if err != nil {
-		return tracerr.Wrap(err)
+		return tracerr.Wrap(fmt.Errorf("Error getting from account: %w", err))
 	}
 	// Validate TokenID
 	if poolTx.TokenID != account.TokenID {
