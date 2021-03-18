@@ -1,5 +1,11 @@
 -- +migrate Up
 
+-- NOTE: We use "DECIMAL(78,0)" to encode go *big.Int types.  All the *big.Int
+-- that we deal with represent a value in the SNARK field, which is an integer
+-- of 256 bits.  `log(2**256, 10) = 77.06`: that is, a 256 bit number can have
+-- at most 78 digits, so we use this value to specify the precision in the
+-- PostgreSQL DECIMAL guaranteeing that we will never lose precision.
+
 -- History
 CREATE TABLE block (
     eth_block_num BIGINT PRIMARY KEY,
@@ -22,10 +28,10 @@ CREATE TABLE batch (
     forger_addr BYTEA NOT NULL, -- fake foreign key for coordinator
     fees_collected BYTEA NOT NULL,
     fee_idxs_coordinator BYTEA NOT NULL,
-    state_root BYTEA NOT NULL,
+    state_root DECIMAL(78,0) NOT NULL,
     num_accounts BIGINT NOT NULL,
     last_idx BIGINT NOT NULL,
-    exit_root BYTEA NOT NULL,
+    exit_root DECIMAL(78,0) NOT NULL,
     forge_l1_txs_num BIGINT,
     slot_num BIGINT NOT NULL,
     total_fees_usd NUMERIC
@@ -34,7 +40,7 @@ CREATE TABLE batch (
 CREATE TABLE bid (
     item_id SERIAL PRIMARY KEY,
     slot_num BIGINT NOT NULL,
-    bid_value BYTEA NOT NULL,
+    bid_value DECIMAL(78,0) NOT NULL,
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     bidder_addr BYTEA NOT NULL -- fake foreign key for coordinator
 );
@@ -106,7 +112,7 @@ CREATE TABLE account_update (
     batch_num BIGINT NOT NULL REFERENCES batch (batch_num) ON DELETE CASCADE,
     idx BIGINT NOT NULL REFERENCES account (idx) ON DELETE CASCADE,
     nonce BIGINT NOT NULL,
-    balance BYTEA NOT NULL
+    balance DECIMAL(78,0) NOT NULL
 );
 
 CREATE TABLE exit_tree (
@@ -114,7 +120,7 @@ CREATE TABLE exit_tree (
     batch_num BIGINT REFERENCES batch (batch_num) ON DELETE CASCADE,
     account_idx BIGINT REFERENCES account (idx) ON DELETE CASCADE,
     merkle_proof BYTEA NOT NULL,
-    balance BYTEA NOT NULL,
+    balance DECIMAL(78,0) NOT NULL,
     instant_withdrawn BIGINT REFERENCES block (eth_block_num) ON DELETE SET NULL,
     delayed_withdraw_request BIGINT REFERENCES block (eth_block_num) ON DELETE SET NULL,
     owner BYTEA,
@@ -164,7 +170,7 @@ CREATE TABLE tx (
     to_idx BIGINT NOT NULL,
     to_eth_addr BYTEA,
     to_bjj BYTEA,
-    amount BYTEA NOT NULL,
+    amount DECIMAL(78,0) NOT NULL,
     amount_success BOOLEAN NOT NULL DEFAULT true,
     amount_f NUMERIC NOT NULL,
     token_id INT NOT NULL REFERENCES token (token_id),
@@ -174,7 +180,7 @@ CREATE TABLE tx (
     -- L1
     to_forge_l1_txs_num BIGINT,
     user_origin BOOLEAN,
-    deposit_amount BYTEA,
+    deposit_amount DECIMAL(78,0),
     deposit_amount_success BOOLEAN NOT NULL DEFAULT true,
     deposit_amount_f NUMERIC,
     deposit_amount_usd NUMERIC,
@@ -544,7 +550,7 @@ FOR EACH ROW EXECUTE PROCEDURE forge_l1_user_txs();
 
 CREATE TABLE rollup_vars (
     eth_block_num BIGINT PRIMARY KEY REFERENCES block (eth_block_num) ON DELETE CASCADE,
-    fee_add_token BYTEA NOT NULL,
+    fee_add_token DECIMAL(78,0) NOT NULL,
     forge_l1_timeout BIGINT NOT NULL,
     withdrawal_delay BIGINT NOT NULL,
     buckets BYTEA NOT NULL,
@@ -556,7 +562,7 @@ CREATE TABLE bucket_update (
     eth_block_num BIGINT NOT NULL REFERENCES block (eth_block_num) ON DELETE CASCADE,
     num_bucket BIGINT NOT NULL,
     block_stamp BIGINT NOT NULL,
-    withdrawals BYTEA NOT NULL
+    withdrawals DECIMAL(78,0) NOT NULL
 );
 
 CREATE TABLE token_exchange (
@@ -572,7 +578,7 @@ CREATE TABLE escape_hatch_withdrawal (
     who_addr BYTEA NOT NULL,
     to_addr BYTEA NOT NULL,
     token_addr BYTEA NOT NULL,
-    amount BYTEA NOT NULL
+    amount DECIMAL(78,0) NOT NULL
 );
 
 CREATE TABLE auction_vars (
@@ -610,7 +616,7 @@ CREATE TABLE tx_pool (
     effective_to_eth_addr BYTEA,
     effective_to_bjj BYTEA,
     token_id INT NOT NULL REFERENCES token (token_id) ON DELETE CASCADE,
-    amount BYTEA NOT NULL,
+    amount DECIMAL(78,0) NOT NULL,
     amount_f NUMERIC NOT NULL,
     fee SMALLINT NOT NULL,
     nonce BIGINT NOT NULL,
@@ -624,7 +630,7 @@ CREATE TABLE tx_pool (
     rq_to_eth_addr BYTEA,
     rq_to_bjj BYTEA,
     rq_token_id INT,
-    rq_amount BYTEA,
+    rq_amount DECIMAL(78,0),
     rq_fee SMALLINT,
     rq_nonce BIGINT,
     tx_type VARCHAR(40) NOT NULL,

@@ -693,11 +693,11 @@ func (hdb *HistoryDB) GetAllExits() ([]common.ExitInfo, error) {
 func (hdb *HistoryDB) GetAllL1UserTxs() ([]common.L1Tx, error) {
 	var txs []*common.L1Tx
 	err := meddler.QueryAll(
-		hdb.dbRead, &txs, // Note that '\x' gets parsed as a big.Int with value = 0
+		hdb.dbRead, &txs,
 		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
 		tx.from_idx, tx.effective_from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
-		tx.amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.amount_success THEN tx.amount ELSE '\x' END) AS effective_amount,
-		tx.deposit_amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.deposit_amount_success THEN tx.deposit_amount ELSE '\x' END) AS effective_deposit_amount,
+		tx.amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.amount_success THEN tx.amount ELSE 0 END) AS effective_amount,
+		tx.deposit_amount, (CASE WHEN tx.batch_num IS NULL THEN NULL WHEN tx.deposit_amount_success THEN tx.deposit_amount ELSE 0 END) AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE is_l1 = TRUE AND user_origin = TRUE ORDER BY item_id;`,
 	)
