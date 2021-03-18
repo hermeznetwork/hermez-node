@@ -18,7 +18,10 @@ import (
 
 // BigIntStr is used to scan/value *big.Int directly into strings from/to sql DBs.
 // It assumes that *big.Int are inserted/fetched to/from the DB using the BigIntMeddler meddler
-// defined at github.com/hermeznetwork/hermez-node/db
+// defined at github.com/hermeznetwork/hermez-node/db.  Since *big.Int is
+// stored as DECIMAL in SQL, there's no need to implement Scan()/Value()
+// because DECIMALS are encoded/decoded as strings by the sql driver, and
+// BigIntStr is already a string.
 type BigIntStr string
 
 // NewBigIntStr creates a *BigIntStr from a *big.Int.
@@ -29,34 +32,6 @@ func NewBigIntStr(bigInt *big.Int) *BigIntStr {
 	}
 	bigIntStr := BigIntStr(bigInt.String())
 	return &bigIntStr
-}
-
-// Scan implements Scanner for database/sql
-func (b *BigIntStr) Scan(src interface{}) error {
-	srcBytes, ok := src.([]byte)
-	if !ok {
-		return tracerr.Wrap(fmt.Errorf("can't scan %T into apitypes.BigIntStr", src))
-	}
-	// bytes to *big.Int
-	bigInt := new(big.Int).SetBytes(srcBytes)
-	// *big.Int to BigIntStr
-	bigIntStr := NewBigIntStr(bigInt)
-	if bigIntStr == nil {
-		return nil
-	}
-	*b = *bigIntStr
-	return nil
-}
-
-// Value implements valuer for database/sql
-func (b BigIntStr) Value() (driver.Value, error) {
-	// string to *big.Int
-	bigInt, ok := new(big.Int).SetString(string(b), 10)
-	if !ok || bigInt == nil {
-		return nil, tracerr.Wrap(errors.New("invalid representation of a *big.Int"))
-	}
-	// *big.Int to bytes
-	return bigInt.Bytes(), nil
 }
 
 // StrBigInt is used to unmarshal BigIntStr directly into an alias of big.Int

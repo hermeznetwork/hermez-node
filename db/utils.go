@@ -13,6 +13,9 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
+
+	//nolint:errcheck // driver for postgres DB
+	_ "github.com/lib/pq"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 	"golang.org/x/sync/semaphore"
@@ -165,7 +168,11 @@ func (b BigIntMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
 		return tracerr.Wrap(fmt.Errorf("BigIntMeddler.PostRead: nil pointer"))
 	}
 	field := fieldPtr.(**big.Int)
-	*field = new(big.Int).SetBytes([]byte(*ptr))
+	var ok bool
+	*field, ok = new(big.Int).SetString(*ptr, 10)
+	if !ok {
+		return tracerr.Wrap(fmt.Errorf("big.Int.SetString failed on \"%v\"", *ptr))
+	}
 	return nil
 }
 
@@ -173,7 +180,7 @@ func (b BigIntMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
 func (b BigIntMeddler) PreWrite(fieldPtr interface{}) (saveValue interface{}, err error) {
 	field := fieldPtr.(*big.Int)
 
-	return field.Bytes(), nil
+	return field.String(), nil
 }
 
 // BigIntNullMeddler encodes or decodes the field value to or from JSON
@@ -198,7 +205,12 @@ func (b BigIntNullMeddler) PostRead(fieldPtr, scanTarget interface{}) error {
 	if ptr == nil {
 		return tracerr.Wrap(fmt.Errorf("BigIntMeddler.PostRead: nil pointer"))
 	}
-	*field = new(big.Int).SetBytes(ptr)
+	var ok bool
+	*field, ok = new(big.Int).SetString(string(ptr), 10)
+	if !ok {
+		return tracerr.Wrap(fmt.Errorf("big.Int.SetString failed on \"%v\"", string(ptr)))
+	}
+
 	return nil
 }
 
@@ -208,7 +220,7 @@ func (b BigIntNullMeddler) PreWrite(fieldPtr interface{}) (saveValue interface{}
 	if field == nil {
 		return nil, nil
 	}
-	return field.Bytes(), nil
+	return field.String(), nil
 }
 
 // SliceToSlicePtrs converts any []Foo to []*Foo
