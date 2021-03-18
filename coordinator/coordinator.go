@@ -24,10 +24,8 @@ import (
 )
 
 var (
-	errLastL1BatchNotSynced  = fmt.Errorf("last L1Batch not synced yet")
-	errForgeNoTxsBeforeDelay = fmt.Errorf(
-		"no txs to forge and we haven't reached the forge no txs delay")
-	errForgeBeforeDelay = fmt.Errorf("we haven't reached the forge delay")
+	errLastL1BatchNotSynced = fmt.Errorf("last L1Batch not synced yet")
+	errSkipBatchByPolicy    = fmt.Errorf("skip batch by policy")
 )
 
 const (
@@ -92,6 +90,12 @@ type Config struct {
 	// the coordinator will immediately forge a batch at the beginning of
 	// a slot if it's the slot winner.
 	IgnoreSlotCommitment bool
+	// ForgeOncePerSlotIfTxs will make the coordinator forge at most one
+	// batch per slot, only if there are included txs in that batch, or
+	// pending l1UserTxs in the smart contract.  Setting this parameter
+	// overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline`
+	// and `IgnoreSlotCommitment`.
+	ForgeOncePerSlotIfTxs bool
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval time.Duration
