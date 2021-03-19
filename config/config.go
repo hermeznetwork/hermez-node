@@ -112,11 +112,17 @@ type Coordinator struct {
 	// MustForgeAtSlotDeadline enables the coordinator to forge slots if
 	// the empty slots reach the slot deadline.
 	MustForgeAtSlotDeadline bool
-	// IgnoreSlotCommitment IgnoreSlotCommitment disables forcing the
-	// coordinator to forge a slot immediately when the slot is not
-	// committed. If set to false, the coordinator will immediately forge
-	// a batch at the beginning of a slot if it's the slot winner.
+	// IgnoreSlotCommitment disables forcing the coordinator to forge a
+	// slot immediately when the slot is not committed. If set to false,
+	// the coordinator will immediately forge a batch at the beginning of a
+	// slot if it's the slot winner.
 	IgnoreSlotCommitment bool
+	// ForgeOncePerSlotIfTxs will make the coordinator forge at most one
+	// batch per slot, only if there are included txs in that batch, or
+	// pending l1UserTxs in the smart contract.  Setting this parameter
+	// overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline`
+	// and `IgnoreSlotCommitment`.
+	ForgeOncePerSlotIfTxs bool
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
 	SyncRetryInterval Duration `validate:"required"`

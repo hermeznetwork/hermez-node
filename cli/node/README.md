@@ -8,7 +8,7 @@ The `hermez-node` has been tested with go version 1.14
 
 ## Usage
 
-```
+```shell
 NAME:
    hermez-node - A new cli application
 
@@ -16,18 +16,18 @@ USAGE:
    node [global options] command [command options] [arguments...]
 
 VERSION:
-   0.1.0-alpha
+   v0.1.0-6-gd8a50c5
 
 COMMANDS:
+   version    Show the application version
    importkey  Import ethereum private key
    genbjj     Generate a new BabyJubJub key
-   wipesql    Wipe the SQL DB (HistoryDB and L2DB), leaving the DB in a clean state
+   wipesql    Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
    run        Run the hermez-node in the indicated mode
+   discard    Discard blocks up to a specified block number
    help, h    Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --mode MODE    Set node MODE (can be "sync" or "coord")
-   --cfg FILE     Node configuration FILE
    --help, -h     show help (default: false)
    --version, -v  print the version (default: false)
 ```
@@ -75,7 +75,7 @@ when running the coordinator in sync mode
 
 Building the node requires using the packr utility to bundle the database
 migrations inside the resulting binary.  Install the packr utility with:
-```
+```shell
 cd /tmp && go get -u github.com/gobuffalo/packr/v2/packr2 && cd -
 ```
 
@@ -83,7 +83,7 @@ Make sure your `$PATH` contains `$GOPATH/bin`, otherwise the packr utility will
 not be found.
 
 Now build the node executable:
-```
+```shell
 cd ../../db && packr2 && cd -
 go build .
 cd ../../db && packr2 clean && cd -
@@ -98,35 +98,40 @@ run the following examples by replacing `./node` with `go run .` and executing
 them in the `cli/node` directory to build from source and run at the same time.
 
 Run the node in mode synchronizer:
-```
-./node --mode sync --cfg cfg.buidler.toml run
+```shell
+./node run --mode sync --cfg cfg.buidler.toml
 ```
 
 Run the node in mode coordinator:
-```
-./node --mode coord --cfg cfg.buidler.toml run
+```shell
+./node run --mode coord --cfg cfg.buidler.toml
 ```
 
 Import an ethereum private key into the keystore:
-```
-./node --mode coord --cfg cfg.buidler.toml importkey --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
+```shell
+./node importkey --mode coord --cfg cfg.buidler.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
 ```
 
 Generate a new BabyJubJub key pair:
+```shell
+./node genbjj
 ```
-./node --mode coord --cfg cfg.buidler.toml genbjj
+
+Check the binary version:
+```shell
+./node version
 ```
 
 Wipe the entier SQL database (this will destroy all synchronized and pool
 data):
-```
-./node --mode coord --cfg cfg.buidler.toml wipesql
+```shell
+./node wipesql --mode coord --cfg cfg.buidler.toml 
 ```
 
 Discard all synchronized blocks and associated state up to a given block
 number.  This command is useful in case the synchronizer reaches an invalid
 state and you want to roll back a few blocks and try again (maybe with some
 fixes in the code).
-```
-./node --mode coord --cfg cfg.buidler.toml discard --block 8061330
+```shell
+./node discard --mode coord --cfg cfg.buidler.toml --block 8061330
 ```

@@ -34,6 +34,22 @@ const (
 	modeCoord = "coord"
 )
 
+var (
+	// Version represents the program based on the git tag
+	Version = "v0.1.0"
+	// Build represents the program based on the git commit
+	Build = "dev"
+	// Date represents the date of application was built
+	Date = ""
+)
+
+func cmdVersion(c *cli.Context) error {
+	fmt.Printf("Version = \"%v\"\n", Version)
+	fmt.Printf("Build = \"%v\"\n", Build)
+	fmt.Printf("Date = \"%v\"\n", Date)
+	return nil
+}
+
 func cmdGenBJJ(c *cli.Context) error {
 	sk := babyjub.NewRandPrivKey()
 	skBuf := [32]byte(sk)
@@ -404,8 +420,8 @@ func getConfigAPIServer(c *cli.Context) (*ConfigAPIServer, error) {
 func main() {
 	app := cli.NewApp()
 	app.Name = "hermez-node"
-	app.Version = "0.1.0-alpha"
-	app.Flags = []cli.Flag{
+	app.Version = Version
+	flags := []cli.Flag{
 		&cli.StringFlag{
 			Name:     flagMode,
 			Usage:    fmt.Sprintf("Set node `MODE` (can be \"%v\" or \"%v\")", modeSync, modeCoord),
@@ -420,16 +436,22 @@ func main() {
 
 	app.Commands = []*cli.Command{
 		{
+			Name:    "version",
+			Aliases: []string{},
+			Usage:   "Show the application version and build",
+			Action:  cmdVersion,
+		},
+		{
 			Name:    "importkey",
 			Aliases: []string{},
 			Usage:   "Import ethereum private key",
 			Action:  cmdImportKey,
-			Flags: []cli.Flag{
+			Flags: append(flags,
 				&cli.StringFlag{
 					Name:     flagSK,
 					Usage:    "ethereum `PRIVATE_KEY` in hex",
 					Required: true,
-				}},
+				}),
 		},
 		{
 			Name:    "genbjj",
@@ -443,18 +465,19 @@ func main() {
 			Usage: "Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, " +
 				"leaving the DB in a clean state",
 			Action: cmdWipeSQL,
-			Flags: []cli.Flag{
+			Flags: append(flags,
 				&cli.BoolFlag{
 					Name:     flagYes,
 					Usage:    "automatic yes to the prompt",
 					Required: false,
-				}},
+				}),
 		},
 		{
 			Name:    "run",
 			Aliases: []string{},
 			Usage:   "Run the hermez-node in the indicated mode",
 			Action:  cmdRun,
+			Flags:   flags,
 		},
 		{
 			Name:    "serveapi",
@@ -467,12 +490,12 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Discard blocks up to a specified block number",
 			Action:  cmdDiscard,
-			Flags: []cli.Flag{
+			Flags: append(flags,
 				&cli.Int64Flag{
 					Name:     flagBlock,
 					Usage:    "last block number to keep",
 					Required: false,
-				}},
+				}),
 		},
 	}
 
