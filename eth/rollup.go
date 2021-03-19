@@ -497,8 +497,8 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ babyjub.PublicKeyComp, fro
 				auth.Value = depositAmount
 			}
 			var permit []byte
-			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, uint16(depositAmountF),
-				uint16(amountF), tokenID, toIdxBig, permit)
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, big.NewInt(0).SetUint64(uint64(depositAmountF)),
+				big.NewInt(0).SetUint64(uint64(amountF)), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("Failed add L1 Tx ERC20/ETH: %w", err))
@@ -546,7 +546,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, 
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig,
-				uint16(depositAmountF), uint16(amountF), tokenID, toIdxBig, permit)
+				big.NewInt(0).SetUint64(uint64(depositAmountF)), big.NewInt(0).SetUint64(uint64(amountF)), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("Failed add L1 Tx ERC20Permit: %w", err))
@@ -610,18 +610,16 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *typ
 func (c *RollupClient) RollupUpdateBucketsParameters(
 	arrayBuckets [common.RollupConstNumBuckets]RollupUpdateBucketsParameters,
 ) (tx *types.Transaction, err error) {
-	params := [common.RollupConstNumBuckets][6]*big.Int{}
-	for i, bucket := range arrayBuckets {
-		params[i][0] = bucket.CeilUSD
-		params[i][1] = bucket.BlockStamp
-		params[i][2] = bucket.Withdrawals
-		params[i][3] = bucket.RateBlocks
-		params[i][4] = bucket.RateWithdrawals
-		params[i][5] = bucket.MaxWithdrawals
-	}
 	if tx, err = c.client.CallAuth(
 		12500000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			params := []*big.Int{}
+			for i, bucket := range arrayBuckets {
+				params[i], err = c.hermez.PackBucket(c.opts, bucket.CeilUSD, bucket.BlockStamp, bucket.Withdrawals, bucket.RateBlocks, bucket.RateWithdrawals, bucket.MaxWithdrawals)
+				if err != nil {
+					return nil, tracerr.Wrap(fmt.Errorf("failed to pack bucket: %w", err))
+				}
+			}
 			return c.hermez.UpdateBucketsParameters(auth, params)
 		},
 	); err != nil {
