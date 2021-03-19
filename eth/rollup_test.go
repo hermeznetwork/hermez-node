@@ -237,8 +237,10 @@ func TestRollupUpdateBucketsParameters(t *testing.T) {
 	var bucketsParameters [common.RollupConstNumBuckets]RollupUpdateBucketsParameters
 	for i := range bucketsParameters {
 		bucketsParameters[i].CeilUSD = big.NewInt(int64((i + 1) * 100))
+		bucketsParameters[i].BlockStamp = big.NewInt(int64(0))
 		bucketsParameters[i].Withdrawals = big.NewInt(int64(i + 1))
-		bucketsParameters[i].BlockWithdrawalRate = big.NewInt(int64(i+1) * 100)
+		bucketsParameters[i].RateBlocks = big.NewInt(int64(i+1) * 4)
+		bucketsParameters[i].RateWithdrawals = big.NewInt(int64(3))
 		bucketsParameters[i].MaxWithdrawals = big.NewInt(int64(100000000000))
 	}
 	_, err := rollupClient.RollupUpdateBucketsParameters(bucketsParameters)

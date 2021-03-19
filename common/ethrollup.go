@@ -132,10 +132,12 @@ func (c *RollupConstants) FindVerifierIdx(MaxTx, NLevels int64) (int, error) {
 // BucketParams are the parameter variables of each Bucket of Rollup Smart
 // Contract
 type BucketParams struct {
-	CeilUSD             *big.Int
-	Withdrawals         *big.Int
-	BlockWithdrawalRate *big.Int
-	MaxWithdrawals      *big.Int
+	CeilUSD         *big.Int
+	BlockStamp      *big.Int
+	Withdrawals     *big.Int
+	RateBlocks      *big.Int
+	RateWithdrawals *big.Int
+	MaxWithdrawals  *big.Int
 }
 
 // BucketUpdate are the bucket updates (tracking the withdrawals value changes)

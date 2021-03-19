@@ -2731,14 +2731,22 @@ components:
                 type: string
                 description: Max USD value
                 example: "1000"
+              blockStamp:
+                type: string
+                description: Block stamp
+                example: "1"
               withdrawals:
                 type: string
                 description: Available withdrawals of the bucket
                 example: "4"
-              blockWithdrawalRate:
+              rateBlocks:
                 type: string
-                description: Every `blockWithdrawalRate` blocks add 1 withdrawal
-                example: "8"
+                description: Rate of blocks
+                example: "2"
+              rateWithdrawals:
+                type: string
+                description: Rate of withdrawals
+                example: "3"
               maxWithdrawals:
                 type: string
                 description: Max withdrawals the bucket can hold
@@ -2746,8 +2754,10 @@ components:
             additionalProperties: false
             required: 
               - ceilUSD
+              - blockStamp
               - withdrawals
-              - blockWithdrawalRate
+              - rateBlocks
+              - rateWithdrawals
               - maxWithdrawals
           additionalProperties: false
           required:

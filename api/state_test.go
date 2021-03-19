@@ -43,7 +43,9 @@ func assertEqualRollupVariables(t *testing.T, rollupVariables common.RollupVaria
 	assert.Equal(t, rollupVariables.SafeMode, apiVariables.SafeMode)
 	if checkBuckets {
 		for i, bucket := range rollupVariables.Buckets {
-			assert.Equal(t, apitypes.NewBigIntStr(bucket.BlockWithdrawalRate), apiVariables.Buckets[i].BlockWithdrawalRate)
+			assert.Equal(t, apitypes.NewBigIntStr(bucket.BlockStamp), apiVariables.Buckets[i].BlockStamp)
+			assert.Equal(t, apitypes.NewBigIntStr(bucket.RateBlocks), apiVariables.Buckets[i].RateBlocks)
+			assert.Equal(t, apitypes.NewBigIntStr(bucket.RateWithdrawals), apiVariables.Buckets[i].RateWithdrawals)
 			assert.Equal(t, apitypes.NewBigIntStr(bucket.CeilUSD), apiVariables.Buckets[i].CeilUSD)
 			assert.Equal(t, apitypes.NewBigIntStr(bucket.MaxWithdrawals), apiVariables.Buckets[i].MaxWithdrawals)
 			assert.Equal(t, apitypes.NewBigIntStr(bucket.Withdrawals), apiVariables.Buckets[i].Withdrawals)

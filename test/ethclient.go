@@ -304,10 +304,12 @@ func NewClientSetupExample() *ClientSetup {
 	var buckets [common.RollupConstNumBuckets]common.BucketParams
 	for i := range buckets {
 		buckets[i] = common.BucketParams{
-			CeilUSD:             big.NewInt(0),
-			Withdrawals:         big.NewInt(0),
-			BlockWithdrawalRate: big.NewInt(0),
-			MaxWithdrawals:      big.NewInt(0),
+			CeilUSD:         big.NewInt(0),
+			BlockStamp:      big.NewInt(0),
+			Withdrawals:     big.NewInt(0),
+			RateBlocks:      big.NewInt(0),
+			RateWithdrawals: big.NewInt(0),
+			MaxWithdrawals:  big.NewInt(0),
 		}
 	}
 	rollupVariables := &common.RollupVariables{

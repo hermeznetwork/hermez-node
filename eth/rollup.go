@@ -64,10 +64,12 @@ func (ei *RollupEventInitialize) RollupVariables() *common.RollupVariables {
 	var buckets [common.RollupConstNumBuckets]common.BucketParams
 	for i := range buckets {
 		buckets[i] = common.BucketParams{
-			CeilUSD:             big.NewInt(0),
-			Withdrawals:         big.NewInt(0),
-			BlockWithdrawalRate: big.NewInt(0),
-			MaxWithdrawals:      big.NewInt(0),
+			CeilUSD:         big.NewInt(0),
+			BlockStamp:      big.NewInt(0),
+			Withdrawals:     big.NewInt(0),
+			RateBlocks:      big.NewInt(0),
+			RateWithdrawals: big.NewInt(0),
+			MaxWithdrawals:  big.NewInt(0),
 		}
 	}
 	return &common.RollupVariables{
@@ -146,14 +148,16 @@ type RollupEventUpdateWithdrawalDelay struct {
 
 // RollupUpdateBucketsParameters are the bucket parameters used in an update
 type RollupUpdateBucketsParameters struct {
-	CeilUSD             *big.Int
-	Withdrawals         *big.Int
-	BlockWithdrawalRate *big.Int
-	MaxWithdrawals      *big.Int
+	CeilUSD         *big.Int
+	BlockStamp      *big.Int
+	Withdrawals     *big.Int
+	RateBlocks      *big.Int
+	RateWithdrawals *big.Int
+	MaxWithdrawals  *big.Int
 }
 
 type rollupEventUpdateBucketsParametersAux struct {
-	ArrayBuckets [common.RollupConstNumBuckets][4]*big.Int
+	ArrayBuckets [common.RollupConstNumBuckets][6]*big.Int
 }
 
 // RollupEventUpdateBucketsParameters is an event of the Rollup Smart Contract
@@ -606,12 +610,14 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *typ
 func (c *RollupClient) RollupUpdateBucketsParameters(
 	arrayBuckets [common.RollupConstNumBuckets]RollupUpdateBucketsParameters,
 ) (tx *types.Transaction, err error) {
-	params := [common.RollupConstNumBuckets][4]*big.Int{}
+	params := [common.RollupConstNumBuckets][6]*big.Int{}
 	for i, bucket := range arrayBuckets {
 		params[i][0] = bucket.CeilUSD
-		params[i][1] = bucket.Withdrawals
-		params[i][2] = bucket.BlockWithdrawalRate
-		params[i][3] = bucket.MaxWithdrawals
+		params[i][1] = bucket.BlockStamp
+		params[i][2] = bucket.Withdrawals
+		params[i][3] = bucket.RateBlocks
+		params[i][4] = bucket.RateWithdrawals
+		params[i][5] = bucket.MaxWithdrawals
 	}
 	if tx, err = c.client.CallAuth(
 		12500000, //nolint:gomnd
@@ -908,9 +914,11 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			}
 			for i, bucket := range bucketsParametersAux.ArrayBuckets {
 				bucketsParameters.ArrayBuckets[i].CeilUSD = bucket[0]
-				bucketsParameters.ArrayBuckets[i].Withdrawals = bucket[1]
-				bucketsParameters.ArrayBuckets[i].BlockWithdrawalRate = bucket[2]
-				bucketsParameters.ArrayBuckets[i].MaxWithdrawals = bucket[3]
+				bucketsParameters.ArrayBuckets[i].BlockStamp = bucket[1]
+				bucketsParameters.ArrayBuckets[i].Withdrawals = bucket[2]
+				bucketsParameters.ArrayBuckets[i].RateBlocks = bucket[3]
+				bucketsParameters.ArrayBuckets[i].RateWithdrawals = bucket[4]
+				bucketsParameters.ArrayBuckets[i].MaxWithdrawals = bucket[5]
 			}
 			rollupEvents.UpdateBucketsParameters =
 				append(rollupEvents.UpdateBucketsParameters, bucketsParameters)
@@ -932,8 +940,10 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			}
 			for i := range bucketsParameters.ArrayBuckets {
 				bucketsParameters.ArrayBuckets[i].CeilUSD = big.NewInt(0)
+				bucketsParameters.ArrayBuckets[i].BlockStamp = big.NewInt(0)
 				bucketsParameters.ArrayBuckets[i].Withdrawals = big.NewInt(0)
-				bucketsParameters.ArrayBuckets[i].BlockWithdrawalRate = big.NewInt(0)
+				bucketsParameters.ArrayBuckets[i].RateBlocks = big.NewInt(0)
+				bucketsParameters.ArrayBuckets[i].RateWithdrawals = big.NewInt(0)
 				bucketsParameters.ArrayBuckets[i].MaxWithdrawals = big.NewInt(0)
 			}
 			rollupEvents.UpdateBucketsParameters = append(rollupEvents.UpdateBucketsParameters,

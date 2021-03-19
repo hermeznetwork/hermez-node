@@ -354,10 +354,12 @@ type BucketUpdateAPI struct {
 // BucketParamsAPI are the parameter variables of each Bucket of Rollup Smart
 // Contract
 type BucketParamsAPI struct {
-	CeilUSD             *apitypes.BigIntStr `json:"ceilUSD"`
-	Withdrawals         *apitypes.BigIntStr `json:"withdrawals"`
-	BlockWithdrawalRate *apitypes.BigIntStr `json:"blockWithdrawalRate"`
-	MaxWithdrawals      *apitypes.BigIntStr `json:"maxWithdrawals"`
+	CeilUSD         *apitypes.BigIntStr `json:"ceilUSD"`
+	BlockStamp      *apitypes.BigIntStr `json:"blockstamp"`
+	Withdrawals     *apitypes.BigIntStr `json:"withdrawals"`
+	RateBlocks      *apitypes.BigIntStr `json:"rateBlocks"`
+	RateWithdrawals *apitypes.BigIntStr `json:"rateWithdrawals"`
+	MaxWithdrawals  *apitypes.BigIntStr `json:"maxWithdrawals"`
 }
 
 // RollupVariablesAPI are the variables of the Rollup Smart Contract
@@ -382,10 +384,12 @@ func NewRollupVariablesAPI(rollupVariables *common.RollupVariables) *RollupVaria
 
 	for i, bucket := range rollupVariables.Buckets {
 		rollupVars.Buckets[i] = BucketParamsAPI{
-			CeilUSD:             apitypes.NewBigIntStr(bucket.CeilUSD),
-			Withdrawals:         apitypes.NewBigIntStr(bucket.Withdrawals),
-			BlockWithdrawalRate: apitypes.NewBigIntStr(bucket.BlockWithdrawalRate),
-			MaxWithdrawals:      apitypes.NewBigIntStr(bucket.MaxWithdrawals),
+			CeilUSD:         apitypes.NewBigIntStr(bucket.CeilUSD),
+			BlockStamp:      apitypes.NewBigIntStr(bucket.BlockStamp),
+			Withdrawals:     apitypes.NewBigIntStr(bucket.Withdrawals),
+			RateBlocks:      apitypes.NewBigIntStr(bucket.RateBlocks),
+			RateWithdrawals: apitypes.NewBigIntStr(bucket.RateWithdrawals),
+			MaxWithdrawals:  apitypes.NewBigIntStr(bucket.MaxWithdrawals),
 		}
 	}
 	return &rollupVars

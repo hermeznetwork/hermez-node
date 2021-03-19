@@ -502,9 +502,11 @@ func TestMain(m *testing.M) {
 	var buckets [common.RollupConstNumBuckets]common.BucketParams
 	for i := range buckets {
 		buckets[i].CeilUSD = big.NewInt(int64(i) * 10)
-		buckets[i].Withdrawals = big.NewInt(int64(i) * 100)
-		buckets[i].BlockWithdrawalRate = big.NewInt(int64(i) * 1000)
-		buckets[i].MaxWithdrawals = big.NewInt(int64(i) * 10000)
+		buckets[i].BlockStamp = big.NewInt(int64(i) * 100)
+		buckets[i].Withdrawals = big.NewInt(int64(i) * 1000)
+		buckets[i].RateBlocks = big.NewInt(int64(i) * 10000)
+		buckets[i].RateWithdrawals = big.NewInt(int64(i) * 100000)
+		buckets[i].MaxWithdrawals = big.NewInt(int64(i) * 1000000)
 	}
 
 	// Generate SC vars and add them to HistoryDB (if needed)
