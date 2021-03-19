@@ -355,7 +355,7 @@ type BucketUpdateAPI struct {
 // Contract
 type BucketParamsAPI struct {
 	CeilUSD         *apitypes.BigIntStr `json:"ceilUSD"`
-	BlockStamp      *apitypes.BigIntStr `json:"blockstamp"`
+	BlockStamp      *apitypes.BigIntStr `json:"blockStamp"`
 	Withdrawals     *apitypes.BigIntStr `json:"withdrawals"`
 	RateBlocks      *apitypes.BigIntStr `json:"rateBlocks"`
 	RateWithdrawals *apitypes.BigIntStr `json:"rateWithdrawals"`
