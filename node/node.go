@@ -230,6 +230,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			cfg.Coordinator.L2DB.SafetyPeriod,
 			cfg.Coordinator.L2DB.MaxTxs,
 			cfg.Coordinator.L2DB.MinFeeUSD,
+			cfg.Coordinator.L2DB.MaxFeeUSD,
 			cfg.Coordinator.L2DB.TTL.Duration,
 			apiConnCon,
 		)
@@ -253,6 +254,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	hdbNodeCfg := historydb.NodeConfig{
 		MaxPoolTxs: cfg.Coordinator.L2DB.MaxTxs,
 		MinFeeUSD:  cfg.Coordinator.L2DB.MinFeeUSD,
+		MaxFeeUSD:  cfg.Coordinator.L2DB.MaxFeeUSD,
 		ForgeDelay: cfg.Coordinator.ForgeDelay.Duration.Seconds(),
 	}
 	if err := historyDB.SetNodeConfig(&hdbNodeCfg); err != nil {
@@ -522,6 +524,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer) (*APIServer, error) {
 			0,
 			cfg.Coordinator.L2DB.MaxTxs,
 			cfg.Coordinator.L2DB.MinFeeUSD,
+			cfg.Coordinator.L2DB.MaxFeeUSD,
 			0,
 			apiConnCon,
 		)

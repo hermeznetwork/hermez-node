@@ -323,7 +323,7 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB, *l2db
 	test.WipeDB(historyDB.DB())
 
 	// Init L2 DB
-	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 24*time.Hour, nil)
+	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
 
 	return stateDB, historyDB, l2DB
 }

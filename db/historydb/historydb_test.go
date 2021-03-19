@@ -1177,7 +1177,7 @@ func TestGetMetricsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, err := historyDB.GetMetricsInternalAPI(common.BatchNum(numBatches))
+	res, _, err := historyDB.GetMetricsInternalAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.Equal(t, float64(numTx)/float64(numBatches), res.TransactionsPerBatch)
@@ -1186,8 +1186,8 @@ func TestGetMetricsAPI(t *testing.T) {
 	// There is a -2 as time for first and last batch is not taken into account
 	assert.InEpsilon(t, float64(frequency)*float64(numBatches-2)/float64(numBatches), res.BatchFrequency, 0.01)
 	assert.InEpsilon(t, float64(numTx)/float64(frequency*blockNum-frequency), res.TransactionsPerSecond, 0.01)
-	assert.Equal(t, int64(3), res.TotalAccounts)
-	assert.Equal(t, int64(3), res.TotalBJJs)
+	assert.Equal(t, int64(3), res.TokenAccounts)
+	assert.Equal(t, int64(3), res.Wallets)
 	// Til does not set fees
 	assert.Equal(t, float64(0), res.AvgTransactionFee)
 }
@@ -1255,22 +1255,22 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, err := historyDBWithACC.GetMetricsInternalAPI(common.BatchNum(numBatches))
+	res, _, err := historyDBWithACC.GetMetricsInternalAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.InEpsilon(t, 1.0, res.TransactionsPerBatch, 0.1)
 
 	assert.InEpsilon(t, res.BatchFrequency, float64(blockTime/time.Second), 0.1)
 	assert.InEpsilon(t, 1.0/float64(blockTime/time.Second), res.TransactionsPerSecond, 0.1)
-	assert.Equal(t, int64(3), res.TotalAccounts)
-	assert.Equal(t, int64(3), res.TotalBJJs)
+	assert.Equal(t, int64(3), res.TokenAccounts)
+	assert.Equal(t, int64(3), res.Wallets)
 	// Til does not set fees
 	assert.Equal(t, float64(0), res.AvgTransactionFee)
 }
 
 func TestGetMetricsAPIEmpty(t *testing.T) {
 	test.WipeDB(historyDB.DB())
-	_, err := historyDBWithACC.GetMetricsInternalAPI(0)
+	_, _, err := historyDBWithACC.GetMetricsInternalAPI(0)
 	assert.NoError(t, err)
 }
 
@@ -1485,7 +1485,7 @@ func TestNodeInfo(t *testing.T) {
 	addr := ethCommon.HexToAddress("0x1234")
 	hash := ethCommon.HexToHash("0x5678")
 	stateAPI := &StateAPI{
-		NodePublicConfig: NodePublicConfig{
+		NodePublicInfo: NodePublicInfo{
 			ForgeDelay: 3.1,
 		},
 		Network: NetworkAPI{
@@ -1544,7 +1544,7 @@ func TestNodeInfo(t *testing.T) {
 		},
 		Metrics: MetricsAPI{
 			TransactionsPerBatch: 1.1,
-			TotalAccounts:        42,
+			TokenAccounts:        42,
 		},
 		Rollup:            *NewRollupVariablesAPI(clientSetup.RollupVariables),
 		Auction:           *NewAuctionVariablesAPI(clientSetup.AuctionVariables),

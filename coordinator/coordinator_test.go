@@ -105,7 +105,7 @@ func newTestModules(t *testing.T) modules {
 	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
 	require.NoError(t, err)
 	test.WipeDB(db)
-	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 24*time.Hour, nil)
+	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
 	historyDB := historydb.NewHistoryDB(db, db, nil)
 
 	txSelDBPath, err = ioutil.TempDir("", "tmpTxSelDB")

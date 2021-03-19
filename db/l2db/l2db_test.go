@@ -37,9 +37,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	l2DB = NewL2DB(db, db, 10, 1000, 0.0, 24*time.Hour, nil)
+	l2DB = NewL2DB(db, db, 10, 1000, 0.0, 1000.0, 24*time.Hour, nil)
 	apiConnCon := dbUtils.NewAPIConnectionController(1, time.Second)
-	l2DBWithACC = NewL2DB(db, db, 10, 1000, 0.0, 24*time.Hour, apiConnCon)
+	l2DBWithACC = NewL2DB(db, db, 10, 1000, 0.0, 1000.0, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB())
 	historyDB = historydb.NewHistoryDB(db, db, nil)
 	// Run tests

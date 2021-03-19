@@ -1181,7 +1181,7 @@ const (
 )
 
 // GetRecommendedFee returns the RecommendedFee information
-func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD float64) (*common.RecommendedFee, error) {
+func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64) (*common.RecommendedFee, error) {
 	var recommendedFee common.RecommendedFee
 	// Get total txs and the batch of the first selected tx of the last hour
 	type totalTxsSinceBatchNum struct {
@@ -1217,11 +1217,11 @@ func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD float64) (*common.RecommendedF
 	} else {
 		avgTransactionFee = 0
 	}
-	recommendedFee.ExistingAccount =
-		math.Max(avgTransactionFee, minFeeUSD)
-	recommendedFee.CreatesAccount =
-		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD)
-	recommendedFee.CreatesAccountInternal =
-		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD)
+	recommendedFee.ExistingAccount = math.Min(maxFeeUSD,
+		math.Max(avgTransactionFee, minFeeUSD))
+	recommendedFee.CreatesAccount = math.Min(maxFeeUSD,
+		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD))
+	recommendedFee.CreatesAccountInternal = math.Min(maxFeeUSD,
+		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD))
 	return &recommendedFee, nil
 }
