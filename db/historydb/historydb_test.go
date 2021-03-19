@@ -738,7 +738,7 @@ func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *co
 		big.NewInt(10),
 		12,
 		13,
-		[5]common.BucketParams{},
+		[]common.BucketParams{},
 		false,
 	}
 	//nolint:govet

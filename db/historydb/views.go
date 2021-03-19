@@ -364,24 +364,25 @@ type BucketParamsAPI struct {
 
 // RollupVariablesAPI are the variables of the Rollup Smart Contract
 type RollupVariablesAPI struct {
-	EthBlockNum           int64                                         `json:"ethereumBlockNum" meddler:"eth_block_num"`
-	FeeAddToken           *apitypes.BigIntStr                           `json:"feeAddToken" meddler:"fee_add_token" validate:"required"`
-	ForgeL1L2BatchTimeout int64                                         `json:"forgeL1L2BatchTimeout" meddler:"forge_l1_timeout" validate:"required"`
-	WithdrawalDelay       uint64                                        `json:"withdrawalDelay" meddler:"withdrawal_delay" validate:"required"`
-	Buckets               [common.RollupConstNumBuckets]BucketParamsAPI `json:"buckets" meddler:"buckets,json"`
-	SafeMode              bool                                          `json:"safeMode" meddler:"safe_mode"`
+	EthBlockNum           int64               `json:"ethereumBlockNum" meddler:"eth_block_num"`
+	FeeAddToken           *apitypes.BigIntStr `json:"feeAddToken" meddler:"fee_add_token" validate:"required"`
+	ForgeL1L2BatchTimeout int64               `json:"forgeL1L2BatchTimeout" meddler:"forge_l1_timeout" validate:"required"`
+	WithdrawalDelay       uint64              `json:"withdrawalDelay" meddler:"withdrawal_delay" validate:"required"`
+	Buckets               []BucketParamsAPI   `json:"buckets" meddler:"buckets,json"`
+	SafeMode              bool                `json:"safeMode" meddler:"safe_mode"`
 }
 
 // NewRollupVariablesAPI creates a RollupVariablesAPI from common.RollupVariables
 func NewRollupVariablesAPI(rollupVariables *common.RollupVariables) *RollupVariablesAPI {
+	buckets := make([]BucketParamsAPI, len(rollupVariables.Buckets))
 	rollupVars := RollupVariablesAPI{
 		EthBlockNum:           rollupVariables.EthBlockNum,
 		FeeAddToken:           apitypes.NewBigIntStr(rollupVariables.FeeAddToken),
 		ForgeL1L2BatchTimeout: rollupVariables.ForgeL1L2BatchTimeout,
 		WithdrawalDelay:       rollupVariables.WithdrawalDelay,
 		SafeMode:              rollupVariables.SafeMode,
+		Buckets:               buckets,
 	}
-
 	for i, bucket := range rollupVariables.Buckets {
 		rollupVars.Buckets[i] = BucketParamsAPI{
 			CeilUSD:         apitypes.NewBigIntStr(bucket.CeilUSD),
