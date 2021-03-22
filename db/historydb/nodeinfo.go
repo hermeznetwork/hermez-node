@@ -32,6 +32,7 @@ type NetworkAPI struct {
 	LastBatch     *BatchAPI       `json:"lastBatch"`
 	CurrentSlot   int64           `json:"currentSlot"`
 	NextForgers   []NextForgerAPI `json:"nextForgers"`
+	PendingL1Txs  int             `json:"pendingL1Transactions"`
 }
 
 // NodePublicConfig is the configuration of the node that is exposed via API

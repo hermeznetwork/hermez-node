@@ -145,11 +145,17 @@ func (u *Updater) UpdateNetworkInfo(
 			}
 		}
 	}
+	// Update pending L1s
+	pendingL1s, err := u.hdb.GetUnforgedL1UserTxsCount()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
 	u.state.Network.LastSyncBlock = lastSyncBlock.Num
 	u.state.Network.LastEthBlock = lastEthBlock.Num
 	u.state.Network.LastBatch = lastBatch
 	u.state.Network.CurrentSlot = currentSlot
 	u.state.Network.NextForgers = nextForgers
+	u.state.Network.PendingL1Txs = pendingL1s
 	u.rw.Unlock()
 	return nil
 }
