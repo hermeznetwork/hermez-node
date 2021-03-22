@@ -137,7 +137,7 @@ type WDelayerInterface interface {
 
 	WDelayerEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*WDelayerEvents, error)
 	WDelayerConstants() (*common.WDelayerConstants, error)
-	WDelayerEventInit() (*WDelayerEventInitialize, int64, error)
+	WDelayerEventInit(genesisBlockNum int64) (*WDelayerEventInitialize, int64, error)
 }
 
 //
@@ -415,12 +415,14 @@ var (
 )
 
 // WDelayerEventInit returns the initialize event with its corresponding block number
-func (c *WDelayerClient) WDelayerEventInit() (*WDelayerEventInitialize, int64, error) {
+func (c *WDelayerClient) WDelayerEventInit(genesisBlockNum int64) (*WDelayerEventInitialize, int64, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []ethCommon.Address{
 			c.address,
 		},
-		Topics: [][]ethCommon.Hash{{logWDelayerInitialize}},
+		FromBlock: big.NewInt(max(0, genesisBlockNum-blocksPerDay)),
+		ToBlock:   big.NewInt(genesisBlockNum),
+		Topics:    [][]ethCommon.Hash{{logWDelayerInitialize}},
 	}
 	logs, err := c.client.client.FilterLogs(context.Background(), query)
 	if err != nil {

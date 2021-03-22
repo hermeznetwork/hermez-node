@@ -704,15 +704,15 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 
 func getInitialVariables(ethClient eth.ClientInterface,
 	consts *common.SCConsts) (*common.SCVariables, *StartBlockNums, error) {
-	rollupInit, rollupInitBlock, err := ethClient.RollupEventInit()
+	rollupInit, rollupInitBlock, err := ethClient.RollupEventInit(consts.Auction.GenesisBlockNum)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("RollupEventInit: %w", err))
 	}
-	auctionInit, auctionInitBlock, err := ethClient.AuctionEventInit()
+	auctionInit, auctionInitBlock, err := ethClient.AuctionEventInit(consts.Auction.GenesisBlockNum)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("AuctionEventInit: %w", err))
 	}
-	wDelayerInit, wDelayerInitBlock, err := ethClient.WDelayerEventInit()
+	wDelayerInit, wDelayerInitBlock, err := ethClient.WDelayerEventInit(consts.Auction.GenesisBlockNum)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("WDelayerEventInit: %w", err))
 	}
