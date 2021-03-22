@@ -62,6 +62,10 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 		return tracerr.Wrap(fmt.Errorf("tx.feeUSD (%v) < minFeeUSD (%v)",
 			feeUSD, l2db.minFeeUSD))
 	}
+	if feeUSD > l2db.maxFeeUSD {
+		return tracerr.Wrap(fmt.Errorf("tx.feeUSD (%v) > maxFeeUSD (%v)",
+			feeUSD, l2db.maxFeeUSD))
+	}
 
 	// Prepare insert SQL query argument parameters
 	namesPart, err := meddler.Default.ColumnsQuoted(tx, false)

@@ -145,8 +145,8 @@ func TestUpdateMetrics(t *testing.T) {
 	assert.Greater(t, ni.StateAPI.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, ni.StateAPI.Metrics.BatchFrequency, float64(0))
 	assert.Greater(t, ni.StateAPI.Metrics.TransactionsPerSecond, float64(0))
-	assert.Greater(t, ni.StateAPI.Metrics.TotalAccounts, int64(0))
-	assert.Greater(t, ni.StateAPI.Metrics.TotalBJJs, int64(0))
+	assert.Greater(t, ni.StateAPI.Metrics.TokenAccounts, int64(0))
+	assert.Greater(t, ni.StateAPI.Metrics.Wallets, int64(0))
 	assert.Greater(t, ni.StateAPI.Metrics.AvgTransactionFee, float64(0))
 }
 
@@ -210,8 +210,8 @@ func TestGetState(t *testing.T) {
 	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, status.Metrics.BatchFrequency, float64(0))
 	assert.Greater(t, status.Metrics.TransactionsPerSecond, float64(0))
-	assert.Greater(t, status.Metrics.TotalAccounts, int64(0))
-	assert.Greater(t, status.Metrics.TotalBJJs, int64(0))
+	assert.Greater(t, status.Metrics.TokenAccounts, int64(0))
+	assert.Greater(t, status.Metrics.Wallets, int64(0))
 	assert.Greater(t, status.Metrics.AvgTransactionFee, float64(0))
 	// Recommended fee
 	// TODO: perform real asserts (not just greater than 0)

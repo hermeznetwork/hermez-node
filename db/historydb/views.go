@@ -314,8 +314,8 @@ type MetricsAPI struct {
 	TransactionsPerBatch   float64 `json:"transactionsPerBatch"`
 	BatchFrequency         float64 `json:"batchFrequency"`
 	TransactionsPerSecond  float64 `json:"transactionsPerSecond"`
-	TotalAccounts          int64   `json:"totalAccounts" meddler:"total_accounts"`
-	TotalBJJs              int64   `json:"totalBJJs" meddler:"total_bjjs"`
+	TokenAccounts          int64   `json:"tokenAccounts"`
+	Wallets                int64   `json:"wallets"`
 	AvgTransactionFee      float64 `json:"avgTransactionFee"`
 	EstimatedTimeToForgeL1 float64 `json:"estimatedTimeToForgeL1" meddler:"estimated_time_to_forge_l1"`
 }

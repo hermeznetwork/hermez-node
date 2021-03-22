@@ -2569,9 +2569,9 @@ components:
       description: List of next coordinators to forge.
       items: 
         $ref: '#/components/schemas/NextForger'
-    NodeConfig:
+    Node:
       type: object
-      description: Configuration of the coordinator node. Note that this is specific for each coordinator.
+      description: Configuration and metrics of the coordinator node. Note that this is specific for each coordinator.
       properties:
         forgeDelay:
           type: number
@@ -2581,9 +2581,14 @@ components:
             forge at the maximum rate. Note that this is a configuration parameter of a node,
             so each coordinator may have a different value.
           example: 193.4
+        poolLoad:
+          type: number
+          description: Number of pending transactions in the pool
+          example: 23201
       additionalProperties: false
       required: 
         - forgeDelay
+        - poolLoad
     State:
       type: object
       description: Gobal variables of the network
@@ -2600,8 +2605,8 @@ components:
           $ref: '#/components/schemas/StateWithdrawDelayer'
         recommendedFee:
           $ref: '#/components/schemas/RecommendedFee'
-        nodeConfig:
-          $ref: '#/components/schemas/NodeConfig'
+        node:
+          $ref: '#/components/schemas/Node'
       additionalProperties: false
       required: 
         - network
@@ -2610,7 +2615,7 @@ components:
         - auction
         - withdrawalDelayer
         - recommendedFee
-        - nodeConfig
+        - node
     StateNetwork:
       type: object
       description: Gobal statistics of the network
@@ -2813,11 +2818,11 @@ components:
           type: number
           description: Average transactions per second in the last 24 hours.
           example: 302.3
-        totalAccounts:
+        tokenAccounts:
           type: integer
           description: Number of created accounts.
           example: 90473
-        totalBJJs:
+        wallets:
           type: integer
           description: Number of different registered BJJs.
           example: 23067
@@ -2834,8 +2839,8 @@ components:
         - transactionsPerBatch
         - batchFrequency
         - transactionsPerSecond
-        - totalAccounts
-        - totalBJJs
+        - tokenAccounts
+        - wallets
         - avgTransactionFee
         - estimatedTimeToForgeL1
     PendingItems:

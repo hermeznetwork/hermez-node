@@ -35,16 +35,17 @@ type NetworkAPI struct {
 	PendingL1Txs  int             `json:"pendingL1Transactions"`
 }
 
-// NodePublicConfig is the configuration of the node that is exposed via API
-type NodePublicConfig struct {
+// NodePublicInfo is the configuration and metrics of the node that is exposed via API
+type NodePublicInfo struct {
 	// ForgeDelay in seconds
 	ForgeDelay float64 `json:"forgeDelay"`
+	// PoolLoad amount of transactions in the pool
+	PoolLoad int64 `json:"poolLoad"`
 }
 
 // StateAPI is an object representing the node and network state exposed via the API
 type StateAPI struct {
-	// NodePublicConfig is the configuration of the node that is exposed via API
-	NodePublicConfig  NodePublicConfig         `json:"nodeConfig"`
+	NodePublicInfo    NodePublicInfo           `json:"node"`
 	Network           NetworkAPI               `json:"network"`
 	Metrics           MetricsAPI               `json:"metrics"`
 	Rollup            RollupVariablesAPI       `json:"rollup"`
@@ -64,6 +65,7 @@ type Constants struct {
 type NodeConfig struct {
 	MaxPoolTxs uint32
 	MinFeeUSD  float64
+	MaxFeeUSD  float64
 	ForgeDelay float64
 }
 

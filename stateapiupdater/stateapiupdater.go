@@ -27,7 +27,7 @@ func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *co
 		config: *config,
 		consts: *consts,
 		state: historydb.StateAPI{
-			NodePublicConfig: historydb.NodePublicConfig{
+			NodePublicInfo: historydb.NodePublicInfo{
 				ForgeDelay: config.ForgeDelay,
 			},
 		},
@@ -65,7 +65,7 @@ func (u *Updater) SetSCVars(vars *common.SCVariablesPtr) {
 
 // UpdateRecommendedFee update Status.RecommendedFee information
 func (u *Updater) UpdateRecommendedFee() error {
-	recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD)
+	recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -84,12 +84,13 @@ func (u *Updater) UpdateMetrics() error {
 		return nil
 	}
 	lastBatchNum := lastBatch.BatchNum
-	metrics, err := u.hdb.GetMetricsInternalAPI(lastBatchNum)
+	metrics, poolLoad, err := u.hdb.GetMetricsInternalAPI(lastBatchNum)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
 	u.rw.Lock()
 	u.state.Metrics = *metrics
+	u.state.NodePublicInfo.PoolLoad = poolLoad
 	u.rw.Unlock()
 	return nil
 }

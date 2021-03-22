@@ -1083,12 +1083,8 @@ func (hdb *HistoryDB) GetNextForgersInternalAPI(auctionVars *common.AuctionVaria
 }
 
 // GetMetricsInternalAPI returns the MetricsAPI
-func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*MetricsAPI, error) {
-	var metrics MetricsAPI
-	// Get the first and last batch of the last 24h and their timestamps
-	// if u.state.Network.LastBatch == nil {
-	// 	return &metrics, nil
-	// }
+func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (metrics *MetricsAPI, poolLoad int64, err error) {
+	metrics = &MetricsAPI{}
 	type period struct {
 		FromBatchNum  common.BatchNum `meddler:"from_batch_num"`
 		FromTimestamp time.Time       `meddler:"from_timestamp"`
@@ -1106,7 +1102,7 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 			FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
 			WHERE block.timestamp >= NOW() - INTERVAL '24 HOURS';`,
 	); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, 0, tracerr.Wrap(err)
 	}
 	// Get the amount of txs of that period
 	row := hdb.dbRead.QueryRow(
@@ -1115,7 +1111,7 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 	)
 	var nTxs int
 	if err := row.Scan(&nTxs); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, 0, tracerr.Wrap(err)
 	}
 	// Set txs/s
 	seconds := p.ToTimestamp.Sub(p.FromTimestamp).Seconds()
@@ -1141,7 +1137,7 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 	)
 	var totalFee float64
 	if err := row.Scan(&totalFee); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, 0, tracerr.Wrap(err)
 	}
 	// Set batch frequency
 	metrics.BatchFrequency = seconds / float64(nBatches)
@@ -1152,7 +1148,7 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 	)
 	var nL2Txs int
 	if err := row.Scan(&nL2Txs); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, 0, tracerr.Wrap(err)
 	}
 	if nL2Txs > 0 {
 		metrics.AvgTransactionFee = totalFee / float64(nL2Txs)
@@ -1161,18 +1157,18 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 	}
 	// Get and set amount of registered accounts
 	type registeredAccounts struct {
-		TotalIdx int64 `meddler:"total_idx"`
-		TotalBJJ int64 `meddler:"total_bjj"`
+		TokenAccounts int64 `meddler:"token_accounts"`
+		Wallets       int64 `meddler:"wallets"`
 	}
 	ra := &registeredAccounts{}
 	if err := meddler.QueryRow(
 		hdb.dbRead, ra,
-		`SELECT COUNT(*) AS total_bjj, COUNT(DISTINCT(bjj)) AS total_idx FROM account;`,
+		`SELECT COUNT(*) AS token_accounts, COUNT(DISTINCT(bjj)) AS wallets FROM account;`,
 	); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, 0, tracerr.Wrap(err)
 	}
-	metrics.TotalAccounts = ra.TotalIdx
-	metrics.TotalBJJs = ra.TotalBJJ
+	metrics.TokenAccounts = ra.TokenAccounts
+	metrics.Wallets = ra.Wallets
 	// Get and set estimated time to forge L1 tx
 	row = hdb.dbRead.QueryRow(
 		`SELECT COALESCE (AVG(EXTRACT(EPOCH FROM (forged.timestamp - added.timestamp))), 0) FROM tx
@@ -1184,10 +1180,18 @@ func (hdb *HistoryDB) GetMetricsInternalAPI(lastBatchNum common.BatchNum) (*Metr
 	)
 	var timeToForgeL1 float64
 	if err := row.Scan(&timeToForgeL1); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, 0, tracerr.Wrap(err)
 	}
 	metrics.EstimatedTimeToForgeL1 = timeToForgeL1
-	return &metrics, nil
+	// Get amount of txs in the pool
+	row = hdb.dbRead.QueryRow(
+		`SELECT COUNT(*) FROM tx_pool WHERE state = $1 AND NOT external_delete;`,
+		common.PoolL2TxStatePending,
+	)
+	if err := row.Scan(&poolLoad); err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	return metrics, poolLoad, nil
 }
 
 // GetStateAPI returns the StateAPI

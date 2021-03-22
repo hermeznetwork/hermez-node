@@ -27,6 +27,7 @@ type L2DB struct {
 	ttl          time.Duration
 	maxTxs       uint32 // limit of txs that are accepted in the pool
 	minFeeUSD    float64
+	maxFeeUSD    float64
 	apiConnCon   *db.APIConnectionController
 }
 
@@ -38,6 +39,7 @@ func NewL2DB(
 	safetyPeriod common.BatchNum,
 	maxTxs uint32,
 	minFeeUSD float64,
+	maxFeeUSD float64,
 	TTL time.Duration,
 	apiConnCon *db.APIConnectionController,
 ) *L2DB {
@@ -48,6 +50,7 @@ func NewL2DB(
 		ttl:          TTL,
 		maxTxs:       maxTxs,
 		minFeeUSD:    minFeeUSD,
+		maxFeeUSD:    maxFeeUSD,
 		apiConnCon:   apiConnCon,
 	}
 }
