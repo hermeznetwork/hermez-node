@@ -12,6 +12,17 @@ import (
 
 var errTODO = fmt.Errorf("TODO: Not implemented yet")
 
+const (
+	blocksPerDay = (3600 * 24) / 15
+)
+
+func max(x, y int64) int64 {
+	if x > y {
+		return x
+	}
+	return y
+}
+
 // ClientInterface is the eth Client interface used by hermez-node modules to
 // interact with Ethereum Blockchain and smart contracts.
 type ClientInterface interface {
