@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hermeznetwork/hermez-node/apitypes"
+	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/test"
