@@ -60,9 +60,9 @@ externalDocs:
   url: 'https://hermez.io'
 servers:
   - description: Hosted mock up
-    url: https://apimock.hermez.network
+    url: https://apimock.hermez.network/v1
   - description: Localhost mock Up
-    url: http://localhost:4010
+    url: http://localhost:4010/v1
 tags:
   - name: Coordinator
     description: Endpoints used by the nodes running in coordinator mode. They are used to interact with the network.
