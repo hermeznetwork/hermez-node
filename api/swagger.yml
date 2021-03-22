@@ -2634,6 +2634,10 @@ components:
             - example: 2334
         nextForgers:
           $ref: '#/components/schemas/NextForgers'
+        pendingL1Transactions:
+          type: number
+          description: Number of pending L1 transactions (added in the smart contract queue but not forged).
+          example: 22
       additionalProperties: false
       required: 
         - lastEthereumBlock
