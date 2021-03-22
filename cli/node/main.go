@@ -485,6 +485,7 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Serve the API only",
 			Action:  cmdServeAPI,
+			Flags:   flags,
 		},
 		{
 			Name:    "discard",
