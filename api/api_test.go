@@ -40,8 +40,8 @@ type Pendinger interface {
 	New() Pendinger
 }
 
-const apiAddr = ":4010"
-const apiURL = "http://localhost" + apiAddr + "/"
+const apiPort = "4010"
+const apiURL = "http://localhost:" + apiPort + "/v1/"
 
 var SetBlockchain = `
 	Type: Blockchain
@@ -258,7 +258,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	// Start server
-	listener, err := net.Listen("tcp", apiAddr) //nolint:gosec
+	listener, err := net.Listen("tcp", ":"+apiPort) //nolint:gosec
 	if err != nil {
 		panic(err)
 	}
@@ -622,7 +622,7 @@ func TestTimeout(t *testing.T) {
 	apiGinTO := gin.Default()
 	finishWait := make(chan interface{})
 	startWait := make(chan interface{})
-	apiGinTO.GET("/wait", func(c *gin.Context) {
+	apiGinTO.GET("/v1/wait", func(c *gin.Context) {
 		cancel, err := apiConnConTO.Acquire()
 		defer cancel()
 		require.NoError(t, err)
@@ -650,9 +650,9 @@ func TestTimeout(t *testing.T) {
 	require.NoError(t, err)
 
 	client := &http.Client{}
-	httpReq, err := http.NewRequest("GET", "http://localhost:4444/tokens", nil)
+	httpReq, err := http.NewRequest("GET", "http://localhost:4444/v1/tokens", nil)
 	require.NoError(t, err)
-	httpReqWait, err := http.NewRequest("GET", "http://localhost:4444/wait", nil)
+	httpReqWait, err := http.NewRequest("GET", "http://localhost:4444/v1/wait", nil)
 	require.NoError(t, err)
 	// Request that will get timed out
 	var wg sync.WaitGroup

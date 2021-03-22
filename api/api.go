@@ -50,38 +50,40 @@ func NewAPI(
 		hermezAddress: consts.HermezAddress,
 	}
 
+	v1 := server.Group("/v1")
+
 	// Add coordinator endpoints
 	if coordinatorEndpoints {
 		// Account
-		server.POST("/account-creation-authorization", a.postAccountCreationAuth)
-		server.GET("/account-creation-authorization/:hezEthereumAddress", a.getAccountCreationAuth)
+		v1.POST("/account-creation-authorization", a.postAccountCreationAuth)
+		v1.GET("/account-creation-authorization/:hezEthereumAddress", a.getAccountCreationAuth)
 		// Transaction
-		server.POST("/transactions-pool", a.postPoolTx)
-		server.GET("/transactions-pool/:id", a.getPoolTx)
+		v1.POST("/transactions-pool", a.postPoolTx)
+		v1.GET("/transactions-pool/:id", a.getPoolTx)
 	}
 
 	// Add explorer endpoints
 	if explorerEndpoints {
 		// Account
-		server.GET("/accounts", a.getAccounts)
-		server.GET("/accounts/:accountIndex", a.getAccount)
-		server.GET("/exits", a.getExits)
-		server.GET("/exits/:batchNum/:accountIndex", a.getExit)
+		v1.GET("/accounts", a.getAccounts)
+		v1.GET("/accounts/:accountIndex", a.getAccount)
+		v1.GET("/exits", a.getExits)
+		v1.GET("/exits/:batchNum/:accountIndex", a.getExit)
 		// Transaction
-		server.GET("/transactions-history", a.getHistoryTxs)
-		server.GET("/transactions-history/:id", a.getHistoryTx)
+		v1.GET("/transactions-history", a.getHistoryTxs)
+		v1.GET("/transactions-history/:id", a.getHistoryTx)
 		// Status
-		server.GET("/batches", a.getBatches)
-		server.GET("/batches/:batchNum", a.getBatch)
-		server.GET("/full-batches/:batchNum", a.getFullBatch)
-		server.GET("/slots", a.getSlots)
-		server.GET("/slots/:slotNum", a.getSlot)
-		server.GET("/bids", a.getBids)
-		server.GET("/state", a.getState)
-		server.GET("/config", a.getConfig)
-		server.GET("/tokens", a.getTokens)
-		server.GET("/tokens/:id", a.getToken)
-		server.GET("/coordinators", a.getCoordinators)
+		v1.GET("/batches", a.getBatches)
+		v1.GET("/batches/:batchNum", a.getBatch)
+		v1.GET("/full-batches/:batchNum", a.getFullBatch)
+		v1.GET("/slots", a.getSlots)
+		v1.GET("/slots/:slotNum", a.getSlot)
+		v1.GET("/bids", a.getBids)
+		v1.GET("/state", a.getState)
+		v1.GET("/config", a.getConfig)
+		v1.GET("/tokens", a.getTokens)
+		v1.GET("/tokens/:id", a.getToken)
+		v1.GET("/coordinators", a.getCoordinators)
 	}
 
 	return a, nil
