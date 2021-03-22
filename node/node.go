@@ -1,3 +1,18 @@
+/*
+Package node does the initialization of all the required objects to either run
+as a synchronizer or as a coordinator.
+
+The Node contains several goroutines that run in the background or that
+periodically perform tasks.  One of this goroutines periodically calls the
+`Synchronizer.Sync` function, allowing the synchronization of one block at a
+time.  After every call to `Synchronizer.Sync`, the Node sends a message to the
+Coordinator to notify it about the new synced block (and associated state) or
+reorg (and resetted state) in case one happens.
+
+Other goroutines perform tasks such as: updating the token prices, update
+metrics stored in the historyDB, update recommended fee stored in the
+historyDB, run the http API server, run the debug http API server, etc.
+*/
 package node
 
 import (

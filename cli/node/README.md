@@ -68,6 +68,9 @@ when running the coordinator in sync mode
   monitor the size of the folder to avoid running out of space.
 - The node requires a PostgreSQL database.  The parameters of the server and
   database must be set in the `PostgreSQL` section.
+- The node requires a web3 RPC server to work.  The node has only been tested
+  with geth and may not work correctly with other ethereum nodes
+  implementations.
 
 ## Building
 
