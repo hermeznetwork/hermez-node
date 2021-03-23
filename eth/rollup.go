@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -157,7 +156,7 @@ type RollupUpdateBucketsParameters struct {
 }
 
 type rollupEventUpdateBucketsParametersAux struct {
-	ArrayBuckets [common.RollupConstNumBuckets][6]*big.Int
+	ArrayBuckets []*big.Int
 }
 
 // RollupEventUpdateBucketsParameters is an event of the Rollup Smart Contract
@@ -613,7 +612,7 @@ func (c *RollupClient) RollupUpdateBucketsParameters(
 	if tx, err = c.client.CallAuth(
 		12500000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			params := []*big.Int{}
+			params := make([]*big.Int, len(arrayBuckets))
 			for i, bucket := range arrayBuckets {
 				params[i], err = c.hermez.PackBucket(c.opts, bucket.CeilUSD, bucket.BlockStamp, bucket.Withdrawals, bucket.RateBlocks, bucket.RateWithdrawals, bucket.MaxWithdrawals)
 				if err != nil {
@@ -743,7 +742,7 @@ var (
 	logHermezUpdateWithdrawalDelay = crypto.Keccak256Hash([]byte(
 		"UpdateWithdrawalDelay(uint64)"))
 	logHermezUpdateBucketsParameters = crypto.Keccak256Hash([]byte(
-		"UpdateBucketsParameters(uint256[4][" + strconv.Itoa(common.RollupConstNumBuckets) + "])"))
+		"UpdateBucketsParameters(uint256[])"))
 	logHermezUpdateTokenExchange = crypto.Keccak256Hash([]byte(
 		"UpdateTokenExchange(address[],uint64[])"))
 	logHermezSafeMode = crypto.Keccak256Hash([]byte(
@@ -911,12 +910,16 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 				return nil, tracerr.Wrap(err)
 			}
 			for i, bucket := range bucketsParametersAux.ArrayBuckets {
-				bucketsParameters.ArrayBuckets[i].CeilUSD = bucket[0]
-				bucketsParameters.ArrayBuckets[i].BlockStamp = bucket[1]
-				bucketsParameters.ArrayBuckets[i].Withdrawals = bucket[2]
-				bucketsParameters.ArrayBuckets[i].RateBlocks = bucket[3]
-				bucketsParameters.ArrayBuckets[i].RateWithdrawals = bucket[4]
-				bucketsParameters.ArrayBuckets[i].MaxWithdrawals = bucket[5]
+				bucket, err := c.hermez.UnpackBucket(c.opts, bucket)
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				bucketsParameters.ArrayBuckets[i].CeilUSD = bucket.CeilUSD
+				bucketsParameters.ArrayBuckets[i].BlockStamp = bucket.BlockStamp
+				bucketsParameters.ArrayBuckets[i].Withdrawals = bucket.Withdrawals
+				bucketsParameters.ArrayBuckets[i].RateBlocks = bucket.RateBlocks
+				bucketsParameters.ArrayBuckets[i].RateWithdrawals = bucket.RateWithdrawals
+				bucketsParameters.ArrayBuckets[i].MaxWithdrawals = bucket.MaxWithdrawals
 			}
 			rollupEvents.UpdateBucketsParameters =
 				append(rollupEvents.UpdateBucketsParameters, bucketsParameters)

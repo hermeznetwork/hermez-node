@@ -241,7 +241,7 @@ func TestRollupUpdateBucketsParameters(t *testing.T) {
 		bucketsParameters[i].Withdrawals = big.NewInt(int64(i + 1))
 		bucketsParameters[i].RateBlocks = big.NewInt(int64(i+1) * 4)
 		bucketsParameters[i].RateWithdrawals = big.NewInt(int64(3))
-		bucketsParameters[i].MaxWithdrawals = big.NewInt(int64(100000000000))
+		bucketsParameters[i].MaxWithdrawals = big.NewInt(int64(1215752192))
 	}
 	_, err := rollupClient.RollupUpdateBucketsParameters(bucketsParameters)
 	require.NoError(t, err)
@@ -250,7 +250,14 @@ func TestRollupUpdateBucketsParameters(t *testing.T) {
 	blockStampBucket = currentBlockNum
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
-	assert.Equal(t, bucketsParameters, rollupEvents.UpdateBucketsParameters[0].ArrayBuckets)
+	for i := range bucketsParameters {
+		assert.Equal(t, 0, bucketsParameters[i].CeilUSD.Cmp(rollupEvents.UpdateBucketsParameters[0].ArrayBuckets[i].CeilUSD))
+		assert.Equal(t, 0, bucketsParameters[i].BlockStamp.Cmp(rollupEvents.UpdateBucketsParameters[0].ArrayBuckets[i].BlockStamp))
+		assert.Equal(t, 0, bucketsParameters[i].Withdrawals.Cmp(rollupEvents.UpdateBucketsParameters[0].ArrayBuckets[i].Withdrawals))
+		assert.Equal(t, 0, bucketsParameters[i].RateBlocks.Cmp(rollupEvents.UpdateBucketsParameters[0].ArrayBuckets[i].RateBlocks))
+		assert.Equal(t, 0, bucketsParameters[i].RateWithdrawals.Cmp(rollupEvents.UpdateBucketsParameters[0].ArrayBuckets[i].RateWithdrawals))
+		assert.Equal(t, 0, bucketsParameters[i].MaxWithdrawals.Cmp(rollupEvents.UpdateBucketsParameters[0].ArrayBuckets[i].MaxWithdrawals))
+	}
 }
 
 func TestRollupUpdateWithdrawalDelay(t *testing.T) {
