@@ -59,17 +59,21 @@ externalDocs:
   description: Find out more about Hermez network.
   url: 'https://hermez.io'
 servers:
-  - description: Hosted mock up
-    url: https://apimock.hermez.network/v1
-  - description: Localhost mock Up
-    url: http://localhost:4010/v1
+  - description: Hosted mock up, returns fake data usefull for development
+    url: https://apimock.hermez.network
+  - description: Localhost mock up, returns fake data usefull for development
+    url: http://localhost:4010
+  - description: Testnet (Rinkeby) server
+    url: https://api.testnet.hermez.io
+  - description: Mainnet (Ethereum) server, use it carefully, specially if attempting to send transactions. You could lose money!
+    url: https://api.hermez.io
 tags:
   - name: Coordinator
     description: Endpoints used by the nodes running in coordinator mode. They are used to interact with the network.
   - name: Explorer
     description: Endpoints used by the nodes running in explorer mode. They are used to get information of the netwrok.
 paths:
-  '/account-creation-authorization':
+  '/v1/account-creation-authorization':
     post:
       tags:
         - Coordinator
@@ -99,7 +103,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/account-creation-authorization/{hezEthereumAddress}':
+  '/v1/account-creation-authorization/{hezEthereumAddress}':
     get:
       tags:
         - Coordinator
@@ -139,7 +143,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/accounts':
+  '/v1/accounts':
     get:
       tags:
         - Explorer
@@ -210,7 +214,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/accounts/{accountIndex}':
+  '/v1/accounts/{accountIndex}':
     get:
       tags:
         - Explorer
@@ -249,7 +253,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/exits':
+  '/v1/exits':
     get:
       tags:
         - Explorer
@@ -336,7 +340,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/exits/{batchNum}/{accountIndex}':
+  '/v1/exits/{batchNum}/{accountIndex}':
     get:
       tags:
         - Explorer
@@ -381,7 +385,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/transactions-pool':
+  '/v1/transactions-pool':
     post:
       tags:
         - Coordinator
@@ -415,7 +419,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/transactions-pool/{id}':
+  '/v1/transactions-pool/{id}':
     get:
       tags:
         - Coordinator
@@ -458,7 +462,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/transactions-history':
+  '/v1/transactions-history':
     get:
       tags:
         - Explorer
@@ -548,7 +552,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/transactions-history/{id}':
+  '/v1/transactions-history/{id}':
     get:
       tags:
         - Explorer
@@ -588,7 +592,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/batches':
+  '/v1/batches':
     get:
       tags:
         - Explorer
@@ -664,7 +668,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'                
-  '/batches/{batchNum}':
+  '/v1/batches/{batchNum}':
     get:
       tags:
         - Explorer
@@ -704,7 +708,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/full-batches/{batchNum}':
+  '/v1/full-batches/{batchNum}':
     get:
       tags:
         - Explorer
@@ -745,7 +749,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/slots':
+  '/v1/slots':
     get:
       tags:
         - Explorer
@@ -821,7 +825,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/slots/{slotNum}':
+  '/v1/slots/{slotNum}':
     get:
       tags:
         - Explorer
@@ -861,7 +865,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/bids':
+  '/v1/bids':
     get:
       tags:
         - Explorer
@@ -925,7 +929,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/state':
+  '/v1/state':
     get:
       tags:
         - Explorer
@@ -951,7 +955,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/config':
+  '/v1/config':
     get:
       tags:
         - Explorer
@@ -971,7 +975,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/tokens':
+  '/v1/tokens':
     get:
       tags:
         - Explorer
@@ -1044,7 +1048,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/tokens/{id}':
+  '/v1/tokens/{id}':
     get:
       tags:
         - Explorer
@@ -1083,7 +1087,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
-  '/coordinators':
+  '/v1/coordinators':
     get:
       tags:
         - Explorer
