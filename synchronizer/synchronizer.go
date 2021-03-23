@@ -68,11 +68,11 @@ var (
 // Stats of the synchronizer
 type Stats struct {
 	Eth struct {
-		RefreshPeriod time.Duration
-		Updated       time.Time
-		FirstBlockNum int64
-		LastBlock     common.Block
-		LastBatchNum  int64
+		UpdateBlockNumDiffThreshold uint16
+		UpdateFrequencyDivider      uint16
+		FirstBlockNum               int64
+		LastBlock                   common.Block
+		LastBatchNum                int64
 	}
 	Sync struct {
 		Updated   time.Time
@@ -107,9 +107,10 @@ type StatsHolder struct {
 }
 
 // NewStatsHolder creates a new StatsHolder
-func NewStatsHolder(firstBlockNum int64, refreshPeriod time.Duration) *StatsHolder {
+func NewStatsHolder(firstBlockNum int64, updateBlockNumDiffThreshold uint16, updateFrequencyDivider uint16) *StatsHolder {
 	stats := Stats{}
-	stats.Eth.RefreshPeriod = refreshPeriod
+	stats.Eth.UpdateBlockNumDiffThreshold = updateBlockNumDiffThreshold
+	stats.Eth.UpdateFrequencyDivider = updateFrequencyDivider
 	stats.Eth.FirstBlockNum = firstBlockNum
 	stats.Sync.LastForgeL1TxsNum = -1
 	return &StatsHolder{Stats: stats}
@@ -142,14 +143,6 @@ func (s *StatsHolder) UpdateSync(lastBlock *common.Block, lastBatch *common.Batc
 
 // UpdateEth updates the ethereum stats, only if the previous stats expired
 func (s *StatsHolder) UpdateEth(ethClient eth.ClientInterface) error {
-	now := time.Now()
-	s.rw.RLock()
-	elapsed := now.Sub(s.Eth.Updated)
-	s.rw.RUnlock()
-	if elapsed < s.Eth.RefreshPeriod {
-		return nil
-	}
-
 	lastBlock, err := ethClient.EthBlockByNumber(context.TODO(), -1)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
@@ -159,7 +152,6 @@ func (s *StatsHolder) UpdateEth(ethClient eth.ClientInterface) error {
 		return tracerr.Wrap(fmt.Errorf("RollupLastForgedBatch: %w", err))
 	}
 	s.rw.Lock()
-	s.Eth.Updated = now
 	s.Eth.LastBlock = *lastBlock
 	s.Eth.LastBatchNum = lastBatchNum
 	s.rw.Unlock()
@@ -218,8 +210,9 @@ type StartBlockNums struct {
 
 // Config is the Synchronizer configuration
 type Config struct {
-	StatsRefreshPeriod time.Duration
-	ChainID            uint16
+	StatsUpdateBlockNumDiffThreshold uint16
+	StatsUpdateFrequencyDivider      uint16
+	ChainID                          uint16
 }
 
 // Synchronizer implements the Synchronizer type
@@ -279,7 +272,7 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 	if startBlockNums.WDelayer < startBlockNum {
 		startBlockNum = startBlockNums.WDelayer
 	}
-	stats := NewStatsHolder(startBlockNum, cfg.StatsRefreshPeriod)
+	stats := NewStatsHolder(startBlockNum, cfg.StatsUpdateBlockNumDiffThreshold, cfg.StatsUpdateFrequencyDivider)
 	s := &Synchronizer{
 		ethClient:     ethClient,
 		consts:        consts,
@@ -561,8 +554,13 @@ func (s *Synchronizer) Sync(ctx context.Context,
 	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v",
 		ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
 
-	if err := s.stats.UpdateEth(s.ethClient); err != nil {
-		return nil, nil, tracerr.Wrap(err)
+	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in
+	// UpdateFrequencyDivider blocks
+	if nextBlockNum+int64(s.stats.Eth.UpdateBlockNumDiffThreshold) >= s.stats.Eth.LastBlock.Num ||
+		nextBlockNum%int64(s.stats.Eth.UpdateFrequencyDivider) == 0 {
+		if err := s.stats.UpdateEth(s.ethClient); err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
 	}
 
 	log.Debugw("Syncing...",
