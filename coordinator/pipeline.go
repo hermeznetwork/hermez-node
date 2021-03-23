@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/txselector"
@@ -246,6 +248,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 
 	// 3. Send the ZKInputs to the proof server
 	batchInfo.ServerProof = serverProof
+	batchInfo.ProofStart = time.Now()
 	if err := p.sendServerProof(ctx, batchInfo); ctx.Err() != nil {
 		return nil, ctx.Err()
 	} else if err != nil {
@@ -602,6 +605,9 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 
 // waitServerProof gets the generated zkProof & sends it to the SmartContract
 func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) error {
+	defer metric.MeasureDuration(metric.WaitServerProof, batchInfo.ProofStart,
+		batchInfo.BatchNum.BigInt().String(), strconv.Itoa(batchInfo.PipelineNum))
+
 	proof, pubInputs, err := batchInfo.ServerProof.GetProof(ctx) // blocking call,
 	// until not resolved don't continue. Returns when the proof server has calculated the proof
 	if err != nil {
