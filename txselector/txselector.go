@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -123,7 +124,7 @@ func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx,
 // included in the next batch.
 func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config) ([]common.Idx,
 	[][]byte, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
-	metricGetL2TxSelection.Inc()
+	metric.GetL2TxSelection.Inc()
 	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs,
 		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, []common.L1Tx{})
 	return coordIdxs, accCreationAuths, l1CoordinatorTxs, l2Txs,
@@ -141,7 +142,7 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config) ([
 func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
-	metricGetL1L2TxSelection.Inc()
+	metric.GetL1L2TxSelection.Inc()
 	coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
 		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, l1UserTxs)
 	return coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
@@ -221,10 +222,11 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
 
-		metricSelectedL1UserTxs.Set(float64(len(l1UserTxs)))
-		metricSelectedL1CoordinatorTxs.Set(0)
-		metricSelectedL2Txs.Set(0)
-		metricDiscardedL2Txs.Set(float64(len(discardedL2Txs)))
+		metric.SelectedL1UserTxs.Set(float64(len(l1UserTxs)))
+		metric.SelectedL1CoordinatorTxs.Set(0)
+		metric.SelectedL2Txs.Set(0)
+		metric.DiscardedL2Txs.Set(float64(len(discardedL2Txs)))
+
 		return nil, nil, l1UserTxs, nil, nil, discardedL2Txs, nil
 	}
 
@@ -320,10 +322,10 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 
-	metricSelectedL1UserTxs.Set(float64(len(l1UserTxs)))
-	metricSelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
-	metricSelectedL2Txs.Set(float64(len(validTxs)))
-	metricDiscardedL2Txs.Set(float64(len(discardedL2Txs)))
+	metric.SelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
+	metric.SelectedL1UserTxs.Set(float64(len(l1UserTxs)))
+	metric.SelectedL2Txs.Set(float64(len(validTxs)))
+	metric.DiscardedL2Txs.Set(float64(len(discardedL2Txs)))
 
 	return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, validTxs, discardedL2Txs, nil
 }
