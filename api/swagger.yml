@@ -59,9 +59,9 @@ externalDocs:
   description: Find out more about Hermez network.
   url: 'https://hermez.io'
 servers:
-  - description: Hosted mock up
-    url: https://apimock.hermez.network/v1
-  - description: Localhost mock Up
+  - description: Testnet api, connected to Rinkeby deployment
+    url: https://api.testnet.hermez.io/v1
+  - description: Localhost usefull for testing/developing the api
     url: http://localhost:4010/v1
 tags:
   - name: Coordinator
