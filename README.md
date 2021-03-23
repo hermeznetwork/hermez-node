@@ -25,13 +25,13 @@ there are more information about the config file into [cli/node/README.md](cli/n
 After setting the config, you can build and run the Hermez Node as a synchronizer:
 
 ```shell
-$ make run
+$ make run-node
 ```
 
 Or build and run as a coordinator, and also passing the config file from other location:
 
 ```shell
-$ MODE=sync CONFIG=cli/node/cfg.buidler.toml make run
+$ MODE=sync CONFIG=cli/node/cfg.buidler.toml make run-node
 ```
 
 To check the useful make commands:

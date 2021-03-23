@@ -1,0 +1,36 @@
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - main: ./cli/node/main.go
+    binary: node
+    id: node
+    goos:
+      - linux
+      - darwin
+      - windows
+    hooks:
+      pre: make migration-pack
+      post: make migration-clean
+
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

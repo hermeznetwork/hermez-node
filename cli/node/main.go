@@ -35,18 +35,18 @@ const (
 )
 
 var (
-	// Version represents the program based on the git tag
-	Version = "v0.1.0"
-	// Build represents the program based on the git commit
-	Build = "dev"
-	// Date represents the date of application was built
-	Date = ""
+	// version represents the program based on the git tag
+	version = "v0.1.0"
+	// commit represents the program based on the git commit
+	commit = "dev"
+	// date represents the date of application was built
+	date = ""
 )
 
 func cmdVersion(c *cli.Context) error {
-	fmt.Printf("Version = \"%v\"\n", Version)
-	fmt.Printf("Build = \"%v\"\n", Build)
-	fmt.Printf("Date = \"%v\"\n", Date)
+	fmt.Printf("Version = \"%v\"\n", version)
+	fmt.Printf("Build = \"%v\"\n", commit)
+	fmt.Printf("Date = \"%v\"\n", date)
 	return nil
 }
 
@@ -421,7 +421,7 @@ func getConfigAPIServer(c *cli.Context) (*ConfigAPIServer, error) {
 func main() {
 	app := cli.NewApp()
 	app.Name = "hermez-node"
-	app.Version = Version
+	app.Version = version
 	flags := []cli.Flag{
 		&cli.StringFlag{
 			Name:     flagMode,
