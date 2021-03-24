@@ -2585,10 +2585,15 @@ components:
           type: number
           description: Number of pending transactions in the pool
           example: 23201
+        hasForjableTransactionsPool:
+          type: boolean
+          description: Indicate the existance of transactions that can be forjed in terms of nonce, balance, ...
+          example: true
       additionalProperties: false
       required: 
         - forgeDelay
         - poolLoad
+        - hasForjableTransactionsPool
     State:
       type: object
       description: Gobal variables of the network

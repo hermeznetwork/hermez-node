@@ -1177,7 +1177,7 @@ func TestGetMetricsAPI(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, _, err := historyDB.GetMetricsInternalAPI(common.BatchNum(numBatches))
+	res, _, _, err := historyDB.GetMetricsInternalAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.Equal(t, float64(numTx)/float64(numBatches), res.TransactionsPerBatch)
@@ -1255,7 +1255,7 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	res, _, err := historyDBWithACC.GetMetricsInternalAPI(common.BatchNum(numBatches))
+	res, _, _, err := historyDBWithACC.GetMetricsInternalAPI(common.BatchNum(numBatches))
 	assert.NoError(t, err)
 
 	assert.InEpsilon(t, 1.0, res.TransactionsPerBatch, 0.1)
@@ -1270,7 +1270,7 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 
 func TestGetMetricsAPIEmpty(t *testing.T) {
 	test.WipeDB(historyDB.DB())
-	_, _, err := historyDBWithACC.GetMetricsInternalAPI(0)
+	_, _, _, err := historyDBWithACC.GetMetricsInternalAPI(0)
 	assert.NoError(t, err)
 }
 

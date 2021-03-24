@@ -41,6 +41,8 @@ type NodePublicInfo struct {
 	ForgeDelay float64 `json:"forgeDelay"`
 	// PoolLoad amount of transactions in the pool
 	PoolLoad int64 `json:"poolLoad"`
+	// HasForjableTxs indicates the existence of txs that can be forjed inmediately in the pool
+	HasForjableTxs bool `json:"hasForjableTransactionsPool"`
 }
 
 // StateAPI is an object representing the node and network state exposed via the API

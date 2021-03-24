@@ -84,13 +84,14 @@ func (u *Updater) UpdateMetrics() error {
 		return nil
 	}
 	lastBatchNum := lastBatch.BatchNum
-	metrics, poolLoad, err := u.hdb.GetMetricsInternalAPI(lastBatchNum)
+	metrics, poolLoad, hasForjableTxs, err := u.hdb.GetMetricsInternalAPI(lastBatchNum)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
 	u.rw.Lock()
 	u.state.Metrics = *metrics
 	u.state.NodePublicInfo.PoolLoad = poolLoad
+	u.state.NodePublicInfo.HasForjableTxs = hasForjableTxs
 	u.rw.Unlock()
 	return nil
 }
