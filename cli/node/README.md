@@ -24,6 +24,7 @@ COMMANDS:
    genbjj     Generate a new BabyJubJub key
    wipesql    Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
    run        Run the hermez-node in the indicated mode
+   serveapi   Serve the API only
    discard    Discard blocks up to a specified block number
    help, h    Shows a list of commands or help for one command
 
@@ -54,6 +55,10 @@ To read the documentation of each configuration parameter, please check the
 with `Coordinator` are only used in coord mode, and don't need to be defined
 when running the coordinator in sync mode
 
+When running the API in standalone mode, the required configuration is a subset
+of the node configuration.  Please, check the `type APIServer` at
+[config/config.go](../../config/config.go) to learn about all the parametes.
+
 ### Notes
 
 - The private key corresponding to the parameter `Coordinator.ForgerAddress` needs to be imported in the ethereum keystore
@@ -68,6 +73,9 @@ when running the coordinator in sync mode
   monitor the size of the folder to avoid running out of space.
 - The node requires a PostgreSQL database.  The parameters of the server and
   database must be set in the `PostgreSQL` section.
+- The node requires a web3 RPC server to work.  The node has only been tested
+  with geth and may not work correctly with other ethereum nodes
+  implementations.
 
 ## Building
 
@@ -105,6 +113,14 @@ Run the node in mode synchronizer:
 Run the node in mode coordinator:
 ```shell
 ./node run --mode coord --cfg cfg.buidler.toml
+```
+
+Serve the API in standalone mode.  This command allows serving the API just
+with access to the PostgreSQL database that a node is using.  Several instances
+of `serveapi` can be running at the same time with a single PostgreSQL
+database:
+```shell
+./node serveapi --mode coord --cfg cfg.buidler.toml
 ```
 
 Import an ethereum private key into the keystore:

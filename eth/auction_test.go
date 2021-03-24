@@ -28,7 +28,7 @@ func TestAuctionGetCurrentSlotNumber(t *testing.T) {
 }
 
 func TestAuctionEventInit(t *testing.T) {
-	auctionInit, blockNum, err := auctionClientTest.AuctionEventInit()
+	auctionInit, blockNum, err := auctionClientTest.AuctionEventInit(genesisBlock)
 	require.NoError(t, err)
 	assert.Equal(t, int64(18), blockNum)
 	assert.Equal(t, donationAddressConst, auctionInit.DonationAddress)

@@ -299,7 +299,8 @@ type Node struct {
 	} `validate:"required"`
 	PostgreSQL PostgreSQL `validate:"required"`
 	Web3       struct {
-		// URL is the URL of the web3 ethereum-node RPC server
+		// URL is the URL of the web3 ethereum-node RPC server.  Only
+		// geth is officially supported.
 		URL string `validate:"required"`
 	} `validate:"required"`
 	Synchronizer struct {

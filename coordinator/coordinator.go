@@ -1,3 +1,43 @@
+/*
+Package coordinator handles all the logic related to forging batches as a
+coordinator in the hermez network.
+
+The forging of batches is done with a pipeline in order to allow multiple
+batches being forged in parallel.  The maximum number of batches that can be
+forged in parallel is determined by the number of available proof servers.
+
+The Coordinator begins with the pipeline stopped.  The main Coordinator
+goroutine keeps listening for synchronizer events sent by the node package,
+which allow the coordinator to determine if the configured forger address is
+allowed to forge at the current block or not.  When the forger address becomes
+allowed to forge, the pipeline is started, and when it terminates being allowed
+to forge, the pipeline is stopped.
+
+The Pipeline consists of two goroutines.  The first one is in charge of
+preparing a batch internally, which involves making a selection of transactions
+and calculating the ZKInputs for the batch proof, and sending these ZKInputs to
+an idle proof server.  This goroutine will keep preparing batches while there
+are idle proof servers, if the forging policy determines that a batch should be
+forged in the current state.  The second goroutine is in charge of waiting for
+the proof server to finish computing the proof, retreiving it, prepare the
+arguments for the `forgeBatch` Rollup transaction, and sending the result to
+the TxManager.  All the batch information moves between functions and
+goroutines via the BatchInfo struct.
+
+Finally, the TxManager contains a single goroutine that makes forgeBatch
+ethereum transactions for the batches sent by the Pipeline, and keeps them in a
+list to check them periodically.  In the periodic checks, the ethereum
+transaction is checked for successfulness, and it's only forgotten after a
+number of confirmation blocks have passed after being successfully mined.  At
+any point if a transaction failure is detected, the TxManager can signal the
+Coordinator to reset the Pipeline in order to reforge the failed batches.
+
+The Coordinator goroutine acts as a manager.  The synchronizer events (which
+notify about new blocks and associated new state) that it receives are
+broadcasted to the Pipeline and the TxManager.  This allows the Coordinator,
+Pipeline and TxManager to have a copy of the current hermez network state
+required to perform their duties.
+*/
 package coordinator
 
 import (

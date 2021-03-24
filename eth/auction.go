@@ -260,7 +260,7 @@ type AuctionInterface interface {
 
 	AuctionConstants() (*common.AuctionConstants, error)
 	AuctionEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*AuctionEvents, error)
-	AuctionEventInit() (*AuctionEventInitialize, int64, error)
+	AuctionEventInit(genesisBlockNum int64) (*AuctionEventInitialize, int64, error)
 }
 
 //
@@ -809,12 +809,14 @@ var (
 )
 
 // AuctionEventInit returns the initialize event with its corresponding block number
-func (c *AuctionClient) AuctionEventInit() (*AuctionEventInitialize, int64, error) {
+func (c *AuctionClient) AuctionEventInit(genesisBlockNum int64) (*AuctionEventInitialize, int64, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []ethCommon.Address{
 			c.address,
 		},
-		Topics: [][]ethCommon.Hash{{logAuctionInitialize}},
+		FromBlock: big.NewInt(max(0, genesisBlockNum-blocksPerDay)),
+		ToBlock:   big.NewInt(genesisBlockNum),
+		Topics:    [][]ethCommon.Hash{{logAuctionInitialize}},
 	}
 	logs, err := c.client.client.FilterLogs(context.Background(), query)
 	if err != nil {

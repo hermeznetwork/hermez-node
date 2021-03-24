@@ -18,7 +18,7 @@ var maxEmergencyModeTime = time.Hour * 24 * 7 * 26
 var maxWithdrawalDelay = time.Hour * 24 * 7 * 2
 
 func TestWDelayerInit(t *testing.T) {
-	wDelayerInit, blockNum, err := wdelayerClientTest.WDelayerEventInit()
+	wDelayerInit, blockNum, err := wdelayerClientTest.WDelayerEventInit(genesisBlock)
 	require.NoError(t, err)
 	assert.Equal(t, int64(16), blockNum)
 	assert.Equal(t, uint64(initWithdrawalDelay), wDelayerInit.InitialWithdrawalDelay)

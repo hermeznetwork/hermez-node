@@ -1152,7 +1152,7 @@ func (c *Client) RollupEventsByBlock(blockNum int64,
 }
 
 // RollupEventInit returns the initialize event with its corresponding block number
-func (c *Client) RollupEventInit() (*eth.RollupEventInitialize, int64, error) {
+func (c *Client) RollupEventInit(genesisBlockNum int64) (*eth.RollupEventInitialize, int64, error) {
 	vars := c.blocks[0].Rollup.Vars
 	return &eth.RollupEventInitialize{
 		ForgeL1L2BatchTimeout: uint8(vars.ForgeL1L2BatchTimeout),
@@ -1628,7 +1628,7 @@ func (c *Client) AuctionEventsByBlock(blockNum int64,
 }
 
 // AuctionEventInit returns the initialize event with its corresponding block number
-func (c *Client) AuctionEventInit() (*eth.AuctionEventInitialize, int64, error) {
+func (c *Client) AuctionEventInit(genesisBlockNum int64) (*eth.AuctionEventInitialize, int64, error) {
 	vars := c.blocks[0].Auction.Vars
 	return &eth.AuctionEventInitialize{
 		DonationAddress:        vars.DonationAddress,
@@ -1863,7 +1863,7 @@ func (c *Client) WDelayerConstants() (*common.WDelayerConstants, error) {
 }
 
 // WDelayerEventInit returns the initialize event with its corresponding block number
-func (c *Client) WDelayerEventInit() (*eth.WDelayerEventInitialize, int64, error) {
+func (c *Client) WDelayerEventInit(genesisBlockNum int64) (*eth.WDelayerEventInitialize, int64, error) {
 	vars := c.blocks[0].WDelayer.Vars
 	return &eth.WDelayerEventInitialize{
 		InitialWithdrawalDelay:         vars.WithdrawalDelay,

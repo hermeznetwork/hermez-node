@@ -1,3 +1,35 @@
+/*
+Package synchronizer synchronizes the hermez network state by querying events
+emitted by the three smart contracts: `Hermez.sol` (referred as Rollup here),
+`HermezAuctionProtocol.sol` (referred as Auction here) and
+`WithdrawalDelayer.sol` (referred as WDelayer here).
+
+The main entry point for synchronization is the `Sync` function, which at most
+will synchronize one ethereum block, and all the hermez events that happened in
+that block.  During a `Sync` call, a reorg can be detected; in such case, uncle
+blocks will be discarded, and only in a future `Sync` call correct blocks will
+be synced.
+
+The synchronization of the events in each smart contracts are done
+in the methods `rollupSync`, `auctionSync` and `wdelayerSync`, which in turn
+use the interface code to read each smart contract state and events found in
+"github.com/hermeznetwork/hermez-node/eth".  After these three methods are
+called, an object of type `common.BlockData` is built containing all the
+updates and events that happened in that block, and it is inserted in the
+HistoryDB in a single SQL transaction.
+
+`rollupSync` is the method that synchronizes batches sent via the `forgeBatch`
+transaction in `Hermez.sol`.  In `rollupSync`, for every batch,  the accounts
+state is updated in the StateDB by processing all transactions that have been
+forged in that batch.
+
+The consistency of the stored data is guaranteed by the HistoryDB: All the
+block information is inserted in a single SQL transaction at the end of the
+`Sync` method, once the StateDB has been updated.  And every time the
+Synchronizer starts, it continues from the last block in the HistoryDB.  The
+StateDB stores updates organized by checkpoints for every batch, and each batch
+is only accessed if it appears in the HistoryDB.
+*/
 package synchronizer
 
 import (
@@ -704,15 +736,15 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 
 func getInitialVariables(ethClient eth.ClientInterface,
 	consts *common.SCConsts) (*common.SCVariables, *StartBlockNums, error) {
-	rollupInit, rollupInitBlock, err := ethClient.RollupEventInit()
+	rollupInit, rollupInitBlock, err := ethClient.RollupEventInit(consts.Auction.GenesisBlockNum)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("RollupEventInit: %w", err))
 	}
-	auctionInit, auctionInitBlock, err := ethClient.AuctionEventInit()
+	auctionInit, auctionInitBlock, err := ethClient.AuctionEventInit(consts.Auction.GenesisBlockNum)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("AuctionEventInit: %w", err))
 	}
-	wDelayerInit, wDelayerInitBlock, err := ethClient.WDelayerEventInit()
+	wDelayerInit, wDelayerInitBlock, err := ethClient.WDelayerEventInit(consts.Auction.GenesisBlockNum)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("WDelayerEventInit: %w", err))
 	}

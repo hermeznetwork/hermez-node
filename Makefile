@@ -3,8 +3,8 @@
 # Project variables.
 PACKAGE := github.com/hermeznetwork/hermez-node
 VERSION := $(shell git describe --tags --always)
-BUILD := $(shell git rev-parse --short HEAD)
-BUILD_DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
+COMMIT := $(shell git rev-parse --short HEAD)
+DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
 PROJECT_NAME := $(shell basename "$(PWD)")
 
 # Go related variables.
@@ -23,7 +23,7 @@ CONFIG ?= $(GOBASE)/cli/node/cfg.buidler.toml
 POSTGRES_PASS ?= yourpasswordhere
 
 # Use linker flags to provide version/build settings.
-LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD) -X=main.Date=$(BUILD_DATE)"
+LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
 
 # PID file will keep the process id of the server.
 PID_PROOF_MOCK := /tmp/.$(PROJECT_NAME).proof.pid
@@ -94,11 +94,11 @@ install:
 	@echo "  >  Checking if there is any missing dependencies..."
 	$(GOENVVARS) go get $(GOCMD)/... $(get)
 
-## run: Run Hermez node.
-run:
+## run-node: Run Hermez node.
+run-node:
 	@bash -c "$(MAKE) clean build"
 	@echo "  >  Running $(PROJECT_NAME)"
-	@$(GOBIN)/$(GOBINARY) --mode $(MODE) --cfg $(CONFIG) run
+	@$(GOBIN)/$(GOBINARY) run --mode $(MODE) --cfg $(CONFIG)
 
 ## run-proof-mock: Run proof server mock API.
 run-proof-mock: stop-proof-mock

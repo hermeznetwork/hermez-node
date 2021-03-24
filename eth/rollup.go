@@ -273,7 +273,7 @@ type RollupInterface interface {
 	RollupConstants() (*common.RollupConstants, error)
 	RollupEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*RollupEvents, error)
 	RollupForgeBatchArgs(ethCommon.Hash, uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error)
-	RollupEventInit() (*RollupEventInitialize, int64, error)
+	RollupEventInit(genesisBlockNum int64) (*RollupEventInitialize, int64, error)
 }
 
 //
@@ -749,12 +749,14 @@ var (
 )
 
 // RollupEventInit returns the initialize event with its corresponding block number
-func (c *RollupClient) RollupEventInit() (*RollupEventInitialize, int64, error) {
+func (c *RollupClient) RollupEventInit(genesisBlockNum int64) (*RollupEventInitialize, int64, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []ethCommon.Address{
 			c.address,
 		},
-		Topics: [][]ethCommon.Hash{{logHermezInitialize}},
+		FromBlock: big.NewInt(max(0, genesisBlockNum-blocksPerDay)),
+		ToBlock:   big.NewInt(genesisBlockNum),
+		Topics:    [][]ethCommon.Hash{{logHermezInitialize}},
 	}
 	logs, err := c.client.client.FilterLogs(context.Background(), query)
 	if err != nil {
