@@ -3040,10 +3040,15 @@ components:
             - maxEmergencyModeTime
             - hermezRollup
           additionalProperties: false
+        chainId:
+          type: integer
+          description: Id of the chain
+          example: 27
       required:
         - hermez
         - auction
         - withdrawalDelayer
+        - chainId
       additionalProperties: false
     Error:
       type: object
