@@ -57,6 +57,7 @@ type Config struct {
 }
 
 type configAPI struct {
+	ChainID           uint16                   `json:"chainId"`
 	RollupConstants   rollupConstants          `json:"hermez"`
 	AuctionConstants  common.AuctionConstants  `json:"auction"`
 	WDelayerConstants common.WDelayerConstants `json:"withdrawalDelayer"`

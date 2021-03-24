@@ -15,7 +15,6 @@ type API struct {
 	h             *historydb.HistoryDB
 	cg            *configAPI
 	l2            *l2db.L2DB
-	chainID       uint16
 	hermezAddress ethCommon.Address
 }
 
@@ -44,9 +43,9 @@ func NewAPI(
 			RollupConstants:   *newRollupConstants(consts.Rollup),
 			AuctionConstants:  consts.Auction,
 			WDelayerConstants: consts.WDelayer,
+			ChainID:           consts.ChainID,
 		},
 		l2:            l2db,
-		chainID:       consts.ChainID,
 		hermezAddress: consts.HermezAddress,
 	}
 
