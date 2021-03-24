@@ -365,6 +365,7 @@ func getConfig(c *cli.Context) (*Config, error) {
 		}
 	case modeCoord:
 		cfg.mode = node.ModeCoordinator
+		fmt.Println("LOADING CFG")
 		cfg.node, err = config.LoadNode(nodeCfgPath, true)
 		if err != nil {
 			return nil, tracerr.Wrap(err)

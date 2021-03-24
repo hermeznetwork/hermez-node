@@ -65,12 +65,18 @@ func (u *Updater) SetSCVars(vars *common.SCVariablesPtr) {
 
 // UpdateRecommendedFee update Status.RecommendedFee information
 func (u *Updater) UpdateRecommendedFee() error {
-	recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
+	// TODO: uncomment this once we have clear how to calculate recommended fee
+	// recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD)
+	// if err != nil {
+	// 	return tracerr.Wrap(err)
+	// }
 	u.rw.Lock()
-	u.state.RecommendedFee = *recommendedFee
+	hardcodedRecommendedFee := 0.99
+	u.state.RecommendedFee = common.RecommendedFee{
+		ExistingAccount:        hardcodedRecommendedFee,
+		CreatesAccount:         hardcodedRecommendedFee,
+		CreatesAccountInternal: hardcodedRecommendedFee,
+	}
 	u.rw.Unlock()
 	return nil
 }
