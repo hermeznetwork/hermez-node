@@ -145,3 +145,11 @@ Coordinator = true
 BatchPath = "/tmp/iden3-test/hermez/batchesdebug"
 LightScrypt = true
 # RollupVerifierIndex = 0
+
+[RecommendedFeePolicy]
+# Strategy used to calculate the recommended fee that the API will expose.
+# Available options:
+# - Static: always return the same value (StaticValue) in USD
+# - AvgLastHour: calculate using the average fee of the forged transactions during the last hour
+PolicyType = "Static"
+StaticValue = 0.99

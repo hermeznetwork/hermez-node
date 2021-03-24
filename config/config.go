@@ -8,6 +8,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/tracerr"
@@ -347,8 +348,9 @@ type Node struct {
 		// can wait to stablish a SQL connection
 		SQLConnectionTimeout Duration
 	} `validate:"required"`
-	Debug       NodeDebug   `validate:"required"`
-	Coordinator Coordinator `validate:"-"`
+	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
+	Debug                NodeDebug                            `validate:"required"`
+	Coordinator          Coordinator                          `validate:"-"`
 }
 
 // APIServer is the api server configuration parameters
