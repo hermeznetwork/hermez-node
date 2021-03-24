@@ -2729,11 +2729,11 @@ components:
             properties:
               ceilUSD:
                 type: string
-                description: Max USD value
+                description: Max USD value that bucket holds
                 example: "1000"
               blockStamp:
                 type: string
-                description: Block stamp
+                description: Block number of the last bucket update
                 example: "1"
               withdrawals:
                 type: string
@@ -2741,11 +2741,11 @@ components:
                 example: "4"
               rateBlocks:
                 type: string
-                description: Rate of blocks
+                description: rateBlocks every `rateBlocks` blocks add `rateWithdrawals` withdrawal
                 example: "2"
               rateWithdrawals:
                 type: string
-                description: Rate of withdrawals
+                description: add `rateWithdrawals` every `rateBlocks`
                 example: "3"
               maxWithdrawals:
                 type: string

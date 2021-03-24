@@ -37,8 +37,6 @@ const (
 	// _L1_USER_TOTALBYTES bytes] l1TxsData + totalL2TxsDataLength + feeIdxCoordinatorLength +
 	// [2 bytes] chainID = 18542 bytes +  totalL2TxsDataLength + feeIdxCoordinatorLength
 	RollupConstInputSHAConstantBytes = 18546
-	// RollupConstNumBuckets Number of buckets
-	RollupConstNumBuckets = 5
 	// RollupConstMaxWithdrawalDelay max withdrawal delay in seconds
 	RollupConstMaxWithdrawalDelay = 2 * 7 * 24 * 60 * 60
 	// RollupConstExchangeMultiplier exchange multiplier
@@ -160,12 +158,12 @@ type TokenExchange struct {
 // RollupVariables are the variables of the Rollup Smart Contract
 //nolint:lll
 type RollupVariables struct {
-	EthBlockNum           int64                               `meddler:"eth_block_num"`
-	FeeAddToken           *big.Int                            `meddler:"fee_add_token,bigint" validate:"required"`
-	ForgeL1L2BatchTimeout int64                               `meddler:"forge_l1_timeout" validate:"required"`
-	WithdrawalDelay       uint64                              `meddler:"withdrawal_delay" validate:"required"`
-	Buckets               [RollupConstNumBuckets]BucketParams `meddler:"buckets,json"`
-	SafeMode              bool                                `meddler:"safe_mode"`
+	EthBlockNum           int64          `meddler:"eth_block_num"`
+	FeeAddToken           *big.Int       `meddler:"fee_add_token,bigint" validate:"required"`
+	ForgeL1L2BatchTimeout int64          `meddler:"forge_l1_timeout" validate:"required"`
+	WithdrawalDelay       uint64         `meddler:"withdrawal_delay" validate:"required"`
+	Buckets               []BucketParams `meddler:"buckets,json"`
+	SafeMode              bool           `meddler:"safe_mode"`
 }
 
 // Copy returns a deep copy of the Variables

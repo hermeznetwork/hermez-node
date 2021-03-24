@@ -60,7 +60,7 @@ type RollupEventInitialize struct {
 
 // RollupVariables returns the RollupVariables from the initialize event
 func (ei *RollupEventInitialize) RollupVariables() *common.RollupVariables {
-	var buckets [common.RollupConstNumBuckets]common.BucketParams
+	buckets := make([]common.BucketParams, 1)
 	for i := range buckets {
 		buckets[i] = common.BucketParams{
 			CeilUSD:         big.NewInt(0),
@@ -161,8 +161,7 @@ type rollupEventUpdateBucketsParametersAux struct {
 
 // RollupEventUpdateBucketsParameters is an event of the Rollup Smart Contract
 type RollupEventUpdateBucketsParameters struct {
-	// ArrayBuckets [common.RollupConstNumBuckets][4]*big.Int
-	ArrayBuckets [common.RollupConstNumBuckets]RollupUpdateBucketsParameters
+	ArrayBuckets []RollupUpdateBucketsParameters
 	SafeMode     bool
 }
 
@@ -496,8 +495,8 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ babyjub.PublicKeyComp, fro
 				auth.Value = depositAmount
 			}
 			var permit []byte
-			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, big.NewInt(0).SetUint64(uint64(depositAmountF)),
-				big.NewInt(0).SetUint64(uint64(amountF)), tokenID, toIdxBig, permit)
+			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig, big.NewInt(int64(depositAmountF)),
+				big.NewInt(int64(amountF)), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("Failed add L1 Tx ERC20/ETH: %w", err))
@@ -545,7 +544,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, 
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig,
-				big.NewInt(0).SetUint64(uint64(depositAmountF)), big.NewInt(0).SetUint64(uint64(amountF)), tokenID, toIdxBig, permit)
+				big.NewInt(int64(depositAmountF)), big.NewInt(int64(amountF)), tokenID, toIdxBig, permit)
 		},
 	); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("Failed add L1 Tx ERC20Permit: %w", err))
@@ -607,14 +606,16 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *typ
 
 // RollupUpdateBucketsParameters is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateBucketsParameters(
-	arrayBuckets [common.RollupConstNumBuckets]RollupUpdateBucketsParameters,
+	arrayBuckets []RollupUpdateBucketsParameters,
 ) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		12500000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			params := make([]*big.Int, len(arrayBuckets))
 			for i, bucket := range arrayBuckets {
-				params[i], err = c.hermez.PackBucket(c.opts, bucket.CeilUSD, bucket.BlockStamp, bucket.Withdrawals, bucket.RateBlocks, bucket.RateWithdrawals, bucket.MaxWithdrawals)
+				params[i], err = c.hermez.PackBucket(c.opts,
+					bucket.CeilUSD, bucket.BlockStamp, bucket.Withdrawals,
+					bucket.RateBlocks, bucket.RateWithdrawals, bucket.MaxWithdrawals)
 				if err != nil {
 					return nil, tracerr.Wrap(fmt.Errorf("failed to pack bucket: %w", err))
 				}
@@ -909,6 +910,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
+			bucketsParameters.ArrayBuckets = make([]RollupUpdateBucketsParameters, len(bucketsParametersAux.ArrayBuckets))
 			for i, bucket := range bucketsParametersAux.ArrayBuckets {
 				bucket, err := c.hermez.UnpackBucket(c.opts, bucket)
 				if err != nil {

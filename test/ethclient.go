@@ -301,7 +301,7 @@ func NewClientSetupExample() *ClientSetup {
 		HermezAuctionContract:   ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
 		WithdrawDelayerContract: ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
 	}
-	var buckets [common.RollupConstNumBuckets]common.BucketParams
+	buckets := make([]common.BucketParams, 1)
 	for i := range buckets {
 		buckets[i] = common.BucketParams{
 			CeilUSD:         big.NewInt(0),

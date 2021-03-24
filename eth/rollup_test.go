@@ -234,7 +234,7 @@ func TestRollupUpdateFeeAddToken(t *testing.T) {
 }
 
 func TestRollupUpdateBucketsParameters(t *testing.T) {
-	var bucketsParameters [common.RollupConstNumBuckets]RollupUpdateBucketsParameters
+	bucketsParameters := make([]RollupUpdateBucketsParameters, 5)
 	for i := range bucketsParameters {
 		bucketsParameters[i].CeilUSD = big.NewInt(int64((i + 1) * 100))
 		bucketsParameters[i].BlockStamp = big.NewInt(int64(0))

@@ -499,7 +499,7 @@ func TestMain(m *testing.M) {
 	// Slot 7
 	nextForgers[6].Coordinator = nonBootForger
 
-	var buckets [common.RollupConstNumBuckets]common.BucketParams
+	buckets := make([]common.BucketParams, 5)
 	for i := range buckets {
 		buckets[i].CeilUSD = big.NewInt(int64(i) * 10)
 		buckets[i].BlockStamp = big.NewInt(int64(i) * 100)
