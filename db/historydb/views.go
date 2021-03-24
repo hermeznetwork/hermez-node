@@ -374,14 +374,15 @@ type RollupVariablesAPI struct {
 
 // NewRollupVariablesAPI creates a RollupVariablesAPI from common.RollupVariables
 func NewRollupVariablesAPI(rollupVariables *common.RollupVariables) *RollupVariablesAPI {
+	buckets := make([]BucketParamsAPI, len(rollupVariables.Buckets))
 	rollupVars := RollupVariablesAPI{
 		EthBlockNum:           rollupVariables.EthBlockNum,
 		FeeAddToken:           apitypes.NewBigIntStr(rollupVariables.FeeAddToken),
 		ForgeL1L2BatchTimeout: rollupVariables.ForgeL1L2BatchTimeout,
 		WithdrawalDelay:       rollupVariables.WithdrawalDelay,
 		SafeMode:              rollupVariables.SafeMode,
+		Buckets:               buckets,
 	}
-
 	for i, bucket := range rollupVariables.Buckets {
 		rollupVars.Buckets[i] = BucketParamsAPI{
 			CeilUSD:         apitypes.NewBigIntStr(bucket.CeilUSD),
