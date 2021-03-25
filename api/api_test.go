@@ -41,7 +41,8 @@ type Pendinger interface {
 }
 
 const apiPort = "4010"
-const apiURL = "http://localhost:" + apiPort + "/v1/"
+const apiIP = "http://localhost:"
+const apiURL = apiIP + apiPort + "/v1/"
 
 var SetBlockchain = `
 	Type: Blockchain
@@ -839,6 +840,25 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 	}
 	responseValidationInput = responseValidationInput.SetBodyBytes(body)
 	return swagger.ValidateResponse(ctx, responseValidationInput)
+}
+
+func doSimpleReq(method, endpoint string) (string, error) {
+	client := &http.Client{}
+	httpReq, err := http.NewRequest(method, endpoint, nil)
+	if err != nil {
+		return "", tracerr.Wrap(err)
+	}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", tracerr.Wrap(err)
+	}
+	//nolint
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", tracerr.Wrap(err)
+	}
+	return string(body), nil
 }
 
 // test helpers

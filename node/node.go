@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"regexp"
 	"sync"
 	"time"
 
@@ -608,19 +607,6 @@ type NodeAPI struct { //nolint:golint
 	addr   string
 }
 
-func handleNoRoute(c *gin.Context) {
-	matched, _ := regexp.MatchString(`^/v[0-9]+/`, c.Request.URL.Path)
-	if !matched {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Version not provided, please provide a valid version in the path such as v1",
-		})
-		return
-	}
-	c.JSON(http.StatusNotFound, gin.H{
-		"error": "404 page not found",
-	})
-}
-
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
 	addr string,
@@ -630,7 +616,6 @@ func NewNodeAPI(
 	l2db *l2db.L2DB,
 ) (*NodeAPI, error) {
 	engine := gin.Default()
-	engine.NoRoute(handleNoRoute)
 	engine.Use(cors.Default())
 	_api, err := api.NewAPI(
 		coordinatorEndpoints, explorerEndpoints,

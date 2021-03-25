@@ -50,6 +50,8 @@ func NewAPI(
 		hermezAddress: consts.HermezAddress,
 	}
 
+	server.NoRoute(a.noRoute)
+
 	v1 := server.Group("/v1")
 
 	// Add coordinator endpoints
