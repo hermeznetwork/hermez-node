@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/lib/pq"
 	"github.com/russross/meddler"
@@ -46,7 +47,9 @@ var (
 
 func retSQLErr(err error, c *gin.Context) {
 	log.Warnw("HTTP API SQL request error", "err", err)
-	errMsg := tracerr.Unwrap(err).Error()
+	unwrapErr := tracerr.Unwrap(err)
+	metric.CollectError(unwrapErr)
+	errMsg := unwrapErr.Error()
 	retDupKey := func(errCode pq.ErrorCode) {
 		// https://www.postgresql.org/docs/current/errcodes-appendix.html
 		if errCode == "23505" {
@@ -80,6 +83,7 @@ func retSQLErr(err error, c *gin.Context) {
 
 func retBadReq(err error, c *gin.Context) {
 	log.Warnw("HTTP API Bad request error", "err", err)
+	metric.CollectError(err)
 	c.JSON(http.StatusBadRequest, errorMsg{
 		Message: err.Error(),
 	})
