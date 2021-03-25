@@ -60,23 +60,12 @@ type RollupEventInitialize struct {
 
 // RollupVariables returns the RollupVariables from the initialize event
 func (ei *RollupEventInitialize) RollupVariables() *common.RollupVariables {
-	buckets := make([]common.BucketParams, 1)
-	for i := range buckets {
-		buckets[i] = common.BucketParams{
-			CeilUSD:         big.NewInt(0),
-			BlockStamp:      big.NewInt(0),
-			Withdrawals:     big.NewInt(0),
-			RateBlocks:      big.NewInt(0),
-			RateWithdrawals: big.NewInt(0),
-			MaxWithdrawals:  big.NewInt(0),
-		}
-	}
 	return &common.RollupVariables{
 		EthBlockNum:           0,
 		FeeAddToken:           ei.FeeAddToken,
 		ForgeL1L2BatchTimeout: int64(ei.ForgeL1L2BatchTimeout),
 		WithdrawalDelay:       ei.WithdrawalDelay,
-		Buckets:               buckets,
+		Buckets:               []common.BucketParams{},
 		SafeMode:              false,
 	}
 }
