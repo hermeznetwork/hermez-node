@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
+	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -49,6 +50,12 @@ func NewAPI(
 		chainID:       consts.ChainID,
 		hermezAddress: consts.HermezAddress,
 	}
+
+	middleware, err := metric.PrometheusMiddleware()
+	if err != nil {
+		return nil, err
+	}
+	server.Use(middleware)
 
 	server.NoRoute(a.noRoute)
 
