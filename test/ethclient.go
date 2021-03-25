@@ -301,22 +301,11 @@ func NewClientSetupExample() *ClientSetup {
 		HermezAuctionContract:   ethCommon.HexToAddress("0x8E442975805fb1908f43050c9C1A522cB0e28D7b"),
 		WithdrawDelayerContract: ethCommon.HexToAddress("0x5CB7979cBdbf65719BEE92e4D15b7b7Ed3D79114"),
 	}
-	buckets := make([]common.BucketParams, 1)
-	for i := range buckets {
-		buckets[i] = common.BucketParams{
-			CeilUSD:         big.NewInt(0),
-			BlockStamp:      big.NewInt(0),
-			Withdrawals:     big.NewInt(0),
-			RateBlocks:      big.NewInt(0),
-			RateWithdrawals: big.NewInt(0),
-			MaxWithdrawals:  big.NewInt(0),
-		}
-	}
 	rollupVariables := &common.RollupVariables{
 		FeeAddToken:           big.NewInt(11),
 		ForgeL1L2BatchTimeout: 10,
 		WithdrawalDelay:       80,
-		Buckets:               buckets,
+		Buckets:               []common.BucketParams{},
 	}
 	auctionConstants := &common.AuctionConstants{
 		BlocksPerSlot:         40,
