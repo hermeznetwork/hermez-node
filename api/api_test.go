@@ -541,7 +541,7 @@ func TestMain(m *testing.M) {
 	testBatches, testFullBatches := genTestBatches(commonBlocks, commonBatches, testTxs)
 	poolTxsToSend, poolTxsToReceive := genTestPoolTxs(commonPoolTxs, testTokens, commonAccounts)
 	// Add balance and nonce to historyDB
-	accounts := genTestAccounts(commonAccounts, testTokens)
+	accounts := genTestAccounts(commonAccounts, testTokens, poolTxsToSend)
 	accUpdates := []common.AccountUpdate{}
 	for i := 0; i < len(accounts); i++ {
 		balance := new(big.Int)

@@ -240,37 +240,39 @@ type CoordinatorAPI struct {
 // AccountAPI is a representation of a account with additional information
 // required by the API
 type AccountAPI struct {
-	ItemID           uint64              `meddler:"item_id"`
-	Idx              apitypes.HezIdx     `meddler:"idx"`
-	BatchNum         common.BatchNum     `meddler:"batch_num"`
-	PublicKey        apitypes.HezBJJ     `meddler:"bjj"`
-	EthAddr          apitypes.HezEthAddr `meddler:"eth_addr"`
-	Nonce            common.Nonce        `meddler:"nonce"`   // max of 40 bits used
-	Balance          *apitypes.BigIntStr `meddler:"balance"` // max of 192 bits used
-	TotalItems       uint64              `meddler:"total_items"`
-	FirstItem        uint64              `meddler:"first_item"`
-	LastItem         uint64              `meddler:"last_item"`
-	TokenID          common.TokenID      `meddler:"token_id"`
-	TokenItemID      int                 `meddler:"token_item_id"`
-	TokenEthBlockNum int64               `meddler:"token_block"`
-	TokenEthAddr     ethCommon.Address   `meddler:"token_eth_addr"`
-	TokenName        string              `meddler:"name"`
-	TokenSymbol      string              `meddler:"symbol"`
-	TokenDecimals    uint64              `meddler:"decimals"`
-	TokenUSD         *float64            `meddler:"usd"`
-	TokenUSDUpdate   *time.Time          `meddler:"usd_update"`
+	ItemID              uint64              `meddler:"item_id"`
+	Idx                 apitypes.HezIdx     `meddler:"idx"`
+	BatchNum            common.BatchNum     `meddler:"batch_num"`
+	PublicKey           apitypes.HezBJJ     `meddler:"bjj"`
+	EthAddr             apitypes.HezEthAddr `meddler:"eth_addr"`
+	Nonce               common.Nonce        `meddler:"nonce"` // max of 40 bits used
+	GreatestNonceInPool *common.Nonce       `meddler:"greatest_nonce"`
+	Balance             *apitypes.BigIntStr `meddler:"balance"` // max of 192 bits used
+	TotalItems          uint64              `meddler:"total_items"`
+	FirstItem           uint64              `meddler:"first_item"`
+	LastItem            uint64              `meddler:"last_item"`
+	TokenID             common.TokenID      `meddler:"token_id"`
+	TokenItemID         int                 `meddler:"token_item_id"`
+	TokenEthBlockNum    int64               `meddler:"token_block"`
+	TokenEthAddr        ethCommon.Address   `meddler:"token_eth_addr"`
+	TokenName           string              `meddler:"name"`
+	TokenSymbol         string              `meddler:"symbol"`
+	TokenDecimals       uint64              `meddler:"decimals"`
+	TokenUSD            *float64            `meddler:"usd"`
+	TokenUSDUpdate      *time.Time          `meddler:"usd_update"`
 }
 
 // MarshalJSON is used to neast some of the fields of AccountAPI
 // without the need of auxiliar structs
 func (account AccountAPI) MarshalJSON() ([]byte, error) {
 	jsonAccount := map[string]interface{}{
-		"itemId":             account.ItemID,
-		"accountIndex":       account.Idx,
-		"nonce":              account.Nonce,
-		"balance":            account.Balance,
-		"bjj":                account.PublicKey,
-		"hezEthereumAddress": account.EthAddr,
+		"itemId":              account.ItemID,
+		"accountIndex":        account.Idx,
+		"nonce":               account.Nonce,
+		"greatestNonceInPool": account.GreatestNonceInPool,
+		"balance":             account.Balance,
+		"bjj":                 account.PublicKey,
+		"hezEthereumAddress":  account.EthAddr,
 		"token": map[string]interface{}{
 			"id":               account.TokenID,
 			"itemId":           account.TokenItemID,

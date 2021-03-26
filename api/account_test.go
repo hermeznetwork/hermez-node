@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -14,14 +16,15 @@ import (
 )
 
 type testAccount struct {
-	ItemID    uint64                 `json:"itemId"`
-	Idx       apitypes.HezIdx        `json:"accountIndex"`
-	BatchNum  common.BatchNum        `json:"batchNum"`
-	PublicKey apitypes.HezBJJ        `json:"bjj"`
-	EthAddr   apitypes.HezEthAddr    `json:"hezEthereumAddress"`
-	Nonce     common.Nonce           `json:"nonce"`
-	Balance   *apitypes.BigIntStr    `json:"balance"`
-	Token     historydb.TokenWithUSD `json:"token"`
+	ItemID              uint64                 `json:"itemId"`
+	Idx                 apitypes.HezIdx        `json:"accountIndex"`
+	BatchNum            common.BatchNum        `json:"batchNum"`
+	PublicKey           apitypes.HezBJJ        `json:"bjj"`
+	EthAddr             apitypes.HezEthAddr    `json:"hezEthereumAddress"`
+	Nonce               common.Nonce           `json:"nonce"`
+	GreatestNonceInPool *common.Nonce          `json:"greatestNonceInPool"`
+	Balance             *apitypes.BigIntStr    `json:"balance"`
+	Token               historydb.TokenWithUSD `json:"token"`
 }
 
 type testAccountsResponse struct {
@@ -39,18 +42,29 @@ func (t *testAccountsResponse) Len() int { return len(t.Accounts) }
 
 func (t testAccountsResponse) New() Pendinger { return &testAccountsResponse{} }
 
-func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD) []testAccount {
+func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD, poolTxs []testPoolTxSend) []testAccount {
 	tAccounts := []testAccount{}
 	for x, account := range accounts {
 		token := getTokenByID(account.TokenID, tokens)
+		var greatestNonce *common.Nonce
+		for _, tx := range poolTxs {
+			if tx.FromIdx == idxToHez(account.Idx, token.Symbol) {
+				if greatestNonce == nil || *greatestNonce < tx.Nonce {
+					gn := new(common.Nonce)
+					*gn = tx.Nonce
+					greatestNonce = gn
+				}
+			}
+		}
 		tAccount := testAccount{
-			ItemID:    uint64(x + 1),
-			Idx:       apitypes.HezIdx(idxToHez(account.Idx, token.Symbol)),
-			PublicKey: apitypes.NewHezBJJ(account.BJJ),
-			EthAddr:   apitypes.NewHezEthAddr(account.EthAddr),
-			Nonce:     account.Nonce,
-			Balance:   apitypes.NewBigIntStr(account.Balance),
-			Token:     token,
+			ItemID:              uint64(x + 1),
+			Idx:                 apitypes.HezIdx(idxToHez(account.Idx, token.Symbol)),
+			PublicKey:           apitypes.NewHezBJJ(account.BJJ),
+			EthAddr:             apitypes.NewHezEthAddr(account.EthAddr),
+			Nonce:               account.Nonce,
+			Balance:             apitypes.NewBigIntStr(account.Balance),
+			Token:               token,
+			GreatestNonceInPool: greatestNonce,
 		}
 		tAccounts = append(tAccounts, tAccount)
 	}
@@ -58,6 +72,28 @@ func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD)
 }
 
 func TestGetAccounts(t *testing.T) {
+	// Add transactions to the pool to test greatestNonceInPool
+	endpointPool := apiURL + "transactions-pool"
+	fetchedTxID := common.TxID{}
+	for _, tx := range tc.poolTxsToSend {
+		jsonTxBytes, err := json.Marshal(tx)
+		require.NoError(t, err)
+		jsonTxReader := bytes.NewReader(jsonTxBytes)
+		require.NoError(
+			t, doGoodReq(
+				"POST",
+				endpointPool,
+				jsonTxReader, &fetchedTxID,
+			),
+		)
+	}
+	// Clean tx_pool after test
+	defer func() {
+		db := api.l2.DB()
+		_, err := db.Exec("DELETE FROM tx_pool")
+		require.NoError(t, err)
+	}()
+
 	endpoint := apiURL + "accounts"
 	fetchedAccounts := []testAccount{}
 
@@ -118,6 +154,7 @@ func TestGetAccounts(t *testing.T) {
 			assert.Less(t, fetchedAccounts[i].Token.USDUpdate.Unix()-3, tc.accounts[i].Token.USDUpdate.Unix())
 			fetchedAccounts[i].Token.USDUpdate = tc.accounts[i].Token.USDUpdate
 		}
+		fmt.Println(fetchedAccounts[i])
 		assert.Equal(t, tc.accounts[i], fetchedAccounts[i])
 	}
 

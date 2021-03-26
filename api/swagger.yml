@@ -2369,7 +2369,16 @@ components:
         accountIndex:
           $ref: '#/components/schemas/AccountIndex'
         nonce:
-          $ref: '#/components/schemas/Nonce'      
+          $ref: '#/components/schemas/Nonce'
+        greatestNonceInPool:
+          type: number
+          description: | 
+            The greatest nonce of among all the transactions in the account from this account. 
+            `null` indicates that there are no transactions in the pool from this account.
+            Note that there is no guarantee that all transactions of the pool from the ssame accoun have consequtive nonces,
+            but the greatest will always be returned.
+          example: 3
+          nullable: true 
         balance:
           $ref: '#/components/schemas/BigInt'
         bjj:
@@ -2385,6 +2394,7 @@ components:
         hezEthereumAddress: hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
         itemId: 4
         nonce: 0
+        greatestNonceInPool: 1
         token:
           USD: 500
           decimals: 18
@@ -2400,6 +2410,7 @@ components:
         - itemId
         - accountIndex
         - nonce
+        - greatestNonceInPool
         - balance
         - bjj
         - hezEthereumAddress

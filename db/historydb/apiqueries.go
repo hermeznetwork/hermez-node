@@ -822,7 +822,9 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 		token.symbol) as idx, account.batch_num, account.bjj, account.eth_addr,
 		token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 		token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd,
-		token.usd_update, account_update.nonce, account_update.balance 
+		token.usd_update, account_update.nonce, account_update.balance, (
+			SELECT MAX(nonce) FROM tx_pool WHERE from_idx = $1
+		) AS greatest_nonce
 		FROM account inner JOIN (
 			SELECT idx, nonce, balance 
 			FROM account_update
@@ -858,13 +860,19 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	queryStr := `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, 
 	account.bjj, account.eth_addr, token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
-	account_update.nonce, account_update.balance, COUNT(*) OVER() AS total_items
-	FROM account inner JOIN (
+	account_update.nonce, account_update.balance, tp.greatest_nonce, COUNT(*) OVER() AS total_items
+	FROM account INNER JOIN (
 		SELECT DISTINCT idx,
 		first_value(nonce) over(partition by idx ORDER BY item_id DESC) as nonce,
 		first_value(balance) over(partition by idx ORDER BY item_id DESC) as balance
 		FROM account_update
-	) AS account_update ON account_update.idx = account.idx INNER JOIN token ON account.token_id = token.token_id `
+	) AS account_update ON account_update.idx = account.idx 
+	INNER JOIN token ON account.token_id = token.token_id
+	LEFT JOIN (
+		SELECT DISTINCT from_idx,
+		MAX(nonce) over(partition by from_idx) as greatest_nonce
+		FROM tx_pool
+	) AS tp ON tp.from_idx = account.idx `
 	// Apply filters
 	nextIsAnd := false
 	// ethAddr filter
