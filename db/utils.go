@@ -1,3 +1,10 @@
+/*
+Package db have some common utilities shared by db/l2db and db/historydb, the most relevant ones are:
+- SQL connection utilities
+- Managing the SQL schema: this is done using migration files placed under db/migrations. The files are executed by
+order of the file name.
+- Custom meddlers: used to easily transform struct <==> table
+*/
 package db
 
 import (
