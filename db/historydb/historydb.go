@@ -1,3 +1,24 @@
+/*
+Package historydb is responsible for storing and retrieving the historic data of the Hermez network.
+It's mostly but not exclusively used by the API and the synchronizer.
+
+Apart from the logic defined in this package, it's important to notice that there are some triggers defined in the
+migration files that have to be taken into consideration to understanding the results of some queries. This is especially true
+for reorgs: all the data is directly or indirectly related to a block, this makes handling reorgs as easy as deleting the
+reorged blocks from the block table, and all related items will be dropped in cascade. This is not the only case, in general
+functions defined in this package that get affected somehow by the SQL level defined logic has a special mention on the function description.
+
+Some of the database tooling used in this package such as meddler and migration tools is explained in the db package.
+
+This package is spitted in different files following these ideas:
+- historydb.go: constructor and functions used by packages other than the api.
+- apiqueries.go: functions used by the API, the queries implemented in this functions use a semaphore
+to restrict the maximum concurrent connections to the database.
+- views.go: structs used to retrieve/store data from/to the database. When possible, the common structs are used, however
+most of the time there is no 1:1 relation between the struct fields and the tables of the schema, especially when joining tables.
+In some cases, some of the structs defined in this file also include custom Marshallers to easily match the expected api formats.
+- nodeinfo.go: used to handle the interfaces and structs that allow communication across running in different machines/process but sharing the same database.
+*/
 package historydb
 
 import (

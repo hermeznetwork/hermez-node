@@ -1,3 +1,11 @@
+/*
+Package apitypes is used to map the common types used across the node with the format expected by the API.
+
+This is done using different strategies:
+- Marshallers: they get triggered when the API marshals the response structs into JSONs
+- Scanners/Valuers: they get triggered when a struct is sent/received to/from the SQL database
+- Adhoc functions: when the already mentioned strategies are not suitable, functions are added to the structs to facilitate the conversions
+*/
 package apitypes
 
 import (
