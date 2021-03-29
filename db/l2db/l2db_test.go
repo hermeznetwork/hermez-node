@@ -311,6 +311,27 @@ func TestGetPending(t *testing.T) {
 	}
 }
 
+func TestL2DB_GetPoolTxs(t *testing.T) {
+	err := prepareHistoryDB(historyDB)
+	if err != nil {
+		log.Error("Error prepare historyDB", err)
+	}
+	poolL2Txs, err := generatePoolL2Txs()
+	state := common.PoolL2TxState("pend")
+	idx := common.Idx(256)
+	var pendingTxs []*common.PoolL2Tx
+	for i := range poolL2Txs {
+		if poolL2Txs[i].FromIdx == idx || poolL2Txs[i].ToIdx == idx {
+			err := l2DB.AddTxTest(&poolL2Txs[i])
+			require.NoError(t, err)
+			pendingTxs = append(pendingTxs, &poolL2Txs[i])
+		}
+	}
+	fetchedTxs, err := l2DBWithACC.GetPoolTxs(&idx, &state)
+	require.NoError(t, err)
+	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
+}
+
 func TestStartForging(t *testing.T) {
 	// Generate txs
 	var fakeBatchNum common.BatchNum = 33

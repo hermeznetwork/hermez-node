@@ -47,6 +47,10 @@ type testPoolTxReceive struct {
 	Token       historydb.TokenWithUSD `json:"token"`
 }
 
+type testPoolTxsResponse struct {
+	Txs []testPoolTxReceive `json:"transactions"`
+}
+
 // testPoolTxSend is a struct to be used as a JSON body
 // when testing POST /transactions-pool
 type testPoolTxSend struct {
@@ -224,6 +228,25 @@ func TestPoolTxs(t *testing.T) {
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
 	require.NoError(t, err)
+	// GET
+	// get by idx
+	fetchedTxs := testPoolTxsResponse{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+"?accountIndex=hez:ETH:263",
+		nil, &fetchedTxs))
+	assert.Equal(t, 1, len(fetchedTxs.Txs))
+	assert.Equal(t, "hez:ETH:263", fetchedTxs.Txs[0].FromIdx)
+	// get by state
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+"?state=pend",
+		nil, &fetchedTxs))
+	assert.Equal(t, 4, len(fetchedTxs.Txs))
+	for _, v := range fetchedTxs.Txs {
+		assert.Equal(t, common.PoolL2TxStatePending, v.State)
+	}
+
 	// GET
 	endpoint += "/"
 	for _, tx := range tc.poolTxsToReceive {

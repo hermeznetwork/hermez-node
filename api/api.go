@@ -60,6 +60,7 @@ func NewAPI(
 		// Transaction
 		v1.POST("/transactions-pool", a.postPoolTx)
 		v1.GET("/transactions-pool/:id", a.getPoolTx)
+		v1.GET("/transactions-pool", a.getPoolTxs)
 	}
 
 	// Add explorer endpoints

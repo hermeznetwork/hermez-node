@@ -127,3 +127,41 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 		txID,
 	))
 }
+
+func (l2db *L2DB) GetPoolTxs(idx *common.Idx, state *common.PoolL2TxState) ([]*PoolTxAPI, error) {
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+	// Apply filters
+	nextIsAnd := false
+	queryStr := selectPoolTxAPI
+	var args []interface{}
+	if state != nil {
+		queryStr += "WHERE state = ? "
+		args = append(args, state)
+		nextIsAnd = true
+	}
+	if idx != nil {
+		if nextIsAnd {
+			queryStr += "AND ("
+		} else {
+			queryStr += "WHERE ("
+		}
+		queryStr += "tx_pool.from_idx = ? "
+		queryStr += "OR tx_pool.to_idx = ?) "
+		args = append(args, idx)
+		args = append(args, idx)
+		nextIsAnd = true
+	}
+	queryStr += "AND NOT external_delete;"
+	query := l2db.dbRead.Rebind(queryStr)
+	txs := []*PoolTxAPI{}
+	err = meddler.QueryAll(
+		l2db.dbRead, &txs,
+		query,
+		args...)
+	return txs, tracerr.Wrap(err)
+}

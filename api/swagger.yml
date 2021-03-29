@@ -415,6 +415,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+    get:
+      tags:
+        - Coordinator
+      summary: Get transactions that are in the pool.
+      operationId: getPoolTxs
+      parameters:
+        - name: state
+          in: query
+          required: false
+          description: State of the transactions, e.g. "pend"
+          schema:
+            $ref: '#/components/schemas/PoolL2TransactionState'
+        - name: accountIndex
+          in: query
+          required: false
+          description: Id of the account
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoolL2Transactions'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
   '/transactions-pool/{id}':
     get:
       tags:
@@ -1439,6 +1482,14 @@ components:
         - requestFee
         - requestNonce
         - token
+    PoolL2Transactions:
+      type: object
+      properties:
+        transactions:
+          type: array
+          description: List of pool l2 transactions
+          items:
+            $ref: '#/components/schemas/PoolL2Transaction'
     TransactionId:
       type: string
       description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
