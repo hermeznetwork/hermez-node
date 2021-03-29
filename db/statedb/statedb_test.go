@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -588,6 +589,48 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	for i := 0; i < numCheckpoints; i++ {
 		err = sdb.MakeCheckpoint()
 		require.NoError(t, err)
+		err := sdb.DeleteOldCheckpoints()
+		require.NoError(t, err)
+		checkpoints, err := sdb.db.ListCheckpoints()
+		require.NoError(t, err)
+		assert.LessOrEqual(t, len(checkpoints), keep)
+	}
+}
+
+// TestConcurrentDeleteOldCheckpoints performs almost the same test than
+// kvdb/kvdb_test.go TestConcurrentDeleteOldCheckpoints, but over the StateDB
+func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer require.NoError(t, os.RemoveAll(dir))
+
+	keep := 16
+	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
+	require.NoError(t, err)
+
+	numCheckpoints := 32
+	// do checkpoints and check that we never have more than `keep`
+	// checkpoints
+	for i := 0; i < numCheckpoints; i++ {
+		err = sdb.MakeCheckpoint()
+		require.NoError(t, err)
+		wg := sync.WaitGroup{}
+		n := 10
+		wg.Add(n)
+		for j := 0; j < n; j++ {
+			go func() {
+				err := sdb.DeleteOldCheckpoints()
+				require.NoError(t, err)
+				checkpoints, err := sdb.db.ListCheckpoints()
+				require.NoError(t, err)
+				assert.LessOrEqual(t, len(checkpoints), keep)
+				wg.Done()
+			}()
+			_, err := sdb.db.ListCheckpoints()
+			// only checking here for absence of errors, not the count of checkpoints
+			require.NoError(t, err)
+		}
+		wg.Wait()
 		checkpoints, err := sdb.db.ListCheckpoints()
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(checkpoints), keep)

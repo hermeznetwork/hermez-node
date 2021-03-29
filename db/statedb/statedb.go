@@ -227,6 +227,12 @@ func (s *StateDB) MakeCheckpoint() error {
 	return s.db.MakeCheckpoint()
 }
 
+// DeleteOldCheckpoints deletes old checkpoints when there are more than
+// `cfg.keep` checkpoints
+func (s *StateDB) DeleteOldCheckpoints() error {
+	return s.db.DeleteOldCheckpoints()
+}
+
 // CurrentBatch returns the current in-memory CurrentBatch of the StateDB.db
 func (s *StateDB) CurrentBatch() common.BatchNum {
 	return s.db.CurrentBatch
