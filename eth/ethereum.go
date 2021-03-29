@@ -245,15 +245,15 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 	if number == -1 {
 		blockNum = nil
 	}
-	block, err := c.client.BlockByNumber(ctx, blockNum)
+	header, err := c.client.HeaderByNumber(ctx, blockNum)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	b := &common.Block{
-		Num:        block.Number().Int64(),
-		Timestamp:  time.Unix(int64(block.Time()), 0),
-		ParentHash: block.ParentHash(),
-		Hash:       block.Hash(),
+		Num:        header.Number.Int64(),
+		Timestamp:  time.Unix(int64(header.Time), 0),
+		ParentHash: header.ParentHash,
+		Hash:       header.Hash(),
 	}
 	return b, nil
 }
