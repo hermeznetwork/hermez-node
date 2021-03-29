@@ -49,6 +49,8 @@ type KVDB struct {
 	CurrentIdx   common.Idx
 	CurrentBatch common.BatchNum
 	m            sync.Mutex
+	mutexDelOld  sync.Mutex
+	wg           sync.WaitGroup
 	last         *Last
 }
 
@@ -444,10 +446,15 @@ func (k *KVDB) MakeCheckpoint() error {
 			return tracerr.Wrap(err)
 		}
 	}
-	// delete old checkpoints
-	if err := k.deleteOldCheckpoints(); err != nil {
-		return tracerr.Wrap(err)
-	}
+
+	k.wg.Add(1)
+	go func() {
+		delErr := k.DeleteOldCheckpoints()
+		if delErr != nil {
+			log.Errorw("delete old checkpoints failed", "err", delErr)
+		}
+		k.wg.Done()
+	}()
 
 	return nil
 }
@@ -509,9 +516,12 @@ func (k *KVDB) ListCheckpoints() ([]int, error) {
 	return checkpoints, nil
 }
 
-// deleteOldCheckpoints deletes old checkpoints when there are more than
+// DeleteOldCheckpoints deletes old checkpoints when there are more than
 // `s.keep` checkpoints
-func (k *KVDB) deleteOldCheckpoints() error {
+func (k *KVDB) DeleteOldCheckpoints() error {
+	k.mutexDelOld.Lock()
+	defer k.mutexDelOld.Unlock()
+
 	list, err := k.ListCheckpoints()
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -584,4 +594,6 @@ func (k *KVDB) Close() {
 	if k.last != nil {
 		k.last.close()
 	}
+	// wait for deletion of old checkpoints
+	k.wg.Wait()
 }
