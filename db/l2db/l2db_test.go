@@ -317,6 +317,7 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 		log.Error("Error prepare historyDB", err)
 	}
 	poolL2Txs, err := generatePoolL2Txs()
+	require.NoError(t, err)
 	state := common.PoolL2TxState("pend")
 	idx := common.Idx(256)
 	var pendingTxs []*common.PoolL2Tx

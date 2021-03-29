@@ -128,6 +128,7 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 	))
 }
 
+// GetPoolTxs return Txs from the pool
 func (l2db *L2DB) GetPoolTxs(idx *common.Idx, state *common.PoolL2TxState) ([]*PoolTxAPI, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
@@ -154,7 +155,6 @@ func (l2db *L2DB) GetPoolTxs(idx *common.Idx, state *common.PoolL2TxState) ([]*P
 		queryStr += "OR tx_pool.to_idx = ?) "
 		args = append(args, idx)
 		args = append(args, idx)
-		nextIsAnd = true
 	}
 	queryStr += "AND NOT external_delete;"
 	query := l2db.dbRead.Rebind(queryStr)
