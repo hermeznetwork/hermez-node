@@ -35,7 +35,7 @@ Symbol = "SUSHI"
 Addr = "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2"
 
 [Debug]
-APIAddress = "localhost:12345"
+APIAddress = "0.0.0.0:12345"
 MeddlerLogs = true
 GinDebugMode = true
 

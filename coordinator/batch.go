@@ -80,6 +80,7 @@ type BatchInfo struct {
 	PipelineNum           int
 	BatchNum              common.BatchNum
 	ServerProof           prover.Client
+	ProofStart            time.Time
 	ZKInputs              *common.ZKInputs
 	Proof                 *prover.Proof
 	PublicInputs          []*big.Int

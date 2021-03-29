@@ -47,6 +47,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
 )
@@ -581,6 +582,7 @@ func (s *Synchronizer) Sync(ctx context.Context,
 				return nil, nil, tracerr.Wrap(err)
 			}
 			discarded := lastSavedBlock.Num - lastDBBlockNum
+			metric.Reorgs.Inc()
 			return nil, &discarded, nil
 		}
 	}
@@ -673,16 +675,16 @@ func (s *Synchronizer) Sync(ctx context.Context,
 	}
 
 	for _, batchData := range rollupData.Batches {
-		metricSyncedLastBatchNum.Set(float64(batchData.Batch.BatchNum))
-		metricEthLastBatchNum.Set(float64(s.stats.Eth.LastBatchNum))
+		metric.LastBatchNum.Set(float64(batchData.Batch.BatchNum))
+		metric.EthLastBatchNum.Set(float64(s.stats.Eth.LastBatchNum))
 		log.Debugw("Synced batch",
 			"syncLastBatch", batchData.Batch.BatchNum,
 			"syncBatchesPerc", s.stats.batchesPerc(batchData.Batch.BatchNum),
 			"ethLastBatch", s.stats.Eth.LastBatchNum,
 		)
 	}
-	metricSyncedLastBlockNum.Set(float64(s.stats.Sync.LastBlock.Num))
-	metricEthLastBlockNum.Set(float64(s.stats.Eth.LastBlock.Num))
+	metric.LastBlockNum.Set(float64(s.stats.Sync.LastBlock.Num))
+	metric.EthLastBlockNum.Set(float64(s.stats.Eth.LastBlock.Num))
 	log.Debugw("Synced block",
 		"syncLastBlockNum", s.stats.Sync.LastBlock.Num,
 		"syncBlocksPerc", s.stats.blocksPerc(),
