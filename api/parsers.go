@@ -96,6 +96,32 @@ func parseQueryBJJ(c querier) (*babyjub.PublicKeyComp, error) {
 	return hezStringToBJJ(bjjStr, name)
 }
 
+func parseQueryPoolL2TxState(c querier) (*common.PoolL2TxState, error) {
+	const name = "state"
+	stateStr := c.Query(name)
+	if stateStr == "" {
+		return nil, nil
+	}
+	switch common.PoolL2TxState(stateStr) {
+	case common.PoolL2TxStatePending:
+		ret := common.PoolL2TxStatePending
+		return &ret, nil
+	case common.PoolL2TxStateForged:
+		ret := common.PoolL2TxStateForged
+		return &ret, nil
+	case common.PoolL2TxStateForging:
+		ret := common.PoolL2TxStateForging
+		return &ret, nil
+	case common.PoolL2TxStateInvalid:
+		ret := common.PoolL2TxStateInvalid
+		return &ret, nil
+	}
+	return nil, tracerr.Wrap(fmt.Errorf(
+		"invalid %s, %s is not a valid option. Check the valid options in the docmentation",
+		name, stateStr,
+	))
+}
+
 func parseQueryTxType(c querier) (*common.TxType, error) {
 	const name = "type"
 	typeStr := c.Query(name)

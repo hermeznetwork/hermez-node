@@ -55,6 +55,35 @@ func (a *API) getPoolTx(c *gin.Context) {
 	c.JSON(http.StatusOK, tx)
 }
 
+func (a *API) getPoolTxs(c *gin.Context) {
+	// Get idx
+	idx, err := parseIdx(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Get state
+	state, err := parseQueryPoolL2TxState(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch txs from l2DB
+	txs, err := a.l2.GetPoolTxs(idx, state)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+
+	// Build successful response
+	type txsResponse struct {
+		Txs []*l2db.PoolTxAPI `json:"transactions"`
+	}
+	c.JSON(http.StatusOK, &txsResponse{
+		Txs: txs,
+	})
+}
+
 type receivedPoolTx struct {
 	TxID        common.TxID             `json:"id" binding:"required"`
 	Type        common.TxType           `json:"type" binding:"required"`
