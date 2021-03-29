@@ -1,6 +1,7 @@
 before:
   hooks:
     - go mod download
+    - make migration-pack
 
 builds:
   - main: ./cli/node/main.go
@@ -9,10 +10,8 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
-    hooks:
-      pre: make migration-pack
-      post: make migration-clean
+    goarch:
+      - amd64
 
 archives:
   - replacements:
