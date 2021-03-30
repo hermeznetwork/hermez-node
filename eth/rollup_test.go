@@ -235,8 +235,9 @@ func TestRollupUpdateFeeAddToken(t *testing.T) {
 
 func TestRollupUpdateBucketsParameters(t *testing.T) {
 	bucketsParameters := make([]RollupUpdateBucketsParameters, 5)
+	ceilUSD, _ := new(big.Int).SetString("10000000", 10)
 	for i := range bucketsParameters {
-		bucketsParameters[i].CeilUSD = big.NewInt(int64((i + 1) * 100))
+		bucketsParameters[i].CeilUSD = big.NewInt(0).Mul(ceilUSD, big.NewInt(int64(i+1)))
 		bucketsParameters[i].BlockStamp = big.NewInt(int64(0))
 		bucketsParameters[i].Withdrawals = big.NewInt(int64(i + 1))
 		bucketsParameters[i].RateBlocks = big.NewInt(int64(i+1) * 4)
@@ -1025,9 +1026,9 @@ func TestRollupWithdrawMerkleProof(t *testing.T) {
 	// Bucket 1
 	// Bucket[0].withdrawals = 1, Bucket[1].withdrawals = 2, ...
 	// Bucket[1].withdrawals - 1 = 1
-	assert.Equal(t, 1, rollupEvents.UpdateBucketWithdraw[0].NumBucket)
-	assert.Equal(t, blockStampBucket, rollupEvents.UpdateBucketWithdraw[0].BlockStamp)
-	assert.Equal(t, big.NewInt(1), rollupEvents.UpdateBucketWithdraw[0].Withdrawals)
+	assert.Equal(t, 0, rollupEvents.UpdateBucketWithdraw[0].NumBucket)
+	assert.Equal(t, int64(442), rollupEvents.UpdateBucketWithdraw[0].BlockStamp)
+	assert.Equal(t, big.NewInt(15), rollupEvents.UpdateBucketWithdraw[0].Withdrawals)
 }
 
 func TestRollupSafeMode(t *testing.T) {
