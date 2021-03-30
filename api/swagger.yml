@@ -427,10 +427,16 @@ paths:
           description: State of the transactions, e.g. "pend"
           schema:
             $ref: '#/components/schemas/PoolL2TransactionState'
-        - name: accountIndex
+        - name: fromAccountIndex
           in: query
           required: false
-          description: Id of the account
+          description: Id of the from account
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: toAccountIndex
+          in: query
+          required: false
+          description: Id of the to account
           schema:
             $ref: '#/components/schemas/AccountIndex'
       responses:

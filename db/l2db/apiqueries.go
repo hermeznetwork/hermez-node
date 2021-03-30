@@ -129,7 +129,7 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 }
 
 // GetPoolTxs return Txs from the pool
-func (l2db *L2DB) GetPoolTxs(idx *common.Idx, state *common.PoolL2TxState) ([]*PoolTxAPI, error) {
+func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxState) ([]*PoolTxAPI, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -145,7 +145,8 @@ func (l2db *L2DB) GetPoolTxs(idx *common.Idx, state *common.PoolL2TxState) ([]*P
 		args = append(args, state)
 		nextIsAnd = true
 	}
-	if idx != nil {
+
+	if fromIdx != nil && toIdx != nil {
 		if nextIsAnd {
 			queryStr += "AND ("
 		} else {
@@ -153,8 +154,24 @@ func (l2db *L2DB) GetPoolTxs(idx *common.Idx, state *common.PoolL2TxState) ([]*P
 		}
 		queryStr += "tx_pool.from_idx = ? "
 		queryStr += "OR tx_pool.to_idx = ?) "
-		args = append(args, idx)
-		args = append(args, idx)
+		args = append(args, fromIdx)
+		args = append(args, toIdx)
+	} else if fromIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.from_idx = ?"
+		args = append(args, fromIdx)
+	} else if toIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.to_idx = ?"
+		args = append(args, toIdx)
 	}
 	queryStr += "AND NOT external_delete;"
 	query := l2db.dbRead.Rebind(queryStr)

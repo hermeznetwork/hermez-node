@@ -172,6 +172,18 @@ func parseIdx(c querier) (*common.Idx, error) {
 	return stringToIdx(idxStr, name)
 }
 
+func parseFromIdx(c querier) (*common.Idx, error) {
+	const name = "fromAccountIndex"
+	idxStr := c.Query(name)
+	return stringToIdx(idxStr, name)
+}
+
+func parseToIdx(c querier) (*common.Idx, error) {
+	const name = "toAccountIndex"
+	idxStr := c.Query(name)
+	return stringToIdx(idxStr, name)
+}
+
 func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.PublicKeyComp, *common.Idx, error) {
 	// TokenID
 	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)

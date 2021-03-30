@@ -233,7 +233,7 @@ func TestPoolTxs(t *testing.T) {
 	fetchedTxs := testPoolTxsResponse{}
 	require.NoError(t, doGoodReq(
 		"GET",
-		endpoint+"?accountIndex=hez:ETH:263",
+		endpoint+"?fromAccountIndex=hez:ETH:263",
 		nil, &fetchedTxs))
 	assert.Equal(t, 1, len(fetchedTxs.Txs))
 	assert.Equal(t, "hez:ETH:263", fetchedTxs.Txs[0].FromIdx)
