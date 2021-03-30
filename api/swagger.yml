@@ -529,6 +529,15 @@ paths:
             type: integer
             minimum: 1
             maximum: 2049
+        - name: includePendingL1s
+          in: query
+          required: false
+          description: |
+            If set to true L1 transactions that have been added to the smart contract queue but haven't been forged yet are returned.
+            Warning: the correctness of the order is not guaranteed when using this filter, as the unforged transactions may change their position
+            once they are forged. 
+          schema:
+            type: boolean
       responses:
         '200':
           description: Successful operation.
