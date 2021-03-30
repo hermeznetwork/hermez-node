@@ -26,6 +26,14 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
+	// IncludePendingL1s
+	includePendingL1s := new(bool)
+	*includePendingL1s = false
+	includePendingL1s, err = parseQueryBool("includePendingL1s", includePendingL1s, c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
 	// Pagination
 	fromItem, order, limit, err := parsePagination(c)
 	if err != nil {
@@ -35,7 +43,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 
 	// Fetch txs from historyDB
 	txs, pendingItems, err := a.h.GetTxsAPI(
-		addr, bjj, tokenID, idx, batchNum, txType, fromItem, limit, order,
+		addr, bjj, tokenID, idx, batchNum, txType, includePendingL1s, fromItem, limit, order,
 	)
 	if err != nil {
 		retSQLErr(err, c)

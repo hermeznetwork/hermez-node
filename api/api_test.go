@@ -164,6 +164,8 @@ var SetBlockchain = `
 	> block
 	> batch
 	> block
+	ForceTransfer(0) D-B: 77777700000000000
+	> block
 `
 
 type testCommon struct {
@@ -366,6 +368,12 @@ func TestMain(m *testing.M) {
 			commonL1Txs = append(commonL1Txs, batch.L1CoordinatorTxs...)
 		}
 	}
+	// Add unforged L1 tx
+	unforgedTx := blocksData[len(blocksData)-1].Rollup.L1UserTxs[0]
+	if unforgedTx.BatchNum != nil {
+		panic("Unforged tx batch num should be nil")
+	}
+	commonL1Txs = append(commonL1Txs, unforgedTx)
 
 	// Generate Coordinators and add them to HistoryDB
 	const nCoords = 10
