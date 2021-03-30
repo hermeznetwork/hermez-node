@@ -523,15 +523,30 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
+		// l1UserFutureTxs are the l1UserTxs that are not being forged
+		// in the next batch, but that are also in the queue for the
+		// future batches
+		l1UserFutureTxs, err := p.historyDB.GetUnforgedL1UserFutureTxs(p.state.lastForgeL1TxsNum + 1)
+		if err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+
 		coordIdxs, auths, l1UserTxs, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
-			p.txSelector.GetL1L2TxSelection(p.cfg.TxProcessorConfig, _l1UserTxs)
+			p.txSelector.GetL1L2TxSelection(p.cfg.TxProcessorConfig, _l1UserTxs, l1UserFutureTxs)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
 	} else {
+		// get l1UserFutureTxs which are all the l1 pending in all the
+		// queues
+		l1UserFutureTxs, err := p.historyDB.GetUnforgedL1UserFutureTxs(p.state.lastForgeL1TxsNum) //nolint:gomnd
+		if err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+
 		// 2b: only L2 txs
 		coordIdxs, auths, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
-			p.txSelector.GetL2TxSelection(p.cfg.TxProcessorConfig)
+			p.txSelector.GetL2TxSelection(p.cfg.TxProcessorConfig, l1UserFutureTxs)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
