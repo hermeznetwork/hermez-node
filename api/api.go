@@ -79,6 +79,8 @@ func NewAPI(
 	}
 	server.Use(middleware)
 
+	server.NoRoute(a.noRoute)
+
 	v1 := server.Group("/v1")
 
 	// Add coordinator endpoints

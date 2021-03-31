@@ -616,12 +616,6 @@ type NodeAPI struct { //nolint:golint
 	addr   string
 }
 
-func handleNoRoute(c *gin.Context) {
-	c.JSON(http.StatusNotFound, gin.H{
-		"error": "404 page not found",
-	})
-}
-
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
 	addr string,
@@ -631,7 +625,6 @@ func NewNodeAPI(
 	l2db *l2db.L2DB,
 ) (*NodeAPI, error) {
 	engine := gin.Default()
-	engine.NoRoute(handleNoRoute)
 	engine.Use(cors.Default())
 	_api, err := api.NewAPI(
 		coordinatorEndpoints, explorerEndpoints,
