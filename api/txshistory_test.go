@@ -325,7 +325,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	path = fmt.Sprintf(
 		"%s?fromAccountIndex=%s&toAccountIndex=%s&limit=%d",
-		endpoint, idx, idx, limit,
+		endpoint, idxStr, idxStr, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
