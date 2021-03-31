@@ -215,6 +215,7 @@ func TestMain(m *testing.M) {
 	chainID := uint16(0)
 	_config := getConfigTest(chainID)
 	config = configAPI{
+		ChainID:           chainID,
 		RollupConstants:   *newRollupConstants(_config.RollupConstants),
 		AuctionConstants:  _config.AuctionConstants,
 		WDelayerConstants: _config.WDelayerConstants,
