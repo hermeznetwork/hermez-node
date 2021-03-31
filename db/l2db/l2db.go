@@ -1,3 +1,20 @@
+/*
+Package l2db is responsible for storing and retrieving the data received by the coordinator through the api.
+Note that this data will be different for each coordinator in the network, as this represents the L2 information.
+
+The data managed by this package is fundamentally PoolL2Tx and AccountCreationAuth. All this data come from
+the API sent by clients and is used by the txselector to decide which transactions are selected to forge a batch.
+
+Some of the database tooling used in this package such as meddler and migration tools is explained in the db package.
+
+This package is spitted in different files following these ideas:
+- l2db.go: constructor and functions used by packages other than the api.
+- apiqueries.go: functions used by the API, the queries implemented in this functions use a semaphore
+to restrict the maximum concurrent connections to the database.
+- views.go: structs used to retrieve/store data from/to the database. When possible, the common structs are used, however
+most of the time there is no 1:1 relation between the struct fields and the tables of the schema, especially when joining tables.
+In some cases, some of the structs defined in this file also include custom Marshallers to easily match the expected api formats.
+*/
 package l2db
 
 import (

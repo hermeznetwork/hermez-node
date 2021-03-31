@@ -288,7 +288,16 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		return nil, tracerr.Wrap(err)
 	}
 
-	stateAPIUpdater := stateapiupdater.NewUpdater(historyDB, &hdbNodeCfg, initSCVars, &hdbConsts)
+	stateAPIUpdater, err := stateapiupdater.NewUpdater(
+		historyDB,
+		&hdbNodeCfg,
+		initSCVars,
+		&hdbConsts,
+		&cfg.RecommendedFeePolicy,
+	)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
 
 	var coord *coordinator.Coordinator
 	if mode == ModeCoordinator {

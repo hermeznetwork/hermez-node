@@ -1,11 +1,20 @@
+/*
+Package stateapiupdater is responsible for generating and storing the object response of the GET /state endpoint exposed through the api package.
+This object is extensively defined at the OpenAPI spec located at api/swagger.yml.
+
+Deployment considerations: in a setup where multiple processes are used (dedicated api process, separated coord / sync, ...), only one process should care
+of using this package.
+*/
 package stateapiupdater
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -17,11 +26,45 @@ type Updater struct {
 	vars   common.SCVariablesPtr
 	consts historydb.Constants
 	rw     sync.RWMutex
+	rfp    *RecommendedFeePolicy
+}
+
+// RecommendedFeePolicy describes how the recommended fee is calculated
+type RecommendedFeePolicy struct {
+	PolicyType  RecommendedFeePolicyType `validate:"required"`
+	StaticValue float64
+}
+
+// RecommendedFeePolicyType describes the different available recommended fee strategies
+type RecommendedFeePolicyType string
+
+const (
+	// RecommendedFeePolicyTypeStatic always give the same StaticValue as recommended fee
+	RecommendedFeePolicyTypeStatic RecommendedFeePolicyType = "Static"
+	// RecommendedFeePolicyTypeAvgLastHour set the recommended fee using the average fee of the last hour
+	RecommendedFeePolicyTypeAvgLastHour RecommendedFeePolicyType = "AvgLastHour"
+)
+
+func (rfp *RecommendedFeePolicy) valid() bool {
+	switch rfp.PolicyType {
+	case RecommendedFeePolicyTypeStatic:
+		if rfp.StaticValue == 0 {
+			log.Warn("RcommendedFee is set to 0 USD, and the policy is static")
+		}
+		return true
+	case RecommendedFeePolicyTypeAvgLastHour:
+		return true
+	default:
+		return false
+	}
 }
 
 // NewUpdater creates a new Updater
 func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *common.SCVariables,
-	consts *historydb.Constants) *Updater {
+	consts *historydb.Constants, rfp *RecommendedFeePolicy) (*Updater, error) {
+	if ok := rfp.valid(); !ok {
+		return nil, tracerr.Wrap(fmt.Errorf("Invalid recommended fee policy: %v", rfp.PolicyType))
+	}
 	u := Updater{
 		hdb:    hdb,
 		config: *config,
@@ -31,9 +74,10 @@ func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *co
 				ForgeDelay: config.ForgeDelay,
 			},
 		},
+		rfp: rfp,
 	}
 	u.SetSCVars(vars.AsPtr())
-	return &u
+	return &u, nil
 }
 
 // Store the State in the HistoryDB
@@ -65,13 +109,27 @@ func (u *Updater) SetSCVars(vars *common.SCVariablesPtr) {
 
 // UpdateRecommendedFee update Status.RecommendedFee information
 func (u *Updater) UpdateRecommendedFee() error {
-	recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD)
-	if err != nil {
-		return tracerr.Wrap(err)
+	switch u.rfp.PolicyType {
+	case RecommendedFeePolicyTypeStatic:
+		u.rw.Lock()
+		u.state.RecommendedFee = common.RecommendedFee{
+			ExistingAccount:        u.rfp.StaticValue,
+			CreatesAccount:         u.rfp.StaticValue,
+			CreatesAccountInternal: u.rfp.StaticValue,
+		}
+		u.rw.Unlock()
+	case RecommendedFeePolicyTypeAvgLastHour:
+		recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		u.rw.Lock()
+		u.state.RecommendedFee = *recommendedFee
+		u.rw.Unlock()
+	default:
+		return tracerr.New("Invalid recommende fee policy")
 	}
-	u.rw.Lock()
-	u.state.RecommendedFee = *recommendedFee
-	u.rw.Unlock()
+
 	return nil
 }
 

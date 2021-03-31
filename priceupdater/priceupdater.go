@@ -173,6 +173,10 @@ func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 			tokenPrice, err = p.getTokenPriceCoingecko(ctx, token.Addr)
 		case UpdateMethodTypeStatic:
 			tokenPrice = token.StaticValue
+			if tokenPrice == float64(0) {
+				log.Warn("token price is set to 0. Probably StaticValue is not put in the configuration file,",
+					"token", token.Symbol)
+			}
 		case UpdateMethodTypeIgnore:
 			continue
 		}

@@ -216,6 +216,7 @@ func TestMain(m *testing.M) {
 	chainID := uint16(0)
 	_config := getConfigTest(chainID)
 	config = configAPI{
+		ChainID:           chainID,
 		RollupConstants:   *newRollupConstants(_config.RollupConstants),
 		AuctionConstants:  _config.AuctionConstants,
 		WDelayerConstants: _config.WDelayerConstants,
@@ -523,11 +524,16 @@ func TestMain(m *testing.M) {
 		WithdrawalDelay: uint64(3000),
 	}
 
-	stateAPIUpdater = stateapiupdater.NewUpdater(hdb, nodeConfig, &common.SCVariables{
+	stateAPIUpdater, err = stateapiupdater.NewUpdater(hdb, nodeConfig, &common.SCVariables{
 		Rollup:   rollupVars,
 		Auction:  auctionVars,
 		WDelayer: wdelayerVars,
-	}, constants)
+	}, constants, &stateapiupdater.RecommendedFeePolicy{
+		PolicyType: stateapiupdater.RecommendedFeePolicyTypeAvgLastHour,
+	})
+	if err != nil {
+		panic(err)
+	}
 
 	// Generate test data, as expected to be received/sended from/to the API
 	testCoords := genTestCoordinators(commonCoords)
