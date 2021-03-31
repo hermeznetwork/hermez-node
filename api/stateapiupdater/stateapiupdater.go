@@ -1,3 +1,10 @@
+/*
+Package stateapiupdater is responsible for generating and storing the object response of the GET /state endpoint exposed through the api package.
+This object is extensively defined at the OpenAPI spec located at api/swagger.yml.
+
+Deployment considerations: in a setup where multiple processes are used (dedicated api process, separated coord / sync, ...), only one process should care
+of using this package.
+*/
 package stateapiupdater
 
 import (
