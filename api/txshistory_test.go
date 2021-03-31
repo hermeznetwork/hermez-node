@@ -324,8 +324,8 @@ func TestGetHistoryTxs(t *testing.T) {
 	idx, err := stringToIdx(idxStr, "")
 	assert.NoError(t, err)
 	path = fmt.Sprintf(
-		"%s?accountIndex=%s&limit=%d",
-		endpoint, idxStr, limit,
+		"%s?fromAccountIndex=%s&toAccountIndex=%s&limit=%d",
+		endpoint, idx, idx, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
@@ -431,8 +431,8 @@ func TestGetHistoryTxs(t *testing.T) {
 	assertTxs(t, []testTx{}, fetchedTxs)
 	// 400
 	path = fmt.Sprintf(
-		"%s?accountIndex=%s&hezEthereumAddress=%s",
-		endpoint, idx, account.EthAddr,
+		"%s?fromAccountIndex=%s&toAccountIndex=%s&hezEthereumAddress=%s",
+		endpoint, idx, idx, account.EthAddr,
 	)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)

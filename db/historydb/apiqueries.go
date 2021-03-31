@@ -456,7 +456,7 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 // and pagination info
 func (hdb *HistoryDB) GetTxsAPI(
 	ethAddr *ethCommon.Address, bjj *babyjub.PublicKeyComp,
-	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
+	tokenID *common.TokenID, fromIdx, toIdx *common.Idx, batchNum *uint, txType *common.TxType,
 	fromItem, limit *uint, order string,
 ) ([]TxAPI, uint64, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for
@@ -508,14 +508,32 @@ func (hdb *HistoryDB) GetTxsAPI(
 		nextIsAnd = true
 	}
 	// idx filter
-	if idx != nil {
+	if fromIdx != nil && toIdx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		queryStr += "(tx.effective_from_idx = ? OR tx.to_idx = ?) "
-		args = append(args, idx, idx)
+		queryStr += "(tx.effective_from_idx = ? "
+		queryStr += "OR tx.to_idx = ?) "
+		args = append(args, fromIdx, toIdx)
+		nextIsAnd = true
+	} else if fromIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx.effective_from_idx = ? "
+		nextIsAnd = true
+	} else if toIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx.to_idx = ? "
+		args = append(args, toIdx)
 		nextIsAnd = true
 	}
 	// batchNum filter

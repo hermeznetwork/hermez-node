@@ -219,6 +219,47 @@ func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.
 	return tokenID, addr, bjj, idx, nil
 }
 
+func parseTxsHistoryFilters(c querier) (*common.TokenID, *ethCommon.Address,
+	*babyjub.PublicKeyComp, *common.Idx, *common.Idx, error) {
+	// TokenID
+	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	var tokenID *common.TokenID
+	if tid != nil {
+		tokenID = new(common.TokenID)
+		*tokenID = common.TokenID(*tid)
+	}
+	// Hez Eth addr
+	addr, err := parseQueryHezEthAddr(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	// BJJ
+	bjj, err := parseQueryBJJ(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	if addr != nil && bjj != nil {
+		return nil, nil, nil, nil, nil, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
+	}
+	// from Idx
+	fromIdx, err := parseFromIdx(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	// to Idx
+	toIdx, err := parseToIdx(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	if (fromIdx != nil || toIdx != nil) && (addr != nil || bjj != nil || tokenID != nil) {
+		return nil, nil, nil, nil, nil, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
+	}
+	return tokenID, addr, bjj, fromIdx, toIdx, nil
+}
+
 func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
 	idsStr := c.Query("ids")
 	symbolsStr := c.Query("symbols")

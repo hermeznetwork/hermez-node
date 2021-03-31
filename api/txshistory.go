@@ -9,7 +9,7 @@ import (
 
 func (a *API) getHistoryTxs(c *gin.Context) {
 	// Get query parameters
-	tokenID, addr, bjj, idx, err := parseExitFilters(c)
+	tokenID, addr, bjj, fromIdx, toIdx, err := parseTxsHistoryFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -35,7 +35,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 
 	// Fetch txs from historyDB
 	txs, pendingItems, err := a.h.GetTxsAPI(
-		addr, bjj, tokenID, idx, batchNum, txType, fromItem, limit, order,
+		addr, bjj, tokenID, fromIdx, toIdx, batchNum, txType, fromItem, limit, order,
 	)
 	if err != nil {
 		retSQLErr(err, c)

@@ -154,15 +154,14 @@ func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxS
 		}
 		queryStr += "tx_pool.from_idx = ? "
 		queryStr += "OR tx_pool.to_idx = ?) "
-		args = append(args, fromIdx)
-		args = append(args, toIdx)
+		args = append(args, fromIdx, toIdx)
 	} else if fromIdx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		queryStr += "tx_pool.from_idx = ?"
+		queryStr += "tx_pool.from_idx = ? "
 		args = append(args, fromIdx)
 	} else if toIdx != nil {
 		if nextIsAnd {
@@ -170,7 +169,7 @@ func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxS
 		} else {
 			queryStr += "WHERE "
 		}
-		queryStr += "tx_pool.to_idx = ?"
+		queryStr += "tx_pool.to_idx = ? "
 		args = append(args, toIdx)
 	}
 	queryStr += "AND NOT external_delete;"

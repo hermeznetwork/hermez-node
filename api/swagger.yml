@@ -536,10 +536,16 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
-        - name: accountIndex
+        - name: fromAccountIndex
           in: query
           required: false
-          description: Only get transactions sent from or to a specific account. Incompatible with the queries `tokenId`, `hezEthereumAddress` and `BJJ`.
+          description: Only get transactions sent from a specific account. Incompatible with the queries `tokenId`, `hezEthereumAddress` and `BJJ`.
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: toAccountIndex
+          in: query
+          required: false
+          description: Only get transactions sent to a specific account. Incompatible with the queries `tokenId`, `hezEthereumAddress` and `BJJ`.
           schema:
             $ref: '#/components/schemas/AccountIndex'
         - name: batchNum

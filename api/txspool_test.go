@@ -246,7 +246,6 @@ func TestPoolTxs(t *testing.T) {
 	for _, v := range fetchedTxs.Txs {
 		assert.Equal(t, common.PoolL2TxStatePending, v.State)
 	}
-
 	// GET
 	endpoint += "/"
 	for _, tx := range tc.poolTxsToReceive {
