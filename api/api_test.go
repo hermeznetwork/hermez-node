@@ -40,9 +40,11 @@ type Pendinger interface {
 	New() Pendinger
 }
 
-const apiPort = "4010"
-const apiIP = "http://localhost:"
-const apiURL = apiIP + apiPort + "/v1/"
+const (
+	apiPort = "4010"
+	apiIP   = "http://localhost:"
+	apiURL  = apiIP + apiPort + "/v1/"
+)
 
 var SetBlockchain = `
 	Type: Blockchain
