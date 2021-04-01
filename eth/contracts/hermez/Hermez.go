@@ -27,7 +27,7 @@ var (
 )
 
 // HermezABI is the input ABI used to generate the binding from.
-const HermezABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"AddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"batchNum\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"l1UserTxsLen\",\"type\":\"uint16\"}],\"name\":\"ForgeBatch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"feeAddToken\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"withdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"InitializeHermezEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"queueIndex\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"position\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"l1UserTx\",\"type\":\"bytes\"}],\"name\":\"L1UserTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"SafeMode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"numBucket\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"}],\"name\":\"UpdateBucketWithdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"UpdateBucketsParameters\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"UpdateFeeAddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"UpdateForgeL1L2BatchTimeout\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"UpdateTokenExchange\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"UpdateWithdrawalDelay\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"WithdrawEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ABSOLUTE_MAX_L1L2BATCHTIMEOUT\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint48\",\"name\":\"fromIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint16\",\"name\":\"loadAmountF\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"amountF\",\"type\":\"uint16\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"toIdx\",\"type\":\"uint48\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addL1Transaction\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"buckets\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"ceilUSD\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockWithdrawalRate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxWithdrawals\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"name\":\"exitNullifierMap\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"exitRootsMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"feeAddToken\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint48\",\"name\":\"newLastIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint256\",\"name\":\"newStRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newExitRoot\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"encodedL1CoordinatorTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"l1L2TxsData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"feeIdxCoordinator\",\"type\":\"bytes\"},{\"internalType\":\"uint8\",\"name\":\"verifierIdx\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"l1Batch\",\"type\":\"bool\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"}],\"name\":\"forgeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"forgeL1L2BatchTimeout\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezAuctionContract\",\"outputs\":[{\"internalType\":\"contractIHermezAuctionProtocol\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezGovernanceAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_verifiers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_verifiersParams\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"_withdrawVerifier\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezAuctionContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenHEZ\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"_forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_feeAddToken\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_poseidon2Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon3Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon4Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezGovernanceAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_withdrawalDelay\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"_withdrawDelayerContract\",\"type\":\"address\"}],\"name\":\"initializeHermez\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"}],\"name\":\"instantWithdrawalViewer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"l1L2TxsDataHashMap\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastForgedBatch\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastIdx\",\"outputs\":[{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastL1L2Batch\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"mapL1TxQueue\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1FillingQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1ToForgeQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registerTokensCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"rollupVerifiers\",\"outputs\":[{\"internalType\":\"contractVerifierRollupInterface\",\"name\":\"verifierInterface\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxTx\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nLevels\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rollupVerifiersLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safeMode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"stateRootMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenExchange\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenHEZ\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[4][5]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[4][5]\"}],\"name\":\"updateBucketsParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"updateFeeAddToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"updateForgeL1L2BatchTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"updateTokenExchange\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"updateWithdrawalDelay\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawCircuit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawDelayerContract\",\"outputs\":[{\"internalType\":\"contractIWithdrawalDelayer\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint256[]\",\"name\":\"siblings\",\"type\":\"uint256[]\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawMerkleProof\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawVerifier\",\"outputs\":[{\"internalType\":\"contractVerifierWithdrawInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawalDelay\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const HermezABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"}],\"name\":\"AddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"batchNum\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"l1UserTxsLen\",\"type\":\"uint16\"}],\"name\":\"ForgeBatch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"feeAddToken\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"withdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"InitializeHermezEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"queueIndex\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"position\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"l1UserTx\",\"type\":\"bytes\"}],\"name\":\"L1UserTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"SafeMode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"numBucket\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"}],\"name\":\"UpdateBucketWithdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"arrayBuckets\",\"type\":\"uint256[]\"}],\"name\":\"UpdateBucketsParameters\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"UpdateFeeAddToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"UpdateForgeL1L2BatchTimeout\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"UpdateTokenExchange\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"UpdateWithdrawalDelay\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"WithdrawEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ABSOLUTE_MAX_L1L2BATCHTIMEOUT\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ACCOUNT_CREATION_HASH\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"AUTHORISE_TYPEHASH\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DOMAIN_SEPARATOR\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"domainSeparator\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"EIP712DOMAIN_HASH\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"HERMEZ_NETWORK_HASH\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"NAME_HASH\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"VERSION_HASH\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint48\",\"name\":\"fromIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint40\",\"name\":\"loadAmountF\",\"type\":\"uint40\"},{\"internalType\":\"uint40\",\"name\":\"amountF\",\"type\":\"uint40\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"toIdx\",\"type\":\"uint48\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addL1Transaction\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"name\":\"addToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"name\":\"buckets\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"name\":\"exitNullifierMap\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"exitRootsMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"feeAddToken\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint48\",\"name\":\"newLastIdx\",\"type\":\"uint48\"},{\"internalType\":\"uint256\",\"name\":\"newStRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newExitRoot\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"encodedL1CoordinatorTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"l1L2TxsData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"feeIdxCoordinator\",\"type\":\"bytes\"},{\"internalType\":\"uint8\",\"name\":\"verifierIdx\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"l1Batch\",\"type\":\"bool\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"}],\"name\":\"forgeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"forgeL1L2BatchTimeout\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getChainId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezAuctionContract\",\"outputs\":[{\"internalType\":\"contractIHermezAuctionProtocol\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hermezGovernanceAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_verifiers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_verifiersParams\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"_withdrawVerifier\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezAuctionContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenHEZ\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"_forgeL1L2BatchTimeout\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_feeAddToken\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_poseidon2Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon3Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_poseidon4Elements\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_hermezGovernanceAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_withdrawalDelay\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"_withdrawDelayerContract\",\"type\":\"address\"}],\"name\":\"initializeHermez\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"}],\"name\":\"instantWithdrawalViewer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"l1L2TxsDataHashMap\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastForgedBatch\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastIdx\",\"outputs\":[{\"internalType\":\"uint48\",\"name\":\"\",\"type\":\"uint48\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastL1L2Batch\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"mapL1TxQueue\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nBuckets\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1FillingQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextL1ToForgeQueue\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"ceilUSD\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"rateBlocks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"rateWithdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxWithdrawals\",\"type\":\"uint256\"}],\"name\":\"packBucket\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"ret\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registerTokensCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"rollupVerifiers\",\"outputs\":[{\"internalType\":\"contractVerifierRollupInterface\",\"name\":\"verifierInterface\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxTx\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nLevels\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rollupVerifiersLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"safeMode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"name\":\"stateRootMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenExchange\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenHEZ\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"tokenMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"bucket\",\"type\":\"uint256\"}],\"name\":\"unpackBucket\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"ceilUSD\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockStamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"rateBlocks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"rateWithdrawals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxWithdrawals\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"newBuckets\",\"type\":\"uint256[]\"}],\"name\":\"updateBucketsParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newFeeAddToken\",\"type\":\"uint256\"}],\"name\":\"updateFeeAddToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"newForgeL1L2BatchTimeout\",\"type\":\"uint8\"}],\"name\":\"updateForgeL1L2BatchTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addressArray\",\"type\":\"address[]\"},{\"internalType\":\"uint64[]\",\"name\":\"valueArray\",\"type\":\"uint64[]\"}],\"name\":\"updateTokenExchange\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newWithdrawalDelay\",\"type\":\"uint64\"}],\"name\":\"updateWithdrawalDelay\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"proofA\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2][2]\",\"name\":\"proofB\",\"type\":\"uint256[2][2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"proofC\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawCircuit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawDelayerContract\",\"outputs\":[{\"internalType\":\"contractIWithdrawalDelayer\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"tokenID\",\"type\":\"uint32\"},{\"internalType\":\"uint192\",\"name\":\"amount\",\"type\":\"uint192\"},{\"internalType\":\"uint256\",\"name\":\"babyPubKey\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"numExitRoot\",\"type\":\"uint32\"},{\"internalType\":\"uint256[]\",\"name\":\"siblings\",\"type\":\"uint256[]\"},{\"internalType\":\"uint48\",\"name\":\"idx\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"instantWithdraw\",\"type\":\"bool\"}],\"name\":\"withdrawMerkleProof\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawVerifier\",\"outputs\":[{\"internalType\":\"contractVerifierWithdrawInterface\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawalDelay\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // Hermez is an auto generated Go binding around an Ethereum contract.
 type Hermez struct {
@@ -202,60 +202,251 @@ func (_Hermez *HermezCallerSession) ABSOLUTEMAXL1L2BATCHTIMEOUT() (uint8, error)
 	return _Hermez.Contract.ABSOLUTEMAXL1L2BATCHTIMEOUT(&_Hermez.CallOpts)
 }
 
-// Buckets is a free data retrieval call binding the contract method 0x9b51fb0d.
+// ACCOUNTCREATIONHASH is a free data retrieval call binding the contract method 0x1300aff0.
 //
-// Solidity: function buckets(uint256 ) view returns(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 blockWithdrawalRate, uint256 maxWithdrawals)
-func (_Hermez *HermezCaller) Buckets(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	CeilUSD             *big.Int
-	BlockStamp          *big.Int
-	Withdrawals         *big.Int
-	BlockWithdrawalRate *big.Int
-	MaxWithdrawals      *big.Int
-}, error) {
+// Solidity: function ACCOUNT_CREATION_HASH() view returns(bytes32)
+func (_Hermez *HermezCaller) ACCOUNTCREATIONHASH(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "ACCOUNT_CREATION_HASH")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// ACCOUNTCREATIONHASH is a free data retrieval call binding the contract method 0x1300aff0.
+//
+// Solidity: function ACCOUNT_CREATION_HASH() view returns(bytes32)
+func (_Hermez *HermezSession) ACCOUNTCREATIONHASH() ([32]byte, error) {
+	return _Hermez.Contract.ACCOUNTCREATIONHASH(&_Hermez.CallOpts)
+}
+
+// ACCOUNTCREATIONHASH is a free data retrieval call binding the contract method 0x1300aff0.
+//
+// Solidity: function ACCOUNT_CREATION_HASH() view returns(bytes32)
+func (_Hermez *HermezCallerSession) ACCOUNTCREATIONHASH() ([32]byte, error) {
+	return _Hermez.Contract.ACCOUNTCREATIONHASH(&_Hermez.CallOpts)
+}
+
+// AUTHORISETYPEHASH is a free data retrieval call binding the contract method 0xe62f6b92.
+//
+// Solidity: function AUTHORISE_TYPEHASH() view returns(bytes32)
+func (_Hermez *HermezCaller) AUTHORISETYPEHASH(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "AUTHORISE_TYPEHASH")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// AUTHORISETYPEHASH is a free data retrieval call binding the contract method 0xe62f6b92.
+//
+// Solidity: function AUTHORISE_TYPEHASH() view returns(bytes32)
+func (_Hermez *HermezSession) AUTHORISETYPEHASH() ([32]byte, error) {
+	return _Hermez.Contract.AUTHORISETYPEHASH(&_Hermez.CallOpts)
+}
+
+// AUTHORISETYPEHASH is a free data retrieval call binding the contract method 0xe62f6b92.
+//
+// Solidity: function AUTHORISE_TYPEHASH() view returns(bytes32)
+func (_Hermez *HermezCallerSession) AUTHORISETYPEHASH() ([32]byte, error) {
+	return _Hermez.Contract.AUTHORISETYPEHASH(&_Hermez.CallOpts)
+}
+
+// DOMAINSEPARATOR is a free data retrieval call binding the contract method 0x3644e515.
+//
+// Solidity: function DOMAIN_SEPARATOR() view returns(bytes32 domainSeparator)
+func (_Hermez *HermezCaller) DOMAINSEPARATOR(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "DOMAIN_SEPARATOR")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// DOMAINSEPARATOR is a free data retrieval call binding the contract method 0x3644e515.
+//
+// Solidity: function DOMAIN_SEPARATOR() view returns(bytes32 domainSeparator)
+func (_Hermez *HermezSession) DOMAINSEPARATOR() ([32]byte, error) {
+	return _Hermez.Contract.DOMAINSEPARATOR(&_Hermez.CallOpts)
+}
+
+// DOMAINSEPARATOR is a free data retrieval call binding the contract method 0x3644e515.
+//
+// Solidity: function DOMAIN_SEPARATOR() view returns(bytes32 domainSeparator)
+func (_Hermez *HermezCallerSession) DOMAINSEPARATOR() ([32]byte, error) {
+	return _Hermez.Contract.DOMAINSEPARATOR(&_Hermez.CallOpts)
+}
+
+// EIP712DOMAINHASH is a free data retrieval call binding the contract method 0xc473af33.
+//
+// Solidity: function EIP712DOMAIN_HASH() view returns(bytes32)
+func (_Hermez *HermezCaller) EIP712DOMAINHASH(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "EIP712DOMAIN_HASH")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// EIP712DOMAINHASH is a free data retrieval call binding the contract method 0xc473af33.
+//
+// Solidity: function EIP712DOMAIN_HASH() view returns(bytes32)
+func (_Hermez *HermezSession) EIP712DOMAINHASH() ([32]byte, error) {
+	return _Hermez.Contract.EIP712DOMAINHASH(&_Hermez.CallOpts)
+}
+
+// EIP712DOMAINHASH is a free data retrieval call binding the contract method 0xc473af33.
+//
+// Solidity: function EIP712DOMAIN_HASH() view returns(bytes32)
+func (_Hermez *HermezCallerSession) EIP712DOMAINHASH() ([32]byte, error) {
+	return _Hermez.Contract.EIP712DOMAINHASH(&_Hermez.CallOpts)
+}
+
+// HERMEZNETWORKHASH is a free data retrieval call binding the contract method 0xf1f2fcab.
+//
+// Solidity: function HERMEZ_NETWORK_HASH() view returns(bytes32)
+func (_Hermez *HermezCaller) HERMEZNETWORKHASH(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "HERMEZ_NETWORK_HASH")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// HERMEZNETWORKHASH is a free data retrieval call binding the contract method 0xf1f2fcab.
+//
+// Solidity: function HERMEZ_NETWORK_HASH() view returns(bytes32)
+func (_Hermez *HermezSession) HERMEZNETWORKHASH() ([32]byte, error) {
+	return _Hermez.Contract.HERMEZNETWORKHASH(&_Hermez.CallOpts)
+}
+
+// HERMEZNETWORKHASH is a free data retrieval call binding the contract method 0xf1f2fcab.
+//
+// Solidity: function HERMEZ_NETWORK_HASH() view returns(bytes32)
+func (_Hermez *HermezCallerSession) HERMEZNETWORKHASH() ([32]byte, error) {
+	return _Hermez.Contract.HERMEZNETWORKHASH(&_Hermez.CallOpts)
+}
+
+// NAMEHASH is a free data retrieval call binding the contract method 0x04622c2e.
+//
+// Solidity: function NAME_HASH() view returns(bytes32)
+func (_Hermez *HermezCaller) NAMEHASH(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "NAME_HASH")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// NAMEHASH is a free data retrieval call binding the contract method 0x04622c2e.
+//
+// Solidity: function NAME_HASH() view returns(bytes32)
+func (_Hermez *HermezSession) NAMEHASH() ([32]byte, error) {
+	return _Hermez.Contract.NAMEHASH(&_Hermez.CallOpts)
+}
+
+// NAMEHASH is a free data retrieval call binding the contract method 0x04622c2e.
+//
+// Solidity: function NAME_HASH() view returns(bytes32)
+func (_Hermez *HermezCallerSession) NAMEHASH() ([32]byte, error) {
+	return _Hermez.Contract.NAMEHASH(&_Hermez.CallOpts)
+}
+
+// VERSIONHASH is a free data retrieval call binding the contract method 0x9e4e7318.
+//
+// Solidity: function VERSION_HASH() view returns(bytes32)
+func (_Hermez *HermezCaller) VERSIONHASH(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "VERSION_HASH")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// VERSIONHASH is a free data retrieval call binding the contract method 0x9e4e7318.
+//
+// Solidity: function VERSION_HASH() view returns(bytes32)
+func (_Hermez *HermezSession) VERSIONHASH() ([32]byte, error) {
+	return _Hermez.Contract.VERSIONHASH(&_Hermez.CallOpts)
+}
+
+// VERSIONHASH is a free data retrieval call binding the contract method 0x9e4e7318.
+//
+// Solidity: function VERSION_HASH() view returns(bytes32)
+func (_Hermez *HermezCallerSession) VERSIONHASH() ([32]byte, error) {
+	return _Hermez.Contract.VERSIONHASH(&_Hermez.CallOpts)
+}
+
+// Buckets is a free data retrieval call binding the contract method 0x061d0964.
+//
+// Solidity: function buckets(int256 ) view returns(uint256)
+func (_Hermez *HermezCaller) Buckets(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _Hermez.contract.Call(opts, &out, "buckets", arg0)
 
-	outstruct := new(struct {
-		CeilUSD             *big.Int
-		BlockStamp          *big.Int
-		Withdrawals         *big.Int
-		BlockWithdrawalRate *big.Int
-		MaxWithdrawals      *big.Int
-	})
+	if err != nil {
+		return *new(*big.Int), err
+	}
 
-	outstruct.CeilUSD = out[0].(*big.Int)
-	outstruct.BlockStamp = out[1].(*big.Int)
-	outstruct.Withdrawals = out[2].(*big.Int)
-	outstruct.BlockWithdrawalRate = out[3].(*big.Int)
-	outstruct.MaxWithdrawals = out[4].(*big.Int)
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
-	return *outstruct, err
+	return out0, err
 
 }
 
-// Buckets is a free data retrieval call binding the contract method 0x9b51fb0d.
+// Buckets is a free data retrieval call binding the contract method 0x061d0964.
 //
-// Solidity: function buckets(uint256 ) view returns(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 blockWithdrawalRate, uint256 maxWithdrawals)
-func (_Hermez *HermezSession) Buckets(arg0 *big.Int) (struct {
-	CeilUSD             *big.Int
-	BlockStamp          *big.Int
-	Withdrawals         *big.Int
-	BlockWithdrawalRate *big.Int
-	MaxWithdrawals      *big.Int
-}, error) {
+// Solidity: function buckets(int256 ) view returns(uint256)
+func (_Hermez *HermezSession) Buckets(arg0 *big.Int) (*big.Int, error) {
 	return _Hermez.Contract.Buckets(&_Hermez.CallOpts, arg0)
 }
 
-// Buckets is a free data retrieval call binding the contract method 0x9b51fb0d.
+// Buckets is a free data retrieval call binding the contract method 0x061d0964.
 //
-// Solidity: function buckets(uint256 ) view returns(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 blockWithdrawalRate, uint256 maxWithdrawals)
-func (_Hermez *HermezCallerSession) Buckets(arg0 *big.Int) (struct {
-	CeilUSD             *big.Int
-	BlockStamp          *big.Int
-	Withdrawals         *big.Int
-	BlockWithdrawalRate *big.Int
-	MaxWithdrawals      *big.Int
-}, error) {
+// Solidity: function buckets(int256 ) view returns(uint256)
+func (_Hermez *HermezCallerSession) Buckets(arg0 *big.Int) (*big.Int, error) {
 	return _Hermez.Contract.Buckets(&_Hermez.CallOpts, arg0)
 }
 
@@ -381,6 +572,37 @@ func (_Hermez *HermezSession) ForgeL1L2BatchTimeout() (uint8, error) {
 // Solidity: function forgeL1L2BatchTimeout() view returns(uint8)
 func (_Hermez *HermezCallerSession) ForgeL1L2BatchTimeout() (uint8, error) {
 	return _Hermez.Contract.ForgeL1L2BatchTimeout(&_Hermez.CallOpts)
+}
+
+// GetChainId is a free data retrieval call binding the contract method 0x3408e470.
+//
+// Solidity: function getChainId() pure returns(uint256 chainId)
+func (_Hermez *HermezCaller) GetChainId(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "getChainId")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetChainId is a free data retrieval call binding the contract method 0x3408e470.
+//
+// Solidity: function getChainId() pure returns(uint256 chainId)
+func (_Hermez *HermezSession) GetChainId() (*big.Int, error) {
+	return _Hermez.Contract.GetChainId(&_Hermez.CallOpts)
+}
+
+// GetChainId is a free data retrieval call binding the contract method 0x3408e470.
+//
+// Solidity: function getChainId() pure returns(uint256 chainId)
+func (_Hermez *HermezCallerSession) GetChainId() (*big.Int, error) {
+	return _Hermez.Contract.GetChainId(&_Hermez.CallOpts)
 }
 
 // HermezAuctionContract is a free data retrieval call binding the contract method 0x2bd83626.
@@ -631,6 +853,37 @@ func (_Hermez *HermezCallerSession) MapL1TxQueue(arg0 uint32) ([]byte, error) {
 	return _Hermez.Contract.MapL1TxQueue(&_Hermez.CallOpts, arg0)
 }
 
+// NBuckets is a free data retrieval call binding the contract method 0x07feef6e.
+//
+// Solidity: function nBuckets() view returns(uint256)
+func (_Hermez *HermezCaller) NBuckets(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "nBuckets")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// NBuckets is a free data retrieval call binding the contract method 0x07feef6e.
+//
+// Solidity: function nBuckets() view returns(uint256)
+func (_Hermez *HermezSession) NBuckets() (*big.Int, error) {
+	return _Hermez.Contract.NBuckets(&_Hermez.CallOpts)
+}
+
+// NBuckets is a free data retrieval call binding the contract method 0x07feef6e.
+//
+// Solidity: function nBuckets() view returns(uint256)
+func (_Hermez *HermezCallerSession) NBuckets() (*big.Int, error) {
+	return _Hermez.Contract.NBuckets(&_Hermez.CallOpts)
+}
+
 // NextL1FillingQueue is a free data retrieval call binding the contract method 0x0ee8e52b.
 //
 // Solidity: function nextL1FillingQueue() view returns(uint32)
@@ -693,6 +946,37 @@ func (_Hermez *HermezCallerSession) NextL1ToForgeQueue() (uint32, error) {
 	return _Hermez.Contract.NextL1ToForgeQueue(&_Hermez.CallOpts)
 }
 
+// PackBucket is a free data retrieval call binding the contract method 0xccd226a7.
+//
+// Solidity: function packBucket(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 rateBlocks, uint256 rateWithdrawals, uint256 maxWithdrawals) pure returns(uint256 ret)
+func (_Hermez *HermezCaller) PackBucket(opts *bind.CallOpts, ceilUSD *big.Int, blockStamp *big.Int, withdrawals *big.Int, rateBlocks *big.Int, rateWithdrawals *big.Int, maxWithdrawals *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "packBucket", ceilUSD, blockStamp, withdrawals, rateBlocks, rateWithdrawals, maxWithdrawals)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// PackBucket is a free data retrieval call binding the contract method 0xccd226a7.
+//
+// Solidity: function packBucket(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 rateBlocks, uint256 rateWithdrawals, uint256 maxWithdrawals) pure returns(uint256 ret)
+func (_Hermez *HermezSession) PackBucket(ceilUSD *big.Int, blockStamp *big.Int, withdrawals *big.Int, rateBlocks *big.Int, rateWithdrawals *big.Int, maxWithdrawals *big.Int) (*big.Int, error) {
+	return _Hermez.Contract.PackBucket(&_Hermez.CallOpts, ceilUSD, blockStamp, withdrawals, rateBlocks, rateWithdrawals, maxWithdrawals)
+}
+
+// PackBucket is a free data retrieval call binding the contract method 0xccd226a7.
+//
+// Solidity: function packBucket(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 rateBlocks, uint256 rateWithdrawals, uint256 maxWithdrawals) pure returns(uint256 ret)
+func (_Hermez *HermezCallerSession) PackBucket(ceilUSD *big.Int, blockStamp *big.Int, withdrawals *big.Int, rateBlocks *big.Int, rateWithdrawals *big.Int, maxWithdrawals *big.Int) (*big.Int, error) {
+	return _Hermez.Contract.PackBucket(&_Hermez.CallOpts, ceilUSD, blockStamp, withdrawals, rateBlocks, rateWithdrawals, maxWithdrawals)
+}
+
 // RegisterTokensCount is a free data retrieval call binding the contract method 0x9f34e9a3.
 //
 // Solidity: function registerTokensCount() view returns(uint256)
@@ -740,10 +1024,13 @@ func (_Hermez *HermezCaller) RollupVerifiers(opts *bind.CallOpts, arg0 *big.Int)
 		MaxTx             *big.Int
 		NLevels           *big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.VerifierInterface = out[0].(common.Address)
-	outstruct.MaxTx = out[1].(*big.Int)
-	outstruct.NLevels = out[2].(*big.Int)
+	outstruct.VerifierInterface = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.MaxTx = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.NLevels = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
@@ -957,6 +1244,71 @@ func (_Hermez *HermezCallerSession) TokenMap(arg0 common.Address) (*big.Int, err
 	return _Hermez.Contract.TokenMap(&_Hermez.CallOpts, arg0)
 }
 
+// UnpackBucket is a free data retrieval call binding the contract method 0x3f267155.
+//
+// Solidity: function unpackBucket(uint256 bucket) pure returns(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 rateBlocks, uint256 rateWithdrawals, uint256 maxWithdrawals)
+func (_Hermez *HermezCaller) UnpackBucket(opts *bind.CallOpts, bucket *big.Int) (struct {
+	CeilUSD         *big.Int
+	BlockStamp      *big.Int
+	Withdrawals     *big.Int
+	RateBlocks      *big.Int
+	RateWithdrawals *big.Int
+	MaxWithdrawals  *big.Int
+}, error) {
+	var out []interface{}
+	err := _Hermez.contract.Call(opts, &out, "unpackBucket", bucket)
+
+	outstruct := new(struct {
+		CeilUSD         *big.Int
+		BlockStamp      *big.Int
+		Withdrawals     *big.Int
+		RateBlocks      *big.Int
+		RateWithdrawals *big.Int
+		MaxWithdrawals  *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.CeilUSD = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.BlockStamp = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.Withdrawals = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	outstruct.RateBlocks = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+	outstruct.RateWithdrawals = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
+	outstruct.MaxWithdrawals = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// UnpackBucket is a free data retrieval call binding the contract method 0x3f267155.
+//
+// Solidity: function unpackBucket(uint256 bucket) pure returns(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 rateBlocks, uint256 rateWithdrawals, uint256 maxWithdrawals)
+func (_Hermez *HermezSession) UnpackBucket(bucket *big.Int) (struct {
+	CeilUSD         *big.Int
+	BlockStamp      *big.Int
+	Withdrawals     *big.Int
+	RateBlocks      *big.Int
+	RateWithdrawals *big.Int
+	MaxWithdrawals  *big.Int
+}, error) {
+	return _Hermez.Contract.UnpackBucket(&_Hermez.CallOpts, bucket)
+}
+
+// UnpackBucket is a free data retrieval call binding the contract method 0x3f267155.
+//
+// Solidity: function unpackBucket(uint256 bucket) pure returns(uint256 ceilUSD, uint256 blockStamp, uint256 withdrawals, uint256 rateBlocks, uint256 rateWithdrawals, uint256 maxWithdrawals)
+func (_Hermez *HermezCallerSession) UnpackBucket(bucket *big.Int) (struct {
+	CeilUSD         *big.Int
+	BlockStamp      *big.Int
+	Withdrawals     *big.Int
+	RateBlocks      *big.Int
+	RateWithdrawals *big.Int
+	MaxWithdrawals  *big.Int
+}, error) {
+	return _Hermez.Contract.UnpackBucket(&_Hermez.CallOpts, bucket)
+}
+
 // WithdrawDelayerContract is a free data retrieval call binding the contract method 0x1b0a8223.
 //
 // Solidity: function withdrawDelayerContract() view returns(address)
@@ -1050,24 +1402,24 @@ func (_Hermez *HermezCallerSession) WithdrawalDelay() (uint64, error) {
 	return _Hermez.Contract.WithdrawalDelay(&_Hermez.CallOpts)
 }
 
-// AddL1Transaction is a paid mutator transaction binding the contract method 0x886df587.
+// AddL1Transaction is a paid mutator transaction binding the contract method 0xc7273053.
 //
-// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint48 toIdx, bytes permit) payable returns()
-func (_Hermez *HermezTransactor) AddL1Transaction(opts *bind.TransactOpts, babyPubKey *big.Int, fromIdx *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx *big.Int, permit []byte) (*types.Transaction, error) {
+// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint40 loadAmountF, uint40 amountF, uint32 tokenID, uint48 toIdx, bytes permit) payable returns()
+func (_Hermez *HermezTransactor) AddL1Transaction(opts *bind.TransactOpts, babyPubKey *big.Int, fromIdx *big.Int, loadAmountF *big.Int, amountF *big.Int, tokenID uint32, toIdx *big.Int, permit []byte) (*types.Transaction, error) {
 	return _Hermez.contract.Transact(opts, "addL1Transaction", babyPubKey, fromIdx, loadAmountF, amountF, tokenID, toIdx, permit)
 }
 
-// AddL1Transaction is a paid mutator transaction binding the contract method 0x886df587.
+// AddL1Transaction is a paid mutator transaction binding the contract method 0xc7273053.
 //
-// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint48 toIdx, bytes permit) payable returns()
-func (_Hermez *HermezSession) AddL1Transaction(babyPubKey *big.Int, fromIdx *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx *big.Int, permit []byte) (*types.Transaction, error) {
+// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint40 loadAmountF, uint40 amountF, uint32 tokenID, uint48 toIdx, bytes permit) payable returns()
+func (_Hermez *HermezSession) AddL1Transaction(babyPubKey *big.Int, fromIdx *big.Int, loadAmountF *big.Int, amountF *big.Int, tokenID uint32, toIdx *big.Int, permit []byte) (*types.Transaction, error) {
 	return _Hermez.Contract.AddL1Transaction(&_Hermez.TransactOpts, babyPubKey, fromIdx, loadAmountF, amountF, tokenID, toIdx, permit)
 }
 
-// AddL1Transaction is a paid mutator transaction binding the contract method 0x886df587.
+// AddL1Transaction is a paid mutator transaction binding the contract method 0xc7273053.
 //
-// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint16 loadAmountF, uint16 amountF, uint32 tokenID, uint48 toIdx, bytes permit) payable returns()
-func (_Hermez *HermezTransactorSession) AddL1Transaction(babyPubKey *big.Int, fromIdx *big.Int, loadAmountF uint16, amountF uint16, tokenID uint32, toIdx *big.Int, permit []byte) (*types.Transaction, error) {
+// Solidity: function addL1Transaction(uint256 babyPubKey, uint48 fromIdx, uint40 loadAmountF, uint40 amountF, uint32 tokenID, uint48 toIdx, bytes permit) payable returns()
+func (_Hermez *HermezTransactorSession) AddL1Transaction(babyPubKey *big.Int, fromIdx *big.Int, loadAmountF *big.Int, amountF *big.Int, tokenID uint32, toIdx *big.Int, permit []byte) (*types.Transaction, error) {
 	return _Hermez.Contract.AddL1Transaction(&_Hermez.TransactOpts, babyPubKey, fromIdx, loadAmountF, amountF, tokenID, toIdx, permit)
 }
 
@@ -1155,25 +1507,25 @@ func (_Hermez *HermezTransactorSession) SafeMode() (*types.Transaction, error) {
 	return _Hermez.Contract.SafeMode(&_Hermez.TransactOpts)
 }
 
-// UpdateBucketsParameters is a paid mutator transaction binding the contract method 0x68e95e53.
+// UpdateBucketsParameters is a paid mutator transaction binding the contract method 0xac300ec9.
 //
-// Solidity: function updateBucketsParameters(uint256[4][5] arrayBuckets) returns()
-func (_Hermez *HermezTransactor) UpdateBucketsParameters(opts *bind.TransactOpts, arrayBuckets [5][4]*big.Int) (*types.Transaction, error) {
-	return _Hermez.contract.Transact(opts, "updateBucketsParameters", arrayBuckets)
+// Solidity: function updateBucketsParameters(uint256[] newBuckets) returns()
+func (_Hermez *HermezTransactor) UpdateBucketsParameters(opts *bind.TransactOpts, newBuckets []*big.Int) (*types.Transaction, error) {
+	return _Hermez.contract.Transact(opts, "updateBucketsParameters", newBuckets)
 }
 
-// UpdateBucketsParameters is a paid mutator transaction binding the contract method 0x68e95e53.
+// UpdateBucketsParameters is a paid mutator transaction binding the contract method 0xac300ec9.
 //
-// Solidity: function updateBucketsParameters(uint256[4][5] arrayBuckets) returns()
-func (_Hermez *HermezSession) UpdateBucketsParameters(arrayBuckets [5][4]*big.Int) (*types.Transaction, error) {
-	return _Hermez.Contract.UpdateBucketsParameters(&_Hermez.TransactOpts, arrayBuckets)
+// Solidity: function updateBucketsParameters(uint256[] newBuckets) returns()
+func (_Hermez *HermezSession) UpdateBucketsParameters(newBuckets []*big.Int) (*types.Transaction, error) {
+	return _Hermez.Contract.UpdateBucketsParameters(&_Hermez.TransactOpts, newBuckets)
 }
 
-// UpdateBucketsParameters is a paid mutator transaction binding the contract method 0x68e95e53.
+// UpdateBucketsParameters is a paid mutator transaction binding the contract method 0xac300ec9.
 //
-// Solidity: function updateBucketsParameters(uint256[4][5] arrayBuckets) returns()
-func (_Hermez *HermezTransactorSession) UpdateBucketsParameters(arrayBuckets [5][4]*big.Int) (*types.Transaction, error) {
-	return _Hermez.Contract.UpdateBucketsParameters(&_Hermez.TransactOpts, arrayBuckets)
+// Solidity: function updateBucketsParameters(uint256[] newBuckets) returns()
+func (_Hermez *HermezTransactorSession) UpdateBucketsParameters(newBuckets []*big.Int) (*types.Transaction, error) {
+	return _Hermez.Contract.UpdateBucketsParameters(&_Hermez.TransactOpts, newBuckets)
 }
 
 // UpdateFeeAddToken is a paid mutator transaction binding the contract method 0x314e5eda.
@@ -2238,13 +2590,13 @@ func (it *HermezUpdateBucketsParametersIterator) Close() error {
 
 // HermezUpdateBucketsParameters represents a UpdateBucketsParameters event raised by the Hermez contract.
 type HermezUpdateBucketsParameters struct {
-	ArrayBuckets [5][4]*big.Int
+	ArrayBuckets []*big.Int
 	Raw          types.Log // Blockchain specific contextual infos
 }
 
-// FilterUpdateBucketsParameters is a free log retrieval operation binding the contract event 0x3c39a1e91c69d4cfeacb11190befc2b1c983746e6b21ab2441a3051de88d4480.
+// FilterUpdateBucketsParameters is a free log retrieval operation binding the contract event 0xd4904145d7eae889c5493798579680417459783db0fa67398bea50e56859075f.
 //
-// Solidity: event UpdateBucketsParameters(uint256[4][5] arrayBuckets)
+// Solidity: event UpdateBucketsParameters(uint256[] arrayBuckets)
 func (_Hermez *HermezFilterer) FilterUpdateBucketsParameters(opts *bind.FilterOpts) (*HermezUpdateBucketsParametersIterator, error) {
 
 	logs, sub, err := _Hermez.contract.FilterLogs(opts, "UpdateBucketsParameters")
@@ -2254,9 +2606,9 @@ func (_Hermez *HermezFilterer) FilterUpdateBucketsParameters(opts *bind.FilterOp
 	return &HermezUpdateBucketsParametersIterator{contract: _Hermez.contract, event: "UpdateBucketsParameters", logs: logs, sub: sub}, nil
 }
 
-// WatchUpdateBucketsParameters is a free log subscription operation binding the contract event 0x3c39a1e91c69d4cfeacb11190befc2b1c983746e6b21ab2441a3051de88d4480.
+// WatchUpdateBucketsParameters is a free log subscription operation binding the contract event 0xd4904145d7eae889c5493798579680417459783db0fa67398bea50e56859075f.
 //
-// Solidity: event UpdateBucketsParameters(uint256[4][5] arrayBuckets)
+// Solidity: event UpdateBucketsParameters(uint256[] arrayBuckets)
 func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts, sink chan<- *HermezUpdateBucketsParameters) (event.Subscription, error) {
 
 	logs, sub, err := _Hermez.contract.WatchLogs(opts, "UpdateBucketsParameters")
@@ -2291,9 +2643,9 @@ func (_Hermez *HermezFilterer) WatchUpdateBucketsParameters(opts *bind.WatchOpts
 	}), nil
 }
 
-// ParseUpdateBucketsParameters is a log parse operation binding the contract event 0x3c39a1e91c69d4cfeacb11190befc2b1c983746e6b21ab2441a3051de88d4480.
+// ParseUpdateBucketsParameters is a log parse operation binding the contract event 0xd4904145d7eae889c5493798579680417459783db0fa67398bea50e56859075f.
 //
-// Solidity: event UpdateBucketsParameters(uint256[4][5] arrayBuckets)
+// Solidity: event UpdateBucketsParameters(uint256[] arrayBuckets)
 func (_Hermez *HermezFilterer) ParseUpdateBucketsParameters(log types.Log) (*HermezUpdateBucketsParameters, error) {
 	event := new(HermezUpdateBucketsParameters)
 	if err := _Hermez.contract.UnpackLog(event, "UpdateBucketsParameters", log); err != nil {
