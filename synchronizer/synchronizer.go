@@ -1156,6 +1156,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 	// RollupEventUpdateBucketsParameters into UpdateBucketsParameters with
 	// all the bucket values at 0 and SafeMode = true
 	for _, evt := range rollupEvents.UpdateBucketsParameters {
+		s.vars.Rollup.Buckets = []common.BucketParams{}
 		for _, bucket := range evt.ArrayBuckets {
 			s.vars.Rollup.Buckets = append(s.vars.Rollup.Buckets, common.BucketParams{
 				CeilUSD:         bucket.CeilUSD,
