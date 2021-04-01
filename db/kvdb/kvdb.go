@@ -46,12 +46,12 @@ type KVDB struct {
 	cfg Config
 	db  *pebble.Storage
 	// CurrentIdx holds the current Idx that the BatchBuilder is using
-	CurrentIdx   common.Idx
-	CurrentBatch common.BatchNum
-	m            sync.Mutex
-	mutexDelOld  sync.Mutex
-	wg           sync.WaitGroup
-	last         *Last
+	CurrentIdx      common.Idx
+	CurrentBatch    common.BatchNum
+	mutexCheckpoint sync.Mutex
+	mutexDelOld     sync.Mutex
+	wg              sync.WaitGroup
+	last            *Last
 }
 
 // Last is a consistent view to the last batch of the stateDB that can
@@ -552,8 +552,8 @@ func (k *KVDB) MakeCheckpointFromTo(fromBatchNum common.BatchNum, dest string) e
 	// synchronizer to do a reset to a batchNum at the same time as the
 	// pipeline is doing a txSelector.Reset and batchBuilder.Reset from
 	// synchronizer to the same batchNum
-	k.m.Lock()
-	defer k.m.Unlock()
+	k.mutexCheckpoint.Lock()
+	defer k.mutexCheckpoint.Unlock()
 	return PebbleMakeCheckpoint(source, dest)
 }
 
