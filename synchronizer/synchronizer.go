@@ -1159,10 +1159,12 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 	for _, evt := range rollupEvents.UpdateBucketsParameters {
 		for i, bucket := range evt.ArrayBuckets {
 			s.vars.Rollup.Buckets[i] = common.BucketParams{
-				CeilUSD:             bucket.CeilUSD,
-				Withdrawals:         bucket.Withdrawals,
-				BlockWithdrawalRate: bucket.BlockWithdrawalRate,
-				MaxWithdrawals:      bucket.MaxWithdrawals,
+				CeilUSD:         bucket.CeilUSD,
+				BlockStamp:      bucket.BlockStamp,
+				Withdrawals:     bucket.Withdrawals,
+				RateBlocks:      bucket.RateBlocks,
+				RateWithdrawals: bucket.RateWithdrawals,
+				MaxWithdrawals:  bucket.MaxWithdrawals,
 			}
 		}
 		s.vars.Rollup.SafeMode = evt.SafeMode
