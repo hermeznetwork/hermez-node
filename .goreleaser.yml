@@ -1,7 +1,11 @@
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=0
+
 before:
   hooks:
+    - go mod tidy
     - go mod download
-    - make migration-pack
 
 builds:
   - main: ./cli/node/main.go
@@ -12,14 +16,13 @@ builds:
       - darwin
     goarch:
       - amd64
-
-archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+    hooks:
+      pre:
+        - cmd: bash -c "GOOS={{ .Os }} GOARCH={{ .Arch }} packr2"
+          dir: db
+      post:
+        - cmd: packr2 clean
+          dir: db
 
 checksum:
   name_template: 'checksums.txt'
