@@ -457,6 +457,7 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 func (hdb *HistoryDB) GetTxsAPI(
 	ethAddr *ethCommon.Address, bjj *babyjub.PublicKeyComp,
 	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
+	includePendingL1s *bool,
 	fromItem, limit *uint, order string,
 ) ([]TxAPI, uint64, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for
@@ -554,12 +555,16 @@ func (hdb *HistoryDB) GetTxsAPI(
 		args = append(args, fromItem)
 		nextIsAnd = true
 	}
-	if nextIsAnd {
-		queryStr += "AND "
-	} else {
-		queryStr += "WHERE "
+
+	// Include pending L1 txs? (deafault false)
+	if includePendingL1s == nil || (includePendingL1s != nil && !*includePendingL1s) {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx.batch_num IS NOT NULL "
 	}
-	queryStr += "tx.batch_num IS NOT NULL "
 
 	// pagination
 	queryStr += "ORDER BY tx.item_id "
