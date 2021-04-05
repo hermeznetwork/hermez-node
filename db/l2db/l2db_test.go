@@ -458,6 +458,7 @@ func TestInvalidateOldNonces(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, common.PoolL2TxStateInvalid, fetchedTx.State)
 		assert.Equal(t, &fakeBatchNum, fetchedTx.BatchNum)
+		assert.Equal(t, invalidateOldNoncesInfo, *fetchedTx.Info)
 	}
 }
 
