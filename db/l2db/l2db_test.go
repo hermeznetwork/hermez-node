@@ -330,7 +330,7 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 			pendingTxs = append(pendingTxs, &poolL2Txs[i])
 		}
 	}
-	fetchedTxs, err := l2DBWithACC.GetPoolTxs(nil, nil, nil, nil, nil, nil,
+	fetchedTxs, _, err := l2DBWithACC.GetPoolTxs(nil, nil, nil, nil, nil, nil,
 		nil, &idx, nil, nil, &state, &fromItem, &limit, OrderAsc)
 	require.NoError(t, err)
 	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
