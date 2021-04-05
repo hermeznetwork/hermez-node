@@ -80,7 +80,7 @@ func (a *API) getPoolTxs(c *gin.Context) {
 		return
 	}
 	// Fetch txs from l2DB
-	txs, err := a.l2.GetPoolTxs(addr, fromAddr, toAddr, bjj, fromBjj, toBjj, txType,
+	txs, pendingItems, err := a.l2.GetPoolTxs(addr, fromAddr, toAddr, bjj, fromBjj, toBjj, txType,
 		idx, fromIdx, toIdx, state, fromItem, limit, order)
 	if err != nil {
 		retSQLErr(err, c)
@@ -89,10 +89,12 @@ func (a *API) getPoolTxs(c *gin.Context) {
 
 	// Build successful response
 	type txsResponse struct {
-		Txs []*l2db.PoolTxAPI `json:"transactions"`
+		Txs          []l2db.PoolTxAPI `json:"transactions"`
+		PendingItems uint64           `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &txsResponse{
-		Txs: txs,
+		Txs:          txs,
+		PendingItems: pendingItems,
 	})
 }
 

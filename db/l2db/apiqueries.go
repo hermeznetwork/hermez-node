@@ -2,6 +2,7 @@ package l2db
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/db"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -133,11 +134,11 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 func (l2db *L2DB) GetPoolTxs(ethAddr, fromEthAddr, toEthAddr *ethCommon.Address,
 	bjj, fromBjj, toBjj *babyjub.PublicKeyComp,
 	txType *common.TxType, idx, fromIdx, toIdx *common.Idx, state *common.PoolL2TxState,
-	fromItem, limit *uint, order string) ([]*PoolTxAPI, error) {
+	fromItem, limit *uint, order string) ([]PoolTxAPI, uint64, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, 0, tracerr.Wrap(err)
 	}
 	defer l2db.apiConnCon.Release()
 	// Apply filters
@@ -249,10 +250,16 @@ func (l2db *L2DB) GetPoolTxs(ethAddr, fromEthAddr, toEthAddr *ethCommon.Address,
 	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
 
 	query := l2db.dbRead.Rebind(queryStr)
-	txs := []*PoolTxAPI{}
-	err = meddler.QueryAll(
-		l2db.dbRead, &txs,
+	txsPtrs := []*PoolTxAPI{}
+	if err = meddler.QueryAll(
+		l2db.dbRead, &txsPtrs,
 		query,
-		args...)
-	return txs, tracerr.Wrap(err)
+		args...); err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
+	if len(txs) == 0 {
+		return txs, 0, nil
+	}
+	return txs, txs[0].TotalItems - uint64(len(txs)), tracerr.Wrap(err)
 }
