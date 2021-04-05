@@ -455,8 +455,8 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 // GetTxsAPI returns a list of txs from the DB using the HistoryTx struct
 // and pagination info
 func (hdb *HistoryDB) GetTxsAPI(
-	ethAddr *ethCommon.Address, bjj *babyjub.PublicKeyComp,
-	tokenID *common.TokenID, fromIdx, toIdx *common.Idx, batchNum *uint, txType *common.TxType,
+	ethAddr, fromEthAddr, toEthAddr *ethCommon.Address, bjj, fromBjj, toBjj *babyjub.PublicKeyComp,
+	tokenID *common.TokenID, idx, fromIdx, toIdx *common.Idx, batchNum *uint, txType *common.TxType,
 	fromItem, limit *uint, order string,
 ) ([]TxAPI, uint64, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for
@@ -491,10 +491,26 @@ func (hdb *HistoryDB) GetTxsAPI(
 		queryStr += "WHERE (tx.from_eth_addr = ? OR tx.to_eth_addr = ?) "
 		nextIsAnd = true
 		args = append(args, ethAddr, ethAddr)
+	} else if fromEthAddr != nil {
+		queryStr += "WHERE tx.from_eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, fromEthAddr)
+	} else if toEthAddr != nil {
+		queryStr += "WHERE tx.to_eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, toEthAddr)
 	} else if bjj != nil { // bjj filter
 		queryStr += "WHERE (tx.from_bjj = ? OR tx.to_bjj = ?) "
 		nextIsAnd = true
 		args = append(args, bjj, bjj)
+	} else if fromBjj != nil {
+		queryStr += "WHERE tx.from_bjj = ? "
+		nextIsAnd = true
+		args = append(args, fromBjj)
+	} else if toBjj != nil {
+		queryStr += "WHERE tx.to_bjj = ? "
+		nextIsAnd = true
+		args = append(args, toBjj)
 	}
 	// tokenID filter
 	if tokenID != nil {
@@ -508,7 +524,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 		nextIsAnd = true
 	}
 	// idx filter
-	if fromIdx != nil && toIdx != nil {
+	if idx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
@@ -516,7 +532,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 		}
 		queryStr += "(tx.effective_from_idx = ? "
 		queryStr += "OR tx.to_idx = ?) "
-		args = append(args, fromIdx, toIdx)
+		args = append(args, idx, idx)
 		nextIsAnd = true
 	} else if fromIdx != nil {
 		if nextIsAnd {
@@ -525,6 +541,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 			queryStr += "WHERE "
 		}
 		queryStr += "tx.effective_from_idx = ? "
+		args = append(args, idx)
 		nextIsAnd = true
 	} else if toIdx != nil {
 		if nextIsAnd {

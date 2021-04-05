@@ -16,6 +16,13 @@ import (
 	"github.com/russross/meddler"
 )
 
+const (
+	// OrderAsc indicates ascending order when using pagination
+	OrderAsc = "ASC"
+	// OrderDesc indicates descending order when using pagination
+	OrderDesc = "DESC"
+)
+
 // TODO(Edu): Check DB consistency while there's concurrent use from Coordinator/TxSelector & API
 
 // L2DB stores L2 txs and authorization registers received by the coordinator and keeps them until they are no longer relevant

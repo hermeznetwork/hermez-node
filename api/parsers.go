@@ -87,8 +87,38 @@ func parseQueryHezEthAddr(c querier) (*ethCommon.Address, error) {
 	return hezStringToEthAddr(addrStr, name)
 }
 
+func parseQueryFromHezEthAddr(c querier) (*ethCommon.Address, error) {
+	const name = "fromHezEthereumAddress"
+	addrStr := c.Query(name)
+	return hezStringToEthAddr(addrStr, name)
+}
+
+func parseQueryToHezEth(c querier) (*ethCommon.Address, error) {
+	const name = "toHezEthereumAddress"
+	addrStr := c.Query(name)
+	return hezStringToEthAddr(addrStr, name)
+}
+
 func parseQueryBJJ(c querier) (*babyjub.PublicKeyComp, error) {
 	const name = "BJJ"
+	bjjStr := c.Query(name)
+	if bjjStr == "" {
+		return nil, nil
+	}
+	return hezStringToBJJ(bjjStr, name)
+}
+
+func parseQueryFromBJJ(c querier) (*babyjub.PublicKeyComp, error) {
+	const name = "fromBJJ"
+	bjjStr := c.Query(name)
+	if bjjStr == "" {
+		return nil, nil
+	}
+	return hezStringToBJJ(bjjStr, name)
+}
+
+func parseQueryToBJJ(c querier) (*babyjub.PublicKeyComp, error) {
+	const name = "toBJJ"
 	bjjStr := c.Query(name)
 	if bjjStr == "" {
 		return nil, nil
@@ -219,12 +249,14 @@ func parseExitFilters(c querier) (*common.TokenID, *ethCommon.Address, *babyjub.
 	return tokenID, addr, bjj, idx, nil
 }
 
-func parseTxsHistoryFilters(c querier) (*common.TokenID, *ethCommon.Address,
-	*babyjub.PublicKeyComp, *common.Idx, *common.Idx, error) {
+func parseTxsFilters(c querier) (*common.TokenID,
+	*ethCommon.Address, *ethCommon.Address, *ethCommon.Address,
+	*babyjub.PublicKeyComp, *babyjub.PublicKeyComp, *babyjub.PublicKeyComp,
+	*common.Idx, *common.Idx, *common.Idx, error) {
 	// TokenID
 	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
 	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	var tokenID *common.TokenID
 	if tid != nil {
@@ -234,30 +266,55 @@ func parseTxsHistoryFilters(c querier) (*common.TokenID, *ethCommon.Address,
 	// Hez Eth addr
 	addr, err := parseQueryHezEthAddr(c)
 	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	fromAddr, err := parseQueryFromHezEthAddr(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	toAddr, err := parseQueryToHezEth(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	// BJJ
 	bjj, err := parseQueryBJJ(c)
 	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
-	if addr != nil && bjj != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
+	fromBjj, err := parseQueryFromBJJ(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	toBjj, err := parseQueryToBJJ(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
+	}
+	if (addr != nil || toAddr != nil || fromAddr != nil) && (bjj != nil || toBjj != nil || fromBjj != nil) {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
+	}
+	// Idx
+	idx, err := parseIdx(c)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	// from Idx
 	fromIdx, err := parseFromIdx(c)
 	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	// to Idx
 	toIdx, err := parseToIdx(c)
 	if err != nil {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(err)
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
-	if (fromIdx != nil || toIdx != nil) && (addr != nil || bjj != nil || tokenID != nil) {
-		return nil, nil, nil, nil, nil, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
+	if (fromIdx != nil || toIdx != nil) && idx != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(errors.New("accountIndex is incompatible with fromAccountIndex or toAccountIndex"))
 	}
-	return tokenID, addr, bjj, fromIdx, toIdx, nil
+	if (fromIdx != nil || toIdx != nil || idx != nil) &&
+		(addr != nil || fromAddr != nil || toAddr != nil || bjj != nil || fromBjj != nil || toBjj != nil || tokenID != nil) {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
+	}
+	return tokenID, addr, fromAddr, toAddr, bjj, fromBjj, toBjj, idx, fromIdx, toIdx, nil
 }
 
 func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {

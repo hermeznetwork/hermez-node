@@ -2,6 +2,7 @@ package l2db
 
 import (
 	"fmt"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -103,7 +104,7 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 }
 
 // selectPoolTxAPI select part of queries to get PoolL2TxRead
-const selectPoolTxAPI = `SELECT  tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
+const selectPoolTxAPI = `SELECT tx_pool.item_id, tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
 tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
 tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
@@ -129,7 +130,10 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 }
 
 // GetPoolTxs return Txs from the pool
-func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxState) ([]*PoolTxAPI, error) {
+func (l2db *L2DB) GetPoolTxs(ethAddr, fromEthAddr, toEthAddr *ethCommon.Address,
+	bjj, fromBjj, toBjj *babyjub.PublicKeyComp,
+	txType *common.TxType, idx, fromIdx, toIdx *common.Idx, state *common.PoolL2TxState,
+	fromItem, limit *uint, order string) ([]*PoolTxAPI, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -145,8 +149,47 @@ func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxS
 		args = append(args, state)
 		nextIsAnd = true
 	}
+	// ethAddr filter
+	if ethAddr != nil {
+		queryStr += "WHERE (tx_pool.effective_from_eth_addr = ? OR tx_pool.effective_to_eth_addr = ?) "
+		nextIsAnd = true
+		args = append(args, ethAddr, ethAddr)
+	} else if fromEthAddr != nil {
+		queryStr += "WHERE tx_pool.effective_from_eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, fromEthAddr)
+	} else if toEthAddr != nil {
+		queryStr += "WHERE tx_pool.effective_to_eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, toEthAddr)
+	} else if bjj != nil {
+		queryStr += "WHERE (tx_pool.effective_from_bjj = ? OR tx_pool.effective_to_bjj = ?) "
+		nextIsAnd = true
+		args = append(args, bjj, bjj)
+	} else if fromBjj != nil {
+		queryStr += "WHERE tx_pool.effective_from_bjj = ? "
+		nextIsAnd = true
+		args = append(args, fromBjj)
+	} else if toBjj != nil {
+		queryStr += "WHERE tx_pool.effective_to_bjj = ? "
+		nextIsAnd = true
+		args = append(args, toBjj)
+	}
 
-	if fromIdx != nil && toIdx != nil {
+	// txType filter
+	if txType != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.tx_type = ? "
+		args = append(args, txType)
+		nextIsAnd = true
+	}
+
+	// account index filter
+	if idx != nil {
 		if nextIsAnd {
 			queryStr += "AND ("
 		} else {
@@ -154,7 +197,8 @@ func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxS
 		}
 		queryStr += "tx_pool.from_idx = ? "
 		queryStr += "OR tx_pool.to_idx = ?) "
-		args = append(args, fromIdx, toIdx)
+		args = append(args, idx, idx)
+		nextIsAnd = true
 	} else if fromIdx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
@@ -163,6 +207,7 @@ func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxS
 		}
 		queryStr += "tx_pool.from_idx = ? "
 		args = append(args, fromIdx)
+		nextIsAnd = true
 	} else if toIdx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
@@ -171,8 +216,38 @@ func (l2db *L2DB) GetPoolTxs(fromIdx, toIdx *common.Idx, state *common.PoolL2TxS
 		}
 		queryStr += "tx_pool.to_idx = ? "
 		args = append(args, toIdx)
+		nextIsAnd = true
 	}
-	queryStr += "AND NOT external_delete;"
+	if fromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if order == OrderAsc {
+			queryStr += "tx_pool.item_id >= ? "
+		} else {
+			queryStr += "tx_pool.item_id <= ? "
+		}
+		args = append(args, fromItem)
+		nextIsAnd = true
+	}
+	if nextIsAnd {
+		queryStr += "AND "
+	} else {
+		queryStr += "WHERE "
+	}
+	queryStr += "NOT external_delete "
+
+	// pagination
+	queryStr += "ORDER BY tx_pool.item_id "
+	if order == OrderAsc {
+		queryStr += "ASC "
+	} else {
+		queryStr += "DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+
 	query := l2db.dbRead.Rebind(queryStr)
 	txs := []*PoolTxAPI{}
 	err = meddler.QueryAll(

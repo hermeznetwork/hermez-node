@@ -324,8 +324,8 @@ func TestGetHistoryTxs(t *testing.T) {
 	idx, err := stringToIdx(idxStr, "")
 	assert.NoError(t, err)
 	path = fmt.Sprintf(
-		"%s?fromAccountIndex=%s&toAccountIndex=%s&limit=%d",
-		endpoint, idxStr, idxStr, limit,
+		"%s?accountIndex=%s&limit=%d",
+		endpoint, idxStr, limit,
 	)
 	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
@@ -341,6 +341,38 @@ func TestGetHistoryTxs(t *testing.T) {
 			}
 		}
 		toIdx, err := stringToIdx((tc.txs[i].ToIdx), "")
+		assert.NoError(t, err)
+		if *toIdx == *idx {
+			idxTxs = append(idxTxs, tc.txs[i])
+		}
+	}
+	assertTxs(t, idxTxs, fetchedTxs)
+	// from idx
+	fetchedTxs = []testTx{}
+	idxTxs = []testTx{}
+	path = fmt.Sprintf("%s?fromAccountIndex=%s&limit=%d", endpoint, idxStr, limit)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	for i := 0; i < len(tc.txs); i++ {
+		var fromIdx *common.Idx
+		if tc.txs[i].FromIdx != nil {
+			fromIdx, err = stringToIdx(*tc.txs[i].FromIdx, "")
+			assert.NoError(t, err)
+			if *fromIdx == *idx {
+				idxTxs = append(idxTxs, tc.txs[i])
+				continue
+			}
+		}
+	}
+	assertTxs(t, idxTxs, fetchedTxs)
+	// to idx
+	fetchedTxs = []testTx{}
+	path = fmt.Sprintf("%s?toAccountIndex=%s&limit=%d", endpoint, idxStr, limit)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	idxTxs = []testTx{}
+	for i := 0; i < len(tc.txs); i++ {
+		toIdx, err := stringToIdx(tc.txs[i].ToIdx, "")
 		assert.NoError(t, err)
 		if *toIdx == *idx {
 			idxTxs = append(idxTxs, tc.txs[i])

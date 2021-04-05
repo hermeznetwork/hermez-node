@@ -427,6 +427,12 @@ paths:
           description: State of the transactions, e.g. "pend"
           schema:
             $ref: '#/components/schemas/PoolL2TransactionState'
+        - name: accountIndex
+          in: query
+          required: false
+          description: Id of the account
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
         - name: fromAccountIndex
           in: query
           required: false
@@ -439,6 +445,36 @@ paths:
           description: Id of the to account
           schema:
             $ref: '#/components/schemas/AccountIndex'
+        - name: type
+          in: query
+          required: false
+          description: Only get transactions of a specific type
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+        - name: fromItem
+          in: query
+          required: false
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
+          schema:
+            type: number
+        - name: order
+          in: query
+          required: false
+          description: Order of the returned items. History transactions will be ordered by (batchNum, position).
+          schema:
+            type: string
+            default: ASC
+            enum:
+              - ASC
+              - DESC
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
       responses:
         '200':
           description: Successful operation.
@@ -536,6 +572,12 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
+        - name: accountIndex
+          in: query
+          required: false
+          description: Id of the account
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
         - name: fromAccountIndex
           in: query
           required: false

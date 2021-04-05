@@ -320,6 +320,8 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 	require.NoError(t, err)
 	state := common.PoolL2TxState("pend")
 	idx := common.Idx(256)
+	fromItem := uint(0)
+	limit := uint(10)
 	var pendingTxs []*common.PoolL2Tx
 	for i := range poolL2Txs {
 		if poolL2Txs[i].FromIdx == idx || poolL2Txs[i].ToIdx == idx {
@@ -328,7 +330,8 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 			pendingTxs = append(pendingTxs, &poolL2Txs[i])
 		}
 	}
-	fetchedTxs, err := l2DBWithACC.GetPoolTxs(&idx, &idx, &state)
+	fetchedTxs, err := l2DBWithACC.GetPoolTxs(nil, nil, nil, nil, nil, nil,
+		nil, &idx, nil, nil, &state, &fromItem, &limit, OrderAsc)
 	require.NoError(t, err)
 	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
 }
