@@ -2,10 +2,10 @@ package l2db
 
 import (
 	"fmt"
-	"github.com/hermeznetwork/hermez-node/db"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/russross/meddler"
