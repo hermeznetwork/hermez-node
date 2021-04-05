@@ -2,11 +2,11 @@ package l2db
 
 import (
 	"fmt"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/russross/meddler"
 )
 
