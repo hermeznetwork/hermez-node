@@ -2,7 +2,7 @@ package requests
 
 import ethCommon "github.com/ethereum/go-ethereum/common"
 
-// API request struct for getting coordinators
+// GetCoordinatorsAPIRequest is an API request struct for getting coordinators
 type GetCoordinatorsAPIRequest struct {
 	BidderAddr *ethCommon.Address
 	ForgerAddr *ethCommon.Address

@@ -6,7 +6,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// API request struct for getting accounts
+// GetAccountsAPIRequest is an API request struct for getting accounts
 type GetAccountsAPIRequest struct {
 	TokenIDs []common.TokenID
 	EthAddr  *ethCommon.Address

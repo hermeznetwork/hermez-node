@@ -6,7 +6,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// API request struct for getting txs
+// GetTxsAPIRequest is an API request struct for getting txs
 type GetTxsAPIRequest struct {
 	EthAddr           *ethCommon.Address
 	Bjj               *babyjub.PublicKeyComp
