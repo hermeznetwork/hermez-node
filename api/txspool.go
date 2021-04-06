@@ -221,18 +221,6 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 				poolTx.ToEthAddr,
 			))
 		}
-	case common.TxTypeTransferToBJJ:
-		// ToBJJ has account created with matching token ID or authorization
-		ok, err := a.h.CanSendToBJJ(poolTx.ToBJJ, poolTx.TokenID)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return tracerr.Wrap(fmt.Errorf(
-				"Destination bjj addr (%v) has not a valid account created nor authorization",
-				poolTx.ToBJJ,
-			))
-		}
 	}
 	return nil
 }

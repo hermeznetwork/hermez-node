@@ -202,6 +202,7 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 	defer hdb.apiConnCon.Release()
 	return hdb.getBestBidsAPI(hdb.dbRead, minSlotNum, maxSlotNum, bidderAddr, limit, order)
 }
+
 func (hdb *HistoryDB) getBestBidsAPI(
 	d meddler.DB,
 	minSlotNum, maxSlotNum *int64,
@@ -988,29 +989,6 @@ func (hdb *HistoryDB) CanSendToEthAddr(ethAddr ethCommon.Address, tokenID common
 			SELECT COUNT(*) > 0 FROM account_creation_auth WHERE eth_addr = $1 LIMIT 1
 		);`,
 		ethAddr, tokenID,
-	)
-	var ok bool
-	return ok, tracerr.Wrap(row.Scan(&ok))
-}
-
-// CanSendToBJJ returns true if it's possible to send a tx to an Eth addr
-// either because there is an idx associated to the Eth addr and token
-// or the cordinator has an authorization to create a valid account
-func (hdb *HistoryDB) CanSendToBJJ(bjj babyjub.PublicKeyComp, tokenID common.TokenID) (bool, error) {
-	cancel, err := hdb.apiConnCon.Acquire()
-	defer cancel()
-	if err != nil {
-		return false, tracerr.Wrap(err)
-	}
-	defer hdb.apiConnCon.Release()
-
-	row := hdb.dbRead.QueryRow(
-		`SELECT (
-			SELECT COUNT(*) > 0 FROM account WHERE bjj = $1 AND token_id = $2 LIMIT 1
-		) OR (
-			SELECT COUNT(*) > 0 FROM account_creation_auth WHERE bjj = $1 LIMIT 1
-		);`,
-		bjj, tokenID,
 	)
 	var ok bool
 	return ok, tracerr.Wrap(row.Scan(&ok))
