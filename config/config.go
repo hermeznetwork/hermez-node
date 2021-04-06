@@ -308,11 +308,19 @@ type Node struct {
 		// SyncLoopInterval is the interval between attempts to
 		// synchronize a new block from an ethereum node
 		SyncLoopInterval Duration `validate:"required"`
-		// StatsRefreshPeriod is the interval between updates of the
-		// synchronizer state Eth parameters (`Eth.LastBlock` and
-		// `Eth.LastBatch`).  This value only affects the reported % of
+		// StatsUpdateBlockNumDiffThreshold is a threshold of a number of
+		// Ethereum blocks left to synchronize, such that if there are more
+		// blocks to sync than the defined value synchronizer can aggressively
+		// skip calling UpdateEth to save network bandwidth and time.
+		// After reaching the threshold UpdateEth is called on each block.
+		// This value only affects the reported % of synchronization of
+		// blocks and batches, nothing else.
+		StatsUpdateBlockNumDiffThreshold uint16 `validate:"required"`
+		// StatsUpdateFrequencyDivider - While having more blocks to sync than
+		// updateEthBlockNumThreshold, UpdateEth will be called once in a
+		// defined number of blocks. This value only affects the reported % of
 		// synchronization of blocks and batches, nothing else.
-		StatsRefreshPeriod Duration `validate:"required"`
+		StatsUpdateFrequencyDivider uint16 `validate:"required"`
 	} `validate:"required"`
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
@@ -345,7 +353,7 @@ type Node struct {
 		// Maximum concurrent connections allowed between API and SQL
 		MaxSQLConnections int `validate:"required"`
 		// SQLConnectionTimeout is the maximum amount of time that an API request
-		// can wait to stablish a SQL connection
+		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
 	} `validate:"required"`
 	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
@@ -364,7 +372,7 @@ type APIServer struct {
 		// Maximum concurrent connections allowed between API and SQL
 		MaxSQLConnections int `validate:"required"`
 		// SQLConnectionTimeout is the maximum amount of time that an API request
-		// can wait to stablish a SQL connection
+		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
 	} `validate:"required"`
 	PostgreSQL  PostgreSQL `validate:"required"`

@@ -251,9 +251,21 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		)
 	}
 
+	const safeBlockNumDiff = 32
+	if cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold < safeBlockNumDiff {
+		return nil, tracerr.Wrap(fmt.Errorf("cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold = %v < %v, which is unsafe",
+			cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold, safeBlockNumDiff))
+	}
+	const safeFrequencyDivider = 1
+	if cfg.Synchronizer.StatsUpdateFrequencyDivider < safeFrequencyDivider {
+		return nil, tracerr.Wrap(fmt.Errorf("cfg.Synchronizer.StatsUpdateFrequencyDivider = %v < %v, which is unsafe",
+			cfg.Synchronizer.StatsUpdateFrequencyDivider, safeFrequencyDivider))
+	}
+
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, l2DB, stateDB, synchronizer.Config{
-		StatsRefreshPeriod: cfg.Synchronizer.StatsRefreshPeriod.Duration,
-		ChainID:            chainIDU16,
+		StatsUpdateBlockNumDiffThreshold: cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold,
+		StatsUpdateFrequencyDivider:      cfg.Synchronizer.StatsUpdateFrequencyDivider,
+		ChainID:                          chainIDU16,
 	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
