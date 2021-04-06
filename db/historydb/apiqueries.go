@@ -8,11 +8,11 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/api"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 	"github.com/russross/meddler"
 )
@@ -64,9 +64,7 @@ func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*Batc
 
 // GetBatchesAPI return the batches applying the given filters
 func (hdb *HistoryDB) GetBatchesAPI(
-	minBatchNum, maxBatchNum, slotNum *uint,
-	forgerAddr *ethCommon.Address,
-	fromItem, limit *uint, order string,
+	request api.GetBatchesAPIRequest,
 ) ([]BatchAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -86,70 +84,70 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	// Apply filters
 	nextIsAnd := false
 	// minBatchNum filter
-	if minBatchNum != nil {
+	if request.MinBatchNum != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "batch.batch_num > ? "
-		args = append(args, minBatchNum)
+		args = append(args, request.MinBatchNum)
 		nextIsAnd = true
 	}
 	// maxBatchNum filter
-	if maxBatchNum != nil {
+	if request.MaxBatchNum != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "batch.batch_num < ? "
-		args = append(args, maxBatchNum)
+		args = append(args, request.MaxBatchNum)
 		nextIsAnd = true
 	}
 	// slotNum filter
-	if slotNum != nil {
+	if request.SlotNum != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "batch.slot_num = ? "
-		args = append(args, slotNum)
+		args = append(args, request.SlotNum)
 		nextIsAnd = true
 	}
 	// forgerAddr filter
-	if forgerAddr != nil {
+	if request.ForgerAddr != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "batch.forger_addr = ? "
-		args = append(args, forgerAddr)
+		args = append(args, request.ForgerAddr)
 		nextIsAnd = true
 	}
 	// pagination
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "batch.item_id >= ? "
 		} else {
 			queryStr += "batch.item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 	}
 	queryStr += "ORDER BY batch.item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	query = hdb.dbRead.Rebind(queryStr)
 	// log.Debug(query)
 	batchPtrs := []*BatchAPI{}
@@ -189,25 +187,18 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 }
 
 // GetBestBidsAPI returns the best bid in specific slot by slotNum
-func (hdb *HistoryDB) GetBestBidsAPI(
-	minSlotNum, maxSlotNum *int64,
-	bidderAddr *ethCommon.Address,
-	limit *uint, order string,
-) ([]BidAPI, uint64, error) {
+func (hdb *HistoryDB) GetBestBidsAPI(request api.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
 	defer hdb.apiConnCon.Release()
-	return hdb.getBestBidsAPI(hdb.dbRead, minSlotNum, maxSlotNum, bidderAddr, limit, order)
+	return hdb.getBestBidsAPI(hdb.dbRead, request)
 }
 func (hdb *HistoryDB) getBestBidsAPI(
 	d meddler.DB,
-	minSlotNum, maxSlotNum *int64,
-	bidderAddr *ethCommon.Address,
-	limit *uint, order string,
-) ([]BidAPI, uint64, error) {
+	request api.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	// JOIN the best bid of each slot with the latest update of each coordinator
@@ -224,21 +215,21 @@ func (hdb *HistoryDB) getBestBidsAPI(
 	) c ON b.bidder_addr = c.bidder_addr 
 	INNER JOIN coordinator ON c.item_id = coordinator.item_id 
 	WHERE (b.slot_num >= ? AND b.slot_num <= ?)`
-	args = append(args, minSlotNum)
-	args = append(args, maxSlotNum)
+	args = append(args, request.MinSlotNum)
+	args = append(args, request.MaxSlotNum)
 	// Apply filters
-	if bidderAddr != nil {
+	if request.BidderAddr != nil {
 		queryStr += " AND b.bidder_addr = ? "
-		args = append(args, bidderAddr)
+		args = append(args, request.BidderAddr)
 	}
 	queryStr += " ORDER BY b.slot_num "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "
 	}
-	if limit != nil {
-		queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	if request.Limit != nil {
+		queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	}
 	query = hdb.dbRead.Rebind(queryStr)
 	bidPtrs := []*BidAPI{}
@@ -254,10 +245,7 @@ func (hdb *HistoryDB) getBestBidsAPI(
 }
 
 // GetBidsAPI return the bids applying the given filters
-func (hdb *HistoryDB) GetBidsAPI(
-	slotNum *int64, bidderAddr *ethCommon.Address,
-	fromItem, limit *uint, order string,
-) ([]BidAPI, uint64, error) {
+func (hdb *HistoryDB) GetBidsAPI(request api.GetBidsAPIRequest) ([]BidAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -278,48 +266,48 @@ func (hdb *HistoryDB) GetBidsAPI(
 	// Apply filters
 	nextIsAnd := false
 	// slotNum filter
-	if slotNum != nil {
+	if request.SlotNum != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "bid.slot_num = ? "
-		args = append(args, slotNum)
+		args = append(args, request.SlotNum)
 		nextIsAnd = true
 	}
 	// bidder filter
-	if bidderAddr != nil {
+	if request.BidderAddr != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "bid.bidder_addr = ? "
-		args = append(args, bidderAddr)
+		args = append(args, request.BidderAddr)
 		nextIsAnd = true
 	}
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "bid.item_id >= ? "
 		} else {
 			queryStr += "bid.item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 	}
 	// pagination
 	queryStr += "ORDER BY bid.item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
@@ -348,8 +336,7 @@ func (hdb *HistoryDB) GetTokenAPI(tokenID common.TokenID) (*TokenWithUSD, error)
 
 // GetTokensAPI returns a list of tokens from the DB
 func (hdb *HistoryDB) GetTokensAPI(
-	ids []common.TokenID, symbols []string, name string, fromItem,
-	limit *uint, order string,
+	request api.GetTokensAPIRequest,
 ) ([]TokenWithUSD, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -362,52 +349,52 @@ func (hdb *HistoryDB) GetTokensAPI(
 	queryStr := `SELECT * , COUNT(*) OVER() AS total_items FROM token `
 	// Apply filters
 	nextIsAnd := false
-	if len(ids) > 0 {
+	if len(request.Ids) > 0 {
 		queryStr += "WHERE token_id IN (?) "
 		nextIsAnd = true
-		args = append(args, ids)
+		args = append(args, request.Ids)
 	}
-	if len(symbols) > 0 {
+	if len(request.Symbols) > 0 {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "symbol IN (?) "
-		args = append(args, symbols)
+		args = append(args, request.Symbols)
 		nextIsAnd = true
 	}
-	if name != "" {
+	if request.Name != "" {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "name ~ ? "
-		args = append(args, name)
+		args = append(args, request.Name)
 		nextIsAnd = true
 	}
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "item_id >= ? "
 		} else {
 			queryStr += "item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 	}
 	// pagination
 	queryStr += "ORDER BY item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
@@ -455,10 +442,7 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 // GetTxsAPI returns a list of txs from the DB using the HistoryTx struct
 // and pagination info
 func (hdb *HistoryDB) GetTxsAPI(
-	ethAddr *ethCommon.Address, bjj *babyjub.PublicKeyComp,
-	tokenID *common.TokenID, idx *common.Idx, batchNum *uint, txType *common.TxType,
-	includePendingL1s *bool,
-	fromItem, limit *uint, order string,
+	request api.GetTxsAPIRequest,
 ) ([]TxAPI, uint64, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for
 	// performance reasons. The expected default value is false (when txs are unforged)
@@ -469,7 +453,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 		return nil, 0, tracerr.Wrap(err)
 	}
 	defer hdb.apiConnCon.Release()
-	if ethAddr != nil && bjj != nil {
+	if request.EthAddr != nil && request.Bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
 	}
 	var query string
@@ -488,76 +472,76 @@ func (hdb *HistoryDB) GetTxsAPI(
 	// Apply filters
 	nextIsAnd := false
 	// ethAddr filter
-	if ethAddr != nil {
+	if request.EthAddr != nil {
 		queryStr += "WHERE (tx.from_eth_addr = ? OR tx.to_eth_addr = ?) "
 		nextIsAnd = true
-		args = append(args, ethAddr, ethAddr)
-	} else if bjj != nil { // bjj filter
+		args = append(args, request.EthAddr, request.EthAddr)
+	} else if request.Bjj != nil { // bjj filter
 		queryStr += "WHERE (tx.from_bjj = ? OR tx.to_bjj = ?) "
 		nextIsAnd = true
-		args = append(args, bjj, bjj)
+		args = append(args, request.Bjj, request.Bjj)
 	}
 	// tokenID filter
-	if tokenID != nil {
+	if request.TokenID != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "tx.token_id = ? "
-		args = append(args, tokenID)
+		args = append(args, request.TokenID)
 		nextIsAnd = true
 	}
 	// idx filter
-	if idx != nil {
+	if request.Idx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "(tx.effective_from_idx = ? OR tx.to_idx = ?) "
-		args = append(args, idx, idx)
+		args = append(args, request.Idx, request.Idx)
 		nextIsAnd = true
 	}
 	// batchNum filter
-	if batchNum != nil {
+	if request.BatchNum != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "tx.batch_num = ? "
-		args = append(args, batchNum)
+		args = append(args, request.BatchNum)
 		nextIsAnd = true
 	}
 	// txType filter
-	if txType != nil {
+	if request.TxType != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "tx.type = ? "
-		args = append(args, txType)
+		args = append(args, request.TxType)
 		nextIsAnd = true
 	}
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "tx.item_id >= ? "
 		} else {
 			queryStr += "tx.item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 		nextIsAnd = true
 	}
 
-	// Include pending L1 txs? (deafault false)
-	if includePendingL1s == nil || (includePendingL1s != nil && !*includePendingL1s) {
+	// Include pending L1 txs? (default false)
+	if request.IncludePendingL1s == nil || (request.IncludePendingL1s != nil && !*request.IncludePendingL1s) {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
@@ -568,12 +552,12 @@ func (hdb *HistoryDB) GetTxsAPI(
 
 	// pagination
 	queryStr += "ORDER BY tx.item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	query = hdb.dbRead.Rebind(queryStr)
 	// log.Debug(query)
 	txsPtrs := []*TxAPI{}
@@ -614,11 +598,9 @@ func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, err
 
 // GetExitsAPI returns a list of exits from the DB and pagination info
 func (hdb *HistoryDB) GetExitsAPI(
-	ethAddr *ethCommon.Address, bjj *babyjub.PublicKeyComp, tokenID *common.TokenID,
-	idx *common.Idx, batchNum *uint, onlyPendingWithdraws *bool,
-	fromItem, limit *uint, order string,
+	request api.GetExitsAPIRequest,
 ) ([]ExitAPI, uint64, error) {
-	if ethAddr != nil && bjj != nil {
+	if request.EthAddr != nil && request.Bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
 	}
 	cancel, err := hdb.apiConnCon.Acquire()
@@ -642,51 +624,51 @@ func (hdb *HistoryDB) GetExitsAPI(
 	// Apply filters
 	nextIsAnd := false
 	// ethAddr filter
-	if ethAddr != nil {
+	if request.EthAddr != nil {
 		queryStr += "WHERE account.eth_addr = ? "
 		nextIsAnd = true
-		args = append(args, ethAddr)
-	} else if bjj != nil { // bjj filter
+		args = append(args, request.EthAddr)
+	} else if request.Bjj != nil { // bjj filter
 		queryStr += "WHERE account.bjj = ? "
 		nextIsAnd = true
-		args = append(args, bjj)
+		args = append(args, request.Bjj)
 	}
 	// tokenID filter
-	if tokenID != nil {
+	if request.TokenID != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "account.token_id = ? "
-		args = append(args, tokenID)
+		args = append(args, request.TokenID)
 		nextIsAnd = true
 	}
 	// idx filter
-	if idx != nil {
+	if request.Idx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "exit_tree.account_idx = ? "
-		args = append(args, idx)
+		args = append(args, request.Idx)
 		nextIsAnd = true
 	}
 	// batchNum filter
-	if batchNum != nil {
+	if request.BatchNum != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "exit_tree.batch_num = ? "
-		args = append(args, batchNum)
+		args = append(args, request.BatchNum)
 		nextIsAnd = true
 	}
 	// onlyPendingWithdraws
-	if onlyPendingWithdraws != nil {
-		if *onlyPendingWithdraws {
+	if request.OnlyPendingWithdraws != nil {
+		if *request.OnlyPendingWithdraws {
 			if nextIsAnd {
 				queryStr += "AND "
 			} else {
@@ -696,28 +678,28 @@ func (hdb *HistoryDB) GetExitsAPI(
 			nextIsAnd = true
 		}
 	}
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "exit_tree.item_id >= ? "
 		} else {
 			queryStr += "exit_tree.item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 		// nextIsAnd = true
 	}
 	// pagination
 	queryStr += "ORDER BY exit_tree.item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	query = hdb.dbRead.Rebind(queryStr)
 	// log.Debug(query)
 	exits := []*ExitAPI{}
@@ -732,8 +714,7 @@ func (hdb *HistoryDB) GetExitsAPI(
 
 // GetCoordinatorsAPI returns a list of coordinators from the DB and pagination info
 func (hdb *HistoryDB) GetCoordinatorsAPI(
-	bidderAddr, forgerAddr *ethCommon.Address,
-	fromItem, limit *uint, order string,
+	request api.GetCoordinatorsAPIRequest,
 ) ([]CoordinatorAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -750,12 +731,12 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(
 	) c ON coordinator.item_id = c.item_id `
 	// Apply filters
 	nextIsAnd := false
-	if bidderAddr != nil {
+	if request.BidderAddr != nil {
 		queryStr += "WHERE bidder_addr = ? "
 		nextIsAnd = true
-		args = append(args, bidderAddr)
+		args = append(args, request.BidderAddr)
 	}
-	if forgerAddr != nil {
+	if request.ForgerAddr != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
@@ -763,29 +744,29 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(
 		}
 		queryStr += "forger_addr = ? "
 		nextIsAnd = true
-		args = append(args, forgerAddr)
+		args = append(args, request.ForgerAddr)
 	}
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "coordinator.item_id >= ? "
 		} else {
 			queryStr += "coordinator.item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 	}
 	// pagination
 	queryStr += "ORDER BY coordinator.item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	query = hdb.dbRead.Rebind(queryStr)
 
 	coordinators := []*CoordinatorAPI{}
@@ -846,10 +827,9 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 
 // GetAccountsAPI returns a list of accounts from the DB and pagination info
 func (hdb *HistoryDB) GetAccountsAPI(
-	tokenIDs []common.TokenID, ethAddr *ethCommon.Address,
-	bjj *babyjub.PublicKeyComp, fromItem, limit *uint, order string,
+	request api.GetAccountsAPIRequest,
 ) ([]AccountAPI, uint64, error) {
-	if ethAddr != nil && bjj != nil {
+	if request.EthAddr != nil && request.Bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
 	}
 	cancel, err := hdb.apiConnCon.Acquire()
@@ -873,47 +853,47 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	// Apply filters
 	nextIsAnd := false
 	// ethAddr filter
-	if ethAddr != nil {
+	if request.EthAddr != nil {
 		queryStr += "WHERE account.eth_addr = ? "
 		nextIsAnd = true
-		args = append(args, ethAddr)
-	} else if bjj != nil { // bjj filter
+		args = append(args, request.EthAddr)
+	} else if request.Bjj != nil { // bjj filter
 		queryStr += "WHERE account.bjj = ? "
 		nextIsAnd = true
-		args = append(args, bjj)
+		args = append(args, request.Bjj)
 	}
 	// tokenID filter
-	if len(tokenIDs) > 0 {
+	if len(request.TokenIDs) > 0 {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "account.token_id IN (?) "
-		args = append(args, tokenIDs)
+		args = append(args, request.TokenIDs)
 		nextIsAnd = true
 	}
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "account.item_id >= ? "
 		} else {
 			queryStr += "account.item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 	}
 	// pagination
 	queryStr += "ORDER BY account.item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
@@ -1000,7 +980,14 @@ func (hdb *HistoryDB) GetNextForgersInternalAPI(auctionVars *common.AuctionVaria
 	secondsPerBlock := int64(15) //nolint:gomnd
 	// currentSlot and lastClosedSlot included
 	limit := uint(lastClosedSlot - currentSlot + 1)
-	bids, _, err := hdb.getBestBidsAPI(hdb.dbRead, &currentSlot, &lastClosedSlot, nil, &limit, "ASC")
+	request := api.GetBestBidsAPIRequest{
+		MinSlotNum: &currentSlot,
+		MaxSlotNum: &lastClosedSlot,
+		BidderAddr: nil,
+		Limit:      &limit,
+		Order:      "ASC",
+	}
+	bids, _, err := hdb.getBestBidsAPI(hdb.dbRead, request)
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		return nil, tracerr.Wrap(err)
 	}

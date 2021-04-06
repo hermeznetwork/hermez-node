@@ -3,9 +3,19 @@ package api
 import (
 	"net/http"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
+
+type GetCoordinatorsAPIRequest struct {
+	BidderAddr *ethCommon.Address
+	ForgerAddr *ethCommon.Address
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
 
 func (a *API) getCoordinators(c *gin.Context) {
 	bidderAddr, err := parseQueryEthAddr("bidderAddr", c)
@@ -25,8 +35,15 @@ func (a *API) getCoordinators(c *gin.Context) {
 		return
 	}
 
+	request := GetCoordinatorsAPIRequest{
+		BidderAddr: bidderAddr,
+		ForgerAddr: forgerAddr,
+		FromItem:   fromItem,
+		Limit:      limit,
+		Order:      order,
+	}
 	// Fetch coordinators from historyDB
-	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(bidderAddr, forgerAddr, fromItem, limit, order)
+	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(request)
 	if err != nil {
 		retSQLErr(err, c)
 		return

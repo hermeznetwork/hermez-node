@@ -9,6 +9,16 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
+type GetTokensAPIRequest struct {
+	Ids     []common.TokenID
+	Symbols []string
+	Name    string
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 func (a *API) getToken(c *gin.Context) {
 	// Get TokenID
 	tokenIDUint, err := parseParamUint("id", nil, 0, maxUint32, c)
@@ -44,10 +54,16 @@ func (a *API) getTokens(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
+	request := GetTokensAPIRequest{
+		Ids:      tokenIDs,
+		Symbols:  symbols,
+		Name:     name,
+		FromItem: fromItem,
+		Limit:    limit,
+		Order:    order,
+	}
 	// Fetch exits from historyDB
-	tokens, pendingItems, err := a.h.GetTokensAPI(
-		tokenIDs, symbols, name, fromItem, limit, order,
-	)
+	tokens, pendingItems, err := a.h.GetTokensAPI(request)
 	if err != nil {
 		retSQLErr(err, c)
 		return

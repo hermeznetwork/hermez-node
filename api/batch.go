@@ -5,11 +5,23 @@ import (
 	"errors"
 	"net/http"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
 )
+
+type GetBatchesAPIRequest struct {
+	MinBatchNum *uint
+	MaxBatchNum *uint
+	SlotNum     *uint
+	ForgerAddr  *ethCommon.Address
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
 
 func (a *API) getBatches(c *gin.Context) {
 	// Get query parameters
@@ -43,10 +55,17 @@ func (a *API) getBatches(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
+	request := GetBatchesAPIRequest{
+		MinBatchNum: minBatchNum,
+		MaxBatchNum: maxBatchNum,
+		SlotNum:     slotNum,
+		ForgerAddr:  forgerAddr,
+		FromItem:    fromItem,
+		Limit:       limit,
+		Order:       order,
+	}
 	// Fetch batches from historyDB
-	batches, pendingItems, err := a.h.GetBatchesAPI(
-		minBatchNum, maxBatchNum, slotNum, forgerAddr, fromItem, limit, order,
-	)
+	batches, pendingItems, err := a.h.GetBatchesAPI(request)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -106,11 +125,15 @@ func (a *API) getFullBatch(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
+
 	// Fetch txs forged in the batch from historyDB
 	maxTxsPerBatch := uint(2048) //nolint:gomnd
-	txs, _, err := a.h.GetTxsAPI(
-		nil, nil, nil, nil, batchNum, nil, nil, nil, &maxTxsPerBatch, historydb.OrderAsc,
-	)
+	request := GetTxsAPIRequest{
+		BatchNum: batchNum,
+		Limit:    &maxTxsPerBatch,
+		Order:    historydb.OrderAsc,
+	}
+	txs, _, err := a.h.GetTxsAPI(request)
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		retSQLErr(err, c)
 		return

@@ -3,9 +3,25 @@ package api
 import (
 	"net/http"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
+
+type GetExitsAPIRequest struct {
+	EthAddr              *ethCommon.Address
+	Bjj                  *babyjub.PublicKeyComp
+	TokenID              *common.TokenID
+	Idx                  *common.Idx
+	BatchNum             *uint
+	OnlyPendingWithdraws *bool
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
 
 func (a *API) getExits(c *gin.Context) {
 	// Get query parameters
@@ -34,10 +50,19 @@ func (a *API) getExits(c *gin.Context) {
 		return
 	}
 
+	request := GetExitsAPIRequest{
+		EthAddr:              addr,
+		Bjj:                  bjj,
+		TokenID:              tokenID,
+		Idx:                  idx,
+		BatchNum:             batchNum,
+		OnlyPendingWithdraws: onlyPendingWithdraws,
+		FromItem:             fromItem,
+		Limit:                limit,
+		Order:                order,
+	}
 	// Fetch exits from historyDB
-	exits, pendingItems, err := a.h.GetExitsAPI(
-		addr, bjj, tokenID, idx, batchNum, onlyPendingWithdraws, fromItem, limit, order,
-	)
+	exits, pendingItems, err := a.h.GetExitsAPI(request)
 	if err != nil {
 		retSQLErr(err, c)
 		return
