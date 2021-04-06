@@ -686,6 +686,15 @@ paths:
             type: integer
             minimum: 1
             maximum: 2049
+        - name: includePendingL1s
+          in: query
+          required: false
+          description: |
+            If set to true L1 transactions that have been added to the smart contract queue but haven't been forged yet are returned.
+            Warning: the correctness of the order is not guaranteed when using this filter, as the unforged transactions may change their position
+            once they are forged. 
+          schema:
+            type: boolean
       responses:
         '200':
           description: Successful operation.
@@ -2909,16 +2918,24 @@ components:
             properties:
               ceilUSD:
                 type: string
-                description: Max USD value
+                description: Max USD value that bucket holds
                 example: "1000"
+              blockStamp:
+                type: string
+                description: Block number of the last bucket update
+                example: "1"
               withdrawals:
                 type: string
                 description: Available withdrawals of the bucket
                 example: "4"
-              blockWithdrawalRate:
+              rateBlocks:
                 type: string
-                description: Every `blockWithdrawalRate` blocks add 1 withdrawal
-                example: "8"
+                description: rateBlocks every `rateBlocks` blocks add `rateWithdrawals` withdrawal
+                example: "2"
+              rateWithdrawals:
+                type: string
+                description: add `rateWithdrawals` every `rateBlocks`
+                example: "3"
               maxWithdrawals:
                 type: string
                 description: Max withdrawals the bucket can hold
@@ -2926,8 +2943,10 @@ components:
             additionalProperties: false
             required: 
               - ceilUSD
+              - blockStamp
               - withdrawals
-              - blockWithdrawalRate
+              - rateBlocks
+              - rateWithdrawals
               - maxWithdrawals
           additionalProperties: false
           required:
@@ -3211,10 +3230,15 @@ components:
             - maxEmergencyModeTime
             - hermezRollup
           additionalProperties: false
+        chainId:
+          type: integer
+          description: Id of the chain
+          example: 27
       required:
         - hermez
         - auction
         - withdrawalDelayer
+        - chainId
       additionalProperties: false
     Error:
       type: object

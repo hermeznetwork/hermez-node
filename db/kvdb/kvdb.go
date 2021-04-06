@@ -46,10 +46,12 @@ type KVDB struct {
 	cfg Config
 	db  *pebble.Storage
 	// CurrentIdx holds the current Idx that the BatchBuilder is using
-	CurrentIdx   common.Idx
-	CurrentBatch common.BatchNum
-	m            sync.Mutex
-	last         *Last
+	CurrentIdx      common.Idx
+	CurrentBatch    common.BatchNum
+	mutexCheckpoint sync.Mutex
+	mutexDelOld     sync.Mutex
+	wg              sync.WaitGroup
+	last            *Last
 }
 
 // Last is a consistent view to the last batch of the stateDB that can
@@ -444,10 +446,15 @@ func (k *KVDB) MakeCheckpoint() error {
 			return tracerr.Wrap(err)
 		}
 	}
-	// delete old checkpoints
-	if err := k.deleteOldCheckpoints(); err != nil {
-		return tracerr.Wrap(err)
-	}
+
+	k.wg.Add(1)
+	go func() {
+		delErr := k.DeleteOldCheckpoints()
+		if delErr != nil {
+			log.Errorw("delete old checkpoints failed", "err", delErr)
+		}
+		k.wg.Done()
+	}()
 
 	return nil
 }
@@ -509,9 +516,12 @@ func (k *KVDB) ListCheckpoints() ([]int, error) {
 	return checkpoints, nil
 }
 
-// deleteOldCheckpoints deletes old checkpoints when there are more than
+// DeleteOldCheckpoints deletes old checkpoints when there are more than
 // `s.keep` checkpoints
-func (k *KVDB) deleteOldCheckpoints() error {
+func (k *KVDB) DeleteOldCheckpoints() error {
+	k.mutexDelOld.Lock()
+	defer k.mutexDelOld.Unlock()
+
 	list, err := k.ListCheckpoints()
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -542,8 +552,8 @@ func (k *KVDB) MakeCheckpointFromTo(fromBatchNum common.BatchNum, dest string) e
 	// synchronizer to do a reset to a batchNum at the same time as the
 	// pipeline is doing a txSelector.Reset and batchBuilder.Reset from
 	// synchronizer to the same batchNum
-	k.m.Lock()
-	defer k.m.Unlock()
+	k.mutexCheckpoint.Lock()
+	defer k.mutexCheckpoint.Unlock()
 	return PebbleMakeCheckpoint(source, dest)
 }
 
@@ -584,4 +594,6 @@ func (k *KVDB) Close() {
 	if k.last != nil {
 		k.last.close()
 	}
+	// wait for deletion of old checkpoints
+	k.wg.Wait()
 }

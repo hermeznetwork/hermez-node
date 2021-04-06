@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -190,10 +191,65 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	for i := 0; i < numCheckpoints; i++ {
 		err = db.MakeCheckpoint()
 		require.NoError(t, err)
+		err = db.DeleteOldCheckpoints()
+		require.NoError(t, err)
 		checkpoints, err := db.ListCheckpoints()
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(checkpoints), keep)
 	}
+}
+
+func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdb")
+	require.NoError(t, err)
+	defer require.NoError(t, os.RemoveAll(dir))
+
+	keep := 16
+	db, err := NewKVDB(Config{Path: dir, Keep: keep})
+	require.NoError(t, err)
+
+	numCheckpoints := 32
+
+	var wg sync.WaitGroup
+	wg.Add(numCheckpoints)
+
+	// do checkpoints and check that we never have more than `keep`
+	// checkpoints.
+	// 1 async DeleteOldCheckpoint after 1 MakeCheckpoint
+	for i := 0; i < numCheckpoints; i++ {
+		err = db.MakeCheckpoint()
+		require.NoError(t, err)
+		go func() {
+			err = db.DeleteOldCheckpoints()
+			require.NoError(t, err)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	checkpoints, err := db.ListCheckpoints()
+	require.NoError(t, err)
+	assert.LessOrEqual(t, len(checkpoints), keep)
+
+	wg.Add(numCheckpoints)
+
+	// do checkpoints and check that we never have more than `keep`
+	// checkpoints
+	// 32 concurrent DeleteOldCheckpoint after 32 MakeCheckpoint
+	for i := 0; i < numCheckpoints; i++ {
+		err = db.MakeCheckpoint()
+		require.NoError(t, err)
+	}
+	for i := 0; i < numCheckpoints; i++ {
+		go func() {
+			err = db.DeleteOldCheckpoints()
+			require.NoError(t, err)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	checkpoints, err = db.ListCheckpoints()
+	require.NoError(t, err)
+	assert.LessOrEqual(t, len(checkpoints), keep)
 }
 
 func TestGetCurrentIdx(t *testing.T) {

@@ -457,7 +457,7 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 func (hdb *HistoryDB) GetTxsAPI(
 	ethAddr, fromEthAddr, toEthAddr *ethCommon.Address, bjj, fromBjj, toBjj *babyjub.PublicKeyComp,
 	tokenID *common.TokenID, idx, fromIdx, toIdx *common.Idx, batchNum *uint, txType *common.TxType,
-	fromItem, limit *uint, order string,
+	includePendingL1s *bool, fromItem, limit *uint, order string,
 ) ([]TxAPI, uint64, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for
 	// performance reasons. The expected default value is false (when txs are unforged)
@@ -530,8 +530,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 		} else {
 			queryStr += "WHERE "
 		}
-		queryStr += "(tx.effective_from_idx = ? "
-		queryStr += "OR tx.to_idx = ?) "
+		queryStr += "(tx.effective_from_idx = ? OR tx.to_idx = ?) "
 		args = append(args, idx, idx)
 		nextIsAnd = true
 	} else if fromIdx != nil {
@@ -589,12 +588,16 @@ func (hdb *HistoryDB) GetTxsAPI(
 		args = append(args, fromItem)
 		nextIsAnd = true
 	}
-	if nextIsAnd {
-		queryStr += "AND "
-	} else {
-		queryStr += "WHERE "
+
+	// Include pending L1 txs? (default false)
+	if includePendingL1s == nil || (includePendingL1s != nil && !*includePendingL1s) {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx.batch_num IS NOT NULL "
 	}
-	queryStr += "tx.batch_num IS NOT NULL "
 
 	// pagination
 	queryStr += "ORDER BY tx.item_id "

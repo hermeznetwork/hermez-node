@@ -209,7 +209,8 @@ func newTestSynchronizer(t *testing.T, ethClient *test.Client, ethClientSetup *t
 	modules modules) *synchronizer.Synchronizer {
 	sync, err := synchronizer.NewSynchronizer(ethClient, modules.historyDB, modules.l2DB, modules.stateDB,
 		synchronizer.Config{
-			StatsRefreshPeriod: 0 * time.Second,
+			StatsUpdateBlockNumDiffThreshold: 100,
+			StatsUpdateFrequencyDivider:      100,
 		})
 	require.NoError(t, err)
 	return sync

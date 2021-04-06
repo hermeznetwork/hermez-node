@@ -230,7 +230,7 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 			poolTx.TokenID, account.TokenID))
 	}
 	// Check signature
-	if !poolTx.VerifySignature(a.chainID, account.BJJ) {
+	if !poolTx.VerifySignature(a.cg.ChainID, account.BJJ) {
 		return tracerr.Wrap(errors.New("wrong signature"))
 	}
 	return nil

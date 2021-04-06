@@ -71,7 +71,7 @@ func (t txsSort) Less(i, j int) bool {
 	}
 	// i is forged
 	if jsf.BatchNum == nil {
-		return false // j is not forged
+		return true // j is not forged
 	}
 	// Both are forged
 	if *isf.BatchNum == *jsf.BatchNum {
@@ -111,7 +111,7 @@ func genTestTxs(
 ) []testTx {
 	txs := []testTx{}
 	// common.L1Tx ==> testTx
-	for _, l1 := range l1s {
+	for i, l1 := range l1s {
 		token := getTokenByID(l1.TokenID, tokens)
 		// l1.FromEthAddr and l1.FromBJJ can't be nil
 		fromEthAddr := string(apitypes.NewHezEthAddr(l1.FromEthAddr))
@@ -137,15 +137,26 @@ func genTestTxs(
 			},
 			Token: token,
 		}
+
 		// set BatchNum for user txs
 		if tx.L1Info.ToForgeL1TxsNum != nil {
-			// WARNING: this is an asumption, and the test input data can brake it easily
+			// WARNING: this works just because the way "common" txs are generated using til
+			// any change on the test set could break this
 			bn := common.BatchNum(*tx.L1Info.ToForgeL1TxsNum + 2)
 			tx.BatchNum = &bn
 		}
 		// If FromIdx is not nil
 		idxStr := idxToHez(l1.EffectiveFromIdx, token.Symbol)
 		tx.FromIdx = &idxStr
+		if i == len(l1s)-1 {
+			// Last tx of the L1 set is supposed to be unforged as per the til set.
+			// Unforged txs have some special propperties
+			tx.L1Info.DepositAmountSuccess = false
+			tx.L1Info.AmountSuccess = false
+			tx.BatchNum = nil
+			idxStrUnforged := idxToHez(l1.FromIdx, token.Symbol)
+			tx.FromIdx = &idxStrUnforged
+		}
 		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
 		if l1.ToIdx >= common.UserThreshold {
 			// find account
@@ -261,12 +272,26 @@ func TestGetHistoryTxs(t *testing.T) {
 			fetchedTxs = append(fetchedTxs, tmp.(testTx))
 		}
 	}
-	// Get all (no filters)
+	// Get all (no filters, excluding unforged txs)
 	limit := 20
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
+	forgedTxs := []testTx{}
+	for i := 0; i < len(tc.txs); i++ {
+		if tc.txs[i].BatchNum != nil {
+			forgedTxs = append(forgedTxs, tc.txs[i])
+		}
+	}
+	assertTxs(t, forgedTxs, fetchedTxs)
+
+	// Get all, including unforged txs
+	fetchedTxs = []testTx{}
+	path = fmt.Sprintf("%s?limit=%d&includePendingL1s=true", endpoint, limit)
+	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
 	assertTxs(t, tc.txs, fetchedTxs)
+
 	// Get by ethAddr
 	account := tc.accounts[2]
 	fetchedTxs = []testTx{}
@@ -285,7 +310,7 @@ func TestGetHistoryTxs(t *testing.T) {
 			(tx.FromEthAddr != nil && *tx.FromEthAddr == string(account.EthAddr)) ||
 			(tx.ToEthAddr != nil && *tx.ToEthAddr == string(account.EthAddr)) ||
 			(tx.FromBJJ != nil && *tx.FromBJJ == string(account.PublicKey)) ||
-			(tx.ToBJJ != nil && *tx.ToBJJ == string(account.PublicKey)) {
+			(tx.ToBJJ != nil && *tx.ToBJJ == string(account.PublicKey)) && tx.BatchNum != nil {
 			accountTxs = append(accountTxs, tx)
 		}
 	}
@@ -312,7 +337,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	tokenIDTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
-		if tc.txs[i].Token.TokenID == tokenID {
+		if tc.txs[i].BatchNum != nil && tc.txs[i].Token.TokenID == tokenID {
 			tokenIDTxs = append(tokenIDTxs, tc.txs[i])
 		}
 	}
@@ -331,6 +356,9 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	idxTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
+		if tc.txs[i].BatchNum == nil {
+			continue
+		}
 		var fromIdx *common.Idx
 		if tc.txs[i].FromIdx != nil {
 			fromIdx, err = stringToIdx(*tc.txs[i].FromIdx, "")
@@ -420,7 +448,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		assert.NoError(t, err)
 		txTypeTxs := []testTx{}
 		for i := 0; i < len(tc.txs); i++ {
-			if tc.txs[i].Type == txType {
+			if tc.txs[i].Type == txType && tc.txs[i].BatchNum != nil {
 				txTypeTxs = append(txTypeTxs, tc.txs[i])
 			}
 		}
@@ -452,7 +480,9 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	flipedTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
-		flipedTxs = append(flipedTxs, tc.txs[len(tc.txs)-1-i])
+		if tc.txs[len(tc.txs)-1-i].BatchNum != nil {
+			flipedTxs = append(flipedTxs, tc.txs[len(tc.txs)-1-i])
+		}
 	}
 	assertTxs(t, flipedTxs, fetchedTxs)
 	// Empty array

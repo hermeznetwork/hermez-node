@@ -309,9 +309,12 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) Coordinators(opts *bi
 		Forger         common.Address
 		CoordinatorURL string
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.Forger = out[0].(common.Address)
-	outstruct.CoordinatorURL = out[1].(string)
+	outstruct.Forger = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.CoordinatorURL = *abi.ConvertType(out[1], new(string)).(*string)
 
 	return *outstruct, err
 
@@ -884,12 +887,15 @@ func (_HermezAuctionProtocol *HermezAuctionProtocolCaller) Slots(opts *bind.Call
 		BidAmount        *big.Int
 		ClosedMinBid     *big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.Bidder = out[0].(common.Address)
-	outstruct.Fulfilled = out[1].(bool)
-	outstruct.ForgerCommitment = out[2].(bool)
-	outstruct.BidAmount = out[3].(*big.Int)
-	outstruct.ClosedMinBid = out[4].(*big.Int)
+	outstruct.Bidder = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Fulfilled = *abi.ConvertType(out[1], new(bool)).(*bool)
+	outstruct.ForgerCommitment = *abi.ConvertType(out[2], new(bool)).(*bool)
+	outstruct.BidAmount = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+	outstruct.ClosedMinBid = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
