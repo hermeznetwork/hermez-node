@@ -3,26 +3,10 @@ package api
 import (
 	"net/http"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 )
-
-type GetTxsAPIRequest struct {
-	EthAddr           *ethCommon.Address
-	Bjj               *babyjub.PublicKeyComp
-	TokenID           *common.TokenID
-	Idx               *common.Idx
-	BatchNum          *uint
-	TxType            *common.TxType
-	IncludePendingL1s *bool
-
-	FromItem *uint
-	Limit    *uint
-	Order    string
-}
 
 func (a *API) getHistoryTxs(c *gin.Context) {
 	// Get query parameters
@@ -57,7 +41,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	request := GetTxsAPIRequest{
+	request := requests.GetTxsAPIRequest{
 		EthAddr:           addr,
 		Bjj:               bjj,
 		TokenID:           tokenID,

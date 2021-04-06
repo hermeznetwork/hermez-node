@@ -3,22 +3,10 @@ package api
 import (
 	"net/http"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 )
-
-type GetAccountsAPIRequest struct {
-	TokenIDs []common.TokenID
-	EthAddr  *ethCommon.Address
-	Bjj      *babyjub.PublicKeyComp
-
-	FromItem *uint
-	Limit    *uint
-	Order    string
-}
 
 func (a *API) getAccount(c *gin.Context) {
 	// Get Addr
@@ -50,7 +38,7 @@ func (a *API) getAccounts(c *gin.Context) {
 		return
 	}
 
-	request := GetAccountsAPIRequest{
+	request := requests.GetAccountsAPIRequest{
 		TokenIDs: tokenIDs,
 		EthAddr:  addr,
 		Bjj:      bjj,

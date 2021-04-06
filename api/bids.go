@@ -4,19 +4,10 @@ import (
 	"errors"
 	"net/http"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
-
-type GetBidsAPIRequest struct {
-	SlotNum    *int64
-	BidderAddr *ethCommon.Address
-
-	FromItem *uint
-	Limit    *uint
-	Order    string
-}
 
 func (a *API) getBids(c *gin.Context) {
 	slotNum, bidderAddr, err := parseBidFilters(c)
@@ -35,7 +26,7 @@ func (a *API) getBids(c *gin.Context) {
 		return
 	}
 
-	request := GetBidsAPIRequest{
+	request := requests.GetBidsAPIRequest{
 		SlotNum:    slotNum,
 		BidderAddr: bidderAddr,
 		FromItem:   fromItem,

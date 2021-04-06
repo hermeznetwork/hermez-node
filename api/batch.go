@@ -5,23 +5,12 @@ import (
 	"errors"
 	"net/http"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
 )
-
-type GetBatchesAPIRequest struct {
-	MinBatchNum *uint
-	MaxBatchNum *uint
-	SlotNum     *uint
-	ForgerAddr  *ethCommon.Address
-
-	FromItem *uint
-	Limit    *uint
-	Order    string
-}
 
 func (a *API) getBatches(c *gin.Context) {
 	// Get query parameters
@@ -55,7 +44,7 @@ func (a *API) getBatches(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	request := GetBatchesAPIRequest{
+	request := requests.GetBatchesAPIRequest{
 		MinBatchNum: minBatchNum,
 		MaxBatchNum: maxBatchNum,
 		SlotNum:     slotNum,

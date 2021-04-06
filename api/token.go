@@ -5,19 +5,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
-
-type GetTokensAPIRequest struct {
-	Ids     []common.TokenID
-	Symbols []string
-	Name    string
-
-	FromItem *uint
-	Limit    *uint
-	Order    string
-}
 
 func (a *API) getToken(c *gin.Context) {
 	// Get TokenID
@@ -54,7 +45,7 @@ func (a *API) getTokens(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	request := GetTokensAPIRequest{
+	request := requests.GetTokensAPIRequest{
 		Ids:      tokenIDs,
 		Symbols:  symbols,
 		Name:     name,

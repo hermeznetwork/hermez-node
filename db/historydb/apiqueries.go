@@ -8,8 +8,8 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/api"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
+	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
@@ -64,7 +64,7 @@ func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*Batc
 
 // GetBatchesAPI return the batches applying the given filters
 func (hdb *HistoryDB) GetBatchesAPI(
-	request api.GetBatchesAPIRequest,
+	request requests.GetBatchesAPIRequest,
 ) ([]BatchAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -187,7 +187,7 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 }
 
 // GetBestBidsAPI returns the best bid in specific slot by slotNum
-func (hdb *HistoryDB) GetBestBidsAPI(request api.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
+func (hdb *HistoryDB) GetBestBidsAPI(request requests.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -198,7 +198,7 @@ func (hdb *HistoryDB) GetBestBidsAPI(request api.GetBestBidsAPIRequest) ([]BidAP
 }
 func (hdb *HistoryDB) getBestBidsAPI(
 	d meddler.DB,
-	request api.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
+	request requests.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	// JOIN the best bid of each slot with the latest update of each coordinator
@@ -245,7 +245,7 @@ func (hdb *HistoryDB) getBestBidsAPI(
 }
 
 // GetBidsAPI return the bids applying the given filters
-func (hdb *HistoryDB) GetBidsAPI(request api.GetBidsAPIRequest) ([]BidAPI, uint64, error) {
+func (hdb *HistoryDB) GetBidsAPI(request requests.GetBidsAPIRequest) ([]BidAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -336,7 +336,7 @@ func (hdb *HistoryDB) GetTokenAPI(tokenID common.TokenID) (*TokenWithUSD, error)
 
 // GetTokensAPI returns a list of tokens from the DB
 func (hdb *HistoryDB) GetTokensAPI(
-	request api.GetTokensAPIRequest,
+	request requests.GetTokensAPIRequest,
 ) ([]TokenWithUSD, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -442,7 +442,7 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 // GetTxsAPI returns a list of txs from the DB using the HistoryTx struct
 // and pagination info
 func (hdb *HistoryDB) GetTxsAPI(
-	request api.GetTxsAPIRequest,
+	request requests.GetTxsAPIRequest,
 ) ([]TxAPI, uint64, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for
 	// performance reasons. The expected default value is false (when txs are unforged)
@@ -598,7 +598,7 @@ func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, err
 
 // GetExitsAPI returns a list of exits from the DB and pagination info
 func (hdb *HistoryDB) GetExitsAPI(
-	request api.GetExitsAPIRequest,
+	request requests.GetExitsAPIRequest,
 ) ([]ExitAPI, uint64, error) {
 	if request.EthAddr != nil && request.Bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
@@ -714,7 +714,7 @@ func (hdb *HistoryDB) GetExitsAPI(
 
 // GetCoordinatorsAPI returns a list of coordinators from the DB and pagination info
 func (hdb *HistoryDB) GetCoordinatorsAPI(
-	request api.GetCoordinatorsAPIRequest,
+	request requests.GetCoordinatorsAPIRequest,
 ) ([]CoordinatorAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -827,7 +827,7 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 
 // GetAccountsAPI returns a list of accounts from the DB and pagination info
 func (hdb *HistoryDB) GetAccountsAPI(
-	request api.GetAccountsAPIRequest,
+	request requests.GetAccountsAPIRequest,
 ) ([]AccountAPI, uint64, error) {
 	if request.EthAddr != nil && request.Bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
@@ -980,7 +980,7 @@ func (hdb *HistoryDB) GetNextForgersInternalAPI(auctionVars *common.AuctionVaria
 	secondsPerBlock := int64(15) //nolint:gomnd
 	// currentSlot and lastClosedSlot included
 	limit := uint(lastClosedSlot - currentSlot + 1)
-	request := api.GetBestBidsAPIRequest{
+	request := requests.GetBestBidsAPIRequest{
 		MinSlotNum: &currentSlot,
 		MaxSlotNum: &lastClosedSlot,
 		BidderAddr: nil,

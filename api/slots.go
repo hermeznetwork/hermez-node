@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
@@ -20,15 +20,6 @@ type SlotAPI struct {
 	LastBlock   int64             `json:"lastBlock"`
 	OpenAuction bool              `json:"openAuction"`
 	WinnerBid   *historydb.BidAPI `json:"bestBid"`
-}
-
-type GetBestBidsAPIRequest struct {
-	MinSlotNum *int64
-	MaxSlotNum *int64
-	BidderAddr *ethCommon.Address
-
-	Limit *uint
-	Order string
 }
 
 func (a *API) getFirstLastBlock(slotNum int64) (int64, int64) {
@@ -265,7 +256,7 @@ func (a *API) getSlots(c *gin.Context) {
 	if wonByEthereumAddress == nil {
 		slotMinLim, slotMaxLim, pendingItems = getLimits(*minSlotNum, *maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
-		request := GetBestBidsAPIRequest{
+		request := requests.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
 			BidderAddr: wonByEthereumAddress,
@@ -279,7 +270,7 @@ func (a *API) getSlots(c *gin.Context) {
 		}
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
-		request := GetBestBidsAPIRequest{
+		request := requests.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
 			BidderAddr: wonByEthereumAddress,
