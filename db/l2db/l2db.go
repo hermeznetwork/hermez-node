@@ -319,7 +319,7 @@ func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
 	return idxs, nil
 }
 
-const invalidateOldNoncesInfo = `Nonce is smaller or equal than account nonce`
+const invalidateOldNoncesInfo = `Nonce is smaller than account nonce`
 
 var invalidateOldNoncesQuery = fmt.Sprintf(`
 		UPDATE tx_pool SET
