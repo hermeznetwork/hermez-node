@@ -117,7 +117,7 @@ func (a *API) getFullBatch(c *gin.Context) {
 
 	// Fetch txs forged in the batch from historyDB
 	maxTxsPerBatch := uint(2048) //nolint:gomnd
-	request := GetTxsAPIRequest{
+	request := requests.GetTxsAPIRequest{
 		BatchNum: batchNum,
 		Limit:    &maxTxsPerBatch,
 		Order:    historydb.OrderAsc,
