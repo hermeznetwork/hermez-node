@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
@@ -256,7 +255,7 @@ func (a *API) getSlots(c *gin.Context) {
 	if wonByEthereumAddress == nil {
 		slotMinLim, slotMaxLim, pendingItems = getLimits(*minSlotNum, *maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
-		bids, _, err = a.h.GetBestBidsAPI(requests.GetBestBidsAPIRequest{
+		bids, _, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
 			BidderAddr: wonByEthereumAddress,
@@ -269,7 +268,7 @@ func (a *API) getSlots(c *gin.Context) {
 		}
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
-		bids, pendingItems, err = a.h.GetBestBidsAPI(requests.GetBestBidsAPIRequest{
+		bids, pendingItems, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
 			BidderAddr: wonByEthereumAddress,

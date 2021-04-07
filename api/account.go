@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -39,7 +38,7 @@ func (a *API) getAccounts(c *gin.Context) {
 	}
 
 	// Fetch Accounts from historyDB
-	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(requests.GetAccountsAPIRequest{
+	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(historydb.GetAccountsAPIRequest{
 		TokenIDs: tokenIDs,
 		EthAddr:  addr,
 		Bjj:      bjj,

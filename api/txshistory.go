@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -42,7 +41,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		return
 	}
 	// Fetch txs from historyDB
-	txs, pendingItems, err := a.h.GetTxsAPI(requests.GetTxsAPIRequest{
+	txs, pendingItems, err := a.h.GetTxsAPI(historydb.GetTxsAPIRequest{
 		EthAddr:           addr,
 		Bjj:               bjj,
 		TokenID:           tokenID,

@@ -9,10 +9,10 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 	"github.com/russross/meddler"
 )
@@ -62,9 +62,21 @@ func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*Batc
 	return batch, nil
 }
 
+// GetBatchesAPIRequest is an API request struct for getting batches
+type GetBatchesAPIRequest struct {
+	MinBatchNum *uint
+	MaxBatchNum *uint
+	SlotNum     *uint
+	ForgerAddr  *ethCommon.Address
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetBatchesAPI return the batches applying the given filters
 func (hdb *HistoryDB) GetBatchesAPI(
-	request requests.GetBatchesAPIRequest,
+	request GetBatchesAPIRequest,
 ) ([]BatchAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -186,8 +198,18 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 	return *bid, tracerr.Wrap(err)
 }
 
+// GetBestBidsAPIRequest is an API request struct for getting best bids
+type GetBestBidsAPIRequest struct {
+	MinSlotNum *int64
+	MaxSlotNum *int64
+	BidderAddr *ethCommon.Address
+
+	Limit *uint
+	Order string
+}
+
 // GetBestBidsAPI returns the best bid in specific slot by slotNum
-func (hdb *HistoryDB) GetBestBidsAPI(request requests.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
+func (hdb *HistoryDB) GetBestBidsAPI(request GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -198,7 +220,7 @@ func (hdb *HistoryDB) GetBestBidsAPI(request requests.GetBestBidsAPIRequest) ([]
 }
 func (hdb *HistoryDB) getBestBidsAPI(
 	d meddler.DB,
-	request requests.GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
+	request GetBestBidsAPIRequest) ([]BidAPI, uint64, error) {
 	var query string
 	var args []interface{}
 	// JOIN the best bid of each slot with the latest update of each coordinator
@@ -244,8 +266,18 @@ func (hdb *HistoryDB) getBestBidsAPI(
 	return bids, bids[0].TotalItems - uint64(len(bids)), nil
 }
 
+// GetBidsAPIRequest is an API request struct for getting bids
+type GetBidsAPIRequest struct {
+	SlotNum    *int64
+	BidderAddr *ethCommon.Address
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetBidsAPI return the bids applying the given filters
-func (hdb *HistoryDB) GetBidsAPI(request requests.GetBidsAPIRequest) ([]BidAPI, uint64, error) {
+func (hdb *HistoryDB) GetBidsAPI(request GetBidsAPIRequest) ([]BidAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -334,9 +366,20 @@ func (hdb *HistoryDB) GetTokenAPI(tokenID common.TokenID) (*TokenWithUSD, error)
 	return hdb.GetToken(tokenID)
 }
 
+// GetTokensAPIRequest is an API request struct for getting tokens
+type GetTokensAPIRequest struct {
+	Ids     []common.TokenID
+	Symbols []string
+	Name    string
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetTokensAPI returns a list of tokens from the DB
 func (hdb *HistoryDB) GetTokensAPI(
-	request requests.GetTokensAPIRequest,
+	request GetTokensAPIRequest,
 ) ([]TokenWithUSD, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -439,10 +482,25 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 	return tx, tracerr.Wrap(err)
 }
 
+// GetTxsAPIRequest is an API request struct for getting txs
+type GetTxsAPIRequest struct {
+	EthAddr           *ethCommon.Address
+	Bjj               *babyjub.PublicKeyComp
+	TokenID           *common.TokenID
+	Idx               *common.Idx
+	BatchNum          *uint
+	TxType            *common.TxType
+	IncludePendingL1s *bool
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetTxsAPI returns a list of txs from the DB using the HistoryTx struct
 // and pagination info
 func (hdb *HistoryDB) GetTxsAPI(
-	request requests.GetTxsAPIRequest,
+	request GetTxsAPIRequest,
 ) ([]TxAPI, uint64, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for
 	// performance reasons. The expected default value is false (when txs are unforged)
@@ -596,9 +654,23 @@ func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, err
 	return exit, tracerr.Wrap(err)
 }
 
+// GetExitsAPIRequest is an API request struct for getting exits
+type GetExitsAPIRequest struct {
+	EthAddr              *ethCommon.Address
+	Bjj                  *babyjub.PublicKeyComp
+	TokenID              *common.TokenID
+	Idx                  *common.Idx
+	BatchNum             *uint
+	OnlyPendingWithdraws *bool
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetExitsAPI returns a list of exits from the DB and pagination info
 func (hdb *HistoryDB) GetExitsAPI(
-	request requests.GetExitsAPIRequest,
+	request GetExitsAPIRequest,
 ) ([]ExitAPI, uint64, error) {
 	if request.EthAddr != nil && request.Bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
@@ -712,9 +784,19 @@ func (hdb *HistoryDB) GetExitsAPI(
 	return db.SlicePtrsToSlice(exits).([]ExitAPI), exits[0].TotalItems - uint64(len(exits)), nil
 }
 
+// GetCoordinatorsAPIRequest is an API request struct for getting coordinators
+type GetCoordinatorsAPIRequest struct {
+	BidderAddr *ethCommon.Address
+	ForgerAddr *ethCommon.Address
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetCoordinatorsAPI returns a list of coordinators from the DB and pagination info
 func (hdb *HistoryDB) GetCoordinatorsAPI(
-	request requests.GetCoordinatorsAPIRequest,
+	request GetCoordinatorsAPIRequest,
 ) ([]CoordinatorAPI, uint64, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
@@ -825,9 +907,20 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 	return account, nil
 }
 
+// GetAccountsAPIRequest is an API request struct for getting accounts
+type GetAccountsAPIRequest struct {
+	TokenIDs []common.TokenID
+	EthAddr  *ethCommon.Address
+	Bjj      *babyjub.PublicKeyComp
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetAccountsAPI returns a list of accounts from the DB and pagination info
 func (hdb *HistoryDB) GetAccountsAPI(
-	request requests.GetAccountsAPIRequest,
+	request GetAccountsAPIRequest,
 ) ([]AccountAPI, uint64, error) {
 	if request.EthAddr != nil && request.Bjj != nil {
 		return nil, 0, tracerr.Wrap(errors.New("ethAddr and bjj are incompatible"))
@@ -980,7 +1073,7 @@ func (hdb *HistoryDB) GetNextForgersInternalAPI(auctionVars *common.AuctionVaria
 	secondsPerBlock := int64(15) //nolint:gomnd
 	// currentSlot and lastClosedSlot included
 	limit := uint(lastClosedSlot - currentSlot + 1)
-	request := requests.GetBestBidsAPIRequest{
+	request := GetBestBidsAPIRequest{
 		MinSlotNum: &currentSlot,
 		MaxSlotNum: &lastClosedSlot,
 		BidderAddr: nil,

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
@@ -45,7 +44,7 @@ func (a *API) getBatches(c *gin.Context) {
 		return
 	}
 	// Fetch batches from historyDB
-	batches, pendingItems, err := a.h.GetBatchesAPI(requests.GetBatchesAPIRequest{
+	batches, pendingItems, err := a.h.GetBatchesAPI(historydb.GetBatchesAPIRequest{
 		MinBatchNum: minBatchNum,
 		MaxBatchNum: maxBatchNum,
 		SlotNum:     slotNum,
@@ -116,7 +115,7 @@ func (a *API) getFullBatch(c *gin.Context) {
 
 	// Fetch txs forged in the batch from historyDB
 	maxTxsPerBatch := uint(2048) //nolint:gomnd
-	txs, _, err := a.h.GetTxsAPI(requests.GetTxsAPIRequest{
+	txs, _, err := a.h.GetTxsAPI(historydb.GetTxsAPIRequest{
 		BatchNum: batchNum,
 		Limit:    &maxTxsPerBatch,
 		Order:    historydb.OrderAsc,

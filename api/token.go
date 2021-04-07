@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
@@ -46,7 +45,7 @@ func (a *API) getTokens(c *gin.Context) {
 		return
 	}
 	// Fetch exits from historyDB
-	tokens, pendingItems, err := a.h.GetTokensAPI(requests.GetTokensAPIRequest{
+	tokens, pendingItems, err := a.h.GetTokensAPI(historydb.GetTokensAPIRequest{
 		Ids:      tokenIDs,
 		Symbols:  symbols,
 		Name:     name,

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -26,7 +25,7 @@ func (a *API) getBids(c *gin.Context) {
 		return
 	}
 
-	bids, pendingItems, err := a.h.GetBidsAPI(requests.GetBidsAPIRequest{
+	bids, pendingItems, err := a.h.GetBidsAPI(historydb.GetBidsAPIRequest{
 		SlotNum:    slotNum,
 		BidderAddr: bidderAddr,
 		FromItem:   fromItem,

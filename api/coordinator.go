@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/requests"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
@@ -27,7 +26,7 @@ func (a *API) getCoordinators(c *gin.Context) {
 	}
 
 	// Fetch coordinators from historyDB
-	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(requests.GetCoordinatorsAPIRequest{
+	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(historydb.GetCoordinatorsAPIRequest{
 		BidderAddr: bidderAddr,
 		ForgerAddr: forgerAddr,
 		FromItem:   fromItem,
