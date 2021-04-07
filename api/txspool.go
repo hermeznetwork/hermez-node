@@ -176,19 +176,51 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	// Get public key
+	// Get sender account information
 	account, err := a.h.GetCommonAccountAPI(poolTx.FromIdx)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("Error getting from account: %w", err))
 	}
-	// Validate TokenID
+	// Validate sender:
+	// TokenID
 	if poolTx.TokenID != account.TokenID {
 		return tracerr.Wrap(fmt.Errorf("tx.TokenID (%v) != account.TokenID (%v)",
 			poolTx.TokenID, account.TokenID))
 	}
+	// Nonce
+	if poolTx.Nonce < account.Nonce {
+		return tracerr.Wrap(fmt.Errorf("poolTx.Nonce (%v) < account.Nonce (%v)",
+			poolTx.Nonce, account.Nonce))
+	}
 	// Check signature
 	if !poolTx.VerifySignature(a.cg.ChainID, account.BJJ) {
 		return tracerr.Wrap(errors.New("wrong signature"))
+	}
+	// Check destinatary, note that transactions that are not transfers
+	// will always be valid in terms of destinatary (they use special ToIdx by protocol)
+	switch poolTx.Type {
+	case common.TxTypeTransfer:
+		// ToIdx exists and match token
+		toAccount, err := a.h.GetCommonAccountAPI(poolTx.ToIdx)
+		if err != nil {
+			return tracerr.Wrap(fmt.Errorf("Error getting to account: %w", err))
+		}
+		if poolTx.TokenID != toAccount.TokenID {
+			return tracerr.Wrap(fmt.Errorf("tx.TokenID (%v) != toAccount.TokenID (%v)",
+				poolTx.TokenID, toAccount.TokenID))
+		}
+	case common.TxTypeTransferToEthAddr:
+		// ToEthAddr has account created with matching token ID or authorization
+		ok, err := a.h.CanSendToEthAddr(poolTx.ToEthAddr, poolTx.TokenID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return tracerr.Wrap(fmt.Errorf(
+				"Destination eth addr (%v) has not a valid account created nor authorization",
+				poolTx.ToEthAddr,
+			))
+		}
 	}
 	return nil
 }

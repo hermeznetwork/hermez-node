@@ -202,6 +202,7 @@ func (hdb *HistoryDB) GetBestBidsAPI(
 	defer hdb.apiConnCon.Release()
 	return hdb.getBestBidsAPI(hdb.dbRead, minSlotNum, maxSlotNum, bidderAddr, limit, order)
 }
+
 func (hdb *HistoryDB) getBestBidsAPI(
 	d meddler.DB,
 	minSlotNum, maxSlotNum *int64,
@@ -864,11 +865,12 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	account.bjj, account.eth_addr, token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
 	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
 	account_update.nonce, account_update.balance, COUNT(*) OVER() AS total_items
-	FROM account inner JOIN (
+	FROM account INNER JOIN (
 		SELECT DISTINCT idx,
-		first_value(nonce) over(partition by idx ORDER BY item_id DESC) as nonce,
-		first_value(balance) over(partition by idx ORDER BY item_id DESC) as balance
+		first_value(nonce) OVER w AS nonce,
+		first_value(balance) OVER w AS balance
 		FROM account_update
+		WINDOW w as (PARTITION BY idx ORDER BY item_id DESC)
 	) AS account_update ON account_update.idx = account.idx INNER JOIN token ON account.token_id = token.token_id `
 	// Apply filters
 	nextIsAnd := false
@@ -940,12 +942,61 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 		return nil, tracerr.Wrap(err)
 	}
 	defer hdb.apiConnCon.Release()
-	account := &common.Account{}
-	err = meddler.QueryRow(
-		hdb.dbRead, account, `SELECT idx, token_id, batch_num, bjj, eth_addr
-		FROM account WHERE idx = $1;`, idx,
+	type fullAccount struct {
+		Idx      common.Idx            `meddler:"idx"`
+		TokenID  common.TokenID        `meddler:"token_id"`
+		BatchNum common.BatchNum       `meddler:"batch_num"`
+		BJJ      babyjub.PublicKeyComp `meddler:"bjj"`
+		EthAddr  ethCommon.Address     `meddler:"eth_addr"`
+		Nonce    common.Nonce          `meddler:"nonce"`
+		Balance  *big.Int              `meddler:"balance,bigint"` // max of 192 bits used
+	}
+	account := &fullAccount{}
+	if err := meddler.QueryRow(
+		hdb.dbRead, account, `SELECT account.idx, token_id, batch_num, bjj, eth_addr, au.nonce, au.balance
+		FROM account INNER JOIN (
+			SELECT DISTINCT idx,
+			first_value(nonce) OVER w AS nonce,
+			first_value(balance) OVER w AS balance
+			FROM account_update
+			WINDOW w as (PARTITION BY idx ORDER BY item_id DESC)
+		) AS au ON au.idx = account.idx
+		WHERE account.idx = $1;`, idx,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return &common.Account{
+		Idx:      account.Idx,
+		TokenID:  account.TokenID,
+		BatchNum: account.BatchNum,
+		BJJ:      account.BJJ,
+		EthAddr:  account.EthAddr,
+		Nonce:    account.Nonce,
+		Balance:  account.Balance,
+	}, nil
+}
+
+// CanSendToEthAddr returns true if it's possible to send a tx to an Eth addr
+// either because there is an idx associated to the Eth addr and token
+// or the cordinator has an authorization to create a valid account
+func (hdb *HistoryDB) CanSendToEthAddr(ethAddr ethCommon.Address, tokenID common.TokenID) (bool, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return false, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+
+	row := hdb.dbRead.QueryRow(
+		`SELECT (
+			SELECT COUNT(*) > 0 FROM account WHERE eth_addr = $1 AND token_id = $2 LIMIT 1
+		) OR (
+			SELECT COUNT(*) > 0 FROM account_creation_auth WHERE eth_addr = $1 LIMIT 1
+		);`,
+		ethAddr, tokenID,
 	)
-	return account, tracerr.Wrap(err)
+	var ok bool
+	return ok, tracerr.Wrap(row.Scan(&ok))
 }
 
 // GetCoordinatorAPI returns a coordinator by its bidderAddr

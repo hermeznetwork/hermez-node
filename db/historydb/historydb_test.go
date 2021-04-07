@@ -394,6 +394,25 @@ func TestAccounts(t *testing.T) {
 	fetchedAccBalances, err := historyDB.GetAllAccountUpdates()
 	require.NoError(t, err)
 	assert.Equal(t, accUpdates, fetchedAccBalances)
+
+	// Test if can send to EthAddr for created accounts
+	var ok bool
+	for _, acc := range fetchedAccs {
+		// can send to created accounts
+		ok, err = historyDBWithACC.CanSendToEthAddr(acc.EthAddr, acc.TokenID)
+		require.NoError(t, err)
+		assert.True(t, ok)
+
+		// cannot send to wrong tokenID
+		ok, err = historyDBWithACC.CanSendToEthAddr(acc.EthAddr, 0)
+		require.NoError(t, err)
+		assert.False(t, ok)
+
+		// cannot send to wrong ethAddr
+		ok, err = historyDBWithACC.CanSendToEthAddr(ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E00000"), acc.TokenID)
+		require.NoError(t, err)
+		assert.False(t, ok)
+	}
 }
 
 func TestTxs(t *testing.T) {
