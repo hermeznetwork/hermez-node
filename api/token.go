@@ -45,16 +45,15 @@ func (a *API) getTokens(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	request := requests.GetTokensAPIRequest{
+	// Fetch exits from historyDB
+	tokens, pendingItems, err := a.h.GetTokensAPI(requests.GetTokensAPIRequest{
 		Ids:      tokenIDs,
 		Symbols:  symbols,
 		Name:     name,
 		FromItem: fromItem,
 		Limit:    limit,
 		Order:    order,
-	}
-	// Fetch exits from historyDB
-	tokens, pendingItems, err := a.h.GetTokensAPI(request)
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return

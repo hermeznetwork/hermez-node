@@ -35,7 +35,8 @@ func (a *API) getExits(c *gin.Context) {
 		return
 	}
 
-	request := requests.GetExitsAPIRequest{
+	// Fetch exits from historyDB
+	exits, pendingItems, err := a.h.GetExitsAPI(requests.GetExitsAPIRequest{
 		EthAddr:              addr,
 		Bjj:                  bjj,
 		TokenID:              tokenID,
@@ -45,9 +46,7 @@ func (a *API) getExits(c *gin.Context) {
 		FromItem:             fromItem,
 		Limit:                limit,
 		Order:                order,
-	}
-	// Fetch exits from historyDB
-	exits, pendingItems, err := a.h.GetExitsAPI(request)
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return

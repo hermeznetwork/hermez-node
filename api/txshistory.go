@@ -41,7 +41,8 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	request := requests.GetTxsAPIRequest{
+	// Fetch txs from historyDB
+	txs, pendingItems, err := a.h.GetTxsAPI(requests.GetTxsAPIRequest{
 		EthAddr:           addr,
 		Bjj:               bjj,
 		TokenID:           tokenID,
@@ -52,9 +53,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		FromItem:          fromItem,
 		Limit:             limit,
 		Order:             order,
-	}
-	// Fetch txs from historyDB
-	txs, pendingItems, err := a.h.GetTxsAPI(request)
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return

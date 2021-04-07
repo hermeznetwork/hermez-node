@@ -26,15 +26,14 @@ func (a *API) getCoordinators(c *gin.Context) {
 		return
 	}
 
-	request := requests.GetCoordinatorsAPIRequest{
+	// Fetch coordinators from historyDB
+	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(requests.GetCoordinatorsAPIRequest{
 		BidderAddr: bidderAddr,
 		ForgerAddr: forgerAddr,
 		FromItem:   fromItem,
 		Limit:      limit,
 		Order:      order,
-	}
-	// Fetch coordinators from historyDB
-	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(request)
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return
