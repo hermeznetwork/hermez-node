@@ -909,6 +909,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 		l1TxsAuth := make([]common.AccountCreationAuth,
 			0, len(forgeBatchArgs.L1CoordinatorTxsAuths))
+		batchData.L1CoordinatorTxs = make([]common.L1Tx, 0, len(forgeBatchArgs.L1CoordinatorTxs))
 		// Get L1 Coordinator Txs
 		for i := range forgeBatchArgs.L1CoordinatorTxs {
 			l1CoordinatorTx := forgeBatchArgs.L1CoordinatorTxs[i]
@@ -994,14 +995,10 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 				s.stateDB.MT.Root().BigInt(), forgeBatchArgs.NewStRoot))
 		}
 
-		// Transform processed PoolL2 txs to L2 and store in BatchData
-		l2Txs, err := common.PoolL2TxsToL2Txs(poolL2Txs) // NOTE: This is a big uggly, find a better way
-		if err != nil {
-			return nil, tracerr.Wrap(err)
-		}
-
-		// Set TxID, BlockNum, BatchNum and Position to the forged L2Txs
-		for i := range l2Txs {
+		l2Txs := make([]common.L2Tx, len(poolL2Txs))
+		for i, tx := range poolL2Txs {
+			l2Txs[i] = tx.L2Tx()
+			// Set TxID, BlockNum, BatchNum and Position to the forged L2Txs
 			if err := l2Txs[i].SetID(); err != nil {
 				return nil, tracerr.Wrap(err)
 			}
@@ -1084,7 +1081,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		token.EthBlockNum = blockNum
 
 		if consts, err := s.ethClient.EthERC20Consts(evtAddToken.TokenAddress); err != nil {
-			log.Warnw("Error retreiving ERC20 token constants", "addr", evtAddToken.TokenAddress)
+			log.Warnw("Error retrieving ERC20 token constants", "addr", evtAddToken.TokenAddress)
 			token.Name = "ERC20_ETH_ERROR"
 			token.Symbol = "ERROR"
 			token.Decimals = 1
@@ -1097,6 +1094,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		rollupData.AddedTokens = append(rollupData.AddedTokens, token)
 	}
 
+	rollupData.UpdateBucketWithdraw = make([]common.BucketUpdate, 0, len(rollupEvents.UpdateBucketWithdraw))
 	for _, evt := range rollupEvents.UpdateBucketWithdraw {
 		rollupData.UpdateBucketWithdraw = append(rollupData.UpdateBucketWithdraw,
 			common.BucketUpdate{
@@ -1107,6 +1105,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			})
 	}
 
+	rollupData.Withdrawals = make([]common.WithdrawInfo, 0, len(rollupEvents.Withdraw))
 	for _, evt := range rollupEvents.Withdraw {
 		rollupData.Withdrawals = append(rollupData.Withdrawals, common.WithdrawInfo{
 			Idx:             common.Idx(evt.Idx),
@@ -1154,7 +1153,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 	// RollupEventUpdateBucketsParameters into UpdateBucketsParameters with
 	// all the bucket values at 0 and SafeMode = true
 	for _, evt := range rollupEvents.UpdateBucketsParameters {
-		s.vars.Rollup.Buckets = []common.BucketParams{}
+		s.vars.Rollup.Buckets = make([]common.BucketParams, 0, len(evt.ArrayBuckets))
 		for _, bucket := range evt.ArrayBuckets {
 			s.vars.Rollup.Buckets = append(s.vars.Rollup.Buckets, common.BucketParams{
 				CeilUSD:         bucket.CeilUSD,
@@ -1202,6 +1201,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	}
 
 	// Get bids
+	auctionData.Bids = make([]common.Bid, 0, len(auctionEvents.NewBid))
 	for _, evt := range auctionEvents.NewBid {
 		bid := common.Bid{
 			SlotNum:     evt.Slot,
@@ -1213,6 +1213,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	}
 
 	// Get Coordinators
+	auctionData.Coordinators = make([]common.Coordinator, 0, len(auctionEvents.SetCoordinator))
 	for _, evt := range auctionEvents.SetCoordinator {
 		coordinator := common.Coordinator{
 			Bidder:      evt.BidderAddress,
@@ -1300,6 +1301,7 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 		return &wDelayerData, nil
 	}
 
+	wDelayerData.Deposits = make([]common.WDelayerTransfer, 0, len(wDelayerEvents.Deposit))
 	for _, evt := range wDelayerEvents.Deposit {
 		wDelayerData.Deposits = append(wDelayerData.Deposits, common.WDelayerTransfer{
 			Owner:  evt.Owner,
@@ -1310,6 +1312,7 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 			append(wDelayerData.DepositsByTxHash[evt.TxHash],
 				&wDelayerData.Deposits[len(wDelayerData.Deposits)-1])
 	}
+	wDelayerData.Withdrawals = make([]common.WDelayerTransfer, 0, len(wDelayerEvents.Withdraw))
 	for _, evt := range wDelayerEvents.Withdraw {
 		wDelayerData.Withdrawals = append(wDelayerData.Withdrawals, common.WDelayerTransfer{
 			Owner:  evt.Owner,
@@ -1317,6 +1320,8 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 			Amount: evt.Amount,
 		})
 	}
+	wDelayerData.EscapeHatchWithdrawals = make([]common.WDelayerEscapeHatchWithdrawal, 0,
+		len(wDelayerEvents.EscapeHatchWithdrawal))
 	for _, evt := range wDelayerEvents.EscapeHatchWithdrawal {
 		wDelayerData.EscapeHatchWithdrawals = append(wDelayerData.EscapeHatchWithdrawals,
 			common.WDelayerEscapeHatchWithdrawal{
