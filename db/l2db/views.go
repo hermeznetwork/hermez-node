@@ -87,7 +87,7 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 		"fromBJJ":                     tx.EffectiveFromBJJ,
 		"toAccountIndex":              tx.ToIdx,
 		"toHezEthereumAddress":        tx.EffectiveToEthAddr,
-		"toBjj":                       tx.EffectiveToBJJ,
+		"toBJJ":                       tx.EffectiveToBJJ,
 		"amount":                      tx.Amount,
 		"fee":                         tx.Fee,
 		"nonce":                       tx.Nonce,
