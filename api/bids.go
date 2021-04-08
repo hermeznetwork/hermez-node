@@ -25,9 +25,13 @@ func (a *API) getBids(c *gin.Context) {
 		return
 	}
 
-	bids, pendingItems, err := a.h.GetBidsAPI(
-		slotNum, bidderAddr, fromItem, limit, order,
-	)
+	bids, pendingItems, err := a.h.GetBidsAPI(historydb.GetBidsAPIRequest{
+		SlotNum:    slotNum,
+		BidderAddr: bidderAddr,
+		FromItem:   fromItem,
+		Limit:      limit,
+		Order:      order,
+	})
 
 	if err != nil {
 		retSQLErr(err, c)

@@ -44,9 +44,15 @@ func (a *API) getBatches(c *gin.Context) {
 		return
 	}
 	// Fetch batches from historyDB
-	batches, pendingItems, err := a.h.GetBatchesAPI(
-		minBatchNum, maxBatchNum, slotNum, forgerAddr, fromItem, limit, order,
-	)
+	batches, pendingItems, err := a.h.GetBatchesAPI(historydb.GetBatchesAPIRequest{
+		MinBatchNum: minBatchNum,
+		MaxBatchNum: maxBatchNum,
+		SlotNum:     slotNum,
+		ForgerAddr:  forgerAddr,
+		FromItem:    fromItem,
+		Limit:       limit,
+		Order:       order,
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -106,11 +112,14 @@ func (a *API) getFullBatch(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
+
 	// Fetch txs forged in the batch from historyDB
 	maxTxsPerBatch := uint(2048) //nolint:gomnd
-	txs, _, err := a.h.GetTxsAPI(
-		nil, nil, nil, nil, batchNum, nil, nil, nil, &maxTxsPerBatch, historydb.OrderAsc,
-	)
+	txs, _, err := a.h.GetTxsAPI(historydb.GetTxsAPIRequest{
+		BatchNum: batchNum,
+		Limit:    &maxTxsPerBatch,
+		Order:    historydb.OrderAsc,
+	})
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		retSQLErr(err, c)
 		return

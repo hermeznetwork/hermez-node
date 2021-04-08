@@ -40,11 +40,19 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-
 	// Fetch txs from historyDB
-	txs, pendingItems, err := a.h.GetTxsAPI(
-		addr, bjj, tokenID, idx, batchNum, txType, includePendingL1s, fromItem, limit, order,
-	)
+	txs, pendingItems, err := a.h.GetTxsAPI(historydb.GetTxsAPIRequest{
+		EthAddr:           addr,
+		Bjj:               bjj,
+		TokenID:           tokenID,
+		Idx:               idx,
+		BatchNum:          batchNum,
+		TxType:            txType,
+		IncludePendingL1s: includePendingL1s,
+		FromItem:          fromItem,
+		Limit:             limit,
+		Order:             order,
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return
