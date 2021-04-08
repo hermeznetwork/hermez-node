@@ -319,9 +319,12 @@ func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
 	return idxs, nil
 }
 
+const invalidateOldNoncesInfo = `Nonce is smaller than account nonce`
+
 var invalidateOldNoncesQuery = fmt.Sprintf(`
 		UPDATE tx_pool SET
 			state = '%s',
+			info = '%s',
 			batch_num = %%d
 		FROM (VALUES
 			(NULL::::BIGINT, NULL::::BIGINT),
@@ -330,7 +333,7 @@ var invalidateOldNoncesQuery = fmt.Sprintf(`
 		WHERE tx_pool.state = '%s' AND
 			tx_pool.from_idx = updated_acc.idx AND
 			tx_pool.nonce < updated_acc.nonce;
-	`, common.PoolL2TxStateInvalid, common.PoolL2TxStatePending)
+	`, common.PoolL2TxStateInvalid, invalidateOldNoncesInfo, common.PoolL2TxStatePending)
 
 // InvalidateOldNonces invalidate txs with nonces that are smaller or equal than their
 // respective accounts nonces.  The state of the affected txs will be changed
