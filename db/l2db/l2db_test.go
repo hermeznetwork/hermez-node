@@ -330,8 +330,22 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 			pendingTxs = append(pendingTxs, &poolL2Txs[i])
 		}
 	}
-	fetchedTxs, _, err := l2DBWithACC.GetPoolTxs(nil, nil, nil, nil, nil, nil,
-		nil, &idx, nil, nil, &state, &fromItem, &limit, OrderAsc)
+	fetchedTxs, _, err := l2DBWithACC.GetPoolTxs(GetPoolTxsAPIRequest{
+		EthAddr:     nil,
+		FromEthAddr: nil,
+		ToEthAddr:   nil,
+		Bjj:         nil,
+		FromBjj:     nil,
+		ToBjj:       nil,
+		TxType:      nil,
+		Idx:         &idx,
+		FromIdx:     nil,
+		ToIdx:       nil,
+		State:       &state,
+		FromItem:    &fromItem,
+		Limit:       &limit,
+		Order:       OrderAsc,
+	})
 	require.NoError(t, err)
 	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
 }
