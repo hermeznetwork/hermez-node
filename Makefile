@@ -50,7 +50,7 @@ test-unit:
 ## test-api-server: Run the API server using the Go tests.
 test-api-server:
 	@echo "  >  Running unit tests"
-	$(GOENVVARS) FAKE_SERVER=yes go test -timeout 0 ./api -p 1 -count 1 -v
+	$(GOENVVARS) FAKE_SERVER=yes go test -race -timeout 0 ./api -p 1 -count 1 -v
 
 ## gofmt: Run `go fmt` for all go files.
 gofmt:

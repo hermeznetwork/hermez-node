@@ -3,7 +3,7 @@ name: Integration testing
 on:
   push:
     branches:
-      - master
+      - develop
 
 jobs:
   trigger-integration:

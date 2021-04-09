@@ -45,9 +45,14 @@ func (a *API) getTokens(c *gin.Context) {
 		return
 	}
 	// Fetch exits from historyDB
-	tokens, pendingItems, err := a.h.GetTokensAPI(
-		tokenIDs, symbols, name, fromItem, limit, order,
-	)
+	tokens, pendingItems, err := a.h.GetTokensAPI(historydb.GetTokensAPIRequest{
+		Ids:      tokenIDs,
+		Symbols:  symbols,
+		Name:     name,
+		FromItem: fromItem,
+		Limit:    limit,
+		Order:    order,
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return

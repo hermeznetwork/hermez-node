@@ -255,14 +255,26 @@ func (a *API) getSlots(c *gin.Context) {
 	if wonByEthereumAddress == nil {
 		slotMinLim, slotMaxLim, pendingItems = getLimits(*minSlotNum, *maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
-		bids, _, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, nil, order)
+		bids, _, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
+			MinSlotNum: &slotMinLim,
+			MaxSlotNum: &slotMaxLim,
+			BidderAddr: wonByEthereumAddress,
+			Limit:      nil,
+			Order:      order,
+		})
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
 		}
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
-		bids, pendingItems, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
+		bids, pendingItems, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
+			MinSlotNum: &slotMinLim,
+			MaxSlotNum: &slotMaxLim,
+			BidderAddr: wonByEthereumAddress,
+			Limit:      limit,
+			Order:      order,
+		})
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return

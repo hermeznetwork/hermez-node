@@ -220,8 +220,8 @@ func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 		err = db.MakeCheckpoint()
 		require.NoError(t, err)
 		go func() {
-			err = db.DeleteOldCheckpoints()
-			require.NoError(t, err)
+			errDelete := db.DeleteOldCheckpoints()
+			require.NoError(t, errDelete)
 			wg.Done()
 		}()
 	}
@@ -241,8 +241,8 @@ func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 	}
 	for i := 0; i < numCheckpoints; i++ {
 		go func() {
-			err = db.DeleteOldCheckpoints()
-			require.NoError(t, err)
+			errDelete := db.DeleteOldCheckpoints()
+			require.NoError(t, errDelete)
 			wg.Done()
 		}()
 	}
