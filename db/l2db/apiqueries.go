@@ -130,11 +130,26 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 	))
 }
 
+type GetPoolTxsAPIRequest struct {
+	EthAddr     *ethCommon.Address
+	FromEthAddr *ethCommon.Address
+	ToEthAddr   *ethCommon.Address
+	Bjj         *babyjub.PublicKeyComp
+	FromBjj     *babyjub.PublicKeyComp
+	ToBjj       *babyjub.PublicKeyComp
+	TxType      *common.TxType
+	Idx         *common.Idx
+	FromIdx     *common.Idx
+	ToIdx       *common.Idx
+	State       *common.PoolL2TxState
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
 // GetPoolTxs return Txs from the pool
-func (l2db *L2DB) GetPoolTxs(ethAddr, fromEthAddr, toEthAddr *ethCommon.Address,
-	bjj, fromBjj, toBjj *babyjub.PublicKeyComp,
-	txType *common.TxType, idx, fromIdx, toIdx *common.Idx, state *common.PoolL2TxState,
-	fromItem, limit *uint, order string) ([]PoolTxAPI, uint64, error) {
+func (l2db *L2DB) GetPoolTxs(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint64, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -145,52 +160,52 @@ func (l2db *L2DB) GetPoolTxs(ethAddr, fromEthAddr, toEthAddr *ethCommon.Address,
 	nextIsAnd := false
 	queryStr := selectPoolTxAPI
 	var args []interface{}
-	if state != nil {
+	if request.State != nil {
 		queryStr += "WHERE state = ? "
-		args = append(args, state)
+		args = append(args, request.State)
 		nextIsAnd = true
 	}
 	// ethAddr filter
-	if ethAddr != nil {
+	if request.EthAddr != nil {
 		queryStr += "WHERE (tx_pool.effective_from_eth_addr = ? OR tx_pool.effective_to_eth_addr = ?) "
 		nextIsAnd = true
-		args = append(args, ethAddr, ethAddr)
-	} else if fromEthAddr != nil {
+		args = append(args, request.EthAddr, request.EthAddr)
+	} else if request.FromEthAddr != nil {
 		queryStr += "WHERE tx_pool.effective_from_eth_addr = ? "
 		nextIsAnd = true
-		args = append(args, fromEthAddr)
-	} else if toEthAddr != nil {
+		args = append(args, request.FromEthAddr)
+	} else if request.ToEthAddr != nil {
 		queryStr += "WHERE tx_pool.effective_to_eth_addr = ? "
 		nextIsAnd = true
-		args = append(args, toEthAddr)
-	} else if bjj != nil {
+		args = append(args, request.ToEthAddr)
+	} else if request.Bjj != nil {
 		queryStr += "WHERE (tx_pool.effective_from_bjj = ? OR tx_pool.effective_to_bjj = ?) "
 		nextIsAnd = true
-		args = append(args, bjj, bjj)
-	} else if fromBjj != nil {
+		args = append(args, request.Bjj, request.Bjj)
+	} else if request.FromBjj != nil {
 		queryStr += "WHERE tx_pool.effective_from_bjj = ? "
 		nextIsAnd = true
-		args = append(args, fromBjj)
-	} else if toBjj != nil {
+		args = append(args, request.FromBjj)
+	} else if request.ToBjj != nil {
 		queryStr += "WHERE tx_pool.effective_to_bjj = ? "
 		nextIsAnd = true
-		args = append(args, toBjj)
+		args = append(args, request.ToBjj)
 	}
 
 	// txType filter
-	if txType != nil {
+	if request.TxType != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "tx_pool.tx_type = ? "
-		args = append(args, txType)
+		args = append(args, request.TxType)
 		nextIsAnd = true
 	}
 
 	// account index filter
-	if idx != nil {
+	if request.Idx != nil {
 		if nextIsAnd {
 			queryStr += "AND ("
 		} else {
@@ -198,39 +213,39 @@ func (l2db *L2DB) GetPoolTxs(ethAddr, fromEthAddr, toEthAddr *ethCommon.Address,
 		}
 		queryStr += "tx_pool.from_idx = ? "
 		queryStr += "OR tx_pool.to_idx = ?) "
-		args = append(args, idx, idx)
+		args = append(args, request.Idx, request.Idx)
 		nextIsAnd = true
-	} else if fromIdx != nil {
+	} else if request.FromIdx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "tx_pool.from_idx = ? "
-		args = append(args, fromIdx)
+		args = append(args, request.FromIdx)
 		nextIsAnd = true
-	} else if toIdx != nil {
+	} else if request.ToIdx != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
 		queryStr += "tx_pool.to_idx = ? "
-		args = append(args, toIdx)
+		args = append(args, request.ToIdx)
 		nextIsAnd = true
 	}
-	if fromItem != nil {
+	if request.FromItem != nil {
 		if nextIsAnd {
 			queryStr += "AND "
 		} else {
 			queryStr += "WHERE "
 		}
-		if order == OrderAsc {
+		if request.Order == OrderAsc {
 			queryStr += "tx_pool.item_id >= ? "
 		} else {
 			queryStr += "tx_pool.item_id <= ? "
 		}
-		args = append(args, fromItem)
+		args = append(args, request.FromItem)
 		nextIsAnd = true
 	}
 	if nextIsAnd {
@@ -242,12 +257,12 @@ func (l2db *L2DB) GetPoolTxs(ethAddr, fromEthAddr, toEthAddr *ethCommon.Address,
 
 	// pagination
 	queryStr += "ORDER BY tx_pool.item_id "
-	if order == OrderAsc {
+	if request.Order == OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *limit)
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 
 	query := l2db.dbRead.Rebind(queryStr)
 	txsPtrs := []*PoolTxAPI{}

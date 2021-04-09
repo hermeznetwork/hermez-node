@@ -486,15 +486,15 @@ func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 // GetTxsAPIRequest is an API request struct for getting txs
 type GetTxsAPIRequest struct {
 	EthAddr           *ethCommon.Address
-	FromEthAddr *ethCommon.Address
-	ToEthAddr *ethCommon.Address
+	FromEthAddr       *ethCommon.Address
+	ToEthAddr         *ethCommon.Address
 	Bjj               *babyjub.PublicKeyComp
-	FromBjj *babyjub.PublicKeyComp
-	ToBjj *babyjub.PublicKeyComp
+	FromBjj           *babyjub.PublicKeyComp
+	ToBjj             *babyjub.PublicKeyComp
 	TokenID           *common.TokenID
 	Idx               *common.Idx
-	FromIdx *common.Idx
-	ToIdx *common.Idx
+	FromIdx           *common.Idx
+	ToIdx             *common.Idx
 	BatchNum          *uint
 	TxType            *common.TxType
 	IncludePendingL1s *bool

@@ -56,7 +56,7 @@ func (a *API) getPoolTx(c *gin.Context) {
 }
 
 func (a *API) getPoolTxs(c *gin.Context) {
-	_, addr, fromAddr, toAddr, bjj, fromBjj, toBjj, idx, fromIdx, toIdx, err := parseTxsFilters(c)
+	txFilters, err := parseTxsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -80,8 +80,22 @@ func (a *API) getPoolTxs(c *gin.Context) {
 		return
 	}
 	// Fetch txs from l2DB
-	txs, pendingItems, err := a.l2.GetPoolTxs(addr, fromAddr, toAddr, bjj, fromBjj, toBjj, txType,
-		idx, fromIdx, toIdx, state, fromItem, limit, order)
+	txs, pendingItems, err := a.l2.GetPoolTxs(l2db.GetPoolTxsAPIRequest{
+		EthAddr:     txFilters.addr,
+		FromEthAddr: txFilters.fromAddr,
+		ToEthAddr:   txFilters.toAddr,
+		Bjj:         txFilters.bjj,
+		FromBjj:     txFilters.fromBjj,
+		ToBjj:       txFilters.toBjj,
+		TxType:      txType,
+		Idx:         txFilters.idx,
+		FromIdx:     txFilters.fromIdx,
+		ToIdx:       txFilters.toIdx,
+		State:       state,
+		FromItem:    fromItem,
+		Limit:       limit,
+		Order:       order,
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return
