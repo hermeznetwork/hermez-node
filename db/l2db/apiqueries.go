@@ -130,6 +130,7 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 	))
 }
 
+// GetPoolTxsAPIRequest is an API request struct for getting txs from the pool
 type GetPoolTxsAPIRequest struct {
 	EthAddr     *ethCommon.Address
 	FromEthAddr *ethCommon.Address
