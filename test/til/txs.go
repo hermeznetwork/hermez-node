@@ -641,11 +641,12 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 			tc.Users[inst.From].Accounts[inst.TokenID].Nonce++
 			if tx.Type == common.TxTypeTransfer {
 				tx.ToIdx = tc.Users[inst.To].Accounts[inst.TokenID].Idx
-				tx.ToEthAddr = tc.Users[inst.To].Addr
-				tx.ToBJJ = tc.Users[inst.To].BJJ.Public().Compress()
+				tx.ToEthAddr = common.EmptyAddr
+				tx.ToBJJ = common.EmptyBJJComp
 			} else if tx.Type == common.TxTypeTransferToEthAddr {
 				tx.ToIdx = common.Idx(0)
 				tx.ToEthAddr = tc.Users[inst.To].Addr
+				tx.ToBJJ = common.EmptyBJJComp
 			} else if tx.Type == common.TxTypeTransferToBJJ {
 				tx.ToIdx = common.Idx(0)
 				tx.ToEthAddr = common.FFAddr
@@ -667,14 +668,16 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 			txs = append(txs, tx)
 		case common.TxTypeExit:
 			tx := common.PoolL2Tx{
-				FromIdx: tc.Users[inst.From].Accounts[inst.TokenID].Idx,
-				ToIdx:   common.Idx(1), // as is an Exit
-				Fee:     common.FeeSelector(inst.Fee),
-				TokenID: inst.TokenID,
-				Amount:  inst.Amount,
-				Nonce:   tc.Users[inst.From].Accounts[inst.TokenID].Nonce,
-				State:   common.PoolL2TxStatePending,
-				Type:    common.TxTypeExit,
+				FromIdx:   tc.Users[inst.From].Accounts[inst.TokenID].Idx,
+				ToIdx:     common.Idx(1), // as is an Exit
+				Fee:       common.FeeSelector(inst.Fee),
+				TokenID:   inst.TokenID,
+				Amount:    inst.Amount,
+				ToEthAddr: common.EmptyAddr,
+				ToBJJ:     common.EmptyBJJComp,
+				Nonce:     tc.Users[inst.From].Accounts[inst.TokenID].Nonce,
+				State:     common.PoolL2TxStatePending,
+				Type:      common.TxTypeExit,
 			}
 			tc.Users[inst.From].Accounts[inst.TokenID].Nonce++
 			nTx, err := common.NewPoolL2Tx(&tx)
