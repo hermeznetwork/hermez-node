@@ -493,8 +493,8 @@ func TestGetHistoryTxs(t *testing.T) {
 	assertTxs(t, []testTx{}, fetchedTxs)
 	// 400
 	path = fmt.Sprintf(
-		"%s?fromAccountIndex=%s&toAccountIndex=%s&hezEthereumAddress=%s",
-		endpoint, idx, idx, account.EthAddr,
+		"%s?accountIndex=%s&hezEthereumAddress=%s",
+		endpoint, idx, account.EthAddr,
 	)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)
