@@ -858,3 +858,54 @@ func TestPurgeByExternalDelete(t *testing.T) {
 		require.Equal(t, sql.ErrNoRows, tracerr.Unwrap(err))
 	}
 }
+
+func TestResetForged(t *testing.T) {
+	// Generate txs
+	err := prepareHistoryDB(historyDB)
+	if err != nil {
+		log.Error("Error prepare historyDB", err)
+	}
+	txs, err := generatePoolL2Txs()
+	require.NoError(t, err)
+
+	// We will work with 8 txs
+	require.GreaterOrEqual(t, len(txs), 8)
+	txs = txs[:8]
+	for i := range txs {
+		require.NoError(t, l2DB.AddTxTest(&txs[i]))
+	}
+
+	// Mark txs[0:4] as non-pending in batchNum=1
+	err = l2DB.StartForging([]common.TxID{txs[0].TxID, txs[1].TxID, txs[2].TxID}, 1)
+	require.NoError(t, err)
+	err = l2DB.DoneForging([]common.TxID{txs[2].TxID}, 1)
+	require.NoError(t, err)
+	err = l2DB.InvalidateTxs([]common.TxID{txs[3].TxID}, 1)
+	require.NoError(t, err)
+
+	// Mark txs[4:8] as non-pending in batchNum=2
+	err = l2DB.StartForging([]common.TxID{txs[4].TxID, txs[5].TxID, txs[6].TxID}, 2)
+	require.NoError(t, err)
+	err = l2DB.DoneForging([]common.TxID{txs[6].TxID}, 2)
+	require.NoError(t, err)
+	err = l2DB.InvalidateTxs([]common.TxID{txs[7].TxID}, 2)
+	require.NoError(t, err)
+
+	// Reset only non-pending in batchNum=2
+	err = l2DB.ResetForged(2)
+	require.NoError(t, err)
+
+	// Fetch txs and check that only the ones in batchNum=2 have been reset
+	for _, tx := range txs[0:4] {
+		fetchedTx, err := l2DBWithACC.GetTxAPI(tx.TxID)
+		require.NoError(t, err)
+		assert.NotEqual(t, common.PoolL2TxStatePending, fetchedTx.State)
+		assert.Equal(t, common.BatchNum(1), *fetchedTx.BatchNum)
+	}
+	for _, tx := range txs[4:8] {
+		fetchedTx, err := l2DBWithACC.GetTxAPI(tx.TxID)
+		require.NoError(t, err)
+		assert.Equal(t, common.PoolL2TxStatePending, fetchedTx.State)
+		assert.Equal(t, (*common.BatchNum)(nil), fetchedTx.BatchNum)
+	}
+}

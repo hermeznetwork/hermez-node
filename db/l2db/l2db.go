@@ -367,6 +367,21 @@ func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 	return tracerr.Wrap(err)
 }
 
+// ResetForged resets the state of txs that became in a non-pending state in
+// batchNum back to the pending state.
+func (l2db *L2DB) ResetForged(batchNum common.BatchNum) error {
+	_, err := l2db.dbWrite.Exec(
+		`UPDATE tx_pool SET batch_num = NULL, state = $1
+		WHERE (state = $2 OR state = $3 OR state = $4) AND batch_num = $5`,
+		common.PoolL2TxStatePending,
+		common.PoolL2TxStateForging,
+		common.PoolL2TxStateForged,
+		common.PoolL2TxStateInvalid,
+		batchNum,
+	)
+	return tracerr.Wrap(err)
+}
+
 // Purge deletes transactions that have been forged or marked as invalid for longer than the safety period
 // it also deletes pending txs that have been in the L2DB for longer than the ttl if maxTxs has been exceeded
 func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
