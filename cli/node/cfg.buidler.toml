@@ -65,8 +65,6 @@ StatsUpdateFrequencyDivider = 100
 
 [SmartContracts]
 Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
-Auction  = "0x317113D2593e3efF1FfAE0ba2fF7A61861Df7ae5"
-WDelayer = "0x5E0816F0f8bC560cB2B9e9C87187BeCac8c2021F"
 TokenHEZ = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
 TokenHEZName = "Hermez Network Token"
 

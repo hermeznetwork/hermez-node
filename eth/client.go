@@ -46,8 +46,8 @@ type Client struct {
 
 // TokenConfig is used to define the information about token
 type TokenConfig struct {
-	Address ethCommon.Address
 	Name    string
+	Address ethCommon.Address
 }
 
 // RollupConfig is the configuration for the Rollup smart contract interface
@@ -55,23 +55,11 @@ type RollupConfig struct {
 	Address ethCommon.Address
 }
 
-// AuctionConfig is the configuration for the Auction smart contract interface
-type AuctionConfig struct {
-	Address  ethCommon.Address
-	TokenHEZ TokenConfig
-}
-
-// WDelayerConfig is the configuration for the WDelayer smart contract interface
-type WDelayerConfig struct {
-	Address ethCommon.Address
-}
-
 // ClientConfig is the configuration of the Client
 type ClientConfig struct {
 	Ethereum EthereumConfig
 	Rollup   RollupConfig
-	Auction  AuctionConfig
-	WDelayer WDelayerConfig
+	TokenHEZ TokenConfig
 }
 
 // NewClient creates a new Client to interact with Ethereum and the Hermez smart contracts.
@@ -81,17 +69,19 @@ func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeyst
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	auctionClient, err := NewAuctionClient(ethereumClient, cfg.Auction.Address,
-		cfg.Auction.TokenHEZ)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
 	rollupClient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address,
-		cfg.Auction.TokenHEZ)
+		cfg.TokenHEZ)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	wDelayerClient, err := NewWDelayerClient(ethereumClient, cfg.WDelayer.Address)
+	auctionClient, err := NewAuctionClient(ethereumClient,
+		rollupClient.consts.HermezAuctionContract,
+		cfg.TokenHEZ)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	wDelayerClient, err := NewWDelayerClient(ethereumClient,
+		rollupClient.consts.WithdrawDelayerContract)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

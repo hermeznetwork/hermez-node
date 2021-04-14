@@ -325,12 +325,6 @@ type Node struct {
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
 		Rollup ethCommon.Address `validate:"required"`
-		// Rollup is the address of the HermezAuctionProtocol.sol smart
-		// contract
-		Auction ethCommon.Address `validate:"required"`
-		// WDelayer is the address of the WithdrawalDelayer.sol smart
-		// contract
-		WDelayer ethCommon.Address `validate:"required"`
 		// TokenHEZ is the address of the HEZTokenFull.sol smart
 		// contract
 		TokenHEZ ethCommon.Address `validate:"required"`
