@@ -149,8 +149,8 @@ type Coordinator struct {
 		// order to be accepted into the pool.  Txs with greater than
 		// maximum fee will be rejected at the API level.
 		MaxFeeUSD float64 `validate:"required"`
-		// TTL is the Time To Live for L2Txs in the pool.  Once MaxTxs
-		// L2Txs is reached, L2Txs older than TTL will be deleted.
+		// TTL is the Time To Live for L2Txs in the pool. L2Txs older
+		// than TTL will be deleted.
 		TTL Duration `validate:"required"`
 		// PurgeBatchDelay is the delay between batches to purge
 		// outdated transactions. Outdated L2Txs are those that have
