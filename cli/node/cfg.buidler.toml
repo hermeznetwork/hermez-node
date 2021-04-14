@@ -65,8 +65,6 @@ StatsUpdateFrequencyDivider = 100
 
 [SmartContracts]
 Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
-TokenHEZ = "0x5D94e3e7aeC542aB0F9129B9a7BAdeb5B3Ca0f77"
-TokenHEZName = "Hermez Network Token"
 
 [Coordinator]
 ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD" # Non-Boot Coordinator

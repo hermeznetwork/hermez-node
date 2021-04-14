@@ -194,9 +194,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		Rollup: eth.RollupConfig{
 			Address: cfg.SmartContracts.Rollup,
 		},
-		TokenHEZ: eth.TokenConfig{
-			Name: cfg.SmartContracts.TokenHEZName,
-		},
 	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)

@@ -325,12 +325,6 @@ type Node struct {
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
 		Rollup ethCommon.Address `validate:"required"`
-		// TokenHEZ is the address of the HEZTokenFull.sol smart
-		// contract
-		TokenHEZ ethCommon.Address `validate:"required"`
-		// TokenHEZName is the name of the HEZ token deployed at
-		// TokenHEZ address
-		TokenHEZName string `validate:"required"`
 	} `validate:"required"`
 	// API specifies the configuration parameters of the API
 	API struct {

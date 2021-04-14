@@ -274,10 +274,6 @@ func TestEthRollupForgeBatch(t *testing.T) {
 		Rollup: eth.RollupConfig{
 			Address: rollupAddr,
 		},
-		TokenHEZ: eth.TokenConfig{
-			Address: ethCommon.Address{},
-			Name:    "HEZ",
-		},
 	})
 	require.NoError(t, err)
 

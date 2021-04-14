@@ -58,7 +58,7 @@ var (
 	hermezRollupAddressConst ethCommon.Address
 	wdelayerAddressConst     ethCommon.Address
 	wdelayerTestAddressConst ethCommon.Address
-	tokenHEZ                 TokenConfig
+	tokenHEZ                 ethCommon.Address
 
 	donationAccount      *accounts.Account
 	donationAddressConst ethCommon.Address
@@ -124,10 +124,7 @@ func getEnvVariables() {
 	hermezRollupAddressConst = ethCommon.HexToAddress(hermezRollupAddressStr)
 	wdelayerAddressConst = ethCommon.HexToAddress(wdelayerAddressStr)
 	wdelayerTestAddressConst = ethCommon.HexToAddress(wdelayerTestAddressStr)
-	tokenHEZ = TokenConfig{
-		Address: tokenHEZAddressConst,
-		Name:    "Hermez Network Token",
-	}
+	tokenHEZ = tokenHEZAddressConst
 }
 
 func TestMain(m *testing.M) {
@@ -179,7 +176,7 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		rollupClient, err = NewRollupClient(ethereumClientGov, hermezRollupAddressConst, tokenHEZ)
+		rollupClient, err = NewRollupClient(ethereumClientGov, hermezRollupAddressConst)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -44,12 +44,6 @@ type Client struct {
 	WDelayerClient
 }
 
-// TokenConfig is used to define the information about token
-type TokenConfig struct {
-	Name    string
-	Address ethCommon.Address
-}
-
 // RollupConfig is the configuration for the Rollup smart contract interface
 type RollupConfig struct {
 	Address ethCommon.Address
@@ -59,7 +53,6 @@ type RollupConfig struct {
 type ClientConfig struct {
 	Ethereum EthereumConfig
 	Rollup   RollupConfig
-	TokenHEZ TokenConfig
 }
 
 // NewClient creates a new Client to interact with Ethereum and the Hermez smart contracts.
@@ -69,14 +62,13 @@ func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeyst
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	rollupClient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address,
-		cfg.TokenHEZ)
+	rollupClient, err := NewRollupClient(ethereumClient, cfg.Rollup.Address)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	auctionClient, err := NewAuctionClient(ethereumClient,
 		rollupClient.consts.HermezAuctionContract,
-		cfg.TokenHEZ)
+		rollupClient.consts.TokenHEZ)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
