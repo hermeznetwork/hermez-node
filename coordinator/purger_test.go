@@ -142,7 +142,7 @@ func TestPurgeMaybeInvalidateMaybe(t *testing.T) {
 
 	syncStateDB.Close()
 	stateDB.StateDB.Close()
-	l2DB.DB().Close()
+	_ = l2DB.DB().Close()
 }
 
 func TestIdxsNonce(t *testing.T) {
@@ -293,5 +293,5 @@ func TestPoolMarkInvalidOldNonces(t *testing.T) {
 
 	syncStateDB.Close()
 	stateDB.StateDB.Close()
-	l2DB.DB().Close()
+	_ = l2DB.DB().Close()
 }

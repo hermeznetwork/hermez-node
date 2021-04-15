@@ -140,7 +140,7 @@ func newTestModules(t *testing.T) modules {
 }
 
 func closeTestModules(t *testing.T, modules modules) {
-	modules.l2DB.DB().Close()
+	_ = modules.l2DB.DB().Close()
 	modules.txSelector.LocalAccountsDB().Close()
 	modules.batchBuilder.LocalStateDB().Close()
 	modules.stateDB.Close()

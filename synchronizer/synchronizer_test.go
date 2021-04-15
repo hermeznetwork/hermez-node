@@ -330,7 +330,7 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB, *l2db
 
 func closeTestModules(_ *testing.T, statedb *statedb.StateDB, historydb *historydb.HistoryDB, l2db *l2db.L2DB) {
 	statedb.Close()
-	l2db.DB().Close()
+	_ = l2db.DB().Close()
 }
 
 func newBigInt(s string) *big.Int {
