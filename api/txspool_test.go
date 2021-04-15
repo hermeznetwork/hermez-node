@@ -248,7 +248,7 @@ func TestPoolTxs(t *testing.T) {
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
 	require.NoError(t, err)
 	// GET
-	// get by idx
+	// init structures
 	fetchedTxs := []testPoolTxReceive{}
 	appendIter := func(intr interface{}) {
 		for i := 0; i < len(intr.(*testPoolTxsResponse).Txs); i++ {
@@ -284,7 +284,7 @@ func TestPoolTxs(t *testing.T) {
 	for _, v := range fetchedTxs {
 		assert.Equal(t, string(account.EthAddr), *v.FromEthAddr)
 	}
-	// get by fromEthAddr
+	// get by toEthAddr
 	fetchedTxs = []testPoolTxReceive{}
 	path = fmt.Sprintf("%s?toHezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
 	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
@@ -302,16 +302,16 @@ func TestPoolTxs(t *testing.T) {
 		}
 		assert.True(t, isPresent)
 	}
-	// get from bjj
+	// get by fromBjj
 	fetchedTxs = []testPoolTxReceive{}
 	path = fmt.Sprintf("%s?fromBJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
 	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		assert.Equal(t, string(account.PublicKey), *v.FromBJJ)
 	}
-	// get from bjj
+	// get by toBjj
 	fetchedTxs = []testPoolTxReceive{}
-	path = fmt.Sprintf("%s?fromBJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
+	path = fmt.Sprintf("%s?toBJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
 	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		assert.Equal(t, string(account.PublicKey), *v.ToBJJ)

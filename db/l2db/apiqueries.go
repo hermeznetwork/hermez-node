@@ -149,8 +149,8 @@ type GetPoolTxsAPIRequest struct {
 	Order    string
 }
 
-// GetPoolTxs return Txs from the pool
-func (l2db *L2DB) GetPoolTxs(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint64, error) {
+// GetPoolTxsAPI return Txs from the pool
+func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint64, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
