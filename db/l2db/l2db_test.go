@@ -334,7 +334,7 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 			pendingTxs = append(pendingTxs, &poolL2Txs[i])
 		}
 	}
-	fetchedTxs, _, err := l2DBWithACC.GetPoolTxs(GetPoolTxsAPIRequest{
+	fetchedTxs, _, err := l2DBWithACC.GetPoolTxsAPI(GetPoolTxsAPIRequest{
 		Idx:      &idx,
 		State:    &state,
 		FromItem: &fromItem,

@@ -80,7 +80,7 @@ func (a *API) getPoolTxs(c *gin.Context) {
 		return
 	}
 	// Fetch txs from l2DB
-	txs, pendingItems, err := a.l2.GetPoolTxs(l2db.GetPoolTxsAPIRequest{
+	txs, pendingItems, err := a.l2.GetPoolTxsAPI(l2db.GetPoolTxsAPIRequest{
 		EthAddr:     txFilters.addr,
 		FromEthAddr: txFilters.fromAddr,
 		ToEthAddr:   txFilters.toAddr,
