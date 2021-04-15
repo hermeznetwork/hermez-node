@@ -194,16 +194,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		Rollup: eth.RollupConfig{
 			Address: cfg.SmartContracts.Rollup,
 		},
-		Auction: eth.AuctionConfig{
-			Address: cfg.SmartContracts.Auction,
-			TokenHEZ: eth.TokenConfig{
-				Address: cfg.SmartContracts.TokenHEZ,
-				Name:    cfg.SmartContracts.TokenHEZName,
-			},
-		},
-		WDelayer: eth.WDelayerConfig{
-			Address: cfg.SmartContracts.WDelayer,
-		},
 	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
