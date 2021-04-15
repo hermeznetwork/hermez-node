@@ -34,7 +34,7 @@ func (d *Duration) UnmarshalText(data []byte) error {
 // ServerProof is the server proof configuration data.
 type ServerProof struct {
 	// URL is the server proof API URL
-	URL string `validate:"required"`
+	URL string `validate:"required,url"`
 }
 
 // ForgeBatchGasCost is the costs associated to a ForgeBatch transaction, split
@@ -70,13 +70,13 @@ type Coordinator struct {
 	} `validate:"required"`
 	// ConfirmBlocks is the number of confirmation blocks to wait for sent
 	// ethereum transactions before forgetting about them
-	ConfirmBlocks int64 `validate:"required"`
+	ConfirmBlocks int64 `validate:"required,gte=0"`
 	// L1BatchTimeoutPerc is the portion of the range before the L1Batch
 	// timeout that will trigger a schedule to forge an L1Batch
-	L1BatchTimeoutPerc float64 `validate:"required"`
+	L1BatchTimeoutPerc float64 `validate:"required,lte=1.0"`
 	// StartSlotBlocksDelay is the number of blocks of delay to wait before
 	// starting the pipeline when we reach a slot in which we can forge.
-	StartSlotBlocksDelay int64
+	StartSlotBlocksDelay int64 `validate:"gte=0"`
 	// ScheduleBatchBlocksAheadCheck is the number of blocks ahead in which
 	// the forger address is checked to be allowed to forge (apart from
 	// checking the next block), used to decide when to stop scheduling new
@@ -86,7 +86,7 @@ type Coordinator struct {
 	// stopped if we can't forge at block 15.
 	// This value should be the expected number of blocks it takes between
 	// scheduling a batch and having it mined.
-	ScheduleBatchBlocksAheadCheck int64
+	ScheduleBatchBlocksAheadCheck int64 `validate:"gte=0"`
 	// SendBatchBlocksMarginCheck is the number of margin blocks ahead in
 	// which the coordinator is also checked to be allowed to forge, apart
 	// from the next block; used to decide when to stop sending batches to
@@ -94,7 +94,7 @@ type Coordinator struct {
 	// For example, if we are at block 10 and SendBatchBlocksMarginCheck is
 	// 5, even though at block 11 we canForge, the batch will be discarded
 	// if we can't forge at block 15.
-	SendBatchBlocksMarginCheck int64
+	SendBatchBlocksMarginCheck int64 `validate:"gte=0"`
 	// ProofServerPollInterval is the waiting interval between polling the
 	// ProofServer while waiting for a particular status
 	ProofServerPollInterval Duration `validate:"required"`
@@ -144,11 +144,11 @@ type Coordinator struct {
 		// MinFeeUSD is the minimum fee in USD that a tx must pay in
 		// order to be accepted into the pool.  Txs with lower than
 		// minimum fee will be rejected at the API level.
-		MinFeeUSD float64
+		MinFeeUSD float64 `validate:"gte=0"`
 		// MaxFeeUSD is the maximum fee in USD that a tx must pay in
 		// order to be accepted into the pool.  Txs with greater than
 		// maximum fee will be rejected at the API level.
-		MaxFeeUSD float64 `validate:"required"`
+		MaxFeeUSD float64 `validate:"required,gte=0"`
 		// TTL is the Time To Live for L2Txs in the pool.  Once MaxTxs
 		// L2Txs is reached, L2Txs older than TTL will be deleted.
 		TTL Duration `validate:"required"`
@@ -157,7 +157,7 @@ type Coordinator struct {
 		// been forged or marked as invalid for longer than the
 		// SafetyPeriod and pending L2Txs that have been in the pool
 		// for longer than TTL once there are MaxTxs.
-		PurgeBatchDelay int64 `validate:"required"`
+		PurgeBatchDelay int64 `validate:"required,gte=0"`
 		// InvalidateBatchDelay is the delay between batches to mark
 		// invalid transactions due to nonce lower than the account
 		// nonce.
@@ -167,27 +167,27 @@ type Coordinator struct {
 		// been forged or marked as invalid for longer than the
 		// SafetyPeriod and pending L2Txs that have been in the pool
 		// for longer than TTL once there are MaxTxs.
-		PurgeBlockDelay int64 `validate:"required"`
+		PurgeBlockDelay int64 `validate:"required,gte=0"`
 		// InvalidateBlockDelay is the delay between blocks to mark
 		// invalid transactions due to nonce lower than the account
 		// nonce.
-		InvalidateBlockDelay int64 `validate:"required"`
+		InvalidateBlockDelay int64 `validate:"required,gte=0"`
 	} `validate:"required"`
 	TxSelector struct {
 		// Path where the TxSelector StateDB is stored
-		Path string `validate:"required"`
+		Path string `validate:"required,file"`
 	} `validate:"required"`
 	BatchBuilder struct {
 		// Path where the BatchBuilder StateDB is stored
-		Path string `validate:"required"`
+		Path string `validate:"required,file"`
 	} `validate:"required"`
 	ServerProofs []ServerProof `validate:"required"`
 	Circuit      struct {
 		// MaxTx is the maximum number of txs supported by the circuit
-		MaxTx int64 `validate:"required"`
+		MaxTx int64 `validate:"required,gte=0"`
 		// NLevels is the maximum number of merkle tree levels
 		// supported by the circuit
-		NLevels int64 `validate:"required"`
+		NLevels int64 `validate:"required,gte=0"`
 	} `validate:"required"`
 	EthClient struct {
 		// MaxGasPrice is the maximum gas price allowed for ethereum
@@ -196,13 +196,13 @@ type Coordinator struct {
 		// GasPriceIncPerc is the percentage increase of gas price set
 		// in an ethereum transaction from the suggested gas price by
 		// the ethereum node
-		GasPriceIncPerc int64
+		GasPriceIncPerc int64 `validate:"gte=0"`
 		// CheckLoopInterval is the waiting interval between receipt
 		// checks of ethereum transactions in the TxManager
 		CheckLoopInterval Duration `validate:"required"`
 		// Attempts is the number of attempts to do an eth client RPC
 		// call before giving up
-		Attempts int `validate:"required"`
+		Attempts int `validate:"required,gt=1"`
 		// AttemptsDelay is delay between attempts do do an eth client
 		// RPC call
 		AttemptsDelay Duration `validate:"required"`
@@ -216,7 +216,7 @@ type Coordinator struct {
 		// Keystore is the ethereum keystore where private keys are kept
 		Keystore struct {
 			// Path to the keystore
-			Path string `validate:"required"`
+			Path string `validate:"required,file"`
 			// Password used to decrypt the keys in the keystore
 			Password string `validate:"required"`
 		} `validate:"required"`
@@ -228,7 +228,7 @@ type Coordinator struct {
 	Debug struct {
 		// BatchPath if set, specifies the path where batchInfo is stored
 		// in JSON in every step/update of the pipeline
-		BatchPath string
+		BatchPath string `validate:"file"`
 		// LightScrypt if set, uses light parameters for the ethereum
 		// keystore encryption algorithm.
 		LightScrypt bool
@@ -240,7 +240,7 @@ type Coordinator struct {
 }
 
 // PostgreSQL is the postgreSQL configuration parameters.  It's possible to use
-// diferentiated SQL connections for read/write.  If the read configuration is
+// differentiated SQL connections for read/write.  If the read configuration is
 // not provided, the write one it's going to be used for both reads and writes
 type PostgreSQL struct {
 	// Port of the PostgreSQL write server
@@ -256,7 +256,7 @@ type PostgreSQL struct {
 	// Port of the PostgreSQL read server
 	PortRead int
 	// Host of the PostgreSQL read server
-	HostRead string
+	HostRead string `validate:"nefield=HostWrite"`
 	// User of the PostgreSQL read server
 	UserRead string
 	// Password of the PostgreSQL read server
@@ -284,25 +284,25 @@ type Node struct {
 		// Interval between price updater calls
 		Interval Duration `validate:"required"`
 		// URLBitfinexV2 is the URL of bitfinex V2 API
-		URLBitfinexV2 string `validate:"required"`
+		URLBitfinexV2 string `validate:"required,url"`
 		// URLCoinGeckoV3 is the URL of coingecko V3 API
-		URLCoinGeckoV3 string `validate:"required"`
+		URLCoinGeckoV3 string `validate:"required,url"`
 		// DefaultUpdateMethod to get token prices
-		DefaultUpdateMethod priceupdater.UpdateMethodType `validate:"required"`
+		DefaultUpdateMethod priceupdater.UpdateMethodType `validate:"required,is-valid-updatemethodtype,is-updatemethodtype-not-static"`
 		// TokensConfig to specify how each token get it's price updated
 		TokensConfig []priceupdater.TokenConfig
 	} `validate:"required"`
 	StateDB struct {
 		// Path where the synchronizer StateDB is stored
-		Path string `validate:"required"`
+		Path string `validate:"required,file"`
 		// Keep is the number of checkpoints to keep
-		Keep int `validate:"required"`
+		Keep int `validate:"required,lt=128"`
 	} `validate:"required"`
 	PostgreSQL PostgreSQL `validate:"required"`
 	Web3       struct {
 		// URL is the URL of the web3 ethereum-node RPC server.  Only
 		// geth is officially supported.
-		URL string `validate:"required"`
+		URL string `validate:"required,url"`
 	} `validate:"required"`
 	Synchronizer struct {
 		// SyncLoopInterval is the interval between attempts to
@@ -315,12 +315,12 @@ type Node struct {
 		// After reaching the threshold UpdateEth is called on each block.
 		// This value only affects the reported % of synchronization of
 		// blocks and batches, nothing else.
-		StatsUpdateBlockNumDiffThreshold uint16 `validate:"required"`
+		StatsUpdateBlockNumDiffThreshold uint16 `validate:"required,gt=32"`
 		// StatsUpdateFrequencyDivider - While having more blocks to sync than
 		// updateEthBlockNumThreshold, UpdateEth will be called once in a
 		// defined number of blocks. This value only affects the reported % of
 		// synchronization of blocks and batches, nothing else.
-		StatsUpdateFrequencyDivider uint16 `validate:"required"`
+		StatsUpdateFrequencyDivider uint16 `validate:"required,gt=1"`
 	} `validate:"required"`
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
@@ -346,12 +346,12 @@ type Node struct {
 		Explorer bool
 		// UpdateMetricsInterval is the interval between updates of the
 		// API metrics
-		UpdateMetricsInterval Duration
+		UpdateMetricsInterval Duration `validate:"required_with=Address"`
 		// UpdateRecommendedFeeInterval is the interval between updates of the
 		// recommended fees
-		UpdateRecommendedFeeInterval Duration
+		UpdateRecommendedFeeInterval Duration `validate:"required_with=Address"`
 		// Maximum concurrent connections allowed between API and SQL
-		MaxSQLConnections int `validate:"required"`
+		MaxSQLConnections int `validate:"required,gte=0"`
 		// SQLConnectionTimeout is the maximum amount of time that an API request
 		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
@@ -370,7 +370,7 @@ type APIServer struct {
 		// Explorer enables the Explorer API endpoints
 		Explorer bool
 		// Maximum concurrent connections allowed between API and SQL
-		MaxSQLConnections int `validate:"required"`
+		MaxSQLConnections int `validate:"required,gte=0"`
 		// SQLConnectionTimeout is the maximum amount of time that an API request
 		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
@@ -386,15 +386,15 @@ type APIServer struct {
 			// stored in the pool.  Once this number of pending L2Txs is
 			// reached, inserts to the pool will be denied until some of
 			// the pending txs are forged.
-			MaxTxs uint32 `validate:"required"`
+			MaxTxs uint32 `validate:"required,gte=0"`
 			// MinFeeUSD is the minimum fee in USD that a tx must pay in
 			// order to be accepted into the pool.  Txs with lower than
 			// minimum fee will be rejected at the API level.
-			MinFeeUSD float64
+			MinFeeUSD float64 `validate:"gte=0"`
 			// MaxFeeUSD is the maximum fee in USD that a tx must pay in
 			// order to be accepted into the pool.  Txs with greater than
 			// maximum fee will be rejected at the API level.
-			MaxFeeUSD float64 `validate:"required"`
+			MaxFeeUSD float64 `validate:"required,gte=0"`
 		} `validate:"required"`
 	}
 	Debug NodeDebug `validate:"required"`
@@ -420,6 +420,9 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 		return nil, tracerr.Wrap(fmt.Errorf("error loading node configuration file: %w", err))
 	}
 	validate := validator.New()
+	validate.RegisterStructValidation(priceupdater.TokenConfigValidation, priceupdater.TokenConfig{})
+	_ = validate.RegisterValidation("is-valid-updatemethodtype", priceupdater.ValidateUpdateMethodType)
+	_ = validate.RegisterValidation("is-updatemethodtype-not-static", priceupdater.ValidateIsUpdateMethodTypeIsNotStatic)
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
@@ -438,6 +441,9 @@ func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 		return nil, tracerr.Wrap(fmt.Errorf("error loading apiServer configuration file: %w", err))
 	}
 	validate := validator.New()
+	validate.RegisterStructValidation(priceupdater.TokenConfigValidation, priceupdater.TokenConfig{})
+	_ = validate.RegisterValidation("is-valid-updatemethodtype", priceupdater.ValidateUpdateMethodType)
+	_ = validate.RegisterValidation("is-updatemethodtype-not-static", priceupdater.ValidateIsUpdateMethodTypeIsNotStatic)
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}

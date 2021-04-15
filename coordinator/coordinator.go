@@ -241,16 +241,6 @@ func NewCoordinator(cfg Config,
 	scConsts *common.SCConsts,
 	initSCVars *common.SCVariables,
 ) (*Coordinator, error) {
-	// nolint reason: hardcoded `1.0`, by design the percentage can't be over 100%
-	if cfg.L1BatchTimeoutPerc >= 1.0 { //nolint:gomnd
-		return nil, tracerr.Wrap(fmt.Errorf("invalid value for Config.L1BatchTimeoutPerc (%v >= 1.0)",
-			cfg.L1BatchTimeoutPerc))
-	}
-	if cfg.EthClientAttempts < 1 {
-		return nil, tracerr.Wrap(fmt.Errorf("invalid value for Config.EthClientAttempts (%v < 1)",
-			cfg.EthClientAttempts))
-	}
-
 	if cfg.DebugBatchPath != "" {
 		if err := os.MkdirAll(cfg.DebugBatchPath, 0744); err != nil {
 			return nil, tracerr.Wrap(err)
