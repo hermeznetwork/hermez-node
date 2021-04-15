@@ -25,6 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var deleteme []string
+
 func addTokens(t *testing.T, tc *til.Context, db *sqlx.DB) {
 	var tokens []common.Token
 	for i := 0; i < int(tc.LastRegisteredTokenID); i++ {
@@ -81,14 +83,14 @@ func initTxSelector(t *testing.T, chainID uint16, hermezContractAddr ethCommon.A
 
 	dir, err := ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 	syncStateDB, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 0})
 	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, txselDir)
 
 	// use Til Coord keys for tests compatibility
 	coordAccount := &txselector.CoordAccount{
@@ -127,6 +129,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.NoError(t, err)
+	deleteme = append(deleteme, bbDir)
 	bb, err := batchbuilder.NewBatchBuilder(bbDir, syncStateDB, 0, NLevels)
 	require.NoError(t, err)
 
@@ -272,6 +275,10 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	require.NoError(t, err)
 	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
 	require.NoError(t, err)
+
+	bb.LocalStateDB().Close()
+	txsel.LocalAccountsDB().Close()
+	syncStateDB.Close()
 }
 
 // TestZKInputsExitWithFee0 checks the case where there is a PoolTxs of type
@@ -302,6 +309,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.NoError(t, err)
+	deleteme = append(deleteme, bbDir)
 	bb, err := batchbuilder.NewBatchBuilder(bbDir, syncStateDB, 0, NLevels)
 	require.NoError(t, err)
 
@@ -363,4 +371,8 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	assert.Equal(t, common.EthAddrToBigInt(tc.Users["Coord"].Addr), zki.EthAddr3[0])
 	assert.Equal(t, "0", zki.EthAddr3[1].String())
 	sendProofAndCheckResp(t, zki)
+
+	bb.LocalStateDB().Close()
+	txsel.LocalAccountsDB().Close()
+	syncStateDB.Close()
 }

@@ -328,6 +328,11 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB, *l2db
 	return stateDB, historyDB, l2DB
 }
 
+func closeTestModules(_ *testing.T, statedb *statedb.StateDB, historydb *historydb.HistoryDB, l2db *l2db.L2DB) {
+	statedb.Close()
+	l2db.DB().Close()
+}
+
 func newBigInt(s string) *big.Int {
 	v, ok := new(big.Int).SetString(s, 10)
 	if !ok {
@@ -729,6 +734,8 @@ func TestSyncGeneral(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
+
+	closeTestModules(t, stateDB, historyDB, l2DB)
 }
 
 func TestSyncForgerCommitment(t *testing.T) {
@@ -857,4 +864,6 @@ func TestSyncForgerCommitment(t *testing.T) {
 	}
 	assert.Equal(t, commitment, syncCommitment)
 	assert.Equal(t, commitment, syncRestartedCommitment)
+
+	closeTestModules(t, stateDB, historyDB, l2DB)
 }
