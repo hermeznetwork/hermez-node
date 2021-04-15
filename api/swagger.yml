@@ -496,7 +496,7 @@ paths:
         - name: order
           in: query
           required: false
-          description: Order of the returned items. History transactions will be ordered by (batchNum, position).
+          description: Order of the returned items. Transactions will be ordered by item_id.
           schema:
             type: string
             default: ASC

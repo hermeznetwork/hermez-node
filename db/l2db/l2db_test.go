@@ -173,6 +173,10 @@ func TestAddTxTest(t *testing.T) {
 		assert.Equal(t, "UTC", nameZone)
 		assert.Equal(t, 0, offset)
 	}
+	tx := &poolL2Txs[1]
+	err = l2DBWithACC.AddTxTest(tx)
+	require.Error(t, err)
+	assert.Regexp(t, "duplicate key value", err.Error())
 }
 
 func TestAddTxAPI(t *testing.T) {

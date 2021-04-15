@@ -16,27 +16,19 @@ require (
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0
-	github.com/karrick/godirwalk v1.16.1 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/mapstructure v1.3.0
 	github.com/prometheus/client_golang v1.3.0
-	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/russross/meddler v1.0.0
-	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/spf13/cobra v1.1.3 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli/v2 v2.2.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210331175145-43e1dd70ce54 // indirect
-	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6 // indirect
-	golang.org/x/tools v0.1.0 // indirect
+	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	gopkg.in/go-playground/validator.v9 v9.29.1
 )
