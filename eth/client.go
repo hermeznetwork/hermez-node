@@ -13,7 +13,7 @@ import (
 var errTODO = fmt.Errorf("TODO: Not implemented yet")
 
 const (
-	blocksPerDay = (3600 * 24) / 15
+	blocksPerDay = (3600 * 24) / 15 //nolint:gomnd
 )
 
 func max(x, y int64) int64 {
