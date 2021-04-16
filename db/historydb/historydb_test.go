@@ -772,40 +772,37 @@ func TestGetUnforgedL1UserTxs(t *testing.T) {
 }
 
 func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *common.WDelayerVariables) {
-	//nolint:govet
 	rollup := &common.RollupVariables{
-		0,
-		big.NewInt(10),
-		12,
-		13,
-		[]common.BucketParams{},
-		false,
+		EthBlockNum:           0,
+		FeeAddToken:           big.NewInt(10),
+		ForgeL1L2BatchTimeout: 12,
+		WithdrawalDelay:       13,
+		Buckets:               []common.BucketParams{},
+		SafeMode:              false,
 	}
-	//nolint:govet
 	auction := &common.AuctionVariables{
-		0,
-		ethCommon.BigToAddress(big.NewInt(2)),
-		ethCommon.BigToAddress(big.NewInt(3)),
-		"https://boot.coord.com",
-		[6]*big.Int{
+		EthBlockNum:        0,
+		DonationAddress:    ethCommon.BigToAddress(big.NewInt(2)),
+		BootCoordinator:    ethCommon.BigToAddress(big.NewInt(3)),
+		BootCoordinatorURL: "https://boot.coord.com",
+		DefaultSlotSetBid: [6]*big.Int{
 			big.NewInt(1), big.NewInt(2), big.NewInt(3),
 			big.NewInt(4), big.NewInt(5), big.NewInt(6),
 		},
-		0,
-		2,
-		4320,
-		[3]uint16{10, 11, 12},
-		1000,
-		20,
+		DefaultSlotSetBidSlotNum: 0,
+		ClosedAuctionSlots:       2,
+		OpenAuctionSlots:         4320,
+		AllocationRatio:          [3]uint16{10, 11, 12},
+		Outbidding:               1000,
+		SlotDeadline:             20,
 	}
-	//nolint:govet
 	wDelayer := &common.WDelayerVariables{
-		0,
-		ethCommon.BigToAddress(big.NewInt(2)),
-		ethCommon.BigToAddress(big.NewInt(3)),
-		13,
-		14,
-		false,
+		EthBlockNum:                0,
+		HermezGovernanceAddress:    ethCommon.BigToAddress(big.NewInt(2)),
+		EmergencyCouncilAddress:    ethCommon.BigToAddress(big.NewInt(3)),
+		WithdrawalDelay:            13,
+		EmergencyModeStartingBlock: 14,
+		EmergencyMode:              false,
 	}
 	return rollup, auction, wDelayer
 }
