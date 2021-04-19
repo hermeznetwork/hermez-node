@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
 	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
-	HEZ "github.com/hermeznetwork/hermez-node/eth/contracts/tokenHEZ"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -276,26 +275,20 @@ type RollupClient struct {
 	client      *EthereumClient
 	chainID     *big.Int
 	address     ethCommon.Address
-	tokenHEZCfg TokenConfig
 	hermez      *Hermez.Hermez
-	tokenHEZ    *HEZ.HEZ
+	token       *TokenClient
 	contractAbi abi.ABI
 	opts        *bind.CallOpts
 	consts      *common.RollupConstants
 }
 
 // NewRollupClient creates a new RollupClient
-func NewRollupClient(client *EthereumClient, address ethCommon.Address,
-	tokenHEZCfg TokenConfig) (*RollupClient, error) {
+func NewRollupClient(client *EthereumClient, address ethCommon.Address) (*RollupClient, error) {
 	contractAbi, err := abi.JSON(strings.NewReader(string(Hermez.HermezABI)))
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	hermez, err := Hermez.NewHermez(address, client.Client())
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	tokenHEZ, err := HEZ.NewHEZ(tokenHEZCfg.Address, client.Client())
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -307,9 +300,7 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address,
 		client:      client,
 		chainID:     chainID,
 		address:     address,
-		tokenHEZCfg: tokenHEZCfg,
 		hermez:      hermez,
-		tokenHEZ:    tokenHEZ,
 		contractAbi: contractAbi,
 		opts:        newCallOpts(),
 	}
@@ -318,6 +309,10 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address,
 		return nil, tracerr.Wrap(fmt.Errorf("RollupConstants at %v: %w", address, err))
 	}
 	c.consts = consts
+	c.token, err = NewTokenClient(client, consts.TokenHEZ)
+	if err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("new token client at %v: %w", address, err))
+	}
 	return c, nil
 }
 
@@ -408,12 +403,12 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToke
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			owner := c.client.account.Address
 			spender := c.address
-			nonce, err := c.tokenHEZ.Nonces(c.opts, owner)
+			nonce, err := c.token.hez.Nonces(c.opts, owner)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
-			tokenName := c.tokenHEZCfg.Name
-			tokenAddr := c.tokenHEZCfg.Address
+			tokenName := c.token.name
+			tokenAddr := c.token.address
 			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID,
 				feeAddToken, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
@@ -522,12 +517,12 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, 
 			}
 			owner := c.client.account.Address
 			spender := c.address
-			nonce, err := c.tokenHEZ.Nonces(c.opts, owner)
+			nonce, err := c.token.hez.Nonces(c.opts, owner)
 			if err != nil {
 				return nil, tracerr.Wrap(err)
 			}
-			tokenName := c.tokenHEZCfg.Name
-			tokenAddr := c.tokenHEZCfg.Address
+			tokenName := c.token.name
+			tokenAddr := c.token.address
 			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID,
 				amount, nonce, deadline, tokenName)
 			signature, _ := c.client.ks.SignHash(*c.client.account, digest)

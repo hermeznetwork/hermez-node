@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net/http"
+	"os"
 	"strconv"
 	"testing"
 
@@ -103,4 +104,7 @@ func TestDebugAPI(t *testing.T) {
 	assert.Equal(t, accounts, accountsAPI)
 
 	cancel()
+
+	sdb.Close()
+	require.NoError(t, os.RemoveAll(dir))
 }

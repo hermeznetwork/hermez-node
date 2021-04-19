@@ -99,6 +99,8 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
 	assert.Equal(t, true, pipeline.shouldL1L2Batch(&batchInfo))
+
+	closeTestModules(t, modules)
 }
 
 const testTokensLen = 3
@@ -232,6 +234,8 @@ PoolTransfer(0) User2-User3: 300 (126)
 	batchInfo, _, err = pipeline.forgeBatch(batchNum)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(batchInfo.L2Txs))
+
+	closeTestModules(t, modules)
 }
 
 func TestEthRollupForgeBatch(t *testing.T) {
@@ -273,16 +277,6 @@ func TestEthRollupForgeBatch(t *testing.T) {
 		Ethereum: ethCfg,
 		Rollup: eth.RollupConfig{
 			Address: rollupAddr,
-		},
-		Auction: eth.AuctionConfig{
-			Address: ethCommon.Address{},
-			TokenHEZ: eth.TokenConfig{
-				Address: ethCommon.Address{},
-				Name:    "HEZ",
-			},
-		},
-		WDelayer: eth.WDelayerConfig{
-			Address: ethCommon.Address{},
 		},
 	})
 	require.NoError(t, err)

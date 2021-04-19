@@ -2,7 +2,6 @@ package statedb
 
 import (
 	"io/ioutil"
-	"os"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -16,7 +15,7 @@ import (
 func TestGetIdx(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	assert.NoError(t, err)
@@ -87,4 +86,6 @@ func TestGetIdx(t *testing.T) {
 	// expect error when trying to get Idx by addr with not used TokenID
 	_, err = sdb.GetIdxByEthAddr(addr, tokenID1)
 	assert.NotNil(t, err)
+
+	sdb.Close()
 }

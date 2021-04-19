@@ -73,7 +73,7 @@ type Coordinator struct {
 	ConfirmBlocks int64 `validate:"required,gte=0"`
 	// L1BatchTimeoutPerc is the portion of the range before the L1Batch
 	// timeout that will trigger a schedule to forge an L1Batch
-	L1BatchTimeoutPerc float64 `validate:"required,lte=1.0"`
+	L1BatchTimeoutPerc float64 `validate:"required,lte=1.0,gte=0.0"`
 	// StartSlotBlocksDelay is the number of blocks of delay to wait before
 	// starting the pipeline when we reach a slot in which we can forge.
 	StartSlotBlocksDelay int64 `validate:"gte=0"`
@@ -149,8 +149,8 @@ type Coordinator struct {
 		// order to be accepted into the pool.  Txs with greater than
 		// maximum fee will be rejected at the API level.
 		MaxFeeUSD float64 `validate:"required,gte=0"`
-		// TTL is the Time To Live for L2Txs in the pool.  Once MaxTxs
-		// L2Txs is reached, L2Txs older than TTL will be deleted.
+		// TTL is the Time To Live for L2Txs in the pool. L2Txs older
+		// than TTL will be deleted.
 		TTL Duration `validate:"required"`
 		// PurgeBatchDelay is the delay between batches to purge
 		// outdated transactions. Outdated L2Txs are those that have
@@ -175,11 +175,11 @@ type Coordinator struct {
 	} `validate:"required"`
 	TxSelector struct {
 		// Path where the TxSelector StateDB is stored
-		Path string `validate:"required,file"`
+		Path string `validate:"required"`
 	} `validate:"required"`
 	BatchBuilder struct {
 		// Path where the BatchBuilder StateDB is stored
-		Path string `validate:"required,file"`
+		Path string `validate:"required"`
 	} `validate:"required"`
 	ServerProofs []ServerProof `validate:"required"`
 	Circuit      struct {
@@ -202,7 +202,7 @@ type Coordinator struct {
 		CheckLoopInterval Duration `validate:"required"`
 		// Attempts is the number of attempts to do an eth client RPC
 		// call before giving up
-		Attempts int `validate:"required,gt=1"`
+		Attempts int `validate:"required,gte=1"`
 		// AttemptsDelay is delay between attempts do do an eth client
 		// RPC call
 		AttemptsDelay Duration `validate:"required"`
@@ -216,7 +216,7 @@ type Coordinator struct {
 		// Keystore is the ethereum keystore where private keys are kept
 		Keystore struct {
 			// Path to the keystore
-			Path string `validate:"required,file"`
+			Path string `validate:"required"`
 			// Password used to decrypt the keys in the keystore
 			Password string `validate:"required"`
 		} `validate:"required"`
@@ -228,7 +228,7 @@ type Coordinator struct {
 	Debug struct {
 		// BatchPath if set, specifies the path where batchInfo is stored
 		// in JSON in every step/update of the pipeline
-		BatchPath string `validate:"file"`
+		BatchPath string
 		// LightScrypt if set, uses light parameters for the ethereum
 		// keystore encryption algorithm.
 		LightScrypt bool
@@ -294,9 +294,9 @@ type Node struct {
 	} `validate:"required"`
 	StateDB struct {
 		// Path where the synchronizer StateDB is stored
-		Path string `validate:"required,file"`
+		Path string `validate:"required"`
 		// Keep is the number of checkpoints to keep
-		Keep int `validate:"required,lt=128"`
+		Keep int `validate:"required,gte=128"`
 	} `validate:"required"`
 	PostgreSQL PostgreSQL `validate:"required"`
 	Web3       struct {
@@ -325,18 +325,6 @@ type Node struct {
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
 		Rollup ethCommon.Address `validate:"required"`
-		// Rollup is the address of the HermezAuctionProtocol.sol smart
-		// contract
-		Auction ethCommon.Address `validate:"required"`
-		// WDelayer is the address of the WithdrawalDelayer.sol smart
-		// contract
-		WDelayer ethCommon.Address `validate:"required"`
-		// TokenHEZ is the address of the HEZTokenFull.sol smart
-		// contract
-		TokenHEZ ethCommon.Address `validate:"required"`
-		// TokenHEZName is the name of the HEZ token deployed at
-		// TokenHEZ address
-		TokenHEZName string `validate:"required"`
 	} `validate:"required"`
 	// API specifies the configuration parameters of the API
 	API struct {
@@ -346,12 +334,12 @@ type Node struct {
 		Explorer bool
 		// UpdateMetricsInterval is the interval between updates of the
 		// API metrics
-		UpdateMetricsInterval Duration `validate:"required_with=Address"`
+		UpdateMetricsInterval Duration `validate:"required"`
 		// UpdateRecommendedFeeInterval is the interval between updates of the
 		// recommended fees
-		UpdateRecommendedFeeInterval Duration `validate:"required_with=Address"`
+		UpdateRecommendedFeeInterval Duration `validate:"required"`
 		// Maximum concurrent connections allowed between API and SQL
-		MaxSQLConnections int `validate:"required,gte=0"`
+		MaxSQLConnections int `validate:"required,gte=1"`
 		// SQLConnectionTimeout is the maximum amount of time that an API request
 		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
@@ -370,7 +358,7 @@ type APIServer struct {
 		// Explorer enables the Explorer API endpoints
 		Explorer bool
 		// Maximum concurrent connections allowed between API and SQL
-		MaxSQLConnections int `validate:"required,gte=0"`
+		MaxSQLConnections int `validate:"required,gte=1"`
 		// SQLConnectionTimeout is the maximum amount of time that an API request
 		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
@@ -386,7 +374,7 @@ type APIServer struct {
 			// stored in the pool.  Once this number of pending L2Txs is
 			// reached, inserts to the pool will be denied until some of
 			// the pending txs are forged.
-			MaxTxs uint32 `validate:"required,gte=0"`
+			MaxTxs uint32 `validate:"required"`
 			// MinFeeUSD is the minimum fee in USD that a tx must pay in
 			// order to be accepted into the pool.  Txs with lower than
 			// minimum fee will be rejected at the API level.

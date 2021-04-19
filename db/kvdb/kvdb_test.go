@@ -12,6 +12,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var deleteme []string
+
+func TestMain(m *testing.M) {
+	exitVal := 0
+	exitVal = m.Run()
+	for _, dir := range deleteme {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	}
+	os.Exit(exitVal)
+}
+
 func addTestKV(t *testing.T, db *KVDB, k, v []byte) {
 	tx, err := db.db.NewTx()
 	require.NoError(t, err)
@@ -36,7 +49,7 @@ func printCheckpoints(t *testing.T, path string) {
 func TestCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "sdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	db, err := NewKVDB(Config{Path: dir, Keep: 128})
 	require.NoError(t, err)
@@ -99,7 +112,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a new KVDB which will get Reset from the initial KVDB
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dirLocal))
+	deleteme = append(deleteme, dirLocal)
 	ldb, err := NewKVDB(Config{Path: dirLocal, Keep: 128})
 	require.NoError(t, err)
 
@@ -120,7 +133,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a 3rd KVDB which will get Reset from the initial KVDB
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dirLocal2))
+	deleteme = append(deleteme, dirLocal2)
 	ldb2, err := NewKVDB(Config{Path: dirLocal2, Keep: 128})
 	require.NoError(t, err)
 
@@ -144,12 +157,16 @@ func TestCheckpoints(t *testing.T) {
 		printCheckpoints(t, ldb.cfg.Path)
 		printCheckpoints(t, ldb2.cfg.Path)
 	}
+
+	ldb2.Close()
+	ldb.Close()
+	db.Close()
 }
 
 func TestListCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	db, err := NewKVDB(Config{Path: dir, Keep: 128})
 	require.NoError(t, err)
@@ -174,12 +191,14 @@ func TestListCheckpoints(t *testing.T) {
 	assert.Equal(t, numReset, len(list))
 	assert.Equal(t, 1, list[0])
 	assert.Equal(t, numReset, list[len(list)-1])
+
+	db.Close()
 }
 
 func TestDeleteOldCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	keep := 16
 	db, err := NewKVDB(Config{Path: dir, Keep: keep})
@@ -197,12 +216,14 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(checkpoints), keep)
 	}
+
+	db.Close()
 }
 
 func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	keep := 16
 	db, err := NewKVDB(Config{Path: dir, Keep: keep})
@@ -250,12 +271,14 @@ func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 	checkpoints, err = db.ListCheckpoints()
 	require.NoError(t, err)
 	assert.LessOrEqual(t, len(checkpoints), keep)
+
+	db.Close()
 }
 
 func TestGetCurrentIdx(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	keep := 16
 	db, err := NewKVDB(Config{Path: dir, Keep: keep})
@@ -289,4 +312,6 @@ func TestGetCurrentIdx(t *testing.T) {
 	idx, err = db.GetCurrentIdx()
 	require.NoError(t, err)
 	assert.Equal(t, common.Idx(255), idx)
+
+	db.Close()
 }

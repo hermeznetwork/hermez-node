@@ -45,12 +45,12 @@ test: govet gocilint test-unit
 ## test-unit: Run all unit tests.
 test-unit:
 	@echo "  >  Running unit tests"
-	$(GOENVVARS) go test -race -p 1 -failfast -timeout 300s -v ./...
+	$(GOENVVARS) POSTGRES_PASS=$(POSTGRES_PASS) go test -race -p 1 -failfast -timeout 300s -v ./...
 
 ## test-api-server: Run the API server using the Go tests.
 test-api-server:
 	@echo "  >  Running unit tests"
-	$(GOENVVARS) FAKE_SERVER=yes go test -race -timeout 0 ./api -p 1 -count 1 -v
+	$(GOENVVARS) POSTGRES_PASS=$(POSTGRES_PASS) FAKE_SERVER=yes go test -race -timeout 0 ./api -p 1 -count 1 -v
 
 ## gofmt: Run `go fmt` for all go files.
 gofmt:

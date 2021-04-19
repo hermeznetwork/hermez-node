@@ -17,6 +17,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var deleteme []string
+
+func TestMain(m *testing.M) {
+	exitVal := 0
+	exitVal = m.Run()
+	for _, dir := range deleteme {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	}
+	os.Exit(exitVal)
+}
+
 func checkBalance(t *testing.T, tc *til.Context, sdb *statedb.StateDB, username string,
 	tokenid int, expected string) {
 	idx := tc.Users[username].Accounts[common.TokenID(tokenid)].Idx
@@ -34,7 +47,7 @@ func checkBalanceByIdx(t *testing.T, sdb *statedb.StateDB, idx common.Idx, expec
 func TestComputeEffectiveAmounts(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
@@ -206,12 +219,14 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 	tp.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
+
+	sdb.Close()
 }
 
 func TestProcessTxsBalances(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
@@ -369,12 +384,14 @@ func TestProcessTxsBalances(t *testing.T) {
 	checkBalance(t, tc, sdb, "C", 1, "100")
 	checkBalance(t, tc, sdb, "D", 0, "360")
 	checkBalance(t, tc, sdb, "F", 0, "100")
+
+	sdb.Close()
 }
 
 func TestProcessTxsSynchronizer(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
@@ -503,12 +520,14 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	acc, err = sdb.GetAccount(common.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, "2", acc.Balance.String())
+
+	sdb.Close()
 }
 
 func TestProcessTxsBatchBuilder(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
@@ -599,12 +618,14 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Equal(t,
 		"18702154359941252155463263732782081721632595649781775986280568467618682348921",
 		sdb.MT.Root().BigInt().String())
+
+	sdb.Close()
 }
 
 func TestProcessTxsRootTestVectors(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
@@ -653,12 +674,14 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	assert.Equal(t,
 		"16181420716631932805604732887923905079487577323947343079740042260791593140221",
 		sdb.MT.Root().BigInt().String())
+
+	sdb.Close()
 }
 
 func TestCreateAccountDepositMaxValue(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	nLevels := 16
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
@@ -723,13 +746,15 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	acc, err = sdb.GetAccount(common.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, daMax1BI, acc.Balance)
+
+	sdb.Close()
 }
 
 func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Context,
-	[]common.BlockData) {
+	[]common.BlockData, *statedb.StateDB) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
@@ -770,7 +795,7 @@ func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Contex
 	_, err = tp.ProcessTxs(nil, nil, nil, nil) // to simulate the first batch from the Til set
 	require.NoError(t, err)
 
-	return tp, tc, blocks
+	return tp, tc, blocks, sdb
 }
 
 func TestMultipleCoordIdxForTokenID(t *testing.T) {
@@ -778,7 +803,7 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	// CoordIdx for each TokenID
 
 	coordIdxs := []common.Idx{257, 257, 257}
-	tp, tc, blocks := initTestMultipleCoordIdxForTokenID(t)
+	tp, tc, blocks, sdb := initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l1CoordTxs := blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
@@ -793,7 +818,8 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 
 	// reset StateDB values
 	coordIdxs = []common.Idx{259, 257}
-	tp, tc, blocks = initTestMultipleCoordIdxForTokenID(t)
+	sdb.Close()
+	tp, tc, blocks, sdb = initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l1CoordTxs = blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
@@ -808,7 +834,8 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 
 	// reset StateDB values
 	coordIdxs = []common.Idx{257, 259}
-	tp, tc, blocks = initTestMultipleCoordIdxForTokenID(t)
+	sdb.Close()
+	tp, tc, blocks, sdb = initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l1CoordTxs = blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
@@ -820,6 +847,8 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	checkBalanceByIdx(t, tp.s, 257, "10")  // Coord0
 	checkBalanceByIdx(t, tp.s, 258, "100") // B
 	checkBalanceByIdx(t, tp.s, 259, "0")   // Coord0
+
+	sdb.Close()
 }
 
 func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOutput,
@@ -829,7 +858,7 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 	// exitInfo with balance of 40.
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	nLevels := 16
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
@@ -896,7 +925,7 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 
 	dir2, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir2))
+	deleteme = append(deleteme, dir2)
 
 	sdb2, err := statedb.NewStateDB(statedb.Config{Path: dir2, Keep: 128,
 		Type: stateDBType, NLevels: nLevels})
@@ -946,7 +975,7 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 
 	dir3, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir3))
+	deleteme = append(deleteme, dir3)
 
 	sdb3, err := statedb.NewStateDB(statedb.Config{Path: dir3, Keep: 128,
 		Type: stateDBType, NLevels: nLevels})
@@ -988,6 +1017,10 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 		}
 	}
 
+	sdb3.Close()
+	sdb2.Close()
+	sdb.Close()
+
 	return ptOuts, ptOuts2, ptOuts3
 }
 
@@ -1007,7 +1040,7 @@ func TestExitOf0Amount(t *testing.T) {
 
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
@@ -1098,12 +1131,14 @@ func TestExitOf0Amount(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[7].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
+
+	sdb.Close()
 }
 
 func TestUpdatedAccounts(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
@@ -1198,4 +1233,6 @@ func TestUpdatedAccounts(t *testing.T) {
 			assert.Equal(t, acc, updAcc)
 		}
 	}
+
+	sdb.Close()
 }

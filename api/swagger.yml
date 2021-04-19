@@ -1306,7 +1306,7 @@ components:
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: null
           nullable: true
-        toBjj:
+        toBJJ:
           type: string
           description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
           pattern: "^hez:[A-Za-z0-9_-]{44}$"
@@ -1410,7 +1410,7 @@ components:
         state: pend
         timestamp: '2020-11-17T13:58:54.422232Z'
         toAccountIndex: hez:SCC:257
-        toBjj: hez:r_trOasVEk0zNaalOoS9aLedu6mO7jI5XTIPu_zGXoyn
+        toBJJ: hez:r_trOasVEk0zNaalOoS9aLedu6mO7jI5XTIPu_zGXoyn
         toHezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
         token:
           USD: 23.74
@@ -1431,7 +1431,7 @@ components:
         - fromBJJ
         - toAccountIndex
         - toHezEthereumAddress
-        - toBjj
+        - toBJJ
         - amount
         - fee
         - nonce
