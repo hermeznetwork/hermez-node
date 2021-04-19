@@ -2,7 +2,6 @@ package zkproof
 
 import (
 	"io/ioutil"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -76,8 +75,7 @@ func addAccCreationAuth(t *testing.T, tc *til.Context, l2DB *l2db.L2DB, chainID 
 
 func initTxSelector(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address,
 	coordUser *til.User) (*txselector.TxSelector, *l2db.L2DB, *statedb.StateDB) {
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	require.NoError(t, err)
 	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
 

@@ -32,8 +32,7 @@ var accs map[common.Idx]common.Account
 
 func TestMain(m *testing.M) {
 	// init DB
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	if err != nil {
 		panic(err)
 	}
