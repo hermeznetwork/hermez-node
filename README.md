@@ -43,29 +43,28 @@ $ make help
 ### Unit testing
 
 Running the unit tests requires a connection to a PostgreSQL database.  You can
-run PostgreSQL with docker easily this way (where `yourpasswordhere` should
-be your password):
+run PostgreSQL with docker easily this way:
 
 ```shell
-$ POSTGRES_PASS="yourpasswordhere" make run-database-container
+$ make run-database-container
 ```
 
-Afterward, run the tests with the password as env var:
-
+Afterward, run the tests:
 ```shell
-$ POSTGRES_PASS="yourpasswordhere" make test
+$ make test
 ```
-
-NOTE: `-p 1` forces execution of package test in serial. Otherwise, they may be
-executed in parallel, and the test may find unexpected entries in the SQL database
-because it's shared among all tests.
 
 There is an extra temporary option that allows you to run the API server using the 
 Go tests. It will be removed once the API can be properly initialized with data 
 from the synchronizer. To use this, run:
 
 ```shell
-$ POSTGRES_PASS="yourpasswordhere" make test-api-server
+$ make test-api-server
+```
+
+It is also possible to run tests with an existing PostgreSQL server, e.g.
+```shell
+$ PGHOST=someserver PGUSER=hermez2 PGPASSWORD=secret make test
 ```
 
 ### Lint

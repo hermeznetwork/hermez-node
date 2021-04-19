@@ -1,10 +1,11 @@
-package db
+package db_test
 
 import (
 	"math/big"
-	"os"
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/russross/meddler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,7 @@ func TestSliceToSlicePtrs(t *testing.T) {
 	for i := 0; i < n; i++ {
 		a[i] = foo{V: i}
 	}
-	b := SliceToSlicePtrs(a).([]*foo)
+	b := db.SliceToSlicePtrs(a).([]*foo)
 	for i := 0; i < len(a); i++ {
 		assert.Equal(t, a[i], *b[i])
 	}
@@ -32,15 +33,14 @@ func TestSlicePtrsToSlice(t *testing.T) {
 	for i := 0; i < n; i++ {
 		a[i] = &foo{V: i}
 	}
-	b := SlicePtrsToSlice(a).([]foo)
+	b := db.SlicePtrsToSlice(a).([]foo)
 	for i := 0; i < len(a); i++ {
 		assert.Equal(t, *a[i], b[i])
 	}
 }
 
 func TestBigInt(t *testing.T) {
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := test.InitTestSQLDB()
 	require.NoError(t, err)
 	defer func() {
 		_, err := db.Exec("DROP TABLE IF EXISTS test_big_int;")

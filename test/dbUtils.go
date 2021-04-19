@@ -1,6 +1,8 @@
 package test
 
 import (
+	"os"
+	"strconv"
 	"testing"
 
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
@@ -33,4 +35,29 @@ func WipeDB(db *sqlx.DB) {
 	if err := dbUtils.MigrationsUp(db.DB); err != nil {
 		panic(err)
 	}
+}
+
+// InitTestSQLDB open test PostgreSQL database
+func InitTestSQLDB() (*sqlx.DB, error) {
+	host := os.Getenv("PGHOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port, _ := strconv.Atoi(os.Getenv("PGPORT"))
+	if port == 0 {
+		port = 5432
+	}
+	user := os.Getenv("PGUSER")
+	if user == "" {
+		user = "hermez"
+	}
+	pass := os.Getenv("PGPASSWORD")
+	if pass == "" {
+		panic("No PGPASSWORD envvar specified")
+	}
+	dbname := os.Getenv("PGDATABASE")
+	if dbname == "" {
+		dbname = "hermez"
+	}
+	return dbUtils.InitSQLDB(port, host, user, pass, dbname)
 }

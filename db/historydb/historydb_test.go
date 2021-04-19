@@ -25,18 +25,9 @@ import (
 var historyDB *HistoryDB
 var historyDBWithACC *HistoryDB
 
-// In order to run the test you need to run a Posgres DB with
-// a database named "history" that is accessible by
-// user: "hermez"
-// pass: set it using the env var POSTGRES_PASS
-// This can be achieved by running: POSTGRES_PASS=your_strong_pass && sudo docker run --rm --name hermez-db-test -p 5432:5432 -e POSTGRES_DB=history -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD=$POSTGRES_PASS -d postgres && sleep 2s && sudo docker exec -it hermez-db-test psql -a history -U hermez -c "CREATE DATABASE l2;"
-// After running the test you can stop the container by running: sudo docker kill hermez-db-test
-// If you already did that for the L2DB you don't have to do it again
-
 func TestMain(m *testing.M) {
 	// init DB
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := test.InitTestSQLDB()
 	if err != nil {
 		panic(err)
 	}

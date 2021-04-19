@@ -2,12 +2,10 @@ package priceupdater
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/stretchr/testify/assert"
@@ -20,8 +18,7 @@ const usdtAddr = "0xdac17f958d2ee523a2206206994597c13d831ec7"
 
 func TestPriceUpdaterBitfinex(t *testing.T) {
 	// Init DB
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := test.InitTestSQLDB()
 	if err != nil {
 		panic(err)
 	}
