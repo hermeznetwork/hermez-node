@@ -480,76 +480,84 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64,
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
 			return nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
-		switch vLog.Topics[0] {
-		case logWDelayerDeposit:
-			var deposit WDelayerEventDeposit
-			err := c.contractAbi.UnpackIntoInterface(&deposit, "Deposit", vLog.Data)
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			deposit.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			deposit.Token = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
-			deposit.TxHash = vLog.TxHash
-			wdelayerEvents.Deposit = append(wdelayerEvents.Deposit, deposit)
-
-		case logWDelayerWithdraw:
-			var withdraw WDelayerEventWithdraw
-			err := c.contractAbi.UnpackIntoInterface(&withdraw, "Withdraw", vLog.Data)
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			withdraw.Token = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			withdraw.Owner = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
-			wdelayerEvents.Withdraw = append(wdelayerEvents.Withdraw, withdraw)
-
-		case logWDelayerEmergencyModeEnabled:
-			var emergencyModeEnabled WDelayerEventEmergencyModeEnabled
-			wdelayerEvents.EmergencyModeEnabled =
-				append(wdelayerEvents.EmergencyModeEnabled, emergencyModeEnabled)
-
-		case logWDelayerNewWithdrawalDelay:
-			var withdrawalDelay WDelayerEventNewWithdrawalDelay
-			err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay,
-				"NewWithdrawalDelay", vLog.Data)
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			wdelayerEvents.NewWithdrawalDelay =
-				append(wdelayerEvents.NewWithdrawalDelay, withdrawalDelay)
-
-		case logWDelayerEscapeHatchWithdrawal:
-			var escapeHatchWithdrawal WDelayerEventEscapeHatchWithdrawal
-			err := c.contractAbi.UnpackIntoInterface(&escapeHatchWithdrawal,
-				"EscapeHatchWithdrawal", vLog.Data)
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			escapeHatchWithdrawal.Who = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			escapeHatchWithdrawal.To = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
-			escapeHatchWithdrawal.Token = ethCommon.BytesToAddress(vLog.Topics[3].Bytes())
-			wdelayerEvents.EscapeHatchWithdrawal =
-				append(wdelayerEvents.EscapeHatchWithdrawal, escapeHatchWithdrawal)
-
-		case logWDelayerNewEmergencyCouncil:
-			var emergencyCouncil WDelayerEventNewEmergencyCouncil
-			err := c.contractAbi.UnpackIntoInterface(&emergencyCouncil,
-				"NewEmergencyCouncil", vLog.Data)
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			wdelayerEvents.NewEmergencyCouncil =
-				append(wdelayerEvents.NewEmergencyCouncil, emergencyCouncil)
-
-		case logWDelayerNewHermezGovernanceAddress:
-			var governanceAddress WDelayerEventNewHermezGovernanceAddress
-			err := c.contractAbi.UnpackIntoInterface(&governanceAddress,
-				"NewHermezGovernanceAddress", vLog.Data)
-			if err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			wdelayerEvents.NewHermezGovernanceAddress =
-				append(wdelayerEvents.NewHermezGovernanceAddress, governanceAddress)
+		err = c.processWDelayerEvent(&vLog, &wdelayerEvents)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
 		}
 	}
 	return &wdelayerEvents, nil
+}
+
+func (c *WDelayerClient) processWDelayerEvent(vLog *types.Log, wdelayerEvents *WDelayerEvents) error {
+	switch vLog.Topics[0] {
+	case logWDelayerDeposit:
+		var deposit WDelayerEventDeposit
+		err := c.contractAbi.UnpackIntoInterface(&deposit, "Deposit", vLog.Data)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		deposit.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		deposit.Token = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+		deposit.TxHash = vLog.TxHash
+		wdelayerEvents.Deposit = append(wdelayerEvents.Deposit, deposit)
+
+	case logWDelayerWithdraw:
+		var withdraw WDelayerEventWithdraw
+		err := c.contractAbi.UnpackIntoInterface(&withdraw, "Withdraw", vLog.Data)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		withdraw.Token = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		withdraw.Owner = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+		wdelayerEvents.Withdraw = append(wdelayerEvents.Withdraw, withdraw)
+
+	case logWDelayerEmergencyModeEnabled:
+		var emergencyModeEnabled WDelayerEventEmergencyModeEnabled
+		wdelayerEvents.EmergencyModeEnabled =
+			append(wdelayerEvents.EmergencyModeEnabled, emergencyModeEnabled)
+
+	case logWDelayerNewWithdrawalDelay:
+		var withdrawalDelay WDelayerEventNewWithdrawalDelay
+		err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay,
+			"NewWithdrawalDelay", vLog.Data)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		wdelayerEvents.NewWithdrawalDelay =
+			append(wdelayerEvents.NewWithdrawalDelay, withdrawalDelay)
+
+	case logWDelayerEscapeHatchWithdrawal:
+		var escapeHatchWithdrawal WDelayerEventEscapeHatchWithdrawal
+		err := c.contractAbi.UnpackIntoInterface(&escapeHatchWithdrawal,
+			"EscapeHatchWithdrawal", vLog.Data)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		escapeHatchWithdrawal.Who = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		escapeHatchWithdrawal.To = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+		escapeHatchWithdrawal.Token = ethCommon.BytesToAddress(vLog.Topics[3].Bytes())
+		wdelayerEvents.EscapeHatchWithdrawal =
+			append(wdelayerEvents.EscapeHatchWithdrawal, escapeHatchWithdrawal)
+
+	case logWDelayerNewEmergencyCouncil:
+		var emergencyCouncil WDelayerEventNewEmergencyCouncil
+		err := c.contractAbi.UnpackIntoInterface(&emergencyCouncil,
+			"NewEmergencyCouncil", vLog.Data)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		wdelayerEvents.NewEmergencyCouncil =
+			append(wdelayerEvents.NewEmergencyCouncil, emergencyCouncil)
+
+	case logWDelayerNewHermezGovernanceAddress:
+		var governanceAddress WDelayerEventNewHermezGovernanceAddress
+		err := c.contractAbi.UnpackIntoInterface(&governanceAddress,
+			"NewHermezGovernanceAddress", vLog.Data)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		wdelayerEvents.NewHermezGovernanceAddress =
+			append(wdelayerEvents.NewHermezGovernanceAddress, governanceAddress)
+	}
+	return nil
 }

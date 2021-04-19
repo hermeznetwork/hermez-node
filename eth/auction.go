@@ -871,122 +871,130 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 				vLog.BlockHash.String())
 			return nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
-		switch vLog.Topics[0] {
-		case logAuctionNewBid:
-			var auxNewBid struct {
-				Slot      *big.Int
-				BidAmount *big.Int
-				Address   ethCommon.Address
-			}
-			var newBid AuctionEventNewBid
-			if err := c.contractAbi.UnpackIntoInterface(&auxNewBid, "NewBid",
-				vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			newBid.BidAmount = auxNewBid.BidAmount
-			newBid.Slot = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
-			newBid.Bidder = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
-			auctionEvents.NewBid = append(auctionEvents.NewBid, newBid)
-		case logAuctionNewSlotDeadline:
-			var newSlotDeadline AuctionEventNewSlotDeadline
-			if err := c.contractAbi.UnpackIntoInterface(&newSlotDeadline,
-				"NewSlotDeadline", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			auctionEvents.NewSlotDeadline = append(auctionEvents.NewSlotDeadline, newSlotDeadline)
-		case logAuctionNewClosedAuctionSlots:
-			var newClosedAuctionSlots AuctionEventNewClosedAuctionSlots
-			if err := c.contractAbi.UnpackIntoInterface(&newClosedAuctionSlots,
-				"NewClosedAuctionSlots", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			auctionEvents.NewClosedAuctionSlots =
-				append(auctionEvents.NewClosedAuctionSlots, newClosedAuctionSlots)
-		case logAuctionNewOutbidding:
-			var newOutbidding AuctionEventNewOutbidding
-			if err := c.contractAbi.UnpackIntoInterface(&newOutbidding, "NewOutbidding",
-				vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			auctionEvents.NewOutbidding = append(auctionEvents.NewOutbidding, newOutbidding)
-		case logAuctionNewDonationAddress:
-			var newDonationAddress AuctionEventNewDonationAddress
-			newDonationAddress.NewDonationAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			auctionEvents.NewDonationAddress = append(auctionEvents.NewDonationAddress,
-				newDonationAddress)
-		case logAuctionNewBootCoordinator:
-			var newBootCoordinator AuctionEventNewBootCoordinator
-			if err := c.contractAbi.UnpackIntoInterface(&newBootCoordinator,
-				"NewBootCoordinator", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			newBootCoordinator.NewBootCoordinator = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			auctionEvents.NewBootCoordinator = append(auctionEvents.NewBootCoordinator,
-				newBootCoordinator)
-		case logAuctionNewOpenAuctionSlots:
-			var newOpenAuctionSlots AuctionEventNewOpenAuctionSlots
-			if err := c.contractAbi.UnpackIntoInterface(&newOpenAuctionSlots,
-				"NewOpenAuctionSlots", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			auctionEvents.NewOpenAuctionSlots =
-				append(auctionEvents.NewOpenAuctionSlots, newOpenAuctionSlots)
-		case logAuctionNewAllocationRatio:
-			var newAllocationRatio AuctionEventNewAllocationRatio
-			if err := c.contractAbi.UnpackIntoInterface(&newAllocationRatio,
-				"NewAllocationRatio", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			auctionEvents.NewAllocationRatio = append(auctionEvents.NewAllocationRatio,
-				newAllocationRatio)
-		case logAuctionSetCoordinator:
-			var setCoordinator AuctionEventSetCoordinator
-			if err := c.contractAbi.UnpackIntoInterface(&setCoordinator,
-				"SetCoordinator", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			setCoordinator.BidderAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			setCoordinator.ForgerAddress = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
-			auctionEvents.SetCoordinator = append(auctionEvents.SetCoordinator, setCoordinator)
-		case logAuctionNewForgeAllocated:
-			var newForgeAllocated AuctionEventNewForgeAllocated
-			if err := c.contractAbi.UnpackIntoInterface(&newForgeAllocated,
-				"NewForgeAllocated", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			newForgeAllocated.Bidder = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			newForgeAllocated.Forger = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
-			newForgeAllocated.SlotToForge = new(big.Int).SetBytes(vLog.Topics[3][:]).Int64()
-			auctionEvents.NewForgeAllocated = append(auctionEvents.NewForgeAllocated,
-				newForgeAllocated)
-		case logAuctionNewDefaultSlotSetBid:
-			var auxNewDefaultSlotSetBid struct {
-				SlotSet          *big.Int
-				NewInitialMinBid *big.Int
-			}
-			var newDefaultSlotSetBid AuctionEventNewDefaultSlotSetBid
-			if err := c.contractAbi.UnpackIntoInterface(&auxNewDefaultSlotSetBid,
-				"NewDefaultSlotSetBid", vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			newDefaultSlotSetBid.NewInitialMinBid = auxNewDefaultSlotSetBid.NewInitialMinBid
-			newDefaultSlotSetBid.SlotSet = auxNewDefaultSlotSetBid.SlotSet.Int64()
-			auctionEvents.NewDefaultSlotSetBid =
-				append(auctionEvents.NewDefaultSlotSetBid, newDefaultSlotSetBid)
-		case logAuctionNewForge:
-			var newForge AuctionEventNewForge
-			newForge.Forger = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			newForge.SlotToForge = new(big.Int).SetBytes(vLog.Topics[2][:]).Int64()
-			auctionEvents.NewForge = append(auctionEvents.NewForge, newForge)
-		case logAuctionHEZClaimed:
-			var HEZClaimed AuctionEventHEZClaimed
-			if err := c.contractAbi.UnpackIntoInterface(&HEZClaimed, "HEZClaimed",
-				vLog.Data); err != nil {
-				return nil, tracerr.Wrap(err)
-			}
-			HEZClaimed.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-			auctionEvents.HEZClaimed = append(auctionEvents.HEZClaimed, HEZClaimed)
+		err = c.processAuctionEvent(&vLog, &auctionEvents)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
 		}
 	}
 	return &auctionEvents, nil
+}
+
+func (c *AuctionClient) processAuctionEvent(vLog *types.Log, auctionEvents *AuctionEvents) error {
+	switch vLog.Topics[0] {
+	case logAuctionNewBid:
+		var auxNewBid struct {
+			Slot      *big.Int
+			BidAmount *big.Int
+			Address   ethCommon.Address
+		}
+		var newBid AuctionEventNewBid
+		if err := c.contractAbi.UnpackIntoInterface(&auxNewBid, "NewBid",
+			vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		newBid.BidAmount = auxNewBid.BidAmount
+		newBid.Slot = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
+		newBid.Bidder = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+		auctionEvents.NewBid = append(auctionEvents.NewBid, newBid)
+	case logAuctionNewSlotDeadline:
+		var newSlotDeadline AuctionEventNewSlotDeadline
+		if err := c.contractAbi.UnpackIntoInterface(&newSlotDeadline,
+			"NewSlotDeadline", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		auctionEvents.NewSlotDeadline = append(auctionEvents.NewSlotDeadline, newSlotDeadline)
+	case logAuctionNewClosedAuctionSlots:
+		var newClosedAuctionSlots AuctionEventNewClosedAuctionSlots
+		if err := c.contractAbi.UnpackIntoInterface(&newClosedAuctionSlots,
+			"NewClosedAuctionSlots", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		auctionEvents.NewClosedAuctionSlots =
+			append(auctionEvents.NewClosedAuctionSlots, newClosedAuctionSlots)
+	case logAuctionNewOutbidding:
+		var newOutbidding AuctionEventNewOutbidding
+		if err := c.contractAbi.UnpackIntoInterface(&newOutbidding, "NewOutbidding",
+			vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		auctionEvents.NewOutbidding = append(auctionEvents.NewOutbidding, newOutbidding)
+	case logAuctionNewDonationAddress:
+		var newDonationAddress AuctionEventNewDonationAddress
+		newDonationAddress.NewDonationAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		auctionEvents.NewDonationAddress = append(auctionEvents.NewDonationAddress,
+			newDonationAddress)
+	case logAuctionNewBootCoordinator:
+		var newBootCoordinator AuctionEventNewBootCoordinator
+		if err := c.contractAbi.UnpackIntoInterface(&newBootCoordinator,
+			"NewBootCoordinator", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		newBootCoordinator.NewBootCoordinator = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		auctionEvents.NewBootCoordinator = append(auctionEvents.NewBootCoordinator,
+			newBootCoordinator)
+	case logAuctionNewOpenAuctionSlots:
+		var newOpenAuctionSlots AuctionEventNewOpenAuctionSlots
+		if err := c.contractAbi.UnpackIntoInterface(&newOpenAuctionSlots,
+			"NewOpenAuctionSlots", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		auctionEvents.NewOpenAuctionSlots =
+			append(auctionEvents.NewOpenAuctionSlots, newOpenAuctionSlots)
+	case logAuctionNewAllocationRatio:
+		var newAllocationRatio AuctionEventNewAllocationRatio
+		if err := c.contractAbi.UnpackIntoInterface(&newAllocationRatio,
+			"NewAllocationRatio", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		auctionEvents.NewAllocationRatio = append(auctionEvents.NewAllocationRatio,
+			newAllocationRatio)
+	case logAuctionSetCoordinator:
+		var setCoordinator AuctionEventSetCoordinator
+		if err := c.contractAbi.UnpackIntoInterface(&setCoordinator,
+			"SetCoordinator", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		setCoordinator.BidderAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		setCoordinator.ForgerAddress = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+		auctionEvents.SetCoordinator = append(auctionEvents.SetCoordinator, setCoordinator)
+	case logAuctionNewForgeAllocated:
+		var newForgeAllocated AuctionEventNewForgeAllocated
+		if err := c.contractAbi.UnpackIntoInterface(&newForgeAllocated,
+			"NewForgeAllocated", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		newForgeAllocated.Bidder = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		newForgeAllocated.Forger = ethCommon.BytesToAddress(vLog.Topics[2].Bytes())
+		newForgeAllocated.SlotToForge = new(big.Int).SetBytes(vLog.Topics[3][:]).Int64()
+		auctionEvents.NewForgeAllocated = append(auctionEvents.NewForgeAllocated,
+			newForgeAllocated)
+	case logAuctionNewDefaultSlotSetBid:
+		var auxNewDefaultSlotSetBid struct {
+			SlotSet          *big.Int
+			NewInitialMinBid *big.Int
+		}
+		var newDefaultSlotSetBid AuctionEventNewDefaultSlotSetBid
+		if err := c.contractAbi.UnpackIntoInterface(&auxNewDefaultSlotSetBid,
+			"NewDefaultSlotSetBid", vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		newDefaultSlotSetBid.NewInitialMinBid = auxNewDefaultSlotSetBid.NewInitialMinBid
+		newDefaultSlotSetBid.SlotSet = auxNewDefaultSlotSetBid.SlotSet.Int64()
+		auctionEvents.NewDefaultSlotSetBid =
+			append(auctionEvents.NewDefaultSlotSetBid, newDefaultSlotSetBid)
+	case logAuctionNewForge:
+		var newForge AuctionEventNewForge
+		newForge.Forger = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		newForge.SlotToForge = new(big.Int).SetBytes(vLog.Topics[2][:]).Int64()
+		auctionEvents.NewForge = append(auctionEvents.NewForge, newForge)
+	case logAuctionHEZClaimed:
+		var HEZClaimed AuctionEventHEZClaimed
+		if err := c.contractAbi.UnpackIntoInterface(&HEZClaimed, "HEZClaimed",
+			vLog.Data); err != nil {
+			return tracerr.Wrap(err)
+		}
+		HEZClaimed.Owner = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
+		auctionEvents.HEZClaimed = append(auctionEvents.HEZClaimed, HEZClaimed)
+	}
+	return nil
 }
