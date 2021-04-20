@@ -171,6 +171,10 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 		queryStr += "WHERE (tx_pool.effective_from_eth_addr = ? OR tx_pool.effective_to_eth_addr = ?) "
 		nextIsAnd = true
 		args = append(args, request.EthAddr, request.EthAddr)
+	} else if request.FromEthAddr != nil && request.ToEthAddr != nil {
+		queryStr += "WHERE (tx_pool.effective_from_eth_addr = ? AND tx_pool.effective_to_eth_addr = ?) "
+		nextIsAnd = true
+		args = append(args, request.FromEthAddr, request.ToEthAddr)
 	} else if request.FromEthAddr != nil {
 		queryStr += "WHERE tx_pool.effective_from_eth_addr = ? "
 		nextIsAnd = true
@@ -183,6 +187,10 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 		queryStr += "WHERE (tx_pool.effective_from_bjj = ? OR tx_pool.effective_to_bjj = ?) "
 		nextIsAnd = true
 		args = append(args, request.Bjj, request.Bjj)
+	} else if request.FromBjj != nil && request.ToBjj != nil {
+		queryStr += "WHERE (tx_pool.effective_from_bjj = ? AND tx_pool.effective_to_bjj = ?) "
+		nextIsAnd = true
+		args = append(args, request.FromBjj, request.ToBjj)
 	} else if request.FromBjj != nil {
 		queryStr += "WHERE tx_pool.effective_from_bjj = ? "
 		nextIsAnd = true
@@ -215,6 +223,15 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 		queryStr += "tx_pool.from_idx = ? "
 		queryStr += "OR tx_pool.to_idx = ?) "
 		args = append(args, request.Idx, request.Idx)
+		nextIsAnd = true
+	} else if request.FromIdx != nil && request.ToIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.from_idx = ? AND tx_pool.to_idx = ? "
+		args = append(args, request.FromIdx, request.ToIdx)
 		nextIsAnd = true
 	} else if request.FromIdx != nil {
 		if nextIsAnd {

@@ -541,6 +541,10 @@ func (hdb *HistoryDB) GetTxsAPI(
 		queryStr += "WHERE (tx.from_eth_addr = ? OR tx.to_eth_addr = ?) "
 		nextIsAnd = true
 		args = append(args, request.EthAddr, request.EthAddr)
+	} else if request.FromEthAddr != nil && request.ToEthAddr != nil {
+		queryStr += "WHERE (tx.from_eth_addr = ? AND tx.to_eth_addr = ?) "
+		nextIsAnd = true
+		args = append(args, request.FromEthAddr, request.ToEthAddr)
 	} else if request.FromEthAddr != nil {
 		queryStr += "WHERE tx.from_eth_addr = ? "
 		nextIsAnd = true
@@ -553,6 +557,10 @@ func (hdb *HistoryDB) GetTxsAPI(
 		queryStr += "WHERE (tx.from_bjj = ? OR tx.to_bjj = ?) "
 		nextIsAnd = true
 		args = append(args, request.Bjj, request.Bjj)
+	} else if request.FromBjj != nil && request.ToBjj != nil {
+		queryStr += "WHERE (tx.from_bjj = ? AND tx.to_bjj = ?) "
+		nextIsAnd = true
+		args = append(args, request.ToBjj, request.FromBjj)
 	} else if request.FromBjj != nil {
 		queryStr += "WHERE tx.from_bjj = ? "
 		nextIsAnd = true
@@ -582,6 +590,15 @@ func (hdb *HistoryDB) GetTxsAPI(
 		}
 		queryStr += "(tx.effective_from_idx = ? OR tx.to_idx = ?) "
 		args = append(args, request.Idx, request.Idx)
+		nextIsAnd = true
+	} else if request.FromIdx != nil && request.ToIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "(tx.effective_from_idx = ? AND tx.to_idx = ?) "
+		args = append(args, request.FromIdx, request.ToIdx)
 		nextIsAnd = true
 	} else if request.FromIdx != nil {
 		if nextIsAnd {

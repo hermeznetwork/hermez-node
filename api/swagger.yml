@@ -436,13 +436,13 @@ paths:
         - name: fromAccountIndex
           in: query
           required: false
-          description: Only get transactions sent from a specific account. Incompatible with the queries `accountIndex`, `toAccountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          description: Only get transactions sent from a specific account. Incompatible with the queries `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
           schema:
             $ref: '#/components/schemas/AccountIndex'
         - name: toAccountIndex
           in: query
           required: false
-          description: Only get transactions sent to a specific account. Incompatible with the queries `accountIndex`, `fromAccountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          description: Only get transactions sent to a specific account. Incompatible with the queries `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
           schema:
             $ref: '#/components/schemas/AccountIndex'
         - name: type
@@ -460,13 +460,13 @@ paths:
         - name: fromHezEthereumAddress
           in: query
           required: false
-          description: Only get transactions sent from an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `toHezEthereumAddress`, `hezEthereumAddress`.
+          description: Only get transactions sent from an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
           schema:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: toHezEthereumAddress
           in: query
           required: false
-          description: Only get transactions sent to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `fromHezEthereumAddress`, `hezEthereumAddress`.
+          description: Only get transactions sent to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
           schema:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
@@ -477,13 +477,13 @@ paths:
             $ref: '#/components/schemas/BJJ'
         - name: fromBJJ
           in: query
-          description: Only get transactions sent from a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`, `toBJJ`.
+          description: Only get transactions sent from a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
         - name: toBJJ
           in: query
-          description: Only get transactions sent to a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`, `fromBJJ`.
+          description: Only get transactions sent to a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
@@ -605,13 +605,13 @@ paths:
         - name: fromHezEthereumAddress
           in: query
           required: false
-          description: Only get transactions sent from an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `toHezEthereumAddress`, `hezEthereumAddress`.
+          description: Only get transactions sent from an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
           schema:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: toHezEthereumAddress
           in: query
           required: false
-          description: Only get transactions sent to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `fromHezEthereumAddress`, `hezEthereumAddress`.
+          description: Only get transactions sent to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
           schema:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
@@ -622,13 +622,13 @@ paths:
             $ref: '#/components/schemas/BJJ'
         - name: fromBJJ
           in: query
-          description: Only get transactions from a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`, `toBJJ`.
+          description: Only get transactions from a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
         - name: toBJJ
           in: query
-          description: Only get transactions to a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`, `fromBJJ`.
+          description: Only get transactions to a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
@@ -641,13 +641,13 @@ paths:
         - name: fromAccountIndex
           in: query
           required: false
-          description: Only get transactions sent from a specific account. Incompatible with the queries `tokenId`, `accountIndex`, `toAccountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          description: Only get transactions sent from a specific account. Incompatible with the queries `tokenId`, `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
           schema:
             $ref: '#/components/schemas/AccountIndex'
         - name: toAccountIndex
           in: query
           required: false
-          description: Only get transactions sent to a specific account. Incompatible with the queries `tokenId`, `accountIndex`, `fromAccountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          description: Only get transactions sent to a specific account. Incompatible with the queries `tokenId`, `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
           schema:
             $ref: '#/components/schemas/AccountIndex'
         - name: batchNum
