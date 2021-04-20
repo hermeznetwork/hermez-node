@@ -20,7 +20,13 @@ GOBINARY := node
 # Project configs.
 MODE ?= sync
 CONFIG ?= $(GOBASE)/cli/node/cfg.buidler.toml
-POSTGRES_PASS ?= yourpasswordhere
+PGHOST ?= localhost
+PGPORT ?= 5432
+PGUSER ?= hermez
+PGPASSWORD ?= yourpasswordhere
+PGDATABASE ?= hermez
+PGENVVARS :=  PGHOST=$(PGHOST) PGPORT=$(PGPORT) PGUSER=$(PGUSER) PGPASSWORD=$(PGPASSWORD) PGDATABASE=$(PGDATABASE)
+
 
 # Use linker flags to provide version/build settings.
 LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
@@ -43,14 +49,17 @@ help: Makefile
 test: govet gocilint test-unit
 
 ## test-unit: Run all unit tests.
+# NOTE: `-p 1` forces execution of package test in serial. Otherwise, they may be
+# executed in parallel, and the test may find unexpected entries in the SQL database
+# because it's shared among all tests.
 test-unit:
 	@echo "  >  Running unit tests"
-	$(GOENVVARS) POSTGRES_PASS=$(POSTGRES_PASS) go test -race -p 1 -failfast -timeout 300s -v ./...
+	$(GOENVVARS) $(PGENVVARS) go test -race -p 1 -failfast -timeout 300s -v ./...
 
 ## test-api-server: Run the API server using the Go tests.
 test-api-server:
 	@echo "  >  Running unit tests"
-	$(GOENVVARS) POSTGRES_PASS=$(POSTGRES_PASS) FAKE_SERVER=yes go test -race -timeout 0 ./api -p 1 -count 1 -v
+	$(GOENVVARS) $(PGENVVARS) FAKE_SERVER=yes go test -race -timeout 0 ./api -p 1 -count 1 -v
 
 ## gofmt: Run `go fmt` for all go files.
 gofmt:
@@ -127,7 +136,7 @@ migration-clean:
 ## run-database-container: Run the Postgres container
 run-database-container:
 	@echo "  >  Running the postgreSQL DB..."
-	@-docker run --rm --name hermez-db -p 5432:5432 -e POSTGRES_DB=hermez -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD="$(POSTGRES_PASS)" -d postgres
+	@-docker run --rm --name hermez-db -p $(PGPORT):5432 -e POSTGRES_DB=$(PGDATABASE) -e POSTGRES_USER=$(PGUSER) -e POSTGRES_PASSWORD="$(PGPASSWORD)" -d postgres
 
 ## stop-database-container: Stop the Postgres container
 stop-database-container:

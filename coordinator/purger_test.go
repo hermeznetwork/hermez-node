@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 
@@ -17,8 +16,7 @@ import (
 )
 
 func newL2DB(t *testing.T) *l2db.L2DB {
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	require.NoError(t, err)
 	test.WipeDB(db)
 	return l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
