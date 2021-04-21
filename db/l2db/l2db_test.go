@@ -339,7 +339,7 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 		State:    &state,
 		FromItem: &fromItem,
 		Limit:    &limit,
-		Order:    OrderAsc,
+		Order:    dbUtils.OrderAsc,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, len(pendingTxs), len(fetchedTxs))

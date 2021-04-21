@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -72,13 +73,13 @@ func TestGetCoordinators(t *testing.T) {
 	// All
 	limit := 5
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &testCoordinatorsResponse{}, appendIter)
+	err := doGoodReqPaginated(path, db.OrderAsc, &testCoordinatorsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertCoordinators(t, tc.coordinators, fetchedCoordinators)
 
 	// All in reverse order
 	fetchedCoordinators = []historydb.CoordinatorAPI{}
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testCoordinatorsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testCoordinatorsResponse{}, appendIter)
 	assert.NoError(t, err)
 	reversedCoordinators := []historydb.CoordinatorAPI{}
 	for i := 0; i < len(tc.coordinators); i++ {
@@ -90,7 +91,7 @@ func TestGetCoordinators(t *testing.T) {
 		fetchedCoordinators = []historydb.CoordinatorAPI{}
 		err = doGoodReqPaginated(
 			fmt.Sprintf(path+"&bidderAddr=%s", filteredCoord.Bidder.String()),
-			historydb.OrderAsc, &testCoordinatorsResponse{}, appendIter,
+			db.OrderAsc, &testCoordinatorsResponse{}, appendIter,
 		)
 		assert.NoError(t, err)
 		assertCoordinators(t, []historydb.CoordinatorAPI{filteredCoord}, fetchedCoordinators)
@@ -98,7 +99,7 @@ func TestGetCoordinators(t *testing.T) {
 		fetchedCoordinators = []historydb.CoordinatorAPI{}
 		err = doGoodReqPaginated(
 			fmt.Sprintf(path+"&forgerAddr=%s", filteredCoord.Forger.String()),
-			historydb.OrderAsc, &testCoordinatorsResponse{}, appendIter,
+			db.OrderAsc, &testCoordinatorsResponse{}, appendIter,
 		)
 		assert.NoError(t, err)
 		assertCoordinators(t, []historydb.CoordinatorAPI{filteredCoord}, fetchedCoordinators)
@@ -107,7 +108,7 @@ func TestGetCoordinators(t *testing.T) {
 	// Empty array
 	fetchedCoordinators = []historydb.CoordinatorAPI{}
 	path = fmt.Sprintf("%s?bidderAddr=0xaa942cfcd25ad4d90a62358b0dd84f33b398262a", endpoint)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testCoordinatorsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testCoordinatorsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertCoordinators(t, []historydb.CoordinatorAPI{}, fetchedCoordinators)
 

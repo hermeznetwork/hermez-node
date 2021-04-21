@@ -146,7 +146,7 @@ func (hdb *HistoryDB) GetBatchesAPI(
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "batch.item_id >= ? "
 		} else {
 			queryStr += "batch.item_id <= ? "
@@ -154,7 +154,7 @@ func (hdb *HistoryDB) GetBatchesAPI(
 		args = append(args, request.FromItem)
 	}
 	queryStr += "ORDER BY batch.item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
@@ -246,7 +246,7 @@ func (hdb *HistoryDB) getBestBidsAPI(
 		args = append(args, request.BidderAddr)
 	}
 	queryStr += " ORDER BY b.slot_num "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "
@@ -326,7 +326,7 @@ func (hdb *HistoryDB) GetBidsAPI(request GetBidsAPIRequest) ([]BidAPI, uint64, e
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "bid.item_id >= ? "
 		} else {
 			queryStr += "bid.item_id <= ? "
@@ -335,7 +335,7 @@ func (hdb *HistoryDB) GetBidsAPI(request GetBidsAPIRequest) ([]BidAPI, uint64, e
 	}
 	// pagination
 	queryStr += "ORDER BY bid.item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "
@@ -424,7 +424,7 @@ func (hdb *HistoryDB) GetTokensAPI(
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "item_id >= ? "
 		} else {
 			queryStr += "item_id <= ? "
@@ -433,7 +433,7 @@ func (hdb *HistoryDB) GetTokensAPI(
 	}
 	// pagination
 	queryStr += "ORDER BY item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "
@@ -647,7 +647,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "tx.item_id >= ? "
 		} else {
 			queryStr += "tx.item_id <= ? "
@@ -668,7 +668,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 
 	// pagination
 	queryStr += "ORDER BY tx.item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
@@ -814,7 +814,7 @@ func (hdb *HistoryDB) GetExitsAPI(
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "exit_tree.item_id >= ? "
 		} else {
 			queryStr += "exit_tree.item_id <= ? "
@@ -824,7 +824,7 @@ func (hdb *HistoryDB) GetExitsAPI(
 	}
 	// pagination
 	queryStr += "ORDER BY exit_tree.item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
@@ -892,7 +892,7 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "coordinator.item_id >= ? "
 		} else {
 			queryStr += "coordinator.item_id <= ? "
@@ -901,7 +901,7 @@ func (hdb *HistoryDB) GetCoordinatorsAPI(
 	}
 	// pagination
 	queryStr += "ORDER BY coordinator.item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "
@@ -1031,7 +1031,7 @@ func (hdb *HistoryDB) GetAccountsAPI(
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "account.item_id >= ? "
 		} else {
 			queryStr += "account.item_id <= ? "
@@ -1040,7 +1040,7 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	}
 	// pagination
 	queryStr += "ORDER BY account.item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += " ASC "
 	} else {
 		queryStr += " DESC "

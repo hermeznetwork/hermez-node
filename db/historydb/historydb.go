@@ -37,13 +37,6 @@ import (
 	"github.com/russross/meddler"
 )
 
-const (
-	// OrderAsc indicates ascending order when using pagination
-	OrderAsc = "ASC"
-	// OrderDesc indicates descending order when using pagination
-	OrderDesc = "DESC"
-)
-
 // TODO(Edu): Document here how HistoryDB is kept consistent
 
 // HistoryDB persist the historic of the rollup

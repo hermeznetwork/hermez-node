@@ -9,7 +9,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -30,15 +30,15 @@ func parsePagination(c querier) (fromItem *uint, order string, limit *uint, err 
 	order = dfltOrder
 	const orderName = "order"
 	orderStr := c.Query(orderName)
-	if orderStr != "" && !(orderStr == historydb.OrderAsc || historydb.OrderDesc == orderStr) {
+	if orderStr != "" && !(orderStr == db.OrderAsc || db.OrderDesc == orderStr) {
 		return nil, "", nil, tracerr.Wrap(errors.New(
-			"order must have the value " + historydb.OrderAsc + " or " + historydb.OrderDesc,
+			"order must have the value " + db.OrderAsc + " or " + db.OrderDesc,
 		))
 	}
-	if orderStr == historydb.OrderAsc {
-		order = historydb.OrderAsc
-	} else if orderStr == historydb.OrderDesc {
-		order = historydb.OrderDesc
+	if orderStr == db.OrderAsc {
+		order = db.OrderAsc
+	} else if orderStr == db.OrderDesc {
+		order = db.OrderDesc
 	}
 	// Limit
 	limit = new(uint)

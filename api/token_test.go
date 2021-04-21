@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +56,7 @@ func TestGetTokens(t *testing.T) {
 	// Get all (no filters)
 	limit := 8
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
+	err := doGoodReqPaginated(path, db.OrderAsc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertTokensAPIs(t, tc.tokens, fetchedTokens)
 
@@ -67,7 +68,7 @@ func TestGetTokens(t *testing.T) {
 		"%s?ids=%s&limit=%d",
 		endpoint, stringIds, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 	var tokensFiltered []historydb.TokenWithUSD
 	tokensFiltered = append(tokensFiltered, tc.tokens[2])
@@ -83,7 +84,7 @@ func TestGetTokens(t *testing.T) {
 		"%s?symbols=%s&limit=%d",
 		endpoint, stringSymbols, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 	tokensFiltered = nil
 	tokensFiltered = append(tokensFiltered, tc.tokens[1])
@@ -99,7 +100,7 @@ func TestGetTokens(t *testing.T) {
 		"%s?name=%s&limit=%d",
 		endpoint, stringName, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 	tokensFiltered = nil
 	tokensFiltered = append(tokensFiltered, tc.tokens[8])
@@ -114,7 +115,7 @@ func TestGetTokens(t *testing.T) {
 		"%s?symbols=%s&ids=%s&limit=%d",
 		endpoint, stringSymbols, stringIds, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTokensResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 
 	tokensFiltered = nil
@@ -126,7 +127,7 @@ func TestGetTokens(t *testing.T) {
 	fetchedTokens = []historydb.TokenWithUSD{}
 	limit = 5
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testTokensResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
 	flipedTokens := []historydb.TokenWithUSD{}
 	for i := 0; i < len(tc.tokens); i++ {

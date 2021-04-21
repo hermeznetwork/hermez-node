@@ -161,11 +161,6 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 	nextIsAnd := false
 	queryStr := selectPoolTxAPI
 	var args []interface{}
-	if request.State != nil {
-		queryStr += "WHERE state = ? "
-		args = append(args, request.State)
-		nextIsAnd = true
-	}
 	// ethAddr filter
 	if request.EthAddr != nil {
 		queryStr += "WHERE (tx_pool.effective_from_eth_addr = ? OR tx_pool.effective_to_eth_addr = ?) "
@@ -199,6 +194,18 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 		queryStr += "WHERE tx_pool.effective_to_bjj = ? "
 		nextIsAnd = true
 		args = append(args, request.ToBjj)
+	}
+
+	// state filter
+	if request.State != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.state = ? "
+		args = append(args, request.State)
+		nextIsAnd = true
 	}
 
 	// txType filter
@@ -258,7 +265,7 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 		} else {
 			queryStr += "WHERE "
 		}
-		if request.Order == OrderAsc {
+		if request.Order == db.OrderAsc {
 			queryStr += "tx_pool.item_id >= ? "
 		} else {
 			queryStr += "tx_pool.item_id <= ? "
@@ -275,7 +282,7 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 
 	// pagination
 	queryStr += "ORDER BY tx_pool.item_id "
-	if request.Order == OrderAsc {
+	if request.Order == db.OrderAsc {
 		queryStr += "ASC "
 	} else {
 		queryStr += "DESC "

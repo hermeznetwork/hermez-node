@@ -13,6 +13,7 @@ import (
 
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/mitchellh/copystructure"
@@ -249,6 +250,24 @@ func TestPoolTxs(t *testing.T) {
 	require.NoError(t, err)
 	// GET
 	// init structures
+	fetchedTxsTotal := []testPoolTxReceive{}
+	appendIterTotal := func(intr interface{}) {
+		for i := 0; i < len(intr.(*testPoolTxsResponse).Txs); i++ {
+			tmp, err := copystructure.Copy(intr.(*testPoolTxsResponse).Txs[i])
+			if err != nil {
+				panic(err)
+			}
+			fetchedTxsTotal = append(fetchedTxsTotal, tmp.(testPoolTxReceive))
+		}
+	}
+	// get all (no filters)
+	limit := 20
+	totalAmountOfTransactions := 4
+	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIterTotal))
+	assert.Equal(t, totalAmountOfTransactions, len(fetchedTxsTotal))
+	// get by ethAddr
+	account := tc.accounts[2]
 	fetchedTxs := []testPoolTxReceive{}
 	appendIter := func(intr interface{}) {
 		for i := 0; i < len(intr.(*testPoolTxsResponse).Txs); i++ {
@@ -259,17 +278,9 @@ func TestPoolTxs(t *testing.T) {
 			fetchedTxs = append(fetchedTxs, tmp.(testPoolTxReceive))
 		}
 	}
-	// get all (no filters)
-	limit := 20
-	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
-	assert.Equal(t, 4, len(fetchedTxs))
-	// get by ethAddr
-	account := tc.accounts[2]
-	fetchedTxs = []testPoolTxReceive{}
 	limit = 5
 	path = fmt.Sprintf("%s?hezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
-	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		isPresent := false
 		if string(account.EthAddr) == *v.FromEthAddr || string(account.EthAddr) == *v.ToEthAddr {
@@ -277,24 +288,45 @@ func TestPoolTxs(t *testing.T) {
 		}
 		assert.True(t, isPresent)
 	}
+	count := 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.EthAddr) == *v.FromEthAddr || (v.ToEthAddr != nil && string(account.EthAddr) == *v.ToEthAddr) {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
 	// get by fromEthAddr
 	fetchedTxs = []testPoolTxReceive{}
 	path = fmt.Sprintf("%s?fromHezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
-	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		assert.Equal(t, string(account.EthAddr), *v.FromEthAddr)
 	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.EthAddr) == *v.FromEthAddr {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
 	// get by toEthAddr
 	fetchedTxs = []testPoolTxReceive{}
 	path = fmt.Sprintf("%s?toHezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
-	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		assert.Equal(t, string(account.EthAddr), *v.ToEthAddr)
 	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if v.ToEthAddr != nil && string(account.EthAddr) == *v.ToEthAddr {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
 	// get by bjj
 	fetchedTxs = []testPoolTxReceive{}
 	path = fmt.Sprintf("%s?BJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
-	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		isPresent := false
 		if string(account.PublicKey) == *v.FromBJJ || string(account.PublicKey) == *v.ToBJJ {
@@ -302,30 +334,52 @@ func TestPoolTxs(t *testing.T) {
 		}
 		assert.True(t, isPresent)
 	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.PublicKey) == *v.FromBJJ || (v.ToBJJ != nil && string(account.PublicKey) == *v.ToBJJ) {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+
 	// get by fromBjj
 	fetchedTxs = []testPoolTxReceive{}
 	path = fmt.Sprintf("%s?fromBJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
-	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		assert.Equal(t, string(account.PublicKey), *v.FromBJJ)
 	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.PublicKey) == *v.FromBJJ {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
 	// get by toBjj
 	fetchedTxs = []testPoolTxReceive{}
 	path = fmt.Sprintf("%s?toBJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
-	require.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	for _, v := range fetchedTxs {
 		assert.Equal(t, string(account.PublicKey), *v.ToBJJ)
 	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if v.ToBJJ != nil && string(account.PublicKey) == *v.ToBJJ {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
 	// get by fromAccountIndex
 	fetchedTxs = []testPoolTxReceive{}
 	require.NoError(t, doGoodReqPaginated(
-		endpoint+"?fromAccountIndex=hez:ETH:263&limit=10", historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+		endpoint+"?fromAccountIndex=hez:ETH:263&limit=10", db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	assert.Equal(t, 1, len(fetchedTxs))
 	assert.Equal(t, "hez:ETH:263", fetchedTxs[0].FromIdx)
 	// get by toAccountIndex
 	fetchedTxs = []testPoolTxReceive{}
 	require.NoError(t, doGoodReqPaginated(
-		endpoint+"?toAccountIndex=hez:ETH:262&limit=10", historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+		endpoint+"?toAccountIndex=hez:ETH:262&limit=10", db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	assert.Equal(t, 1, len(fetchedTxs))
 	toIdx := "hez:ETH:262"
 	assert.Equal(t, &toIdx, fetchedTxs[0].ToIdx)
@@ -334,7 +388,7 @@ func TestPoolTxs(t *testing.T) {
 	idx := "hez:ETH:259"
 	path = fmt.Sprintf("%s?accountIndex=%s&limit=%d", endpoint, idx, limit)
 	require.NoError(t, doGoodReqPaginated(
-		path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+		path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	assert.NoError(t, err)
 	for _, v := range fetchedTxs {
 		isPresent := false
@@ -358,7 +412,7 @@ func TestPoolTxs(t *testing.T) {
 		limit = 2
 		path = fmt.Sprintf("%s?type=%s&limit=%d",
 			endpoint, txType, limit)
-		assert.NoError(t, doGoodReqPaginated(path, historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+		assert.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 		for _, v := range fetchedTxs {
 			assert.Equal(t, txType, v.Type)
 		}
@@ -367,7 +421,7 @@ func TestPoolTxs(t *testing.T) {
 	// get by state
 	fetchedTxs = []testPoolTxReceive{}
 	require.NoError(t, doGoodReqPaginated(
-		endpoint+"?state=pend&limit=10", historydb.OrderAsc, &testPoolTxsResponse{}, appendIter))
+		endpoint+"?state=pend&limit=10", db.OrderAsc, &testPoolTxsResponse{}, appendIter))
 	assert.Equal(t, 4, len(fetchedTxs))
 	for _, v := range fetchedTxs {
 		assert.Equal(t, common.PoolL2TxStatePending, v.State)

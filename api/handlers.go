@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
@@ -19,7 +19,7 @@ const (
 	maxLimit uint = 2049
 
 	// dfltOrder indicates how paginated endpoints are ordered if not specified
-	dfltOrder = historydb.OrderAsc
+	dfltOrder = db.OrderAsc
 
 	// dfltLimit indicates the limit of returned items in paginated responses if the query param limit is not provided
 	dfltLimit uint = 20

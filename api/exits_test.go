@@ -6,6 +6,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -110,7 +111,7 @@ func TestGetExits(t *testing.T) {
 	// Get all (no filters)
 	limit := 8
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err := doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertExitAPIs(t, tc.exits, fetchedExits)
 
@@ -136,7 +137,7 @@ func TestGetExits(t *testing.T) {
 		"%s?hezEthereumAddress=%s&limit=%d",
 		endpoint, account.EthAddr, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	var accountExits []testExit
 	for i := range tc.exits {
@@ -156,7 +157,7 @@ func TestGetExits(t *testing.T) {
 		"%s?BJJ=%s&limit=%d",
 		endpoint, account.PublicKey, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertExitAPIs(t, accountExits, fetchedExits)
 	// Get by tokenID
@@ -167,7 +168,7 @@ func TestGetExits(t *testing.T) {
 		"%s?tokenId=%d&limit=%d",
 		endpoint, tokenID, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	tokenIDExits := []testExit{}
 	for i := 0; i < len(tc.exits); i++ {
@@ -184,7 +185,7 @@ func TestGetExits(t *testing.T) {
 		"%s?accountIndex=%s&limit=%d",
 		endpoint, idx, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	idxExits := []testExit{}
 	for i := 0; i < len(tc.exits); i++ {
@@ -201,7 +202,7 @@ func TestGetExits(t *testing.T) {
 		"%s?batchNum=%d&limit=%d",
 		endpoint, batchNum, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	batchNumExits := []testExit{}
 	for i := 0; i < len(tc.exits); i++ {
@@ -217,7 +218,7 @@ func TestGetExits(t *testing.T) {
 		"%s?&onlyPendingWithdraws=%t&limit=%d",
 		endpoint, true, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	pendingExits := []testExit{}
 	for i := 0; i < len(tc.exits); i++ {
@@ -233,7 +234,7 @@ func TestGetExits(t *testing.T) {
 		"%s?batchNum=%d&tokeId=%d&limit=%d",
 		endpoint, batchNum, tokenID, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	mixedExits := []testExit{}
 	flipedExits := []testExit{}
@@ -248,13 +249,13 @@ func TestGetExits(t *testing.T) {
 	fetchedExits = []testExit{}
 	limit = 5
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertExitAPIs(t, flipedExits, fetchedExits)
 	// Empty array
 	fetchedExits = []testExit{}
 	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testExitsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testExitsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertExitAPIs(t, []testExit{}, fetchedExits)
 	// 400
