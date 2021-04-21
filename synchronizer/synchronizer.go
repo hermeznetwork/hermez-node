@@ -143,11 +143,15 @@ func (s *StatsHolder) UpdateSync(lastBlock *common.Block, lastBatch *common.Batc
 
 // UpdateEth updates the ethereum stats, only if the previous stats expired
 func (s *StatsHolder) UpdateEth(ethClient eth.ClientInterface) error {
+	start := time.Now()
 	lastBlock, err := ethClient.EthBlockByNumber(context.TODO(), -1)
+	log.Debugw("DBG EthBlockByNumber duration", "elapsed", time.Since(start))
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
 	}
+	start = time.Now()
 	lastBatchNum, err := ethClient.RollupLastForgedBatch()
+	log.Debugw("DBG RollupLastForgedBatch duration", "elapsed", time.Since(start))
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("RollupLastForgedBatch: %w", err))
 	}
@@ -391,7 +395,9 @@ func (s *Synchronizer) updateCurrentSlot(slot *common.Slot, reset bool, hasBatch
 
 		// TODO: Remove this SANITY CHECK once this code is tested enough
 		// BEGIN SANITY CHECK
+		start := time.Now()
 		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, blockNum)
+		log.Debugw("DBG AuctionCanForge duration", "elapsed", time.Since(start))
 		if err != nil {
 			return tracerr.Wrap(fmt.Errorf("AuctionCanForge: %w", err))
 		}
@@ -422,7 +428,9 @@ func (s *Synchronizer) updateNextSlot(slot *common.Slot) error {
 
 		// TODO: Remove this SANITY CHECK once this code is tested enough
 		// BEGIN SANITY CHECK
+		start := time.Now()
 		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, slot.StartBlock)
+		log.Debugw("DBG AuctionCanForge duration", "elapsed", time.Since(start))
 		if err != nil {
 			return tracerr.Wrap(fmt.Errorf("AuctionCanForge: %w", err))
 		}
@@ -545,7 +553,9 @@ func (s *Synchronizer) Sync(ctx context.Context,
 		}
 	}
 
+	start := time.Now()
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
+	log.Debugw("DBG EthBlockByNumber duration", "elapsed", time.Since(start))
 	if tracerr.Unwrap(err) == ethereum.NotFound {
 		return nil, nil, nil
 	} else if err != nil {
@@ -702,7 +712,9 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 
 	var block *common.Block
 	for blockNum >= s.startBlockNum {
+		start := time.Now()
 		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), blockNum)
+		log.Debugw("DBG EthBlockByNumber duration", "elapsed", time.Since(start))
 		if err != nil {
 			return 0, tracerr.Wrap(fmt.Errorf("ethClient.EthBlockByNumber: %w", err))
 		}
@@ -838,7 +850,9 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 	// Get rollup events in the block, and make sure the block hash matches
 	// the expected one.
+	start := time.Now()
 	rollupEvents, err := s.ethClient.RollupEventsByBlock(blockNum, &ethBlock.Hash)
+	log.Debugw("DBG RollupEventsByBlock duration", "elapsed", time.Since(start))
 	if err != nil && err.Error() == errStrUnknownBlock {
 		return nil, tracerr.Wrap(ErrUnknownBlock)
 	} else if err != nil {
@@ -872,8 +886,10 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		position := 0
 
 		// Get the input for each Tx
+		start := time.Now()
 		forgeBatchArgs, sender, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash,
 			evtForgeBatch.L1UserTxsLen)
+		log.Debugw("DBG RollupForgeBatchArgs duration", "elapsed", time.Since(start))
 		if err != nil {
 			return nil, tracerr.Wrap(fmt.Errorf("RollupForgeBatchArgs: %w", err))
 		}
@@ -1189,7 +1205,9 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	var auctionData = common.NewAuctionData()
 
 	// Get auction events in the block
+	start := time.Now()
 	auctionEvents, err := s.ethClient.AuctionEventsByBlock(blockNum, &ethBlock.Hash)
+	log.Debugw("DBG AuctionEventsByBlock duration", "elapsed", time.Since(start))
 	if err != nil && err.Error() == errStrUnknownBlock {
 		return nil, tracerr.Wrap(ErrUnknownBlock)
 	} else if err != nil {
@@ -1290,7 +1308,9 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 	wDelayerData := common.NewWDelayerData()
 
 	// Get wDelayer events in the block
+	start := time.Now()
 	wDelayerEvents, err := s.ethClient.WDelayerEventsByBlock(blockNum, &ethBlock.Hash)
+	log.Debugw("DBG WDelayerEventsByBlock duration", "elapsed", time.Since(start))
 	if err != nil && err.Error() == errStrUnknownBlock {
 		return nil, tracerr.Wrap(ErrUnknownBlock)
 	} else if err != nil {

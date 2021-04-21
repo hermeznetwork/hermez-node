@@ -712,6 +712,7 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
 	time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
+	log.Debugw("DBG Sync()", "blockData!=nil", blockData != nil, "discarded", discarded, "err", err)
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
