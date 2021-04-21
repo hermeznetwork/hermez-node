@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 const (
@@ -35,8 +36,10 @@ const (
 	UpdateMethodTypeIgnore UpdateMethodType = "ignore"
 )
 
-func (t *UpdateMethodType) valid() bool {
-	switch *t {
+// ValidateUpdateMethodType method is for validation update method field in config
+func ValidateUpdateMethodType(fl validator.FieldLevel) bool {
+	field := fl.Field().Interface().(UpdateMethodType)
+	switch field {
 	case UpdateMethodTypeBitFinexV2:
 		return true
 	case UpdateMethodTypeCoingeckoV3:
@@ -50,20 +53,31 @@ func (t *UpdateMethodType) valid() bool {
 	}
 }
 
+// ValidateIsUpdateMethodTypeIsNotStatic method is for validation update method type field is not static
+func ValidateIsUpdateMethodTypeIsNotStatic(fl validator.FieldLevel) bool {
+	field := fl.Field().Interface().(UpdateMethodType)
+	return field != UpdateMethodTypeStatic
+}
+
 // TokenConfig specifies how a single token get its price updated
 type TokenConfig struct {
-	UpdateMethod UpdateMethodType
-	StaticValue  float64 // required by UpdateMethodTypeStatic
+	UpdateMethod UpdateMethodType `validate:"is-valid-updatemethodtype"`
+	StaticValue  float64          // required by UpdateMethodTypeStatic
 	Symbol       string
 	Addr         ethCommon.Address
 }
 
-func (t *TokenConfig) valid() bool {
-	if (t.Addr == common.EmptyAddr && t.Symbol != "ETH") ||
-		(t.Symbol == "" && t.UpdateMethod == UpdateMethodTypeBitFinexV2) {
-		return false
+// TokenConfigValidation method is for validation of tokenConfig struct
+func TokenConfigValidation(sl validator.StructLevel) {
+	tokenConfig := sl.Current().Interface().(TokenConfig)
+	if tokenConfig.Addr == common.EmptyAddr && tokenConfig.Symbol != "ETH" {
+		sl.ReportError(tokenConfig.Addr, "Addr", "Addr", "emptyaddrfornoteth", "")
+		sl.ReportError(tokenConfig.Symbol, "Symbol", "Symbol", "emptyaddrfornoteth", "")
+		return
+	} else if tokenConfig.Symbol == "" && tokenConfig.UpdateMethod == UpdateMethodTypeBitFinexV2 {
+		sl.ReportError(tokenConfig.Symbol, "Symbol", "Symbol", "emptysymbolforbitfinex", "")
+		return
 	}
-	return t.UpdateMethod.valid()
 }
 
 // PriceUpdater definition
@@ -83,17 +97,8 @@ func NewPriceUpdater(
 	db *historydb.HistoryDB,
 	bitfinexV2URL, coingeckoV3URL string,
 ) (*PriceUpdater, error) {
-	// Validate params
-	if !defaultUpdateMethodType.valid() || defaultUpdateMethodType == UpdateMethodTypeStatic {
-		return nil, tracerr.Wrap(
-			fmt.Errorf("Invalid defaultUpdateMethodType: %v", defaultUpdateMethodType),
-		)
-	}
 	tokensConfigMap := make(map[ethCommon.Address]TokenConfig)
 	for _, t := range tokensConfig {
-		if !t.valid() {
-			return nil, tracerr.Wrap(fmt.Errorf("Invalid tokensConfig, wrong entry: %+v", t))
-		}
 		tokensConfigMap[t.Addr] = t
 	}
 	// Init
