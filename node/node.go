@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
+
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
@@ -35,6 +37,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
 	"github.com/hermeznetwork/hermez-node/coordinator"
+
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -92,6 +95,14 @@ type Node struct {
 
 // NewNode creates a Node
 func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
+	if cfg.Debug.PprofAddress != "" {
+		go func() {
+			log.Infof("Starting pprof at %v", cfg.Debug.PprofAddress)
+			if err := http.ListenAndServe(cfg.Debug.PprofAddress, nil); err != nil {
+				log.Errorw("http.ListenAndServe", "err", err)
+			}
+		}()
+	}
 	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
 	dbWrite, err := dbUtils.InitSQLDB(

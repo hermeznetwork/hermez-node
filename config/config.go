@@ -276,6 +276,9 @@ type NodeDebug struct {
 	// GinDebugMode sets Gin-Gonic (the web framework) to run in
 	// debug mode
 	GinDebugMode bool
+	// PprofAddress is the address where the go runtime profiling
+	// data is exposed
+	PprofAddress string
 }
 
 // Node is the hermez node configuration.
