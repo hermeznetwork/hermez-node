@@ -172,6 +172,10 @@ func TestAddTxTest(t *testing.T) {
 		assert.Equal(t, "UTC", nameZone)
 		assert.Equal(t, 0, offset)
 	}
+	tx := &poolL2Txs[1]
+	err = l2DBWithACC.AddTxTest(tx)
+	require.Error(t, err)
+	assert.Regexp(t, "duplicate key value", err.Error())
 }
 
 func TestAddTxAPI(t *testing.T) {
@@ -308,6 +312,36 @@ func TestGetPending(t *testing.T) {
 			tokens[tx.TokenID].Decimals, *tokens[tx.TokenID].USD)
 		assert.InEpsilon(t, feeAmountUSD, tx.AbsoluteFee, 0.01)
 	}
+}
+
+func TestL2DB_GetPoolTxs(t *testing.T) {
+	err := prepareHistoryDB(historyDB)
+	if err != nil {
+		log.Error("Error prepare historyDB", err)
+	}
+	poolL2Txs, err := generatePoolL2Txs()
+	require.NoError(t, err)
+	state := common.PoolL2TxState("pend")
+	idx := common.Idx(256)
+	fromItem := uint(0)
+	limit := uint(10)
+	var pendingTxs []*common.PoolL2Tx
+	for i := range poolL2Txs {
+		if poolL2Txs[i].FromIdx == idx || poolL2Txs[i].ToIdx == idx {
+			err := l2DB.AddTxTest(&poolL2Txs[i])
+			require.NoError(t, err)
+			pendingTxs = append(pendingTxs, &poolL2Txs[i])
+		}
+	}
+	fetchedTxs, _, err := l2DBWithACC.GetPoolTxsAPI(GetPoolTxsAPIRequest{
+		Idx:      &idx,
+		State:    &state,
+		FromItem: &fromItem,
+		Limit:    &limit,
+		Order:    dbUtils.OrderAsc,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, len(pendingTxs), len(fetchedTxs))
 }
 
 func TestStartForging(t *testing.T) {

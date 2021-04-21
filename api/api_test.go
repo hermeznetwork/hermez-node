@@ -729,7 +729,7 @@ func doGoodReqPaginated(
 		if remaining == 0 {
 			break
 		}
-		if order == historydb.OrderDesc {
+		if order == db.OrderDesc {
 			next = lastID - 1
 		} else {
 			next = lastID + 1

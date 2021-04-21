@@ -39,6 +39,7 @@ type PoolL2TxWrite struct {
 
 // PoolTxAPI represents a L2 Tx pool with extra metadata used by the API
 type PoolTxAPI struct {
+	ItemID               uint64                `meddler:"item_id"`
 	TxID                 common.TxID           `meddler:"tx_id"`
 	FromIdx              apitypes.HezIdx       `meddler:"from_idx"`
 	EffectiveFromEthAddr *apitypes.HezEthAddr  `meddler:"effective_from_eth_addr"`
@@ -80,6 +81,7 @@ type PoolTxAPI struct {
 // without the need of auxiliar structs
 func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
+		"itemId":                      tx.ItemID,
 		"id":                          tx.TxID,
 		"type":                        tx.Type,
 		"fromAccountIndex":            tx.FromIdx,

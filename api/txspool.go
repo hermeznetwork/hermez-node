@@ -55,6 +55,63 @@ func (a *API) getPoolTx(c *gin.Context) {
 	c.JSON(http.StatusOK, tx)
 }
 
+func (a *API) getPoolTxs(c *gin.Context) {
+	txFilters, err := parseTxsFilters(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// TxType
+	txType, err := parseQueryTxType(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Pagination
+	fromItem, order, limit, err := parsePagination(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Get state
+	state, err := parseQueryPoolL2TxState(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch txs from l2DB
+	txs, pendingItems, err := a.l2.GetPoolTxsAPI(l2db.GetPoolTxsAPIRequest{
+		EthAddr:     txFilters.addr,
+		FromEthAddr: txFilters.fromAddr,
+		ToEthAddr:   txFilters.toAddr,
+		Bjj:         txFilters.bjj,
+		FromBjj:     txFilters.fromBjj,
+		ToBjj:       txFilters.toBjj,
+		TxType:      txType,
+		Idx:         txFilters.idx,
+		FromIdx:     txFilters.fromIdx,
+		ToIdx:       txFilters.toIdx,
+		State:       state,
+		FromItem:    fromItem,
+		Limit:       limit,
+		Order:       order,
+	})
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+
+	// Build successful response
+	type txsResponse struct {
+		Txs          []l2db.PoolTxAPI `json:"transactions"`
+		PendingItems uint64           `json:"pendingItems"`
+	}
+	c.JSON(http.StatusOK, &txsResponse{
+		Txs:          txs,
+		PendingItems: pendingItems,
+	})
+}
+
 type receivedPoolTx struct {
 	TxID        common.TxID             `json:"id" binding:"required"`
 	Type        common.TxType           `json:"type" binding:"required"`

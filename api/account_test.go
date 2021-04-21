@@ -7,6 +7,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -76,14 +77,14 @@ func TestGetAccounts(t *testing.T) {
 
 	// Filter by BJJ
 	path := fmt.Sprintf("%s?BJJ=%s&limit=%d", endpoint, tc.accounts[0].PublicKey, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
+	err := doGoodReqPaginated(path, db.OrderAsc, &testAccountsResponse{}, appendIter)
 	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Filter by ethAddr
 	path = fmt.Sprintf("%s?hezEthereumAddress=%s&limit=%d", endpoint, tc.accounts[3].EthAddr, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testAccountsResponse{}, appendIter)
 	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
@@ -95,21 +96,21 @@ func TestGetAccounts(t *testing.T) {
 	fetchedAccounts = []testAccount{}
 	// Filter by token IDs
 	path = fmt.Sprintf("%s?tokenIds=%s&limit=%d", endpoint, stringIds, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testAccountsResponse{}, appendIter)
 	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// Token Ids + bjj
 	path = fmt.Sprintf("%s?tokenIds=%s&BJJ=%s&limit=%d", endpoint, stringIds, tc.accounts[10].PublicKey, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testAccountsResponse{}, appendIter)
 	require.NoError(t, err)
 	assert.Greater(t, len(fetchedAccounts), 0)
 	assert.LessOrEqual(t, len(fetchedAccounts), len(tc.accounts))
 	fetchedAccounts = []testAccount{}
 	// No filters (checks response content)
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testAccountsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testAccountsResponse{}, appendIter)
 	require.NoError(t, err)
 	assert.Equal(t, len(tc.accounts), len(fetchedAccounts))
 	for i := 0; i < len(fetchedAccounts); i++ {
@@ -132,7 +133,7 @@ func TestGetAccounts(t *testing.T) {
 			reversedAccounts = append(reversedAccounts, tmp.(testAccount))
 		}
 	}
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testAccountsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testAccountsResponse{}, appendIter)
 	require.NoError(t, err)
 	assert.Equal(t, len(reversedAccounts), len(fetchedAccounts))
 	for i := 0; i < len(fetchedAccounts); i++ {

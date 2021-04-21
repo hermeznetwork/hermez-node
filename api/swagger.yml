@@ -415,6 +415,127 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+    get:
+      tags:
+        - Coordinator
+      summary: Get transactions that are in the pool.
+      operationId: getPoolTxs
+      parameters:
+        - name: state
+          in: query
+          required: false
+          description: State of the transactions, e.g. "pend"
+          schema:
+            $ref: '#/components/schemas/PoolL2TransactionState'
+        - name: accountIndex
+          in: query
+          required: false
+          description: Only get transactions sent from and to a specific account. Incompatible with the queries `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: fromAccountIndex
+          in: query
+          required: false
+          description: Only get transactions sent from a specific account. Incompatible with the queries `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: toAccountIndex
+          in: query
+          required: false
+          description: Only get transactions sent to a specific account. Incompatible with the queries `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: type
+          in: query
+          required: false
+          description: Only get transactions of a specific type
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+        - name: hezEthereumAddress
+          in: query
+          required: false
+          description: Only get transactions sent from or to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `toHezEthereumAddress`, `fromHezEthereumAddress`.
+          schema:
+            $ref: '#/components/schemas/HezEthereumAddress'
+        - name: fromHezEthereumAddress
+          in: query
+          required: false
+          description: Only get transactions sent from an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
+          schema:
+            $ref: '#/components/schemas/HezEthereumAddress'
+        - name: toHezEthereumAddress
+          in: query
+          required: false
+          description: Only get transactions sent to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
+          schema:
+            $ref: '#/components/schemas/HezEthereumAddress'
+        - name: BJJ
+          in: query
+          description: Only get transactions associated with a BabyJubJub compressed public key. The BJJ is in base 64. Incompatible with the queries `hezEthereumAddress` and `accountIndex`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
+        - name: fromBJJ
+          in: query
+          description: Only get transactions sent from a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
+        - name: toBJJ
+          in: query
+          description: Only get transactions sent to a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
+        - name: fromItem
+          in: query
+          required: false
+          description: Indicates the desired first item (using the itemId property) to be included in the response.
+          schema:
+            type: number
+        - name: order
+          in: query
+          required: false
+          description: Order of the returned items. Transactions will be ordered by item_id.
+          schema:
+            type: string
+            default: ASC
+            enum:
+              - ASC
+              - DESC
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to be returned.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2049
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoolL2Transactions'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
   '/transactions-pool/{id}':
     get:
       tags:
@@ -478,7 +599,19 @@ paths:
         - name: hezEthereumAddress
           in: query
           required: false
-          description: Only get transactions sent from or to an account associated with an Ethereum address Incompatible with the queries `BJJ` and `accountIndex`.
+          description: Only get transactions sent from or to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `toHezEthereumAddress`, `fromHezEthereumAddress`.
+          schema:
+            $ref: '#/components/schemas/HezEthereumAddress'
+        - name: fromHezEthereumAddress
+          in: query
+          required: false
+          description: Only get transactions sent from an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
+          schema:
+            $ref: '#/components/schemas/HezEthereumAddress'
+        - name: toHezEthereumAddress
+          in: query
+          required: false
+          description: Only get transactions sent to an account associated with an Ethereum address. Incompatible with the queries `BJJ`, `fromBJJ`, `toBJJ` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`.
           schema:
             $ref: '#/components/schemas/HezEthereumAddress'
         - name: BJJ
@@ -487,10 +620,34 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/BJJ'
+        - name: fromBJJ
+          in: query
+          description: Only get transactions from a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
+        - name: toBJJ
+          in: query
+          description: Only get transactions to a BabyJubJub compressed public key. Incompatible with the queries `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress` and `accountIndex`, `fromAccountIndex`, `toAccountIndex`, `BJJ`.
+          required: false
+          schema:
+            $ref: '#/components/schemas/BJJ'
         - name: accountIndex
           in: query
           required: false
-          description: Only get transactions sent from or to a specific account. Incompatible with the queries `tokenId`, `hezEthereumAddress` and `BJJ`.
+          description: Only get transactions sent from and to a specific account. Incompatible with the queries `tokenId`, `fromAccountIndex`, `toAccountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: fromAccountIndex
+          in: query
+          required: false
+          description: Only get transactions sent from a specific account. Incompatible with the queries `tokenId`, `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: toAccountIndex
+          in: query
+          required: false
+          description: Only get transactions sent to a specific account. Incompatible with the queries `tokenId`, `accountIndex`, `hezEthereumAddress`, `fromHezEthereumAddress`, `toHezEthereumAddress`, `BJJ`, `toBJJ`, `fromBJJ`.
           schema:
             $ref: '#/components/schemas/AccountIndex'
         - name: batchNum
@@ -1448,6 +1605,20 @@ components:
         - requestFee
         - requestNonce
         - token
+    PoolL2Transactions:
+      type: object
+      properties:
+        transactions:
+          type: array
+          description: List of pool l2 transactions
+          items:
+            $ref: '#/components/schemas/PoolL2Transaction'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
+      required:
+        - transactions
+        - pendingItems
+      additionalProperties: false
     TransactionId:
       type: string
       description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)

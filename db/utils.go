@@ -30,6 +30,13 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+const (
+	// OrderAsc indicates ascending order when using pagination
+	OrderAsc = "ASC"
+	// OrderDesc indicates descending order when using pagination
+	OrderDesc = "DESC"
+)
+
 var migrations *migrate.PackrMigrationSource
 
 func init() {

@@ -6,14 +6,17 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
 
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,6 +24,7 @@ import (
 // testPoolTxReceive is a struct to be used to assert the response
 // of GET /transactions-pool/:id
 type testPoolTxReceive struct {
+	ItemID      uint64                 `json:"itemId"`
 	TxID        common.TxID            `json:"id"`
 	Type        common.TxType          `json:"type"`
 	FromIdx     string                 `json:"fromAccountIndex"`
@@ -46,6 +50,26 @@ type testPoolTxReceive struct {
 	Timestamp   time.Time              `json:"timestamp"`
 	Token       historydb.TokenWithUSD `json:"token"`
 }
+
+type testPoolTxsResponse struct {
+	Txs          []testPoolTxReceive `json:"transactions"`
+	PendingItems uint64              `json:"pendingItems"`
+}
+
+func (t testPoolTxsResponse) GetPending() (pendingItems, lastItemID uint64) {
+	if len(t.Txs) == 0 {
+		return 0, 0
+	}
+	pendingItems = t.PendingItems
+	lastItemID = t.Txs[len(t.Txs)-1].ItemID
+	return pendingItems, lastItemID
+}
+
+func (t testPoolTxsResponse) Len() int {
+	return len(t.Txs)
+}
+
+func (t testPoolTxsResponse) New() Pendinger { return &testPoolTxsResponse{} }
 
 // testPoolTxSend is a struct to be used as a JSON body
 // when testing POST /transactions-pool
@@ -225,6 +249,184 @@ func TestPoolTxs(t *testing.T) {
 	err = doBadReq("POST", endpoint, jsonTxReader, 400)
 	require.NoError(t, err)
 	// GET
+	// init structures
+	fetchedTxsTotal := []testPoolTxReceive{}
+	appendIterTotal := func(intr interface{}) {
+		for i := 0; i < len(intr.(*testPoolTxsResponse).Txs); i++ {
+			tmp, err := copystructure.Copy(intr.(*testPoolTxsResponse).Txs[i])
+			if err != nil {
+				panic(err)
+			}
+			fetchedTxsTotal = append(fetchedTxsTotal, tmp.(testPoolTxReceive))
+		}
+	}
+	// get all (no filters)
+	limit := 20
+	totalAmountOfTransactions := 4
+	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIterTotal))
+	assert.Equal(t, totalAmountOfTransactions, len(fetchedTxsTotal))
+	// get by ethAddr
+	account := tc.accounts[2]
+	fetchedTxs := []testPoolTxReceive{}
+	appendIter := func(intr interface{}) {
+		for i := 0; i < len(intr.(*testPoolTxsResponse).Txs); i++ {
+			tmp, err := copystructure.Copy(intr.(*testPoolTxsResponse).Txs[i])
+			if err != nil {
+				panic(err)
+			}
+			fetchedTxs = append(fetchedTxs, tmp.(testPoolTxReceive))
+		}
+	}
+	limit = 5
+	path = fmt.Sprintf("%s?hezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	for _, v := range fetchedTxs {
+		isPresent := false
+		if string(account.EthAddr) == *v.FromEthAddr || string(account.EthAddr) == *v.ToEthAddr {
+			isPresent = true
+		}
+		assert.True(t, isPresent)
+	}
+	count := 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.EthAddr) == *v.FromEthAddr || (v.ToEthAddr != nil && string(account.EthAddr) == *v.ToEthAddr) {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+	// get by fromEthAddr
+	fetchedTxs = []testPoolTxReceive{}
+	path = fmt.Sprintf("%s?fromHezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	for _, v := range fetchedTxs {
+		assert.Equal(t, string(account.EthAddr), *v.FromEthAddr)
+	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.EthAddr) == *v.FromEthAddr {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+	// get by toEthAddr
+	fetchedTxs = []testPoolTxReceive{}
+	path = fmt.Sprintf("%s?toHezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	for _, v := range fetchedTxs {
+		assert.Equal(t, string(account.EthAddr), *v.ToEthAddr)
+	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if v.ToEthAddr != nil && string(account.EthAddr) == *v.ToEthAddr {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+	// get by bjj
+	fetchedTxs = []testPoolTxReceive{}
+	path = fmt.Sprintf("%s?BJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	for _, v := range fetchedTxs {
+		isPresent := false
+		if string(account.PublicKey) == *v.FromBJJ || string(account.PublicKey) == *v.ToBJJ {
+			isPresent = true
+		}
+		assert.True(t, isPresent)
+	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.PublicKey) == *v.FromBJJ || (v.ToBJJ != nil && string(account.PublicKey) == *v.ToBJJ) {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+
+	// get by fromBjj
+	fetchedTxs = []testPoolTxReceive{}
+	path = fmt.Sprintf("%s?fromBJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	for _, v := range fetchedTxs {
+		assert.Equal(t, string(account.PublicKey), *v.FromBJJ)
+	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if string(account.PublicKey) == *v.FromBJJ {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+	// get by toBjj
+	fetchedTxs = []testPoolTxReceive{}
+	path = fmt.Sprintf("%s?toBJJ=%s&limit=%d", endpoint, account.PublicKey, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	for _, v := range fetchedTxs {
+		assert.Equal(t, string(account.PublicKey), *v.ToBJJ)
+	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if v.ToBJJ != nil && string(account.PublicKey) == *v.ToBJJ {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+	// get by fromAccountIndex
+	fetchedTxs = []testPoolTxReceive{}
+	require.NoError(t, doGoodReqPaginated(
+		endpoint+"?fromAccountIndex=hez:ETH:263&limit=10", db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	assert.Equal(t, 1, len(fetchedTxs))
+	assert.Equal(t, "hez:ETH:263", fetchedTxs[0].FromIdx)
+	// get by toAccountIndex
+	fetchedTxs = []testPoolTxReceive{}
+	require.NoError(t, doGoodReqPaginated(
+		endpoint+"?toAccountIndex=hez:ETH:262&limit=10", db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	assert.Equal(t, 1, len(fetchedTxs))
+	toIdx := "hez:ETH:262"
+	assert.Equal(t, &toIdx, fetchedTxs[0].ToIdx)
+	// get by accountIndex
+	fetchedTxs = []testPoolTxReceive{}
+	idx := "hez:ETH:259"
+	path = fmt.Sprintf("%s?accountIndex=%s&limit=%d", endpoint, idx, limit)
+	require.NoError(t, doGoodReqPaginated(
+		path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	assert.NoError(t, err)
+	for _, v := range fetchedTxs {
+		isPresent := false
+		if v.FromIdx == idx || v.ToIdx == &idx {
+			isPresent = true
+		}
+		assert.True(t, isPresent)
+	}
+	txTypes := []common.TxType{
+		common.TxTypeExit,
+		common.TxTypeTransfer,
+		common.TxTypeDeposit,
+		common.TxTypeCreateAccountDeposit,
+		common.TxTypeCreateAccountDepositTransfer,
+		common.TxTypeDepositTransfer,
+		common.TxTypeForceTransfer,
+		common.TxTypeForceExit,
+	}
+	for _, txType := range txTypes {
+		fetchedTxs = []testPoolTxReceive{}
+		limit = 2
+		path = fmt.Sprintf("%s?type=%s&limit=%d",
+			endpoint, txType, limit)
+		assert.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+		for _, v := range fetchedTxs {
+			assert.Equal(t, txType, v.Type)
+		}
+	}
+
+	// get by state
+	fetchedTxs = []testPoolTxReceive{}
+	require.NoError(t, doGoodReqPaginated(
+		endpoint+"?state=pend&limit=10", db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	assert.Equal(t, 4, len(fetchedTxs))
+	for _, v := range fetchedTxs {
+		assert.Equal(t, common.PoolL2TxStatePending, v.State)
+	}
+	// GET
 	endpoint += "/"
 	for _, tx := range tc.poolTxsToReceive {
 		fetchedTx := testPoolTxReceive{}
@@ -250,6 +452,7 @@ func assertPoolTx(t *testing.T, expected, actual testPoolTxReceive) {
 	assert.Equal(t, common.PoolL2TxStatePending, actual.State)
 	expected.State = actual.State
 	actual.Token.ItemID = 0
+	actual.ItemID = 0
 	// timestamp should be very close to now
 	assert.Less(t, time.Now().UTC().Unix()-3, actual.Timestamp.Unix())
 	expected.Timestamp = actual.Timestamp

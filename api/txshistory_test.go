@@ -10,6 +10,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/mitchellh/copystructure"
@@ -275,7 +276,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// Get all (no filters, excluding unforged txs)
 	limit := 20
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err := doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	forgedTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
@@ -288,7 +289,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// Get all, including unforged txs
 	fetchedTxs = []testTx{}
 	path = fmt.Sprintf("%s?limit=%d&includePendingL1s=true", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertTxs(t, tc.txs, fetchedTxs)
 
@@ -300,7 +301,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		"%s?hezEthereumAddress=%s&limit=%d",
 		endpoint, account.EthAddr, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	accountTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
@@ -322,7 +323,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		"%s?BJJ=%s&limit=%d",
 		endpoint, account.PublicKey, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertTxs(t, accountTxs, fetchedTxs)
 	// Get by tokenID
@@ -333,7 +334,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		"%s?tokenId=%d&limit=%d",
 		endpoint, tokenID, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	tokenIDTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
@@ -352,7 +353,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		"%s?accountIndex=%s&limit=%d",
 		endpoint, idxStr, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	idxTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
@@ -375,6 +376,38 @@ func TestGetHistoryTxs(t *testing.T) {
 		}
 	}
 	assertTxs(t, idxTxs, fetchedTxs)
+	// from idx
+	fetchedTxs = []testTx{}
+	idxTxs = []testTx{}
+	path = fmt.Sprintf("%s?fromAccountIndex=%s&limit=%d", endpoint, idxStr, limit)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	for i := 0; i < len(tc.txs); i++ {
+		var fromIdx *common.Idx
+		if tc.txs[i].FromIdx != nil {
+			fromIdx, err = stringToIdx(*tc.txs[i].FromIdx, "")
+			assert.NoError(t, err)
+			if *fromIdx == *idx {
+				idxTxs = append(idxTxs, tc.txs[i])
+				continue
+			}
+		}
+	}
+	assertTxs(t, idxTxs, fetchedTxs)
+	// to idx
+	fetchedTxs = []testTx{}
+	path = fmt.Sprintf("%s?toAccountIndex=%s&limit=%d", endpoint, idxStr, limit)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
+	assert.NoError(t, err)
+	idxTxs = []testTx{}
+	for i := 0; i < len(tc.txs); i++ {
+		toIdx, err := stringToIdx(tc.txs[i].ToIdx, "")
+		assert.NoError(t, err)
+		if *toIdx == *idx {
+			idxTxs = append(idxTxs, tc.txs[i])
+		}
+	}
+	assertTxs(t, idxTxs, fetchedTxs)
 	// batchNum
 	fetchedTxs = []testTx{}
 	limit = 3
@@ -383,7 +416,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		"%s?batchNum=%d&limit=%d",
 		endpoint, *batchNum, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	batchNumTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
@@ -412,7 +445,7 @@ func TestGetHistoryTxs(t *testing.T) {
 			"%s?type=%s&limit=%d",
 			endpoint, txType, limit,
 		)
-		err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+		err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 		assert.NoError(t, err)
 		txTypeTxs := []testTx{}
 		for i := 0; i < len(tc.txs); i++ {
@@ -429,7 +462,7 @@ func TestGetHistoryTxs(t *testing.T) {
 		"%s?batchNum=%d&tokenId=%d&limit=%d",
 		endpoint, *batchNum, tokenID, limit,
 	)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	mixedTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
@@ -444,7 +477,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs = []testTx{}
 	limit = 5
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flipedTxs := []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
@@ -456,7 +489,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// Empty array
 	fetchedTxs = []testTx{}
 	path = fmt.Sprintf("%s?batchNum=999999", endpoint)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testTxsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertTxs(t, []testTx{}, fetchedTxs)
 	// 400

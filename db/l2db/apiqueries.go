@@ -5,7 +5,9 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/russross/meddler"
 )
 
@@ -103,7 +105,7 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 }
 
 // selectPoolTxAPI select part of queries to get PoolL2TxRead
-const selectPoolTxAPI = `SELECT  tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
+const selectPoolTxAPI = `SELECT tx_pool.item_id, tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
 tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
 tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
@@ -126,4 +128,178 @@ func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 		selectPoolTxAPI+"WHERE tx_id = $1;",
 		txID,
 	))
+}
+
+// GetPoolTxsAPIRequest is an API request struct for getting txs from the pool
+type GetPoolTxsAPIRequest struct {
+	EthAddr     *ethCommon.Address
+	FromEthAddr *ethCommon.Address
+	ToEthAddr   *ethCommon.Address
+	Bjj         *babyjub.PublicKeyComp
+	FromBjj     *babyjub.PublicKeyComp
+	ToBjj       *babyjub.PublicKeyComp
+	TxType      *common.TxType
+	Idx         *common.Idx
+	FromIdx     *common.Idx
+	ToIdx       *common.Idx
+	State       *common.PoolL2TxState
+
+	FromItem *uint
+	Limit    *uint
+	Order    string
+}
+
+// GetPoolTxsAPI return Txs from the pool
+func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint64, error) {
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+	// Apply filters
+	nextIsAnd := false
+	queryStr := selectPoolTxAPI
+	var args []interface{}
+	// ethAddr filter
+	if request.EthAddr != nil {
+		queryStr += "WHERE (tx_pool.effective_from_eth_addr = ? OR tx_pool.effective_to_eth_addr = ?) "
+		nextIsAnd = true
+		args = append(args, request.EthAddr, request.EthAddr)
+	} else if request.FromEthAddr != nil && request.ToEthAddr != nil {
+		queryStr += "WHERE (tx_pool.effective_from_eth_addr = ? AND tx_pool.effective_to_eth_addr = ?) "
+		nextIsAnd = true
+		args = append(args, request.FromEthAddr, request.ToEthAddr)
+	} else if request.FromEthAddr != nil {
+		queryStr += "WHERE tx_pool.effective_from_eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, request.FromEthAddr)
+	} else if request.ToEthAddr != nil {
+		queryStr += "WHERE tx_pool.effective_to_eth_addr = ? "
+		nextIsAnd = true
+		args = append(args, request.ToEthAddr)
+	} else if request.Bjj != nil {
+		queryStr += "WHERE (tx_pool.effective_from_bjj = ? OR tx_pool.effective_to_bjj = ?) "
+		nextIsAnd = true
+		args = append(args, request.Bjj, request.Bjj)
+	} else if request.FromBjj != nil && request.ToBjj != nil {
+		queryStr += "WHERE (tx_pool.effective_from_bjj = ? AND tx_pool.effective_to_bjj = ?) "
+		nextIsAnd = true
+		args = append(args, request.FromBjj, request.ToBjj)
+	} else if request.FromBjj != nil {
+		queryStr += "WHERE tx_pool.effective_from_bjj = ? "
+		nextIsAnd = true
+		args = append(args, request.FromBjj)
+	} else if request.ToBjj != nil {
+		queryStr += "WHERE tx_pool.effective_to_bjj = ? "
+		nextIsAnd = true
+		args = append(args, request.ToBjj)
+	}
+
+	// state filter
+	if request.State != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.state = ? "
+		args = append(args, request.State)
+		nextIsAnd = true
+	}
+
+	// txType filter
+	if request.TxType != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.tx_type = ? "
+		args = append(args, request.TxType)
+		nextIsAnd = true
+	}
+
+	// account index filter
+	if request.Idx != nil {
+		if nextIsAnd {
+			queryStr += "AND ("
+		} else {
+			queryStr += "WHERE ("
+		}
+		queryStr += "tx_pool.from_idx = ? "
+		queryStr += "OR tx_pool.to_idx = ?) "
+		args = append(args, request.Idx, request.Idx)
+		nextIsAnd = true
+	} else if request.FromIdx != nil && request.ToIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.from_idx = ? AND tx_pool.to_idx = ? "
+		args = append(args, request.FromIdx, request.ToIdx)
+		nextIsAnd = true
+	} else if request.FromIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.from_idx = ? "
+		args = append(args, request.FromIdx)
+		nextIsAnd = true
+	} else if request.ToIdx != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.to_idx = ? "
+		args = append(args, request.ToIdx)
+		nextIsAnd = true
+	}
+	if request.FromItem != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		if request.Order == db.OrderAsc {
+			queryStr += "tx_pool.item_id >= ? "
+		} else {
+			queryStr += "tx_pool.item_id <= ? "
+		}
+		args = append(args, request.FromItem)
+		nextIsAnd = true
+	}
+	if nextIsAnd {
+		queryStr += "AND "
+	} else {
+		queryStr += "WHERE "
+	}
+	queryStr += "NOT external_delete "
+
+	// pagination
+	queryStr += "ORDER BY tx_pool.item_id "
+	if request.Order == db.OrderAsc {
+		queryStr += "ASC "
+	} else {
+		queryStr += "DESC "
+	}
+	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
+
+	query := l2db.dbRead.Rebind(queryStr)
+	txsPtrs := []*PoolTxAPI{}
+	if err = meddler.QueryAll(
+		l2db.dbRead, &txsPtrs,
+		query,
+		args...); err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
+	if len(txs) == 0 {
+		return txs, 0, nil
+	}
+	return txs, txs[0].TotalItems - uint64(len(txs)), tracerr.Wrap(err)
 }
