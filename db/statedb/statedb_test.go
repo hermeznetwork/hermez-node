@@ -21,6 +21,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var deleteme []string
+
+func TestMain(m *testing.M) {
+	exitVal := 0
+	exitVal = m.Run()
+	for _, dir := range deleteme {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	}
+	os.Exit(exitVal)
+}
+
 func newAccount(t *testing.T, i int) *common.Account {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:],
@@ -45,7 +58,7 @@ func newAccount(t *testing.T, i int) *common.Account {
 func TestNewStateDBIntermediateState(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
@@ -177,12 +190,14 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 	assert.Nil(t, v)
+
+	sdb.Close()
 }
 
 func TestStateDBWithoutMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
@@ -231,12 +246,14 @@ func TestStateDBWithoutMT(t *testing.T) {
 	_, err = sdb.MTGetProof(common.Idx(1))
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrStateDBWithoutMT, tracerr.Unwrap(err))
+
+	sdb.Close()
 }
 
 func TestStateDBWithMT(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
@@ -283,6 +300,8 @@ func TestStateDBWithMT(t *testing.T) {
 	a, err := sdb.GetAccount(common.Idx(256)) // check that account value has been updated
 	require.NoError(t, err)
 	assert.Equal(t, accounts[0].Nonce, a.Nonce)
+
+	sdb.Close()
 }
 
 // TestCheckpoints performs almost the same test than kvdb/kvdb_test.go
@@ -290,7 +309,7 @@ func TestStateDBWithMT(t *testing.T) {
 func TestCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "sdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
@@ -372,7 +391,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a LocalStateDB from the initial StateDB
 	dirLocal, err := ioutil.TempDir("", "ldb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dirLocal))
+	deleteme = append(deleteme, dirLocal)
 	ldb, err := NewLocalStateDB(Config{Path: dirLocal, Keep: 128, Type: TypeBatchBuilder,
 		NLevels: 32}, sdb)
 	require.NoError(t, err)
@@ -394,7 +413,7 @@ func TestCheckpoints(t *testing.T) {
 	// Create a 2nd LocalStateDB from the initial StateDB
 	dirLocal2, err := ioutil.TempDir("", "ldb2")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dirLocal2))
+	deleteme = append(deleteme, dirLocal2)
 	ldb2, err := NewLocalStateDB(Config{Path: dirLocal2, Keep: 128, Type: TypeBatchBuilder,
 		NLevels: 32}, sdb)
 	require.NoError(t, err)
@@ -417,11 +436,16 @@ func TestCheckpoints(t *testing.T) {
 		printCheckpoints(t, ldb.cfg.Path)
 		printCheckpoints(t, ldb2.cfg.Path)
 	}
+
+	ldb2.Close()
+	ldb.Close()
+	sdb.Close()
 }
 
 func TestStateDBGetAccounts(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeTxSelector, NLevels: 0})
 	require.NoError(t, err)
@@ -442,6 +466,8 @@ func TestStateDBGetAccounts(t *testing.T) {
 	dbAccounts, err := sdb.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, accounts, dbAccounts)
+
+	sdb.Close()
 }
 
 func printCheckpoints(t *testing.T, path string) {
@@ -468,7 +494,7 @@ func bigFromStr(h string, u int) *big.Int {
 func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
@@ -538,6 +564,8 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	assert.Equal(t,
 		"13174362770971232417413036794215823584762073355951212910715422236001731746065",
 		sdb.MT.Root().BigInt().String())
+
+	sdb.Close()
 }
 
 // TestListCheckpoints performs almost the same test than kvdb/kvdb_test.go
@@ -545,7 +573,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 func TestListCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := NewStateDB(Config{Path: dir, Keep: 128, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
@@ -570,6 +598,8 @@ func TestListCheckpoints(t *testing.T) {
 	assert.Equal(t, numReset, len(list))
 	assert.Equal(t, 1, list[0])
 	assert.Equal(t, numReset, list[len(list)-1])
+
+	sdb.Close()
 }
 
 // TestDeleteOldCheckpoints performs almost the same test than
@@ -577,7 +607,7 @@ func TestListCheckpoints(t *testing.T) {
 func TestDeleteOldCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	keep := 16
 	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
@@ -595,6 +625,8 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(checkpoints), keep)
 	}
+
+	sdb.Close()
 }
 
 // TestConcurrentDeleteOldCheckpoints performs almost the same test than
@@ -602,7 +634,7 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	keep := 16
 	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
@@ -635,12 +667,14 @@ func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(checkpoints), keep)
 	}
+
+	sdb.Close()
 }
 
 func TestCurrentIdx(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	keep := 16
 	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
@@ -670,12 +704,14 @@ func TestCurrentIdx(t *testing.T) {
 
 	idx = sdb.CurrentIdx()
 	assert.Equal(t, common.Idx(255), idx)
+
+	sdb.Close()
 }
 
 func TestResetFromBadCheckpoint(t *testing.T) {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	keep := 16
 	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
@@ -691,4 +727,6 @@ func TestResetFromBadCheckpoint(t *testing.T) {
 	// reset from a checkpoint that doesn't exist
 	err = sdb.Reset(10)
 	require.Error(t, err)
+
+	sdb.Close()
 }

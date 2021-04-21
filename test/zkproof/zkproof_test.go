@@ -16,7 +16,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/hermeznetwork/hermez-node/test/txsets"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,6 +27,11 @@ func TestMain(m *testing.M) {
 	exitVal := 0
 	proofServerURL = os.Getenv("PROOF_SERVER_URL")
 	exitVal = m.Run()
+	for _, dir := range deleteme {
+		if err := os.RemoveAll(dir); err != nil {
+			panic(err)
+		}
+	}
 	os.Exit(exitVal)
 }
 
@@ -48,7 +52,7 @@ var txprocConfig = txprocessor.Config{
 func initStateDB(t *testing.T, typ statedb.TypeStateDB) *statedb.StateDB {
 	dir, err := ioutil.TempDir("", "tmpdb")
 	require.NoError(t, err)
-	defer assert.Nil(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128, Type: typ, NLevels: NLevels})
 	require.NoError(t, err)
@@ -105,6 +109,8 @@ func TestZKInputsEmpty(t *testing.T) {
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 	sendProofAndCheckResp(t, ptOut.ZKInputs) // test empty batch ZKInputs after a non-empty batch
+
+	sdb.Close()
 }
 
 func TestZKInputs0(t *testing.T) {
@@ -117,6 +123,8 @@ func TestZKInputs0(t *testing.T) {
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
+
+	sdb.Close()
 }
 func TestZKInputs1(t *testing.T) {
 	sdb := initStateDB(t, statedb.TypeBatchBuilder)
@@ -128,6 +136,8 @@ func TestZKInputs1(t *testing.T) {
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
+
+	sdb.Close()
 }
 func TestZKInputs2(t *testing.T) {
 	sdb := initStateDB(t, statedb.TypeBatchBuilder)
@@ -139,6 +149,8 @@ func TestZKInputs2(t *testing.T) {
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
+
+	sdb.Close()
 }
 func TestZKInputs3(t *testing.T) {
 	sdb := initStateDB(t, statedb.TypeBatchBuilder)
@@ -150,6 +162,8 @@ func TestZKInputs3(t *testing.T) {
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
+
+	sdb.Close()
 }
 func TestZKInputs4(t *testing.T) {
 	sdb := initStateDB(t, statedb.TypeBatchBuilder)
@@ -161,6 +175,8 @@ func TestZKInputs4(t *testing.T) {
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
+
+	sdb.Close()
 }
 
 func TestZKInputs5(t *testing.T) {
@@ -173,6 +189,8 @@ func TestZKInputs5(t *testing.T) {
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
+
+	sdb.Close()
 }
 
 func TestZKInputs6(t *testing.T) {
@@ -298,4 +316,6 @@ func TestZKInputs6(t *testing.T) {
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
+
+	sdb.Close()
 }

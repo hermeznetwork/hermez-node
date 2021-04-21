@@ -194,16 +194,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		Rollup: eth.RollupConfig{
 			Address: cfg.SmartContracts.Rollup,
 		},
-		Auction: eth.AuctionConfig{
-			Address: cfg.SmartContracts.Auction,
-			TokenHEZ: eth.TokenConfig{
-				Address: cfg.SmartContracts.TokenHEZ,
-				Name:    cfg.SmartContracts.TokenHEZName,
-			},
-		},
-		WDelayer: eth.WDelayerConfig{
-			Address: cfg.SmartContracts.WDelayer,
-		},
 	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -223,11 +213,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 	chainIDU16 := uint16(chainIDU64)
 
-	const safeStateDBKeep = 128
-	if cfg.StateDB.Keep < safeStateDBKeep {
-		return nil, tracerr.Wrap(fmt.Errorf("cfg.StateDB.Keep = %v < %v, which is unsafe",
-			cfg.StateDB.Keep, safeStateDBKeep))
-	}
 	stateDB, err := statedb.NewStateDB(statedb.Config{
 		Path:    cfg.StateDB.Path,
 		Keep:    cfg.StateDB.Keep,
@@ -249,17 +234,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			cfg.Coordinator.L2DB.TTL.Duration,
 			apiConnCon,
 		)
-	}
-
-	const safeBlockNumDiff = 32
-	if cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold < safeBlockNumDiff {
-		return nil, tracerr.Wrap(fmt.Errorf("cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold = %v < %v, which is unsafe",
-			cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold, safeBlockNumDiff))
-	}
-	const safeFrequencyDivider = 1
-	if cfg.Synchronizer.StatsUpdateFrequencyDivider < safeFrequencyDivider {
-		return nil, tracerr.Wrap(fmt.Errorf("cfg.Synchronizer.StatsUpdateFrequencyDivider = %v < %v, which is unsafe",
-			cfg.Synchronizer.StatsUpdateFrequencyDivider, safeFrequencyDivider))
 	}
 
 	sync, err := synchronizer.NewSynchronizer(client, historyDB, l2DB, stateDB, synchronizer.Config{
@@ -447,14 +421,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		} else {
 			gin.SetMode(gin.ReleaseMode)
 		}
-		if cfg.API.UpdateMetricsInterval.Duration == 0 {
-			return nil, tracerr.Wrap(fmt.Errorf("invalid cfg.API.UpdateMetricsInterval: %v",
-				cfg.API.UpdateMetricsInterval.Duration))
-		}
-		if cfg.API.UpdateRecommendedFeeInterval.Duration == 0 {
-			return nil, tracerr.Wrap(fmt.Errorf("invalid cfg.API.UpdateRecommendedFeeInterval: %v",
-				cfg.API.UpdateRecommendedFeeInterval.Duration))
-		}
 		server := gin.Default()
 		coord := false
 		if mode == ModeCoordinator {
@@ -530,10 +496,6 @@ func NewAPIServer(mode Mode, cfg *config.APIServer) (*APIServer, error) {
 	var dbRead *sqlx.DB
 	if cfg.PostgreSQL.HostRead == "" {
 		dbRead = dbWrite
-	} else if cfg.PostgreSQL.HostRead == cfg.PostgreSQL.HostWrite {
-		return nil, tracerr.Wrap(fmt.Errorf(
-			"PostgreSQL.HostRead and PostgreSQL.HostWrite must be different",
-		))
 	} else {
 		dbRead, err = dbUtils.InitSQLDB(
 			cfg.PostgreSQL.PortRead,

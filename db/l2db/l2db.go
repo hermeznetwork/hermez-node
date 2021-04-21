@@ -375,14 +375,12 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 		`DELETE FROM tx_pool WHERE (
 			batch_num < $1 AND (state = $2 OR state = $3)
 		) OR (
-			(SELECT count(*) FROM tx_pool WHERE state = $4) > $5 
-			AND timestamp < $6 AND state = $4
+			state = $4 AND timestamp < $5
 		);`,
 		currentBatchNum-l2db.safetyPeriod,
 		common.PoolL2TxStateForged,
 		common.PoolL2TxStateInvalid,
 		common.PoolL2TxStatePending,
-		l2db.maxTxs,
 		time.Unix(now-int64(l2db.ttl.Seconds()), 0),
 	)
 	return tracerr.Wrap(err)

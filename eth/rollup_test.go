@@ -292,7 +292,7 @@ func TestRollupUpdateTokenExchange(t *testing.T) {
 }
 
 func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst, tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	key := genKeysBjj(2)
 	fromIdxInt64 := int64(0)
@@ -327,8 +327,7 @@ func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
-	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst)
 	require.NoError(t, err)
 	key := genKeysBjj(1)
 	fromIdxInt64 := int64(0)
@@ -362,8 +361,7 @@ func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	key := genKeysBjj(3)
 	fromIdxInt64 := int64(0)
@@ -397,8 +395,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
 }
 
 func TestRollupL1UserTxETHDeposit(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(0)
@@ -431,8 +428,7 @@ func TestRollupL1UserTxETHDeposit(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20Deposit(t *testing.T) {
-	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(0)
@@ -464,8 +460,7 @@ func TestRollupL1UserTxERC20Deposit(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20PermitDeposit(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(0)
@@ -496,8 +491,7 @@ func TestRollupL1UserTxERC20PermitDeposit(t *testing.T) {
 }
 
 func TestRollupL1UserTxETHDepositTransfer(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(257)
@@ -530,8 +524,7 @@ func TestRollupL1UserTxETHDepositTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20DepositTransfer(t *testing.T) {
-	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(258)
@@ -563,8 +556,7 @@ func TestRollupL1UserTxERC20DepositTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20PermitDepositTransfer(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(259)
@@ -596,8 +588,7 @@ func TestRollupL1UserTxERC20PermitDepositTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxETHCreateAccountDepositTransfer(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(257)
@@ -630,8 +621,7 @@ func TestRollupL1UserTxETHCreateAccountDepositTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20CreateAccountDepositTransfer(t *testing.T) {
-	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(258)
@@ -663,8 +653,7 @@ func TestRollupL1UserTxERC20CreateAccountDepositTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20PermitCreateAccountDepositTransfer(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(259)
@@ -696,8 +685,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDepositTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxETHForceTransfer(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(257)
@@ -729,8 +717,7 @@ func TestRollupL1UserTxETHForceTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20ForceTransfer(t *testing.T) {
-	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(258)
@@ -761,8 +748,7 @@ func TestRollupL1UserTxERC20ForceTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20PermitForceTransfer(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(259)
 	toIdxInt64 := int64(260)
@@ -793,8 +779,7 @@ func TestRollupL1UserTxERC20PermitForceTransfer(t *testing.T) {
 }
 
 func TestRollupL1UserTxETHForceExit(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(256)
 	toIdxInt64 := int64(1)
@@ -826,8 +811,7 @@ func TestRollupL1UserTxETHForceExit(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20ForceExit(t *testing.T) {
-	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux2, err := NewRollupClient(ethereumClientAux2, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(257)
 	toIdxInt64 := int64(1)
@@ -858,8 +842,7 @@ func TestRollupL1UserTxERC20ForceExit(t *testing.T) {
 }
 
 func TestRollupL1UserTxERC20PermitForceExit(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst,
-		tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(1)
@@ -981,7 +964,7 @@ func TestRollupForgeBatchArgs2(t *testing.T) {
 }
 
 func TestRollupWithdrawMerkleProof(t *testing.T) {
-	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst, tokenHEZ)
+	rollupClientAux, err := NewRollupClient(ethereumClientAux, hermezRollupAddressConst)
 	require.NoError(t, err)
 
 	var pkComp babyjub.PublicKeyComp

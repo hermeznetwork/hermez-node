@@ -2,7 +2,6 @@
 
 Fixes #<issue number>. _in case of a bug fix, this should point to a bug or any other related issue(s)_
 
-
 ### Bug description
 
 <!-- Describe the bug here -->

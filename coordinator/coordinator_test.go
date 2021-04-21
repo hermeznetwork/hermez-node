@@ -101,8 +101,7 @@ func newTestModules(t *testing.T) modules {
 		Type: statedb.TypeSynchronizer, NLevels: 48})
 	assert.NoError(t, err)
 
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	require.NoError(t, err)
 	test.WipeDB(db)
 	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
@@ -137,6 +136,13 @@ func newTestModules(t *testing.T) modules {
 		batchBuilder: batchBuilder,
 		stateDB:      syncStateDB,
 	}
+}
+
+func closeTestModules(t *testing.T, modules modules) {
+	_ = modules.l2DB.DB().Close()
+	modules.txSelector.LocalAccountsDB().Close()
+	modules.batchBuilder.LocalStateDB().Close()
+	modules.stateDB.Close()
 }
 
 type timer struct {
@@ -318,6 +324,8 @@ func TestCoordinatorFlow(t *testing.T) {
 	log.Info("~~~ simulate stopping forgerLoop by closing coordinator stopch")
 	coord.Stop()
 	time.Sleep(1 * time.Second)
+
+	closeTestModules(t, modules)
 }
 
 func TestCoordinatorStartStop(t *testing.T) {
@@ -329,6 +337,8 @@ func TestCoordinatorStartStop(t *testing.T) {
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
 	coord.Start()
 	coord.Stop()
+
+	closeTestModules(t, modules)
 }
 
 func TestCoordCanForge(t *testing.T) {
@@ -406,6 +416,9 @@ func TestCoordCanForge(t *testing.T) {
 	bootCoord.stats = stats
 	assert.Equal(t, true, coord.canForge())
 	assert.Equal(t, false, bootCoord.canForge())
+
+	closeTestModules(t, modules)
+	closeTestModules(t, modules2)
 }
 
 func TestCoordHandleMsgSyncBlock(t *testing.T) {
@@ -486,6 +499,8 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 	msg.Stats = coord.stats
 	require.NoError(t, coord.handleMsgSyncBlock(ctx, &msg))
 	assert.Nil(t, coord.pipeline)
+
+	closeTestModules(t, modules)
 }
 
 // ethAddTokens adds the tokens from the blocks to the blockchain
@@ -566,6 +581,8 @@ func TestCoordinatorStress(t *testing.T) {
 	cancel()
 	wg.Wait()
 	coord.Stop()
+
+	closeTestModules(t, modules)
 }
 
 // TODO: Test Reorg

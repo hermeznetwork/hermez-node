@@ -2,7 +2,6 @@ package db
 
 import (
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/russross/meddler"
@@ -39,8 +38,7 @@ func TestSlicePtrsToSlice(t *testing.T) {
 }
 
 func TestBigInt(t *testing.T) {
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := InitTestSQLDB()
 	require.NoError(t, err)
 	defer func() {
 		_, err := db.Exec("DROP TABLE IF EXISTS test_big_int;")

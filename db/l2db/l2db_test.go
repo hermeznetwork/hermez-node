@@ -32,8 +32,7 @@ var accs map[common.Idx]common.Account
 
 func TestMain(m *testing.M) {
 	// init DB
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	if err != nil {
 		panic(err)
 	}
@@ -809,19 +808,21 @@ func TestAddGet(t *testing.T) {
 	require.GreaterOrEqual(t, len(poolL2Txs), 3)
 	txs := poolL2Txs[:3]
 	// NOTE: By changing the tx fields, the signature will no longer be
-	// valid, but we are not checking the signautre here so it's OK.
+	// valid, but we are not checking the signature here so it's OK.
 	// 0. Has ToIdx >= 256 && ToEthAddr == 0 && ToBJJ == 0
 	require.GreaterOrEqual(t, int(txs[0].ToIdx), 256)
 	txs[0].ToEthAddr = ethCommon.Address{}
 	txs[0].ToBJJ = babyjub.PublicKeyComp{}
 	// 1. Has ToIdx >= 256 && ToEthAddr != 0 && ToBJJ != 0
 	require.GreaterOrEqual(t, int(txs[1].ToIdx), 256)
-	require.NotEqual(t, txs[1].ToEthAddr, ethCommon.Address{})
-	require.NotEqual(t, txs[1].ToBJJ, babyjub.PublicKeyComp{})
+	txs[1].ToEthAddr = common.FFAddr
+	sk := babyjub.NewRandPrivKey()
+	txs[1].ToBJJ = sk.Public().Compress()
 	// 2. Has ToIdx == 0 && ToEthAddr != 0 && ToBJJ != 0
 	txs[2].ToIdx = 0
-	require.NotEqual(t, txs[2].ToEthAddr, ethCommon.Address{})
-	require.NotEqual(t, txs[2].ToBJJ, babyjub.PublicKeyComp{})
+	txs[2].ToEthAddr = common.FFAddr
+	sk = babyjub.NewRandPrivKey()
+	txs[2].ToBJJ = sk.Public().Compress()
 
 	for i := 0; i < len(txs); i++ {
 		require.NoError(t, txs[i].SetID())

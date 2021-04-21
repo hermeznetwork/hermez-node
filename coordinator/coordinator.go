@@ -241,16 +241,6 @@ func NewCoordinator(cfg Config,
 	scConsts *common.SCConsts,
 	initSCVars *common.SCVariables,
 ) (*Coordinator, error) {
-	// nolint reason: hardcoded `1.0`, by design the percentage can't be over 100%
-	if cfg.L1BatchTimeoutPerc >= 1.0 { //nolint:gomnd
-		return nil, tracerr.Wrap(fmt.Errorf("invalid value for Config.L1BatchTimeoutPerc (%v >= 1.0)",
-			cfg.L1BatchTimeoutPerc))
-	}
-	if cfg.EthClientAttempts < 1 {
-		return nil, tracerr.Wrap(fmt.Errorf("invalid value for Config.EthClientAttempts (%v < 1)",
-			cfg.EthClientAttempts))
-	}
-
 	if cfg.DebugBatchPath != "" {
 		if err := os.MkdirAll(cfg.DebugBatchPath, 0744); err != nil {
 			return nil, tracerr.Wrap(err)
@@ -490,6 +480,34 @@ func (c *Coordinator) handleMsgSyncBlock(ctx context.Context, msg *MsgSyncBlock)
 	if c.pipeline != nil {
 		c.pipeline.SetSyncStatsVars(ctx, &msg.Stats, &msg.Vars)
 	}
+
+	// If there's any batch not forged by us, make sure we don't keep
+	// "phantom forged l2txs" in the pool.  That is, l2txs that we
+	// attempted to forge in BatchNum=N, where the forgeBatch transaction
+	// failed, but another batch with BatchNum=N was forged by another
+	// coordinator successfully.
+	externalBatchNums := []common.BatchNum{}
+	for _, batch := range msg.Batches {
+		if batch.Batch.ForgerAddr != c.cfg.ForgerAddress {
+			externalBatchNums = append(externalBatchNums, batch.Batch.BatchNum)
+		}
+	}
+	if len(externalBatchNums) > 0 {
+		// If we just synced external batches, make sure the pipeline
+		// is stopped
+		lastValidBatch := externalBatchNums[0] - 1
+		if c.pipeline != nil {
+			if err := c.handleStopPipeline(ctx, "synced external batches",
+				lastValidBatch); err != nil {
+				return err
+			}
+		} else {
+			if err := c.l2DB.Reorg(lastValidBatch); err != nil {
+				return err
+			}
+		}
+	}
+
 	if !c.stats.Synced() {
 		return nil
 	}

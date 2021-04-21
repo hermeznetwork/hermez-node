@@ -202,9 +202,7 @@ func TestMain(m *testing.M) {
 	// Swagger
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// HistoryDB
-	pass := os.Getenv("POSTGRES_PASS")
-
-	database, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	database, err := db.InitTestSQLDB()
 	if err != nil {
 		panic(err)
 	}
@@ -628,8 +626,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestTimeout(t *testing.T) {
-	pass := os.Getenv("POSTGRES_PASS")
-	databaseTO, err := db.ConnectSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	databaseTO, err := db.InitTestSQLDB()
 	require.NoError(t, err)
 	apiConnConTO := db.NewAPIConnectionController(1, 100*time.Millisecond)
 	hdbTO := historydb.NewHistoryDB(databaseTO, databaseTO, apiConnConTO)
