@@ -1,3 +1,24 @@
+/*
+Package historydb is responsible for storing and retrieving the historic data of the Hermez network.
+It's mostly but not exclusively used by the API and the synchronizer.
+
+Apart from the logic defined in this package, it's important to notice that there are some triggers defined in the
+migration files that have to be taken into consideration to understanding the results of some queries. This is especially true
+for reorgs: all the data is directly or indirectly related to a block, this makes handling reorgs as easy as deleting the
+reorged blocks from the block table, and all related items will be dropped in cascade. This is not the only case, in general
+functions defined in this package that get affected somehow by the SQL level defined logic has a special mention on the function description.
+
+Some of the database tooling used in this package such as meddler and migration tools is explained in the db package.
+
+This package is spitted in different files following these ideas:
+- historydb.go: constructor and functions used by packages other than the api.
+- apiqueries.go: functions used by the API, the queries implemented in this functions use a semaphore
+to restrict the maximum concurrent connections to the database.
+- views.go: structs used to retrieve/store data from/to the database. When possible, the common structs are used, however
+most of the time there is no 1:1 relation between the struct fields and the tables of the schema, especially when joining tables.
+In some cases, some of the structs defined in this file also include custom Marshallers to easily match the expected api formats.
+- nodeinfo.go: used to handle the interfaces and structs that allow communication across running in different machines/process but sharing the same database.
+*/
 package historydb
 
 import (
@@ -745,6 +766,24 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 		tx.deposit_amount, NULL AS effective_deposit_amount,
 		tx.eth_block_num, tx.type, tx.batch_num
 		FROM tx WHERE batch_num IS NULL AND to_forge_l1_txs_num = $1
+		ORDER BY position;`,
+		toForgeL1TxsNum,
+	)
+	return db.SlicePtrsToSlice(txs).([]common.L1Tx), tracerr.Wrap(err)
+}
+
+// GetUnforgedL1UserFutureTxs gets L1 User Txs to be forged after the L1Batch
+// with toForgeL1TxsNum (in one of the future batches, not in the next one).
+func (hdb *HistoryDB) GetUnforgedL1UserFutureTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error) {
+	var txs []*common.L1Tx
+	err := meddler.QueryAll(
+		hdb.dbRead, &txs, // only L1 user txs can have batch_num set to null
+		`SELECT tx.id, tx.to_forge_l1_txs_num, tx.position, tx.user_origin,
+		tx.from_idx, tx.from_eth_addr, tx.from_bjj, tx.to_idx, tx.token_id,
+		tx.amount, NULL AS effective_amount,
+		tx.deposit_amount, NULL AS effective_deposit_amount,
+		tx.eth_block_num, tx.type, tx.batch_num
+		FROM tx WHERE batch_num IS NULL AND to_forge_l1_txs_num > $1
 		ORDER BY position;`,
 		toForgeL1TxsNum,
 	)

@@ -394,6 +394,25 @@ func TestAccounts(t *testing.T) {
 	fetchedAccBalances, err := historyDB.GetAllAccountUpdates()
 	require.NoError(t, err)
 	assert.Equal(t, accUpdates, fetchedAccBalances)
+
+	// Test if can send to EthAddr for created accounts
+	var ok bool
+	for _, acc := range fetchedAccs {
+		// can send to created accounts
+		ok, err = historyDBWithACC.CanSendToEthAddr(acc.EthAddr, acc.TokenID)
+		require.NoError(t, err)
+		assert.True(t, ok)
+
+		// cannot send to wrong tokenID
+		ok, err = historyDBWithACC.CanSendToEthAddr(acc.EthAddr, 0)
+		require.NoError(t, err)
+		assert.False(t, ok)
+
+		// cannot send to wrong ethAddr
+		ok, err = historyDBWithACC.CanSendToEthAddr(ethCommon.HexToAddress("0xE39fEc6224708f0772D2A74fd3f9055A90E00000"), acc.TokenID)
+		require.NoError(t, err)
+		assert.False(t, ok)
+	}
 }
 
 func TestTxs(t *testing.T) {
@@ -699,34 +718,55 @@ func TestGetUnforgedL1UserTxs(t *testing.T) {
 		CreateAccountDeposit(1) B: 5
 		CreateAccountDeposit(1) C: 5
 		CreateAccountDeposit(1) D: 5
-
 		> block
+
+		> batchL1
+		> block
+
+		CreateAccountDeposit(1) E: 5
+		CreateAccountDeposit(1) F: 5
+		> block
+
 	`
 	tc := til.NewContext(uint16(0), 128)
 	blocks, err := tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	// Sanity check
-	require.Equal(t, 1, len(blocks))
+	require.Equal(t, 3, len(blocks))
 	require.Equal(t, 5, len(blocks[0].Rollup.L1UserTxs))
-
-	toForgeL1TxsNum := int64(1)
 
 	for i := range blocks {
 		err = historyDB.AddBlockSCData(&blocks[i])
 		require.NoError(t, err)
 	}
 
-	l1UserTxs, err := historyDB.GetUnforgedL1UserTxs(toForgeL1TxsNum)
+	l1UserTxs, err := historyDB.GetUnforgedL1UserFutureTxs(0)
+	require.NoError(t, err)
+	assert.Equal(t, 7, len(l1UserTxs))
+
+	l1UserTxs, err = historyDB.GetUnforgedL1UserTxs(1)
 	require.NoError(t, err)
 	assert.Equal(t, 5, len(l1UserTxs))
 	assert.Equal(t, blocks[0].Rollup.L1UserTxs, l1UserTxs)
 
+	l1UserTxs, err = historyDB.GetUnforgedL1UserFutureTxs(1)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(l1UserTxs))
+
 	count, err := historyDB.GetUnforgedL1UserTxsCount()
 	require.NoError(t, err)
-	assert.Equal(t, 5, count)
+	assert.Equal(t, 7, count)
+
+	l1UserTxs, err = historyDB.GetUnforgedL1UserTxs(2)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(l1UserTxs))
+
+	l1UserTxs, err = historyDB.GetUnforgedL1UserFutureTxs(2)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(l1UserTxs))
 
 	// No l1UserTxs for this toForgeL1TxsNum
-	l1UserTxs, err = historyDB.GetUnforgedL1UserTxs(2)
+	l1UserTxs, err = historyDB.GetUnforgedL1UserTxs(3)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(l1UserTxs))
 }
@@ -738,7 +778,7 @@ func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *co
 		big.NewInt(10),
 		12,
 		13,
-		[5]common.BucketParams{},
+		[]common.BucketParams{},
 		false,
 	}
 	//nolint:govet

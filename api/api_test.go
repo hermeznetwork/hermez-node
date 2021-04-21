@@ -40,8 +40,11 @@ type Pendinger interface {
 	New() Pendinger
 }
 
-const apiPort = "4010"
-const apiURL = "http://localhost:" + apiPort + "/v1/"
+const (
+	apiPort = "4010"
+	apiIP   = "http://localhost:"
+	apiURL  = apiIP + apiPort + "/v1/"
+)
 
 var SetBlockchain = `
 	Type: Blockchain
@@ -161,6 +164,8 @@ var SetBlockchain = `
 	> block
 	> batch
 	> block
+	ForceTransfer(0) D-B: 77777700000000000
+	> block
 `
 
 type testCommon struct {
@@ -215,6 +220,7 @@ func TestMain(m *testing.M) {
 	chainID := uint16(0)
 	_config := getConfigTest(chainID)
 	config = configAPI{
+		ChainID:           chainID,
 		RollupConstants:   *newRollupConstants(_config.RollupConstants),
 		AuctionConstants:  _config.AuctionConstants,
 		WDelayerConstants: _config.WDelayerConstants,
@@ -362,6 +368,12 @@ func TestMain(m *testing.M) {
 			commonL1Txs = append(commonL1Txs, batch.L1CoordinatorTxs...)
 		}
 	}
+	// Add unforged L1 tx
+	unforgedTx := blocksData[len(blocksData)-1].Rollup.L1UserTxs[0]
+	if unforgedTx.BatchNum != nil {
+		panic("Unforged tx batch num should be nil")
+	}
+	commonL1Txs = append(commonL1Txs, unforgedTx)
 
 	// Generate Coordinators and add them to HistoryDB
 	const nCoords = 10
@@ -500,12 +512,14 @@ func TestMain(m *testing.M) {
 	// Slot 7
 	nextForgers[6].Coordinator = nonBootForger
 
-	var buckets [common.RollupConstNumBuckets]common.BucketParams
+	buckets := make([]common.BucketParams, 5)
 	for i := range buckets {
 		buckets[i].CeilUSD = big.NewInt(int64(i) * 10)
-		buckets[i].Withdrawals = big.NewInt(int64(i) * 100)
-		buckets[i].BlockWithdrawalRate = big.NewInt(int64(i) * 1000)
-		buckets[i].MaxWithdrawals = big.NewInt(int64(i) * 10000)
+		buckets[i].BlockStamp = big.NewInt(int64(i) * 100)
+		buckets[i].Withdrawals = big.NewInt(int64(i) * 1000)
+		buckets[i].RateBlocks = big.NewInt(int64(i) * 10000)
+		buckets[i].RateWithdrawals = big.NewInt(int64(i) * 100000)
+		buckets[i].MaxWithdrawals = big.NewInt(int64(i) * 1000000)
 	}
 
 	// Generate SC vars and add them to HistoryDB (if needed)
@@ -844,6 +858,25 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 	}
 	responseValidationInput = responseValidationInput.SetBodyBytes(body)
 	return swagger.ValidateResponse(ctx, responseValidationInput)
+}
+
+func doSimpleReq(method, endpoint string) (string, error) {
+	client := &http.Client{}
+	httpReq, err := http.NewRequest(method, endpoint, nil)
+	if err != nil {
+		return "", tracerr.Wrap(err)
+	}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", tracerr.Wrap(err)
+	}
+	//nolint
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", tracerr.Wrap(err)
+	}
+	return string(body), nil
 }
 
 // test helpers

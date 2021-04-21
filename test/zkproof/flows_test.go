@@ -156,7 +156,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 		}
 		// TxSelector select the transactions for the next Batch
 		coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
-			txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
+			txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs, nil)
 		require.NoError(t, err)
 		// BatchBuilder build Batch
 		zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -180,7 +180,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
-		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs, nil)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -209,7 +209,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
-		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs, nil)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -236,7 +236,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
-		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs, nil)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -256,7 +256,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	// TxSelector select the transactions for the next Batch
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
-		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs, nil)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -319,7 +319,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	// TxSelector select the transactions for the next Batch
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
-		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs)
+		txsel.GetL1L2TxSelection(txprocConfig, l1UserTxs, nil)
 	require.NoError(t, err)
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
@@ -342,7 +342,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	require.NoError(t, err)
 	addL2Txs(t, l2DBTxSel, l2Txs) // Add L2s to TxSelector.L2DB
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
-		txsel.GetL1L2TxSelection(txprocConfig, nil)
+		txsel.GetL1L2TxSelection(txprocConfig, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(coordIdxs))
 	assert.Equal(t, 0, len(oL1UserTxs))

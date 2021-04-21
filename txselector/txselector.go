@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -84,7 +85,7 @@ func (txsel *TxSelector) getCoordIdx(tokenID common.TokenID) (common.Idx, error)
 func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx,
 	tokenID common.TokenID, positionL1 int) (*common.L1Tx, int, error) {
 	// check if CoordinatorAccount for TokenID is already pending to create
-	if checkAlreadyPendingToCreate(l1CoordinatorTxs, tokenID,
+	if checkPendingToCreateL1CoordTx(l1CoordinatorTxs, tokenID,
 		txsel.coordAccount.Addr, txsel.coordAccount.BJJ) {
 		return nil, positionL1, nil
 	}
@@ -121,11 +122,12 @@ func (txsel *TxSelector) coordAccountForTokenID(l1CoordinatorTxs []common.L1Tx,
 // but there is a transactions to them and the authorization of account
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
-func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config) ([]common.Idx,
+func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config, l1UserFutureTxs []common.L1Tx) ([]common.Idx,
 	[][]byte, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
-	metricGetL2TxSelection.Inc()
+	metric.GetL2TxSelection.Inc()
 	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs,
-		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, []common.L1Tx{})
+		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig,
+		[]common.L1Tx{}, l1UserFutureTxs)
 	return coordIdxs, accCreationAuths, l1CoordinatorTxs, l2Txs,
 		discardedL2Txs, tracerr.Wrap(err)
 }
@@ -139,11 +141,11 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config) ([
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
 func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
-	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
+	l1UserTxs, l1UserFutureTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
-	metricGetL1L2TxSelection.Inc()
+	metric.GetL1L2TxSelection.Inc()
 	coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
-		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, l1UserTxs)
+		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, l1UserTxs, l1UserFutureTxs)
 	return coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
 		discardedL2Txs, tracerr.Wrap(err)
 }
@@ -157,7 +159,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
 func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
-	l1UserTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
+	l1UserTxs, l1UserFutureTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	// WIP.0: the TxSelector is not optimized and will need a redesign. The
 	// current version is implemented in order to have a functional
@@ -221,10 +223,11 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
 
-		metricSelectedL1UserTxs.Set(float64(len(l1UserTxs)))
-		metricSelectedL1CoordinatorTxs.Set(0)
-		metricSelectedL2Txs.Set(0)
-		metricDiscardedL2Txs.Set(float64(len(discardedL2Txs)))
+		metric.SelectedL1UserTxs.Set(float64(len(l1UserTxs)))
+		metric.SelectedL1CoordinatorTxs.Set(0)
+		metric.SelectedL2Txs.Set(0)
+		metric.DiscardedL2Txs.Set(float64(len(discardedL2Txs)))
+
 		return nil, nil, l1UserTxs, nil, nil, discardedL2Txs, nil
 	}
 
@@ -233,7 +236,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	var validTxs, discardedL2Txs []common.PoolL2Tx
 	l2TxsForgable = sortL2Txs(l2TxsForgable)
 	accAuths, l1CoordinatorTxs, validTxs, discardedL2Txs, err =
-		txsel.processL2Txs(tp, selectionConfig, len(l1UserTxs),
+		txsel.processL2Txs(tp, selectionConfig, len(l1UserTxs), l1UserFutureTxs,
 			l2TxsForgable, validTxs, discardedL2Txs)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
@@ -247,8 +250,8 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 		var l1CoordinatorTxs2 []common.L1Tx
 		accAuths2, l1CoordinatorTxs2, validTxs, discardedL2Txs, err =
 			txsel.processL2Txs(tp, selectionConfig,
-				len(l1UserTxs)+len(l1CoordinatorTxs), l2TxsNonForgable,
-				validTxs, discardedL2Txs)
+				len(l1UserTxs)+len(l1CoordinatorTxs), l1UserFutureTxs,
+				l2TxsNonForgable, validTxs, discardedL2Txs)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
@@ -320,17 +323,18 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 
-	metricSelectedL1UserTxs.Set(float64(len(l1UserTxs)))
-	metricSelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
-	metricSelectedL2Txs.Set(float64(len(validTxs)))
-	metricDiscardedL2Txs.Set(float64(len(discardedL2Txs)))
+	metric.SelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
+	metric.SelectedL1UserTxs.Set(float64(len(l1UserTxs)))
+	metric.SelectedL2Txs.Set(float64(len(validTxs)))
+	metric.DiscardedL2Txs.Set(float64(len(discardedL2Txs)))
 
 	return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, validTxs, discardedL2Txs, nil
 }
 
 func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
-	selectionConfig txprocessor.Config, nL1Txs int, l2Txs, validTxs, discardedL2Txs []common.PoolL2Tx) (
-	[][]byte, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
+	selectionConfig txprocessor.Config, nL1Txs int, l1UserFutureTxs []common.L1Tx,
+	l2Txs, validTxs, discardedL2Txs []common.PoolL2Tx) ([][]byte, []common.L1Tx,
+	[]common.PoolL2Tx, []common.PoolL2Tx, error) {
 	var l1CoordinatorTxs []common.L1Tx
 	positionL1 := nL1Txs
 	var accAuths [][]byte
@@ -432,7 +436,8 @@ func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
 		if l2Txs[i].ToIdx == 0 { // ToEthAddr/ToBJJ case
 			validL2Tx, l1CoordinatorTx, accAuth, err :=
 				txsel.processTxToEthAddrBJJ(validTxs, selectionConfig,
-					nL1Txs, l1CoordinatorTxs, positionL1, l2Txs[i])
+					nL1Txs, l1UserFutureTxs, l1CoordinatorTxs,
+					positionL1, l2Txs[i])
 			if err != nil {
 				log.Debugw("txsel.processTxToEthAddrBJJ", "err", err)
 				// Discard L2Tx, and update Info parameter of
@@ -572,16 +577,33 @@ func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
 // l1CoordinatorTxs array, and then the PoolL2Tx is added into the validTxs
 // array.
 func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
-	selectionConfig txprocessor.Config, nL1UserTxs int, l1CoordinatorTxs []common.L1Tx,
-	positionL1 int, l2Tx common.PoolL2Tx) (*common.PoolL2Tx, *common.L1Tx,
-	*common.AccountCreationAuth, error) {
+	selectionConfig txprocessor.Config, nL1UserTxs int, l1UserFutureTxs,
+	l1CoordinatorTxs []common.L1Tx, positionL1 int, l2Tx common.PoolL2Tx) (
+	*common.PoolL2Tx, *common.L1Tx, *common.AccountCreationAuth, error) {
 	// if L2Tx needs a new L1CoordinatorTx of CreateAccount type, and a
 	// previous L2Tx in the current process already created a
 	// L1CoordinatorTx of this type, in the DB there still seem that needs
 	// to create a new L1CoordinatorTx, but as is already created, the tx
 	// is valid
-	if checkAlreadyPendingToCreate(l1CoordinatorTxs, l2Tx.TokenID, l2Tx.ToEthAddr, l2Tx.ToBJJ) {
+	if checkPendingToCreateL1CoordTx(l1CoordinatorTxs, l2Tx.TokenID, l2Tx.ToEthAddr, l2Tx.ToBJJ) {
 		return &l2Tx, nil, nil, nil
+	}
+
+	// check if L2Tx receiver account will be created by a L1UserFutureTxs
+	// (in the next batch, the current frozen queue). In that case, the L2Tx
+	// will be discarded at the current batch, even if there is an
+	// AccountCreationAuth for the account, as there is a L1UserTx in the
+	// frozen queue that will create the receiver Account.  The L2Tx is
+	// discarded to avoid the Coordinator creating a new L1CoordinatorTx to
+	// create the receiver account, which will be also created in the next
+	// batch from the L1UserFutureTx, ending with the user having 2
+	// different accounts for the same TokenID. The double account creation
+	// is supported by the Hermez zkRollup specification, but it was decided
+	// to mitigate it at the TxSelector level for the explained cases.
+	if checkPendingToCreateFutureTxs(l1UserFutureTxs, l2Tx.TokenID, l2Tx.ToEthAddr, l2Tx.ToBJJ) {
+		return nil, nil, nil, fmt.Errorf("L2Tx discarded at the current batch, as the" +
+			" receiver account does not exist yet, and there is a L1UserTx that" +
+			" will create that account in a future batch.")
 	}
 
 	var l1CoordinatorTx *common.L1Tx
@@ -686,12 +708,29 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(validTxs []common.PoolL2Tx,
 	return &l2Tx, l1CoordinatorTx, accAuth, nil
 }
 
-func checkAlreadyPendingToCreate(l1CoordinatorTxs []common.L1Tx, tokenID common.TokenID,
+func checkPendingToCreateL1CoordTx(l1CoordinatorTxs []common.L1Tx, tokenID common.TokenID,
 	addr ethCommon.Address, bjj babyjub.PublicKeyComp) bool {
 	for i := 0; i < len(l1CoordinatorTxs); i++ {
 		if l1CoordinatorTxs[i].FromEthAddr == addr &&
 			l1CoordinatorTxs[i].TokenID == tokenID &&
 			l1CoordinatorTxs[i].FromBJJ == bjj {
+			return true
+		}
+	}
+	return false
+}
+
+func checkPendingToCreateFutureTxs(l1UserFutureTxs []common.L1Tx, tokenID common.TokenID,
+	addr ethCommon.Address, bjj babyjub.PublicKeyComp) bool {
+	for i := 0; i < len(l1UserFutureTxs); i++ {
+		if l1UserFutureTxs[i].FromEthAddr == addr &&
+			l1UserFutureTxs[i].TokenID == tokenID &&
+			l1UserFutureTxs[i].FromBJJ == bjj {
+			return true
+		}
+		if l1UserFutureTxs[i].FromEthAddr == addr &&
+			l1UserFutureTxs[i].TokenID == tokenID &&
+			common.EmptyBJJComp == bjj {
 			return true
 		}
 	}

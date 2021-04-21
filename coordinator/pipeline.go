@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/txselector"
@@ -246,6 +248,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 
 	// 3. Send the ZKInputs to the proof server
 	batchInfo.ServerProof = serverProof
+	batchInfo.ProofStart = time.Now()
 	if err := p.sendServerProof(ctx, batchInfo); ctx.Err() != nil {
 		return nil, ctx.Err()
 	} else if err != nil {
@@ -520,15 +523,30 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
+		// l1UserFutureTxs are the l1UserTxs that are not being forged
+		// in the next batch, but that are also in the queue for the
+		// future batches
+		l1UserFutureTxs, err := p.historyDB.GetUnforgedL1UserFutureTxs(p.state.lastForgeL1TxsNum + 1)
+		if err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+
 		coordIdxs, auths, l1UserTxs, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
-			p.txSelector.GetL1L2TxSelection(p.cfg.TxProcessorConfig, _l1UserTxs)
+			p.txSelector.GetL1L2TxSelection(p.cfg.TxProcessorConfig, _l1UserTxs, l1UserFutureTxs)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
 	} else {
+		// get l1UserFutureTxs which are all the l1 pending in all the
+		// queues
+		l1UserFutureTxs, err := p.historyDB.GetUnforgedL1UserFutureTxs(p.state.lastForgeL1TxsNum) //nolint:gomnd
+		if err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+
 		// 2b: only L2 txs
 		coordIdxs, auths, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
-			p.txSelector.GetL2TxSelection(p.cfg.TxProcessorConfig)
+			p.txSelector.GetL2TxSelection(p.cfg.TxProcessorConfig, l1UserFutureTxs)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
@@ -602,6 +620,9 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 
 // waitServerProof gets the generated zkProof & sends it to the SmartContract
 func (p *Pipeline) waitServerProof(ctx context.Context, batchInfo *BatchInfo) error {
+	defer metric.MeasureDuration(metric.WaitServerProof, batchInfo.ProofStart,
+		batchInfo.BatchNum.BigInt().String(), strconv.Itoa(batchInfo.PipelineNum))
+
 	proof, pubInputs, err := batchInfo.ServerProof.GetProof(ctx) // blocking call,
 	// until not resolved don't continue. Returns when the proof server has calculated the proof
 	if err != nil {

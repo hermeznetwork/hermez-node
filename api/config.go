@@ -41,7 +41,6 @@ func newRollupConstants(publicConstants common.RollupConstants) *rollupConstants
 		MaxL1UserTx:             common.RollupConstMaxL1UserTx,
 		MaxL1Tx:                 common.RollupConstMaxL1Tx,
 		InputSHAConstantBytes:   common.RollupConstInputSHAConstantBytes,
-		NumBuckets:              common.RollupConstNumBuckets,
 		MaxWithdrawalDelay:      common.RollupConstMaxWithdrawalDelay,
 		ExchangeMultiplier:      common.RollupConstExchangeMultiplier,
 	}
@@ -57,6 +56,7 @@ type Config struct {
 }
 
 type configAPI struct {
+	ChainID           uint16                   `json:"chainId"`
 	RollupConstants   rollupConstants          `json:"hermez"`
 	AuctionConstants  common.AuctionConstants  `json:"auction"`
 	WDelayerConstants common.WDelayerConstants `json:"withdrawalDelayer"`

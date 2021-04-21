@@ -22,7 +22,7 @@ type L1Tx struct {
 	// 	- L1UserTx: 0
 	// 	- L1CoordinatorTx: 1
 	TxID TxID `meddler:"id"`
-	// ToForgeL1TxsNum indicates in which the tx was forged / will be forged
+	// ToForgeL1TxsNum indicates in which L1UserTx queue the tx was forged / will be forged
 	ToForgeL1TxsNum *int64 `meddler:"to_forge_l1_txs_num"`
 	Position        int    `meddler:"position"`
 	// UserOrigin is set to true if the tx was originated by a user, false if it was
