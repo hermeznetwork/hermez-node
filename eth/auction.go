@@ -203,7 +203,10 @@ func NewAuctionEvents() AuctionEvents {
 	}
 }
 
-// AuctionInterface is the inteface to to Auction Smart Contract
+// AuctionEventsByBlockNumMap is a map of AuctionEvents grouped by block numbers
+type AuctionEventsByBlockNumMap map[int64]*AuctionEvents
+
+// AuctionInterface is the interface to to Auction Smart Contract
 type AuctionInterface interface {
 	//
 	// Smart Contract Methods
@@ -259,6 +262,7 @@ type AuctionInterface interface {
 
 	AuctionConstants() (*common.AuctionConstants, error)
 	AuctionEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*AuctionEvents, error)
+	AuctionEventsByBlockRange(fromBlock int64, toBlock int64) (AuctionEventsByBlockNumMap, error)
 	AuctionEventInit(genesisBlockNum int64) (*AuctionEventInitialize, int64, error)
 }
 
@@ -871,7 +875,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 				vLog.BlockHash.String())
 			return nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
-		err = c.processAuctionEvent(&vLog, &auctionEvents)
+		err = c.processAuctionEvent(vLog, &auctionEvents)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -879,7 +883,45 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 	return &auctionEvents, nil
 }
 
-func (c *AuctionClient) processAuctionEvent(vLog *types.Log, auctionEvents *AuctionEvents) error {
+// AuctionEventsByBlockRange returns the events in a block range that happened in the
+// Auction Smart Contract.
+// If there are no events in that block range the result is nil.
+func (c *AuctionClient) AuctionEventsByBlockRange(fromBlock int64, toBlock int64) (AuctionEventsByBlockNumMap, error) {
+	auctionEventsByBlockNum := make(AuctionEventsByBlockNumMap)
+	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+		auctionEvents := NewAuctionEvents()
+		auctionEventsByBlockNum[blockNum] = &auctionEvents
+	}
+
+	query := ethereum.FilterQuery{
+		FromBlock: big.NewInt(fromBlock),
+		ToBlock:   big.NewInt(toBlock),
+		Addresses: []ethCommon.Address{
+			c.address,
+		},
+		Topics: [][]ethCommon.Hash{},
+	}
+
+	logs, err := c.client.client.FilterLogs(context.TODO(), query)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if len(logs) == 0 {
+		return auctionEventsByBlockNum, nil
+	}
+
+	for _, vLog := range logs {
+		blockNum := int64(vLog.BlockNumber)
+		// TODO: rewrite processAuctionEvent like in processRollupEvent
+		err = c.processAuctionEvent(vLog, auctionEventsByBlockNum[blockNum])
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	}
+	return auctionEventsByBlockNum, nil
+}
+
+func (c *AuctionClient) processAuctionEvent(vLog types.Log, auctionEvents *AuctionEvents) error {
 	switch vLog.Topics[0] {
 	case logAuctionNewBid:
 		var auxNewBid struct {

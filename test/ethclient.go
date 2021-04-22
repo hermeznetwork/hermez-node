@@ -1142,6 +1142,12 @@ func (c *Client) RollupEventsByBlock(blockNum int64,
 	return &block.Rollup.Events, nil
 }
 
+// RollupEventsByBlockRange returns the events in a block range that happened in the Rollup Smart Contract
+func (c *Client) RollupEventsByBlockRange(fromBlock int64, toBlock int64) (eth.RollupEventsByBlockNumMap, error) {
+	// TODO: return range!!!
+	return nil, tracerr.Wrap(fmt.Errorf("not implemented"))
+}
+
 // RollupEventInit returns the initialize event with its corresponding block number
 func (c *Client) RollupEventInit(genesisBlockNum int64) (*eth.RollupEventInitialize, int64, error) {
 	vars := c.blocks[0].Rollup.Vars
@@ -1618,6 +1624,12 @@ func (c *Client) AuctionEventsByBlock(blockNum int64,
 	return &block.Auction.Events, nil
 }
 
+// AuctionEventsByBlockRange returns the events in a block range that happened in the Auction Smart Contract
+func (c *Client) AuctionEventsByBlockRange(fromBlock int64, toBlock int64) (eth.AuctionEventsByBlockNumMap, error) {
+	// TODO: return range!!!
+	return nil, tracerr.Wrap(fmt.Errorf("not implemented"))
+}
+
 // AuctionEventInit returns the initialize event with its corresponding block number
 func (c *Client) AuctionEventInit(genesisBlockNum int64) (*eth.AuctionEventInitialize, int64, error) {
 	vars := c.blocks[0].Auction.Vars
@@ -1843,6 +1855,12 @@ func (c *Client) WDelayerEventsByBlock(blockNum int64,
 			blockHash, block.Eth.Hash))
 	}
 	return &block.WDelayer.Events, nil
+}
+
+// WDelayerEventsByBlockRange returns the events in a block range that happened in the WDelayer Contract
+func (c *Client) WDelayerEventsByBlockRange(fromBlock int64, toBlock int64) (eth.WDelayerEventsByBlockNumMap, error) {
+	// TODO: return range!!!
+	return nil, tracerr.Wrap(fmt.Errorf("not implemented"))
 }
 
 // WDelayerConstants returns the Constants of the WDelayer Contract

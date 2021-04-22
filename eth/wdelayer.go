@@ -112,7 +112,10 @@ func NewWDelayerEvents() WDelayerEvents {
 	}
 }
 
-// WDelayerInterface is the inteface to WithdrawalDelayer Smart Contract
+// WDelayerEventsByBlockNumMap is a map of WDelayerEvents grouped by block numbers
+type WDelayerEventsByBlockNumMap map[int64]*WDelayerEvents
+
+// WDelayerInterface is the interface to WithdrawalDelayer Smart Contract
 type WDelayerInterface interface {
 	//
 	// Smart Contract Methods
@@ -136,6 +139,7 @@ type WDelayerInterface interface {
 		amount *big.Int) (*types.Transaction, error)
 
 	WDelayerEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*WDelayerEvents, error)
+	WDelayerEventsByBlockRange(fromBlock int64, toBlock int64) (WDelayerEventsByBlockNumMap, error)
 	WDelayerConstants() (*common.WDelayerConstants, error)
 	WDelayerEventInit(genesisBlockNum int64) (*WDelayerEventInitialize, int64, error)
 }
@@ -480,7 +484,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64,
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
 			return nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
-		err = c.processWDelayerEvent(&vLog, &wdelayerEvents)
+		err = c.processWDelayerEvent(vLog, &wdelayerEvents)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -488,7 +492,45 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64,
 	return &wdelayerEvents, nil
 }
 
-func (c *WDelayerClient) processWDelayerEvent(vLog *types.Log, wdelayerEvents *WDelayerEvents) error {
+// WDelayerEventsByBlockRange returns the events in a block range that happened in the
+// WDelayer Smart Contract.
+// If there are no events in that block range the result is nil.
+func (c *WDelayerClient) WDelayerEventsByBlockRange(fromBlock int64, toBlock int64) (WDelayerEventsByBlockNumMap, error) {
+	wdelayerEventsByBlockNum := make(WDelayerEventsByBlockNumMap)
+	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+		wdelayerEvents := NewWDelayerEvents()
+		wdelayerEventsByBlockNum[blockNum] = &wdelayerEvents
+	}
+
+	query := ethereum.FilterQuery{
+		FromBlock: big.NewInt(fromBlock),
+		ToBlock:   big.NewInt(toBlock),
+		Addresses: []ethCommon.Address{
+			c.address,
+		},
+		Topics: [][]ethCommon.Hash{},
+	}
+
+	logs, err := c.client.client.FilterLogs(context.Background(), query)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if len(logs) == 0 {
+		return wdelayerEventsByBlockNum, nil
+	}
+
+	for _, vLog := range logs {
+		blockNum := int64(vLog.BlockNumber)
+		// TODO: rewrite processWDelayerEvent like in processRollupEvent
+		err = c.processWDelayerEvent(vLog, wdelayerEventsByBlockNum[blockNum])
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	}
+	return wdelayerEventsByBlockNum, nil
+}
+
+func (c *WDelayerClient) processWDelayerEvent(vLog types.Log, wdelayerEvents *WDelayerEvents) error {
 	switch vLog.Topics[0] {
 	case logWDelayerDeposit:
 		var deposit WDelayerEventDeposit

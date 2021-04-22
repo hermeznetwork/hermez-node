@@ -224,7 +224,10 @@ type rollupForgeBatchArgsAux struct {
 	ProofC      [2]*big.Int
 }
 
-// RollupInterface is the inteface to to Rollup Smart Contract
+// RollupEventsByBlockNumMap is a map of RollupEvents grouped by block numbers
+type RollupEventsByBlockNumMap map[int64]*RollupEvents
+
+// RollupInterface is the interface to to Rollup Smart Contract
 type RollupInterface interface {
 	//
 	// Smart Contract Methods
@@ -262,6 +265,7 @@ type RollupInterface interface {
 
 	RollupConstants() (*common.RollupConstants, error)
 	RollupEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*RollupEvents, error)
+	RollupEventsByBlockRange(fromBlock int64, toBlock int64) (RollupEventsByBlockNumMap, error)
 	RollupForgeBatchArgs(ethCommon.Hash, uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error)
 	RollupEventInit(genesisBlockNum int64) (*RollupEventInitialize, int64, error)
 }
@@ -801,7 +805,11 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			log.Errorw("Block hash mismatch", "expected", blockHash.String(), "got", vLog.BlockHash.String())
 			return nil, tracerr.Wrap(ErrBlockHashMismatchEvent)
 		}
-		err = c.processRollupEvent(&vLog, &rollupEvents)
+		event, err := c.processRollupEvent(vLog)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		err = rollupEvents.addEvent(event)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -809,43 +817,83 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 	return &rollupEvents, nil
 }
 
-func (c *RollupClient) processRollupEvent(vLog *types.Log, rollupEvents *RollupEvents) error {
+// RollupEventsByBlockRange returns the events in a block range that happened in the
+// Rollup Smart Contract.
+// If there are no events in that block range the result is nil.
+func (c *RollupClient) RollupEventsByBlockRange(fromBlock int64, toBlock int64) (RollupEventsByBlockNumMap, error) {
+	rollupEventsByBlockNum := make(RollupEventsByBlockNumMap)
+	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+		rollupEvents := NewRollupEvents()
+		rollupEventsByBlockNum[blockNum] = &rollupEvents
+	}
+
+	query := ethereum.FilterQuery{
+		FromBlock: big.NewInt(fromBlock),
+		ToBlock:   big.NewInt(toBlock),
+		Addresses: []ethCommon.Address{
+			c.address,
+		},
+		Topics: [][]ethCommon.Hash{},
+	}
+	logs, err := c.client.client.FilterLogs(context.Background(), query)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if len(logs) == 0 {
+		return rollupEventsByBlockNum, nil
+	}
+
+	for _, vLog := range logs {
+		event, err := c.processRollupEvent(vLog)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		blockNum := int64(vLog.BlockNumber)
+		err = rollupEventsByBlockNum[blockNum].addEvent(event)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	}
+	return rollupEventsByBlockNum, nil
+}
+
+func (c *RollupClient) processRollupEvent(vLog types.Log) (interface{}, error) {
 	switch vLog.Topics[0] {
 	case logHermezL1UserTxEvent:
 		var L1UserTxAux rollupEventL1UserTxAux
 		var L1UserTx RollupEventL1UserTx
 		err := c.contractAbi.UnpackIntoInterface(&L1UserTxAux, "L1UserTxEvent", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
 		L1Tx, err := common.L1UserTxFromBytes(L1UserTxAux.L1UserTx)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
 		toForgeL1TxsNum := new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
 		L1Tx.ToForgeL1TxsNum = &toForgeL1TxsNum
 		L1Tx.Position = int(new(big.Int).SetBytes(vLog.Topics[2][:]).Int64())
 		L1Tx.UserOrigin = true
 		L1UserTx.L1UserTx = *L1Tx
-		rollupEvents.L1UserTx = append(rollupEvents.L1UserTx, L1UserTx)
+		return L1UserTx, nil
 	case logHermezAddToken:
 		var addToken RollupEventAddToken
 		err := c.contractAbi.UnpackIntoInterface(&addToken, "AddToken", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
 		addToken.TokenAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
-		rollupEvents.AddToken = append(rollupEvents.AddToken, addToken)
+		return addToken, nil
 	case logHermezForgeBatch:
 		var forgeBatch RollupEventForgeBatch
 		err := c.contractAbi.UnpackIntoInterface(&forgeBatch, "ForgeBatch", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
 		forgeBatch.BatchNum = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
 		forgeBatch.EthTxHash = vLog.TxHash
 		// forgeBatch.Sender = vLog.Address
-		rollupEvents.ForgeBatch = append(rollupEvents.ForgeBatch, forgeBatch)
+		return forgeBatch, nil
 	case logHermezUpdateForgeL1L2BatchTimeout:
 		var updateForgeL1L2BatchTimeout struct {
 			NewForgeL1L2BatchTimeout uint8
@@ -853,19 +901,18 @@ func (c *RollupClient) processRollupEvent(vLog *types.Log, rollupEvents *RollupE
 		err := c.contractAbi.UnpackIntoInterface(&updateForgeL1L2BatchTimeout,
 			"UpdateForgeL1L2BatchTimeout", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
-		rollupEvents.UpdateForgeL1L2BatchTimeout = append(rollupEvents.UpdateForgeL1L2BatchTimeout,
-			RollupEventUpdateForgeL1L2BatchTimeout{
-				NewForgeL1L2BatchTimeout: int64(updateForgeL1L2BatchTimeout.NewForgeL1L2BatchTimeout),
-			})
+		return RollupEventUpdateForgeL1L2BatchTimeout{
+			NewForgeL1L2BatchTimeout: int64(updateForgeL1L2BatchTimeout.NewForgeL1L2BatchTimeout),
+		}, nil
 	case logHermezUpdateFeeAddToken:
 		var updateFeeAddToken RollupEventUpdateFeeAddToken
 		err := c.contractAbi.UnpackIntoInterface(&updateFeeAddToken, "UpdateFeeAddToken", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
-		rollupEvents.UpdateFeeAddToken = append(rollupEvents.UpdateFeeAddToken, updateFeeAddToken)
+		return updateFeeAddToken, nil
 	case logHermezWithdrawEvent:
 		var withdraw RollupEventWithdraw
 		withdraw.Idx = new(big.Int).SetBytes(vLog.Topics[1][:]).Uint64()
@@ -875,41 +922,40 @@ func (c *RollupClient) processRollupEvent(vLog *types.Log, rollupEvents *RollupE
 			withdraw.InstantWithdraw = true
 		}
 		withdraw.TxHash = vLog.TxHash
-		rollupEvents.Withdraw = append(rollupEvents.Withdraw, withdraw)
+		return withdraw, nil
 	case logHermezUpdateBucketWithdraw:
 		var updateBucketWithdrawAux rollupEventUpdateBucketWithdrawAux
 		var updateBucketWithdraw RollupEventUpdateBucketWithdraw
 		err := c.contractAbi.UnpackIntoInterface(&updateBucketWithdrawAux,
 			"UpdateBucketWithdraw", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
 		updateBucketWithdraw.Withdrawals = updateBucketWithdrawAux.Withdrawals
 		updateBucketWithdraw.NumBucket = int(new(big.Int).SetBytes(vLog.Topics[1][:]).Int64())
 		updateBucketWithdraw.BlockStamp = new(big.Int).SetBytes(vLog.Topics[2][:]).Int64()
-		rollupEvents.UpdateBucketWithdraw =
-			append(rollupEvents.UpdateBucketWithdraw, updateBucketWithdraw)
+		return updateBucketWithdraw, nil
 
 	case logHermezUpdateWithdrawalDelay:
 		var withdrawalDelay RollupEventUpdateWithdrawalDelay
 		err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay, "UpdateWithdrawalDelay", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
-		rollupEvents.UpdateWithdrawalDelay = append(rollupEvents.UpdateWithdrawalDelay, withdrawalDelay)
+		return withdrawalDelay, nil
 	case logHermezUpdateBucketsParameters:
 		var bucketsParametersAux rollupEventUpdateBucketsParametersAux
 		var bucketsParameters RollupEventUpdateBucketsParameters
 		err := c.contractAbi.UnpackIntoInterface(&bucketsParametersAux,
 			"UpdateBucketsParameters", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
 		bucketsParameters.ArrayBuckets = make([]RollupUpdateBucketsParameters, len(bucketsParametersAux.ArrayBuckets))
 		for i, bucket := range bucketsParametersAux.ArrayBuckets {
 			bucket, err := c.hermez.UnpackBucket(c.opts, bucket)
 			if err != nil {
-				return tracerr.Wrap(err)
+				return nil, tracerr.Wrap(err)
 			}
 			bucketsParameters.ArrayBuckets[i].CeilUSD = bucket.CeilUSD
 			bucketsParameters.ArrayBuckets[i].BlockStamp = bucket.BlockStamp
@@ -918,36 +964,19 @@ func (c *RollupClient) processRollupEvent(vLog *types.Log, rollupEvents *RollupE
 			bucketsParameters.ArrayBuckets[i].RateWithdrawals = bucket.RateWithdrawals
 			bucketsParameters.ArrayBuckets[i].MaxWithdrawals = bucket.MaxWithdrawals
 		}
-		rollupEvents.UpdateBucketsParameters =
-			append(rollupEvents.UpdateBucketsParameters, bucketsParameters)
+		return bucketsParameters, nil
 	case logHermezUpdateTokenExchange:
 		var tokensExchange RollupEventUpdateTokenExchange
 		err := c.contractAbi.UnpackIntoInterface(&tokensExchange, "UpdateTokenExchange", vLog.Data)
 		if err != nil {
-			return tracerr.Wrap(err)
+			return nil, tracerr.Wrap(err)
 		}
-		rollupEvents.UpdateTokenExchange = append(rollupEvents.UpdateTokenExchange, tokensExchange)
+		return tokensExchange, nil
 	case logHermezSafeMode:
 		var safeMode RollupEventSafeMode
-		rollupEvents.SafeMode = append(rollupEvents.SafeMode, safeMode)
-		// Also add an UpdateBucketsParameter with
-		// SafeMode=true to keep the order between `safeMode`
-		// and `UpdateBucketsParameters`
-		bucketsParameters := RollupEventUpdateBucketsParameters{
-			SafeMode: true,
-		}
-		for i := range bucketsParameters.ArrayBuckets {
-			bucketsParameters.ArrayBuckets[i].CeilUSD = big.NewInt(0)
-			bucketsParameters.ArrayBuckets[i].BlockStamp = big.NewInt(0)
-			bucketsParameters.ArrayBuckets[i].Withdrawals = big.NewInt(0)
-			bucketsParameters.ArrayBuckets[i].RateBlocks = big.NewInt(0)
-			bucketsParameters.ArrayBuckets[i].RateWithdrawals = big.NewInt(0)
-			bucketsParameters.ArrayBuckets[i].MaxWithdrawals = big.NewInt(0)
-		}
-		rollupEvents.UpdateBucketsParameters = append(rollupEvents.UpdateBucketsParameters,
-			bucketsParameters)
+		return safeMode, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // RollupForgeBatchArgs returns the arguments used in a ForgeBatch call in the
@@ -1067,4 +1096,48 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 		}
 	}
 	return &rollupForgeBatchArgs, &sender, nil
+}
+
+func (rollupEvents *RollupEvents) addEvent(event interface{}) error {
+	switch rollupEvent := event.(type) {
+	case RollupEventL1UserTx:
+		rollupEvents.L1UserTx = append(rollupEvents.L1UserTx, rollupEvent)
+	case RollupEventAddToken:
+		rollupEvents.AddToken = append(rollupEvents.AddToken, rollupEvent)
+	case RollupEventForgeBatch:
+		rollupEvents.ForgeBatch = append(rollupEvents.ForgeBatch, rollupEvent)
+	case RollupEventUpdateForgeL1L2BatchTimeout:
+		rollupEvents.UpdateForgeL1L2BatchTimeout = append(rollupEvents.UpdateForgeL1L2BatchTimeout, rollupEvent)
+	case RollupEventUpdateFeeAddToken:
+		rollupEvents.UpdateFeeAddToken = append(rollupEvents.UpdateFeeAddToken, rollupEvent)
+	case RollupEventWithdraw:
+		rollupEvents.Withdraw = append(rollupEvents.Withdraw, rollupEvent)
+	case RollupEventUpdateWithdrawalDelay:
+		rollupEvents.UpdateWithdrawalDelay = append(rollupEvents.UpdateWithdrawalDelay, rollupEvent)
+	case RollupEventUpdateBucketWithdraw:
+		rollupEvents.UpdateBucketWithdraw = append(rollupEvents.UpdateBucketWithdraw, rollupEvent)
+	case RollupEventUpdateBucketsParameters:
+		rollupEvents.UpdateBucketsParameters = append(rollupEvents.UpdateBucketsParameters, rollupEvent)
+	case RollupEventUpdateTokenExchange:
+		rollupEvents.UpdateTokenExchange = append(rollupEvents.UpdateTokenExchange, rollupEvent)
+	case RollupEventSafeMode:
+		rollupEvents.SafeMode = append(rollupEvents.SafeMode, rollupEvent)
+		// Also add an UpdateBucketsParameter with
+		// SafeMode=true to keep the order between `safeMode`
+		// and `UpdateBucketsParameters`
+		bucketsParameters := RollupEventUpdateBucketsParameters{
+			SafeMode: true,
+		}
+		for i := range bucketsParameters.ArrayBuckets {
+			bucketsParameters.ArrayBuckets[i].CeilUSD = big.NewInt(0)
+			bucketsParameters.ArrayBuckets[i].BlockStamp = big.NewInt(0)
+			bucketsParameters.ArrayBuckets[i].Withdrawals = big.NewInt(0)
+			bucketsParameters.ArrayBuckets[i].RateBlocks = big.NewInt(0)
+			bucketsParameters.ArrayBuckets[i].RateWithdrawals = big.NewInt(0)
+			bucketsParameters.ArrayBuckets[i].MaxWithdrawals = big.NewInt(0)
+		}
+		rollupEvents.UpdateBucketsParameters = append(rollupEvents.UpdateBucketsParameters,
+			bucketsParameters)
+	}
+	return nil
 }

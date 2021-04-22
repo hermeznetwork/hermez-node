@@ -56,6 +56,16 @@ const (
 	// errStrUnknownBlock is the string returned by geth when querying an
 	// unknown block
 	errStrUnknownBlock = "unknown block"
+	// maxConcurrentRequests is a number of requests to fetch block headers
+	// allowed to be executed concurrently
+	maxConcurrentRequests = 10
+	// batchDownloaderBlockNumDiffThreshold is a number of blocks remaining to
+	// be synchronized, while having more blocks than specified value
+	// synchronizer can fetch block headers and events in large batches
+	batchDownloaderBlockNumDiffThreshold = 256
+	// batchDownloaderBatchSize specifies size of a batch (block number range)
+	// for concurrent fetching of block headers and events
+	batchDownloaderBatchSize = 100
 )
 
 var (
@@ -95,6 +105,12 @@ type BlockEvents struct {
 	AuctionEvents  *eth.AuctionEvents
 	WDelayerEvents *eth.WDelayerEvents
 }
+
+// BlocksByBlockNumMap is a map of block numbers and corresponding block headers
+type BlocksByBlockNumMap map[int64]*common.Block
+
+// BlockEventsByBlockNumMap is a map of block numbers and corresponding block events
+type BlockEventsByBlockNumMap map[int64]*BlockEvents
 
 // Synced returns true if the Synchronizer is up to date with the last ethereum block
 func (s *Stats) Synced() bool {
@@ -516,20 +532,68 @@ func (s *Synchronizer) resetIntermediateState() error {
 	return nil
 }
 
-func (s *Synchronizer) fetchBlock(ctx context.Context, blockNum int64) (*common.Block, error) {
+// FetchBlock fetches headers of a block with a specified block number
+func (s *Synchronizer) FetchBlock(ctx context.Context, blockNum int64) (*common.Block, error) {
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, blockNum)
 	if tracerr.Unwrap(err) == ethereum.NotFound {
 		return nil, tracerr.Wrap(ErrUnknownBlock)
 	} else if err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
 	}
-	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v",
+	log.Debugf("Fetched ethBlock: num: %v, parent: %v, hash: %v",
 		ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
 
 	return ethBlock, nil
 }
 
-func (s *Synchronizer) fetchBlockEvents(ethBlock *common.Block) (*BlockEvents, error) {
+// FetchBlockRange is a simple concurrent fetcher of a range of blocks
+func (s *Synchronizer) FetchBlockRange(ctx context.Context, fromBlock int64, toBlock int64) (BlocksByBlockNumMap, error) {
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+
+	blocks := make(BlocksByBlockNumMap)
+	errors := make(map[int64]error)
+
+	limiter := make(chan struct{}, maxConcurrentRequests)
+
+	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+		limiter <- struct{}{} // would block if limiter channel is already filled
+		wg.Add(1)
+		go func(_blockNum int64) {
+			defer func() {
+				<-limiter
+				wg.Done()
+			}()
+			ethBlock, err := s.ethClient.EthBlockByNumber(ctx, _blockNum)
+			mutex.Lock()
+			if tracerr.Unwrap(err) == ethereum.NotFound {
+				errors[_blockNum] = tracerr.Wrap(ErrUnknownBlock)
+				return
+			} else if err != nil {
+				errors[_blockNum] = tracerr.Wrap(ErrUnknownBlock)
+				return
+			}
+			blocks[ethBlock.Num] = ethBlock
+			mutex.Unlock()
+			log.Debugf("Fetched ethBlock: num: %v, parent: %v, hash: %v",
+				ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
+		}(blockNum)
+	}
+
+	// wait for all the requests to finish
+	wg.Wait()
+
+	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+		if errors[blockNum] != nil {
+			return nil, errors[blockNum]
+		}
+	}
+
+	return blocks, nil
+}
+
+// FetchBlockEvents fetches block events of a specified block
+func (s *Synchronizer) FetchBlockEvents(ethBlock *common.Block) (*BlockEvents, error) {
 	var rollupErr, auctionErr, wDelayerErr error
 	var rollupEvents *eth.RollupEvents
 	var auctionEvents *eth.AuctionEvents
@@ -537,25 +601,23 @@ func (s *Synchronizer) fetchBlockEvents(ethBlock *common.Block) (*BlockEvents, e
 
 	hash := &ethBlock.Hash
 
-	//if ethBlock.Num+128 >= s.stats.Eth.LastBlock.Num {
-	//	hash = nil
-	//}
-
 	var wg sync.WaitGroup
-	wg.Add(3)
 
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		// Get rollup events in the block
 		rollupEvents, rollupErr = s.ethClient.RollupEventsByBlock(ethBlock.Num, hash)
 	}()
 
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		// Get auction events in the block
 		auctionEvents, auctionErr = s.ethClient.AuctionEventsByBlock(ethBlock.Num, hash)
 	}()
 
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		// Get wDelayer events in the block
@@ -590,6 +652,70 @@ func (s *Synchronizer) fetchBlockEvents(ethBlock *common.Block) (*BlockEvents, e
 	}
 
 	return &blockEvents, nil
+}
+
+// FetchBlockEventsByBlockRange fetches block events for a specified block number range
+func (s *Synchronizer) FetchBlockEventsByBlockRange(fromBlock int64, toBlock int64) (BlockEventsByBlockNumMap, error) {
+	var rollupErr, auctionErr, wDelayerErr error
+	var rollupEventsByBlockNum eth.RollupEventsByBlockNumMap
+	var auctionEventsByBlockNum eth.AuctionEventsByBlockNumMap
+	var wDelayerEventsByBlockNum eth.WDelayerEventsByBlockNumMap
+
+	var wg sync.WaitGroup
+
+	blockEvents := make(BlockEventsByBlockNumMap)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Get rollup events in the block range
+		rollupEventsByBlockNum, rollupErr = s.ethClient.RollupEventsByBlockRange(fromBlock, toBlock)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Get auction events in the block range
+		auctionEventsByBlockNum, auctionErr = s.ethClient.AuctionEventsByBlockRange(fromBlock, toBlock)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Get wDelayer events in the block range
+		wDelayerEventsByBlockNum, wDelayerErr = s.ethClient.WDelayerEventsByBlockRange(fromBlock, toBlock)
+	}()
+
+	wg.Wait()
+
+	// Check for errors in goroutines
+	if rollupErr != nil && rollupErr.Error() == errStrUnknownBlock {
+		return nil, tracerr.Wrap(ErrUnknownBlock)
+	} else if rollupErr != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("RollupEventsByBlockRange: %w", rollupErr))
+	}
+
+	if auctionErr != nil && auctionErr.Error() == errStrUnknownBlock {
+		return nil, tracerr.Wrap(ErrUnknownBlock)
+	} else if auctionErr != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("AuctionEventsByBlockRange: %w", auctionErr))
+	}
+
+	if wDelayerErr != nil && wDelayerErr.Error() == errStrUnknownBlock {
+		return nil, tracerr.Wrap(ErrUnknownBlock)
+	} else if wDelayerErr != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("WDelayerEventsByBlockRange: %w", wDelayerErr))
+	}
+
+	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+		blockEvents[blockNum] = &BlockEvents{
+			RollupEvents:   rollupEventsByBlockNum[blockNum],
+			AuctionEvents:  auctionEventsByBlockNum[blockNum],
+			WDelayerEvents: wDelayerEventsByBlockNum[blockNum],
+		}
+	}
+
+	return blockEvents, nil
 }
 
 // Sync attempts to synchronize an ethereum block starting from lastSavedBlock.
@@ -630,51 +756,6 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		}
 	}
 
-	ethBlock, err := s.fetchBlock(ctx, nextBlockNum)
-	if tracerr.Unwrap(err) == ErrUnknownBlock {
-		return nil, nil, nil
-	} else if err != nil {
-		return nil, nil, tracerr.Wrap(err)
-	}
-
-	blockEvents, err := s.fetchBlockEvents(ethBlock)
-	if tracerr.Unwrap(err) == ErrUnknownBlock {
-		return nil, nil, nil
-	} else if err != nil {
-		return nil, nil, tracerr.Wrap(err)
-	}
-
-	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in
-	// UpdateFrequencyDivider blocks
-	if nextBlockNum+int64(s.stats.Eth.UpdateBlockNumDiffThreshold) >= s.stats.Eth.LastBlock.Num ||
-		nextBlockNum%int64(s.stats.Eth.UpdateFrequencyDivider) == 0 {
-		if err := s.stats.UpdateEth(s.ethClient); err != nil {
-			return nil, nil, tracerr.Wrap(err)
-		}
-	}
-
-	log.Debugw("Syncing...",
-		"block", nextBlockNum,
-		"ethLastBlock", s.stats.Eth.LastBlock,
-	)
-
-	// Check that the obtained ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
-	if s.lastSavedBlock != nil {
-		if s.lastSavedBlock.Hash != ethBlock.ParentHash {
-			// Reorg detected
-			log.Debugw("Reorg Detected",
-				"blockNum", ethBlock.Num,
-				"block.parent(got)", ethBlock.ParentHash, "parent.hash(exp)", s.lastSavedBlock.Hash)
-			lastDBBlockNum, err := s.reorg(s.lastSavedBlock)
-			if err != nil {
-				return nil, nil, tracerr.Wrap(err)
-			}
-			discarded := s.lastSavedBlock.Num - lastDBBlockNum
-			metric.Reorgs.Inc()
-			return nil, &discarded, nil
-		}
-	}
-
 	defer func() {
 		// If there was an error during sync, reset to the last block
 		// in the historyDB because the historyDB is written last in
@@ -689,31 +770,144 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		}
 	}()
 
-	blockData, err = s.processBlock(ethBlock, blockEvents)
-	if err != nil {
-		return nil, nil, tracerr.Wrap(err)
+	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in
+	// UpdateFrequencyDivider blocks
+	if nextBlockNum+int64(s.stats.Eth.UpdateBlockNumDiffThreshold) >= s.stats.Eth.LastBlock.Num ||
+		nextBlockNum%int64(s.stats.Eth.UpdateFrequencyDivider) == 0 {
+		if err := s.stats.UpdateEth(s.ethClient); err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+	}
+
+	batchSize := batchDownloaderBatchSize
+	// While having more blocks to sync than (batchDownloaderBlockNumDiffThreshold+batchSize),
+	// we can download blocks and events in batches
+	if nextBlockNum+batchDownloaderBlockNumDiffThreshold+int64(batchSize) < s.stats.Eth.LastBlock.Num {
+		// Simple concurrent fetcher of block headers and events
+		// TODO: move fetching to a separate loop, that could be much more efficient
+
+		fromBlock := nextBlockNum
+		toBlock := nextBlockNum + int64(batchSize) - 1
+
+		log.Debugw("Syncing a block range...",
+			"fromBlock", fromBlock,
+			"toBlock", toBlock,
+			"ethLastBlock", s.stats.Eth.LastBlock,
+		)
+
+		var blocks BlocksByBlockNumMap
+		var blockEventsMap BlockEventsByBlockNumMap
+		var fetchBlocksError, fetchEventsError error
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Fetch blocks
+			blocks, fetchBlocksError = s.FetchBlockRange(ctx, fromBlock, toBlock)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Fetch events
+			blockEventsMap, fetchEventsError = s.FetchBlockEventsByBlockRange(fromBlock, toBlock)
+		}()
+
+		wg.Wait()
+
+		if tracerr.Unwrap(fetchBlocksError) == ErrUnknownBlock {
+			return nil, nil, nil
+		} else if fetchBlocksError != nil {
+			return nil, nil, tracerr.Wrap(fetchBlocksError)
+		}
+
+		if tracerr.Unwrap(fetchEventsError) == ErrUnknownBlock {
+			return nil, nil, nil
+		} else if fetchEventsError != nil {
+			return nil, nil, tracerr.Wrap(fetchEventsError)
+		}
+
+		for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+			blockData, discarded, err = s.ProcessBlock(blocks[blockNum], blockEventsMap[blockNum])
+			if err != nil {
+				return nil, nil, tracerr.Wrap(err)
+			}
+			if discarded != nil {
+				return nil, discarded, nil
+			}
+		}
+	} else {
+		// It's not safe to fetch large batches
+		// Fetch and process one block at a time
+
+		log.Debugw("Syncing...",
+			"block", nextBlockNum,
+			"ethLastBlock", s.stats.Eth.LastBlock,
+		)
+
+		ethBlock, err := s.FetchBlock(ctx, nextBlockNum)
+		if tracerr.Unwrap(err) == ErrUnknownBlock {
+			return nil, nil, nil
+		} else if err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+
+		blockEvents, err := s.FetchBlockEvents(ethBlock)
+		if tracerr.Unwrap(err) == ErrUnknownBlock {
+			return nil, nil, nil
+		} else if err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+
+		blockData, discarded, err = s.ProcessBlock(ethBlock, blockEvents)
+		if err != nil {
+			return nil, nil, tracerr.Wrap(err)
+		}
+		if discarded != nil {
+			return nil, discarded, nil
+		}
 	}
 
 	return blockData, nil, nil
 }
 
-func (s *Synchronizer) processBlock(ethBlock *common.Block, blockEvents *BlockEvents) (*common.BlockData, error) {
+// ProcessBlock processes block and it's events
+func (s *Synchronizer) ProcessBlock(ethBlock *common.Block, blockEvents *BlockEvents) (blockData *common.BlockData, discarded *int64, err error) {
+	// Check that the obtained ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
+	if s.lastSavedBlock != nil {
+		if s.lastSavedBlock.Hash != ethBlock.ParentHash {
+			// Reorg detected
+			log.Debugw("Reorg Detected",
+				"blockNum", ethBlock.Num,
+				"block.parent(got)", ethBlock.ParentHash, "parent.hash(exp)", s.lastSavedBlock.Hash)
+			lastDBBlockNum, err := s.reorg(s.lastSavedBlock)
+			if err != nil {
+				return nil, nil, tracerr.Wrap(err)
+			}
+			discarded := s.lastSavedBlock.Num - lastDBBlockNum
+			s.lastSavedBlock = nil
+			metric.Reorgs.Inc()
+			return nil, &discarded, nil
+		}
+	}
+
 	// Get data from the rollup contract
 	rollupData, err := s.rollupSync(ethBlock, blockEvents.RollupEvents)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, nil, tracerr.Wrap(err)
 	}
 
 	// Get data from the auction contract
 	auctionData, err := s.auctionSync(ethBlock, blockEvents.AuctionEvents)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, nil, tracerr.Wrap(err)
 	}
 
 	// Get data from the WithdrawalDelayer contract
 	wDelayerData, err := s.wdelayerSync(ethBlock, blockEvents.WDelayerEvents)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, nil, tracerr.Wrap(err)
 	}
 
 	for i := range rollupData.Withdrawals {
@@ -721,7 +915,7 @@ func (s *Synchronizer) processBlock(ethBlock *common.Block, blockEvents *BlockEv
 		if !withdrawal.InstantWithdraw {
 			wDelayerTransfers := wDelayerData.DepositsByTxHash[withdrawal.TxHash]
 			if len(wDelayerTransfers) == 0 {
-				return nil, tracerr.Wrap(fmt.Errorf("WDelayer deposit corresponding to " +
+				return nil, nil, tracerr.Wrap(fmt.Errorf("WDelayer deposit corresponding to " +
 					"non-instant rollup withdrawal not found"))
 			}
 			// Pop the first wDelayerTransfer to consume them in chronological order
@@ -735,7 +929,7 @@ func (s *Synchronizer) processBlock(ethBlock *common.Block, blockEvents *BlockEv
 	}
 
 	// Group all the block data into the structs to save into HistoryDB
-	blockData := &common.BlockData{
+	blockData = &common.BlockData{
 		Block:    *ethBlock,
 		Rollup:   *rollupData,
 		Auction:  *auctionData,
@@ -744,7 +938,7 @@ func (s *Synchronizer) processBlock(ethBlock *common.Block, blockEvents *BlockEv
 
 	err = s.historyDB.AddBlockSCData(blockData)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, nil, tracerr.Wrap(err)
 	}
 
 	batchesLen := len(rollupData.Batches)
@@ -768,7 +962,7 @@ func (s *Synchronizer) processBlock(ethBlock *common.Block, blockEvents *BlockEv
 		hasBatch = true
 	}
 	if err = s.updateCurrentNextSlotIfSync(false, hasBatch); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, nil, tracerr.Wrap(err)
 	}
 
 	for _, batchData := range rollupData.Batches {
@@ -792,7 +986,7 @@ func (s *Synchronizer) processBlock(ethBlock *common.Block, blockEvents *BlockEv
 
 	s.lastSavedBlock = &blockData.Block
 
-	return blockData, nil
+	return blockData, nil, nil
 }
 
 // reorg manages a reorg, updating History and State DB as needed.  Keeps
