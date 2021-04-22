@@ -25,11 +25,13 @@ builds:
           dir: db
 
 archives:
-  files:
-    - LICENSE
-    - cli/node/README.md
-    - cli/node/cfg.api.toml
-    - cli/node/cfg.buidler.toml
+  - id: heznode
+    wrap_in_directory: true
+    files:
+      - LICENSE
+      - cli/node/README.md
+      - cli/node/cfg.api.toml
+      - cli/node/cfg.buidler.toml
 
 checksum:
   name_template: 'checksums.txt'
