@@ -9,8 +9,8 @@ before:
 
 builds:
   - main: ./cli/node/main.go
-    binary: node
-    id: node
+    binary: heznode
+    id: heznode
     goos:
       - linux
       - darwin

@@ -15,7 +15,7 @@ GOPKG := $(.)
 GOENVVARS := GOBIN=$(GOBIN)
 GOCMD := $(GOBASE)/cli/node
 GOPROOF := $(GOBASE)/test/proofserver/cli
-GOBINARY := node
+GOBINARY := heznode
 
 # Project configs.
 MODE ?= sync
@@ -26,7 +26,6 @@ PGUSER ?= hermez
 PGPASSWORD ?= yourpasswordhere
 PGDATABASE ?= hermez
 PGENVVARS :=  PGHOST=$(PGHOST) PGPORT=$(PGPORT) PGUSER=$(PGUSER) PGPASSWORD=$(PGPASSWORD) PGDATABASE=$(PGDATABASE)
-
 
 # Use linker flags to provide version/build settings.
 LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
@@ -87,21 +86,26 @@ exec:
 
 ## clean: Clean build files. Runs `go clean` internally.
 clean:
-	@-rm $(GOBIN)/ 2> /dev/null
+	@-rm -r $(GOBIN) 2> /dev/null
 	@echo "  >  Cleaning build cache"
-	$(GOENVVARS) go clean
+	@$(GOENVVARS) go clean
 
 ## build: Build the project.
-build: install
+build: clean install
 	@echo "  >  Building Hermez binary..."
 	@bash -c "$(MAKE) migration-pack"
-	$(GOENVVARS) go build $(LDFLAGS) -o $(GOBIN)/$(GOBINARY) $(GOCMD)
+	@$(GOENVVARS) go build $(LDFLAGS) -o $(GOBIN)/$(GOBINARY) -x $(GOCMD)
 	@bash -c "$(MAKE) migration-clean"
 
-## install: Install missing dependencies. Runs `go get` internally. e.g; make install get=github.com/foo/bar
+## install: Install missing dependencies.
 install:
 	@echo "  >  Checking if there is any missing dependencies..."
-	$(GOENVVARS) go get $(GOCMD)/... $(get)
+	@$(GOENVVARS) go mod download
+
+## go-get: Install specific dependency. Runs `go get` internally. e.g; make install get=github.com/foo/bar
+go-get:
+	@echo "  >  Adding the missing dependency: $(get)"
+	@$(GOENVVARS) go get $(GOCMD)/... $(get)
 
 ## run-node: Run Hermez node.
 run-node:
