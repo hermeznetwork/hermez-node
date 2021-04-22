@@ -122,10 +122,18 @@ stop-proof-mock:
 	@-kill -s INT `cat $(PID_PROOF_MOCK)` 2> /dev/null || true
 	@-rm $(PID_PROOF_MOCK) $(GOBIN)/proof 2> /dev/null || true
 
+## install-packr: Install the packr for the database migrations.
+install-packr:
+ifeq ($(wildcard $(GOPATH)/bin/packr2),)
+	@echo "  >  Installing packr2"
+	@-bash -c "go get github.com/gobuffalo/packr/v2/packr2"
+else
+	@echo "  >  packr2 already installed"
+endif
+
 ## migration-pack: Pack the database migrations into the binary.
-migration-pack:
+migration-pack: install-packr
 	@echo "  >  Packing the migrations..."
-	@cd /tmp && go get -u github.com/gobuffalo/packr/v2/packr2 && cd -
 	@cd $(GOBASE)/db && packr2 && cd -
 
 ## migration-clean: Clean the database migrations pack.
