@@ -16,6 +16,7 @@ GOENVVARS := GOBIN=$(GOBIN)
 GOCMD := $(GOBASE)/cli/node
 GOPROOF := $(GOBASE)/test/proofserver/cli
 GOBINARY := heznode
+PACKR := $(GOPATH)/bin/packr2
 
 # Project configs.
 MODE ?= sync
@@ -82,7 +83,7 @@ gocilint:
 
 ## exec: Run given command. e.g; make exec run="go test ./..."
 exec:
-	GOBIN=$(GOBIN) $(run)
+	@$(GOENVVARS) $(run)
 
 ## clean: Clean build files. Runs `go clean` internally.
 clean:
@@ -128,7 +129,7 @@ stop-proof-mock:
 
 ## install-packr: Install the packr for the database migrations.
 install-packr:
-ifeq ($(wildcard $(GOPATH)/bin/packr2),)
+ifeq ($(wildcard $(PACKR)),)
 	@echo "  >  Installing packr2"
 	@-bash -c "go get github.com/gobuffalo/packr/v2/packr2"
 else
@@ -138,12 +139,12 @@ endif
 ## migration-pack: Pack the database migrations into the binary.
 migration-pack: install-packr
 	@echo "  >  Packing the migrations..."
-	@cd $(GOBASE)/db && packr2 && cd -
+	@cd $(GOBASE)/db && $(PACKR) && cd -
 
 ## migration-clean: Clean the database migrations pack.
 migration-clean:
 	@echo "  >  Cleaning the migrations..."
-	@cd $(GOBASE)/db && packr2 clean && cd -
+	@cd $(GOBASE)/db && $(PACKR) clean && cd -
 
 ## run-database-container: Run the Postgres container
 run-database-container:
