@@ -24,6 +24,13 @@ builds:
         - cmd: packr2 clean
           dir: db
 
+archives:
+  files:
+    - LICENSE
+    - cli/node/README.md
+    - cli/node/cfg.api.toml
+    - cli/node/cfg.buidler.toml
+
 checksum:
   name_template: 'checksums.txt'
 
