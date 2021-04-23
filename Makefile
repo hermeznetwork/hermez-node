@@ -95,7 +95,7 @@ clean:
 build: clean install
 	@echo "  >  Building Hermez binary..."
 	@bash -c "$(MAKE) migration-pack"
-	@$(GOENVVARS) go build $(LDFLAGS) -o $(GOBIN)/$(GOBINARY) -x $(GOCMD)
+	@$(GOENVVARS) go build $(LDFLAGS) -o $(GOBIN)/$(GOBINARY) $(GOCMD)
 	@bash -c "$(MAKE) migration-clean"
 
 ## install: Install missing dependencies.
