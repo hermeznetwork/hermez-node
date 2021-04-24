@@ -558,6 +558,10 @@ func (s *Synchronizer) FetchBlockRange(ctx context.Context, fromBlock int64, toB
 
 	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
 		limiter <- struct{}{} // would block if limiter channel is already filled
+		ctxErr := ctx.Err()
+		if ctxErr != nil {
+			return nil, tracerr.Wrap(ctxErr)
+		}
 		wg.Add(1)
 		go func(_blockNum int64) {
 			defer func() {
@@ -829,6 +833,11 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		}
 
 		for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
+			// Check that node is not exiting
+			ctxErr := ctx.Err()
+			if ctxErr != nil {
+				return nil, nil, tracerr.Wrap(ctxErr)
+			}
 			blockData, discarded, err = s.ProcessBlock(blocks[blockNum], blockEventsMap[blockNum])
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
