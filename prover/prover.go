@@ -204,6 +204,7 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	case GET:
 		req, err = p.client.New().Get(path).Request()
 	case POST:
+		log.Debugw("DBG (p *ProofServerClient) apiRequest POST", "path", path, "body", fmt.Sprintf("%+v", body))
 		req, err = p.client.New().Post(path).BodyJSON(body).Request()
 	default:
 		return tracerr.Wrap(fmt.Errorf("invalid http method: %v", method))
@@ -216,8 +217,12 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 		return tracerr.Wrap(err)
 	}
 	defer res.Body.Close() //nolint:errcheck
-	if !(200 <= res.StatusCode && res.StatusCode < 300) {
+	if res.StatusCode > 299 || res.StatusCode < 200 {
 		return tracerr.Wrap(errSrv)
+	}
+	// DBG SANITY CHECK
+	if strings.Index(path, "input") > 0 {
+		log.Debugw("DBG (p *ProofServerClient) apiRequest POST ", "response", fmt.Sprintf("%+v", res))
 	}
 	return nil
 }
