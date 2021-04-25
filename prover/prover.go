@@ -290,14 +290,16 @@ func (p *ProofServerClient) Cancel(ctx context.Context) error {
 func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 	for {
 		status, err := p.apiStatus(ctx)
-		log.Debugw("DBG (p *ProofServerClient) WaitReady p.apiStatus called")
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
+		// DBG : SANITY CHECK
+		fmt.Print(".")
 		if !status.Status.IsInitialized() {
 			return tracerr.Wrap(fmt.Errorf("Proof Server is not initialized"))
 		}
 		if status.Status.IsReady() {
+			log.Debugw("DBG (p *ProofServerClient) WaitReady The status is ", status.Status)
 			return nil
 		}
 		select {
