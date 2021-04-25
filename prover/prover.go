@@ -300,7 +300,7 @@ func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 		}
 		if status.Status.IsReady() {
 			log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
-			log.Debugw("DBG (p *ProofServerClient) WaitReady The status is ", status.Status)
+			log.Debugw("DBG (p *ProofServerClient) WaitReady The status is ", fmt.Sprintf("%+v", status.Status))
 			log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
 			return nil
 		}
