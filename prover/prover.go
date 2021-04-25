@@ -190,10 +190,10 @@ func NewProofServerClient(URL string, pollInterval time.Duration) *ProofServerCl
 		Timeout: time.Minute * 2,
 	}
 	// DBG SANITY CHECK AND DEBUG
-	if pollInterval > time.Minute*2 {
-		log.Infow("DBG NewProofServerClient set cap to pollInterval to 2 minutes", "pollInterval original", fmt.Sprintf("%+v", pollInterval))
-		pollInterval = time.Minute * 2
-	}
+	// if pollInterval > time.Minute*2 {
+	// 	log.Infow("DBG NewProofServerClient set cap to pollInterval to 2 minutes", "pollInterval original", fmt.Sprintf("%+v", pollInterval))
+	// 	pollInterval = time.Minute * 2
+	// }
 	client := sling.New().Base(URL)
 	client.Client(standardGoHTTPClientWithTimeout)
 	return &ProofServerClient{URL: URL, client: client, pollInterval: pollInterval}
