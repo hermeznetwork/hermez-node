@@ -198,6 +198,7 @@ func (p *Pipeline) reset(batchNum common.BatchNum,
 }
 
 func (p *Pipeline) syncSCVars(vars common.SCVariablesPtr) {
+	// DBG : here the sync actions would not be started?
 	updateSCVars(&p.vars, vars)
 }
 
@@ -259,8 +260,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 }
 
 // Start the forging pipeline
-func (p *Pipeline) Start(batchNum common.BatchNum,
-	stats *synchronizer.Stats, vars *common.SCVariables) error {
+func (p *Pipeline) Start(batchNum common.BatchNum, stats *synchronizer.Stats, vars *common.SCVariables) error {
 	if p.started {
 		log.Fatal("Pipeline already started")
 	}
@@ -304,8 +304,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				} else if err != nil {
 					p.setErrAtBatchNum(batchNum)
 					p.coord.SendMsg(p.ctx, MsgStopPipeline{
-						Reason: fmt.Sprintf(
-							"Pipeline.handleForgBatch: %v", err),
+						Reason:         fmt.Sprintf("Pipeline.handleForgBatch: %v", err),
 						FailedBatchNum: batchNum,
 					})
 					continue

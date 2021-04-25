@@ -210,7 +210,9 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	case GET:
 		req, err = p.client.New().Get(path).Request()
 	case POST:
-		log.Debugw("DBG (p *ProofServerClient) apiRequest POST", "path", path, "body", fmt.Sprintf("%+v", body))
+		log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+		log.Debugw("DBG (p *ProofServerClient) apiRequest POST", "path", path)
+		log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
 		req, err = p.client.New().Post(path).BodyJSON(body).Request()
 	default:
 		return tracerr.Wrap(fmt.Errorf("invalid http method: %v", method))
@@ -228,7 +230,9 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	}
 	// DBG SANITY CHECK
 	if strings.Index(path, "input") > 0 {
-		log.Debugw("DBG (p *ProofServerClient) apiRequest POST ", "response", fmt.Sprintf("%+v", res))
+		log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+		log.Debugw("DBG (p *ProofServerClient) apiRequest POST ", "response", res.Status)
+		log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
 	}
 	return nil
 }
@@ -285,9 +289,8 @@ func (p *ProofServerClient) Cancel(ctx context.Context) error {
 // WaitReady waits until the serverProof is ready
 func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 	for {
-		start := time.Now()
 		status, err := p.apiStatus(ctx)
-		log.Debugw("DBG (p *ProofServerClient) WaitReady p.apiStatus duration", "elapsed", time.Since(start))
+		log.Debugw("DBG (p *ProofServerClient) WaitReady p.apiStatus called")
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
