@@ -448,10 +448,12 @@ func (c *Coordinator) syncStats(ctx context.Context, stats *synchronizer.Stats) 
 			}
 			c.pipelineFromBatch = fromBatch
 			// Start the pipeline
-			if err := c.pipeline.Start(fromBatch.BatchNum, stats, &c.vars); err != nil {
-				c.pipeline = nil
-				return tracerr.Wrap(err)
-			}
+			// if err := c.pipeline.Start(fromBatch.BatchNum, stats, &c.vars); err != nil {
+			// 	c.pipeline = nil
+			// 	return tracerr.Wrap(err)
+			// }
+			// DBG starts the process in a new go routine
+			go c.pipeline.Start(fromBatch.BatchNum, stats, &c.vars)
 		}
 	} else {
 		if !canForge {

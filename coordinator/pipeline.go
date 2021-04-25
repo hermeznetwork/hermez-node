@@ -276,7 +276,9 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 // Start the forging pipeline
 func (p *Pipeline) Start(batchNum common.BatchNum, stats *synchronizer.Stats, vars *common.SCVariables) error {
 	if p.started {
-		log.Fatal("Pipeline already started")
+		// DBG if the Start process already got started move forward
+		log.Info("Pipeline already started")
+		return nil
 	}
 	p.started = true
 
@@ -316,6 +318,10 @@ func (p *Pipeline) Start(batchNum common.BatchNum, stats *synchronizer.Stats, va
 					tracerr.Unwrap(err) == errSkipBatchByPolicy {
 					continue
 				} else if err != nil {
+					// DBG Error in handleForgeBatch
+					log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+					log.Debugw("DBG Start error calling handleForgeBatch", err)
+					log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
 					p.setErrAtBatchNum(batchNum)
 					p.coord.SendMsg(p.ctx, MsgStopPipeline{
 						Reason:         fmt.Sprintf("Pipeline.handleForgBatch: %v", err),
