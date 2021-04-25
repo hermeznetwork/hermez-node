@@ -11,6 +11,7 @@ import (
 
 	"github.com/dghubble/sling"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -184,7 +185,12 @@ func NewProofServerClient(URL string, pollInterval time.Duration) *ProofServerCl
 	if URL[len(URL)-1] != '/' {
 		URL += "/"
 	}
+	// HTTP client with timeout
+	standardGoHTTPClientWithTimeout := &http.Client{
+		Timeout: time.Minute * 2,
+	}
 	client := sling.New().Base(URL)
+	client.Client(standardGoHTTPClientWithTimeout)
 	return &ProofServerClient{URL: URL, client: client, pollInterval: pollInterval}
 }
 
@@ -268,7 +274,9 @@ func (p *ProofServerClient) Cancel(ctx context.Context) error {
 // WaitReady waits until the serverProof is ready
 func (p *ProofServerClient) WaitReady(ctx context.Context) error {
 	for {
+		start := time.Now()
 		status, err := p.apiStatus(ctx)
+		log.Debugw("DBG (p *ProofServerClient) WaitReady p.apiStatus duration", "elapsed", time.Since(start))
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
