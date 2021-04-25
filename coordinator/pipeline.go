@@ -228,9 +228,16 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 	// 2. Forge the batch internally (make a selection of txs and prepare
 	// all the smart contract arguments)
 	var skipReason *string
+	// DBG
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+	log.Debugw("DBG handleForgeBatch", "mutexL2DBUpdateDelete.Lock", "batchNum", batchNum)
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
 	p.mutexL2DBUpdateDelete.Lock()
 	batchInfo, skipReason, err = p.forgeBatch(batchNum)
 	p.mutexL2DBUpdateDelete.Unlock()
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+	log.Debugw("DBG handleForgeBatch", "mutexL2DBUpdateDelete.Unlock", "skipReason", skipReason)
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	} else if err != nil {
@@ -250,7 +257,14 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 	// 3. Send the ZKInputs to the proof server
 	batchInfo.ServerProof = serverProof
 	batchInfo.ProofStart = time.Now()
-	if err := p.sendServerProof(ctx, batchInfo); ctx.Err() != nil {
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+	log.Debugw("DBG handleForgeBatch", "sendServerProof")
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+	err = p.sendServerProof(ctx, batchInfo)
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+	log.Debugw("DBG handleForgeBatch", "return sendServerProof", err)
+	log.Debugw(fmt.Sprint("\n\n ================================= \n\n"))
+	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	} else if err != nil {
 		log.Errorw("sendServerProof", "err", err)
