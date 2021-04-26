@@ -9,8 +9,8 @@ before:
 
 builds:
   - main: ./cli/node/main.go
-    binary: node
-    id: node
+    binary: heznode
+    id: heznode
     goos:
       - linux
       - darwin
@@ -23,6 +23,15 @@ builds:
       post:
         - cmd: packr2 clean
           dir: db
+
+archives:
+  - id: heznode
+    wrap_in_directory: true
+    files:
+      - LICENSE
+      - cli/node/README.md
+      - cli/node/cfg.api.toml
+      - cli/node/cfg.buidler.toml
 
 checksum:
   name_template: 'checksums.txt'
