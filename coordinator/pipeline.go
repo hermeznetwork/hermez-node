@@ -97,7 +97,7 @@ func NewPipeline(ctx context.Context,
 	proversPool := NewProversPool(len(provers))
 	proversPoolSize := 0
 	for _, prover := range provers {
-		ctxTimeout, cancel := context.WithTimeout(ctx, time.Minute)
+		ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*12)
 		defer cancel()
 		log.Debug("\nDBG Waiting for Prove server\n")
 		if err := prover.WaitReady(ctxTimeout); err != nil {
