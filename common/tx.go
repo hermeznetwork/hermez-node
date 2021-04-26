@@ -113,6 +113,9 @@ const (
 	// TxTypeCreateAccountDeposit represents creation of a new leaf in the state tree
 	// (newAcconut) + L1->L2 transfer
 	TxTypeCreateAccountDeposit TxType = "CreateAccountDeposit"
+	// TxTypeCreateAccountDepositWithoutBjj represents creation of a new leaf in the state tree without bjj
+	// for test purposes
+	TxTypeCreateAccountDepositWithoutBjj TxType = "CreateAccountDepositWithoutBjj"
 	// TxTypeCreateAccountDepositTransfer represents L1->L2 transfer + L2->L2 transfer
 	TxTypeCreateAccountDepositTransfer TxType = "CreateAccountDepositTransfer"
 	// TxTypeDepositTransfer TBD

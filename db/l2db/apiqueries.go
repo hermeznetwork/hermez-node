@@ -69,6 +69,16 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 			feeUSD, l2db.maxFeeUSD))
 	}
 
+	if tx.ToBJJ != nil {
+		var exists bool
+		row := l2db.dbRead.QueryRow(`SELECT EXISTS(SELECT 1 FROM account WHERE bjj = $1);`, tx.ToBJJ)
+		if err := row.Scan(&exists); err != nil {
+			return tracerr.Wrap(err)
+		} else if !exists {
+			return tracerr.Wrap(fmt.Errorf("account with bjj %s doesn't exists. "+
+				"Please, register it using /account-creation-authorization endpoint", tx.ToBJJ))
+		}
+	}
 	// Prepare insert SQL query argument parameters
 	namesPart, err := meddler.Default.ColumnsQuoted(tx, false)
 	if err != nil {
