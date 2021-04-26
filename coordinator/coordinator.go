@@ -55,6 +55,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
@@ -240,6 +241,7 @@ func NewCoordinator(cfg Config,
 	ethClient eth.ClientInterface,
 	scConsts *common.SCConsts,
 	initSCVars *common.SCVariables,
+	etherscanClient etherscan.Client,
 ) (*Coordinator, error) {
 	if cfg.DebugBatchPath != "" {
 		if err := os.MkdirAll(cfg.DebugBatchPath, 0744); err != nil {
@@ -284,7 +286,7 @@ func NewCoordinator(cfg Config,
 	ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, 1*time.Second)
 	defer ctxTimeoutCancel()
 	txManager, err := NewTxManager(ctxTimeout, &cfg, ethClient, l2DB, &c,
-		scConsts, initSCVars)
+		scConsts, initSCVars, etherscanClient)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

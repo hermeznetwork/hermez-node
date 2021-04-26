@@ -40,6 +40,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/hermez-node/prover"
@@ -325,6 +326,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		etherScanService, _ := etherscan.NewEtherscanService("")
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
@@ -409,6 +411,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			client,
 			&scConsts,
 			initSCVars,
+			etherScanService,
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
