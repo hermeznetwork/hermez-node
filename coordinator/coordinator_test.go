@@ -18,6 +18,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
@@ -153,7 +154,7 @@ var bidder = ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f"
 var forger = ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 
 func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *test.Client,
-	ethClientSetup *test.ClientSetup, modules modules) *Coordinator {
+	ethClientSetup *test.ClientSetup, modules modules, 	etherscanClient etherscan.Client) *Coordinator {
 	debugBatchPath, err := ioutil.TempDir("", "tmpDebugBatch")
 	require.NoError(t, err)
 	deleteme = append(deleteme, debugBatchPath)
@@ -200,7 +201,7 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		WDelayer: *ethClientSetup.WDelayerVariables,
 	}
 	coord, err := NewCoordinator(conf, modules.historyDB, modules.l2DB, modules.txSelector,
-		modules.batchBuilder, serverProofs, ethClient, scConsts, initSCVars)
+		modules.batchBuilder, serverProofs, ethClient, scConsts, initSCVars, etherscanClient)
 	require.NoError(t, err)
 	return coord
 }
@@ -231,8 +232,9 @@ func TestCoordinatorFlow(t *testing.T) {
 	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("")
 	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 
 	// Bid for slot 2 and 4
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
@@ -325,8 +327,9 @@ func TestCoordinatorStartStop(t *testing.T) {
 	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("")
 	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	coord.Start()
 	coord.Stop()
 }
@@ -338,8 +341,9 @@ func TestCoordCanForge(t *testing.T) {
 
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("")
 	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
 	bid, ok := new(big.Int).SetString("12000000000000000000", 10)
@@ -350,7 +354,7 @@ func TestCoordCanForge(t *testing.T) {
 	require.NoError(t, err)
 
 	modules2 := newTestModules(t)
-	bootCoord := newTestCoordinator(t, bootForger, ethClient, ethClientSetup, modules2)
+	bootCoord := newTestCoordinator(t, bootForger, ethClient, ethClientSetup, modules2, etherScanService)
 
 	assert.Equal(t, forger, coord.cfg.ForgerAddress)
 	assert.Equal(t, bootForger, bootCoord.cfg.ForgerAddress)
@@ -415,8 +419,9 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("")
 	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
 	bid, ok := new(big.Int).SetString("11000000000000000000", 10)
@@ -512,8 +517,9 @@ func TestCoordinatorStress(t *testing.T) {
 	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("")
 	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	syn := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
 
 	coord.Start()

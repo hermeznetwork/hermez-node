@@ -55,6 +55,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
@@ -240,6 +241,7 @@ func NewCoordinator(cfg Config,
 	ethClient eth.ClientInterface,
 	scConsts *common.SCConsts,
 	initSCVars *common.SCVariables,
+	etherscanClient etherscan.Client,
 ) (*Coordinator, error) {
 	// nolint reason: hardcoded `1.0`, by design the percentage can't be over 100%
 	if cfg.L1BatchTimeoutPerc >= 1.0 { //nolint:gomnd
@@ -294,7 +296,7 @@ func NewCoordinator(cfg Config,
 	ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, 1*time.Second)
 	defer ctxTimeoutCancel()
 	txManager, err := NewTxManager(ctxTimeout, &cfg, ethClient, l2DB, &c,
-		scConsts, initSCVars)
+		scConsts, initSCVars, etherscanClient)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
