@@ -131,6 +131,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	bn, err := sdb.getCurrentBatch()
 	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(0), bn)
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
 	bn, err = sdb.getCurrentBatch()
@@ -333,6 +334,7 @@ func TestCheckpoints(t *testing.T) {
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 
 	// do checkpoints and check that currentBatch is correct
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
 	cb, err := sdb.getCurrentBatch()
@@ -348,6 +350,7 @@ func TestCheckpoints(t *testing.T) {
 	assert.Equal(t, accCur, accLast)
 
 	for i := 1; i < 10; i++ {
+		sdb.AdvanceCurrentBatch()
 		err = sdb.MakeCheckpoint()
 		require.NoError(t, err)
 
@@ -373,6 +376,7 @@ func TestCheckpoints(t *testing.T) {
 	assert.Equal(t, common.BatchNum(3), cb)
 
 	// advance one checkpoint and check that currentBatch is fine
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
 	cb, err = sdb.getCurrentBatch()
@@ -404,6 +408,7 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb
+	ldb.AdvanceCurrentBatch()
 	err = ldb.MakeCheckpoint()
 	require.NoError(t, err)
 	cb, err = ldb.getCurrentBatch()
@@ -425,6 +430,7 @@ func TestCheckpoints(t *testing.T) {
 	cb = ldb2.CurrentBatch()
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb2
+	ldb2.AdvanceCurrentBatch()
 	err = ldb2.MakeCheckpoint()
 	require.NoError(t, err)
 	cb = ldb2.CurrentBatch()
@@ -581,6 +587,7 @@ func TestListCheckpoints(t *testing.T) {
 	numCheckpoints := 16
 	// do checkpoints
 	for i := 0; i < numCheckpoints; i++ {
+		sdb.AdvanceCurrentBatch()
 		err = sdb.MakeCheckpoint()
 		require.NoError(t, err)
 	}
@@ -617,6 +624,7 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	// do checkpoints and check that we never have more than `keep`
 	// checkpoints
 	for i := 0; i < numCheckpoints; i++ {
+		sdb.AdvanceCurrentBatch()
 		err = sdb.MakeCheckpoint()
 		require.NoError(t, err)
 		err := sdb.DeleteOldCheckpoints()
@@ -644,6 +652,7 @@ func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 	// do checkpoints and check that we never have more than `keep`
 	// checkpoints
 	for i := 0; i < numCheckpoints; i++ {
+		sdb.AdvanceCurrentBatch()
 		err = sdb.MakeCheckpoint()
 		require.NoError(t, err)
 		wg := sync.WaitGroup{}
@@ -691,6 +700,7 @@ func TestCurrentIdx(t *testing.T) {
 	idx = sdb.CurrentIdx()
 	assert.Equal(t, common.Idx(255), idx)
 
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
 
@@ -717,10 +727,13 @@ func TestResetFromBadCheckpoint(t *testing.T) {
 	sdb, err := NewStateDB(Config{Path: dir, Keep: keep, Type: TypeSynchronizer, NLevels: 32})
 	require.NoError(t, err)
 
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
 

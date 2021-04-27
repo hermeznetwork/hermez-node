@@ -64,7 +64,7 @@ func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBa
 	bbStateDB := bb.localStateDB.StateDB
 	tp := txprocessor.NewTxProcessor(bbStateDB, configBatch.TxProcessorConfig)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1usertxs, l1coordinatortxs, pooll2txs, true)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

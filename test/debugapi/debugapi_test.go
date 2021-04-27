@@ -48,6 +48,7 @@ func TestDebugAPI(t *testing.T) {
 	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
 	require.Nil(t, err)
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint() // Make a checkpoint to increment the batchNum
 	require.Nil(t, err)
 
@@ -69,6 +70,7 @@ func TestDebugAPI(t *testing.T) {
 		require.Nil(t, err)
 	}
 	// Make a checkpoint (batchNum 2) to make the accounts available in Last
+	sdb.AdvanceCurrentBatch()
 	err = sdb.MakeCheckpoint()
 	require.Nil(t, err)
 

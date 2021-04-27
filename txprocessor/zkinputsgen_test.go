@@ -58,7 +58,7 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -113,7 +113,7 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -182,7 +182,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	l1CoordTxs := []common.L1Tx{}
 	l2Txs := []common.PoolL2Tx{}
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	assert.Equal(t, "0", sdb.MT.Root().BigInt().String())
@@ -217,7 +217,7 @@ func TestZKInputsEmpty(t *testing.T) {
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs = txsets.GenerateTxsZKInputs0(t, chainID)
 
-	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	rootNonZero := sdb.MT.Root()
@@ -244,7 +244,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	l1CoordTxs = []common.L1Tx{}
 	l2Txs = []common.PoolL2Tx{}
 
-	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	assert.Equal(t, rootNonZero, sdb.MT.Root())
@@ -303,7 +303,7 @@ func TestZKInputs0(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -364,7 +364,7 @@ func TestZKInputs1(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -432,7 +432,7 @@ func TestZKInputs2(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -508,7 +508,7 @@ func TestZKInputs3(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -584,7 +584,7 @@ func TestZKInputs4(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
@@ -660,7 +660,7 @@ func TestZKInputs5(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -739,7 +739,7 @@ func TestZKInputs6(t *testing.T) {
 	tc.RestartNonces()
 
 	log.Debug("block:0 batch:1")
-	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil, true)
 	require.NoError(t, err)
 
 	assert.Equal(t, "0", sdb.MT.Root().BigInt().String())
@@ -760,7 +760,7 @@ func TestZKInputs6(t *testing.T) {
 	log.Debug("block:0 batch:2")
 	l1UserTxs := []common.L1Tx{}
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	assert.Equal(t, "0", sdb.MT.Root().BigInt().String())
@@ -781,7 +781,7 @@ func TestZKInputs6(t *testing.T) {
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"10303926118213025243660668481827257778714122989909761705455084995854999537039",
@@ -802,7 +802,7 @@ func TestZKInputs6(t *testing.T) {
 	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[3].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
@@ -823,7 +823,7 @@ func TestZKInputs6(t *testing.T) {
 	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[4].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
@@ -844,7 +844,7 @@ func TestZKInputs6(t *testing.T) {
 	log.Debug("block:0 batch:6")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[5].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"9061858435528794221929846392270405504056106238451760714188625065949729889651",
@@ -876,7 +876,7 @@ func TestZKInputs6(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
+		blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"4392049343656836675348565048374261353937130287163762821533580216441778455298",
@@ -908,7 +908,7 @@ func TestZKInputs6(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
+		blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"8905191229562583213069132470917469035834300549892959854483573322676101624713",
@@ -939,7 +939,7 @@ func TestZKInputs6(t *testing.T) {
 	l2Txs = poolL2Txs
 	coordIdxs = []common.Idx{263}
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+		blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"20593679664586247774284790801579542411781976279024409415159440382607791042723",
@@ -962,7 +962,7 @@ func TestZKInputs6(t *testing.T) {
 	l2Txs = []common.PoolL2Tx{}
 	coordIdxs = []common.Idx{}
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"7635139306183028888189957942287689775017794868718398189334978386355501406695",
@@ -1032,7 +1032,7 @@ func TestZKInputsForceExitNotEnoughBalance(t *testing.T) {
 	tp := NewTxProcessor(sdb, config)
 
 	// process Batch2:
-	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil)
+	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 	assert.Equal(t,
@@ -1048,7 +1048,7 @@ func TestZKInputsForceExitNotEnoughBalance(t *testing.T) {
 	// printZKInputs(t, ptOut.ZKInputs)
 
 	// process Batch4:
-	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil)
+	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"9817949306315488277882761441334442702413477797580483156608957607254414748724",
@@ -1168,7 +1168,7 @@ func TestZKInputsDepositTransferDifferentTokenIDs(t *testing.T) {
 	assert.Equal(t, "257", tc.Users["B"].Accounts[1].Idx.String())
 
 	// process Batch2:
-	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil)
+	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"15840908427090148754401850838287012766516231419678649885722313476293488046059",
@@ -1187,7 +1187,7 @@ func TestZKInputsDepositTransferDifferentTokenIDs(t *testing.T) {
 		Type:          common.TxTypeDepositTransfer,
 	}
 	l1UserTxs := []common.L1Tx{depositTransferTx}
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, nil, nil)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"14230709344017026161842015882701267639148413699586803973757674240329499158042",
@@ -1269,7 +1269,7 @@ func TestZKInputsL1CoordinatorTxsAfterL1Exit(t *testing.T) {
 	tp := NewTxProcessor(sdb, config)
 
 	// process Batch2:
-	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil)
+	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"13250144760662777978687264077050092444905467656476402514654550449973838329915",
@@ -1286,7 +1286,7 @@ func TestZKInputsL1CoordinatorTxsAfterL1Exit(t *testing.T) {
 
 	// process Batch4:
 	l1UserTxs := blocks[0].Rollup.Batches[3].L1UserTxs
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, poolL2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, poolL2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"2449079255569259710281173899922223113570673452636649748260745275814779988814",

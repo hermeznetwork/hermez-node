@@ -840,18 +840,30 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 			return nil, nil, tracerr.Wrap(fetchEventsError)
 		}
 
+		batchesForged := 0
+
 		for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
 			// Check that node is not exiting
 			ctxErr := ctx.Err()
 			if ctxErr != nil {
-				return nil, nil, tracerr.Wrap(ctxErr)
+				// node is exiting, breaking the loop to make checkpoint
+				break
 			}
-			blockData, discarded, err = s.ProcessBlock(blocks[blockNum], blockEventsMap[blockNum])
+			// Processing Block, but skipping StateDB.MakeCheckpoint call inside
+			blockData, discarded, err = s.ProcessBlock(blocks[blockNum], blockEventsMap[blockNum], false)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
 			if discarded != nil {
 				return nil, discarded, nil
+			}
+			batchesForged += len(blockData.Rollup.Batches)
+		}
+		// Doing StateDB.MakeCheckpoint for the whole block range just once and only if there were batches
+		if batchesForged > 0 {
+			err = s.stateDB.MakeCheckpoint()
+			if err != nil {
+				return nil, nil, tracerr.Wrap(err)
 			}
 		}
 	} else {
@@ -877,7 +889,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 			return nil, nil, tracerr.Wrap(err)
 		}
 
-		blockData, discarded, err = s.ProcessBlock(ethBlock, blockEvents)
+		blockData, discarded, err = s.ProcessBlock(ethBlock, blockEvents, true)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
@@ -890,7 +902,8 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 }
 
 // ProcessBlock processes block and it's events
-func (s *Synchronizer) ProcessBlock(ethBlock *common.Block, blockEvents *BlockEvents) (blockData *common.BlockData, discarded *int64, err error) {
+func (s *Synchronizer) ProcessBlock(ethBlock *common.Block, blockEvents *BlockEvents,
+	makeCheckpoint bool) (blockData *common.BlockData, discarded *int64, err error) {
 	// Check that the obtained ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
 	if s.lastSavedBlock != nil {
 		if s.lastSavedBlock.Hash != ethBlock.ParentHash {
@@ -910,7 +923,7 @@ func (s *Synchronizer) ProcessBlock(ethBlock *common.Block, blockEvents *BlockEv
 	}
 
 	// Get data from the rollup contract
-	rollupData, err := s.rollupSync(ethBlock, blockEvents.RollupEvents)
+	rollupData, err := s.rollupSync(ethBlock, blockEvents.RollupEvents, makeCheckpoint)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
@@ -1145,7 +1158,8 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 
 // rollupSync retrieves all the Rollup Smart Contract Data that happened at
 // ethBlock.blockNum with ethBlock.Hash.
-func (s *Synchronizer) rollupSync(ethBlock *common.Block, rollupEvents *eth.RollupEvents) (*common.RollupData, error) {
+func (s *Synchronizer) rollupSync(ethBlock *common.Block, rollupEvents *eth.RollupEvents,
+	makeCheckpoint bool) (*common.RollupData, error) {
 	blockNum := ethBlock.Num
 	var rollupData = common.NewRollupData()
 	// var forgeL1TxsNum int64
@@ -1286,7 +1300,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block, rollupEvents *eth.Roll
 
 		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
 		processTxsOut, err := tp.ProcessTxs(forgeBatchArgs.FeeIdxCoordinator,
-			l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
+			l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs, makeCheckpoint)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}

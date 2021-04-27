@@ -219,11 +219,17 @@ func (s *StateDB) LastMTGetRoot() (*big.Int, error) {
 	return root, nil
 }
 
+// AdvanceCurrentBatch advances the current BatchNum
+func (s *StateDB) AdvanceCurrentBatch() {
+	log.Debugw("Advancing Current Batch Number", "batch", s.CurrentBatch()+1, "type", s.cfg.Type)
+	s.db.AdvanceCurrentBatch()
+}
+
 // MakeCheckpoint does a checkpoint at the given batchNum in the defined path.
 // Internally this advances & stores the current BatchNum, and then stores a
 // Checkpoint of the current state of the StateDB.
 func (s *StateDB) MakeCheckpoint() error {
-	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch()+1, "type", s.cfg.Type)
+	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch(), "type", s.cfg.Type)
 	return s.db.MakeCheckpoint()
 }
 

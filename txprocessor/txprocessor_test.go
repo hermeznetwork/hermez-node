@@ -77,7 +77,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		ChainID:  chainID,
 	}
 	tp := NewTxProcessor(sdb, config)
-	_, err = tp.ProcessTxs(nil, blocks[0].Rollup.L1UserTxs, nil, nil)
+	_, err = tp.ProcessTxs(nil, blocks[0].Rollup.L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 
 	tx := common.L1Tx{
@@ -248,21 +248,21 @@ func TestProcessTxsBalances(t *testing.T) {
 	tp := NewTxProcessor(sdb, config)
 
 	log.Debug("block:0 batch:1, only L1CoordinatorTxs")
-	_, err = tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	_, err = tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t, "0", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs := []common.L1Tx{}
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t, "0", tp.s.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	assert.Equal(t,
@@ -272,7 +272,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[3].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
@@ -283,7 +283,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[4].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "500")
 	checkBalance(t, tc, sdb, "A", 1, "500")
@@ -294,7 +294,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:6")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[5].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "A", 0, "600")
 	checkBalance(t, tc, sdb, "A", 1, "500")
@@ -307,7 +307,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:7")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[6].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "Coord", 0, "10")
 	checkBalance(t, tc, sdb, "Coord", 1, "20")
@@ -324,7 +324,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:0 batch:8")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[7].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "Coord", 0, "35")
 	checkBalance(t, tc, sdb, "Coord", 1, "30")
@@ -343,7 +343,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:1 batch:1")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[0].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "Coord", 1, "30")
 	checkBalance(t, tc, sdb, "Coord", 0, "35")
@@ -362,7 +362,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	log.Debug("block:1 batch:2")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"20375835796927052406196249140510136992262283055544831070430919054949353249481",
@@ -372,7 +372,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	poolL2Txs, err := tc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow1)
 	assert.NoError(t, err)
 
-	_, err = tp.ProcessTxs(coordIdxs, []common.L1Tx{}, []common.L1Tx{}, poolL2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, []common.L1Tx{}, []common.L1Tx{}, poolL2Txs, true)
 	require.NoError(t, err)
 	checkBalance(t, tc, sdb, "Coord", 1, "30")
 	checkBalance(t, tc, sdb, "Coord", 0, "35")
@@ -430,7 +430,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
 	log.Debug("block:0 batch:1, only L1CoordinatorTxs")
-	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(ptOut.CreatedAccounts))
 	assert.Equal(t, 0, len(ptOut.CollectedFees))
@@ -438,7 +438,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	log.Debug("block:0 batch:2")
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
 	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs,
-		blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+		blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 31, len(ptOut.CreatedAccounts))
@@ -453,7 +453,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 
 	log.Debug("block:0 batch:3")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
@@ -473,7 +473,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, common.Nonce(0), l2Txs[1].Nonce)
 	assert.Equal(t, common.Nonce(0), l2Txs[2].Nonce)
 
-	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	// after processing expect l2Txs[0:2].Nonce!=0 and has expected value
@@ -495,7 +495,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	log.Debug("block:1 batch:2")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
 	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
-		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	// 1, as previous batch was without L1UserTxs, and has pending the
 	// 'ForceExit(1) A: 5', and the 2 exit transactions get grouped under 1
@@ -557,7 +557,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
 	log.Debug("block:0 batch:1, only L1CoordinatorTxs")
-	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil, true)
 	require.NoError(t, err)
 	// expect 0 at CreatedAccount, as is only computed when StateDB.Type==TypeSynchronizer
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
@@ -565,7 +565,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	log.Debug("block:0 batch:2")
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
 	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs,
-		blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+		blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
@@ -575,7 +575,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 
 	log.Debug("block:0 batch:3")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
@@ -585,7 +585,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 
 	log.Debug("block:1 batch:1")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[0].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	acc, err = sdb.GetAccount(idxA1)
 	require.NoError(t, err)
@@ -594,7 +594,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	log.Debug("block:1 batch:2")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
 	_, err = tp.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
-		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 	acc, err = sdb.GetAccount(idxA1)
 	assert.NoError(t, err)
@@ -669,7 +669,7 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 		ChainID:  chainID,
 	}
 	tp := NewTxProcessor(sdb, config)
-	_, err = tp.ProcessTxs(nil, l1Txs, nil, l2Txs)
+	_, err = tp.ProcessTxs(nil, l1Txs, nil, l2Txs, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"16181420716631932805604732887923905079487577323947343079740042260791593140221",
@@ -736,7 +736,7 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	}
 	tp := NewTxProcessor(sdb, config)
 
-	_, err = tp.ProcessTxs(nil, l1Txs, nil, nil)
+	_, err = tp.ProcessTxs(nil, l1Txs, nil, nil, true)
 	require.NoError(t, err)
 
 	// check balances
@@ -792,7 +792,7 @@ func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Contex
 	}
 	tp := NewTxProcessor(sdb, config)
 	// batch1
-	_, err = tp.ProcessTxs(nil, nil, nil, nil) // to simulate the first batch from the Til set
+	_, err = tp.ProcessTxs(nil, nil, nil, nil, true) // to simulate the first batch from the Til set
 	require.NoError(t, err)
 
 	return tp, tc, blocks, sdb
@@ -808,7 +808,7 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	l1CoordTxs := blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	_, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	checkBalanceByIdx(t, tp.s, 256, "90")  // A
@@ -824,7 +824,7 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	l1CoordTxs = blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	checkBalanceByIdx(t, tp.s, 256, "90")  // A
@@ -840,7 +840,7 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	l1CoordTxs = blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	checkBalanceByIdx(t, tp.s, 256, "90")  // A
@@ -908,7 +908,7 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 	ptOuts := []*ProcessTxOutput{}
 	for _, block := range blocks {
 		for _, batch := range block.Rollup.Batches {
-			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil, true)
 			require.NoError(t, err)
 			ptOuts = append(ptOuts, ptOut)
 		}
@@ -960,7 +960,7 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 	ptOuts2 := []*ProcessTxOutput{}
 	for _, block := range blocks {
 		for _, batch := range block.Rollup.Batches {
-			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil, true)
 			require.NoError(t, err)
 			ptOuts2 = append(ptOuts2, ptOut)
 		}
@@ -1011,7 +1011,7 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 	ptOuts3 := []*ProcessTxOutput{}
 	for _, block := range blocks {
 		for _, batch := range block.Rollup.Batches {
-			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil, true)
 			require.NoError(t, err)
 			ptOuts3 = append(ptOuts3, ptOut)
 		}
@@ -1104,10 +1104,10 @@ func TestExitOf0Amount(t *testing.T) {
 	// - Batch8, equivalent to Batches[7]
 
 	// process Batch2:
-	_, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil)
+	_, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	// process Batch4:
-	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil)
+	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"17688031540912620894848983912708704736922099609001460827147265569563156468242",
@@ -1115,7 +1115,7 @@ func TestExitOf0Amount(t *testing.T) {
 	exitRootBatch4 := ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String()
 
 	// process Batch6:
-	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[5].L1UserTxs, nil, nil)
+	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[5].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"17688031540912620894848983912708704736922099609001460827147265569563156468242",
@@ -1128,7 +1128,7 @@ func TestExitOf0Amount(t *testing.T) {
 	// For the Batch8, as there is only 1 exit with Amount=0, the ExitRoot
 	// should be 0.
 	// process Batch8:
-	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[7].L1UserTxs, nil, nil)
+	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[7].L1UserTxs, nil, nil, true)
 	require.NoError(t, err)
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
@@ -1200,7 +1200,7 @@ func TestUpdatedAccounts(t *testing.T) {
 	for _, batch := range blocks[0].Rollup.Batches {
 		l2Txs := common.L2TxsToPoolL2Txs(batch.L2Txs)
 		ptOut, err := tp.ProcessTxs(batch.Batch.FeeIdxsCoordinator, batch.L1UserTxs,
-			batch.L1CoordinatorTxs, l2Txs)
+			batch.L1CoordinatorTxs, l2Txs, true)
 		require.NoError(t, err)
 		switch batch.Batch.BatchNum {
 		case 1:

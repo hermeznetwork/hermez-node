@@ -60,6 +60,7 @@ func TestCheckpoints(t *testing.T) {
 	}
 
 	// do checkpoints and check that currentBatch is correct
+	db.AdvanceCurrentBatch()
 	err = db.MakeCheckpoint()
 	require.NoError(t, err)
 	cb, err := db.GetCurrentBatch()
@@ -67,6 +68,7 @@ func TestCheckpoints(t *testing.T) {
 	assert.Equal(t, common.BatchNum(1), cb)
 
 	for i := 1; i < 10; i++ {
+		db.AdvanceCurrentBatch()
 		err = db.MakeCheckpoint()
 		require.NoError(t, err)
 
@@ -94,6 +96,7 @@ func TestCheckpoints(t *testing.T) {
 	assert.Equal(t, common.BatchNum(3), cb)
 
 	// advance one checkpoint and check that currentBatch is fine
+	db.AdvanceCurrentBatch()
 	err = db.MakeCheckpoint()
 	require.NoError(t, err)
 	cb, err = db.GetCurrentBatch()
@@ -124,6 +127,7 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb
+	ldb.AdvanceCurrentBatch()
 	err = ldb.MakeCheckpoint()
 	require.NoError(t, err)
 	cb, err = ldb.GetCurrentBatch()
@@ -145,6 +149,7 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, common.BatchNum(4), cb)
 	// advance one checkpoint in ldb2
+	ldb2.AdvanceCurrentBatch()
 	err = ldb2.MakeCheckpoint()
 	require.NoError(t, err)
 	cb, err = ldb2.GetCurrentBatch()
@@ -174,6 +179,7 @@ func TestListCheckpoints(t *testing.T) {
 	numCheckpoints := 16
 	// do checkpoints
 	for i := 0; i < numCheckpoints; i++ {
+		db.AdvanceCurrentBatch()
 		err = db.MakeCheckpoint()
 		require.NoError(t, err)
 	}
@@ -208,6 +214,7 @@ func TestDeleteOldCheckpoints(t *testing.T) {
 	// do checkpoints and check that we never have more than `keep`
 	// checkpoints
 	for i := 0; i < numCheckpoints; i++ {
+		db.AdvanceCurrentBatch()
 		err = db.MakeCheckpoint()
 		require.NoError(t, err)
 		err = db.DeleteOldCheckpoints()
@@ -238,6 +245,7 @@ func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 	// checkpoints.
 	// 1 async DeleteOldCheckpoint after 1 MakeCheckpoint
 	for i := 0; i < numCheckpoints; i++ {
+		db.AdvanceCurrentBatch()
 		err = db.MakeCheckpoint()
 		require.NoError(t, err)
 		go func() {
@@ -257,6 +265,7 @@ func TestConcurrentDeleteOldCheckpoints(t *testing.T) {
 	// checkpoints
 	// 32 concurrent DeleteOldCheckpoint after 32 MakeCheckpoint
 	for i := 0; i < numCheckpoints; i++ {
+		db.AdvanceCurrentBatch()
 		err = db.MakeCheckpoint()
 		require.NoError(t, err)
 	}
@@ -297,6 +306,7 @@ func TestGetCurrentIdx(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, common.Idx(255), idx)
 
+	db.AdvanceCurrentBatch()
 	err = db.MakeCheckpoint()
 	require.NoError(t, err)
 

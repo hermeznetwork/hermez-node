@@ -185,10 +185,13 @@ func (tp *TxProcessor) resetZKInputs() {
 // And if TypeSynchronizer returns an array of common.Account with all the
 // created accounts.
 func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx,
-	l2txs []common.PoolL2Tx) (ptOut *ProcessTxOutput, err error) {
+	l2txs []common.PoolL2Tx, makeCheckpoint bool) (ptOut *ProcessTxOutput, err error) {
 	defer func() {
 		if err == nil {
-			err = tp.s.MakeCheckpoint()
+			tp.s.AdvanceCurrentBatch()
+			if makeCheckpoint {
+				err = tp.s.MakeCheckpoint()
+			}
 		}
 	}()
 

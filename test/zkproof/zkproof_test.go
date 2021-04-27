@@ -92,21 +92,21 @@ func TestZKInputsEmpty(t *testing.T) {
 	l1UserTxs := []common.L1Tx{}
 	l1CoordTxs := []common.L1Tx{}
 	l2Txs := []common.PoolL2Tx{}
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs) // test empty batch ZKInputs
 
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs = txsets.GenerateTxsZKInputs0(t, ChainID)
 
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	coordIdxs = []common.Idx{}
 	l1UserTxs = []common.L1Tx{}
 	l1CoordTxs = []common.L1Tx{}
 	l2Txs = []common.PoolL2Tx{}
-	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 	sendProofAndCheckResp(t, ptOut.ZKInputs) // test empty batch ZKInputs after a non-empty batch
 
@@ -119,7 +119,7 @@ func TestZKInputs0(t *testing.T) {
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs0(t, ChainID)
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -132,7 +132,7 @@ func TestZKInputs1(t *testing.T) {
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs1(t, ChainID)
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -145,7 +145,7 @@ func TestZKInputs2(t *testing.T) {
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs2(t, ChainID)
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -158,7 +158,7 @@ func TestZKInputs3(t *testing.T) {
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs3(t, ChainID)
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -171,7 +171,7 @@ func TestZKInputs4(t *testing.T) {
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs4(t, ChainID)
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -185,7 +185,7 @@ func TestZKInputs5(t *testing.T) {
 	_, coordIdxs, l1UserTxs, l1CoordTxs, l2Txs := txsets.GenerateTxsZKInputs5(t, ChainID)
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
-	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	ptOut, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -206,7 +206,7 @@ func TestZKInputs6(t *testing.T) {
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 	// batch1
-	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -214,7 +214,7 @@ func TestZKInputs6(t *testing.T) {
 	// batch2
 	l1UserTxs := []common.L1Tx{}
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -222,7 +222,7 @@ func TestZKInputs6(t *testing.T) {
 	// batch3
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -230,7 +230,7 @@ func TestZKInputs6(t *testing.T) {
 	// batch4
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[3].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -238,7 +238,7 @@ func TestZKInputs6(t *testing.T) {
 	// batch5
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[4].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -246,7 +246,7 @@ func TestZKInputs6(t *testing.T) {
 	// batch6
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[5].L2Txs)
-	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
+	ptOut, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -265,7 +265,7 @@ func TestZKInputs6(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
+		blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -284,7 +284,7 @@ func TestZKInputs6(t *testing.T) {
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
+		blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -302,7 +302,7 @@ func TestZKInputs6(t *testing.T) {
 	l2Txs = poolL2Txs
 	coordIdxs = []common.Idx{262}
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+		blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)
@@ -312,7 +312,7 @@ func TestZKInputs6(t *testing.T) {
 	l2Txs = []common.PoolL2Tx{}
 	coordIdxs = []common.Idx{}
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
-		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs, true)
 	require.NoError(t, err)
 
 	sendProofAndCheckResp(t, ptOut.ZKInputs)

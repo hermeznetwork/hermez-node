@@ -218,6 +218,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 				"Tx not selected due impossibility to be forged with the current state"
 			discardedL2Txs = append(discardedL2Txs, l2TxsNonForgable[i])
 		}
+		tp.StateDB().AdvanceCurrentBatch()
 		err = tp.StateDB().MakeCheckpoint()
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
@@ -318,6 +319,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 		}
 	}
 
+	tp.StateDB().AdvanceCurrentBatch()
 	err = tp.StateDB().MakeCheckpoint()
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)

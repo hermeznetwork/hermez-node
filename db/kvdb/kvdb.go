@@ -413,13 +413,14 @@ func (k *KVDB) SetCurrentIdx(idx common.Idx) error {
 	return nil
 }
 
-// MakeCheckpoint does a checkpoint at the given batchNum in the defined path.
-// Internally this advances & stores the current BatchNum, and then stores a
-// Checkpoint of the current state of the k.
-func (k *KVDB) MakeCheckpoint() error {
-	// advance currentBatch
+// AdvanceCurrentBatch advances the current BatchNum
+func (k *KVDB) AdvanceCurrentBatch() {
 	k.CurrentBatch++
+}
 
+// MakeCheckpoint does a checkpoint at the given batchNum in the defined path.
+// Stores a Checkpoint of the current state of the k.
+func (k *KVDB) MakeCheckpoint() error {
 	checkpointPath := path.Join(k.cfg.Path, fmt.Sprintf("%s%d", PathBatchNum, k.CurrentBatch))
 
 	if err := k.setCurrentBatch(); err != nil {
@@ -503,16 +504,6 @@ func (k *KVDB) ListCheckpoints() ([]int, error) {
 		}
 	}
 	sort.Ints(checkpoints)
-	if !k.cfg.NoGapsCheck && len(checkpoints) > 0 {
-		first := checkpoints[0]
-		for _, checkpoint := range checkpoints[1:] {
-			first++
-			if checkpoint != first {
-				log.Errorw("gap between checkpoints", "checkpoints", checkpoints)
-				return nil, tracerr.Wrap(fmt.Errorf("checkpoint gap at %v", checkpoint))
-			}
-		}
-	}
 	return checkpoints, nil
 }
 
