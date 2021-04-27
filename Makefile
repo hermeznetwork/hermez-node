@@ -15,7 +15,8 @@ GOPKG := $(.)
 GOENVVARS := GOBIN=$(GOBIN)
 GOCMD := $(GOBASE)/cli/node
 GOPROOF := $(GOBASE)/test/proofserver/cli
-GOBINARY := node
+GOBINARY := heznode
+PACKR := $(GOPATH)/bin/packr2
 
 # Project configs.
 MODE ?= sync
@@ -26,7 +27,6 @@ PGUSER ?= hermez
 PGPASSWORD ?= yourpasswordhere
 PGDATABASE ?= hermez
 PGENVVARS :=  PGHOST=$(PGHOST) PGPORT=$(PGPORT) PGUSER=$(PGUSER) PGPASSWORD=$(PGPASSWORD) PGDATABASE=$(PGDATABASE)
-
 
 # Use linker flags to provide version/build settings.
 LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
@@ -83,25 +83,30 @@ gocilint:
 
 ## exec: Run given command. e.g; make exec run="go test ./..."
 exec:
-	GOBIN=$(GOBIN) $(run)
+	@$(GOENVVARS) $(run)
 
 ## clean: Clean build files. Runs `go clean` internally.
 clean:
-	@-rm $(GOBIN)/ 2> /dev/null
+	@-rm -r $(GOBIN) 2> /dev/null
 	@echo "  >  Cleaning build cache"
-	$(GOENVVARS) go clean
+	@$(GOENVVARS) go clean
 
 ## build: Build the project.
-build: install
+build: clean install
 	@echo "  >  Building Hermez binary..."
 	@bash -c "$(MAKE) migration-pack"
-	$(GOENVVARS) go build $(LDFLAGS) -o $(GOBIN)/$(GOBINARY) $(GOCMD)
+	@$(GOENVVARS) go build $(LDFLAGS) -o $(GOBIN)/$(GOBINARY) $(GOCMD)
 	@bash -c "$(MAKE) migration-clean"
 
-## install: Install missing dependencies. Runs `go get` internally. e.g; make install get=github.com/foo/bar
+## install: Install missing dependencies.
 install:
 	@echo "  >  Checking if there is any missing dependencies..."
-	$(GOENVVARS) go get $(GOCMD)/... $(get)
+	@$(GOENVVARS) go mod download
+
+## go-get: Install specific dependency. Runs `go get` internally. e.g; make install get=github.com/foo/bar
+go-get:
+	@echo "  >  Adding the missing dependency: $(get)"
+	@$(GOENVVARS) go get $(GOCMD)/... $(get)
 
 ## run-node: Run Hermez node.
 run-node:
@@ -122,16 +127,24 @@ stop-proof-mock:
 	@-kill -s INT `cat $(PID_PROOF_MOCK)` 2> /dev/null || true
 	@-rm $(PID_PROOF_MOCK) $(GOBIN)/proof 2> /dev/null || true
 
+## install-packr: Install the packr for the database migrations.
+install-packr:
+ifeq ($(wildcard $(PACKR)),)
+	@echo "  >  Installing packr2"
+	@-bash -c "go get github.com/gobuffalo/packr/v2/packr2"
+else
+	@echo "  >  packr2 already installed"
+endif
+
 ## migration-pack: Pack the database migrations into the binary.
-migration-pack:
+migration-pack: install-packr
 	@echo "  >  Packing the migrations..."
-	@cd /tmp && go get -u github.com/gobuffalo/packr/v2/packr2 && cd -
-	@cd $(GOBASE)/db && packr2 && cd -
+	@cd $(GOBASE)/db && $(PACKR) && cd -
 
 ## migration-clean: Clean the database migrations pack.
 migration-clean:
 	@echo "  >  Cleaning the migrations..."
-	@cd $(GOBASE)/db && packr2 clean && cd -
+	@cd $(GOBASE)/db && $(PACKR) clean && cd -
 
 ## run-database-container: Run the Postgres container
 run-database-container:
