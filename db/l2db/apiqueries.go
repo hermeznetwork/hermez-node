@@ -114,6 +114,17 @@ tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type,
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
+// selectPoolTxsAPI select part of queries to get PoolL2TxRead transactions
+const selectPoolTxsAPI = `SELECT tx_pool.item_id, tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
+tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
+tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
+hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
+tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
+token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
+count(*) OVER() AS total_items 
+FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
+
 // GetTxAPI return the specified Tx in PoolTxAPI format
 func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
@@ -159,7 +170,7 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 	defer l2db.apiConnCon.Release()
 	// Apply filters
 	nextIsAnd := false
-	queryStr := selectPoolTxAPI
+	queryStr := selectPoolTxsAPI
 	var args []interface{}
 	// ethAddr filter
 	if request.EthAddr != nil {
