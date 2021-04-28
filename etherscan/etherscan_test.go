@@ -2,7 +2,6 @@ package etherscan
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -35,9 +34,7 @@ func TestEtherscanApiServer(t *testing.T) {
 }
 
 func testGetGasPrice(t *testing.T) {
-	fmt.Println("here",etherscanURL)
 	gasPrice, err := etherScanMockService.GetGasPrice(context.Background(), etherscanURL)
-	fmt.Println(gasPrice)
 	require.NoError(t, err)
 	assert.NotEqual(t, 0, gasPrice.LastBlock)
 	assert.NotEqual(t, 90, gasPrice.SafeGasPrice)
