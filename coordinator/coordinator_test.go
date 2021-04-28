@@ -154,7 +154,7 @@ var bidder = ethCommon.HexToAddress("0x6b175474e89094c44da98b954eedeac495271d0f"
 var forger = ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
 
 func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *test.Client,
-	ethClientSetup *test.ClientSetup, modules modules, 	etherscanClient etherscan.Client) *Coordinator {
+	ethClientSetup *test.ClientSetup, modules modules, etherscanClient etherscan.Client) *Coordinator {
 	debugBatchPath, err := ioutil.TempDir("", "tmpDebugBatch")
 	require.NoError(t, err)
 	deleteme = append(deleteme, debugBatchPath)

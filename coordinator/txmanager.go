@@ -25,19 +25,19 @@ import (
 // call to forge, waits for transaction confirmation, and keeps checking them
 // until a number of confirmed blocks have passed.
 type TxManager struct {
-	cfg       			Config
-	ethClient 			eth.ClientInterface
-	etherscanClient 	etherscan.Client
-	l2DB      			*l2db.L2DB   // Used only to mark forged txs as forged in the L2DB
-	coord     			*Coordinator // Used only to send messages to stop the pipeline
-	batchCh   			chan *BatchInfo
-	chainID   			*big.Int
-	account   			accounts.Account
-	consts    			common.SCConsts
+	cfg             Config
+	ethClient       eth.ClientInterface
+	etherscanClient etherscan.Client
+	l2DB            *l2db.L2DB   // Used only to mark forged txs as forged in the L2DB
+	coord           *Coordinator // Used only to send messages to stop the pipeline
+	batchCh         chan *BatchInfo
+	chainID         *big.Int
+	account         accounts.Account
+	consts          common.SCConsts
 
-	stats      			synchronizer.Stats
-	vars        		common.SCVariables
-	statsVarsCh 		chan statsVars
+	stats       synchronizer.Stats
+	vars        common.SCVariables
+	statsVarsCh chan statsVars
 
 	discardPipelineCh chan int // int refers to the pipelineNum
 
@@ -131,7 +131,7 @@ func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
 	//First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
 	var gasPrice *big.Int
-	etherscanGasPrice, err :=t.etherscanClient.GetGasPrice(ctx, "")
+	etherscanGasPrice, err := t.etherscanClient.GetGasPrice(ctx, "")
 	if err != nil {
 		log.Warn("Error getting the gas price from etherscan. Trying another method")
 		var er error
