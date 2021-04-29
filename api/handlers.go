@@ -53,7 +53,7 @@ func retSQLErr(err error, c *gin.Context) {
 	retDupKey := func(errCode pq.ErrorCode) {
 		// https://www.postgresql.org/docs/current/errcodes-appendix.html
 		if errCode == "23505" {
-			c.JSON(http.StatusInternalServerError, errorMsg{
+			c.JSON(http.StatusConflict, errorMsg{
 				Message: errDuplicatedKey,
 			})
 		} else {

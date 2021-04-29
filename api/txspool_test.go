@@ -266,7 +266,7 @@ func TestPoolTxs(t *testing.T) {
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIterTotal))
 	assert.Equal(t, totalAmountOfTransactions, len(fetchedTxsTotal))
-	// get by ethAddr
+
 	account := tc.accounts[2]
 	fetchedTxs := []testPoolTxReceive{}
 	appendIter := func(intr interface{}) {
@@ -278,6 +278,12 @@ func TestPoolTxs(t *testing.T) {
 			fetchedTxs = append(fetchedTxs, tmp.(testPoolTxReceive))
 		}
 	}
+	// get to check correct behavior with pending items
+	// if limit not working correctly, then this is failing with panic
+	limit = 1
+	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIterTotal))
+	// get by ethAddr
 	limit = 5
 	path = fmt.Sprintf("%s?hezEthereumAddress=%s&limit=%d", endpoint, account.EthAddr, limit)
 	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
