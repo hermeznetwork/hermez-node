@@ -240,7 +240,7 @@ func cmdRun(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	node, err := node.NewNode(cfg.mode, cfg.node)
+	node, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
 	}
@@ -256,7 +256,7 @@ func cmdServeAPI(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	srv, err := node.NewAPIServer(cfg.mode, cfg.server)
+	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting api server: %w", err))
 	}

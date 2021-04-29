@@ -251,6 +251,7 @@ func TestMain(m *testing.M) {
 	}
 
 	api, err = NewAPI(
+		"test",
 		true,
 		true,
 		apiGin,
@@ -657,6 +658,7 @@ func TestTimeout(t *testing.T) {
 		}
 	}()
 	_, err = NewAPI(
+		"test",
 		true,
 		true,
 		apiGinTO,

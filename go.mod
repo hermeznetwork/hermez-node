@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/dghubble/sling v1.3.0
+	github.com/dimiro1/health v0.0.0-20191019130555-c5cbb4d46ffc
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/getkin/kin-openapi v0.22.0
 	github.com/gin-contrib/cors v1.3.1
