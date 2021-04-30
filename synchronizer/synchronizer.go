@@ -66,6 +66,8 @@ const (
 	// batchDownloaderBatchSize specifies size of a batch (block number range)
 	// for concurrent fetching of block headers and events
 	batchDownloaderBatchSize = 100
+	// blockFetchTimeout specifies timeout of request to fetch block headers
+	blockFetchTimeout = 30 * time.Second
 )
 
 var (
@@ -567,18 +569,20 @@ func (s *Synchronizer) FetchBlockRange(ctx context.Context, fromBlock int64, toB
 			defer func() {
 				<-limiter
 				wg.Done()
+				mutex.Unlock()
 			}()
-			ethBlock, err := s.ethClient.EthBlockByNumber(ctx, _blockNum)
+			blockCtx, cancel := context.WithTimeout(ctx, blockFetchTimeout)
+			defer cancel()
+			ethBlock, err := s.ethClient.EthBlockByNumber(blockCtx, _blockNum)
 			mutex.Lock()
 			if tracerr.Unwrap(err) == ethereum.NotFound {
 				errors[_blockNum] = tracerr.Wrap(ErrUnknownBlock)
 				return
 			} else if err != nil {
-				errors[_blockNum] = tracerr.Wrap(ErrUnknownBlock)
+				errors[_blockNum] = tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
 				return
 			}
 			blocks[ethBlock.Num] = ethBlock
-			mutex.Unlock()
 			log.Debugf("Fetched ethBlock: num: %v, parent: %v, hash: %v",
 				ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
 		}(blockNum)
@@ -649,6 +653,8 @@ func (s *Synchronizer) FetchBlockEvents(ethBlock *common.Block) (*BlockEvents, e
 		return nil, tracerr.Wrap(fmt.Errorf("WDelayerEventsByBlock: %w", wDelayerErr))
 	}
 
+	log.Debugw("Fetched block events", "blockNum", ethBlock.Num)
+
 	blockEvents := BlockEvents{
 		RollupEvents:   rollupEvents,
 		AuctionEvents:  auctionEvents,
@@ -710,6 +716,8 @@ func (s *Synchronizer) FetchBlockEventsByBlockRange(fromBlock int64, toBlock int
 	} else if wDelayerErr != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("WDelayerEventsByBlockRange: %w", wDelayerErr))
 	}
+
+	log.Debugw("Fetched block range events", "from", fromBlock, "to", toBlock)
 
 	for blockNum := fromBlock; blockNum <= toBlock; blockNum++ {
 		blockEvents[blockNum] = &BlockEvents{
