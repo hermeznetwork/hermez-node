@@ -276,7 +276,7 @@ func NewCoordinator(cfg Config,
 
 		purger: &purger,
 
-		msgCh: make(chan interface{}),
+		msgCh: make(chan interface{}, queueLen),
 		ctx:   ctx,
 		// wg
 		cancel: cancel,
