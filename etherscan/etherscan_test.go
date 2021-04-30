@@ -10,6 +10,7 @@ import (
 )
 
 var etherscanURL = "http://localhost:3000/api"
+var apiKey = "FFFFFFFFFFFFFFFFFFF"
 
 var etherScanMockService *MockEtherscanClient
 var etherScanService *EtherScanService
@@ -20,8 +21,12 @@ func TestMain(m *testing.M) {
 	if _etherscanURL != "" {
 		etherscanURL = _etherscanURL
 	}
+	_apiKey := os.Getenv("ETHERSCAN_API_KEY")
+	if _apiKey != "" {
+		apiKey = _apiKey
+	}
 	var err error
-	etherScanService, err = NewEtherscanService(etherscanURL)
+	etherScanService, err = NewEtherscanService(etherscanURL, apiKey)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +39,7 @@ func TestEtherscanApiServer(t *testing.T) {
 }
 
 func testGetGasPrice(t *testing.T) {
-	gasPrice, err := etherScanMockService.GetGasPrice(context.Background(), etherscanURL)
+	gasPrice, err := etherScanMockService.GetGasPrice(context.Background())
 	require.NoError(t, err)
 	assert.NotEqual(t, 0, gasPrice.LastBlock)
 	assert.NotEqual(t, 90, gasPrice.SafeGasPrice)

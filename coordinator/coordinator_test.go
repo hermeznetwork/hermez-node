@@ -232,7 +232,7 @@ func TestCoordinatorFlow(t *testing.T) {
 	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("")
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 
@@ -327,7 +327,7 @@ func TestCoordinatorStartStop(t *testing.T) {
 	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("")
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	coord.Start()
@@ -341,7 +341,7 @@ func TestCoordCanForge(t *testing.T) {
 
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("")
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
@@ -419,7 +419,7 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("")
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
@@ -517,7 +517,7 @@ func TestCoordinatorStress(t *testing.T) {
 	ethClientSetup.ChainID = big.NewInt(int64(chainID))
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("")
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	syn := newTestSynchronizer(t, ethClient, ethClientSetup, modules)

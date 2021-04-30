@@ -41,7 +41,7 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	var timer timer
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("")
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	var stats synchronizer.Stats
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
@@ -179,7 +179,7 @@ func TestPipelineForgeBatchWithTxs(t *testing.T) {
 	var timer timer
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("")
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	sync := newTestSynchronizer(t, ethClient, ethClientSetup, modules)

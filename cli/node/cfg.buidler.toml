@@ -147,6 +147,10 @@ BatchPath = "/tmp/iden3-test/hermez/batchesdebug"
 LightScrypt = true
 # RollupVerifierIndex = 0
 
+[Coordinator.Etherscan]
+URL = "https://api.etherscan.io"
+ApiKey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+
 [RecommendedFeePolicy]
 # Strategy used to calculate the recommended fee that the API will expose.
 # Available options:

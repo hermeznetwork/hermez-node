@@ -131,9 +131,9 @@ func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
 	//First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
 	var gasPrice *big.Int
-	etherscanGasPrice, err := t.etherscanClient.GetGasPrice(ctx, "")
+	etherscanGasPrice, err := t.etherscanClient.GetGasPrice(ctx)
 	if err != nil {
-		log.Warn("Error getting the gas price from etherscan. Trying another method")
+		log.Warn("Error getting the gas price from etherscan. Trying another method. Error: ",err)
 		var er error
 		gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
 		if er != nil {
