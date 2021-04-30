@@ -133,7 +133,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	var gasPrice *big.Int
 	etherscanGasPrice, err := t.etherscanClient.GetGasPrice(ctx)
 	if err != nil {
-		log.Warn("Error getting the gas price from etherscan. Trying another method. Error: ",err)
+		log.Warn("Error getting the gas price from etherscan. Trying another method. Error: ", err)
 		var er error
 		gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
 		if er != nil {

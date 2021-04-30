@@ -13,7 +13,7 @@ var etherscanURL = "http://localhost:3000/api"
 var apiKey = "FFFFFFFFFFFFFFFFFFF"
 
 var etherScanMockService *MockEtherscanClient
-var etherScanService *EtherScanService
+var etherScanService *Service
 
 func TestMain(m *testing.M) {
 	exitVal := 0

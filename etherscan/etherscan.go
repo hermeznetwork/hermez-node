@@ -29,10 +29,10 @@ type GasPriceEtherscan struct {
 	FastGasPrice    string `json:"FastGasPrice"`
 }
 
-// EtherScanService definition
-type EtherScanService struct {
+// Service definition
+type Service struct {
 	clientEtherscan *sling.Sling
-	apiKey string
+	apiKey          string
 }
 
 // Client is the interface to a ServerProof that calculates zk proofs
@@ -42,7 +42,7 @@ type Client interface {
 }
 
 // NewEtherscanService is the constructor that creates an etherscanService
-func NewEtherscanService(etherscanURL string, apikey string) (*EtherScanService, error) {
+func NewEtherscanService(etherscanURL string, apikey string) (*Service, error) {
 	// Init
 	tr := &http.Transport{
 		MaxIdleConns:       defaultMaxIdleConns,
@@ -50,14 +50,14 @@ func NewEtherscanService(etherscanURL string, apikey string) (*EtherScanService,
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
-	return &EtherScanService{
+	return &Service{
 		clientEtherscan: sling.New().Base(etherscanURL).Client(httpClient),
-		apiKey: apikey,
+		apiKey:          apikey,
 	}, nil
 }
 
 // GetGasPrice retrieves the gas price estimation from etherscan
-func (p *EtherScanService) GetGasPrice(ctx context.Context) (*GasPriceEtherscan, error) {
+func (p *Service) GetGasPrice(ctx context.Context) (*GasPriceEtherscan, error) {
 	var resBody etherscanResponse
 	url := "/api?module=gastracker&action=gasoracle&apikey=" + p.apiKey
 	req, err := p.clientEtherscan.New().Get(url).Request()

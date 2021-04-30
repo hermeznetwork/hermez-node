@@ -45,6 +45,7 @@ type API struct {
 
 // NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
 func NewAPI(
+	version string,
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
@@ -83,6 +84,7 @@ func NewAPI(
 
 	v1 := server.Group("/v1")
 
+	v1.GET("/health", gin.WrapH(a.healthRoute(version)))
 	// Add coordinator endpoints
 	if coordinatorEndpoints {
 		// Account creation authorization

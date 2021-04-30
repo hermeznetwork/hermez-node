@@ -92,7 +92,7 @@ type Node struct {
 }
 
 // NewNode creates a Node
-func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
+func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
 	dbWrite, err := dbUtils.InitSQLDB(
@@ -327,7 +327,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			return nil, tracerr.Wrap(err)
 		}
 		etherScanService, _ := etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
-			cfg.Coordinator.Etherscan.ApiKey)
+			cfg.Coordinator.Etherscan.APIKey)
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
@@ -432,6 +432,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		}
 		var err error
 		nodeAPI, err = NewNodeAPI(
+			version,
 			cfg.API.Address,
 			coord, cfg.API.Explorer,
 			server,
@@ -484,7 +485,7 @@ type APIServer struct {
 }
 
 // NewAPIServer creates a new APIServer
-func NewAPIServer(mode Mode, cfg *config.APIServer) (*APIServer, error) {
+func NewAPIServer(mode Mode, cfg *config.APIServer, version string) (*APIServer, error) {
 	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
 	dbWrite, err := dbUtils.InitSQLDB(
@@ -543,6 +544,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer) (*APIServer, error) {
 		coord = cfg.Coordinator.API.Coordinator
 	}
 	nodeAPI, err := NewNodeAPI(
+		version,
 		cfg.API.Address,
 		coord, cfg.API.Explorer,
 		server,
@@ -596,6 +598,7 @@ type NodeAPI struct { //nolint:golint
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
+	version,
 	addr string,
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
@@ -605,6 +608,7 @@ func NewNodeAPI(
 	engine := gin.Default()
 	engine.Use(cors.Default())
 	_api, err := api.NewAPI(
+		version,
 		coordinatorEndpoints, explorerEndpoints,
 		engine,
 		hdb,

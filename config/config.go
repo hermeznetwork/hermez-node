@@ -239,10 +239,10 @@ type Coordinator struct {
 	}
 	Etherscan struct {
 		// URL if set, specifies the etherscan endpoint to get
-		// the gas estimations for that momment.
+		// the gas estimations for that moment.
 		URL string
-		// ApiKey allow access to etherscan services
-		ApiKey string
+		// APIKey allow access to etherscan services
+		APIKey string
 	}
 }
 

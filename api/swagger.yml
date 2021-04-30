@@ -1137,6 +1137,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+  '/health':
+    get:
+      tags:
+        - Explorer
+      summary: Return health status of the hermez node.
+      description: Return health status of the hermez node.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: Service unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error503'
   '/tokens':
     get:
       tags:
@@ -3240,6 +3260,71 @@ components:
         - withdrawalDelayer
         - chainId
       additionalProperties: false
+    Health:
+      type: object
+      description: Return values that can be valuable for the /health endpoint.
+      properties:
+        historyDB:
+          type: object
+          description: History db connection status
+          properties:
+            last_migration:
+              type: string
+              description: Name of the last migration
+              example: 0002.sql
+            status:
+              type: string
+              description: Status of the connection. Possible responses - UP or DOWN
+              example: UP
+            version:
+              type: string
+              description: Version of the database
+              example: PostgreSQL 13.2 (Debian 13.2-1.pgdg100+1) on x86_64-pc-linux-gnu
+          required:
+            - last_migration
+            - status
+            - version
+          additionalProperties: false
+        l2DB:
+          type: object
+          description: L2 db connection status
+          properties:
+            last_migration:
+              type: string
+              description: Name of the last migration
+              example: 0002.sql
+            status:
+              type: string
+              description: Status of the connection. Possible responses - UP or DOWN
+              example: UP
+            version:
+              type: string
+              description: Version of the database
+              example: PostgreSQL 13.2 (Debian 13.2-1.pgdg100+1) on x86_64-pc-linux-gnu
+          required:
+            - last_migration
+            - status
+            - version
+          additionalProperties: false
+        status:
+          type: string
+          description: Status of the hermez node. Possible responses - UP or DOWN
+          example: UP
+        timestamp:
+          type: string
+          format: date-time
+          description: Current time with location set to UTC
+        version:
+          type: string
+          description: Current version of the hermez-node
+          example: v1.2.0
+      required:
+        - historyDB
+        - l2DB
+        - status
+        - timestamp
+        - version
+      additionalProperties: false
     Error:
       type: object
       description: Error response. 
@@ -3261,3 +3346,8 @@ components:
         - $ref: '#/components/schemas/Error'
         - example:
             message: Database error.
+    Error503:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - example:
+            message: Service unavailable.
