@@ -326,7 +326,8 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		etherScanService, _ := etherscan.NewEtherscanService("")
+		etherScanService, _ := etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
+			cfg.Coordinator.Etherscan.ApiKey)
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
