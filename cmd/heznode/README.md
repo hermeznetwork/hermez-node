@@ -1,6 +1,6 @@
-# node cli
+# hermez-node cli
 
-This is the main cli for the node
+This is the main cli for the hermez-node
 
 ## Go version
 
@@ -16,7 +16,7 @@ USAGE:
    heznode [global options] command [command options] [arguments...]
 
 VERSION:
-   v0.1.0-6-gd8a50c5
+   v1.2.0-rc2-5-g94a7043
 
 COMMANDS:
    version    Show the application version
@@ -102,7 +102,7 @@ not be found.
 Now build the node executable:
 ```shell
 cd db && packr2 && cd -
-go build ./cli/node -o bin/heznode
+go build ./cmd/heznode -o bin/heznode
 cd db && packr2 clean && cd -
 ```
 
@@ -111,7 +111,7 @@ The executable is `bin/heznode` .
 ## Usage Examples
 
 The following commands assume you have built the node previously.  You can also
-run the following examples by replacing `./bin/heznode` with `go run ./cli/node`.
+run the following examples by replacing `./bin/heznode` with `go run ./cmd/heznode`.
 
 Run the node in mode synchronizer:
 ```shell

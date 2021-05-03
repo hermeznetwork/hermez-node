@@ -19,8 +19,8 @@ $ ./bin/heznode version
 
 ### Run
 
-First you must edit the default/template config file into [cli/node/cfg.buidler.toml](cli/heznode/cfg.buidler.toml), 
-there are more information about the config file into [cli/node/README.md](cli/heznode/README.md)
+First you must edit the default/template config file into [cmd/heznode/cfg.buidler.toml](cmd/heznode/cfg.buidler.toml), 
+there are more information about the config file into [cmd/heznode/README.md](cmd/heznode/README.md)
 
 After setting the config, you can build and run the Hermez Node as a synchronizer:
 
@@ -31,7 +31,7 @@ $ make run-node
 Or build and run as a coordinator, and also passing the config file from other location:
 
 ```shell
-$ MODE=sync CONFIG=cli/node/cfg.buidler.toml make run-node
+$ MODE=sync CONFIG=cmd/heznode/cfg.buidler.toml make run-node
 ```
 
 To check the useful make commands:
@@ -82,19 +82,19 @@ $ make gocilint
 
 ### Node
 
-See [cli/node/README.md](cli/heznode/README.md)
+See [cmd/heznode/README.md](cmd/heznode/README.md)
 
 ### Proof Server
 
 The node in mode coordinator requires a proof server (a server capable of 
 calculating proofs from the zkInputs). There is a mock proof server CLI 
-at `test/proofserver/cli` for testing purposes.
+at `test/proofserver/cmd` for testing purposes.
 
-Usage of `test/proofserver/cli`:
+Usage of `test/proofserver/cmd`:
 
 ```shell
 USAGE:
-    go run ./test/proofserver/cli OPTIONS
+    go run ./test/proofserver/cmd OPTIONS
 
 OPTIONS:
   -a string

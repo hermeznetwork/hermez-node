@@ -8,7 +8,7 @@ before:
     - go mod download
 
 builds:
-  - main: ./cli/node/main.go
+  - main: ./cmd/heznode/main.go
     binary: heznode
     id: heznode
     goos:
@@ -29,9 +29,9 @@ archives:
     wrap_in_directory: true
     files:
       - LICENSE
-      - cli/node/README.md
-      - cli/node/cfg.api.toml
-      - cli/node/cfg.buidler.toml
+      - cmd/heznode/README.md
+      - cmd/heznode/cfg.api.toml
+      - cmd/heznode/cfg.buidler.toml
 
 checksum:
   name_template: 'checksums.txt'

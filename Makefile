@@ -13,8 +13,8 @@ GOBASE := $(shell pwd)
 GOBIN := $(GOBASE)/bin
 GOPKG := $(.)
 GOENVVARS := GOBIN=$(GOBIN)
-GOCMD := $(GOBASE)/cli/node
-GOPROOF := $(GOBASE)/test/proofserver/cli
+GOCMD := $(GOBASE)/cmd/heznode
+GOPROOF := $(GOBASE)/test/proofserver/cmd
 GOBINARY := heznode
 # Go 1.13+ do not require GOPATH to be set, but we use some binaries in $GOPATH/bin
 GOPATH ?= $(shell go env GOPATH)
@@ -23,7 +23,7 @@ GOCILINT := $(GOPATH)/bin/golangci-lint
 
 # Project configs.
 MODE ?= sync
-CONFIG ?= $(GOBASE)/cli/node/cfg.buidler.toml
+CONFIG ?= $(GOBASE)/cmd/heznode/cfg.buidler.toml
 PGHOST ?= localhost
 PGPORT ?= 4012
 PGUSER ?= hermez
