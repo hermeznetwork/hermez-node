@@ -13,7 +13,7 @@ NAME:
    hermez-node - A new cli application
 
 USAGE:
-   node [global options] command [command options] [arguments...]
+   heznode [global options] command [command options] [arguments...]
 
 VERSION:
    v0.1.0-6-gd8a50c5
@@ -78,8 +78,17 @@ of the node configuration.  Please, check the `type APIServer` at
   implementations.
 
 ## Building
+### Building with a `make` tool
 
-*All commands assume you are at the `cli/node` directory.*
+Just run:
+```
+make
+```
+This is the recommended way.
+
+### Building manually
+
+*All commands assume you are at the project root directory.*
 
 Building the node requires using the packr utility to bundle the database
 migrations inside the resulting binary.  Install the packr utility with:
@@ -92,27 +101,26 @@ not be found.
 
 Now build the node executable:
 ```shell
-cd ../../db && packr2 && cd -
-go build .
-cd ../../db && packr2 clean && cd -
+cd db && packr2 && cd -
+go build ./cli/node -o bin/heznode
+cd db && packr2 clean && cd -
 ```
 
-The executable is `node`.
+The executable is `bin/heznode` .
 
 ## Usage Examples
 
 The following commands assume you have built the node previously.  You can also
-run the following examples by replacing `./node` with `go run .` and executing
-them in the `cli/node` directory to build from source and run at the same time.
+run the following examples by replacing `./bin/heznode` with `go run ./cli/node`.
 
 Run the node in mode synchronizer:
 ```shell
-./node run --mode sync --cfg cfg.buidler.toml
+./bin/heznode run --mode sync --cfg cfg.buidler.toml
 ```
 
 Run the node in mode coordinator:
 ```shell
-./node run --mode coord --cfg cfg.buidler.toml
+./bin/heznode run --mode coord --cfg cfg.buidler.toml
 ```
 
 Serve the API in standalone mode.  This command allows serving the API just
@@ -120,28 +128,28 @@ with access to the PostgreSQL database that a node is using.  Several instances
 of `serveapi` can be running at the same time with a single PostgreSQL
 database:
 ```shell
-./node serveapi --mode coord --cfg cfg.buidler.toml
+./bin/heznode serveapi --mode coord --cfg cfg.buidler.toml
 ```
 
 Import an ethereum private key into the keystore:
 ```shell
-./node importkey --mode coord --cfg cfg.buidler.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
+./bin/heznode importkey --mode coord --cfg cfg.buidler.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
 ```
 
 Generate a new BabyJubJub key pair:
 ```shell
-./node genbjj
+./bin/heznode genbjj
 ```
 
 Check the binary version:
 ```shell
-./node version
+./bin/heznode version
 ```
 
 Wipe the entier SQL database (this will destroy all synchronized and pool
 data):
 ```shell
-./node wipesql --mode coord --cfg cfg.buidler.toml 
+./bin/heznode wipesql --mode coord --cfg cfg.buidler.toml 
 ```
 
 Discard all synchronized blocks and associated state up to a given block
@@ -149,5 +157,5 @@ number.  This command is useful in case the synchronizer reaches an invalid
 state and you want to roll back a few blocks and try again (maybe with some
 fixes in the code).
 ```shell
-./node discard --mode coord --cfg cfg.buidler.toml --block 8061330
+./bin/heznode discard --mode coord --cfg cfg.buidler.toml --block 8061330
 ```
