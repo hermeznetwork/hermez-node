@@ -129,10 +129,10 @@ run-node: build
 	echo "  >  Running $(PROJECT_NAME)"
 	$(GOBIN)/$(GOBINARY) run --mode $(MODE) --cfg $(CONFIG)
 
-## wipesql: Clean Hermez node databases.
-wipesql: build
+## wipedbs: Clean Hermez node databases.
+wipedbs: build
 	echo "  >  Cleaning local databases"
-	$(GOBIN)/$(GOBINARY) wipesql --mode $(MODE) --cfg $(CONFIG)
+	$(GOBIN)/$(GOBINARY) wipedbs --mode $(MODE) --cfg $(CONFIG)
 
 ## run-proof-mock: Run proof server mock API.
 run-proof-mock: stop-proof-mock

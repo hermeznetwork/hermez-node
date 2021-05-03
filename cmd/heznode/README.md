@@ -21,8 +21,8 @@ VERSION:
 COMMANDS:
    version    Show the application version
    importkey  Import ethereum private key
-   genbjj     Generate a new BabyJubJub key
-   wipesql    Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
+   genbjj     Generate a new random BabyJubJub key
+   wipedbs    Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
    run        Run the hermez-node in the indicated mode
    serveapi   Serve the API only
    discard    Discard blocks up to a specified block number
@@ -63,7 +63,10 @@ of the node configuration.  Please, check the `type APIServer` at
 
 - The private key corresponding to the parameter `Coordinator.ForgerAddress` needs to be imported in the ethereum keystore
 - The private key corresponding to the parameter `Coordinator.FeeAccount.Address` needs to be imported in the ethereum keystore
-- The public key corresponding to the parameter `Coordinator.FeeAccount.BJJ` can be generated with the command `genbjj`
+- The public key corresponding to the parameter `Coordinator.FeeAccount.BJJ` can be generated with the command `genbjj`.<br>
+  Note that a public key will be generated for a new random private key, 
+  [look here](https://github.com/hermeznetwork/docs/blob/feature/coordinator2/docs/developers/coordinator.md#start-coordinator-in-testnet)
+  if you need a public key for an existing wallet 
 - There are two sets of debug parameters (`Debug` for all modes, and
   `Coordinator.Debug` for `coord` mode).  Some of these parameters may not be
   suitable for production.
@@ -136,7 +139,7 @@ Import an ethereum private key into the keystore:
 ./bin/heznode importkey --mode coord --cfg cfg.buidler.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
 ```
 
-Generate a new BabyJubJub key pair:
+Generate a new random BabyJubJub key pair:
 ```shell
 ./bin/heznode genbjj
 ```
@@ -149,7 +152,7 @@ Check the binary version:
 Wipe the entier SQL database (this will destroy all synchronized and pool
 data):
 ```shell
-./bin/heznode wipesql --mode coord --cfg cfg.buidler.toml 
+./bin/heznode wipedbs --mode coord --cfg cfg.buidler.toml 
 ```
 
 Discard all synchronized blocks and associated state up to a given block
