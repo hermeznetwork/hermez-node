@@ -241,7 +241,7 @@ func NewCoordinator(cfg Config,
 	ethClient eth.ClientInterface,
 	scConsts *common.SCConsts,
 	initSCVars *common.SCVariables,
-	etherscanClient etherscan.Client,
+	etherscanService *etherscan.Service,
 ) (*Coordinator, error) {
 	if cfg.DebugBatchPath != "" {
 		if err := os.MkdirAll(cfg.DebugBatchPath, 0744); err != nil {
@@ -286,7 +286,7 @@ func NewCoordinator(cfg Config,
 	ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, 1*time.Second)
 	defer ctxTimeoutCancel()
 	txManager, err := NewTxManager(ctxTimeout, &cfg, ethClient, l2DB, &c,
-		scConsts, initSCVars, etherscanClient)
+		scConsts, initSCVars, etherscanService)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

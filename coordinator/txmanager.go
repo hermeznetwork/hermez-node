@@ -25,15 +25,15 @@ import (
 // call to forge, waits for transaction confirmation, and keeps checking them
 // until a number of confirmed blocks have passed.
 type TxManager struct {
-	cfg             Config
-	ethClient       eth.ClientInterface
-	etherscanClient etherscan.Client
-	l2DB            *l2db.L2DB   // Used only to mark forged txs as forged in the L2DB
-	coord           *Coordinator // Used only to send messages to stop the pipeline
-	batchCh         chan *BatchInfo
-	chainID         *big.Int
-	account         accounts.Account
-	consts          common.SCConsts
+	cfg              Config
+	ethClient        eth.ClientInterface
+	etherscanService *etherscan.Service
+	l2DB             *l2db.L2DB   // Used only to mark forged txs as forged in the L2DB
+	coord            *Coordinator // Used only to send messages to stop the pipeline
+	batchCh          chan *BatchInfo
+	chainID          *big.Int
+	account          accounts.Account
+	consts           common.SCConsts
 
 	stats       synchronizer.Stats
 	vars        common.SCVariables
@@ -57,7 +57,7 @@ type TxManager struct {
 
 // NewTxManager creates a new TxManager
 func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterface, l2DB *l2db.L2DB,
-	coord *Coordinator, scConsts *common.SCConsts, initSCVars *common.SCVariables, etherscanClient etherscan.Client) (
+	coord *Coordinator, scConsts *common.SCConsts, initSCVars *common.SCVariables, etherscanService *etherscan.Service) (
 	*TxManager, error) {
 	chainID, err := ethClient.EthChainID()
 	if err != nil {
@@ -75,7 +75,7 @@ func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterfac
 	return &TxManager{
 		cfg:               *cfg,
 		ethClient:         ethClient,
-		etherscanClient:   etherscanClient,
+		etherscanService:  etherscanService,
 		l2DB:              l2DB,
 		coord:             coord,
 		batchCh:           make(chan *BatchInfo, queueLen),
@@ -131,26 +131,34 @@ func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
 	//First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
 	var gasPrice *big.Int
-	etherscanGasPrice, err := t.etherscanClient.GetGasPrice(ctx)
-	if err != nil {
-		log.Warn("Error getting the gas price from etherscan. Trying another method. Error: ", err)
-		var er error
-		gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
-		if er != nil {
-			return nil, tracerr.Wrap(err)
-		}
-	} else {
-		eGasPrice := new(big.Int)
-		eGasPrice, ok := eGasPrice.SetString(etherscanGasPrice.ProposeGasPrice, 10)
-		if !ok {
-			log.Warn("invalid big int: \"%v\"", etherscanGasPrice.ProposeGasPrice, ". Trying another method to get gas price")
+	if t.etherscanService != nil {
+		etherscanGasPrice, err := (*t.etherscanService).GetGasPrice(ctx)
+		if err != nil {
+			log.Warn("Error getting the gas price from etherscan. Trying another method. Error: ", err.Error())
 			var er error
 			gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
 			if er != nil {
-				return nil, tracerr.Wrap(err)
+				return nil, tracerr.Wrap(er)
 			}
 		} else {
-			gasPrice = eGasPrice
+			eGasPrice := new(big.Int)
+			eGasPrice, ok := eGasPrice.SetString(etherscanGasPrice.ProposeGasPrice, 10)
+			if !ok {
+				log.Warn("invalid big int: \"%v\"", etherscanGasPrice.ProposeGasPrice, ". Trying another method to get gas price")
+				var er error
+				gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
+				if er != nil {
+					return nil, tracerr.Wrap(er)
+				}
+			} else {
+				gasPrice = eGasPrice
+			}
+		}
+	} else {
+		var er error
+		gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
+		if er != nil {
+			return nil, tracerr.Wrap(er)
 		}
 	}
 	if t.cfg.GasPriceIncPerc != 0 {
