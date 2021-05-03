@@ -22,7 +22,7 @@ PACKR := $(GOPATH)/bin/packr2
 MODE ?= sync
 CONFIG ?= $(GOBASE)/cli/node/cfg.buidler.toml
 PGHOST ?= localhost
-PGPORT ?= 5432
+PGPORT ?= 4012
 PGUSER ?= hermez
 PGPASSWORD ?= yourpasswordhere
 PGDATABASE ?= hermez
@@ -148,10 +148,10 @@ migration-clean:
 
 ## run-database-container: Run the Postgres container
 run-database-container:
-	@echo "  >  Running the postgreSQL DB..."
-	@-docker run --rm --name hermez-db -p $(PGPORT):5432 -e POSTGRES_DB=$(PGDATABASE) -e POSTGRES_USER=$(PGUSER) -e POSTGRES_PASSWORD="$(PGPASSWORD)" -d postgres
+	echo "  >  Running the postgreSQL DB..."
+	docker run --rm --name hermez-l2db-$(PGPORT) -p $(PGPORT):5432 -e POSTGRES_DB=$(PGDATABASE) -e POSTGRES_USER=$(PGUSER) -e POSTGRES_PASSWORD="$(PGPASSWORD)" -d postgres
 
 ## stop-database-container: Stop the Postgres container
 stop-database-container:
-	@echo "  >  Stopping the postgreSQL DB..."
-	@-docker stop hermez-db
+	echo "  >  Stopping the postgreSQL DB..."
+	docker stop hermez-l2db-$(PGPORT)
