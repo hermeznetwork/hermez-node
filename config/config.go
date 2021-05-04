@@ -242,7 +242,7 @@ type Coordinator struct {
 		// the gas estimations for that momment.
 		URL string
 		// ApiKey allow access to etherscan services
-		ApiKey string
+		APIKey string
 	}
 }
 
