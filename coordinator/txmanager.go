@@ -132,7 +132,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	//First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
 	var gasPrice *big.Int
 	if t.etherscanService != nil {
-		etherscanGasPrice, err := (*t.etherscanService).GetGasPrice(ctx)
+		etherscanGasPrice, err := t.etherscanService.GetGasPrice(ctx)
 		if err != nil {
 			log.Warn("Error getting the gas price from etherscan. Trying another method. Error: ", err.Error())
 			var er error
