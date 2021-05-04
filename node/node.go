@@ -352,8 +352,15 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		etherScanService, _ := etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
-			cfg.Coordinator.Etherscan.ApiKey)
+		var etherScanService *etherscan.Service
+		if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
+			log.Info("EtherScan method detected in cofiguration file")
+			etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
+				cfg.Coordinator.Etherscan.APIKey)
+		} else {
+			log.Info("EtherScan method not configured in config file")
+			etherScanService = nil
+		}
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
