@@ -237,6 +237,13 @@ type Coordinator struct {
 		// must match with the Circuit parameters.
 		RollupVerifierIndex *int
 	}
+	Etherscan struct {
+		// URL if set, specifies the etherscan endpoint to get
+		// the gas estimations for that moment.
+		URL string
+		// APIKey allow access to etherscan services
+		APIKey string
+	}
 }
 
 // PostgreSQL is the postgreSQL configuration parameters.  It's possible to use

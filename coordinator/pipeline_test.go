@@ -16,6 +16,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test"
@@ -40,9 +41,10 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	var timer timer
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	var stats synchronizer.Stats
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	pipeline, err := coord.newPipeline(ctx)
 	require.NoError(t, err)
 	pipeline.vars = coord.vars
@@ -179,8 +181,9 @@ func TestPipelineForgeBatchWithTxs(t *testing.T) {
 	var timer timer
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	sync := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
 
 	// preload the synchronier (via the test ethClient) some tokens and

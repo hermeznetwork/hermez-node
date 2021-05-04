@@ -40,6 +40,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/hermez-node/prover"
@@ -325,6 +326,15 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		var etherScanService *etherscan.Service
+		if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
+			log.Info("EtherScan method detected in cofiguration file")
+			etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
+				cfg.Coordinator.Etherscan.APIKey)
+		} else {
+			log.Info("EtherScan method not configured in config file")
+			etherScanService = nil
+		}
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
@@ -409,6 +419,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			client,
 			&scConsts,
 			initSCVars,
+			etherScanService,
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
