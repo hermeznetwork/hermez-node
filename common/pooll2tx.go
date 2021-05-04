@@ -93,7 +93,7 @@ func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
 // SetType sets the type of the transaction
 func (tx *PoolL2Tx) SetType() error {
 	isAddrEmpty := tx.ToBJJ == EmptyBJJComp && tx.ToEthAddr == EmptyAddr
-	if isAddrEmpty && tx.ToIdx >= IdxUserThreshold {
+	if tx.ToIdx >= IdxUserThreshold {
 		tx.Type = TxTypeTransfer
 	} else if isAddrEmpty && tx.ToIdx == 1 {
 		tx.Type = TxTypeExit
