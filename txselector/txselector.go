@@ -214,8 +214,6 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	if len(l2TxsForgable) == 0 {
 		var discardedL2Txs []common.PoolL2Tx
 		for i := 0; i < len(l2TxsNonForgable); i++ {
-			l2TxsNonForgable[i].Info =
-				"Tx not selected due impossibility to be forged with the current state"
 			discardedL2Txs = append(discardedL2Txs, l2TxsNonForgable[i])
 		}
 		err = tp.StateDB().MakeCheckpoint()
@@ -763,16 +761,14 @@ func splitL2ForgableAndNonForgable(tp *txprocessor.TxProcessor,
 	for i := 0; i < len(l2Txs); i++ {
 		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
 		if err != nil {
+			l2Txs[i].Info = fmt.Sprintf("Invalid transaction, FromIdx account not found %d", l2Txs[i].FromIdx)
 			l2TxsNonForgable = append(l2TxsNonForgable, l2Txs[i])
 			continue
 		}
 
 		if l2Txs[i].Nonce != accSender.Nonce {
-			l2TxsNonForgable = append(l2TxsNonForgable, l2Txs[i])
-			continue
-		}
-		enoughBalance, _, _ := tp.CheckEnoughBalance(l2Txs[i])
-		if !enoughBalance {
+			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to wrong nonce, tx nonce %d, account sender nonce %d",
+				l2Txs[i].Nonce, accSender.Nonce)
 			l2TxsNonForgable = append(l2TxsNonForgable, l2Txs[i])
 			continue
 		}
