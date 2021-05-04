@@ -88,6 +88,7 @@ func (a *API) getPoolTxs(c *gin.Context) {
 		FromBjj:     txFilters.fromBjj,
 		ToBjj:       txFilters.toBjj,
 		TxType:      txType,
+		TokenID:     txFilters.tokenID,
 		Idx:         txFilters.idx,
 		FromIdx:     txFilters.fromIdx,
 		ToIdx:       txFilters.toIdx,
