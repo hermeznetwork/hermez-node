@@ -418,7 +418,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 			}
 		}
 		if tp.s.Type() == statedb.TypeSynchronizer || tp.s.Type() == statedb.TypeBatchBuilder {
-			if exitIdx != nil && exitTree != nil {
+			if exitIdx != nil && exitTree != nil && exitAccount != nil {
 				exits[tp.i] = processedExit{
 					exit:    true,
 					newExit: newExit,

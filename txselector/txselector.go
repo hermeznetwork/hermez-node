@@ -358,6 +358,13 @@ func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
 			break
 		}
 
+		// Discard exits with amount 0
+		if l2Txs[i].Type == common.TxTypeExit && l2Txs[i].Amount.Cmp(big.NewInt(0)) <= 0 {
+			l2Txs[i].Info = "Exits with amount 0 have no sense, not accepting to prevent unintended transactions"
+			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+			continue
+		}
+
 		// get Nonce & TokenID from the Account by l2Tx.FromIdx
 		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
 		if err != nil {
