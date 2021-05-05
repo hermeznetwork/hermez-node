@@ -150,6 +150,7 @@ type GetPoolTxsAPIRequest struct {
 	FromBjj     *babyjub.PublicKeyComp
 	ToBjj       *babyjub.PublicKeyComp
 	TxType      *common.TxType
+	TokenID     *common.TokenID
 	Idx         *common.Idx
 	FromIdx     *common.Idx
 	ToIdx       *common.Idx
@@ -205,6 +206,18 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 		queryStr += "WHERE tx_pool.effective_to_bjj = ? "
 		nextIsAnd = true
 		args = append(args, request.ToBjj)
+	}
+
+	// tokenID filter
+	if request.TokenID != nil {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "tx_pool.token_id = ? "
+		args = append(args, request.TokenID)
+		nextIsAnd = true
 	}
 
 	// state filter

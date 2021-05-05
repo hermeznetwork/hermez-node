@@ -427,6 +427,12 @@ paths:
           description: State of the transactions, e.g. "pend"
           schema:
             $ref: '#/components/schemas/PoolL2TransactionState'
+        - name: tokenId
+          in: query
+          required: false
+          description: Only get transactions of specific token
+          schema:
+            $ref: '#/components/schemas/TokenId'
         - name: accountIndex
           in: query
           required: false

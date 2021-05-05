@@ -280,6 +280,7 @@ func TestPoolTxs(t *testing.T) {
 	}
 	// get to check correct behavior with pending items
 	// if limit not working correctly, then this is failing with panic
+	fetchedTxsTotal = []testPoolTxReceive{}
 	limit = 1
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
 	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIterTotal))
@@ -325,6 +326,19 @@ func TestPoolTxs(t *testing.T) {
 	count = 0
 	for _, v := range fetchedTxsTotal {
 		if v.ToEthAddr != nil && string(account.EthAddr) == *v.ToEthAddr {
+			count++
+		}
+	}
+	assert.Equal(t, count, len(fetchedTxs))
+	fetchedTxs = []testPoolTxReceive{}
+	path = fmt.Sprintf("%s?tokenId=%d&limit=%d", endpoint, account.Token.TokenID, limit)
+	require.NoError(t, doGoodReqPaginated(path, db.OrderAsc, &testPoolTxsResponse{}, appendIter))
+	for _, v := range fetchedTxs {
+		assert.Equal(t, account.Token.TokenID, v.Token.TokenID)
+	}
+	count = 0
+	for _, v := range fetchedTxsTotal {
+		if account.Token.TokenID == v.Token.TokenID {
 			count++
 		}
 	}
