@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,20 +28,6 @@ const (
 
 	// 2^64 /2 -1
 	maxInt64 = 9223372036854775807
-
-	// Error for duplicated key
-	errDuplicatedKey = "Item already exists"
-
-	// Error for timeout due to SQL connection
-	errSQLTimeout = "The node is under heavy preasure, please try again later"
-
-	// Error message returned when context reaches timeout
-	errCtxTimeout = "context deadline exceeded"
-)
-
-var (
-	// ErrNilBidderAddr is used when a nil bidderAddr is received in the getCoordinator method
-	ErrNilBidderAddr = errors.New("biderAddr can not be nil")
 )
 
 func retSQLErr(err error, c *gin.Context) {
@@ -54,7 +39,7 @@ func retSQLErr(err error, c *gin.Context) {
 		// https://www.postgresql.org/docs/current/errcodes-appendix.html
 		if errCode == "23505" {
 			c.JSON(http.StatusConflict, errorMsg{
-				Message: errDuplicatedKey,
+				Message: ErrDuplicatedKey,
 			})
 		} else {
 			c.JSON(http.StatusInternalServerError, errorMsg{
@@ -64,7 +49,7 @@ func retSQLErr(err error, c *gin.Context) {
 	}
 	if errMsg == errCtxTimeout {
 		c.JSON(http.StatusServiceUnavailable, errorMsg{
-			Message: errSQLTimeout,
+			Message: ErrSQLTimeout,
 		})
 	} else if sqlErr, ok := tracerr.Unwrap(err).(*pq.Error); ok {
 		retDupKey(sqlErr.Code)

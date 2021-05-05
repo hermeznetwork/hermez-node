@@ -279,5 +279,13 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 			))
 		}
 	}
+	// Extra sanity checks: those checks are valid as per the protocol, but are very likely to
+	// have unexpected side effects that could have a negative impact on users
+	switch poolTx.Type {
+	case common.TxTypeExit:
+		if poolTx.Amount.Cmp(big.NewInt(0)) <= 0 {
+			return tracerr.New(ErrExitAmount0)
+		}
+	}
 	return nil
 }
