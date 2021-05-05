@@ -51,7 +51,7 @@ func TestDebugAPI(t *testing.T) {
 	err = sdb.MakeCheckpoint() // Make a checkpoint to increment the batchNum
 	require.Nil(t, err)
 
-	addr := "localhost:12345"
+	addr := "localhost:4011"
 	// We won't test the sync/stats endpoint, so we can se the synchronizer to nil
 	debugAPI := NewDebugAPI(addr, sdb, nil)
 
