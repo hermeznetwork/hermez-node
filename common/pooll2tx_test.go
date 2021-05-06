@@ -327,18 +327,18 @@ func TestPoolL2Tx_SetType(t *testing.T) {
 		}, {
 			"Send to eth and bjj addresses and idx",
 			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: Idx(400)},
-			TxType(""),
-			true,
+			TxTypeTransfer,
+			false,
 		}, {
 			"Send to FFAddr eth and bjj addresses and idx",
 			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(400)},
-			TxType(""),
-			true,
+			TxTypeTransfer,
+			false,
 		}, {
 			"Send to FFAddr eth and bjj addresses",
-			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: Idx(0)},
-			TxType(""),
-			true,
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			TxTypeTransferToBJJ,
+			false,
 		}, {
 			"Send to eth and bjj addresses",
 			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: Idx(0)},
