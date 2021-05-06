@@ -693,7 +693,7 @@ func TestTimeout(t *testing.T) {
 	err = json.Unmarshal(body, msg)
 	require.NoError(t, err)
 	// Check that the error was the expected down
-	require.Equal(t, errSQLTimeout, msg.Message)
+	require.Equal(t, ErrSQLTimeout, msg.Message)
 	finishWait <- nil
 
 	// Stop server
