@@ -600,7 +600,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 		batchInfo.BatchNum); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
-	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs); err != nil {
+	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs, batchInfo.BatchNum); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
