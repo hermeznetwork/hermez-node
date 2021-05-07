@@ -241,13 +241,14 @@ func TestUpdateTxsInfo(t *testing.T) {
 		poolL2Txs[i].Info = "test"
 	}
 	// update the txs
-	err = l2DB.UpdateTxsInfo(poolL2Txs)
+	var batchNum common.BatchNum
+	err = l2DB.UpdateTxsInfo(poolL2Txs, batchNum)
 	require.NoError(t, err)
 
 	for i := range poolL2Txs {
 		fetchedTx, err := l2DB.GetTx(poolL2Txs[i].TxID)
 		require.NoError(t, err)
-		assert.Equal(t, "test", fetchedTx.Info)
+		assert.Equal(t, "BatchNum: 0. test", fetchedTx.Info)
 	}
 }
 

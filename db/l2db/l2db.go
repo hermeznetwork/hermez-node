@@ -20,6 +20,7 @@ package l2db
 import (
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -115,7 +116,7 @@ func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.Accoun
 }
 
 // UpdateTxsInfo updates the parameter Info of the pool transactions
-func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
+func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx, batchNum common.BatchNum) error {
 	if len(txs) == 0 {
 		return nil
 	}
@@ -124,8 +125,9 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
 		Info string      `db:"info"`
 	}
 	txUpdates := make([]txUpdate, len(txs))
+	batchN := strconv.FormatInt(int64(batchNum), 10)
 	for i := range txs {
-		txUpdates[i] = txUpdate{ID: txs[i].TxID, Info: txs[i].Info}
+		txUpdates[i] = txUpdate{ID: txs[i].TxID, Info: "BatchNum: " + batchN + ". " + txs[i].Info}
 	}
 	const query string = `
 		UPDATE tx_pool SET

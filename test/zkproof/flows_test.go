@@ -193,7 +193,8 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	var batchNum common.BatchNum
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
 
 	log.Debug("block:0 batch:8")
@@ -222,7 +223,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
 
 	log.Debug("(batch9) block:1 batch:1")
@@ -249,7 +250,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
 
 	log.Debug("(batch10) block:1 batch:2")
@@ -271,7 +272,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
 
 	bb.LocalStateDB().Close()
