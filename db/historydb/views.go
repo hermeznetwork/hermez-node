@@ -291,6 +291,7 @@ func (account AccountAPI) MarshalJSON() ([]byte, error) {
 type BatchAPI struct {
 	ItemID           uint64                      `json:"itemId" meddler:"item_id"`
 	BatchNum         common.BatchNum             `json:"batchNum" meddler:"batch_num"`
+	EthereumTxHash   ethCommon.Hash              `json:"ethereumTxHash" meddler:"eth_tx_hash"`
 	EthBlockNum      int64                       `json:"ethereumBlockNum" meddler:"eth_block_num"`
 	EthBlockHash     ethCommon.Hash              `json:"ethereumBlockHash" meddler:"hash"`
 	Timestamp        time.Time                   `json:"timestamp" meddler:"timestamp,utctime"`

@@ -877,7 +877,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		if err != nil {
 			return nil, tracerr.Wrap(fmt.Errorf("RollupForgeBatchArgs: %w", err))
 		}
-
+		ethTxHash := evtForgeBatch.EthTxHash
 		batchNum := common.BatchNum(evtForgeBatch.BatchNum)
 		var l1UserTxs []common.L1Tx
 		// Check if this is a L1Batch to get L1 Tx from it
@@ -1052,6 +1052,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		// Get Batch information
 		batch := common.Batch{
 			BatchNum:           batchNum,
+			EthTxHash:          ethTxHash,
 			EthBlockNum:        blockNum,
 			ForgerAddr:         *sender,
 			CollectedFees:      processTxsOut.CollectedFees,

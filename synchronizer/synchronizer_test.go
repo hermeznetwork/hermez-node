@@ -502,6 +502,9 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
 	assert.Equal(t, int64(3), stats.Eth.LastBlock.Num)
 	assert.Equal(t, int64(2), stats.Sync.LastBlock.Num)
+	// Set ethereum transaction hash (til doesn't set it)
+	blocks[0].Rollup.Batches[0].Batch.EthTxHash = syncBlock.Rollup.Batches[0].Batch.EthTxHash
+	blocks[0].Rollup.Batches[1].Batch.EthTxHash = syncBlock.Rollup.Batches[1].Batch.EthTxHash
 
 	checkSyncBlock(t, s, 2, &blocks[0], syncBlock)
 
@@ -520,6 +523,9 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
 	assert.Equal(t, int64(3), stats.Eth.LastBlock.Num)
 	assert.Equal(t, int64(3), stats.Sync.LastBlock.Num)
+	// Set ethereum transaction hash (til doesn't set it)
+	blocks[1].Rollup.Batches[0].Batch.EthTxHash = syncBlock.Rollup.Batches[0].Batch.EthTxHash
+	blocks[1].Rollup.Batches[1].Batch.EthTxHash = syncBlock.Rollup.Batches[1].Batch.EthTxHash
 
 	checkSyncBlock(t, s, 3, &blocks[1], syncBlock)
 

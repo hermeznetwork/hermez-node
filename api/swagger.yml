@@ -2205,6 +2205,10 @@ components:
           type: string
           description: hash of the Ethereum block in which the batch was forged
           example: "0xfe88c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
+        ethereumTxHash:
+          type: string
+          description: hash of the Ethereum transaction in which the batch was forged
+          example: "0xae98c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
         timestamp:
           type: string
           format: date-time
@@ -2245,6 +2249,7 @@ components:
       required:
           - itemId
           - batchNum
+          - ethereumTxHash
           - ethereumBlockNum
           - ethereumBlockHash
           - timestamp
