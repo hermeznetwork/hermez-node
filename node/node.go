@@ -305,7 +305,10 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			return nil, tracerr.Wrap(err)
 		}
 		//Swap bjj from bigEndian to LittleEndian
-		bjjRaw, _ := cfg.Coordinator.FeeAccount.BJJ.MarshalText()
+		bjjRaw, err := cfg.Coordinator.FeeAccount.BJJ.MarshalText()
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
 		var bjj babyjub.PublicKeyComp
 		if err := bjj.UnmarshalText(common.SwapEndianness(bjjRaw)); err != nil {
 			return nil, tracerr.Wrap(err)
