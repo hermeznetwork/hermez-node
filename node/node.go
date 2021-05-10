@@ -50,6 +50,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 	"github.com/russross/meddler"
 )
@@ -303,9 +304,15 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			cfg.Coordinator.EthClient.Keystore.Password); err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		//Swap bjj from bigEndian to LittleEndian
+		bjjRaw, _ := cfg.Coordinator.FeeAccount.BJJ.MarshalText()
+		var bjj babyjub.PublicKeyComp
+		if err := bjj.UnmarshalText(common.SwapEndianness(bjjRaw)); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
 		auth := &common.AccountCreationAuth{
 			EthAddr: cfg.Coordinator.FeeAccount.Address,
-			BJJ:     cfg.Coordinator.FeeAccount.BJJ,
+			BJJ:     bjj,
 		}
 		if err := auth.Sign(func(msg []byte) ([]byte, error) {
 			return keyStore.SignHash(feeAccount, msg)
@@ -314,7 +321,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		}
 		coordAccount := &txselector.CoordAccount{
 			Addr:                cfg.Coordinator.FeeAccount.Address,
-			BJJ:                 cfg.Coordinator.FeeAccount.BJJ,
+			BJJ:                 bjj,
 			AccountCreationAuth: auth.Signature,
 		}
 		txSelector, err := txselector.NewTxSelector(coordAccount,

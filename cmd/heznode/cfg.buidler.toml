@@ -96,7 +96,7 @@ IgnoreSlotCommitment = false
 [Coordinator.FeeAccount]
 Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"
 # PrivateKey = "0x3a9270c020e169097808da4b02e8d9100be0f8a38cfad3dcfc0b398076381fdd"
-BJJ = "0x1b176232f78ba0d388ecc5f4896eca2d3b3d4f272092469f559247297f5c0c13"
+BJJ = "0x31c0c5f792742955f964290272f4d3b3d2ace6984f5cce883d0ab87f232671b1"
 # BJJPrivateKey = "0xb556862fb60e7cf4c0a8a7f44baf2ab06a4c90ac39decc4eef363b6142d07a34"
 
 [Coordinator.L2DB]
