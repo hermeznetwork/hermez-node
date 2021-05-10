@@ -10,7 +10,7 @@ gen() {
         folder=$name
     fi
 
-    jq .abi "${CONTRACTS}/artifacts/${pkg}.json" > /tmp/${name}.abi
+    jq .abi "${CONTRACTS}/artifacts/contracts/${name}/${pkg}.sol/${pkg}.json" > /tmp/${name}.abi
     abigen --abi /tmp/${name}.abi --pkg=${pkg} --out=${folder}/${pkg}.go
 }
 
@@ -23,5 +23,5 @@ CONTRACTS="$1"
 
 gen hermez Hermez
 gen auction HermezAuctionProtocol
-gen withdrawdelayer WithdrawalDelayer
+gen withdrawalDelayer WithdrawalDelayer
 gen HEZ HEZ tokenHEZ
