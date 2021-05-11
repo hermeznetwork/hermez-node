@@ -62,11 +62,17 @@ func MigrationsUp(db *sql.DB) error {
 	return nil
 }
 
-// MigrationsDown runs the SQL migrations Down
-func MigrationsDown(db *sql.DB) error {
-	nMigrations, err := migrate.Exec(db, "postgres", migrations, migrate.Down)
+// MigrationsDown runs the SQL migrations Down,
+// migrationsToRun specifies how many migrations will be run, 0 means any.
+func MigrationsDown(db *sql.DB, migrationsToRun uint) error {
+	nMigrations, err := migrate.ExecMax(db, "postgres", migrations, migrate.Down, int(migrationsToRun))
 	if err != nil {
 		return tracerr.Wrap(err)
+	}
+	if migrationsToRun != 0 && nMigrations != int(migrationsToRun) {
+		return tracerr.Wrap(
+			fmt.Errorf("Unexpected amount of migrations applied. Expected = %d, actual = %d", migrationsToRun, nMigrations),
+		)
 	}
 	log.Info("successfully ran ", nMigrations, " migrations Down")
 	return nil

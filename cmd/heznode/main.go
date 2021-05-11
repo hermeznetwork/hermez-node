@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -25,13 +26,14 @@ import (
 )
 
 const (
-	flagCfg   = "cfg"
-	flagMode  = "mode"
-	flagSK    = "privatekey"
-	flagYes   = "yes"
-	flagBlock = "block"
-	modeSync  = "sync"
-	modeCoord = "coord"
+	flagCfg     = "cfg"
+	flagMode    = "mode"
+	flagSK      = "privatekey"
+	flagYes     = "yes"
+	flagBlock   = "block"
+	modeSync    = "sync"
+	modeCoord   = "coord"
+	nMigrations = "nMigrations"
 )
 
 var (
@@ -201,7 +203,7 @@ func cmdWipeDBs(c *cli.Context) error {
 		return tracerr.Wrap(err)
 	}
 	log.Info("Wiping SQL DB...")
-	if err := dbUtils.MigrationsDown(db.DB); err != nil {
+	if err := dbUtils.MigrationsDown(db.DB, 0); err != nil {
 		return tracerr.Wrap(fmt.Errorf("dbUtils.MigrationsDown: %w", err))
 	}
 
@@ -209,6 +211,48 @@ func cmdWipeDBs(c *cli.Context) error {
 	if err := resetStateDBs(_cfg, 0); err != nil {
 		return tracerr.Wrap(fmt.Errorf("resetStateDBs: %w", err))
 	}
+	return nil
+}
+
+func cmdSQLMigrationDown(c *cli.Context) error {
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	cfg := _cfg.node
+	yes := c.Bool(flagYes)
+	migrationsToRun := c.Uint(nMigrations)
+	if !yes {
+		fmt.Printf("*WARNING* Are you sure you want to revert "+
+			"%d the SQL migrations? [y/N]: ", migrationsToRun)
+		var input string
+		if _, err := fmt.Scanln(&input); err != nil {
+			return tracerr.Wrap(err)
+		}
+		input = strings.ToLower(input)
+		if !(input == "y" || input == "yes") {
+			return nil
+		}
+	}
+	if migrationsToRun == 0 {
+		return errors.New(nMigrations + "is set to 0, this is equivalent to use wipedbs command. If this is your intention use the other command")
+	}
+	db, err := dbUtils.ConnectSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
+	)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	log.Infof("Reverting %d SQL migrations...", migrationsToRun)
+	if err := dbUtils.MigrationsDown(db.DB, migrationsToRun); err != nil {
+		return tracerr.Wrap(fmt.Errorf("dbUtils.MigrationsDown: %w", err))
+	}
+	log.Info("SQL migrations down successfully")
+
 	return nil
 }
 
@@ -471,6 +515,24 @@ func main() {
 					Name:     flagYes,
 					Usage:    "automatic yes to the prompt",
 					Required: false,
+				}),
+		},
+		{
+			Name:    "migratesqldown",
+			Aliases: []string{},
+			Usage: "Revert migrations of the SQL DB (HistoryDB and L2DB), " +
+				"leaving the SQL schema as in previous versions",
+			Action: cmdSQLMigrationDown,
+			Flags: append(flags,
+				&cli.BoolFlag{
+					Name:     flagYes,
+					Usage:    "automatic yes to the prompt",
+					Required: false,
+				},
+				&cli.UintFlag{
+					Name:     nMigrations,
+					Usage:    "amount of migrations to be reverted",
+					Required: true,
 				}),
 		},
 		{
