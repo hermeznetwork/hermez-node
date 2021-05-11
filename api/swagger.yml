@@ -87,6 +87,10 @@ paths:
       responses:
         '200':
           description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountCreationAuthorizationPostSuccessResponse'
         '400':
           description: Bad request.
           content:
@@ -1784,6 +1788,16 @@ components:
       - hezEthereumAddress
       - bjj
       - signature
+    AccountCreationAuthorizationPostSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: string
+      example:
+        success: 'OK'
+      additionalProperties: false
+      required:
+      - success
     HistoryTransaction:
       type: object
       description: Transaction of the Hermez Network
