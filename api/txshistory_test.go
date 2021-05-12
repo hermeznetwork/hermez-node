@@ -291,19 +291,6 @@ func TestGetHistoryTxs(t *testing.T) {
 	path = fmt.Sprintf("%s?limit=%d&includePendingL1s=true", endpoint, limit)
 	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
-	forgedTxs := []testTx{}
-	for i := 0; i < len(tc.txs); i++ {
-		if tc.txs[i].BatchNum != nil {
-			forgedTxs = append(forgedTxs, tc.txs[i])
-		}
-	}
-	assertTxs(t, forgedTxs, fetchedTxs)
-
-	// Get all, including unforged txs
-	fetchedTxs = []testTx{}
-	path = fmt.Sprintf("%s?limit=%d&includePendingL1s=true", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testTxsResponse{}, appendIter)
-	assert.NoError(t, err)
 	assertTxs(t, tc.txs, fetchedTxs)
 
 	// Get by ethAddr
