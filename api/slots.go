@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
 )
@@ -64,7 +65,7 @@ func (a *API) newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []his
 	for i := range bids {
 		slotNum := bids[i].SlotNum
 		slot := a.newSlotAPI(slotNum, currentBlockNum, &bids[i], auctionVars)
-		if order == historydb.OrderAsc {
+		if order == db.OrderAsc {
 			if fromItem == nil || slot.ItemID >= uint64(*fromItem) {
 				slots = append(slots, slot)
 			}
@@ -79,7 +80,7 @@ func (a *API) newSlotsAPIFromWinnerBids(fromItem *uint, order string, bids []his
 
 func (a *API) addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64, auctionVars *common.AuctionVariables, fromItem *uint, order string) ([]SlotAPI, error) {
 	emptySlot := a.newSlotAPI(slotNum, currentBlockNum, nil, auctionVars)
-	if order == historydb.OrderAsc {
+	if order == db.OrderAsc {
 		if fromItem == nil || emptySlot.ItemID >= uint64(*fromItem) {
 			slots = append(slots, emptySlot)
 		}
@@ -129,7 +130,7 @@ func (a *API) getSlot(c *gin.Context) {
 func getLimits(
 	minSlotNum, maxSlotNum int64, fromItem, limit *uint, order string,
 ) (minLimit, maxLimit int64, pendingItems uint64) {
-	if order == historydb.OrderAsc {
+	if order == db.OrderAsc {
 		if fromItem != nil && int64(*fromItem) > minSlotNum {
 			minLimit = int64(*fromItem)
 		} else {
@@ -160,7 +161,7 @@ func getLimits(
 func getLimitsWithAddr(minSlotNum, maxSlotNum *int64, fromItem, limit *uint, order string) (int64, int64) {
 	var minLim, maxLim int64
 	if fromItem != nil {
-		if order == historydb.OrderAsc {
+		if order == db.OrderAsc {
 			maxLim = *maxSlotNum
 			if int64(*fromItem) > *minSlotNum {
 				minLim = int64(*fromItem)
@@ -255,14 +256,26 @@ func (a *API) getSlots(c *gin.Context) {
 	if wonByEthereumAddress == nil {
 		slotMinLim, slotMaxLim, pendingItems = getLimits(*minSlotNum, *maxSlotNum, fromItem, limit, order)
 		// Get best bids in range maxSlotNum - minSlotNum
-		bids, _, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, nil, order)
+		bids, _, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
+			MinSlotNum: &slotMinLim,
+			MaxSlotNum: &slotMaxLim,
+			BidderAddr: wonByEthereumAddress,
+			Limit:      nil,
+			Order:      order,
+		})
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
 		}
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
-		bids, pendingItems, err = a.h.GetBestBidsAPI(&slotMinLim, &slotMaxLim, wonByEthereumAddress, limit, order)
+		bids, pendingItems, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
+			MinSlotNum: &slotMinLim,
+			MaxSlotNum: &slotMaxLim,
+			BidderAddr: wonByEthereumAddress,
+			Limit:      limit,
+			Order:      order,
+		})
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
@@ -287,7 +300,7 @@ func (a *API) getSlots(c *gin.Context) {
 			for j := range slotsBids {
 				if slotsBids[j].SlotNum == i {
 					found = true
-					if order == historydb.OrderAsc {
+					if order == db.OrderAsc {
 						if fromItem == nil || slotsBids[j].ItemID >= uint64(*fromItem) {
 							slots = append(slots, slotsBids[j])
 						}

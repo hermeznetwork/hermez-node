@@ -9,7 +9,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -133,7 +133,7 @@ func TestGetBatches(t *testing.T) {
 	// Get all (no filters)
 	limit := 3
 	path := fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	err := doGoodReqPaginated(path, db.OrderAsc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	assertBatches(t, tc.batches, fetchedBatches)
 
@@ -142,7 +142,7 @@ func TestGetBatches(t *testing.T) {
 	limit = 2
 	minBatchNum := tc.batches[len(tc.batches)/2].BatchNum
 	path = fmt.Sprintf("%s?minBatchNum=%d&limit=%d", endpoint, minBatchNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	minBatchNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
@@ -157,7 +157,7 @@ func TestGetBatches(t *testing.T) {
 	limit = 1
 	maxBatchNum := tc.batches[len(tc.batches)/2].BatchNum
 	path = fmt.Sprintf("%s?maxBatchNum=%d&limit=%d", endpoint, maxBatchNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	maxBatchNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
@@ -172,7 +172,7 @@ func TestGetBatches(t *testing.T) {
 	limit = 5
 	slotNum := tc.batches[len(tc.batches)/2].SlotNum
 	path = fmt.Sprintf("%s?slotNum=%d&limit=%d", endpoint, slotNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	slotNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
@@ -187,7 +187,7 @@ func TestGetBatches(t *testing.T) {
 	limit = 10
 	forgerAddr := tc.batches[len(tc.batches)/2].ForgerAddr
 	path = fmt.Sprintf("%s?forgerAddr=%s&limit=%d", endpoint, forgerAddr.String(), limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	forgerAddrBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
@@ -201,7 +201,7 @@ func TestGetBatches(t *testing.T) {
 	fetchedBatches = []testBatch{}
 	limit = 6
 	path = fmt.Sprintf("%s?limit=%d", endpoint, limit)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testBatchesResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	flippedBatches := []testBatch{}
 	for i := len(tc.batches) - 1; i >= 0; i-- {
@@ -215,7 +215,7 @@ func TestGetBatches(t *testing.T) {
 	maxBatchNum = tc.batches[len(tc.batches)-len(tc.batches)/4].BatchNum
 	minBatchNum = tc.batches[len(tc.batches)/4].BatchNum
 	path = fmt.Sprintf("%s?minBatchNum=%d&maxBatchNum=%d&limit=%d", endpoint, minBatchNum, maxBatchNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	minMaxBatchNumBatches := []testBatch{}
 	for i := 0; i < len(tc.batches); i++ {
@@ -228,7 +228,7 @@ func TestGetBatches(t *testing.T) {
 	// Empty array
 	fetchedBatches = []testBatch{}
 	path = fmt.Sprintf("%s?slotNum=%d&minBatchNum=%d", endpoint, 1, 25)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBatchesResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBatchesResponse{}, appendIter)
 	require.NoError(t, err)
 	assertBatches(t, []testBatch{}, fetchedBatches)
 

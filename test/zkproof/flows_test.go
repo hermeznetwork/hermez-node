@@ -2,7 +2,6 @@ package zkproof
 
 import (
 	"io/ioutil"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -24,6 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var deleteme []string
 
 func addTokens(t *testing.T, tc *til.Context, db *sqlx.DB) {
 	var tokens []common.Token
@@ -74,21 +75,20 @@ func addAccCreationAuth(t *testing.T, tc *til.Context, l2DB *l2db.L2DB, chainID 
 
 func initTxSelector(t *testing.T, chainID uint16, hermezContractAddr ethCommon.Address,
 	coordUser *til.User) (*txselector.TxSelector, *l2db.L2DB, *statedb.StateDB) {
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	require.NoError(t, err)
 	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
 
 	dir, err := ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, dir)
 	syncStateDB, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 0})
 	require.NoError(t, err)
 
 	txselDir, err := ioutil.TempDir("", "tmpTxSelDB")
 	require.NoError(t, err)
-	defer assert.NoError(t, os.RemoveAll(dir))
+	deleteme = append(deleteme, txselDir)
 
 	// use Til Coord keys for tests compatibility
 	coordAccount := &txselector.CoordAccount{
@@ -127,6 +127,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.NoError(t, err)
+	deleteme = append(deleteme, bbDir)
 	bb, err := batchbuilder.NewBatchBuilder(bbDir, syncStateDB, 0, NLevels)
 	require.NoError(t, err)
 
@@ -192,7 +193,8 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	var batchNum common.BatchNum
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
 
 	log.Debug("block:0 batch:8")
@@ -221,7 +223,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
 
 	log.Debug("(batch9) block:1 batch:1")
@@ -248,7 +250,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
 
 	log.Debug("(batch10) block:1 batch:2")
@@ -270,8 +272,12 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
 		txsel.LocalAccountsDB().CurrentBatch())
 	require.NoError(t, err)
-	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs)
+	err = l2DBTxSel.UpdateTxsInfo(discardedL2Txs, batchNum)
 	require.NoError(t, err)
+
+	bb.LocalStateDB().Close()
+	txsel.LocalAccountsDB().Close()
+	syncStateDB.Close()
 }
 
 // TestZKInputsExitWithFee0 checks the case where there is a PoolTxs of type
@@ -302,6 +308,7 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 
 	bbDir, err := ioutil.TempDir("", "tmpBatchBuilderDB")
 	require.NoError(t, err)
+	deleteme = append(deleteme, bbDir)
 	bb, err := batchbuilder.NewBatchBuilder(bbDir, syncStateDB, 0, NLevels)
 	require.NoError(t, err)
 
@@ -363,4 +370,8 @@ func TestZKInputsExitWithFee0(t *testing.T) {
 	assert.Equal(t, common.EthAddrToBigInt(tc.Users["Coord"].Addr), zki.EthAddr3[0])
 	assert.Equal(t, "0", zki.EthAddr3[1].String())
 	sendProofAndCheckResp(t, zki)
+
+	bb.LocalStateDB().Close()
+	txsel.LocalAccountsDB().Close()
+	syncStateDB.Close()
 }

@@ -315,8 +315,7 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB, *l2db
 	require.NoError(t, err)
 
 	// Init History DB
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	require.NoError(t, err)
 	historyDB := historydb.NewHistoryDB(db, db, nil)
 	// Clear DB
@@ -326,6 +325,11 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB, *l2db
 	l2DB := l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
 
 	return stateDB, historyDB, l2DB
+}
+
+func closeTestModules(_ *testing.T, statedb *statedb.StateDB, historydb *historydb.HistoryDB, l2db *l2db.L2DB) {
+	statedb.Close()
+	_ = l2db.DB().Close()
 }
 
 func newBigInt(s string) *big.Int {
@@ -729,6 +733,8 @@ func TestSyncGeneral(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
+
+	closeTestModules(t, stateDB, historyDB, l2DB)
 }
 
 func TestSyncForgerCommitment(t *testing.T) {
@@ -857,4 +863,6 @@ func TestSyncForgerCommitment(t *testing.T) {
 	}
 	assert.Equal(t, commitment, syncCommitment)
 	assert.Equal(t, commitment, syncRestartedCommitment)
+
+	closeTestModules(t, stateDB, historyDB, l2DB)
 }

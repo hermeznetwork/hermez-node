@@ -40,6 +40,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/hermez-node/prover"
@@ -91,7 +92,7 @@ type Node struct {
 }
 
 // NewNode creates a Node
-func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
+func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
 	dbWrite, err := dbUtils.InitSQLDB(
@@ -194,16 +195,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		Rollup: eth.RollupConfig{
 			Address: cfg.SmartContracts.Rollup,
 		},
-		Auction: eth.AuctionConfig{
-			Address: cfg.SmartContracts.Auction,
-			TokenHEZ: eth.TokenConfig{
-				Address: cfg.SmartContracts.TokenHEZ,
-				Name:    cfg.SmartContracts.TokenHEZName,
-			},
-		},
-		WDelayer: eth.WDelayerConfig{
-			Address: cfg.SmartContracts.WDelayer,
-		},
 	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -223,11 +214,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 	}
 	chainIDU16 := uint16(chainIDU64)
 
-	const safeStateDBKeep = 128
-	if cfg.StateDB.Keep < safeStateDBKeep {
-		return nil, tracerr.Wrap(fmt.Errorf("cfg.StateDB.Keep = %v < %v, which is unsafe",
-			cfg.StateDB.Keep, safeStateDBKeep))
-	}
 	stateDB, err := statedb.NewStateDB(statedb.Config{
 		Path:    cfg.StateDB.Path,
 		Keep:    cfg.StateDB.Keep,
@@ -351,6 +337,15 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		var etherScanService *etherscan.Service
+		if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
+			log.Info("EtherScan method detected in cofiguration file")
+			etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
+				cfg.Coordinator.Etherscan.APIKey)
+		} else {
+			log.Info("EtherScan method not configured in config file")
+			etherScanService = nil
+		}
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
@@ -435,6 +430,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 			client,
 			&scConsts,
 			initSCVars,
+			etherScanService,
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -447,14 +443,6 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		} else {
 			gin.SetMode(gin.ReleaseMode)
 		}
-		if cfg.API.UpdateMetricsInterval.Duration == 0 {
-			return nil, tracerr.Wrap(fmt.Errorf("invalid cfg.API.UpdateMetricsInterval: %v",
-				cfg.API.UpdateMetricsInterval.Duration))
-		}
-		if cfg.API.UpdateRecommendedFeeInterval.Duration == 0 {
-			return nil, tracerr.Wrap(fmt.Errorf("invalid cfg.API.UpdateRecommendedFeeInterval: %v",
-				cfg.API.UpdateRecommendedFeeInterval.Duration))
-		}
 		server := gin.Default()
 		coord := false
 		if mode == ModeCoordinator {
@@ -462,6 +450,7 @@ func NewNode(mode Mode, cfg *config.Node) (*Node, error) {
 		}
 		var err error
 		nodeAPI, err = NewNodeAPI(
+			version,
 			cfg.API.Address,
 			coord, cfg.API.Explorer,
 			server,
@@ -514,7 +503,7 @@ type APIServer struct {
 }
 
 // NewAPIServer creates a new APIServer
-func NewAPIServer(mode Mode, cfg *config.APIServer) (*APIServer, error) {
+func NewAPIServer(mode Mode, cfg *config.APIServer, version string) (*APIServer, error) {
 	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
 	dbWrite, err := dbUtils.InitSQLDB(
@@ -530,10 +519,6 @@ func NewAPIServer(mode Mode, cfg *config.APIServer) (*APIServer, error) {
 	var dbRead *sqlx.DB
 	if cfg.PostgreSQL.HostRead == "" {
 		dbRead = dbWrite
-	} else if cfg.PostgreSQL.HostRead == cfg.PostgreSQL.HostWrite {
-		return nil, tracerr.Wrap(fmt.Errorf(
-			"PostgreSQL.HostRead and PostgreSQL.HostWrite must be different",
-		))
 	} else {
 		dbRead, err = dbUtils.InitSQLDB(
 			cfg.PostgreSQL.PortRead,
@@ -577,6 +562,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer) (*APIServer, error) {
 		coord = cfg.Coordinator.API.Coordinator
 	}
 	nodeAPI, err := NewNodeAPI(
+		version,
 		cfg.API.Address,
 		coord, cfg.API.Explorer,
 		server,
@@ -630,6 +616,7 @@ type NodeAPI struct { //nolint:golint
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
+	version,
 	addr string,
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
@@ -639,6 +626,7 @@ func NewNodeAPI(
 	engine := gin.Default()
 	engine.Use(cors.Default())
 	_api, err := api.NewAPI(
+		version,
 		coordinatorEndpoints, explorerEndpoints,
 		engine,
 		hdb,

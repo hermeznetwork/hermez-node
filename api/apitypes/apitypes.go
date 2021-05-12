@@ -110,6 +110,10 @@ type StrHezEthAddr ethCommon.Address
 
 // UnmarshalText unmarshals a StrHezEthAddr
 func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		*s = StrHezEthAddr(common.EmptyAddr)
+		return nil
+	}
 	withoutHez := strings.TrimPrefix(string(text), "hez:")
 	var addr ethCommon.Address
 	if err := addr.UnmarshalText([]byte(withoutHez)); err != nil {
@@ -194,6 +198,10 @@ type StrHezBJJ babyjub.PublicKeyComp
 
 // UnmarshalText unmarshalls a StrHezBJJ
 func (s *StrHezBJJ) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		*s = StrHezBJJ(common.EmptyBJJComp)
+		return nil
+	}
 	bjj, err := hezStrToBJJ(string(text))
 	if err != nil {
 		return tracerr.Wrap(err)

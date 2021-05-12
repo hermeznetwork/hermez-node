@@ -171,7 +171,7 @@ func resetStateDBs(cfg *Config, batchNum common.BatchNum) error {
 	return nil
 }
 
-func cmdWipeSQL(c *cli.Context) error {
+func cmdWipeDBs(c *cli.Context) error {
 	_cfg, err := parseCli(c)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
@@ -240,7 +240,7 @@ func cmdRun(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	node, err := node.NewNode(cfg.mode, cfg.node)
+	node, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
 	}
@@ -256,7 +256,7 @@ func cmdServeAPI(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	srv, err := node.NewAPIServer(cfg.mode, cfg.server)
+	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting api server: %w", err))
 	}
@@ -457,15 +457,15 @@ func main() {
 		{
 			Name:    "genbjj",
 			Aliases: []string{},
-			Usage:   "Generate a new BabyJubJub key",
+			Usage:   "Generate a new random BabyJubJub key",
 			Action:  cmdGenBJJ,
 		},
 		{
-			Name:    "wipesql",
+			Name:    "wipedbs",
 			Aliases: []string{},
 			Usage: "Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, " +
 				"leaving the DB in a clean state",
-			Action: cmdWipeSQL,
+			Action: cmdWipeDBs,
 			Flags: append(flags,
 				&cli.BoolFlag{
 					Name:     flagYes,

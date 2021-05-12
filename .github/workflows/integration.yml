@@ -2,8 +2,8 @@ name: Integration testing
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - '*rc*'
 
 jobs:
   trigger-integration:

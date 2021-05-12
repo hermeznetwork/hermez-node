@@ -35,9 +35,17 @@ func (a *API) getExits(c *gin.Context) {
 	}
 
 	// Fetch exits from historyDB
-	exits, pendingItems, err := a.h.GetExitsAPI(
-		addr, bjj, tokenID, idx, batchNum, onlyPendingWithdraws, fromItem, limit, order,
-	)
+	exits, pendingItems, err := a.h.GetExitsAPI(historydb.GetExitsAPIRequest{
+		EthAddr:              addr,
+		Bjj:                  bjj,
+		TokenID:              tokenID,
+		Idx:                  idx,
+		BatchNum:             batchNum,
+		OnlyPendingWithdraws: onlyPendingWithdraws,
+		FromItem:             fromItem,
+		Limit:                limit,
+		Order:                order,
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return

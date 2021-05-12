@@ -12,7 +12,9 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +28,13 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/russross/meddler"
 	"golang.org/x/sync/semaphore"
+)
+
+const (
+	// OrderAsc indicates ascending order when using pagination
+	OrderAsc = "ASC"
+	// OrderDesc indicates descending order when using pagination
+	OrderDesc = "DESC"
 )
 
 var migrations *migrate.PackrMigrationSource
@@ -95,6 +104,31 @@ func InitSQLDB(port int, host, user, password, name string) (*sqlx.DB, error) {
 		return nil, tracerr.Wrap(err)
 	}
 	return db, nil
+}
+
+// InitTestSQLDB opens test PostgreSQL database
+func InitTestSQLDB() (*sqlx.DB, error) {
+	host := os.Getenv("PGHOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port, _ := strconv.Atoi(os.Getenv("PGPORT"))
+	if port == 0 {
+		port = 5432
+	}
+	user := os.Getenv("PGUSER")
+	if user == "" {
+		user = "hermez"
+	}
+	pass := os.Getenv("PGPASSWORD")
+	if pass == "" {
+		panic("No PGPASSWORD envvar specified")
+	}
+	dbname := os.Getenv("PGDATABASE")
+	if dbname == "" {
+		dbname = "hermez"
+	}
+	return InitSQLDB(port, host, user, pass, dbname)
 }
 
 // APIConnectionController is used to limit the SQL open connections used by the API

@@ -1,6 +1,11 @@
-*                       @ed255
 *.md                    @jeffprestes
 api/                    @arnaubennassar
+db/*.go                 @arnaubennassar
+db/historydb            @arnaubennassar
+db/migrations           @arnaubennassar
+db/l2db                 @arnaubennassar
 Makefile                @Pantani
 .goreleaser.yml         @Pantani
 .github/                @Pantani
+txselector/             @Pantani
+txprocessor/            @Pantani

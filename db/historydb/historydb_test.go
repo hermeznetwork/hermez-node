@@ -25,18 +25,9 @@ import (
 var historyDB *HistoryDB
 var historyDBWithACC *HistoryDB
 
-// In order to run the test you need to run a Posgres DB with
-// a database named "history" that is accessible by
-// user: "hermez"
-// pass: set it using the env var POSTGRES_PASS
-// This can be achieved by running: POSTGRES_PASS=your_strong_pass && sudo docker run --rm --name hermez-db-test -p 5432:5432 -e POSTGRES_DB=history -e POSTGRES_USER=hermez -e POSTGRES_PASSWORD=$POSTGRES_PASS -d postgres && sleep 2s && sudo docker exec -it hermez-db-test psql -a history -U hermez -c "CREATE DATABASE l2;"
-// After running the test you can stop the container by running: sudo docker kill hermez-db-test
-// If you already did that for the L2DB you don't have to do it again
-
 func TestMain(m *testing.M) {
 	// init DB
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	if err != nil {
 		panic(err)
 	}
@@ -772,40 +763,37 @@ func TestGetUnforgedL1UserTxs(t *testing.T) {
 }
 
 func exampleInitSCVars() (*common.RollupVariables, *common.AuctionVariables, *common.WDelayerVariables) {
-	//nolint:govet
 	rollup := &common.RollupVariables{
-		0,
-		big.NewInt(10),
-		12,
-		13,
-		[]common.BucketParams{},
-		false,
+		EthBlockNum:           0,
+		FeeAddToken:           big.NewInt(10),
+		ForgeL1L2BatchTimeout: 12,
+		WithdrawalDelay:       13,
+		Buckets:               []common.BucketParams{},
+		SafeMode:              false,
 	}
-	//nolint:govet
 	auction := &common.AuctionVariables{
-		0,
-		ethCommon.BigToAddress(big.NewInt(2)),
-		ethCommon.BigToAddress(big.NewInt(3)),
-		"https://boot.coord.com",
-		[6]*big.Int{
+		EthBlockNum:        0,
+		DonationAddress:    ethCommon.BigToAddress(big.NewInt(2)),
+		BootCoordinator:    ethCommon.BigToAddress(big.NewInt(3)),
+		BootCoordinatorURL: "https://boot.coord.com",
+		DefaultSlotSetBid: [6]*big.Int{
 			big.NewInt(1), big.NewInt(2), big.NewInt(3),
 			big.NewInt(4), big.NewInt(5), big.NewInt(6),
 		},
-		0,
-		2,
-		4320,
-		[3]uint16{10, 11, 12},
-		1000,
-		20,
+		DefaultSlotSetBidSlotNum: 0,
+		ClosedAuctionSlots:       2,
+		OpenAuctionSlots:         4320,
+		AllocationRatio:          [3]uint16{10, 11, 12},
+		Outbidding:               1000,
+		SlotDeadline:             20,
 	}
-	//nolint:govet
 	wDelayer := &common.WDelayerVariables{
-		0,
-		ethCommon.BigToAddress(big.NewInt(2)),
-		ethCommon.BigToAddress(big.NewInt(3)),
-		13,
-		14,
-		false,
+		EthBlockNum:                0,
+		HermezGovernanceAddress:    ethCommon.BigToAddress(big.NewInt(2)),
+		EmergencyCouncilAddress:    ethCommon.BigToAddress(big.NewInt(3)),
+		WithdrawalDelay:            13,
+		EmergencyModeStartingBlock: 14,
+		EmergencyMode:              false,
 	}
 	return rollup, auction, wDelayer
 }

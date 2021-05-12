@@ -12,3 +12,6 @@ contact_links:
   - name: Twitter
     url: https://twitter.com/hermez_network
     about: Official Hermez Twitter
+  - name: Hermez Docs
+    url: https://docs.hermez.io/
+    about: Official Hermez Documentation

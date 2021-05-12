@@ -20,6 +20,7 @@ package l2db
 import (
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -115,7 +116,7 @@ func (l2db *L2DB) GetAccountCreationAuth(addr ethCommon.Address) (*common.Accoun
 }
 
 // UpdateTxsInfo updates the parameter Info of the pool transactions
-func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
+func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx, batchNum common.BatchNum) error {
 	if len(txs) == 0 {
 		return nil
 	}
@@ -124,8 +125,9 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx) error {
 		Info string      `db:"info"`
 	}
 	txUpdates := make([]txUpdate, len(txs))
+	batchN := strconv.FormatInt(int64(batchNum), 10)
 	for i := range txs {
-		txUpdates[i] = txUpdate{ID: txs[i].TxID, Info: txs[i].Info}
+		txUpdates[i] = txUpdate{ID: txs[i].TxID, Info: "BatchNum: " + batchN + ". " + txs[i].Info}
 	}
 	const query string = `
 		UPDATE tx_pool SET
@@ -319,9 +321,12 @@ func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
 	return idxs, nil
 }
 
+const invalidateOldNoncesInfo = `Nonce is smaller than account nonce`
+
 var invalidateOldNoncesQuery = fmt.Sprintf(`
 		UPDATE tx_pool SET
 			state = '%s',
+			info = '%s',
 			batch_num = %%d
 		FROM (VALUES
 			(NULL::::BIGINT, NULL::::BIGINT),
@@ -330,7 +335,7 @@ var invalidateOldNoncesQuery = fmt.Sprintf(`
 		WHERE tx_pool.state = '%s' AND
 			tx_pool.from_idx = updated_acc.idx AND
 			tx_pool.nonce < updated_acc.nonce;
-	`, common.PoolL2TxStateInvalid, common.PoolL2TxStatePending)
+	`, common.PoolL2TxStateInvalid, invalidateOldNoncesInfo, common.PoolL2TxStatePending)
 
 // InvalidateOldNonces invalidate txs with nonces that are smaller or equal than their
 // respective accounts nonces.  The state of the affected txs will be changed
@@ -353,7 +358,7 @@ func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []common.IdxNonce, batchNu
 // The state of the affected txs can change form Forged -> Pending or from Invalid -> Pending
 func (l2db *L2DB) Reorg(lastValidBatch common.BatchNum) error {
 	_, err := l2db.dbWrite.Exec(
-		`UPDATE tx_pool SET batch_num = NULL, state = $1
+		`UPDATE tx_pool SET batch_num = NULL, state = $1, info = NULL
 		WHERE (state = $2 OR state = $3 OR state = $4) AND batch_num > $5`,
 		common.PoolL2TxStatePending,
 		common.PoolL2TxStateForging,
@@ -372,14 +377,12 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 		`DELETE FROM tx_pool WHERE (
 			batch_num < $1 AND (state = $2 OR state = $3)
 		) OR (
-			(SELECT count(*) FROM tx_pool WHERE state = $4) > $5 
-			AND timestamp < $6 AND state = $4
+			state = $4 AND timestamp < $5
 		);`,
 		currentBatchNum-l2db.safetyPeriod,
 		common.PoolL2TxStateForged,
 		common.PoolL2TxStateInvalid,
 		common.PoolL2TxStatePending,
-		l2db.maxTxs,
 		time.Unix(now-int64(l2db.ttl.Seconds()), 0),
 	)
 	return tracerr.Wrap(err)

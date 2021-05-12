@@ -16,6 +16,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test"
@@ -40,9 +41,10 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	var timer timer
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
 	var stats synchronizer.Stats
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	pipeline, err := coord.newPipeline(ctx)
 	require.NoError(t, err)
 	pipeline.vars = coord.vars
@@ -99,6 +101,8 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
 	assert.Equal(t, true, pipeline.shouldL1L2Batch(&batchInfo))
+
+	closeTestModules(t, modules)
 }
 
 const testTokensLen = 3
@@ -177,8 +181,9 @@ func TestPipelineForgeBatchWithTxs(t *testing.T) {
 	var timer timer
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
+	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules)
+	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	sync := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
 
 	// preload the synchronier (via the test ethClient) some tokens and
@@ -232,6 +237,8 @@ PoolTransfer(0) User2-User3: 300 (126)
 	batchInfo, _, err = pipeline.forgeBatch(batchNum)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(batchInfo.L2Txs))
+
+	closeTestModules(t, modules)
 }
 
 func TestEthRollupForgeBatch(t *testing.T) {
@@ -273,16 +280,6 @@ func TestEthRollupForgeBatch(t *testing.T) {
 		Ethereum: ethCfg,
 		Rollup: eth.RollupConfig{
 			Address: rollupAddr,
-		},
-		Auction: eth.AuctionConfig{
-			Address: ethCommon.Address{},
-			TokenHEZ: eth.TokenConfig{
-				Address: ethCommon.Address{},
-				Name:    "HEZ",
-			},
-		},
-		WDelayer: eth.WDelayerConfig{
-			Address: ethCommon.Address{},
 		},
 	})
 	require.NoError(t, err)

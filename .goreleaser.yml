@@ -8,9 +8,9 @@ before:
     - go mod download
 
 builds:
-  - main: ./cli/node/main.go
-    binary: node
-    id: node
+  - main: ./cmd/heznode/main.go
+    binary: heznode
+    id: heznode
     goos:
       - linux
       - darwin
@@ -23,6 +23,15 @@ builds:
       post:
         - cmd: packr2 clean
           dir: db
+
+archives:
+  - id: heznode
+    wrap_in_directory: true
+    files:
+      - LICENSE
+      - cmd/heznode/README.md
+      - cmd/heznode/cfg.api.toml
+      - cmd/heznode/cfg.buidler.toml
 
 checksum:
   name_template: 'checksums.txt'

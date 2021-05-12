@@ -22,6 +22,9 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
+// TODO: add this timeout to config file?
+const proverWaitReadyTimeout = 20 * time.Second
+
 type statsVars struct {
 	Stats synchronizer.Stats
 	Vars  common.SCVariablesPtr
@@ -97,7 +100,9 @@ func NewPipeline(ctx context.Context,
 	proversPool := NewProversPool(len(provers))
 	proversPoolSize := 0
 	for _, prover := range provers {
-		if err := prover.WaitReady(ctx); err != nil {
+		ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, proverWaitReadyTimeout)
+		defer ctxTimeoutCancel()
+		if err := prover.WaitReady(ctxTimeout); err != nil {
 			log.Errorw("prover.WaitReady", "err", err)
 		} else {
 			proversPool.Add(ctx, prover)
@@ -297,9 +302,11 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				batchNum = p.state.batchNum + 1
 				batchInfo, err := p.handleForgeBatch(p.ctx, batchNum)
 				if p.ctx.Err() != nil {
+					p.revertPoolChanges(batchNum)
 					continue
 				} else if tracerr.Unwrap(err) == errLastL1BatchNotSynced ||
 					tracerr.Unwrap(err) == errSkipBatchByPolicy {
+					p.revertPoolChanges(batchNum)
 					continue
 				} else if err != nil {
 					p.setErrAtBatchNum(batchNum)
@@ -308,6 +315,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 							"Pipeline.handleForgBatch: %v", err),
 						FailedBatchNum: batchNum,
 					})
+					p.revertPoolChanges(batchNum)
 					continue
 				}
 				p.lastForgeTime = time.Now()
@@ -338,10 +346,12 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				// batches because there's been an error and we
 				// wait for the pipeline to be stopped.
 				if p.getErrAtBatchNum() != 0 {
+					p.revertPoolChanges(batchNum)
 					continue
 				}
 				err := p.waitServerProof(p.ctx, batchInfo)
 				if p.ctx.Err() != nil {
+					p.revertPoolChanges(batchNum)
 					continue
 				} else if err != nil {
 					log.Errorw("waitServerProof", "err", err)
@@ -351,6 +361,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 							"Pipeline.waitServerProof: %v", err),
 						FailedBatchNum: batchInfo.BatchNum,
 					})
+					p.revertPoolChanges(batchNum)
 					continue
 				}
 				// We are done with this serverProof, add it back to the pool
@@ -360,6 +371,16 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 		}
 	}()
 	return nil
+}
+
+// revertPoolChanges will undo changes made to the pool while trying to forge failedBatch.
+// Call this function only if the porcess of forging a batch fails
+func (p *Pipeline) revertPoolChanges(failedBatch common.BatchNum) {
+	if err := p.l2DB.Reorg(failedBatch - 1); err != nil {
+		// NOTE: the reason why this error si not returned is that this function is used in a error handling situation
+		// and at this point the flow shouldn't change (handling the error of handling an error), things could get really meesy
+		log.Error("Error trying to revert changes on the pool after the porcess of forging a batch failed: ", err)
+	}
 }
 
 // Stop the forging pipeline
@@ -579,7 +600,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 		batchInfo.BatchNum); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
-	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs); err != nil {
+	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs, batchInfo.BatchNum); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
 

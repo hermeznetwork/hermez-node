@@ -7,6 +7,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -80,7 +81,7 @@ func TestGetBids(t *testing.T) {
 	fetchedBids = []testBid{}
 	bidderAddress := tc.bids[3].Bidder
 	path := fmt.Sprintf("%s?bidderAddr=%s&limit=%d", endpoint, bidderAddress.String(), limit)
-	err := doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
+	err := doGoodReqPaginated(path, db.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	bidderAddrBids := []testBid{}
 	for i := 0; i < len(tc.bids); i++ {
@@ -94,7 +95,7 @@ func TestGetBids(t *testing.T) {
 	fetchedBids = []testBid{}
 	slotNum := tc.bids[3].SlotNum
 	path = fmt.Sprintf("%s?slotNum=%d&limit=%d", endpoint, slotNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	slotNumBids := []testBid{}
 	for i := 0; i < len(tc.bids); i++ {
@@ -107,7 +108,7 @@ func TestGetBids(t *testing.T) {
 	// slotNum, in reverse order
 	fetchedBids = []testBid{}
 	path = fmt.Sprintf("%s?slotNum=%d&limit=%d", endpoint, slotNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderDesc, &testBidsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderDesc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	flippedBids := []testBid{}
 	for i := len(slotNumBids) - 1; i >= 0; i-- {
@@ -120,7 +121,7 @@ func TestGetBids(t *testing.T) {
 	bidderAddress = tc.bids[1].Bidder
 	slotNum = tc.bids[1].SlotNum
 	path = fmt.Sprintf("%s?bidderAddr=%s&slotNum=%d&limit=%d", endpoint, bidderAddress.String(), slotNum, limit)
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	slotNumBidderAddrBids := []testBid{}
 	for i := 0; i < len(tc.bids); i++ {
@@ -133,7 +134,7 @@ func TestGetBids(t *testing.T) {
 	// Empty array
 	fetchedBids = []testBid{}
 	path = fmt.Sprintf("%s?slotNum=%d&bidderAddr=%s", endpoint, 5, tc.bids[1].Bidder.String())
-	err = doGoodReqPaginated(path, historydb.OrderAsc, &testBidsResponse{}, appendIter)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testBidsResponse{}, appendIter)
 	assert.NoError(t, err)
 	assertBids(t, []testBid{}, fetchedBids)
 

@@ -13,14 +13,14 @@ The `hermez-node` has been tested with go version 1.14
 Build the binary and check the current version:
 
 ```shell
-$ make build
-$ bin/node version
+$ make
+$ ./bin/heznode version
 ```
 
 ### Run
 
-First you must edit the default/template config file into [cli/node/cfg.buidler.toml](cli/node/cfg.buidler.toml), 
-there are more information about the config file into [cli/node/README.md](cli/node/README.md)
+First you must edit the default/template config file into [cmd/heznode/cfg.buidler.toml](cmd/heznode/cfg.buidler.toml), 
+there are more information about the config file into [cmd/heznode/README.md](cmd/heznode/README.md)
 
 After setting the config, you can build and run the Hermez Node as a synchronizer:
 
@@ -31,7 +31,7 @@ $ make run-node
 Or build and run as a coordinator, and also passing the config file from other location:
 
 ```shell
-$ MODE=sync CONFIG=cli/node/cfg.buidler.toml make run-node
+$ MODE=sync CONFIG=cmd/heznode/cfg.buidler.toml make run-node
 ```
 
 To check the useful make commands:
@@ -43,29 +43,28 @@ $ make help
 ### Unit testing
 
 Running the unit tests requires a connection to a PostgreSQL database.  You can
-run PostgreSQL with docker easily this way (where `yourpasswordhere` should
-be your password):
+run PostgreSQL with docker easily this way:
 
 ```shell
-$ POSTGRES_PASS="yourpasswordhere" make run-database-container
+$ make run-database-container
 ```
 
-Afterward, run the tests with the password as env var:
-
+Afterward, run the tests:
 ```shell
-$ POSTGRES_PASS="yourpasswordhere" make test
+$ make test
 ```
-
-NOTE: `-p 1` forces execution of package test in serial. Otherwise, they may be
-executed in parallel, and the test may find unexpected entries in the SQL database
-because it's shared among all tests.
 
 There is an extra temporary option that allows you to run the API server using the 
 Go tests. It will be removed once the API can be properly initialized with data 
 from the synchronizer. To use this, run:
 
 ```shell
-$ POSTGRES_PASS="yourpasswordhere" make test-api-server
+$ make test-api-server
+```
+
+It is also possible to run the tests with an existing PostgreSQL server, e.g.
+```shell
+$ PGHOST=someserver PGUSER=hermez2 PGPASSWORD=secret make test
 ```
 
 ### Lint
@@ -83,19 +82,19 @@ $ make gocilint
 
 ### Node
 
-See [cli/node/README.md](cli/node/README.md)
+See [cmd/heznode/README.md](cmd/heznode/README.md)
 
 ### Proof Server
 
 The node in mode coordinator requires a proof server (a server capable of 
 calculating proofs from the zkInputs). There is a mock proof server CLI 
-at `test/proofserver/cli` for testing purposes.
+at `test/proofserver/cmd` for testing purposes.
 
-Usage of `test/proofserver/cli`:
+Usage of `test/proofserver/cmd`:
 
 ```shell
 USAGE:
-    go run ./test/proofserver/cli OPTIONS
+    go run ./test/proofserver/cmd OPTIONS
 
 OPTIONS:
   -a string

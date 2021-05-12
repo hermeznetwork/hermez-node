@@ -38,7 +38,14 @@ func (a *API) getAccounts(c *gin.Context) {
 	}
 
 	// Fetch Accounts from historyDB
-	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(tokenIDs, addr, bjj, fromItem, limit, order)
+	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(historydb.GetAccountsAPIRequest{
+		TokenIDs: tokenIDs,
+		EthAddr:  addr,
+		Bjj:      bjj,
+		FromItem: fromItem,
+		Limit:    limit,
+		Order:    order,
+	})
 	if err != nil {
 		retSQLErr(err, c)
 		return

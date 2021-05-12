@@ -202,9 +202,7 @@ func TestMain(m *testing.M) {
 	// Swagger
 	router := swagger.NewRouter().WithSwaggerFromFile("./swagger.yml")
 	// HistoryDB
-	pass := os.Getenv("POSTGRES_PASS")
-
-	database, err := db.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	database, err := db.InitTestSQLDB()
 	if err != nil {
 		panic(err)
 	}
@@ -253,6 +251,7 @@ func TestMain(m *testing.M) {
 	}
 
 	api, err = NewAPI(
+		"test",
 		true,
 		true,
 		apiGin,
@@ -628,8 +627,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestTimeout(t *testing.T) {
-	pass := os.Getenv("POSTGRES_PASS")
-	databaseTO, err := db.ConnectSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	databaseTO, err := db.InitTestSQLDB()
 	require.NoError(t, err)
 	apiConnConTO := db.NewAPIConnectionController(1, 100*time.Millisecond)
 	hdbTO := historydb.NewHistoryDB(databaseTO, databaseTO, apiConnConTO)
@@ -660,6 +658,7 @@ func TestTimeout(t *testing.T) {
 		}
 	}()
 	_, err = NewAPI(
+		"test",
 		true,
 		true,
 		apiGinTO,
@@ -694,7 +693,7 @@ func TestTimeout(t *testing.T) {
 	err = json.Unmarshal(body, msg)
 	require.NoError(t, err)
 	// Check that the error was the expected down
-	require.Equal(t, errSQLTimeout, msg.Message)
+	require.Equal(t, ErrSQLTimeout, msg.Message)
 	finishWait <- nil
 
 	// Stop server
@@ -732,7 +731,7 @@ func doGoodReqPaginated(
 		if remaining == 0 {
 			break
 		}
-		if order == historydb.OrderDesc {
+		if order == db.OrderDesc {
 			next = lastID - 1
 		} else {
 			next = lastID + 1

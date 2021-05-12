@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 
@@ -17,14 +16,13 @@ import (
 )
 
 func newL2DB(t *testing.T) *l2db.L2DB {
-	pass := os.Getenv("POSTGRES_PASS")
-	db, err := dbUtils.InitSQLDB(5432, "localhost", "hermez", pass, "hermez")
+	db, err := dbUtils.InitTestSQLDB()
 	require.NoError(t, err)
 	test.WipeDB(db)
 	return l2db.NewL2DB(db, db, 10, 100, 0.0, 1000.0, 24*time.Hour, nil)
 }
 
-func newStateDB(t *testing.T) *statedb.LocalStateDB {
+func newStateDB(t *testing.T) (*statedb.LocalStateDB, *statedb.StateDB) {
 	syncDBPath, err := ioutil.TempDir("", "tmpSyncDB")
 	require.NoError(t, err)
 	deleteme = append(deleteme, syncDBPath)
@@ -37,7 +35,7 @@ func newStateDB(t *testing.T) *statedb.LocalStateDB {
 	stateDB, err := statedb.NewLocalStateDB(statedb.Config{Path: stateDBPath, Keep: 128,
 		Type: statedb.TypeTxSelector, NLevels: 0}, syncStateDB)
 	require.NoError(t, err)
-	return stateDB
+	return stateDB, syncStateDB
 }
 
 func TestCanPurgeCanInvalidate(t *testing.T) {
@@ -97,7 +95,7 @@ func TestPurgeMaybeInvalidateMaybe(t *testing.T) {
 		cfg: cfg,
 	}
 	l2DB := newL2DB(t)
-	stateDB := newStateDB(t)
+	stateDB, syncStateDB := newStateDB(t)
 
 	startBlockNum := int64(1000)
 	startBatchNum := int64(10)
@@ -139,6 +137,10 @@ func TestPurgeMaybeInvalidateMaybe(t *testing.T) {
 	ok, err = p.InvalidateMaybe(l2DB, stateDB, blockNum, batchNum)
 	require.NoError(t, err)
 	assert.False(t, ok)
+
+	syncStateDB.Close()
+	stateDB.StateDB.Close()
+	_ = l2DB.DB().Close()
 }
 
 func TestIdxsNonce(t *testing.T) {
@@ -182,7 +184,7 @@ func TestIdxsNonce(t *testing.T) {
 
 func TestPoolMarkInvalidOldNonces(t *testing.T) {
 	l2DB := newL2DB(t)
-	stateDB := newStateDB(t)
+	stateDB, syncStateDB := newStateDB(t)
 
 	set0 := `
 		Type: Blockchain
@@ -286,4 +288,8 @@ func TestPoolMarkInvalidOldNonces(t *testing.T) {
 	pendingTxs, err = l2DB.GetPendingTxs()
 	require.NoError(t, err)
 	assert.Equal(t, 6, len(pendingTxs))
+
+	syncStateDB.Close()
+	stateDB.StateDB.Close()
+	_ = l2DB.DB().Close()
 }

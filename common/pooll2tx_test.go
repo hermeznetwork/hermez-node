@@ -279,3 +279,82 @@ func TestPoolL2TxID(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, tx0.TxID, tx1.TxID)
 }
+
+func TestPoolL2Tx_SetType(t *testing.T) {
+	bjjAddr := [32]byte{
+		212, 229, 103, 64, 248, 118, 174, 248,
+		192, 16, 184, 106, 64, 213, 245, 103,
+		69, 161, 24, 208, 144, 106, 52, 230,
+		154, 236, 140, 13, 177, 203, 143, 163,
+	}
+	ethAddr := ethCommon.HexToAddress("0x7ffC57839B00206D1ad20c69A1981b489f772031")
+	tests := []struct {
+		name    string
+		tx      *PoolL2Tx
+		want    TxType
+		wantErr bool
+	}{
+		{
+			"Send to bjj address",
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			TxTypeTransferToBJJ,
+			false,
+		}, {
+			"Send to eth address",
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: ethAddr, ToIdx: Idx(0)},
+			TxTypeTransferToEthAddr,
+			false,
+		}, {
+			"Send to eth FFAddr address",
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			TxTypeTransferToEthAddr,
+			true,
+		}, {
+			"Send to idx",
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: EmptyAddr, ToIdx: Idx(400)},
+			TxTypeTransfer,
+			false,
+		}, {
+			"Empty transfer",
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: EmptyAddr, ToIdx: Idx(0)},
+			TxType(""),
+			true,
+		}, {
+			"Empty transfer and FFAddr",
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			TxType(""),
+			true,
+		}, {
+			"Send to eth and bjj addresses and idx",
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: Idx(400)},
+			TxTypeTransfer,
+			false,
+		}, {
+			"Send to FFAddr eth and bjj addresses and idx",
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(400)},
+			TxTypeTransfer,
+			false,
+		}, {
+			"Send to FFAddr eth and bjj addresses",
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			TxTypeTransferToBJJ,
+			false,
+		}, {
+			"Send to eth and bjj addresses",
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: Idx(0)},
+			TxType(""),
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.tx.SetType()
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, tt.tx.Type)
+		})
+	}
+}

@@ -358,6 +358,13 @@ func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
 			break
 		}
 
+		// Discard exits with amount 0
+		if l2Txs[i].Type == common.TxTypeExit && l2Txs[i].Amount.Cmp(big.NewInt(0)) <= 0 {
+			l2Txs[i].Info = "Exits with amount 0 have no sense, not accepting to prevent unintended transactions"
+			discardedL2Txs = append(discardedL2Txs, l2Txs[i])
+			continue
+		}
+
 		// get Nonce & TokenID from the Account by l2Tx.FromIdx
 		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
 		if err != nil {
@@ -487,7 +494,7 @@ func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
 				continue
 			}
 		} else if l2Txs[i].ToIdx >= common.IdxUserThreshold {
-			receiverAcc, err := txsel.localAccountsDB.GetAccount(l2Txs[i].ToIdx)
+			_, err := txsel.localAccountsDB.GetAccount(l2Txs[i].ToIdx)
 			if err != nil {
 				// tx not valid
 				log.Debugw("invalid L2Tx: ToIdx not found in StateDB",
@@ -498,38 +505,6 @@ func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
 					"ToIdx: %d", l2Txs[i].ToIdx)
 				discardedL2Txs = append(discardedL2Txs, l2Txs[i])
 				continue
-			}
-			if l2Txs[i].ToEthAddr != common.EmptyAddr {
-				if l2Txs[i].ToEthAddr != receiverAcc.EthAddr {
-					log.Debugw("invalid L2Tx: ToEthAddr does not correspond to the Account.EthAddr",
-						"ToIdx", l2Txs[i].ToIdx, "tx.ToEthAddr",
-						l2Txs[i].ToEthAddr, "account.EthAddr", receiverAcc.EthAddr)
-					// Discard L2Tx, and update Info
-					// parameter of the tx, and add it to
-					// the discardedTxs array
-					l2Txs[i].Info = fmt.Sprintf("Tx not selected because ToEthAddr "+
-						"does not correspond to the Account.EthAddr. "+
-						"tx.ToIdx: %d, tx.ToEthAddr: %s, account.EthAddr: %s",
-						l2Txs[i].ToIdx, l2Txs[i].ToEthAddr, receiverAcc.EthAddr)
-					discardedL2Txs = append(discardedL2Txs, l2Txs[i])
-					continue
-				}
-			}
-			if l2Txs[i].ToBJJ != common.EmptyBJJComp {
-				if l2Txs[i].ToBJJ != receiverAcc.BJJ {
-					log.Debugw("invalid L2Tx: ToBJJ does not correspond to the Account.BJJ",
-						"ToIdx", l2Txs[i].ToIdx, "tx.ToEthAddr", l2Txs[i].ToBJJ,
-						"account.BJJ", receiverAcc.BJJ)
-					// Discard L2Tx, and update Info
-					// parameter of the tx, and add it to
-					// the discardedTxs array
-					l2Txs[i].Info = fmt.Sprintf("Tx not selected because tx.ToBJJ "+
-						"does not correspond to the Account.BJJ. "+
-						"tx.ToIdx: %d, tx.ToEthAddr: %s, tx.ToBJJ: %s, account.BJJ: %s",
-						l2Txs[i].ToIdx, l2Txs[i].ToEthAddr, l2Txs[i].ToBJJ, receiverAcc.BJJ)
-					discardedL2Txs = append(discardedL2Txs, l2Txs[i])
-					continue
-				}
 			}
 		}
 

@@ -92,14 +92,17 @@ func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
 
 // SetType sets the type of the transaction
 func (tx *PoolL2Tx) SetType() error {
+	isAddrEmpty := tx.ToBJJ == EmptyBJJComp && tx.ToEthAddr == EmptyAddr
 	if tx.ToIdx >= IdxUserThreshold {
 		tx.Type = TxTypeTransfer
-	} else if tx.ToIdx == 1 {
+	} else if isAddrEmpty && tx.ToIdx == 1 {
 		tx.Type = TxTypeExit
 	} else if tx.ToIdx == 0 {
 		if tx.ToBJJ != EmptyBJJComp && tx.ToEthAddr == FFAddr {
 			tx.Type = TxTypeTransferToBJJ
-		} else if tx.ToEthAddr != FFAddr && tx.ToEthAddr != EmptyAddr {
+		} else if tx.ToEthAddr != FFAddr &&
+			tx.ToEthAddr != EmptyAddr &&
+			tx.ToBJJ == EmptyBJJComp {
 			tx.Type = TxTypeTransferToEthAddr
 		} else {
 			return tracerr.Wrap(errors.New("malformed transaction"))
