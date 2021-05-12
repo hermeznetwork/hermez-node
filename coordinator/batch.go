@@ -93,8 +93,8 @@ type BatchInfo struct {
 	CoordIdxs             []common.Idx
 	ForgeBatchArgs        *eth.RollupForgeBatchArgs
 	Auth                  *bind.TransactOpts `json:"-"`
-	EthTx                 *types.Transaction
-	EthTxErr              error
+	EthTxs                []*types.Transaction
+	EthTxsErrs            []error
 	// SendTimestamp  the time of batch sent to ethereum
 	SendTimestamp time.Time
 	Receipt       *types.Receipt
