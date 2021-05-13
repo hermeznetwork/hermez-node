@@ -290,14 +290,10 @@ type Node struct {
 	PriceUpdater struct {
 		// Interval between price updater calls
 		Interval Duration `validate:"required"`
-		// URLBitfinexV2 is the URL of bitfinex V2 API
-		URLBitfinexV2 string `validate:"required,url"`
-		// URLCoinGeckoV3 is the URL of coingecko V3 API
-		URLCoinGeckoV3 string `validate:"required,url"`
-		// DefaultUpdateMethod to get token prices
-		DefaultUpdateMethod priceupdater.UpdateMethodType `validate:"required,is-valid-updatemethodtype,is-updatemethodtype-not-static"`
+		// Priority option defines the priority provider
+		Priority priceupdater.Priority `validate:"required"`
 		// TokensConfig to specify how each token get it's price updated
-		TokensConfig []priceupdater.TokenConfig
+		Provider []priceupdater.Provider
 	} `validate:"required"`
 	StateDB struct {
 		// Path where the synchronizer StateDB is stored
@@ -415,9 +411,7 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 		return nil, tracerr.Wrap(fmt.Errorf("error loading node configuration file: %w", err))
 	}
 	validate := validator.New()
-	validate.RegisterStructValidation(priceupdater.TokenConfigValidation, priceupdater.TokenConfig{})
-	_ = validate.RegisterValidation("is-valid-updatemethodtype", priceupdater.ValidateUpdateMethodType)
-	_ = validate.RegisterValidation("is-updatemethodtype-not-static", priceupdater.ValidateIsUpdateMethodTypeIsNotStatic)
+	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
@@ -436,9 +430,7 @@ func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 		return nil, tracerr.Wrap(fmt.Errorf("error loading apiServer configuration file: %w", err))
 	}
 	validate := validator.New()
-	validate.RegisterStructValidation(priceupdater.TokenConfigValidation, priceupdater.TokenConfig{})
-	_ = validate.RegisterValidation("is-valid-updatemethodtype", priceupdater.ValidateUpdateMethodType)
-	_ = validate.RegisterValidation("is-updatemethodtype-not-static", priceupdater.ValidateIsUpdateMethodTypeIsNotStatic)
+	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}

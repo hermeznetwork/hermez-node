@@ -502,7 +502,7 @@ func (hdb *HistoryDB) GetTokenSymbolsAndAddrs() ([]TokenSymbolAndAddr, error) {
 	var tokens []*TokenSymbolAndAddr
 	err := meddler.QueryAll(
 		hdb.dbRead, &tokens,
-		"SELECT symbol, eth_addr FROM token;",
+		"SELECT symbol, eth_addr, token_id FROM token;",
 	)
 	return db.SlicePtrsToSlice(tokens).([]TokenSymbolAndAddr), tracerr.Wrap(err)
 }

@@ -455,11 +455,9 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB, sync)
 	}
 	priceUpdater, err := priceupdater.NewPriceUpdater(
-		cfg.PriceUpdater.DefaultUpdateMethod,
-		cfg.PriceUpdater.TokensConfig,
+		cfg.PriceUpdater.Priority,
+		cfg.PriceUpdater.Provider,
 		historyDB,
-		cfg.PriceUpdater.URLBitfinexV2,
-		cfg.PriceUpdater.URLCoinGeckoV3,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
