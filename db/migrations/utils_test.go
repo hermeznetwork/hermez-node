@@ -24,6 +24,7 @@ import (
 
 type migrationTester interface {
 	// InsertData used to insert data in the affected tables of the migration that is being tested
+	// data will be inserted with the schema as it was previous the migration that is being tested
 	InsertData(*sqlx.DB) error
 	// RunAssertsAfterMigrationUp this function will be called after running the migration is being tested
 	// and should assert that the data inserted in the function InsertData is persisted properly
