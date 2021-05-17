@@ -48,6 +48,9 @@ var (
 // TxID is the identifier of a Hermez network transaction
 type TxID [TxIDLen]byte
 
+// EmptyTxID represents a TxID with 0 value
+var EmptyTxID TxID = TxID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
 // Scan implements Scanner for database/sql.
 func (txid *TxID) Scan(src interface{}) error {
 	srcB, ok := src.([]byte)
