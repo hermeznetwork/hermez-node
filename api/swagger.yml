@@ -387,6 +387,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+  '/atomic-pool':
+    post:
+      tags:
+        - Coordinator
+      summary: Add a collection of L2 transactions to the coordinator's pool.
+      description: >-
+        Send L2 transactions. The transactions will be stored in the transaction pool of the coordinator and eventually forged.
+        The main goal of sending transactions in groups is to use the atomic feature, where transactions are binded by the `request` fields,
+        and forced to be forged together. If the payload includes transactions that are not requested or request other transactions,
+        all transactions will be discarded and an error will be returned.
+      operationId: postTx
+      requestBody:
+        description: Signed transactions.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPoolL2Transactions'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionIds'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
   '/transactions-pool':
     post:
       tags:
@@ -1397,6 +1434,11 @@ components:
             - $ref: '#/components/schemas/BJJSignature'
             - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+        requestId:
+          type: string
+          description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
+          example: "0x00000000000001e240004700" 
+          nullable: true
         requestFromAccountIndex:
           type: string
           description: References the `fromAccountIndex` of the requested transaction.
@@ -1461,6 +1503,10 @@ components:
       - fee
       - nonce
       - signature
+    PostPoolL2Transactions:
+      type: array
+      items:
+        $ref: '#/components/schemas/PostPoolL2Transaction'
     PoolL2Transaction:
       type: object
       properties:
@@ -1655,6 +1701,10 @@ components:
       type: string
       description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
       example: "0x00000000000001e240004700" 
+    TransactionIds:
+      type: array
+      items:
+          $ref: '#/components/schemas/TransactionId'
     EthereumAddress:
       type: string
       description: "Address of an Etherum account."

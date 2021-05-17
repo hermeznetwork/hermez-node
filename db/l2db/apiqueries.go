@@ -8,6 +8,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/jmoiron/sqlx"
 	"github.com/russross/meddler"
 )
 
@@ -72,15 +73,15 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 	// Prepare insert SQL query argument parameters
 	namesPart, err := meddler.Default.ColumnsQuoted(tx, false)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	valuesPart, err := meddler.Default.PlaceholdersString(tx, false)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 	values, err := meddler.Default.Values(tx, false)
 	if err != nil {
-		return err
+		return tracerr.Wrap(err)
 	}
 
 	q := fmt.Sprintf(
@@ -104,11 +105,123 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 	return nil
 }
 
+// AddAtomicTxsAPI inserts transactions into the pool
+// if minFeeUSD <= total fee in USD <= maxFeeUSD.
+// It's assumed that the given txs conform an atomic group
+func (l2db *L2DB) AddAtomicTxsAPI(txs []PoolL2TxWrite) error {
+	if len(txs) == 0 {
+		return nil
+	}
+	// DB connection handling
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+
+	// Calculate fee in token amount per each used token (don't include tokens with fee 0)
+	feeMap := make(map[common.TokenID]float64)
+	for _, tx := range txs {
+		if _, ok := feeMap[tx.TokenID]; !ok && tx.AmountFloat > 0 {
+			feeMap[tx.TokenID] = tx.Fee.Percentage() * tx.AmountFloat
+		} else {
+			feeMap[tx.TokenID] += tx.Fee.Percentage() * tx.AmountFloat
+		}
+	}
+	tokenIDs := make([]common.TokenID, len(feeMap))
+	pos := 0
+	for id := range feeMap {
+		tokenIDs[pos] = id
+		pos++
+	}
+
+	// Get value in USD for the used tokens (value peer token without decimals)
+	query, args, err := sqlx.In(
+		`SELECT token_id, COALESCE(usd, 0) / (10.0 ^ token.decimals::NUMERIC) AS usd_no_decimals
+		FROM token WHERE token_id IN(?);`,
+		tokenIDs,
+	)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	query = l2db.dbRead.Rebind(query)
+	type tokenUSDValue struct {
+		TokenID     common.TokenID `meddler:"token_id"`
+		USDPerToken float64        `meddler:"usd_no_decimals"`
+	}
+	USDValues := []*tokenUSDValue{}
+	if err := meddler.QueryAll(l2db.dbRead, &USDValues, query, args...); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	// Calculate average fee per transaction
+	var avgFeeUSD float64
+	for _, USDValue := range USDValues {
+		avgFeeUSD += feeMap[USDValue.TokenID] * USDValue.USDPerToken
+	}
+	avgFeeUSD = avgFeeUSD / float64(len(txs))
+
+	// Check that the fee is in accepted range
+	if avgFeeUSD < l2db.minFeeUSD {
+		return tracerr.Wrap(fmt.Errorf("avgFeeUSD (%v) < minFeeUSD (%v)",
+			avgFeeUSD, l2db.minFeeUSD))
+	}
+	if avgFeeUSD > l2db.maxFeeUSD {
+		return tracerr.Wrap(fmt.Errorf("avgFeeUSD (%v) > maxFeeUSD (%v)",
+			avgFeeUSD, l2db.maxFeeUSD))
+	}
+
+	// Check if pool is full
+	row := l2db.dbRead.QueryRow(`SELECT COUNT(*) > $1
+		FROM tx_pool
+		WHERE state = $2 AND NOT external_delete;`,
+		l2db.maxTxs, common.PoolL2TxStatePending)
+	var poolIsFull bool
+	if err := row.Scan(&poolIsFull); err != nil {
+		return tracerr.Wrap(err)
+	}
+	if poolIsFull {
+		return tracerr.Wrap(errPoolFull)
+	}
+
+	// Insert txs
+	return tracerr.Wrap(db.BulkInsert(
+		l2db.dbWrite,
+		`INSERT INTO tx_pool (
+			tx_id,
+			from_idx,
+			to_idx,
+			to_eth_addr,
+			to_bjj,
+			token_id,
+			amount,
+			amount_f,
+			fee,
+			nonce,
+			state,
+			signature,
+			rq_from_idx,
+			rq_to_idx,
+			rq_to_eth_addr,
+			rq_to_bjj,
+			rq_token_id,
+			rq_amount,
+			rq_fee,
+			rq_nonce,
+			rq_tx_id,
+			tx_type,
+			client_ip
+		) VALUES %s;`,
+		txs,
+	))
+}
+
 // selectPoolTxAPI select part of queries to get PoolL2TxRead
 const selectPoolTxAPI = `SELECT tx_pool.item_id, tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
 tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, tx_pool.rq_tx_id, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
@@ -118,7 +231,7 @@ FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 const selectPoolTxsAPI = `SELECT tx_pool.item_id, tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
 tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, tx_pool.rq_tx_id, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
