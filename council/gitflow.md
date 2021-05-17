@@ -1,43 +1,5 @@
 # Git flow
 
-## Introduction
-
-This document describes the branching and merge flow used by the Hermez team to 
-manage the code for this project. The information described here must be followed 
-by the entire team involved in the project in order to avoid merge problems or 
-synchronism problems between the repositories.
-
-This material is based on the DVCS tool **Git** and the **Github** service.
-
-A distributed version control system (DVCS) is a type of version control where the 
-complete codebase - including its full version history - is mirrored on every 
-developer's computer. It's abbreviated DVCS. Changes to files are tracked between 
-computers
-
-GitHub, Inc. is a provider of Internet hosting for software development and version 
-control using Git. It offers the distributed version control and source code 
-management functionality of Git, plus its own features.
-
-## Decentralized but centralized
-
-The repository setup that we use and that works well with this branching model, 
-is that with a central “truth” repo. Note that this repo is only considered to 
-be the central one (since Git is a DVCS, there is no such thing as a central 
-repo at a technical level). We will refer to this repo as origin, since this 
-name is familiar to all Git users. Currently our origin is at **Github**.
-
-![Centralized origin](img/centr-decentr.png "Centralized origin")
-
-Each developer pulls and pushes to origin. But besides the centralized push-pull 
-relationships, each developer may also pull changes from other peers to form 
-sub teams. For example, this might be useful to work together with two or more 
-developers on a big new feature, before pushing the work in progress to origin 
-prematurely. In the figure above, there are subteams of Alice and Bob, Alice and 
-David, and Clair and David.
-
-Technically, this means nothing more than that Alice has defined a Git remote, 
-named bob, pointing to Bob’s repository, and vice versa.
-
 ## The main branches
 
 At the core, the development model is greatly inspired by existing models out there. 
@@ -136,7 +98,8 @@ indicating that in his evaluation the new code is ready to join the `develop` br
 
 The code reviewer should keep in mind that he becomes co-responsible for the written 
 code at the time of its approval. Therefore, the review must be done with great care 
-and attention.
+and attention. Also, the person who created the PR is responsible for doing the merge 
+after having the approval of at least one reviewer.
 
 ## Hotfix branches
 
@@ -177,16 +140,8 @@ $ git push origin hotfix/1.2.1
 ```
 
 After merge with *master* you need to update the *develop* branch with the hotfix too
-to avoid conflicts and loose code. 
-
-```bash
-$ git checkout develop
-Switched to branch 'develop'
-
-$ git merge --no-ff hotfix/1.2.1
-Merge made by recursive.
-(Summary of changes)
-```
+to avoid conflicts and loose code. You should create a new PR that will merge the 
+hotfix branch with *develop* branch. This must be approved too. 
 
 Hotfix branches should always branch off from `master` branch and must merge back into
 `master` too. Also this should be merged in `develop` too. The branch naming convention 
@@ -209,10 +164,10 @@ branch is branched off.
 
 It is exactly at the start of a release branch that the upcoming release gets assigned 
 a version number—not any earlier. Up until that moment, the develop branch reflected 
-changes for the “next release”, but it is unclear whether that “next release” will 
-eventually become 0.3 or 1.0, until the release branch is started. That decision is 
-made on the start of the release branch and is carried out by the project’s rules 
-on version number bumping.
+changes for the “next release”. Each new commit in *develop* must be named xx.xx.xx-rcx,
+example: v1.2.0-rc5. Subsequent commits will increase the X in -rcX, although maybe not 
+all commits must include the tag. At the end of the day those tags are used to indicate 
+the QA team that "this code should be tested to check if it's production ready".
 
 ![Release model](img/release-branch.png "Release model")
 
@@ -238,6 +193,15 @@ Switched to a new branch "release/name-of-release"
 
 After that open a PR pointing to `master` to put the release branch inside the 
 approval flow. After approved the responsible for open the PR must merge into `master`,
-delete the release branch and **tag new version**.
+delete the release branch and **tag new version**. 
+
+Since *master* is a protected branch, not all users are enable to merge into this. So
+if you don't have access to do this please ask somebody able to do after approvals and
+all flow be satisfied. 
+
+## References
+
+This document was written using this [link](https://nvie.com/posts/a-successful-git-branching-model/#supporting-branches)
+as reference. 
 
 
