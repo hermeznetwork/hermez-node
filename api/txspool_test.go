@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
@@ -38,6 +39,7 @@ type testPoolTxReceive struct {
 	Nonce       common.Nonce           `json:"nonce"`
 	State       common.PoolL2TxState   `json:"state"`
 	Signature   babyjub.SignatureComp  `json:"signature"`
+	RqTxID      *common.TxID           `json:"requestId"`
 	RqFromIdx   *string                `json:"requestFromAccountIndex"`
 	RqToIdx     *string                `json:"requestToAccountIndex"`
 	RqToEthAddr *string                `json:"requestToHezEthereumAddress"`
@@ -85,6 +87,7 @@ type testPoolTxSend struct {
 	Fee         common.FeeSelector    `json:"fee"`
 	Nonce       common.Nonce          `json:"nonce"`
 	Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
+	RqTxID      *common.TxID          `json:"requestId" binding:"required"`
 	RqFromIdx   *string               `json:"requestFromAccountIndex"`
 	RqToIdx     *string               `json:"requestToAccountIndex"`
 	RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
@@ -163,6 +166,9 @@ func genTestPoolTxs(
 		}
 		if poolTx.RqFromIdx != 0 {
 			rqFromIdx := idxToHez(poolTx.RqFromIdx, token.Symbol)
+			rqTxID := poolTx.RqTxID
+			genSendTx.RqTxID = &rqTxID
+			genReceiveTx.RqTxID = &rqTxID
 			genSendTx.RqFromIdx = &rqFromIdx
 			genReceiveTx.RqFromIdx = &rqFromIdx
 			genSendTx.RqTokenID = &token.TokenID
@@ -488,20 +494,12 @@ func assertPoolTx(t *testing.T, expected, actual testPoolTxReceive) {
 
 // TestAllTosNull test that the API doesn't accept txs with all the TOs set to null (to eth, to bjj, to idx)
 func TestAllTosNull(t *testing.T) {
+	// Generate keys
+	addr, sk := generateKeys(4444)
 	// Generate account:
-	// Ethereum private key
-	var key ecdsa.PrivateKey
-	key.D = big.NewInt(int64(4444)) // only for testing
-	key.PublicKey.X, key.PublicKey.Y = ethCrypto.S256().ScalarBaseMult(key.D.Bytes())
-	key.Curve = ethCrypto.S256()
-	addr := ethCrypto.PubkeyToAddress(key.PublicKey)
-	// BJJ private key
-	var sk babyjub.PrivateKey
-	var iBytes [8]byte
-	binary.LittleEndian.PutUint64(iBytes[:], 4444)
-	copy(sk[:], iBytes[:]) // only for testing
+	var testIdx common.Idx = 333
 	account := common.Account{
-		Idx:      4444,
+		Idx:      testIdx,
 		TokenID:  0,
 		BatchNum: 1,
 		BJJ:      sk.Public().Compress(),
@@ -552,6 +550,214 @@ func TestAllTosNull(t *testing.T) {
 	err = doBadReq("POST", apiURL+"transactions-pool", jsonTxReader, 400)
 	require.NoError(t, err)
 	// Clean historyDB: the added account shouldn't be there for other tests
-	_, err = api.h.DB().DB.Exec("delete from account where idx = 4444")
+	_, err = api.h.DB().DB.Exec(
+		fmt.Sprintf("delete from account where idx = %d", testIdx),
+	)
 	assert.NoError(t, err)
+}
+
+func TestAtomicPool(t *testing.T) {
+	// Generate N "wallets" (account + private key)
+	const nAccounts = 4 // for the test to work 4 is the minimum value
+	const usedToken = 0 // this test will use only a token
+	accounts := make([]common.Account, nAccounts)
+	accountUpdates := make([]common.AccountUpdate, nAccounts)
+	privateKeys := make(map[common.Idx]*babyjub.PrivateKey, nAccounts)
+	for i := 0; i < nAccounts; i++ {
+		addr, privKey := generateKeys(i + 1234567)
+		idx := common.Idx(i) + 5000
+		account := common.Account{
+			Idx:      idx,
+			TokenID:  tc.tokens[usedToken].TokenID,
+			BatchNum: 1,
+			BJJ:      privKey.Public().Compress(),
+			EthAddr:  addr,
+		}
+		accountUpdate := common.AccountUpdate{
+			Idx:      idx,
+			BatchNum: 1,
+			Nonce:    0,
+			Balance:  big.NewInt(1000000),
+		}
+		accounts[i] = account
+		accountUpdates[i] = accountUpdate
+		privateKeys[idx] = &privKey
+	}
+	// Add accounts to HistoryDB
+	err := api.h.AddAccounts(accounts)
+	assert.NoError(t, err)
+	err = api.h.AddAccountUpdates(accountUpdates)
+	assert.NoError(t, err)
+
+	signAndTransformTxs := func(txs []common.PoolL2Tx) ([]testPoolTxSend, []testPoolTxReceive) {
+		for i := 0; i < len(txs); i++ {
+			// Set TxID and type
+			_, err := common.NewPoolL2Tx(&txs[i])
+			assert.NoError(t, err)
+			// Sign
+			toSign, err := txs[i].HashToSign(0)
+			assert.NoError(t, err)
+			sig := privateKeys[txs[i].FromIdx].SignPoseidon(toSign)
+			txs[i].Signature = sig.Compress()
+		}
+		return genTestPoolTxs(txs, []historydb.TokenWithUSD{tc.tokens[usedToken]}, accounts)
+	}
+	assertTxs := func(txsToReceive []testPoolTxReceive) {
+		for _, tx := range txsToReceive {
+			const path = apiURL + "transactions-pool/"
+			fetchedTx := testPoolTxReceive{}
+			require.NoError(
+				t, doGoodReq(
+					"GET",
+					path+tx.TxID.String(),
+					nil, &fetchedTx,
+				),
+			)
+			assertPoolTx(t, tx, fetchedTx)
+		}
+	}
+
+	const path = apiURL + "atomic-pool"
+	// Test correct atomic group (ciclic)
+	/*
+		A  ──────────► B
+		▲              │
+		│              │
+		└────── C ◄────┘
+	*/
+	// Generate txs
+	txs := []common.PoolL2Tx{}
+	baseTx := common.PoolL2Tx{
+		TokenID:   tc.tokens[usedToken].TokenID,
+		Amount:    big.NewInt(1000),
+		Fee:       200,
+		Nonce:     0,
+		RqTokenID: tc.tokens[usedToken].TokenID,
+		RqAmount:  big.NewInt(1000),
+		RqFee:     200,
+		RqNonce:   0,
+	}
+	for i := 0; i < nAccounts; i++ {
+		tx := baseTx
+		tx.FromIdx = accounts[i].Idx
+		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqFromIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
+		txs = append(txs, tx)
+	}
+	// Sign and format txs
+	txsToSend, txsToReceive := signAndTransformTxs(txs)
+	// Send txs
+	jsonTxBytes, err := json.Marshal(txsToSend)
+	require.NoError(t, err)
+	jsonTxReader := bytes.NewReader(jsonTxBytes)
+	fetchedTxIDs := []common.TxID{}
+	err = doGoodReq("POST", path, jsonTxReader, &fetchedTxIDs)
+	assert.NoError(t, err)
+	// Check response
+	expectedTxIDs := []common.TxID{}
+	for _, tx := range txs {
+		expectedTxIDs = append(expectedTxIDs, tx.TxID)
+	}
+	assert.Equal(t, expectedTxIDs, fetchedTxIDs)
+	// Check txs in the DB
+	assertTxs(txsToReceive)
+
+	// Test group that is not atomic #1
+	/* Note that in this example, txs B and C could be forged without A
+
+	   A  ──────────► B ───────► C
+	                  ▲          │
+	                  └──────────┘
+	*/
+	// Generate txs
+	txs = []common.PoolL2Tx{}
+	// Acyclic part: A  ──────────► B
+	A := baseTx
+	A.FromIdx = accounts[nAccounts-1].Idx
+	A.ToIdx = accounts[0].Idx
+	A.RqFromIdx = accounts[0].Idx
+	A.RqToIdx = accounts[1].Idx
+	txs = append(txs, A)
+	/* Cyclic part:
+	B ───────► C
+	▲          │
+	└──────────┘
+	*/
+	nAccountsMinus1 := nAccounts - 1
+	for i := 0; i < nAccountsMinus1; i++ {
+		tx := baseTx
+		tx.FromIdx = accounts[i].Idx
+		tx.ToIdx = accounts[(i+1)%nAccountsMinus1].Idx
+		tx.RqFromIdx = accounts[(i+1)%nAccountsMinus1].Idx
+		tx.RqToIdx = accounts[(i+2)%nAccountsMinus1].Idx
+		txs = append(txs, tx)
+	}
+	// Sign and format txs
+	txsToSend, _ = signAndTransformTxs(txs)
+	// Send txs
+	jsonTxBytes, err = json.Marshal(txsToSend)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", path, jsonTxReader, 400)
+	assert.NoError(t, err)
+
+	// Test group that is not atomic #2
+	/* Note that in this example txs A and B could be forged without C and D and viceversa
+
+	A ───────► B
+	▲          │
+	└──────────┘
+
+	C ───────► D
+	▲          │
+	└──────────┘
+	*/
+	// Generate txs
+	txs = []common.PoolL2Tx{}
+	for i := 0; i < nAccounts; i++ {
+		tx := baseTx
+		tx.FromIdx = accounts[i].Idx
+		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqFromIdx = accounts[(i+2)%nAccounts].Idx
+		tx.RqToIdx = accounts[(i+3)%nAccounts].Idx
+		txs = append(txs, tx)
+	}
+	// Sign and format txs
+	txsToSend, _ = signAndTransformTxs(txs)
+	// Send txs
+	jsonTxBytes, err = json.Marshal(txsToSend)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", path, jsonTxReader, 400)
+	assert.NoError(t, err)
+
+	// Test send only one tx
+	jsonTxBytes, err = json.Marshal([]testPoolTxSend{tc.poolTxsToSend[0]})
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", path, jsonTxReader, 400)
+	assert.NoError(t, err)
+
+	// Clean historyDB: the added account shouldn't be there for other tests
+	for _, account := range accounts {
+		_, err := api.h.DB().DB.Exec(
+			fmt.Sprintf("delete from account where idx = %d;", account.Idx),
+		)
+		assert.NoError(t, err)
+	}
+}
+
+func generateKeys(random int) (ethCommon.Address, babyjub.PrivateKey) {
+	var key ecdsa.PrivateKey
+	key.D = big.NewInt(int64(random)) // only for testing
+	key.PublicKey.X, key.PublicKey.Y = ethCrypto.S256().ScalarBaseMult(key.D.Bytes())
+	key.Curve = ethCrypto.S256()
+	addr := ethCrypto.PubkeyToAddress(key.PublicKey)
+	// BJJ private key
+	var sk babyjub.PrivateKey
+	var iBytes [8]byte
+	binary.LittleEndian.PutUint64(iBytes[:], uint64(random))
+	copy(sk[:], iBytes[:]) // only for testing
+	return addr, sk
 }

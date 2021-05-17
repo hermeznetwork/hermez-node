@@ -88,6 +88,16 @@ func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
 			txIDOld.String(), tx.TxID.String()))
 	}
 
+	rqTxIDOld := tx.TxID
+	if err := tx.SetRqID(); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	// If original RqTxID doesn't match the correct one, return error
+	if rqTxIDOld != (TxID{}) && rqTxIDOld != tx.TxID {
+		return tx, tracerr.Wrap(fmt.Errorf("PoolL2Tx.RqTxID: %s, should be: %s",
+			rqTxIDOld.String(), tx.RqTxID.String()))
+	}
+
 	return tx, nil
 }
 
@@ -121,6 +131,29 @@ func (tx *PoolL2Tx) SetID() error {
 		return tracerr.Wrap(err)
 	}
 	tx.TxID = txID
+	return nil
+}
+
+// SetRqID sets the request ID of the transaction
+func (tx *PoolL2Tx) SetRqID() error {
+	if tx.RqAmount == nil {
+		tx.RqTxID = TxID{}
+		return nil
+	}
+	requestedTx := PoolL2Tx{
+		FromIdx:   tx.RqFromIdx,
+		ToIdx:     tx.RqToIdx,
+		ToEthAddr: tx.RqToEthAddr,
+		ToBJJ:     tx.RqToBJJ,
+		TokenID:   tx.RqTokenID,
+		Amount:    tx.RqAmount,
+		Fee:       tx.RqFee,
+	}
+	rqID, err := requestedTx.L2Tx().CalculateTxID()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	tx.RqTxID = rqID
 	return nil
 }
 

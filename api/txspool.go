@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/yourbasic/graph"
 )
 
 func (a *API) postPoolTx(c *gin.Context) {
@@ -30,12 +31,86 @@ func (a *API) postPoolTx(c *gin.Context) {
 	}
 	writeTx.ClientIP = c.ClientIP()
 	// Insert to DB
+	// note that fee in USD validation happens in this function
 	if err := a.l2.AddTxAPI(writeTx); err != nil {
 		retSQLErr(err, c)
 		return
 	}
 	// Return TxID
 	c.JSON(http.StatusOK, writeTx.TxID.String())
+}
+
+func (a *API) postAtomicPool(c *gin.Context) {
+	// Parse body
+	var receivedTxs []receivedPoolTx
+	if err := c.ShouldBindJSON(&receivedTxs); err != nil {
+		retBadReq(err, c)
+		return
+	}
+	nTxs := len(receivedTxs)
+	if nTxs <= 1 {
+		retBadReq(errors.New(ErrSingleTxInAtomicEndpoint), c)
+		return
+	}
+	// Transform from received to insert format and validate (individually)
+	writeTxs := make([]l2db.PoolL2TxWrite, nTxs) // used for DB insert
+	txIDStrings := make([]string, nTxs)          // used for successful response
+	clientIP := c.ClientIP()
+	for i, tx := range receivedTxs {
+		writeTx := tx.toPoolL2TxWrite()
+		if err := a.verifyPoolL2TxWrite(writeTx); err != nil {
+			retBadReq(err, c)
+			return
+		}
+		writeTx.ClientIP = clientIP
+		writeTxs[i] = *writeTx
+		txIDStrings[i] = writeTx.TxID.String()
+	}
+	// Validate that all txs in the payload represent an atomic group
+	if !isAtomicGroup(writeTxs) {
+		retBadReq(errors.New(ErrTxsNotAtomic), c)
+		return
+	}
+	// Insert to DB
+	if err := a.l2.AddAtomicTxsAPI(writeTxs); err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	// Return IDs of the added txs in the pool
+	c.JSON(http.StatusOK, txIDStrings)
+}
+
+// isAtomicGroup returns true if all the txs are needed to be forged
+// (all txs will be forged in the same batch or non of them will be forged)
+func isAtomicGroup(txs []l2db.PoolL2TxWrite) bool {
+	// Create a graph from the given txs to represent requests between transactions
+	g := graph.New(len(txs))
+	idToPos := make(map[common.TxID]int, len(txs))
+	// Map tx ID to integers that will represent the nodes of the graph
+	for i, tx := range txs {
+		idToPos[tx.TxID] = i
+	}
+	// Create vertices that connect nodes of the graph (txs) using RqTxID
+	for i, tx := range txs {
+		if tx.RqTxID == nil {
+			// if just one tx doesn't request any other tx, this tx could be forged alone
+			// making the hole group not atomic
+			return false
+		}
+		if rqTxPos, ok := idToPos[*tx.RqTxID]; ok {
+			g.Add(i, rqTxPos)
+		} else {
+			// tx is requesting a tx that is not provided in the payload
+			return false
+		}
+	}
+	// A graph with a single strongly connected component,
+	// means that all the nodes can be reached from all the nodes.
+	// If tx A "can reach" tx B it means that tx A requests tx B.
+	// Therefore we can say that if there is a single strongly connected component in the graph,
+	// all the transactions require all trnsactions to be forged, in other words: they are an atomic group
+	strongComponents := graph.StrongComponents(g)
+	return len(strongComponents) == 1
 }
 
 func (a *API) getPoolTx(c *gin.Context) {
@@ -125,6 +200,7 @@ type receivedPoolTx struct {
 	Fee         common.FeeSelector      `json:"fee"`
 	Nonce       common.Nonce            `json:"nonce"`
 	Signature   babyjub.SignatureComp   `json:"signature" binding:"required"`
+	RqTxID      *common.TxID            `json:"requestId"`
 	RqFromIdx   *apitypes.StrHezIdx     `json:"requestFromAccountIndex"`
 	RqToIdx     *apitypes.StrHezIdx     `json:"requestToAccountIndex"`
 	RqToEthAddr *apitypes.StrHezEthAddr `json:"requestToHezEthereumAddress"`
@@ -151,6 +227,7 @@ func (tx *receivedPoolTx) toPoolL2TxWrite() *l2db.PoolL2TxWrite {
 		Nonce:       tx.Nonce,
 		State:       common.PoolL2TxStatePending,
 		Signature:   tx.Signature,
+		RqTxID:      (*common.TxID)(tx.RqTxID),
 		RqFromIdx:   (*common.Idx)(tx.RqFromIdx),
 		RqToIdx:     (*common.Idx)(tx.RqToIdx),
 		RqToEthAddr: (*ethCommon.Address)(tx.RqToEthAddr),
@@ -192,9 +269,12 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	} else {
 		poolTx.ToBJJ = *txw.ToBJJ
 	}
+	// Rq fields
+	txHasRq := false
 	// RqFromIdx
 	if txw.RqFromIdx != nil {
 		poolTx.RqFromIdx = *txw.RqFromIdx
+		txHasRq = true
 	}
 	// RqToIdx
 	if txw.RqToIdx != nil {
@@ -224,7 +304,14 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 	if txw.RqNonce != nil {
 		poolTx.RqNonce = *txw.RqNonce
 	}
-	// Check type and id
+	// RqTxID
+	if txw.RqTxID != nil {
+		poolTx.RqTxID = *txw.RqTxID
+	} else if txHasRq {
+		// If any Rq field is set RqTxID shouldn't be nil
+		return errors.New(ErrRqTxIDNotProvided)
+	}
+	// Check type, id and request id
 	_, err := common.NewPoolL2Tx(&poolTx)
 	if err != nil {
 		return tracerr.Wrap(err)
