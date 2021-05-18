@@ -4,6 +4,8 @@ Go implementation of the Hermez node.
 
 ## Developing
 
+To contribute to this codebase you must follow the [branch model and development flow](council/gitflow.md).
+
 ### Go version
 
 The `hermez-node` has been tested with go version 1.14
