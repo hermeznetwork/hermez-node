@@ -457,6 +457,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	priceUpdater, err := priceupdater.NewPriceUpdater(
 		cfg.PriceUpdater.Priority,
 		cfg.PriceUpdater.Provider,
+		cfg.PriceUpdater.Statictokens,
 		historyDB,
 	)
 	if err != nil {

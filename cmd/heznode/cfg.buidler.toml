@@ -9,6 +9,7 @@ SQLConnectionTimeout = "2s"
 [PriceUpdater]
 Interval = "5s"
 Priority = "bitfinexV2,CoinGeckoV3"
+Statictokens="3=1.31,4=1.01"
 
 [[PriceUpdater.Provider]]
 Provider = "bitfinexV2"
@@ -17,11 +18,10 @@ URL = "ticker/t"
 URLExtraParams = "USD"
 # token order ETH,HEZ,USDT,USDC,DAI,WBTC,WETH,XAUt,UNI,SUSHI,COMP,BAL,AAVE,YFI,LINK. Order based in tokenId.
 # Available update methods:
-# - ignore method don't update the price leave it as it is on the DB
-# - static method is performed writting the price instead of the token symbol.
-# - empty method will let the provider fail with this provider and try the next one.
-# Example: Symbols = "0=ETH,1=HEZ,2=ignore,3=1.01,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=empty:,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
-Symbols = "0=ETH,2=UST,8=UNI,9=SUSHI:"
+# - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
+# - static method is performed writting the price in Statictokens.
+# Example: Symbols = "0=ETH,1=HEZ,2=ignore,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
+Symbols = "0=ETH,2=UST,8=ignore,9=ignore,5=WBT,14=LINK:,12=AAVE:,7=XAUT:,10=COMP:,6=ETH"
 
 [[PriceUpdater.Provider]]
 Provider = "CoinGeckoV3"
@@ -30,11 +30,10 @@ URL = "simple/token_price/ethereum?contract_addresses="
 URLExtraParams = "&vs_currencies=usd"
 # token order ETH,HEZ,USDT,USDC,DAI,WBTC,WETH,XAUt,UNI,SUSHI,COMP,BAL,AAVE,YFI,LINK. Order based in tokenId.
 # Available update methods:
-# - ignore method don't update the price leave it as it is on the DB
-# - static method is performed writting the price instead of the token symbol.
-# - empty method will let the provider fail with this provider and try the next one.
-# Example: Addresses="0=0x00,1=0x12,2=0x12,3=15.34,4=0x12,5=0x12,6=empty,7=0x12,8=,9=0x12,10=0x12,11=ignore,12=0x12,13=0x12,14=0x12"
-Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=0x1f9840a85d5af5bf1d1762f925bdaddc4201f984,9=ignore"
+# - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
+# - static method is performed writting the price in Statictokens.
+# Example: Addresses="0=0x00,1=0x12,2=0x12,4=0x12,5=0x12,6=,7=0x12,8=,9=0x12,10=0x12,11=ignore,12=0x12,13=0x12,14=0x12"
+Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=ignore,9=ignore"
 
 [Debug]
 APIAddress = "0.0.0.0:12345"

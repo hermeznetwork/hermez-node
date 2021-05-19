@@ -294,6 +294,8 @@ type Node struct {
 		Priority priceupdater.Priority `validate:"required"`
 		// TokensConfig to specify how each token get it's price updated
 		Provider []priceupdater.Provider
+		// Statictokens option defines the static prices for tokens
+		Statictokens string
 	} `validate:"required"`
 	StateDB struct {
 		// Path where the synchronizer StateDB is stored

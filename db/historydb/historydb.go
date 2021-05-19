@@ -478,6 +478,16 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenAddr ethCommon.Address, value float6
 	return tracerr.Wrap(err)
 }
 
+// UpdateTokenValueByTokenID updates the USD value of a token. Value is the price in
+// USD of a normalized token (1 token = 10^decimals units)
+func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID int, value float64) error {
+	_, err := hdb.dbWrite.Exec(
+		"UPDATE token SET usd = $1 WHERE token_id = $2;",
+		value, tokenID,
+	)
+	return tracerr.Wrap(err)
+}
+
 // GetToken returns a token from the DB given a TokenID
 func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenWithUSD, error) {
 	token := &TokenWithUSD{}
