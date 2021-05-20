@@ -458,6 +458,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		cfg.PriceUpdater.Priority,
 		cfg.PriceUpdater.Provider,
 		cfg.PriceUpdater.Statictokens,
+		cfg.PriceUpdater.Fiat,
 		historyDB,
 	)
 	if err != nil {
@@ -797,6 +798,9 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(n.cfg.PriceUpdater.Interval.Duration):
+				if err := n.priceUpdater.UpdateFiatPrices(n.ctx); err != nil {
+					log.Errorw("PriceUpdater.UpdateFiatPrices()", "err", err)
+				}
 				if err := n.priceUpdater.UpdateTokenList(); err != nil {
 					log.Errorw("PriceUpdater.UpdateTokenList()", "err", err)
 				}

@@ -11,6 +11,12 @@ Interval = "5s"
 Priority = "bitfinexV2,CoinGeckoV3"
 Statictokens="3=1.31,4=1.01"
 
+[PriceUpdater.Fiat]
+APIKey=""
+URL="https://api.exchangeratesapi.io/v1/"
+BaseCurrency="USD"
+Currencies="CNY,EUR,JPY,GBP"
+
 [[PriceUpdater.Provider]]
 Provider = "bitfinexV2"
 BASEURL = "https://api-pub.bitfinex.com/v2/"
@@ -20,8 +26,8 @@ URLExtraParams = "USD"
 # Available update methods:
 # - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
 # - static method is performed writting the price in Statictokens.
-# Example: Symbols = "0=ETH,1=HEZ,2=ignore,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
-Symbols = "0=ETH,2=UST,8=ignore,9=ignore,5=WBT,14=LINK:,12=AAVE:,7=XAUT:,10=COMP:,6=ETH"
+# Example: Symbols = "0=ETH,1=HEZ,2=ignore,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=SUSHI:,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
+Symbols = "0=ETH,2=UST,8=ignore,9=SUSHI:,5=WBT,14=LINK:,12=AAVE:,7=XAUT:,10=COMP:,6=ETH"
 
 [[PriceUpdater.Provider]]
 Provider = "CoinGeckoV3"
@@ -33,7 +39,7 @@ URLExtraParams = "&vs_currencies=usd"
 # - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
 # - static method is performed writting the price in Statictokens.
 # Example: Addresses="0=0x00,1=0x12,2=0x12,4=0x12,5=0x12,6=,7=0x12,8=,9=0x12,10=0x12,11=ignore,12=0x12,13=0x12,14=0x12"
-Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=ignore,9=ignore"
+Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=ignore"
 
 [Debug]
 APIAddress = "0.0.0.0:12345"

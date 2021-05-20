@@ -35,7 +35,15 @@ const (
 	UpdateMethodTypeIgnore string = "ignore"
 )
 
-// Provider specifies how a provider get the price updated
+// Fiat definition
+type Fiat struct {
+	APIKey       string
+	URL			 string
+	BaseCurrency string
+	Currencies   string
+}
+
+// Provider definition
 type Provider struct {
 	Provider       string
 	BASEURL        string
@@ -147,7 +155,8 @@ type PriceUpdater struct {
 	updateMethodsPriority []string
 	tokensList            map[int]historydb.TokenSymbolAndAddr
 	providers             []Provider
-	StatictokensMap       staticMap
+	statictokensMap       staticMap
+	fiat				  Fiat
 	clientProviders       map[string]*sling.Sling
 }
 
@@ -156,6 +165,7 @@ func NewPriceUpdater(
 	updateMethodTypesPriority Priority,
 	providers []Provider,
 	staticTokens string,
+	fiat Fiat,
 	db *historydb.HistoryDB,
 ) (*PriceUpdater, error) {
 	priorityArr := strings.Split(string(updateMethodTypesPriority), ",")
@@ -184,13 +194,15 @@ func NewPriceUpdater(
 		}
 		//Create Client providers for each provider
 		clientProviders[providers[i].Provider] = sling.New().Base(providers[i].BASEURL).Client(httpClient)
+		clientProviders["fiat"] = sling.New().Base(fiat.URL).Client(httpClient)
 	}
 	return &PriceUpdater{
 		db:                    db,
 		updateMethodsPriority: priorityArr,
 		tokensList:            map[int]historydb.TokenSymbolAndAddr{},
 		providers:             providers,
-		StatictokensMap:       staticTokensMap,
+		statictokensMap:       staticTokensMap,
+		fiat:				   fiat,
 		clientProviders:       clientProviders,
 	}, nil
 }
@@ -249,7 +261,7 @@ func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID in
 // token prices in the db
 func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 	// Update static prices
-	for tokenID, price := range p.StatictokensMap.Statictokens {
+	for tokenID, price := range p.statictokensMap.Statictokens {
 		if err := p.db.UpdateTokenValueByTokenID(tokenID, price); err != nil {
 			log.Errorw("token price not updated (db error)",
 				"err", err)
@@ -278,7 +290,7 @@ func (p *PriceUpdater) UpdateTokenList() error {
 	for _, dbToken := range dbTokens {
 		// If the token doesn't exists in the config list,
 		// add it with default update method
-		if _, ok := p.StatictokensMap.Statictokens[dbToken.TokenID]; ok {
+		if _, ok := p.statictokensMap.Statictokens[dbToken.TokenID]; ok {
 			continue
 		} else {
 			if !(p.providers[0].SymbolsMap.Symbols[dbToken.TokenID] == UpdateMethodTypeIgnore ||
@@ -300,4 +312,64 @@ func (p *PriceUpdater) UpdateTokenList() error {
 		}
 	}
 	return nil
+}
+
+type fiatExchangeAPI struct {
+	Base string
+	Rates interface{}
+}
+
+func (p *PriceUpdater) getFiatPrices(ctx context.Context) (map[string]interface{}, error) {
+	var url = "latest?base="+p.fiat.BaseCurrency+"&symbols="+p.fiat.Currencies+"&access_key="+p.fiat.APIKey
+	req, err := p.clientProviders["fiat"].New().Get(url).Request()
+	if err != nil {
+		return make(map[string]interface{}), tracerr.Wrap(err)
+	}
+	var res *http.Response
+	var result map[string]interface{}
+	var data *fiatExchangeAPI
+	res, err = p.clientProviders["fiat"].Do(req.WithContext(ctx), &data, nil)
+	if err != nil {
+		return make(map[string]interface{}), tracerr.Wrap(err)
+	}
+	if data != nil {
+		result = data.Rates.(map[string]interface{})
+	} else {
+		log.Error("Error: data got are empty. Http code: ", res.StatusCode, ". URL: ", url)
+	}
+	return result, nil
+}
+
+// UpdateFiatPrices updates the fiat prices
+func (p *PriceUpdater) UpdateFiatPrices(ctx context.Context) error {
+	log.Debug("Updating fiat prices")
+	//Retrieve fiat prices
+	prices, err := p.getFiatPrices(ctx)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	//Getting all price from database with baseCurrency USD
+	currencies, err := p.db.GetAllFiatPrice("USD")
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	for token, pr := range prices {
+		price := pr.(float64)
+		var exist bool
+		for i:=0; i<len(currencies); i++ {
+			if token == currencies[i].Currency {
+				exist = true
+			}
+		}
+		if exist {
+			if err = p.db.UpdateFiatPrice(token, "USD", price); err != nil {
+				log.Error("DB error updating fiat currency price: ",token, ", ", price, " Error: ",err)
+			}
+		} else {
+			if err = p.db.CreateFiatPrice(token, "USD", price); err != nil {
+				log.Error("DB error creating fiat currency price: ",token, ", ", price, " Error: ",err)
+			}
+		}
+	}
+return err
 }
