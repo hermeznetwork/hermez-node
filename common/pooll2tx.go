@@ -148,6 +148,7 @@ func (tx *PoolL2Tx) SetRqID() error {
 		TokenID:   tx.RqTokenID,
 		Amount:    tx.RqAmount,
 		Fee:       tx.RqFee,
+		Nonce:     tx.RqNonce,
 	}
 	rqID, err := requestedTx.L2Tx().CalculateTxID()
 	if err != nil {
