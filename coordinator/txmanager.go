@@ -161,6 +161,12 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 			return nil, tracerr.Wrap(er)
 		}
 	}
+	//If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
+	const maxGasPrice = 2000
+	maxGasPriceBig := big.NewInt(maxGasPrice)
+	if gasPrice.Cmp(maxGasPriceBig) == 1 {
+		gasPrice = maxGasPriceBig
+	}
 	if t.cfg.GasPriceIncPerc != 0 {
 		inc := new(big.Int).Set(gasPrice)
 		inc.Mul(inc, new(big.Int).SetInt64(t.cfg.GasPriceIncPerc))
