@@ -454,6 +454,68 @@ func (hdb *HistoryDB) GetTokensAPI(
 	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), uint64(len(tokens)) - tokens[0].TotalItems, nil
 }
 
+// GetCurrencyAPI returns a Currency from the DB given its symbol
+func (hdb *HistoryDB) GetCurrencyAPI(symbol string) (FiatCurrency, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return FiatCurrency{}, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	return hdb.GetFiatPrice(symbol, "USD")
+}
+
+// GetCurrencyAPIRequest is an API request struct for getting fiat currencies
+type GetCurrencyAPIRequest struct {
+	Symbols []string
+	Order   string
+}
+
+// GetTokensAPI returns a list of tokens from the DB
+func (hdb *HistoryDB) GetCurrenciesAPI(
+	request GetCurrencyAPIRequest,
+) ([]FiatCurrency, uint64, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	var query string
+	var args []interface{}
+	queryStr := `SELECT * , COUNT(*) OVER() AS total_items FROM fiat `
+	// Apply filters
+	nextIsAnd := false
+	if len(request.Symbols) > 0 {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "currency IN (?) "
+		args = append(args, request.Symbols)
+		nextIsAnd = true
+	}
+	queryStr += "ORDER BY item_id "
+	if request.Order == db.OrderAsc {
+		queryStr += "ASC "
+	} else {
+		queryStr += "DESC "
+	}
+	query, argsQ, err := sqlx.In(queryStr, args...)
+	if err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	query = hdb.dbRead.Rebind(query)
+	currencies := []*FiatCurrency{}
+	if err := meddler.QueryAll(hdb.dbRead, &currencies, query, argsQ...); err != nil {
+		return nil, 0, tracerr.Wrap(err)
+	}
+	if len(currencies) == 0 {
+		return []FiatCurrency{}, 0, nil
+	}
+	return db.SlicePtrsToSlice(currencies).([]FiatCurrency), uint64(len(currencies)) - currencies[0].TotalItems, nil
+}
 // GetTxAPI returns a tx from the DB given a TxID
 func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for

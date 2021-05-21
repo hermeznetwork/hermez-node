@@ -240,10 +240,12 @@ type CoordinatorAPI struct {
 
 // FiatCurrency is a representation of a currency price object
 type FiatCurrency struct {
+	ItemID       uint64      `json:"itemId" meddler:"item_id"`
 	Currency     string     `json:"Currency" meddler:"currency"`
 	BaseCurrency string     `json:"BaseCurrency" meddler:"base_currency"`
 	Price        float64    `json:"Price" meddler:"price"`
 	LastUpdate   *time.Time `json:"LastUpdate" meddler:"last_update"`
+	TotalItems   uint64     `json:"-" meddler:"total_items"`
 }
 
 // AccountAPI is a representation of a account with additional information

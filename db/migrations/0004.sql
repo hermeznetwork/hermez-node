@@ -18,6 +18,7 @@ $BODY$
 LANGUAGE plpgsql;
 -- +migrate StatementEnd
 CREATE TABLE IF NOT EXISTS fiat (
+    item_id SERIAL NOT NULL,
     currency VARCHAR(10) NOT NULL,
     base_currency VARCHAR(10) NOT NULL,
     price NUMERIC NOT NULL,
