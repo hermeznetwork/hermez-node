@@ -18,6 +18,7 @@ In some cases, some of the structs defined in this file also include custom Mars
 package l2db
 
 import (
+	"database/sql"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -27,6 +28,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 
 	//nolint:errcheck // driver for postgres DB
@@ -147,58 +149,95 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx, batchNum common.BatchNum)
 	return nil
 }
 
-// NewPoolL2TxWriteFromPoolL2Tx creates a new PoolL2TxWrite from a PoolL2Tx
-func NewPoolL2TxWriteFromPoolL2Tx(tx *common.PoolL2Tx) *PoolL2TxWrite {
-	// transform tx from *common.PoolL2Tx to PoolL2TxWrite
-	insertTx := &PoolL2TxWrite{
-		TxID:      tx.TxID,
-		FromIdx:   tx.FromIdx,
-		TokenID:   tx.TokenID,
-		Amount:    tx.Amount,
-		Fee:       tx.Fee,
-		Nonce:     tx.Nonce,
-		State:     common.PoolL2TxStatePending,
-		Signature: tx.Signature,
-		RqAmount:  tx.RqAmount,
-		Type:      tx.Type,
-	}
-	if tx.ToIdx != 0 {
-		insertTx.ToIdx = &tx.ToIdx
-	}
-	nilAddr := ethCommon.BigToAddress(big.NewInt(0))
-	if tx.ToEthAddr != nilAddr {
-		insertTx.ToEthAddr = &tx.ToEthAddr
-	}
-	if tx.RqFromIdx != 0 {
-		insertTx.RqFromIdx = &tx.RqFromIdx
-	}
-	if tx.RqToIdx != 0 { // if true, all Rq... fields must be different to nil
-		insertTx.RqToIdx = &tx.RqToIdx
-		insertTx.RqTokenID = &tx.RqTokenID
-		insertTx.RqFee = &tx.RqFee
-		insertTx.RqNonce = &tx.RqNonce
-	}
-	if tx.RqToEthAddr != nilAddr {
-		insertTx.RqToEthAddr = &tx.RqToEthAddr
-	}
-	if tx.ToBJJ != common.EmptyBJJComp {
-		insertTx.ToBJJ = &tx.ToBJJ
-	}
-	if tx.RqToBJJ != common.EmptyBJJComp {
-		insertTx.RqToBJJ = &tx.RqToBJJ
-	}
-	f := new(big.Float).SetInt(tx.Amount)
-	amountF, _ := f.Float64()
-	insertTx.AmountFloat = amountF
-	return insertTx
+// AddTxTest inserts a tx into the L2DB, without security checks. This is useful for test purposes,
+func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
+	// Add tx without checking if pool is full
+	_, err := l2db.addTx(tx, false)
+	return err
 }
 
-// AddTxTest inserts a tx into the L2DB. This is useful for test purposes,
-// but in production txs will only be inserted through the API
-func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
-	insertTx := NewPoolL2TxWriteFromPoolL2Tx(tx)
-	// insert tx
-	return tracerr.Wrap(meddler.Insert(l2db.dbWrite, "tx_pool", insertTx))
+func (l2db *L2DB) addTx(tx *common.PoolL2Tx, checkPoolIsFull bool) (sql.Result, error) {
+	// Prepare extra DB fields and nullables
+	var (
+		toEthAddr *ethCommon.Address
+		toBJJ     *babyjub.PublicKeyComp
+		// Info (always nil)
+		info *string
+		// Rq fields, nil unless tx.RqFromIdx != 0
+		rqFromIdx   *common.Idx
+		rqToIdx     *common.Idx
+		rqToEthAddr *ethCommon.Address
+		rqToBJJ     *babyjub.PublicKeyComp
+		rqTokenID   *common.TokenID
+		rqAmount    *string
+		rqFee       *common.FeeSelector
+		rqNonce     *common.Nonce
+	)
+	// AmountFloat
+	f := new(big.Float).SetInt((*big.Int)(tx.Amount))
+	amountF, _ := f.Float64()
+	// ToEthAddr
+	if tx.ToEthAddr != common.EmptyAddr {
+		toEthAddr = &tx.ToEthAddr
+	}
+	// ToBJJ
+	if tx.ToBJJ != common.EmptyBJJComp {
+		toBJJ = &tx.ToBJJ
+	}
+	// Rq fields
+	if tx.RqFromIdx != 0 {
+		// RqFromIdx
+		rqFromIdx = &tx.RqFromIdx
+		// RqToIdx
+		if tx.RqToIdx != 0 {
+			rqToIdx = &tx.RqToIdx
+		}
+		// RqToEthAddr
+		if tx.RqToEthAddr != common.EmptyAddr {
+			rqToEthAddr = &tx.RqToEthAddr
+		}
+		// RqToBJJ
+		if tx.RqToBJJ != common.EmptyBJJComp {
+			rqToBJJ = &tx.RqToBJJ
+		}
+		// RqTokenID
+		rqTokenID = &tx.RqTokenID
+		// RqAmount
+		if tx.RqAmount != nil {
+			rqAmountStr := tx.RqAmount.String()
+			rqAmount = &rqAmountStr
+		}
+		// RqFee
+		rqFee = &tx.RqFee
+		// RqNonce
+		rqNonce = &tx.RqNonce
+	}
+	const queryInsertPart = `INSERT INTO tx_pool (
+		tx_id, from_idx, to_idx, to_eth_addr, to_bjj, token_id,
+		amount, fee, nonce, state, info, signature, rq_from_idx, 
+		rq_to_idx, rq_to_eth_addr, rq_to_bjj, rq_token_id, rq_amount, rq_fee, rq_nonce, 
+		tx_type, amount_f, client_ip
+	)`
+	const queryVarsPart = `$1, $2, $3, $4, $5, $6, 
+	$7, $8, $9, $10, $11, $12, $13,
+	$14, $15, $16, $17, $18, $19, $20,
+	$21, $22, $23`
+	queryVars := []interface{}{tx.TxID, tx.FromIdx, tx.ToIdx, toEthAddr, toBJJ, tx.TokenID,
+		tx.Amount.String(), tx.Fee, tx.Nonce, tx.State, info, tx.Signature, rqFromIdx,
+		rqToIdx, rqToEthAddr, rqToBJJ, rqTokenID, rqAmount, rqFee, rqNonce,
+		tx.Type, amountF, tx.ClientIP}
+	var query string
+	if checkPoolIsFull {
+		query = queryInsertPart +
+			"SELECT " +
+			queryVarsPart +
+			"WHERE (SELECT COUNT (*) FROM tx_pool WHERE state = $24 AND NOT external_delete) < $25;"
+		queryVars = append(queryVars, common.PoolL2TxStatePending, l2db.maxTxs)
+	} else {
+		query = queryInsertPart + "VALUES(" + queryVarsPart + ");"
+	}
+	res, err := l2db.dbWrite.Exec(query, queryVars...)
+	return res, tracerr.Wrap(err)
 }
 
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
