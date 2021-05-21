@@ -189,14 +189,10 @@ func TestAddTxAPI(t *testing.T) {
 	l2DBWithACC.maxTxs = 5
 
 	poolL2Txs, err := generatePoolL2Txs()
-	txs := make([]*PoolL2TxWrite, len(poolL2Txs))
-	for i := range poolL2Txs {
-		txs[i] = NewPoolL2TxWriteFromPoolL2Tx(&poolL2Txs[i])
-	}
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(poolL2Txs), 8)
-	for i := range txs[:5] {
-		err := l2DBWithACC.AddTxAPI(txs[i])
+	for i := range poolL2Txs[:5] {
+		err := l2DBWithACC.AddTxAPI(&poolL2Txs[i])
 		require.NoError(t, err)
 		fetchedTx, err := l2DB.GetTx(poolL2Txs[i].TxID)
 		require.NoError(t, err)
@@ -205,7 +201,7 @@ func TestAddTxAPI(t *testing.T) {
 		assert.Equal(t, "UTC", nameZone)
 		assert.Equal(t, 0, offset)
 	}
-	err = l2DBWithACC.AddTxAPI(txs[5])
+	err = l2DBWithACC.AddTxAPI(&poolL2Txs[5])
 	assert.Equal(t, errPoolFull, tracerr.Unwrap(err))
 	// reset maxTxs to original value
 	l2DBWithACC.maxTxs = oldMaxTxs
@@ -213,13 +209,13 @@ func TestAddTxAPI(t *testing.T) {
 	// set minFeeUSD to a high value than the tx feeUSD to test the error
 	// of inserting a tx with lower than min fee
 	oldMinFeeUSD := l2DBWithACC.minFeeUSD
-	tx := txs[5]
+	tx := poolL2Txs[5]
 	feeAmount, err := common.CalcFeeAmount(tx.Amount, tx.Fee)
 	require.NoError(t, err)
 	feeAmountUSD := common.TokensToUSD(feeAmount, decimals, tokenValue)
 	// set minFeeUSD higher than the tx fee to trigger the error
 	l2DBWithACC.minFeeUSD = feeAmountUSD + 1
-	err = l2DBWithACC.AddTxAPI(tx)
+	err = l2DBWithACC.AddTxAPI(&tx)
 	require.Error(t, err)
 	assert.Regexp(t, "tx.feeUSD (.*) < minFeeUSD (.*)", err.Error())
 	// reset minFeeUSD to original value
@@ -834,11 +830,7 @@ func TestAddGet(t *testing.T) {
 	for i := 0; i < len(txs); i++ {
 		dbTx, err := l2DB.GetTx(txs[i].TxID)
 		require.NoError(t, err)
-		// Ignore Timestamp, AbsoluteFee, AbsoluteFeeUpdate
-		txs[i].Timestamp = dbTx.Timestamp
-		txs[i].AbsoluteFee = dbTx.AbsoluteFee
-		txs[i].AbsoluteFeeUpdate = dbTx.AbsoluteFeeUpdate
-		assert.Equal(t, txs[i], *dbTx)
+		assertTx(t, &txs[i], dbTx)
 	}
 }
 
