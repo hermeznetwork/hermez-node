@@ -177,7 +177,7 @@ type testCommon struct {
 	accounts         []testAccount
 	txs              []testTx
 	exits            []testExit
-	poolTxsToSend    []testPoolTxSend
+	poolTxsToSend    []common.PoolL2Tx
 	poolTxsToReceive []testPoolTxReceive
 	auths            []testAuth
 	router           *swagger.Router
