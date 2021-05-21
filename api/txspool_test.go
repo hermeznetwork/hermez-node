@@ -117,8 +117,6 @@ func genTestPoolTxs(
 			Fee:       poolTx.Fee,
 			Nonce:     poolTx.Nonce,
 			Signature: poolTx.Signature,
-			RqFee:     &poolTx.RqFee,
-			RqNonce:   &poolTx.RqNonce,
 		}
 		// common.PoolL2Tx ==> testPoolTxReceive
 		genReceiveTx := testPoolTxReceive{
@@ -132,9 +130,7 @@ func genTestPoolTxs(
 			Signature: poolTx.Signature,
 			Timestamp: poolTx.Timestamp,
 			// BatchNum:    poolTx.BatchNum,
-			RqFee:   &poolTx.RqFee,
-			RqNonce: &poolTx.RqNonce,
-			Token:   token,
+			Token: token,
 		}
 		fromAcc := getAccountByIdx(poolTx.FromIdx, accs)
 		fromAddr := ethAddrToHez(fromAcc.EthAddr)
@@ -167,8 +163,14 @@ func genTestPoolTxs(
 		if poolTx.RqFromIdx != 0 {
 			rqFromIdx := idxToHez(poolTx.RqFromIdx, token.Symbol)
 			rqTxID := poolTx.RqTxID
+			rqFee := poolTx.RqFee
+			rqNonce := poolTx.RqNonce
 			genSendTx.RqTxID = &rqTxID
 			genReceiveTx.RqTxID = &rqTxID
+			genSendTx.RqFee = &rqFee
+			genReceiveTx.RqFee = &rqFee
+			genSendTx.RqNonce = &rqNonce
+			genReceiveTx.RqNonce = &rqNonce
 			genSendTx.RqFromIdx = &rqFromIdx
 			genReceiveTx.RqFromIdx = &rqFromIdx
 			genSendTx.RqTokenID = &token.TokenID
@@ -573,11 +575,13 @@ func TestAtomicPool(t *testing.T) {
 			BJJ:      privKey.Public().Compress(),
 			EthAddr:  addr,
 		}
+		balance, ok := big.NewInt(0).SetString("1000000000000000000", 10)
+		require.True(t, ok)
 		accountUpdate := common.AccountUpdate{
 			Idx:      idx,
 			BatchNum: 1,
 			Nonce:    0,
-			Balance:  big.NewInt(1000000),
+			Balance:  balance,
 		}
 		accounts[i] = account
 		accountUpdates[i] = accountUpdate
@@ -629,11 +633,11 @@ func TestAtomicPool(t *testing.T) {
 	txs := []common.PoolL2Tx{}
 	baseTx := common.PoolL2Tx{
 		TokenID:   tc.tokens[usedToken].TokenID,
-		Amount:    big.NewInt(1000),
+		Amount:    big.NewInt(10000000000),
 		Fee:       200,
 		Nonce:     0,
 		RqTokenID: tc.tokens[usedToken].TokenID,
-		RqAmount:  big.NewInt(1000),
+		RqAmount:  big.NewInt(10000000000),
 		RqFee:     200,
 		RqNonce:   0,
 	}
@@ -662,6 +666,73 @@ func TestAtomicPool(t *testing.T) {
 	assert.Equal(t, expectedTxIDs, fetchedTxIDs)
 	// Check txs in the DB
 	assertTxs(txsToReceive)
+
+	// Test only one tx with fee
+	// Generate txs
+	txs = []common.PoolL2Tx{}
+	baseTx.Nonce = 1
+	baseTx.RqNonce = 1 // Nonce incremented just to avoid TxID conflicts
+	baseTx.Fee = 0
+	baseTx.RqFee = 0
+	for i := 0; i < nAccounts; i++ {
+		tx := baseTx
+		tx.FromIdx = accounts[i].Idx
+		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqFromIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
+		if i == 0 {
+			tx.Fee = 200
+		} else if i == nAccounts-1 {
+			tx.RqFee = 200
+		}
+		txs = append(txs, tx)
+	}
+	// Sign and format txs
+	txsToSend, txsToReceive = signAndTransformTxs(txs)
+	// Send txs
+	jsonTxBytes, err = json.Marshal(txsToSend)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	fetchedTxIDs = []common.TxID{}
+	err = doGoodReq("POST", path, jsonTxReader, &fetchedTxIDs)
+	assert.NoError(t, err)
+	// Check response
+	expectedTxIDs = []common.TxID{}
+	for _, tx := range txs {
+		expectedTxIDs = append(expectedTxIDs, tx.TxID)
+	}
+	assert.Equal(t, expectedTxIDs, fetchedTxIDs)
+	// Check txs in the DB
+	assertTxs(txsToReceive)
+
+	// Test fee too low
+	// Generate txs
+	txs = []common.PoolL2Tx{}
+	baseTx.Nonce = 2
+	baseTx.RqNonce = 2 // Nonce incremented just to avoid TxID conflicts
+	baseTx.Fee = 0
+	baseTx.RqFee = 0
+	for i := 0; i < nAccounts; i++ {
+		tx := baseTx
+		tx.FromIdx = accounts[i].Idx
+		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqFromIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
+		if i == 0 {
+			tx.Fee = 5
+		} else if i == nAccounts-1 {
+			tx.RqFee = 5
+		}
+		txs = append(txs, tx)
+	}
+	// Sign and format txs
+	txsToSend, _ = signAndTransformTxs(txs)
+	// Send txs
+	jsonTxBytes, err = json.Marshal(txsToSend)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", path, jsonTxReader, 500)
+	assert.NoError(t, err)
 
 	// Test group that is not atomic #1
 	/* Note that in this example, txs B and C could be forged without A
