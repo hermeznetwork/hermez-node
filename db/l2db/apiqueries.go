@@ -161,7 +161,6 @@ func (l2db *L2DB) AddAtomicTxsAPI(txs []PoolL2TxWrite) error {
 		avgFeeUSD += feeMap[USDValue.TokenID] * USDValue.USDPerToken
 	}
 	avgFeeUSD = avgFeeUSD / float64(len(txs))
-
 	// Check that the fee is in accepted range
 	if avgFeeUSD < l2db.minFeeUSD {
 		return tracerr.Wrap(fmt.Errorf("avgFeeUSD (%v) < minFeeUSD (%v)",
