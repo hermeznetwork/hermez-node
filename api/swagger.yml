@@ -1183,8 +1183,8 @@ paths:
           description: Include only specific currencies by their symbols.
           schema:
             type: string
-            description: Comma separated list of currencies symbols.
-            example: "EUR,CNY"
+            description: pipeline symbol "|" separate list of currencies symbols.
+            example: "EUR|CNY"
         - name: order
           in: query
           required: false

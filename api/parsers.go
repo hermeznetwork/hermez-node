@@ -371,7 +371,7 @@ func parseCurrencyFilters(c querier) ([]string, error) {
 	symbolsStr := c.Query("symbols")
 	var symbols []string
 	if symbolsStr != "" {
-		symbols = strings.Split(symbolsStr, ",")
+		symbols = strings.Split(symbolsStr, "|")
 	}
 	return symbols, nil
 }

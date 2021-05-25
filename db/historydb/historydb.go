@@ -481,6 +481,7 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenAddr ethCommon.Address, value float6
 // UpdateTokenValueByTokenID updates the USD value of a token. Value is the price in
 // USD of a normalized token (1 token = 10^decimals units)
 func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID int, value float64) error {
+	// usd_update field is gonna be updated automatically due to trigger trigger_token_usd_update
 	_, err := hdb.dbWrite.Exec(
 		"UPDATE token SET usd = $1 WHERE token_id = $2;",
 		value, tokenID,
@@ -490,6 +491,7 @@ func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID int, value float64) erro
 
 // UpdateFiatPrice updates the USD value per currency
 func (hdb *HistoryDB) UpdateFiatPrice(currency string, baseCurrency string, price float64) error {
+	// last_update field is gonna be updated automatically by the trigger trigger_fiat_price_update
 	_, err := hdb.dbWrite.Exec(
 		"UPDATE fiat SET price = $1 WHERE currency = $2 AND base_currency = $3;",
 		price, currency, baseCurrency,
@@ -499,6 +501,7 @@ func (hdb *HistoryDB) UpdateFiatPrice(currency string, baseCurrency string, pric
 
 // CreateFiatPrice creates a new entry for a new currency or pair currency/baseCurrency
 func (hdb *HistoryDB) CreateFiatPrice(currency string, baseCurrency string, price float64) error {
+	// last_update field is gonna be filled automatically by the trigger trigger_fiat_price_update
 	_, err := hdb.dbWrite.Exec(
 		"INSERT INTO fiat(currency, base_currency, price) VALUES ($1, $2, $3);",
 		currency, baseCurrency, price,
