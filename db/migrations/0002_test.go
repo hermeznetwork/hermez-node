@@ -182,7 +182,7 @@ func (m migrationTest0002) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 	var result int
 	assert.NoError(t, row.Scan(&result))
 	assert.Equal(t, 1, result)
-	// check that item_id table doesn't exist anymore
+	// check that item_id column doesn't exist anymore
 	const queryCheckItemID = `SELECT COUNT(*) FROM tx_pool WHERE item_id = 1;`
 	row = db.QueryRow(queryCheckItemID)
 	assert.Equal(t, `pq: column "item_id" does not exist`, row.Scan(&result).Error())

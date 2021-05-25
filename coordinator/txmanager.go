@@ -161,6 +161,12 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 			return nil, tracerr.Wrap(er)
 		}
 	}
+	//If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
+	const maxGasPrice = 2000
+	maxGasPriceBig := big.NewInt(maxGasPrice)
+	if gasPrice.Cmp(maxGasPriceBig) == 1 {
+		gasPrice = maxGasPriceBig
+	}
 	if t.cfg.GasPriceIncPerc != 0 {
 		inc := new(big.Int).Set(gasPrice)
 		inc.Mul(inc, new(big.Int).SetInt64(t.cfg.GasPriceIncPerc))
@@ -289,7 +295,7 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 	if !resend {
 		t.accNextNonce = auth.Nonce.Uint64() + 1
 	}
-	batchInfo.EthTx = ethTx
+	batchInfo.EthTxs = append(batchInfo.EthTxs, ethTx)
 	log.Infow("TxManager ethClient.RollupForgeBatch", "batch", batchInfo.BatchNum, "tx", ethTx.Hash())
 	now := time.Now()
 	batchInfo.SendTimestamp = now
@@ -319,32 +325,38 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 // checkEthTransactionReceipt takes the txHash from the BatchInfo and stores
 // the corresponding receipt if found
 func (t *TxManager) checkEthTransactionReceipt(ctx context.Context, batchInfo *BatchInfo) error {
-	txHash := batchInfo.EthTx.Hash()
 	var receipt *types.Receipt
 	var err error
-	for attempt := 0; attempt < t.cfg.EthClientAttempts; attempt++ {
-		receipt, err = t.ethClient.EthTransactionReceipt(ctx, txHash)
-		if ctx.Err() != nil {
-			continue
-		} else if tracerr.Unwrap(err) == ethereum.NotFound {
-			err = nil
-			break
-		} else if err != nil {
-			log.Errorw("TxManager ethClient.EthTransactionReceipt",
-				"attempt", attempt, "err", err)
-		} else {
+	// taking receipt from last transaction
+	for i := len(batchInfo.EthTxs) - 1; i >= 0; i-- {
+		if receipt != nil {
 			break
 		}
-		select {
-		case <-ctx.Done():
-			return tracerr.Wrap(common.ErrDone)
-		case <-time.After(t.cfg.EthClientAttemptsDelay):
+		txHash := batchInfo.EthTxs[i].Hash()
+		for attempt := 0; attempt < t.cfg.EthClientAttempts; attempt++ {
+			receipt, err = t.ethClient.EthTransactionReceipt(ctx, txHash)
+			if ctx.Err() != nil {
+				continue
+			} else if tracerr.Unwrap(err) == ethereum.NotFound {
+				err = nil
+				break
+			} else if err != nil {
+				log.Errorw("TxManager ethClient.EthTransactionReceipt",
+					"attempt", attempt, "err", err)
+			} else {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				return tracerr.Wrap(common.ErrDone)
+			case <-time.After(t.cfg.EthClientAttemptsDelay):
+			}
 		}
-	}
-	if err != nil {
-		return tracerr.Wrap(
-			fmt.Errorf("reached max attempts for ethClient.EthTransactionReceipt: %w",
-				err))
+		if err != nil {
+			return tracerr.Wrap(
+				fmt.Errorf("reached max attempts for ethClient.EthTransactionReceipt: %w",
+					err))
+		}
 	}
 	batchInfo.Receipt = receipt
 	t.cfg.debugBatchStore(batchInfo)
@@ -354,16 +366,19 @@ func (t *TxManager) checkEthTransactionReceipt(ctx context.Context, batchInfo *B
 func (t *TxManager) handleReceipt(ctx context.Context, batchInfo *BatchInfo) (*int64, error) {
 	receipt := batchInfo.Receipt
 	if receipt != nil {
-		if batchInfo.EthTx.Nonce()+1 > t.accNonce {
-			t.accNonce = batchInfo.EthTx.Nonce() + 1
+		// taking last eth tx nonce as it probably have the highest nonce
+		lastEthTx := batchInfo.EthTxs[len(batchInfo.EthTxs)-1]
+		if lastEthTx.Nonce()+1 > t.accNonce {
+			t.accNonce = lastEthTx.Nonce() + 1
 		}
 		if receipt.Status == types.ReceiptStatusFailed {
 			batchInfo.Debug.Status = StatusFailed
-			_, err := t.ethClient.EthCall(ctx, batchInfo.EthTx, receipt.BlockNumber)
+			_, err := t.ethClient.EthCall(ctx, lastEthTx, receipt.BlockNumber)
 			log.Warnw("TxManager receipt status is failed", "tx", receipt.TxHash,
 				"batch", batchInfo.BatchNum, "block", receipt.BlockNumber.Int64(),
 				"err", err)
-			batchInfo.EthTxErr = err
+			batchInfo.EthTxsErrs = append(batchInfo.EthTxsErrs, err)
+
 			if batchInfo.BatchNum <= t.lastSuccessBatch {
 				t.lastSuccessBatch = batchInfo.BatchNum - 1
 			}
@@ -559,8 +574,12 @@ func (t *TxManager) Run(ctx context.Context) {
 			now := time.Now()
 			if !t.cfg.EthNoReuseNonce && confirm == nil &&
 				now.Sub(batchInfo.SendTimestamp) > t.cfg.EthTxResendTimeout {
+				var txsHashes string
+				for _, tx := range batchInfo.EthTxs {
+					txsHashes = fmt.Sprintf("%s %s", txsHashes, tx.Hash())
+				}
 				log.Infow("TxManager: forgeBatch tx not been mined timeout, resending",
-					"tx", batchInfo.EthTx.Hash(), "batch", batchInfo.BatchNum)
+					"txs", txsHashes, "batch", batchInfo.BatchNum)
 				if err := t.sendRollupForgeBatch(ctx, batchInfo, true); ctx.Err() != nil {
 					continue
 				} else if err != nil {
@@ -578,8 +597,12 @@ func (t *TxManager) Run(ctx context.Context) {
 			}
 
 			if confirm != nil && *confirm >= t.cfg.ConfirmBlocks {
+				var txsHashes string
+				for _, tx := range batchInfo.EthTxs {
+					txsHashes = fmt.Sprintf("%s %s", txsHashes, tx.Hash())
+				}
 				log.Debugw("TxManager: forgeBatch tx confirmed",
-					"tx", batchInfo.EthTx.Hash(), "batch", batchInfo.BatchNum)
+					"txs", txsHashes, "batch", batchInfo.BatchNum)
 				t.queue.Remove(queuePosition)
 			}
 		}

@@ -13,7 +13,8 @@ const batchNumBytesLen = 8
 
 // Batch is a struct that represents Hermez network batch
 type Batch struct {
-	BatchNum BatchNum `meddler:"batch_num"`
+	BatchNum  BatchNum       `meddler:"batch_num"`
+	EthTxHash ethCommon.Hash `meddler:"eth_tx_hash"`
 	// Ethereum block in which the batch is forged
 	EthBlockNum        int64                `meddler:"eth_block_num"`
 	ForgerAddr         ethCommon.Address    `meddler:"forger_addr"`
