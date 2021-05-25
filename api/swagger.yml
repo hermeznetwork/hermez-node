@@ -1163,6 +1163,92 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error503'
+  '/currencies':
+    get:
+      tags:
+        - Explorer
+      summary: Get information of the supported fiat currencies in the Hermez Network.
+      description: Get information of the supported fiat currencies in the Hermez Network.
+      operationId: getFiatCurrencies
+      parameters:
+        - name: symbols
+          in: query
+          required: false
+          description: Include only specific currencies by their symbols.
+          schema:
+            type: string
+            description: Comma separated list of currencies symbols.
+            example: "EUR,CNY"
+        - name: order
+          in: query
+          required: false
+          description: Order of the returned items. Tokens will be ordered by increasing tokenID.
+          schema:
+            type: string
+            default: ASC
+            enum:
+                - ASC
+                - DESC
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currencies'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/currencies/{symbol}':
+    get:
+      tags:
+        - Explorer
+      summary: Get information of a fiat currency supported by Hermez Network.
+      description: Get information of a fiat currency supported by Hermez Network.
+      operationId: getFiatCurrency
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          description: Include only a specific currency by its symbol.
+          schema:
+            type: string
+            description: Currency symbol.
+            example: "EUR"
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
   '/tokens':
     get:
       tags:
@@ -2461,6 +2547,47 @@ components:
           description: List of tokens.
           items: 
             $ref: '#/components/schemas/Token'
+        pendingItems:
+          $ref: '#/components/schemas/PendingItems'
+    Currency:
+      type: object
+      description: Hermez Network compatible and registered currency.
+      properties:
+        itemId:
+          $ref: '#/components/schemas/ItemId'
+        Currency:
+          type: string
+          description: symbol of the currency
+          example: EUR
+        BaseCurrency:
+          type: string
+          description: symbol of the base currency
+          example: USD
+        Price:
+          type: number
+          description: Value of the currency in USD.
+          example: 1.01
+          nullable: true
+        LastUpdate:
+          type: string
+          format: date-time
+          description: Timestamp of the moment the `USD` value was updated.
+          nullable: true
+      required:
+        - itemId
+        - Currency
+        - BaseCurrency
+        - Price
+        - LastUpdate
+      additionalProperties: false
+    Currencies:
+      type: object
+      properties:
+        Currencies:
+          type: array
+          description: List of Currencies.
+          items: 
+            $ref: '#/components/schemas/Currency'
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
     Exit:

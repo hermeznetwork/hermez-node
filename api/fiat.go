@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
-
 )
 
 func (a *API) getFiatCurrency(c *gin.Context) {
@@ -26,7 +25,7 @@ func (a *API) getFiatCurrency(c *gin.Context) {
 }
 
 func (a *API) getFiatCurrencies(c *gin.Context) {
-	// Curreny filters
+	// Currency filters
 	symbols, err := parseCurrencyFilters(c)
 	if err != nil {
 		retBadReq(err, c)
@@ -36,8 +35,8 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 
 	// Fetch exits from historyDB
 	currencies, pendingItems, err := a.h.GetCurrenciesAPI(historydb.GetCurrencyAPIRequest{
-		Symbols:  symbols,
-		Order: order,
+		Symbols: symbols,
+		Order:   order,
 	})
 	if err != nil {
 		retSQLErr(err, c)
@@ -46,11 +45,11 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 
 	// Build successful response
 	type CurrenciesResponse struct {
-		Currencies       []historydb.FiatCurrency `json:"currencies"`
+		Currencies   []historydb.FiatCurrency `json:"currencies"`
 		PendingItems uint64                   `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &CurrenciesResponse{
-		Currencies:       currencies,
+		Currencies:   currencies,
 		PendingItems: pendingItems,
 	})
 }

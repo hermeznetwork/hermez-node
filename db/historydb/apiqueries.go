@@ -471,7 +471,7 @@ type GetCurrencyAPIRequest struct {
 	Order   string
 }
 
-// GetTokensAPI returns a list of tokens from the DB
+// GetCurrenciesAPI returns a list of Currencies from the DB
 func (hdb *HistoryDB) GetCurrenciesAPI(
 	request GetCurrencyAPIRequest,
 ) ([]FiatCurrency, uint64, error) {
@@ -485,16 +485,10 @@ func (hdb *HistoryDB) GetCurrenciesAPI(
 	var args []interface{}
 	queryStr := `SELECT * , COUNT(*) OVER() AS total_items FROM fiat `
 	// Apply filters
-	nextIsAnd := false
 	if len(request.Symbols) > 0 {
-		if nextIsAnd {
-			queryStr += "AND "
-		} else {
-			queryStr += "WHERE "
-		}
+		queryStr += "WHERE "
 		queryStr += "currency IN (?) "
 		args = append(args, request.Symbols)
-		nextIsAnd = true
 	}
 	queryStr += "ORDER BY item_id "
 	if request.Order == db.OrderAsc {
@@ -516,6 +510,7 @@ func (hdb *HistoryDB) GetCurrenciesAPI(
 	}
 	return db.SlicePtrsToSlice(currencies).([]FiatCurrency), uint64(len(currencies)) - currencies[0].TotalItems, nil
 }
+
 // GetTxAPI returns a tx from the DB given a TxID
 func (hdb *HistoryDB) GetTxAPI(txID common.TxID) (*TxAPI, error) {
 	// Warning: amount_success and deposit_amount_success have true as default for

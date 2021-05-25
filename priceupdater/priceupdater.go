@@ -38,7 +38,7 @@ const (
 // Fiat definition
 type Fiat struct {
 	APIKey       string
-	URL			 string
+	URL          string
 	BaseCurrency string
 	Currencies   string
 }
@@ -156,7 +156,7 @@ type PriceUpdater struct {
 	tokensList            map[int]historydb.TokenSymbolAndAddr
 	providers             []Provider
 	statictokensMap       staticMap
-	fiat				  Fiat
+	fiat                  Fiat
 	clientProviders       map[string]*sling.Sling
 }
 
@@ -202,7 +202,7 @@ func NewPriceUpdater(
 		tokensList:            map[int]historydb.TokenSymbolAndAddr{},
 		providers:             providers,
 		statictokensMap:       staticTokensMap,
-		fiat:				   fiat,
+		fiat:                  fiat,
 		clientProviders:       clientProviders,
 	}, nil
 }
@@ -315,12 +315,12 @@ func (p *PriceUpdater) UpdateTokenList() error {
 }
 
 type fiatExchangeAPI struct {
-	Base string
+	Base  string
 	Rates interface{}
 }
 
 func (p *PriceUpdater) getFiatPrices(ctx context.Context) (map[string]interface{}, error) {
-	var url = "latest?base="+p.fiat.BaseCurrency+"&symbols="+p.fiat.Currencies+"&access_key="+p.fiat.APIKey
+	var url = "latest?base=" + p.fiat.BaseCurrency + "&symbols=" + p.fiat.Currencies + "&access_key=" + p.fiat.APIKey
 	req, err := p.clientProviders["fiat"].New().Get(url).Request()
 	if err != nil {
 		return make(map[string]interface{}), tracerr.Wrap(err)
@@ -356,20 +356,56 @@ func (p *PriceUpdater) UpdateFiatPrices(ctx context.Context) error {
 	for token, pr := range prices {
 		price := pr.(float64)
 		var exist bool
-		for i:=0; i<len(currencies); i++ {
+		for i := 0; i < len(currencies); i++ {
 			if token == currencies[i].Currency {
 				exist = true
 			}
 		}
 		if exist {
 			if err = p.db.UpdateFiatPrice(token, "USD", price); err != nil {
-				log.Error("DB error updating fiat currency price: ",token, ", ", price, " Error: ",err)
+				log.Error("DB error updating fiat currency price: ", token, ", ", price, " Error: ", err)
 			}
 		} else {
 			if err = p.db.CreateFiatPrice(token, "USD", price); err != nil {
-				log.Error("DB error creating fiat currency price: ",token, ", ", price, " Error: ",err)
+				log.Error("DB error creating fiat currency price: ", token, ", ", price, " Error: ", err)
 			}
 		}
 	}
-return err
+	return err
+}
+
+// UpdateFiatPricesMock updates the fiat prices
+func (p *PriceUpdater) UpdateFiatPricesMock(ctx context.Context) error {
+	log.Debug("Updating fiat prices")
+	//Retrieve fiat prices
+	prices := make(map[string]interface{})
+	prices["CNY"] = 6.4306
+	prices["EUR"] = 0.817675
+	prices["JPY"] = 108.709503
+	prices["GBP"] = 0.70335
+
+	//Getting all price from database with baseCurrency USD
+	currencies, err := p.db.GetAllFiatPrice("USD")
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	for token, pr := range prices {
+		price := pr.(float64)
+		var exist bool
+		for i := 0; i < len(currencies); i++ {
+			if token == currencies[i].Currency {
+				exist = true
+			}
+		}
+		if exist {
+			if err = p.db.UpdateFiatPrice(token, "USD", price); err != nil {
+				log.Error("DB error updating fiat currency price: ", token, ", ", price, " Error: ", err)
+			}
+		} else {
+			if err = p.db.CreateFiatPrice(token, "USD", price); err != nil {
+				log.Error("DB error creating fiat currency price: ", token, ", ", price, " Error: ", err)
+			}
+		}
+	}
+	return err
 }
