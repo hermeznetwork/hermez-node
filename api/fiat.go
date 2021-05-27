@@ -9,10 +9,10 @@ import (
 )
 
 func (a *API) getFiatCurrency(c *gin.Context) {
-	// Get TokenID
+	// Get symbol
 	symbol := c.Param("symbol")
-	if symbol == "" { // tokenID is required
-		retBadReq(errors.New("Invalid Symbol"), c)
+	if symbol == "" { // symbol is required
+		retBadReq(errors.New(ErrInvalidSymbol), c)
 		return
 	}
 	// Fetch currency from historyDB
@@ -31,13 +31,9 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	order := c.Query("order")
 
 	// Fetch exits from historyDB
-	currencies, pendingItems, err := a.h.GetCurrenciesAPI(historydb.GetCurrencyAPIRequest{
-		Symbols: symbols,
-		Order:   order,
-	})
+	currencies, err := a.h.GetCurrenciesAPI(symbols)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -45,11 +41,9 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 
 	// Build successful response
 	type CurrenciesResponse struct {
-		Currencies   []historydb.FiatCurrency `json:"currencies"`
-		PendingItems uint64                   `json:"pendingItems"`
+		Currencies []historydb.FiatCurrency `json:"currencies"`
 	}
 	c.JSON(http.StatusOK, &CurrenciesResponse{
-		Currencies:   currencies,
-		PendingItems: pendingItems,
+		Currencies: currencies,
 	})
 }

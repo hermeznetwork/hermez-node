@@ -52,7 +52,7 @@ func (m migrationTest0002) InsertData(db *sqlx.DB) error {
 		717, 
 		115.047487133272
 	);`
-	// isert account to set effective_from_eth_addr, effective_from_bjj through trigger
+	// insert account to set effective_from_eth_addr, effective_from_bjj through trigger
 	const queryInsertAccount = `INSERT INTO account (
 		idx,token_id,batch_num,bjj,eth_addr
 	) VALUES (

@@ -513,7 +513,7 @@ func (hdb *HistoryDB) CreateFiatPrice(currency string, baseCurrency string, pric
 func (hdb *HistoryDB) GetFiatPrice(currency string, baseCurrency string) (FiatCurrency, error) {
 	var currencyPrice = &FiatCurrency{}
 	err := meddler.QueryRow(
-		hdb.dbRead, currencyPrice, `SELECT * FROM fiat WHERE currency = $1 AND base_currency = $2;`,
+		hdb.dbRead, currencyPrice, `SELECT currency, base_currency, price, last_update FROM fiat WHERE currency = $1 AND base_currency = $2;`,
 		currency, baseCurrency,
 	)
 	return *currencyPrice, tracerr.Wrap(err)
@@ -523,7 +523,7 @@ func (hdb *HistoryDB) GetFiatPrice(currency string, baseCurrency string) (FiatCu
 func (hdb *HistoryDB) GetAllFiatPrice(baseCurrency string) ([]FiatCurrency, error) {
 	var currencyPrices []*FiatCurrency
 	err := meddler.QueryAll(
-		hdb.dbRead, &currencyPrices, `SELECT * FROM fiat WHERE base_currency = $1;`,
+		hdb.dbRead, &currencyPrices, `SELECT currency, base_currency, price, last_update FROM fiat WHERE base_currency = $1;`,
 		baseCurrency,
 	)
 	return db.SlicePtrsToSlice(currencyPrices).([]FiatCurrency), tracerr.Wrap(err)

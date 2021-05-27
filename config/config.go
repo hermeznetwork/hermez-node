@@ -291,7 +291,7 @@ type Node struct {
 		// Interval between price updater calls
 		Interval Duration `validate:"required"`
 		// Priority option defines the priority provider
-		Priority priceupdater.Priority `validate:"required"`
+		Priority string `validate:"required"`
 		// TokensConfig to specify how each token get it's price updated
 		Provider []priceupdater.Provider
 		// Statictokens defines the static prices for tokens

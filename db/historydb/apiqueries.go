@@ -465,50 +465,38 @@ func (hdb *HistoryDB) GetCurrencyAPI(symbol string) (FiatCurrency, error) {
 	return hdb.GetFiatPrice(symbol, "USD")
 }
 
-// GetCurrencyAPIRequest is an API request struct for getting fiat currencies
-type GetCurrencyAPIRequest struct {
-	Symbols []string
-	Order   string
-}
-
 // GetCurrenciesAPI returns a list of Currencies from the DB
 func (hdb *HistoryDB) GetCurrenciesAPI(
-	request GetCurrencyAPIRequest,
-) ([]FiatCurrency, uint64, error) {
+	symbols []string,
+) ([]FiatCurrency, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
-		return nil, 0, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(err)
 	}
 	defer hdb.apiConnCon.Release()
 	var query string
 	var args []interface{}
-	queryStr := `SELECT * , COUNT(*) OVER() AS total_items FROM fiat `
+	queryStr := `SELECT currency, base_currency, price, last_update FROM fiat `
 	// Apply filters
-	if len(request.Symbols) > 0 {
+	if len(symbols) > 0 {
 		queryStr += "WHERE "
-		queryStr += "currency IN (?) "
-		args = append(args, request.Symbols)
-	}
-	queryStr += "ORDER BY item_id "
-	if request.Order == db.OrderAsc {
-		queryStr += "ASC "
-	} else {
-		queryStr += "DESC "
+		queryStr += "currency IN (?)"
+		args = append(args, symbols)
 	}
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
-		return nil, 0, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(err)
 	}
 	query = hdb.dbRead.Rebind(query)
 	currencies := []*FiatCurrency{}
 	if err := meddler.QueryAll(hdb.dbRead, &currencies, query, argsQ...); err != nil {
-		return nil, 0, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(err)
 	}
 	if len(currencies) == 0 {
-		return []FiatCurrency{}, 0, nil
+		return []FiatCurrency{}, nil
 	}
-	return db.SlicePtrsToSlice(currencies).([]FiatCurrency), uint64(len(currencies)) - currencies[0].TotalItems, nil
+	return db.SlicePtrsToSlice(currencies).([]FiatCurrency), nil
 }
 
 // GetTxAPI returns a tx from the DB given a TxID

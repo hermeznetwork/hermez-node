@@ -22,9 +22,6 @@ const (
 	defaultIdleConnTimeout = 2 * time.Second
 )
 
-// Priority defines the priority provider
-type Priority string
-
 const (
 	// UpdateMethodTypeBitFinexV2 is the http API used by bitfinex V2
 	UpdateMethodTypeBitFinexV2 string = "bitfinexV2"
@@ -162,7 +159,7 @@ type PriceUpdater struct {
 
 // NewPriceUpdater is the constructor for the updater
 func NewPriceUpdater(
-	updateMethodTypesPriority Priority,
+	updateMethodTypesPriority string,
 	providers []Provider,
 	staticTokens string,
 	fiat Fiat,

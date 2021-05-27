@@ -95,7 +95,7 @@ func TestPriceUpdater(t *testing.T) {
 			Addresses:      "1=0x1,2=" + usdtAddr + ",3=ignore,5=0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
 		},
 	}
-	var priority Priority = "bitfinexV2,CoinGeckoV3"
+	var priority string = "bitfinexV2,CoinGeckoV3"
 	var staticTokens = "4=30.02"
 	var fiat = Fiat{
 		APIKey:       "FFFFFFFFFF",

@@ -1173,8 +1173,8 @@ paths:
     get:
       tags:
         - Explorer
-      summary: Get information of the supported fiat currencies in the Hermez Network.
-      description: Get information of the supported fiat currencies in the Hermez Network.
+      summary: Get information of the fiat currencies.
+      description: Get information of the fiat currencies.
       operationId: getFiatCurrencies
       parameters:
         - name: symbols
@@ -1185,16 +1185,6 @@ paths:
             type: string
             description: pipeline symbol "|" separate list of currencies symbols.
             example: "EUR|CNY"
-        - name: order
-          in: query
-          required: false
-          description: Order of the returned items. Tokens will be ordered by increasing tokenID.
-          schema:
-            type: string
-            default: ASC
-            enum:
-                - ASC
-                - DESC
       responses:
         '200':
           description: Successful operation.
@@ -1218,8 +1208,8 @@ paths:
     get:
       tags:
         - Explorer
-      summary: Get information of a fiat currency supported by Hermez Network.
-      description: Get information of a fiat currency supported by Hermez Network.
+      summary: Get information of a fiat currency.
+      description: Get information of a fiat currency.
       operationId: getFiatCurrency
       parameters:
         - name: symbol
@@ -2574,43 +2564,38 @@ components:
       type: object
       description: Hermez Network compatible and registered currency.
       properties:
-        itemId:
-          $ref: '#/components/schemas/ItemId'
-        Currency:
+        currency:
           type: string
           description: symbol of the currency
           example: EUR
-        BaseCurrency:
+        baseCurrency:
           type: string
           description: symbol of the base currency
           example: USD
-        Price:
+        price:
           type: number
           description: Value of the currency in USD.
           example: 1.01
           nullable: true
-        LastUpdate:
+        lastUpdate:
           type: string
           format: date-time
           description: Timestamp of the moment the `USD` value was updated.
           nullable: true
       required:
-        - itemId
-        - Currency
-        - BaseCurrency
-        - Price
-        - LastUpdate
+        - currency
+        - baseCurrency
+        - price
+        - lastUpdate
       additionalProperties: false
     Currencies:
       type: object
       properties:
-        Currencies:
+        currencies:
           type: array
           description: List of Currencies.
           items: 
             $ref: '#/components/schemas/Currency'
-        pendingItems:
-          $ref: '#/components/schemas/PendingItems'
     Exit:
       type: object
       description: Exit tree leaf. It Contains the necessary information to perform a withdrawal.

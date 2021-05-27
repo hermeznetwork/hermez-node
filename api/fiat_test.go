@@ -31,6 +31,7 @@ func TestFiat(t *testing.T) {
 	err = genFiatPrices(db)
 	assert.NoError(t, err)
 
+	//Get all fiat currencies
 	endpoint := apiURL + "currencies/"
 	type responseTest struct {
 		Currencies []historydb.FiatCurrency
@@ -41,4 +42,21 @@ func TestFiat(t *testing.T) {
 	assert.Equal(t, response.Currencies[0].BaseCurrency, "USD")
 	assert.Equal(t, response.Currencies[0].Currency, "EUR")
 	assert.Equal(t, response.Currencies[0].Price, 0.82)
+
+	//Get some fiat currencies
+	endpoint = endpoint + "?symbols=EUR"
+	err = doGoodReq("GET", endpoint, nil, &response)
+	assert.NoError(t, err)
+	assert.Equal(t, response.Currencies[0].BaseCurrency, "USD")
+	assert.Equal(t, response.Currencies[0].Currency, "EUR")
+	assert.Equal(t, response.Currencies[0].Price, 0.82)
+
+	//Get EUR fiat currency
+	endpoint = apiURL + "currencies/EUR"
+	var singleItemResp historydb.FiatCurrency
+	err = doGoodReq("GET", endpoint, nil, &singleItemResp)
+	assert.NoError(t, err)
+	assert.Equal(t, singleItemResp.BaseCurrency, "USD")
+	assert.Equal(t, singleItemResp.Currency, "EUR")
+	assert.Equal(t, singleItemResp.Price, 0.82)
 }
