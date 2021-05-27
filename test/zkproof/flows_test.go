@@ -91,7 +91,7 @@ func initTxSelector(t *testing.T, chainID uint16, hermezContractAddr ethCommon.A
 	deleteme = append(deleteme, txselDir)
 
 	// use Til Coord keys for tests compatibility
-	coordAccount := &txselector.CoordAccount{
+	coordAccount := txselector.CoordAccount{
 		Addr:                coordUser.Addr,
 		BJJ:                 coordUser.BJJ.Public().Compress(),
 		AccountCreationAuth: nil,
@@ -187,7 +187,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"4392049343656836675348565048374261353937130287163762821533580216441778455298",
+		"17845026419825606568297898952886451490968178996859596985115147673317944565005",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
@@ -217,7 +217,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"8905191229562583213069132470917469035834300549892959854483573322676101624713",
+		"5011486595982139468087543085074814351795839959948110063153096719520312696275",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
@@ -244,7 +244,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	zki, err = bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
-		"20593679664586247774284790801579542411781976279024409415159440382607791042723",
+		"6530394748986447282151711357194248066562667891309466162814480602176851300695",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),
@@ -266,7 +266,7 @@ func TestTxSelectorBatchBuilderZKInputsMinimumFlow0(t *testing.T) {
 	// same root as previous batch, as the L1CoordinatorTxs created by the
 	// Til set is not created by the TxSelector in this test
 	assert.Equal(t,
-		"20593679664586247774284790801579542411781976279024409415159440382607791042723",
+		"6530394748986447282151711357194248066562667891309466162814480602176851300695",
 		bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
 	err = l2DBTxSel.StartForging(common.TxIDsFromPoolL2Txs(l2Txs),

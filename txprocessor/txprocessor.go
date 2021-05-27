@@ -170,6 +170,11 @@ func (tp *TxProcessor) StateDB() *statedb.StateDB {
 	return tp.s
 }
 
+// AccumulatedCoordFees returns the accumulated fees for each token (coordinator idx) in the processed batch
+func (tp *TxProcessor) AccumulatedCoordFees() map[common.Idx]*big.Int {
+	return tp.AccumulatedFees
+}
+
 func (tp *TxProcessor) resetZKInputs() {
 	tp.zki = nil
 	tp.i = 0 // initialize current transaction index in the ZKInputs generation
@@ -1039,7 +1044,11 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 						accSender.TokenID, coordIdxsMap[accSender.TokenID]))
 			}
 			// accumulate the fee for the Coord account
-			accumulated := tp.AccumulatedFees[accCoord.Idx]
+			accumulated, ok := tp.AccumulatedFees[accCoord.Idx]
+			if !ok {
+				accumulated = big.NewInt(0)
+				tp.AccumulatedFees[accCoord.Idx] = accumulated
+			}
 			accumulated.Add(accumulated, fee)
 
 			if tp.s.Type() == statedb.TypeSynchronizer ||
@@ -1246,7 +1255,11 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			}
 
 			// accumulate the fee for the Coord account
-			accumulated := tp.AccumulatedFees[accCoord.Idx]
+			accumulated, ok := tp.AccumulatedFees[accCoord.Idx]
+			if !ok {
+				accumulated = big.NewInt(0)
+				tp.AccumulatedFees[accCoord.Idx] = accumulated
+			}
 			accumulated.Add(accumulated, fee)
 
 			if tp.s.Type() == statedb.TypeSynchronizer ||
