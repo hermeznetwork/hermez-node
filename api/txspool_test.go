@@ -16,6 +16,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -831,4 +832,47 @@ func generateKeys(random int) (ethCommon.Address, babyjub.PrivateKey) {
 	binary.LittleEndian.PutUint64(iBytes[:], uint64(random))
 	copy(sk[:], iBytes[:]) // only for testing
 	return addr, sk
+}
+
+func TestIsAtomic(t *testing.T) {
+	// NOT atomic cases
+	// Empty group
+	txs := []l2db.PoolL2TxWrite{}
+	assert.False(t, isAtomicGroup(txs))
+
+	// Case missing tx: 1 ==> 2 ==> 3 ==> (4: not provided)
+	txs = []l2db.PoolL2TxWrite{
+		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: &common.TxID{3}},
+		{TxID: common.TxID{3}, RqTxID: &common.TxID{4}},
+	}
+	assert.False(t, isAtomicGroup(txs))
+
+	// Case loneley tx: 1 ==> 2 ==> 3 ==> 1 <== (4: no buddy references 4th tx)
+	txs = []l2db.PoolL2TxWrite{
+		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: &common.TxID{3}},
+		{TxID: common.TxID{3}, RqTxID: &common.TxID{1}},
+		{TxID: common.TxID{4}, RqTxID: &common.TxID{1}},
+	}
+	assert.False(t, isAtomicGroup(txs))
+
+	// Case two groups: 1 <==> 2  3 <==> 4
+	txs = []l2db.PoolL2TxWrite{
+		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: &common.TxID{1}},
+		{TxID: common.TxID{3}, RqTxID: &common.TxID{4}},
+		{TxID: common.TxID{4}, RqTxID: &common.TxID{3}},
+	}
+	assert.False(t, isAtomicGroup(txs))
+
+	// Atomic cases
+	// Case circular: 1 ==> 2 ==> 3 ==> 4 ==> 1
+	txs = []l2db.PoolL2TxWrite{
+		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: &common.TxID{3}},
+		{TxID: common.TxID{3}, RqTxID: &common.TxID{4}},
+		{TxID: common.TxID{4}, RqTxID: &common.TxID{1}},
+	}
+	assert.True(t, isAtomicGroup(txs))
 }
