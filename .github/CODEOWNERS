@@ -9,3 +9,5 @@ Makefile                @Pantani
 .github/                @Pantani
 txselector/             @Pantani
 txprocessor/            @Pantani
+etherscan/              @ARR552
+priceupdater/           @ARR552
