@@ -65,7 +65,7 @@ func (m migrationTest0003) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 		forge_l1_txs_num IS NULL AND
 		slot_num = 717 AND
 		total_fees_usd = 115.047487133272 AND
-		eth_tx_hash IS NULL;
+		eth_tx_hash = DECODE('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
 	`
 	row := db.QueryRow(queryGetBatch)
 	var result int
