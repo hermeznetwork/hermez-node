@@ -82,14 +82,14 @@ func TestPriceUpdater(t *testing.T) {
 	tc := []Provider{
 		{
 			Provider:       "bitfinexV2",
-			BASEURL:        "https://api-pub.bitfinex.com/v2/",
+			BaseURL:        "https://api-pub.bitfinex.com/v2/",
 			URL:            "ticker/t",
 			URLExtraParams: "USD",
 			Symbols:        "1=DAI,2=USDT,3=ignore,5=UNI",
 		},
 		{
 			Provider:       "CoinGeckoV3",
-			BASEURL:        "https://api.coingecko.com/api/v3/",
+			BaseURL:        "https://api.coingecko.com/api/v3/",
 			URL:            "simple/token_price/ethereum?contract_addresses=",
 			URLExtraParams: "&vs_currencies=usd",
 			Addresses:      "1=0x1,2=" + usdtAddr + ",3=ignore,5=0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",

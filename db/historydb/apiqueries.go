@@ -480,8 +480,7 @@ func (hdb *HistoryDB) GetCurrenciesAPI(
 	queryStr := `SELECT currency, base_currency, price, last_update FROM fiat `
 	// Apply filters
 	if len(symbols) > 0 {
-		queryStr += "WHERE "
-		queryStr += "currency IN (?)"
+		queryStr += "WHERE currency IN (?)"
 		args = append(args, symbols)
 	}
 	query, argsQ, err := sqlx.In(queryStr, args...)

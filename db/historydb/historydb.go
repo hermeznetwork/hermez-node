@@ -480,7 +480,7 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenAddr ethCommon.Address, value float6
 
 // UpdateTokenValueByTokenID updates the USD value of a token. Value is the price in
 // USD of a normalized token (1 token = 10^decimals units)
-func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID int, value float64) error {
+func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID uint, value float64) error {
 	// usd_update field is gonna be updated automatically due to trigger trigger_token_usd_update
 	_, err := hdb.dbWrite.Exec(
 		"UPDATE token SET usd = $1 WHERE token_id = $2;",
@@ -510,7 +510,7 @@ func (hdb *HistoryDB) CreateFiatPrice(currency string, baseCurrency string, pric
 }
 
 // GetFiatPrice recover the price for a currency
-func (hdb *HistoryDB) GetFiatPrice(currency string, baseCurrency string) (FiatCurrency, error) {
+func (hdb *HistoryDB) GetFiatPrice(currency, baseCurrency string) (FiatCurrency, error) {
 	var currencyPrice = &FiatCurrency{}
 	err := meddler.QueryRow(
 		hdb.dbRead, currencyPrice, `SELECT currency, base_currency, price, last_update FROM fiat WHERE currency = $1 AND base_currency = $2;`,

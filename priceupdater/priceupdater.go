@@ -43,7 +43,7 @@ type Fiat struct {
 // Provider definition
 type Provider struct {
 	Provider       string
-	BASEURL        string
+	BaseURL        string
 	URL            string
 	URLExtraParams string
 	SymbolsMap     symbolsMap
@@ -52,88 +52,96 @@ type Provider struct {
 	Addresses      string
 }
 type staticMap struct {
-	Statictokens map[int]float64
+	Statictokens map[uint]float64
 }
 
-// strToMapStatic converts Statictokens mapping from text.
-func (d *staticMap) strToMapStatic(str string) error {
-	mapping := make(map[int]float64)
+// strToStaticTokensMap converts Statictokens mapping from text.
+func (d *staticMap) strToStaticTokensMap(str string) error {
+	var lastErr error
 	if str != "" {
+		mapping := make(map[uint]float64)
 		elements := strings.Split(str, ",")
 		for i := 0; i < len(elements); i++ {
 			values := strings.Split(elements[i], "=")
-			num, err := strconv.Atoi(values[0])
+			tokenID, err := strconv.Atoi(values[0])
 			if err != nil {
 				log.Error("Error converting string to int. Avoiding element: ", elements[i])
+				lastErr = err
 				continue
 			}
 			if price, err := strconv.ParseFloat(values[1], 64); err != nil {
-				log.Error("Error converting string to float64. Avoiding element: ", elements[i], " Error: ", err)
+				log.Error("function strToStaticTokensMap. Error converting string to float64. Avoiding element: ",
+					elements[i], " Error: ", err)
+				lastErr = err
 				continue
 			} else {
-				mapping[num] = price
+				mapping[uint(tokenID)] = price
 			}
 		}
 		d.Statictokens = mapping
 		log.Debug("StaticToken mapping from config file: ", mapping)
 	}
-	return nil
+	return lastErr
 }
 
 type symbolsMap struct {
-	Symbols map[int]string
+	Symbols map[uint]string
 }
 
 // strToMapSymbol converts Symbols mapping from text.
 func (d *symbolsMap) strToMapSymbol(str string) error {
-	mapping := make(map[int]string)
+	var lastErr error
 	if str != "" {
+		mapping := make(map[uint]string)
 		elements := strings.Split(str, ",")
 		for i := 0; i < len(elements); i++ {
 			values := strings.Split(elements[i], "=")
-			num, err := strconv.Atoi(values[0])
+			tokenID, err := strconv.Atoi(values[0])
 			if err != nil {
-				log.Error("Error converting string to int. Avoiding element: ", elements[i])
+				log.Error("function strToMapSymbol. Error converting string to int. Avoiding element: ", elements[i])
+				lastErr = err
 				continue
 			}
 			if values[1] == UpdateMethodTypeIgnore || values[1] == "" {
-				mapping[num] = UpdateMethodTypeIgnore
+				mapping[uint(tokenID)] = UpdateMethodTypeIgnore
 			} else {
-				mapping[num] = values[1]
+				mapping[uint(tokenID)] = values[1]
 			}
 		}
 		d.Symbols = mapping
 		log.Debug("Symbol mapping from config file: ", mapping)
 	}
-	return nil
+	return lastErr
 }
 
 type addressesMap struct {
-	Addresses map[int]ethCommon.Address
+	Addresses map[uint]ethCommon.Address
 }
 
 // strToMapAddress converts addresses mapping from text.
 func (d *addressesMap) strToMapAddress(str string) error {
+	var lastErr error
 	if str != "" {
-		mapping := make(map[int]ethCommon.Address)
+		mapping := make(map[uint]ethCommon.Address)
 		elements := strings.Split(str, ",")
 		for i := 0; i < len(elements); i++ {
 			values := strings.Split(elements[i], "=")
-			num, err := strconv.Atoi(values[0])
+			tokenID, err := strconv.Atoi(values[0])
 			if err != nil {
-				log.Error("Error converting string to int. Avoiding element: ", elements[i])
+				log.Error("function strToMapAddress. Error converting string to int. Avoiding element: ", elements[i])
+				lastErr = err
 				continue
 			}
 			if values[1] == UpdateMethodTypeIgnore || values[1] == "" {
-				mapping[num] = common.FFAddr
+				mapping[uint(tokenID)] = common.FFAddr
 			} else {
-				mapping[num] = ethCommon.HexToAddress(values[1])
+				mapping[uint(tokenID)] = ethCommon.HexToAddress(values[1])
 			}
 		}
 		d.Addresses = mapping
 		log.Debug("Address mapping from config file: ", mapping)
 	}
-	return nil
+	return lastErr
 }
 
 // ProviderValidation method is for validation of Provider struct
@@ -150,7 +158,7 @@ func ProviderValidation(sl validator.StructLevel) {
 type PriceUpdater struct {
 	db                    *historydb.HistoryDB
 	updateMethodsPriority []string
-	tokensList            map[int]historydb.TokenSymbolAndAddr
+	tokensList            map[uint]historydb.TokenSymbolAndAddr
 	providers             []Provider
 	statictokensMap       staticMap
 	fiat                  Fiat
@@ -167,7 +175,7 @@ func NewPriceUpdater(
 ) (*PriceUpdater, error) {
 	priorityArr := strings.Split(string(updateMethodTypesPriority), ",")
 	var staticTokensMap staticMap
-	err := staticTokensMap.strToMapStatic(staticTokens)
+	err := staticTokensMap.strToStaticTokensMap(staticTokens)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -190,13 +198,13 @@ func NewPriceUpdater(
 			return nil, tracerr.Wrap(err)
 		}
 		//Create Client providers for each provider
-		clientProviders[providers[i].Provider] = sling.New().Base(providers[i].BASEURL).Client(httpClient)
+		clientProviders[providers[i].Provider] = sling.New().Base(providers[i].BaseURL).Client(httpClient)
 		clientProviders["fiat"] = sling.New().Base(fiat.URL).Client(httpClient)
 	}
 	return &PriceUpdater{
 		db:                    db,
 		updateMethodsPriority: priorityArr,
-		tokensList:            map[int]historydb.TokenSymbolAndAddr{},
+		tokensList:            map[uint]historydb.TokenSymbolAndAddr{},
 		providers:             providers,
 		statictokensMap:       staticTokensMap,
 		fiat:                  fiat,
@@ -206,7 +214,7 @@ func NewPriceUpdater(
 
 type coingecko map[ethCommon.Address]map[string]float64
 
-func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID int) (float64, error) {
+func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID uint) (float64, error) {
 	for i := 0; i < len(p.updateMethodsPriority); i++ {
 		for j := 0; j < len(p.providers); j++ {
 			if p.updateMethodsPriority[i] == p.providers[j].Provider {
@@ -220,30 +228,36 @@ func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID in
 				if err != nil {
 					return 0, tracerr.Wrap(err)
 				}
-				var res *http.Response
-				var result float64
-				var errResult bool
-				if p.providers[j].Provider == UpdateMethodTypeBitFinexV2 {
+				var (
+					res           *http.Response
+					result        float64
+					isEmptyResult bool
+				)
+				switch p.providers[j].Provider {
+				case UpdateMethodTypeBitFinexV2:
 					var data interface{}
 					res, err = p.clientProviders[p.providers[j].Provider].Do(req.WithContext(ctx), &data, nil)
 					if data != nil {
 						result = data.([]interface{})[6].(float64)
 					} else {
-						errResult = true
+						isEmptyResult = true
 					}
-				} else if p.providers[j].Provider == UpdateMethodTypeCoingeckoV3 {
+				case UpdateMethodTypeCoingeckoV3:
 					var data coingecko
 					res, err = p.clientProviders[p.providers[j].Provider].Do(req.WithContext(ctx), &data, nil)
 					result = data[p.providers[j].AddressesMap.Addresses[tokenID]]["usd"]
-				} else {
+					if len(data) == 0 {
+						isEmptyResult = true
+					}
+				default:
 					log.Error("Unknown price provider: ", p.providers[j].Provider)
 					return 0, tracerr.Wrap(fmt.Errorf("Error: Unknown price provider: " + p.providers[j].Provider))
 				}
-				if err != nil || errResult {
-					log.Warn("Trying another price provider: ", err, " http error code: ", res.StatusCode, " tokenId: ", tokenID, ". URL: ", url)
+				if err != nil || isEmptyResult {
+					log.Warn("Trying another price provider if it's possible: ", err, " http error code: ", res.StatusCode, " tokenId: ", tokenID, ". URL: ", url)
 					continue
 				} else if res.StatusCode != http.StatusOK {
-					log.Warn("Trying another price provider. Http response code: ", res.StatusCode)
+					log.Warn("Trying another price provider if it's possible. Http response code: ", res.StatusCode)
 					continue
 				} else {
 					return result, nil
@@ -268,7 +282,10 @@ func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 	for _, token := range p.tokensList {
 		if p.providers[0].AddressesMap.Addresses[token.TokenID] != common.FFAddr ||
 			p.providers[0].SymbolsMap.Symbols[token.TokenID] == UpdateMethodTypeIgnore {
-			tokenPrice, _ := p.getTokenPriceFromProvider(ctx, token.TokenID)
+			tokenPrice, err := p.getTokenPriceFromProvider(ctx, token.TokenID)
+			if err != nil {
+				log.Errorw("token price from provider error", "err", err, "token", token.Symbol)
+			}
 			if err := p.db.UpdateTokenValueByTokenID(token.TokenID, tokenPrice); err != nil {
 				log.Errorw("token price not updated (db error)",
 					"err", err, "token", token.Symbol)
@@ -317,14 +334,16 @@ type fiatExchangeAPI struct {
 }
 
 func (p *PriceUpdater) getFiatPrices(ctx context.Context) (map[string]interface{}, error) {
-	var url = "latest?base=" + p.fiat.BaseCurrency + "&symbols=" + p.fiat.Currencies + "&access_key=" + p.fiat.APIKey
+	url := "latest?base=" + p.fiat.BaseCurrency + "&symbols=" + p.fiat.Currencies + "&access_key=" + p.fiat.APIKey
 	req, err := p.clientProviders["fiat"].New().Get(url).Request()
 	if err != nil {
 		return make(map[string]interface{}), tracerr.Wrap(err)
 	}
-	var res *http.Response
-	var result map[string]interface{}
-	var data *fiatExchangeAPI
+	var (
+		res    *http.Response
+		result map[string]interface{}
+		data   *fiatExchangeAPI
+	)
 	res, err = p.clientProviders["fiat"].Do(req.WithContext(ctx), &data, nil)
 	if err != nil {
 		return make(map[string]interface{}), tracerr.Wrap(err)
@@ -333,6 +352,7 @@ func (p *PriceUpdater) getFiatPrices(ctx context.Context) (map[string]interface{
 		result = data.Rates.(map[string]interface{})
 	} else {
 		log.Error("Error: data got are empty. Http code: ", res.StatusCode, ". URL: ", url)
+		return make(map[string]interface{}), tracerr.Wrap(fmt.Errorf("Empty data received from the fiat provider"))
 	}
 	return result, nil
 }

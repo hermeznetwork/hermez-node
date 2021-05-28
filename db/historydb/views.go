@@ -149,7 +149,7 @@ type txWrite struct {
 
 // TokenSymbolAndAddr token representation with only Eth addr and symbol
 type TokenSymbolAndAddr struct {
-	TokenID int               `meddler:"token_id"`
+	TokenID uint              `meddler:"token_id"`
 	Symbol  string            `meddler:"symbol"`
 	Addr    ethCommon.Address `meddler:"eth_addr"`
 }
