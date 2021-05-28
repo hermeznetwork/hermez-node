@@ -196,32 +196,60 @@ type ExitAPI struct {
 	TokenUSDUpdate         *time.Time                      `meddler:"usd_update"`
 }
 
+type exitAPIJSON struct {
+	ItemID                 uint64                          `json:"itemId"`
+	BatchNum               common.BatchNum                 `json:"batchNum"`
+	AccountIdx             apitypes.HezIdx                 `json:"accountIndex"`
+	Bjj                    *apitypes.HezBJJ                `json:"bjj"`
+	EthAddr                *apitypes.HezEthAddr            `json:"hezEthereumAddress"`
+	MerkleProof            *merkletree.CircomVerifierProof `json:"merkleProof"`
+	Balance                apitypes.BigIntStr              `json:"balance"`
+	InstantWithdrawn       *int64                          `json:"instantWithdraw"`
+	DelayedWithdrawRequest *int64                          `json:"delayedWithdrawRequest"`
+	DelayedWithdrawn       *int64                          `json:"delayedWithdraw"`
+	TokenJSON              tokenJSON                       `json:"token"`
+}
+
+type tokenJSON struct {
+	TokenID          common.TokenID    `json:"id"`
+	TokenItemID      uint64            `json:"itemId"`
+	TokenEthBlockNum int64             `json:"ethereumBlockNum"`
+	TokenEthAddr     ethCommon.Address `json:"ethereumAddress"`
+	TokenName        string            `json:"name"`
+	TokenSymbol      string            `json:"symbol"`
+	TokenDecimals    uint64            `json:"decimals"`
+	TokenUSD         *float64          `json:"USD"`
+	TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
+}
+
 // MarshalJSON is used to neast some of the fields of ExitAPI
 // without the need of auxiliar structs
 func (e ExitAPI) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"itemId":                 e.ItemID,
-		"batchNum":               e.BatchNum,
-		"accountIndex":           e.AccountIdx,
-		"bjj":                    e.BJJ,
-		"hezEthereumAddress":     e.EthAddr,
-		"merkleProof":            e.MerkleProof,
-		"balance":                e.Balance,
-		"instantWithdraw":        e.InstantWithdrawn,
-		"delayedWithdrawRequest": e.DelayedWithdrawRequest,
-		"delayedWithdraw":        e.DelayedWithdrawn,
-		"token": map[string]interface{}{
-			"id":               e.TokenID,
-			"itemId":           e.TokenItemID,
-			"ethereumBlockNum": e.TokenEthBlockNum,
-			"ethereumAddress":  e.TokenEthAddr,
-			"name":             e.TokenName,
-			"symbol":           e.TokenSymbol,
-			"decimals":         e.TokenDecimals,
-			"USD":              e.TokenUSD,
-			"fiatUpdate":       e.TokenUSDUpdate,
+	eaj := exitAPIJSON{
+		ItemID:                 e.ItemID,
+		BatchNum:               e.BatchNum,
+		AccountIdx:             e.AccountIdx,
+		Bjj:                    e.BJJ,
+		EthAddr:                e.EthAddr,
+		MerkleProof:            e.MerkleProof,
+		Balance:                e.Balance,
+		InstantWithdrawn:       e.InstantWithdrawn,
+		DelayedWithdrawRequest: e.DelayedWithdrawRequest,
+		DelayedWithdrawn:       e.DelayedWithdrawn,
+		TokenJSON: tokenJSON{
+			TokenID:          e.TokenID,
+			TokenItemID:      e.TokenItemID,
+			TokenEthBlockNum: e.TokenEthBlockNum,
+			TokenEthAddr:     e.TokenEthAddr,
+			TokenName:        e.TokenName,
+			TokenSymbol:      e.TokenSymbol,
+			TokenDecimals:    e.TokenDecimals,
+			TokenUSD:         e.TokenUSD,
+			TokenUSDUpdate:   e.TokenUSDUpdate,
 		},
-	})
+	}
+
+	return json.Marshal(eaj)
 }
 
 // CoordinatorAPI is a representation of a coordinator with additional information
