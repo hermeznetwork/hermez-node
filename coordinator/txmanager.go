@@ -131,8 +131,16 @@ func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 // NewAuth generates a new auth object for an ethereum transaction
 func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
 	// First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
-	var gasPrice *big.Int
-	var eGasPrice *big.Int
+
+	// If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
+	const maxGasPrice = 2000
+	// If gas price is to low, probably there is an error or at Etherscan or Ethereum node.
+	// So setting a minimum value
+	const minGasPrice = 5
+
+	gasPrice := big.NewInt(minGasPrice)
+	eGasPrice := big.NewInt(minGasPrice)
+
 	if t.etherscanService != nil {
 		etherscanGasPrice, err := t.etherscanService.GetGasPrice(ctx)
 		if err != nil {
@@ -162,11 +170,9 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 		}
 	}
 
-	// If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
-	const maxGasPrice = 2000
-	// If gas price is to low, probably there is an error or at Etherscan or Ethereum node.
-	// So setting a minimum value
-	const minGasPrice = 5
+	// If the gas price that comes from Etherscan is higher, uses Etherscan's price
+	// It's better pay few more gas than the transaction get stucked at ethereum node pool
+	log.Debugw("TxManager gas prices - ", "Ethereum node gasPrice:", gasPrice, " Etherscan gasPrice:", eGasPrice)
 
 	maxGasPriceBig := big.NewInt(maxGasPrice)
 	minGasPriceBig := big.NewInt(minGasPrice)
@@ -182,13 +188,11 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	// Convert the eGasPrice from gwei , such as 20 to wei
 	eGasPrice = eGasPrice.Mul(eGasPrice, big.NewInt(params.GWei))
 
-	// If the gas price that comes from Etherscan is higher, uses Etherscan's price
-	// It's better pay few more gas than the transaction get stucked at ethereum node pool
-	log.Debugw("TxManager gas prices - ", "Ethereum node gasPrice:", gasPrice, " Etherscan gasPrice:", eGasPrice)
-
 	if gasPrice.Cmp(eGasPrice) < 0 {
 		gasPrice = eGasPrice
 	}
+
+	log.Debugw("TxManager: transaction metadata", "gasPrice", gasPrice)
 
 	if t.cfg.GasPriceIncPerc != 0 {
 		inc := new(big.Int).Set(gasPrice)
@@ -197,8 +201,6 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 		inc.Div(inc, new(big.Int).SetUint64(100)) //nolint:gomnd
 		gasPrice.Add(gasPrice, inc)
 	}
-
-	log.Debugw("TxManager: transaction metadata", "gasPrice", gasPrice)
 
 	auth, err := bind.NewKeyStoreTransactorWithChainID(t.ethClient.EthKeyStore(), t.account, t.chainID)
 	if err != nil {
