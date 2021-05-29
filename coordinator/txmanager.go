@@ -129,29 +129,28 @@ func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 
 // NewAuth generates a new auth object for an ethereum transaction
 func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
-	//First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
+	// First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
 	var gasPrice *big.Int
+	var eGasPrice *big.Int
 	if t.etherscanService != nil {
 		etherscanGasPrice, err := t.etherscanService.GetGasPrice(ctx)
 		if err != nil {
-			log.Warn("Error getting the gas price from etherscan. Trying another method. Error: ", err.Error())
+			log.Warn("[Etherscan gas price service] Error getting the gas price from etherscan. Trying another method. Error: ", err.Error())
 			var er error
 			gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
 			if er != nil {
 				return nil, tracerr.Wrap(er)
 			}
 		} else {
-			eGasPrice := new(big.Int)
-			eGasPrice, ok := eGasPrice.SetString(etherscanGasPrice.ProposeGasPrice, 10)
+			var ok bool
+			eGasPrice, ok = eGasPrice.SetString(etherscanGasPrice.ProposeGasPrice, 10)
 			if !ok {
-				log.Warn("invalid big int: \"%v\"", etherscanGasPrice.ProposeGasPrice, ". Trying another method to get gas price")
+				log.Warn("[Etherscan gas price service] invalid big int: \"%v\"", etherscanGasPrice.ProposeGasPrice, ". Trying another method to get gas price")
 				var er error
 				gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
 				if er != nil {
 					return nil, tracerr.Wrap(er)
 				}
-			} else {
-				gasPrice = eGasPrice
 			}
 		}
 	} else {
@@ -161,12 +160,35 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 			return nil, tracerr.Wrap(er)
 		}
 	}
-	//If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
+
+	// If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
 	const maxGasPrice = 2000
+	// If gas price is to low, probably there is an error or at Etherscan or Ethereum node.
+	// So setting a minimum value
+	const minGasPrice = 5
+
 	maxGasPriceBig := big.NewInt(maxGasPrice)
-	if gasPrice.Cmp(maxGasPriceBig) == 1 {
-		gasPrice = maxGasPriceBig
+	minGasPriceBig := big.NewInt(minGasPrice)
+
+	if eGasPrice.Cmp(maxGasPriceBig) == 1 {
+		eGasPrice = maxGasPriceBig
 	}
+
+	if eGasPrice.Cmp(minGasPriceBig) < 0 {
+		eGasPrice = minGasPriceBig
+	}
+
+	// Convert the eGasPrice from gwei , such as 20 to wei
+	eGasPrice = eGasPrice.Mul(eGasPrice, big.NewInt(100000001))
+
+	// If the gas price that comes from Etherscan is higher, uses Etherscan's price
+	// It's better pay few more gas than the transaction get stucked at ethereum node pool
+	log.Debugw("TxManager gas prices - ", "Ethereum node gasPrice:", gasPrice, " Etherscan gasPrice:", eGasPrice)
+
+	if gasPrice.Cmp(eGasPrice) < 0 {
+		gasPrice = eGasPrice
+	}
+
 	if t.cfg.GasPriceIncPerc != 0 {
 		inc := new(big.Int).Set(gasPrice)
 		inc.Mul(inc, new(big.Int).SetInt64(t.cfg.GasPriceIncPerc))
@@ -175,7 +197,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 		gasPrice.Add(gasPrice, inc)
 	}
 
-	// log.Debugw("TxManager: transaction metadata", "gasPrice", gasPrice)
+	log.Debugw("TxManager: transaction metadata", "gasPrice", gasPrice)
 
 	auth, err := bind.NewKeyStoreTransactorWithChainID(t.ethClient.EthKeyStore(), t.account, t.chainID)
 	if err != nil {
@@ -514,7 +536,8 @@ func (t *TxManager) Run(ctx context.Context) {
 				log.Warnw("TxManager: shouldSend", "err", err,
 					"batch", batchInfo.BatchNum)
 				t.coord.SendMsg(ctx, MsgStopPipeline{
-					Reason: fmt.Sprintf("forgeBatch shouldSend: %v", err)})
+					Reason: fmt.Sprintf("forgeBatch shouldSend: %v", err),
+				})
 				continue
 			}
 			if err := t.sendRollupForgeBatch(ctx, batchInfo, false); ctx.Err() != nil {
@@ -528,7 +551,8 @@ func (t *TxManager) Run(ctx context.Context) {
 				log.Warnw("TxManager: forgeBatch send failed", "err", err,
 					"batch", batchInfo.BatchNum)
 				t.coord.SendMsg(ctx, MsgStopPipeline{
-					Reason: fmt.Sprintf("forgeBatch send: %v", err)})
+					Reason: fmt.Sprintf("forgeBatch send: %v", err),
+				})
 				continue
 			}
 			t.queue.Push(batchInfo)
@@ -553,7 +577,8 @@ func (t *TxManager) Run(ctx context.Context) {
 				// mined and failed.  This could be due to the
 				// ethNode failure.
 				t.coord.SendMsg(ctx, MsgStopPipeline{
-					Reason: fmt.Sprintf("forgeBatch receipt: %v", err)})
+					Reason: fmt.Sprintf("forgeBatch receipt: %v", err),
+				})
 			}
 
 			confirm, err := t.handleReceipt(ctx, batchInfo)
@@ -568,7 +593,8 @@ func (t *TxManager) Run(ctx context.Context) {
 					continue
 				}
 				t.coord.SendMsg(ctx, MsgStopPipeline{
-					Reason: fmt.Sprintf("forgeBatch reject: %v", err)})
+					Reason: fmt.Sprintf("forgeBatch reject: %v", err),
+				})
 				continue
 			}
 			now := time.Now()
@@ -591,7 +617,8 @@ func (t *TxManager) Run(ctx context.Context) {
 					log.Warnw("TxManager: forgeBatch resend failed", "err", err,
 						"batch", batchInfo.BatchNum)
 					t.coord.SendMsg(ctx, MsgStopPipeline{
-						Reason: fmt.Sprintf("forgeBatch resend: %v", err)})
+						Reason: fmt.Sprintf("forgeBatch resend: %v", err),
+					})
 					continue
 				}
 			}
