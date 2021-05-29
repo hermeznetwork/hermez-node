@@ -64,8 +64,8 @@ type txAPIJSON struct {
 	BatchNum    *common.BatchNum     `json:"batchNum"`
 	HistoricUSD *float64             `json:"historicUSD"`
 	Timestamp   time.Time            `json:"timestamp"`
-	L1Info      l1infoJSON           `json:"L1Info"`
-	L2Info      l2infoJSON           `json:"L2Info"`
+	L1Info      *l1infoJSON          `json:"L1Info"`
+	L2Info      *l2infoJSON          `json:"L2Info"`
 	TokenJSON   tokenJSON            `json:"token"`
 	L1orL2      string               `json:"L1orL2"`
 }
@@ -143,10 +143,15 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 		FromIdx:     tx.FromIdx,
 		FromEthAddr: tx.FromEthAddr,
 		FromBJJ:     tx.FromBJJ,
+		ToIdx:       tx.ToIdx,
+		ToEthAddr:   tx.ToEthAddr,
+		ToBJJ:       tx.ToBJJ,
 		Amount:      tx.Amount,
 		BatchNum:    tx.BatchNum,
 		HistoricUSD: tx.HistoricUSD,
 		Timestamp:   tx.Timestamp,
+		L1Info:      nil,
+		L2Info:      nil,
 		TokenJSON: tokenJSON{
 			TokenID:          tx.TokenID,
 			TokenItemID:      tx.TokenItemID,
@@ -168,7 +173,7 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 			amountSuccess = false
 			depositAmountSuccess = false
 		}
-		txa.L1Info = l1infoJSON{
+		txa.L1Info = &l1infoJSON{
 			ToForgeL1TxsNum:          tx.ToForgeL1TxsNum,
 			UserOrigin:               tx.UserOrigin,
 			DepositAmount:            tx.DepositAmount,
@@ -179,7 +184,7 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 		}
 	} else {
 		txa.L1orL2 = "L2"
-		txa.L2Info = l2infoJSON{
+		txa.L2Info = &l2infoJSON{
 			Fee:            tx.Fee,
 			HistoricFeeUSD: tx.HistoricFeeUSD,
 			Nonce:          tx.Nonce,
