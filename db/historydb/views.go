@@ -49,6 +49,43 @@ type accountAPIJSON struct {
 	TokenJSON          tokenJSON           `json:"token"`
 }
 
+type txAPIJSON struct {
+	TxID        common.TxID          `json:"id"`
+	ItemID      uint64               `json:"itemId"`
+	Type        common.TxType        `json:"type"`
+	Position    int                  `json:"position"`
+	FromIdx     *apitypes.HezIdx     `json:"fromAccountIndex"`
+	FromEthAddr *apitypes.HezEthAddr `json:"fromHezEthereumAddress"`
+	FromBJJ     *apitypes.HezBJJ     `json:"fromBJJ"`
+	ToIdx       apitypes.HezIdx      `json:"toAccountIndex"`
+	ToEthAddr   *apitypes.HezEthAddr `json:"toHezEthereumAddress"`
+	ToBJJ       *apitypes.HezBJJ     `json:"toBJJ"`
+	Amount      apitypes.BigIntStr   `json:"amount"`
+	BatchNum    *common.BatchNum     `json:"batchNum"`
+	HistoricUSD *float64             `json:"historicUSD"`
+	Timestamp   time.Time            `json:"timestamp"`
+	L1Info      l1infoJSON           `json:"L1Info"`
+	L2Info      l2infoJSON           `json:"L2Info"`
+	TokenJSON   tokenJSON            `json:"token"`
+	L1orL2      string               `json:"L1orL2"`
+}
+
+type l1infoJSON struct {
+	ToForgeL1TxsNum          *int64              `json:"toForgeL1TransactionsNum"`
+	UserOrigin               *bool               `json:"userOrigin"`
+	DepositAmount            *apitypes.BigIntStr `json:"depositAmount"`
+	AmountSuccess            bool                `json:"amountSuccess"`
+	DepositAmountSuccess     bool                `json:"depositAmountSuccess"`
+	HistoricDepositAmountUSD *float64            `json:"historicDepositAmountUSD"`
+	EthereumBlockNum         int64               `json:"ethereumBlockNum"`
+}
+
+type l2infoJSON struct {
+	Fee            *common.FeeSelector `json:"fee"`
+	HistoricFeeUSD *float64            `json:"historicFeeUSD"`
+	Nonce          *common.Nonce       `json:"nonce"`
+}
+
 // TxAPI is a representation of a generic Tx with additional information
 // required by the API, and extracted by joining block and token tables
 type TxAPI struct {
@@ -98,61 +135,57 @@ type TxAPI struct {
 // MarshalJSON is used to neast some of the fields of TxAPI
 // without the need of auxiliar structs
 func (tx TxAPI) MarshalJSON() ([]byte, error) {
-	jsonTx := map[string]interface{}{
-		"id":                     tx.TxID,
-		"itemId":                 tx.ItemID,
-		"type":                   tx.Type,
-		"position":               tx.Position,
-		"fromAccountIndex":       tx.FromIdx,
-		"fromHezEthereumAddress": tx.FromEthAddr,
-		"fromBJJ":                tx.FromBJJ,
-		"toAccountIndex":         tx.ToIdx,
-		"toHezEthereumAddress":   tx.ToEthAddr,
-		"toBJJ":                  tx.ToBJJ,
-		"amount":                 tx.Amount,
-		"batchNum":               tx.BatchNum,
-		"historicUSD":            tx.HistoricUSD,
-		"timestamp":              tx.Timestamp,
-		"L1Info":                 nil,
-		"L2Info":                 nil,
-		"token": map[string]interface{}{
-			"id":               tx.TokenID,
-			"itemId":           tx.TokenItemID,
-			"ethereumBlockNum": tx.TokenEthBlockNum,
-			"ethereumAddress":  tx.TokenEthAddr,
-			"name":             tx.TokenName,
-			"symbol":           tx.TokenSymbol,
-			"decimals":         tx.TokenDecimals,
-			"USD":              tx.TokenUSD,
-			"fiatUpdate":       tx.TokenUSDUpdate,
+	txa := txAPIJSON{
+		TxID:        tx.TxID,
+		ItemID:      tx.ItemID,
+		Type:        tx.Type,
+		Position:    tx.Position,
+		FromIdx:     tx.FromIdx,
+		FromEthAddr: tx.FromEthAddr,
+		FromBJJ:     tx.FromBJJ,
+		Amount:      tx.Amount,
+		BatchNum:    tx.BatchNum,
+		HistoricUSD: tx.HistoricUSD,
+		Timestamp:   tx.Timestamp,
+		TokenJSON: tokenJSON{
+			TokenID:          tx.TokenID,
+			TokenItemID:      tx.TokenItemID,
+			TokenEthBlockNum: tx.TokenEthBlockNum,
+			TokenEthAddr:     tx.TokenEthAddr,
+			TokenName:        tx.TokenName,
+			TokenSymbol:      tx.TokenSymbol,
+			TokenDecimals:    tx.TokenDecimals,
+			TokenUSD:         tx.TokenUSD,
+			TokenUSDUpdate:   tx.TokenUSDUpdate,
 		},
 	}
+
 	if tx.IsL1 {
-		jsonTx["L1orL2"] = "L1"
+		txa.L1orL2 = "L1"
 		amountSuccess := tx.AmountSuccess
 		depositAmountSuccess := tx.DepositAmountSuccess
 		if tx.BatchNum == nil {
 			amountSuccess = false
 			depositAmountSuccess = false
 		}
-		jsonTx["L1Info"] = map[string]interface{}{
-			"toForgeL1TransactionsNum": tx.ToForgeL1TxsNum,
-			"userOrigin":               tx.UserOrigin,
-			"depositAmount":            tx.DepositAmount,
-			"amountSuccess":            amountSuccess,
-			"depositAmountSuccess":     depositAmountSuccess,
-			"historicDepositAmountUSD": tx.HistoricDepositAmountUSD,
-			"ethereumBlockNum":         tx.EthBlockNum,
+		txa.L1Info = l1infoJSON{
+			ToForgeL1TxsNum:          tx.ToForgeL1TxsNum,
+			UserOrigin:               tx.UserOrigin,
+			DepositAmount:            tx.DepositAmount,
+			AmountSuccess:            amountSuccess,
+			DepositAmountSuccess:     depositAmountSuccess,
+			HistoricDepositAmountUSD: tx.HistoricDepositAmountUSD,
+			EthereumBlockNum:         tx.EthBlockNum,
 		}
 	} else {
-		jsonTx["L1orL2"] = "L2"
-		jsonTx["L2Info"] = map[string]interface{}{
-			"fee":            tx.Fee,
-			"historicFeeUSD": tx.HistoricFeeUSD,
-			"nonce":          tx.Nonce,
+		txa.L1orL2 = "L2"
+		txa.L2Info = l2infoJSON{
+			Fee:            tx.Fee,
+			HistoricFeeUSD: tx.HistoricFeeUSD,
+			Nonce:          tx.Nonce,
 		}
 	}
-	return json.Marshal(jsonTx)
+	return json.Marshal(txa)
 }
 
 // txWrite is an representatiion that merges common.L1Tx and common.L2Tx
