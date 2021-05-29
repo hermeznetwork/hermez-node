@@ -10,7 +10,7 @@ PROJECT_NAME := $(shell basename "$(PWD)")
 # Go related variables.
 GO_FILES := $(shell find . -type f -name '*.go' | grep -v vendor)
 GOBASE := $(shell pwd)
-GOBIN := $(GOBASE)/bin
+GOBIN := $(GOBASE)/dist
 GOPKG := $(.)
 GOENVVARS := GOBIN=$(GOBIN)
 GOCMD := $(GOBASE)/cmd/heznode
@@ -19,7 +19,12 @@ GOBINARY := heznode
 # Go 1.13+ do not require GOPATH to be set, but we use some binaries in $GOPATH/bin
 GOPATH ?= $(shell go env GOPATH)
 PACKR := $(GOPATH)/bin/packr2
+GORELEASER := $(GOPATH)/bin/goreleaser
 GOCILINT := $(GOPATH)/bin/golangci-lint
+
+# Docker configs.
+DOCKER_IMAGE = hermez-node-build
+DOCKER_BUILD_FILE = build/Dockerfile
 
 # Project configs.
 MODE ?= sync
@@ -45,7 +50,7 @@ MAKEFLAGS += --silent
 export GO111MODULE=on
 
 ## build: Build the project.
-build: govet gocilint migration-pack
+build: clean migration-pack
 	echo "  >  Building Hermez binary..."
 	$(GOENVVARS) go build $(LDFLAGS) -o $(GOBIN)/$(GOBINARY) $(GOCMD)
 	$(MAKE) migration-clean
@@ -102,6 +107,7 @@ gocilint: .stamp.gocilint
 ## clean: Clean build files. Runs `go clean` internally.
 clean:
 	-rm -r $(GOBIN) .stamp.* 2> /dev/null
+	-mkdir -p $(GOBIN) .stamp.* 2> /dev/null
 	echo "  >  Cleaning build cache"
 	$(GOENVVARS) go clean ./...
 
@@ -109,6 +115,22 @@ clean:
 gomod-download:
 	echo "  >  Checking if there is any missing dependencies..."
 	$(GOENVVARS) go mod download
+
+## docker-build: Build the binaries with Docker.
+docker-build: clean $(GORELEASER)
+	echo "  >  Building with docker..."
+	docker build -t $(DOCKER_IMAGE) -f $(DOCKER_BUILD_FILE) .
+	docker run -t --rm -v "$(PWD)/dist:/build/dist" $(DOCKER_IMAGE) make goreleaser
+
+$(GORELEASER):
+	echo "  >  Installing goreleaser"
+	cd && go install github.com/goreleaser/goreleaser@latest
+
+## goreleaser: Build the binaries with Goreleaser.
+goreleaser: clean $(GORELEASER)
+	echo "  >  Building with goreleaser..."
+	cd $(GOBASE) && $(GORELEASER) --snapshot --skip-publish
+	$(MAKE) migration-clean
 
 $(PACKR):
 	echo "  >  Installing packr2"
