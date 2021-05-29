@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
@@ -179,7 +180,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	}
 
 	// Convert the eGasPrice from gwei , such as 20 to wei
-	eGasPrice = eGasPrice.Mul(eGasPrice, big.NewInt(100000001))
+	eGasPrice = eGasPrice.Mul(eGasPrice, big.NewInt(params.GWei))
 
 	// If the gas price that comes from Etherscan is higher, uses Etherscan's price
 	// It's better pay few more gas than the transaction get stucked at ethereum node pool
