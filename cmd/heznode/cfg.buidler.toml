@@ -145,7 +145,7 @@ LightScrypt = true
 
 [Coordinator.Etherscan]
 URL = "https://api.etherscan.io"
-APIKey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+APIKey = ""
 
 [RecommendedFeePolicy]
 # Strategy used to calculate the recommended fee that the API will expose.

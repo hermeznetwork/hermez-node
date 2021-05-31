@@ -51,8 +51,8 @@ func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*Batc
 		`SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
 		batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
 		batch.num_accounts, batch.exit_root, batch.forge_l1_txs_num, batch.slot_num,
-		block.timestamp, block.hash,
-	    COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs
+		COALESCE(batch.eth_tx_hash, DECODE('0000000000000000000000000000000000000000000000000000000000000000', 'hex')) as eth_tx_hash,
+		block.timestamp, block.hash, COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs
 	    FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
 	 	WHERE batch_num = $1;`, batchNum,
 	); err != nil {
@@ -89,7 +89,7 @@ func (hdb *HistoryDB) GetBatchesAPI(
 	queryStr := `SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
 	batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
 	batch.num_accounts, batch.exit_root, batch.forge_l1_txs_num, batch.slot_num,
-	block.timestamp, block.hash,
+	batch.eth_tx_hash, block.timestamp, block.hash,
 	COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs,
 	count(*) OVER() AS total_items
 	FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num `

@@ -89,6 +89,10 @@ paths:
       responses:
         '200':
           description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountCreationAuthorizationPostSuccessResponse'
         '400':
           description: Bad request.
           content:
@@ -1786,6 +1790,16 @@ components:
       - hezEthereumAddress
       - bjj
       - signature
+    AccountCreationAuthorizationPostSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: string
+      example:
+        success: 'OK'
+      additionalProperties: false
+      required:
+      - success
     HistoryTransaction:
       type: object
       description: Transaction of the Hermez Network
@@ -2207,6 +2221,10 @@ components:
           type: string
           description: hash of the Ethereum block in which the batch was forged
           example: "0xfe88c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
+        ethereumTxHash:
+          type: string
+          description: hash of the Ethereum transaction in which the batch was forged
+          example: "0xae98c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
         timestamp:
           type: string
           format: date-time
@@ -2247,6 +2265,7 @@ components:
       required:
           - itemId
           - batchNum
+          - ethereumTxHash
           - ethereumBlockNum
           - ethereumBlockHash
           - timestamp

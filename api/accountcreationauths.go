@@ -30,8 +30,13 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 		retSQLErr(err, c)
 		return
 	}
+	type okResponse struct {
+		Success string `json:"success"`
+	}
 	// Return OK
-	c.Status(http.StatusOK)
+	c.JSON(http.StatusOK, &okResponse{
+		Success: "OK",
+	})
 }
 
 func (a *API) getAccountCreationAuth(c *gin.Context) {

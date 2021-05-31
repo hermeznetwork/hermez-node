@@ -203,7 +203,7 @@ func (hdb *HistoryDB) GetAllBatches() ([]common.Batch, error) {
 		hdb.dbRead, &batches,
 		`SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr, batch.fees_collected,
 		 batch.fee_idxs_coordinator, batch.state_root, batch.num_accounts, batch.last_idx, batch.exit_root,
-		 batch.forge_l1_txs_num, batch.slot_num, batch.total_fees_usd FROM batch
+		 batch.forge_l1_txs_num, batch.slot_num, batch.total_fees_usd, batch.eth_tx_hash FROM batch
 		 ORDER BY item_id;`,
 	)
 	return db.SlicePtrsToSlice(batches).([]common.Batch), tracerr.Wrap(err)
