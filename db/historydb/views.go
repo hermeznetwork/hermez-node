@@ -12,8 +12,9 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
-// Helper structs for JSON serialization
-type tokenJSON struct {
+// TokenJSON is a representation of the JSON structure returned
+// by the serialization method
+type TokenJSON struct {
 	TokenID          common.TokenID    `json:"id"`
 	TokenItemID      uint64            `json:"itemId"`
 	TokenEthBlockNum int64             `json:"ethereumBlockNum"`
@@ -25,7 +26,9 @@ type tokenJSON struct {
 	TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
 }
 
-type exitAPIJSON struct {
+// ExitAPIJSON is a representation of the JSON structure returned
+// by the serialization method
+type ExitAPIJSON struct {
 	ItemID                 uint64                          `json:"itemId"`
 	BatchNum               common.BatchNum                 `json:"batchNum"`
 	AccountIdx             apitypes.HezIdx                 `json:"accountIndex"`
@@ -36,20 +39,24 @@ type exitAPIJSON struct {
 	InstantWithdrawn       *int64                          `json:"instantWithdraw"`
 	DelayedWithdrawRequest *int64                          `json:"delayedWithdrawRequest"`
 	DelayedWithdrawn       *int64                          `json:"delayedWithdraw"`
-	TokenJSON              tokenJSON                       `json:"token"`
+	TokenJSON              TokenJSON                       `json:"token"`
 }
 
-type accountAPIJSON struct {
+// AccountAPIJSON is a representation of the JSON structure returned
+// by the serialization method
+type AccountAPIJSON struct {
 	ItemID             uint64              `json:"itemId"`
 	AccountIndex       apitypes.HezIdx     `json:"accountIndex"`
 	Nonce              common.Nonce        `json:"nonce"`
 	Balance            *apitypes.BigIntStr `json:"balance"`
 	Bjj                apitypes.HezBJJ     `json:"bjj"`
 	HezEthereumAddress apitypes.HezEthAddr `json:"hezEthereumAddress"`
-	TokenJSON          tokenJSON           `json:"token"`
+	TokenJSON          TokenJSON           `json:"token"`
 }
 
-type txAPIJSON struct {
+// TxAPIJSON is a representation of the JSON structure returned
+// by the serialization method
+type TxAPIJSON struct {
 	TxID        common.TxID          `json:"id"`
 	ItemID      uint64               `json:"itemId"`
 	Type        common.TxType        `json:"type"`
@@ -64,13 +71,15 @@ type txAPIJSON struct {
 	BatchNum    *common.BatchNum     `json:"batchNum"`
 	HistoricUSD *float64             `json:"historicUSD"`
 	Timestamp   time.Time            `json:"timestamp"`
-	L1Info      *l1infoJSON          `json:"L1Info"`
-	L2Info      *l2infoJSON          `json:"L2Info"`
-	TokenJSON   tokenJSON            `json:"token"`
+	L1Info      *L1infoJSON          `json:"L1Info"`
+	L2Info      *L2infoJSON          `json:"L2Info"`
+	TokenJSON   TokenJSON            `json:"token"`
 	L1orL2      string               `json:"L1orL2"`
 }
 
-type l1infoJSON struct {
+// L1infoJSON is a representation of the JSON structure returned
+// by the serialization method
+type L1infoJSON struct {
 	ToForgeL1TxsNum          *int64              `json:"toForgeL1TransactionsNum"`
 	UserOrigin               *bool               `json:"userOrigin"`
 	DepositAmount            *apitypes.BigIntStr `json:"depositAmount"`
@@ -80,7 +89,9 @@ type l1infoJSON struct {
 	EthereumBlockNum         int64               `json:"ethereumBlockNum"`
 }
 
-type l2infoJSON struct {
+// L2infoJSON is a representation of the JSON structure returned
+// by the serialization method
+type L2infoJSON struct {
 	Fee            *common.FeeSelector `json:"fee"`
 	HistoricFeeUSD *float64            `json:"historicFeeUSD"`
 	Nonce          *common.Nonce       `json:"nonce"`
@@ -135,7 +146,7 @@ type TxAPI struct {
 // MarshalJSON is used to neast some of the fields of TxAPI
 // without the need of auxiliar structs
 func (tx TxAPI) MarshalJSON() ([]byte, error) {
-	txa := txAPIJSON{
+	txa := TxAPIJSON{
 		TxID:        tx.TxID,
 		ItemID:      tx.ItemID,
 		Type:        tx.Type,
@@ -152,7 +163,7 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 		Timestamp:   tx.Timestamp,
 		L1Info:      nil,
 		L2Info:      nil,
-		TokenJSON: tokenJSON{
+		TokenJSON: TokenJSON{
 			TokenID:          tx.TokenID,
 			TokenItemID:      tx.TokenItemID,
 			TokenEthBlockNum: tx.TokenEthBlockNum,
@@ -173,7 +184,7 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 			amountSuccess = false
 			depositAmountSuccess = false
 		}
-		txa.L1Info = &l1infoJSON{
+		txa.L1Info = &L1infoJSON{
 			ToForgeL1TxsNum:          tx.ToForgeL1TxsNum,
 			UserOrigin:               tx.UserOrigin,
 			DepositAmount:            tx.DepositAmount,
@@ -184,7 +195,7 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 		}
 	} else {
 		txa.L1orL2 = "L2"
-		txa.L2Info = &l2infoJSON{
+		txa.L2Info = &L2infoJSON{
 			Fee:            tx.Fee,
 			HistoricFeeUSD: tx.HistoricFeeUSD,
 			Nonce:          tx.Nonce,
@@ -274,7 +285,7 @@ type ExitAPI struct {
 // MarshalJSON is used to neast some of the fields of ExitAPI
 // without the need of auxiliar structs
 func (e ExitAPI) MarshalJSON() ([]byte, error) {
-	eaj := exitAPIJSON{
+	eaj := ExitAPIJSON{
 		ItemID:                 e.ItemID,
 		BatchNum:               e.BatchNum,
 		AccountIdx:             e.AccountIdx,
@@ -285,7 +296,7 @@ func (e ExitAPI) MarshalJSON() ([]byte, error) {
 		InstantWithdrawn:       e.InstantWithdrawn,
 		DelayedWithdrawRequest: e.DelayedWithdrawRequest,
 		DelayedWithdrawn:       e.DelayedWithdrawn,
-		TokenJSON: tokenJSON{
+		TokenJSON: TokenJSON{
 			TokenID:          e.TokenID,
 			TokenItemID:      e.TokenItemID,
 			TokenEthBlockNum: e.TokenEthBlockNum,
@@ -341,14 +352,14 @@ type AccountAPI struct {
 // MarshalJSON is used to neast some of the fields of AccountAPI
 // without the need of auxiliar structs
 func (account AccountAPI) MarshalJSON() ([]byte, error) {
-	act := accountAPIJSON{
+	act := AccountAPIJSON{
 		ItemID:             account.ItemID,
 		AccountIndex:       account.Idx,
 		Nonce:              account.Nonce,
 		Balance:            account.Balance,
 		Bjj:                account.PublicKey,
 		HezEthereumAddress: account.EthAddr,
-		TokenJSON: tokenJSON{
+		TokenJSON: TokenJSON{
 			TokenID:          account.TokenID,
 			TokenItemID:      uint64(account.TokenItemID),
 			TokenEthBlockNum: account.TokenEthBlockNum,
