@@ -12,6 +12,91 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
+// TokenJSON is a representation of the JSON structure returned
+// by the serialization method
+type TokenJSON struct {
+	TokenID          common.TokenID    `json:"id"`
+	TokenItemID      uint64            `json:"itemId"`
+	TokenEthBlockNum int64             `json:"ethereumBlockNum"`
+	TokenEthAddr     ethCommon.Address `json:"ethereumAddress"`
+	TokenName        string            `json:"name"`
+	TokenSymbol      string            `json:"symbol"`
+	TokenDecimals    uint64            `json:"decimals"`
+	TokenUSD         *float64          `json:"USD"`
+	TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
+}
+
+// ExitAPIJSON is a representation of the JSON structure returned
+// by the serialization method
+type ExitAPIJSON struct {
+	ItemID                 uint64                          `json:"itemId"`
+	BatchNum               common.BatchNum                 `json:"batchNum"`
+	AccountIdx             apitypes.HezIdx                 `json:"accountIndex"`
+	Bjj                    *apitypes.HezBJJ                `json:"bjj"`
+	EthAddr                *apitypes.HezEthAddr            `json:"hezEthereumAddress"`
+	MerkleProof            *merkletree.CircomVerifierProof `json:"merkleProof"`
+	Balance                apitypes.BigIntStr              `json:"balance"`
+	InstantWithdrawn       *int64                          `json:"instantWithdraw"`
+	DelayedWithdrawRequest *int64                          `json:"delayedWithdrawRequest"`
+	DelayedWithdrawn       *int64                          `json:"delayedWithdraw"`
+	TokenJSON              TokenJSON                       `json:"token"`
+}
+
+// AccountAPIJSON is a representation of the JSON structure returned
+// by the serialization method
+type AccountAPIJSON struct {
+	ItemID             uint64              `json:"itemId"`
+	AccountIndex       apitypes.HezIdx     `json:"accountIndex"`
+	Nonce              common.Nonce        `json:"nonce"`
+	Balance            *apitypes.BigIntStr `json:"balance"`
+	Bjj                apitypes.HezBJJ     `json:"bjj"`
+	HezEthereumAddress apitypes.HezEthAddr `json:"hezEthereumAddress"`
+	TokenJSON          TokenJSON           `json:"token"`
+}
+
+// TxAPIJSON is a representation of the JSON structure returned
+// by the serialization method
+type TxAPIJSON struct {
+	TxID        common.TxID          `json:"id"`
+	ItemID      uint64               `json:"itemId"`
+	Type        common.TxType        `json:"type"`
+	Position    int                  `json:"position"`
+	FromIdx     *apitypes.HezIdx     `json:"fromAccountIndex"`
+	FromEthAddr *apitypes.HezEthAddr `json:"fromHezEthereumAddress"`
+	FromBJJ     *apitypes.HezBJJ     `json:"fromBJJ"`
+	ToIdx       apitypes.HezIdx      `json:"toAccountIndex"`
+	ToEthAddr   *apitypes.HezEthAddr `json:"toHezEthereumAddress"`
+	ToBJJ       *apitypes.HezBJJ     `json:"toBJJ"`
+	Amount      apitypes.BigIntStr   `json:"amount"`
+	BatchNum    *common.BatchNum     `json:"batchNum"`
+	HistoricUSD *float64             `json:"historicUSD"`
+	Timestamp   time.Time            `json:"timestamp"`
+	L1Info      *L1infoJSON          `json:"L1Info"`
+	L2Info      *L2infoJSON          `json:"L2Info"`
+	TokenJSON   TokenJSON            `json:"token"`
+	L1orL2      string               `json:"L1orL2"`
+}
+
+// L1infoJSON is a representation of the JSON structure returned
+// by the serialization method
+type L1infoJSON struct {
+	ToForgeL1TxsNum          *int64              `json:"toForgeL1TransactionsNum"`
+	UserOrigin               *bool               `json:"userOrigin"`
+	DepositAmount            *apitypes.BigIntStr `json:"depositAmount"`
+	AmountSuccess            bool                `json:"amountSuccess"`
+	DepositAmountSuccess     bool                `json:"depositAmountSuccess"`
+	HistoricDepositAmountUSD *float64            `json:"historicDepositAmountUSD"`
+	EthereumBlockNum         int64               `json:"ethereumBlockNum"`
+}
+
+// L2infoJSON is a representation of the JSON structure returned
+// by the serialization method
+type L2infoJSON struct {
+	Fee            *common.FeeSelector `json:"fee"`
+	HistoricFeeUSD *float64            `json:"historicFeeUSD"`
+	Nonce          *common.Nonce       `json:"nonce"`
+}
+
 // TxAPI is a representation of a generic Tx with additional information
 // required by the API, and extracted by joining block and token tables
 type TxAPI struct {
@@ -61,61 +146,62 @@ type TxAPI struct {
 // MarshalJSON is used to neast some of the fields of TxAPI
 // without the need of auxiliar structs
 func (tx TxAPI) MarshalJSON() ([]byte, error) {
-	jsonTx := map[string]interface{}{
-		"id":                     tx.TxID,
-		"itemId":                 tx.ItemID,
-		"type":                   tx.Type,
-		"position":               tx.Position,
-		"fromAccountIndex":       tx.FromIdx,
-		"fromHezEthereumAddress": tx.FromEthAddr,
-		"fromBJJ":                tx.FromBJJ,
-		"toAccountIndex":         tx.ToIdx,
-		"toHezEthereumAddress":   tx.ToEthAddr,
-		"toBJJ":                  tx.ToBJJ,
-		"amount":                 tx.Amount,
-		"batchNum":               tx.BatchNum,
-		"historicUSD":            tx.HistoricUSD,
-		"timestamp":              tx.Timestamp,
-		"L1Info":                 nil,
-		"L2Info":                 nil,
-		"token": map[string]interface{}{
-			"id":               tx.TokenID,
-			"itemId":           tx.TokenItemID,
-			"ethereumBlockNum": tx.TokenEthBlockNum,
-			"ethereumAddress":  tx.TokenEthAddr,
-			"name":             tx.TokenName,
-			"symbol":           tx.TokenSymbol,
-			"decimals":         tx.TokenDecimals,
-			"USD":              tx.TokenUSD,
-			"fiatUpdate":       tx.TokenUSDUpdate,
+	txa := TxAPIJSON{
+		TxID:        tx.TxID,
+		ItemID:      tx.ItemID,
+		Type:        tx.Type,
+		Position:    tx.Position,
+		FromIdx:     tx.FromIdx,
+		FromEthAddr: tx.FromEthAddr,
+		FromBJJ:     tx.FromBJJ,
+		ToIdx:       tx.ToIdx,
+		ToEthAddr:   tx.ToEthAddr,
+		ToBJJ:       tx.ToBJJ,
+		Amount:      tx.Amount,
+		BatchNum:    tx.BatchNum,
+		HistoricUSD: tx.HistoricUSD,
+		Timestamp:   tx.Timestamp,
+		L1Info:      nil,
+		L2Info:      nil,
+		TokenJSON: TokenJSON{
+			TokenID:          tx.TokenID,
+			TokenItemID:      tx.TokenItemID,
+			TokenEthBlockNum: tx.TokenEthBlockNum,
+			TokenEthAddr:     tx.TokenEthAddr,
+			TokenName:        tx.TokenName,
+			TokenSymbol:      tx.TokenSymbol,
+			TokenDecimals:    tx.TokenDecimals,
+			TokenUSD:         tx.TokenUSD,
+			TokenUSDUpdate:   tx.TokenUSDUpdate,
 		},
 	}
+
 	if tx.IsL1 {
-		jsonTx["L1orL2"] = "L1"
+		txa.L1orL2 = "L1"
 		amountSuccess := tx.AmountSuccess
 		depositAmountSuccess := tx.DepositAmountSuccess
 		if tx.BatchNum == nil {
 			amountSuccess = false
 			depositAmountSuccess = false
 		}
-		jsonTx["L1Info"] = map[string]interface{}{
-			"toForgeL1TransactionsNum": tx.ToForgeL1TxsNum,
-			"userOrigin":               tx.UserOrigin,
-			"depositAmount":            tx.DepositAmount,
-			"amountSuccess":            amountSuccess,
-			"depositAmountSuccess":     depositAmountSuccess,
-			"historicDepositAmountUSD": tx.HistoricDepositAmountUSD,
-			"ethereumBlockNum":         tx.EthBlockNum,
+		txa.L1Info = &L1infoJSON{
+			ToForgeL1TxsNum:          tx.ToForgeL1TxsNum,
+			UserOrigin:               tx.UserOrigin,
+			DepositAmount:            tx.DepositAmount,
+			AmountSuccess:            amountSuccess,
+			DepositAmountSuccess:     depositAmountSuccess,
+			HistoricDepositAmountUSD: tx.HistoricDepositAmountUSD,
+			EthereumBlockNum:         tx.EthBlockNum,
 		}
 	} else {
-		jsonTx["L1orL2"] = "L2"
-		jsonTx["L2Info"] = map[string]interface{}{
-			"fee":            tx.Fee,
-			"historicFeeUSD": tx.HistoricFeeUSD,
-			"nonce":          tx.Nonce,
+		txa.L1orL2 = "L2"
+		txa.L2Info = &L2infoJSON{
+			Fee:            tx.Fee,
+			HistoricFeeUSD: tx.HistoricFeeUSD,
+			Nonce:          tx.Nonce,
 		}
 	}
-	return json.Marshal(jsonTx)
+	return json.Marshal(txa)
 }
 
 // txWrite is an representatiion that merges common.L1Tx and common.L2Tx
@@ -199,29 +285,31 @@ type ExitAPI struct {
 // MarshalJSON is used to neast some of the fields of ExitAPI
 // without the need of auxiliar structs
 func (e ExitAPI) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"itemId":                 e.ItemID,
-		"batchNum":               e.BatchNum,
-		"accountIndex":           e.AccountIdx,
-		"bjj":                    e.BJJ,
-		"hezEthereumAddress":     e.EthAddr,
-		"merkleProof":            e.MerkleProof,
-		"balance":                e.Balance,
-		"instantWithdraw":        e.InstantWithdrawn,
-		"delayedWithdrawRequest": e.DelayedWithdrawRequest,
-		"delayedWithdraw":        e.DelayedWithdrawn,
-		"token": map[string]interface{}{
-			"id":               e.TokenID,
-			"itemId":           e.TokenItemID,
-			"ethereumBlockNum": e.TokenEthBlockNum,
-			"ethereumAddress":  e.TokenEthAddr,
-			"name":             e.TokenName,
-			"symbol":           e.TokenSymbol,
-			"decimals":         e.TokenDecimals,
-			"USD":              e.TokenUSD,
-			"fiatUpdate":       e.TokenUSDUpdate,
+	eaj := ExitAPIJSON{
+		ItemID:                 e.ItemID,
+		BatchNum:               e.BatchNum,
+		AccountIdx:             e.AccountIdx,
+		Bjj:                    e.BJJ,
+		EthAddr:                e.EthAddr,
+		MerkleProof:            e.MerkleProof,
+		Balance:                e.Balance,
+		InstantWithdrawn:       e.InstantWithdrawn,
+		DelayedWithdrawRequest: e.DelayedWithdrawRequest,
+		DelayedWithdrawn:       e.DelayedWithdrawn,
+		TokenJSON: TokenJSON{
+			TokenID:          e.TokenID,
+			TokenItemID:      e.TokenItemID,
+			TokenEthBlockNum: e.TokenEthBlockNum,
+			TokenEthAddr:     e.TokenEthAddr,
+			TokenName:        e.TokenName,
+			TokenSymbol:      e.TokenSymbol,
+			TokenDecimals:    e.TokenDecimals,
+			TokenUSD:         e.TokenUSD,
+			TokenUSDUpdate:   e.TokenUSDUpdate,
 		},
-	})
+	}
+
+	return json.Marshal(eaj)
 }
 
 // CoordinatorAPI is a representation of a coordinator with additional information
@@ -264,26 +352,26 @@ type AccountAPI struct {
 // MarshalJSON is used to neast some of the fields of AccountAPI
 // without the need of auxiliar structs
 func (account AccountAPI) MarshalJSON() ([]byte, error) {
-	jsonAccount := map[string]interface{}{
-		"itemId":             account.ItemID,
-		"accountIndex":       account.Idx,
-		"nonce":              account.Nonce,
-		"balance":            account.Balance,
-		"bjj":                account.PublicKey,
-		"hezEthereumAddress": account.EthAddr,
-		"token": map[string]interface{}{
-			"id":               account.TokenID,
-			"itemId":           account.TokenItemID,
-			"ethereumBlockNum": account.TokenEthBlockNum,
-			"ethereumAddress":  account.TokenEthAddr,
-			"name":             account.TokenName,
-			"symbol":           account.TokenSymbol,
-			"decimals":         account.TokenDecimals,
-			"USD":              account.TokenUSD,
-			"fiatUpdate":       account.TokenUSDUpdate,
+	act := AccountAPIJSON{
+		ItemID:             account.ItemID,
+		AccountIndex:       account.Idx,
+		Nonce:              account.Nonce,
+		Balance:            account.Balance,
+		Bjj:                account.PublicKey,
+		HezEthereumAddress: account.EthAddr,
+		TokenJSON: TokenJSON{
+			TokenID:          account.TokenID,
+			TokenItemID:      uint64(account.TokenItemID),
+			TokenEthBlockNum: account.TokenEthBlockNum,
+			TokenEthAddr:     account.TokenEthAddr,
+			TokenName:        account.TokenName,
+			TokenSymbol:      account.TokenSymbol,
+			TokenDecimals:    account.TokenDecimals,
+			TokenUSD:         account.TokenUSD,
+			TokenUSDUpdate:   account.TokenUSDUpdate,
 		},
 	}
-	return json.Marshal(jsonAccount)
+	return json.Marshal(act)
 }
 
 // BatchAPI is a representation of a batch with additional information
