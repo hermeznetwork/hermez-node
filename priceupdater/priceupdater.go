@@ -159,7 +159,7 @@ type PriceUpdater struct {
 	db                    *historydb.HistoryDB
 	updateMethodsPriority []string
 	tokensList            map[uint]historydb.TokenSymbolAndAddr
-	providers             []Provider
+	providers             map[string]Provider
 	statictokensMap       staticMap
 	fiat                  Fiat
 	clientProviders       map[string]*sling.Sling
@@ -187,6 +187,7 @@ func NewPriceUpdater(
 		DisableCompression: true,
 	}
 	httpClient := &http.Client{Transport: tr}
+	providersMap := make(map[string]Provider)
 	for i := 0; i < len(providers); i++ {
 		//create mappings
 		err := providers[i].SymbolsMap.strToMapSymbol(providers[i].Symbols)
@@ -200,12 +201,14 @@ func NewPriceUpdater(
 		//Create Client providers for each provider
 		clientProviders[providers[i].Provider] = sling.New().Base(providers[i].BaseURL).Client(httpClient)
 		clientProviders["fiat"] = sling.New().Base(fiat.URL).Client(httpClient)
+		//Add provider to providersMap
+		providersMap[providers[i].Provider] = providers[i]
 	}
 	return &PriceUpdater{
 		db:                    db,
 		updateMethodsPriority: priorityArr,
 		tokensList:            map[uint]historydb.TokenSymbolAndAddr{},
-		providers:             providers,
+		providers:             providersMap,
 		statictokensMap:       staticTokensMap,
 		fiat:                  fiat,
 		clientProviders:       clientProviders,
@@ -216,53 +219,48 @@ type coingecko map[ethCommon.Address]map[string]float64
 
 func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID uint) (float64, error) {
 	for i := 0; i < len(p.updateMethodsPriority); i++ {
-		for j := 0; j < len(p.providers); j++ {
-			if p.updateMethodsPriority[i] == p.providers[j].Provider {
-				var url string
-				if _, ok := p.providers[j].AddressesMap.Addresses[tokenID]; ok {
-					url = p.providers[j].URL + p.providers[j].AddressesMap.Addresses[tokenID].String() + p.providers[j].URLExtraParams
-				} else {
-					url = p.providers[j].URL + p.providers[j].SymbolsMap.Symbols[tokenID] + p.providers[j].URLExtraParams
-				}
-				req, err := p.clientProviders[p.providers[j].Provider].New().Get(url).Request()
-				if err != nil {
-					return 0, tracerr.Wrap(err)
-				}
-				var (
-					res           *http.Response
-					result        float64
-					isEmptyResult bool
-				)
-				switch p.providers[j].Provider {
-				case UpdateMethodTypeBitFinexV2:
-					var data interface{}
-					res, err = p.clientProviders[p.providers[j].Provider].Do(req.WithContext(ctx), &data, nil)
-					if data != nil {
-						result = data.([]interface{})[6].(float64)
-					} else {
-						isEmptyResult = true
-					}
-				case UpdateMethodTypeCoingeckoV3:
-					var data coingecko
-					res, err = p.clientProviders[p.providers[j].Provider].Do(req.WithContext(ctx), &data, nil)
-					result = data[p.providers[j].AddressesMap.Addresses[tokenID]]["usd"]
-					if len(data) == 0 {
-						isEmptyResult = true
-					}
-				default:
-					log.Error("Unknown price provider: ", p.providers[j].Provider)
-					return 0, tracerr.Wrap(fmt.Errorf("Error: Unknown price provider: " + p.providers[j].Provider))
-				}
-				if err != nil || isEmptyResult {
-					log.Warn("Trying another price provider if it's possible: ", err, " http error code: ", res.StatusCode, " tokenId: ", tokenID, ". URL: ", url)
-					continue
-				} else if res.StatusCode != http.StatusOK {
-					log.Warn("Trying another price provider if it's possible. Http response code: ", res.StatusCode)
-					continue
-				} else {
-					return result, nil
-				}
+		provider := p.providers[p.updateMethodsPriority[i]]
+		var url string
+		if _, ok := provider.AddressesMap.Addresses[tokenID]; ok {
+			url = provider.URL + provider.AddressesMap.Addresses[tokenID].String() + provider.URLExtraParams
+		} else {
+			url = provider.URL + provider.SymbolsMap.Symbols[tokenID] + provider.URLExtraParams
+		}
+		req, err := p.clientProviders[provider.Provider].New().Get(url).Request()
+		if err != nil {
+			return 0, tracerr.Wrap(err)
+		}
+		var (
+			res           *http.Response
+			result        float64
+			isEmptyResult bool
+		)
+		switch provider.Provider {
+		case UpdateMethodTypeBitFinexV2:
+			var data interface{}
+			res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
+			if data != nil {
+				//The token price is received inside an array in the sixth position
+				result = data.([]interface{})[6].(float64)
+			} else {
+				isEmptyResult = true
 			}
+		case UpdateMethodTypeCoingeckoV3:
+			var data coingecko
+			res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
+			result = data[provider.AddressesMap.Addresses[tokenID]]["usd"]
+			if len(data) == 0 {
+				isEmptyResult = true
+			}
+		default:
+			log.Error("Unknown price provider: ", provider.Provider)
+			return 0, tracerr.Wrap(fmt.Errorf("Error: Unknown price provider: " + provider.Provider))
+		}
+		if err != nil || isEmptyResult || res.StatusCode != http.StatusOK {
+			log.Warn("Trying another price provider if it's possible: ", err, " http error code: ", res.StatusCode, " tokenId: ", tokenID, ". URL: ", url)
+			continue
+		} else {
+			return result, nil
 		}
 	}
 	return 0, tracerr.Wrap(fmt.Errorf("Error getting price. All providers have failed"))
@@ -280,8 +278,8 @@ func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 	}
 	//Update token prices but ignore ones
 	for _, token := range p.tokensList {
-		if p.providers[0].AddressesMap.Addresses[token.TokenID] != common.FFAddr ||
-			p.providers[0].SymbolsMap.Symbols[token.TokenID] == UpdateMethodTypeIgnore {
+		if p.providers[p.updateMethodsPriority[0]].AddressesMap.Addresses[token.TokenID] != common.FFAddr ||
+			p.providers[p.updateMethodsPriority[0]].SymbolsMap.Symbols[token.TokenID] == UpdateMethodTypeIgnore {
 			tokenPrice, err := p.getTokenPriceFromProvider(ctx, token.TokenID)
 			if err != nil {
 				log.Errorw("token price from provider error", "err", err, "token", token.Symbol)
@@ -307,20 +305,20 @@ func (p *PriceUpdater) UpdateTokenList() error {
 		if _, ok := p.statictokensMap.Statictokens[dbToken.TokenID]; ok {
 			continue
 		} else {
-			if !(p.providers[0].SymbolsMap.Symbols[dbToken.TokenID] == UpdateMethodTypeIgnore ||
-				p.providers[0].AddressesMap.Addresses[dbToken.TokenID] == common.FFAddr) {
+			if !(p.providers[p.updateMethodsPriority[0]].SymbolsMap.Symbols[dbToken.TokenID] == UpdateMethodTypeIgnore ||
+				p.providers[p.updateMethodsPriority[0]].AddressesMap.Addresses[dbToken.TokenID] == common.FFAddr) {
 				p.tokensList[dbToken.TokenID] = dbToken
 			}
 		}
-		for i := 0; i < len(p.providers); i++ {
-			if len(p.providers[i].SymbolsMap.Symbols) != 0 {
-				if _, ok := p.providers[i].SymbolsMap.Symbols[dbToken.TokenID]; !ok {
-					p.providers[i].SymbolsMap.Symbols[dbToken.TokenID] = dbToken.Symbol
+		for _, provider := range p.providers {
+			if len(provider.SymbolsMap.Symbols) != 0 {
+				if _, ok := provider.SymbolsMap.Symbols[dbToken.TokenID]; !ok {
+					provider.SymbolsMap.Symbols[dbToken.TokenID] = dbToken.Symbol
 				}
 			}
-			if len(p.providers[i].AddressesMap.Addresses) != 0 {
-				if _, ok := p.providers[i].AddressesMap.Addresses[dbToken.TokenID]; !ok {
-					p.providers[i].AddressesMap.Addresses[dbToken.TokenID] = dbToken.Addr
+			if len(provider.AddressesMap.Addresses) != 0 {
+				if _, ok := provider.AddressesMap.Addresses[dbToken.TokenID]; !ok {
+					provider.AddressesMap.Addresses[dbToken.TokenID] = dbToken.Addr
 				}
 			}
 		}
