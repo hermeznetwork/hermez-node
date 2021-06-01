@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,6 +9,12 @@ import (
 )
 
 func (a *API) getAccount(c *gin.Context) {
+	for id := range c.Request.URL.Query() {
+		if id != "accountIndex" {
+			retBadReq(fmt.Errorf("invalid Param: %s", id), c)
+			return
+		}
+	}
 	// Get Addr
 	idx, err := parseParamIdx(c)
 	if err != nil {
@@ -24,6 +31,13 @@ func (a *API) getAccount(c *gin.Context) {
 }
 
 func (a *API) getAccounts(c *gin.Context) {
+	for id := range c.Request.URL.Query() {
+		if id != "tokenIds" && id != "hezEthereumAddress" && id != "BJJ" &&
+			id != "fromItem" && id != "order" && id != "limit" {
+			retBadReq(fmt.Errorf("invalid Param: %s", id), c)
+			return
+		}
+	}
 	// Account filters
 	tokenIDs, addr, bjj, err := parseAccountFilters(c)
 	if err != nil {
