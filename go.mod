@@ -27,6 +27,7 @@ require (
 	github.com/russross/meddler v1.0.1
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli/v2 v2.2.0
+	github.com/yourbasic/graph v0.0.0-20170921192928-40eb135c0b26
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
 	golang.org/x/net v0.0.0-20200822124328-c89045814202

@@ -212,7 +212,12 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	// L2DB
-	l2DB := l2db.NewL2DB(database, database, 10, 1000, 0.0, 1000.0, 24*time.Hour, apiConnCon)
+	nodeConfig := &historydb.NodeConfig{
+		MaxPoolTxs: 10,
+		MinFeeUSD:  0.000000000000001,
+		MaxFeeUSD:  10000000000,
+	}
+	l2DB := l2db.NewL2DB(database, database, 10, 1000, nodeConfig.MinFeeUSD, nodeConfig.MaxFeeUSD, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 	// Config (smart contract constants)
 	chainID := uint16(0)
@@ -240,11 +245,6 @@ func TestMain(m *testing.M) {
 	}
 	if err := hdb.SetConstants(constants); err != nil {
 		panic(err)
-	}
-	nodeConfig := &historydb.NodeConfig{
-		MaxPoolTxs: 10,
-		MinFeeUSD:  0,
-		MaxFeeUSD:  10000000000,
 	}
 	if err := hdb.SetNodeConfig(nodeConfig); err != nil {
 		panic(err)
@@ -816,6 +816,7 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 	ctx := context.Background()
 	client := &http.Client{}
 	httpReq, _ := http.NewRequest(method, path, reqBody)
+	httpReq.Header.Add("Content-Type", "application/json")
 	route, pathParams, err := tc.router.FindRoute(httpReq.Method, httpReq.URL)
 	if err != nil {
 		return tracerr.Wrap(err)
