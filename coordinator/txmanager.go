@@ -160,10 +160,6 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 		return nil, tracerr.Wrap(err)
 	}
 
-	// If the gas price that comes from Etherscan is higher, uses Etherscan's price
-	// It's better pay few more gas than the transaction get stucked at ethereum node pool
-	log.Debugw("TxManager gas prices - ", "Ethereum node gasPrice:", gasPrice, " Etherscan gasPrice:", eGasPrice)
-
 	maxGasPriceBig := big.NewInt(maxGasPrice)
 	minGasPriceBig := big.NewInt(minGasPrice)
 
@@ -177,6 +173,10 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 
 	// Convert the eGasPrice from gwei , such as 20 to wei
 	eGasPrice = eGasPrice.Mul(eGasPrice, big.NewInt(params.GWei))
+
+	// If the gas price that comes from Etherscan is higher, uses Etherscan's price
+	// It's better pay few more gas than the transaction get stucked at ethereum node pool
+	log.Debugw("TxManager gas prices - ", "Ethereum node gasPrice:", gasPrice, " Etherscan gasPrice:", eGasPrice)
 
 	if gasPrice.Cmp(eGasPrice) < 0 {
 		gasPrice = eGasPrice
