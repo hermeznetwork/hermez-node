@@ -140,7 +140,6 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	// So setting a minimum value
 	const minGasPrice = 5
 
-	gasPrice := big.NewInt(minGasPrice)
 	eGasPrice := big.NewInt(minGasPrice)
 
 	if t.etherscanService != nil {
@@ -156,7 +155,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 		}
 	}
 
-	gasPrice, err = t.ethClient.EthSuggestGasPrice(ctx)
+	gasPrice, err := t.ethClient.EthSuggestGasPrice(ctx)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
