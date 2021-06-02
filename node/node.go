@@ -311,7 +311,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		}, chainIDU16, cfg.SmartContracts.Rollup); err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		coordAccount := &txselector.CoordAccount{
+		coordAccount := txselector.CoordAccount{
 			Addr:                cfg.Coordinator.FeeAccount.Address,
 			BJJ:                 cfg.Coordinator.FeeAccount.BJJ,
 			AccountCreationAuth: auth.Signature,
