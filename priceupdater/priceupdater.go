@@ -283,8 +283,7 @@ func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 			tokenPrice, err := p.getTokenPriceFromProvider(ctx, token.TokenID)
 			if err != nil {
 				log.Errorw("token price from provider error", "err", err, "token", token.Symbol)
-			}
-			if err := p.db.UpdateTokenValueByTokenID(token.TokenID, tokenPrice); err != nil {
+			} else if err := p.db.UpdateTokenValueByTokenID(token.TokenID, tokenPrice); err != nil {
 				log.Errorw("token price not updated (db error)",
 					"err", err, "token", token.Symbol)
 			}
