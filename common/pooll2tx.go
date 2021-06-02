@@ -486,6 +486,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		Fee         FeeSelector           `json:"fee"`
 		Nonce       Nonce                 `json:"nonce"`
 		Signature   babyjub.SignatureComp `json:"signature"`
+		RqTxID      *TxID                 `json:"requestId`
 		RqFromIdx   *string               `json:"requestFromAccountIndex"`
 		RqToIdx     *string               `json:"requestToAccountIndex"`
 		RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
@@ -526,6 +527,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		if tx.RqTokenSymbol == "" {
 			return nil, errors.New("Invalid tx.RqTokenSymbol")
 		}
+		toMarshal.RqTxID = &tx.RqTxID
 		rqFromIdx := idxToHez(tx.RqFromIdx, tx.TokenSymbol)
 		toMarshal.RqFromIdx = &rqFromIdx
 		toMarshal.RqTokenID = &tx.RqTokenID
@@ -565,6 +567,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Fee         FeeSelector           `json:"fee"`
 		Nonce       Nonce                 `json:"nonce"`
 		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
+		RqTxID      TxID                  `json:"requestId"`
 		RqFromIdx   StrHezIdx             `json:"requestFromAccountIndex"`
 		RqToIdx     StrHezIdx             `json:"requestToAccountIndex"`
 		RqToEthAddr StrHezEthAddr         `json:"requestToHezEthereumAddress"`
@@ -598,6 +601,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Fee:           receivedJSON.Fee,
 		Nonce:         receivedJSON.Nonce,
 		Signature:     receivedJSON.Signature,
+		RqTxID:        receivedJSON.RqTxID,
 		RqFromIdx:     (Idx)(receivedJSON.RqFromIdx.Idx),
 		RqToIdx:       (Idx)(receivedJSON.RqToIdx.Idx),
 		RqToEthAddr:   (ethCommon.Address)(receivedJSON.RqToEthAddr),
