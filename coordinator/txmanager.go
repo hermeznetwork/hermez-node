@@ -130,7 +130,9 @@ func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 
 // NewAuth generates a new auth object for an ethereum transaction
 func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
-	// First we try getting the gas price from etherscan. If it fails we get the gas price from the ethereum node.
+	// First we try getting the gas price from etherscan. Later we get the gas price from the ethereum node.
+
+	var err error
 
 	// If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
 	const maxGasPrice = 2000
@@ -145,29 +147,18 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 		etherscanGasPrice, err := t.etherscanService.GetGasPrice(ctx)
 		if err != nil {
 			log.Warn("[Etherscan gas price service] Error getting the gas price from etherscan. Trying another method. Error: ", err.Error())
-			var er error
-			gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
-			if er != nil {
-				return nil, tracerr.Wrap(er)
-			}
 		} else {
 			var ok bool
 			eGasPrice, ok = eGasPrice.SetString(etherscanGasPrice.ProposeGasPrice, 10)
 			if !ok {
 				log.Warn("[Etherscan gas price service] invalid big int: \"%v\"", etherscanGasPrice.ProposeGasPrice, ". Trying another method to get gas price")
-				var er error
-				gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
-				if er != nil {
-					return nil, tracerr.Wrap(er)
-				}
 			}
 		}
-	} else {
-		var er error
-		gasPrice, er = t.ethClient.EthSuggestGasPrice(ctx)
-		if er != nil {
-			return nil, tracerr.Wrap(er)
-		}
+	}
+
+	gasPrice, err = t.ethClient.EthSuggestGasPrice(ctx)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
 	}
 
 	// If the gas price that comes from Etherscan is higher, uses Etherscan's price
