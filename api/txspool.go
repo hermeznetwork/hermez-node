@@ -45,7 +45,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 
 func (a *API) postAtomicPool(c *gin.Context) {
 	// Parse body
-	var receivedTxs []receivedPoolTx
+	var receivedTxs []common.PoolL2Tx
 	if err := c.ShouldBindJSON(&receivedTxs); err != nil {
 		retBadReq(err, c)
 		return
@@ -55,27 +55,24 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		retBadReq(errors.New(ErrSingleTxInAtomicEndpoint), c)
 		return
 	}
-	// Transform from received to insert format and validate (individually)
-	writeTxs := make([]l2db.PoolL2TxWrite, nTxs) // used for DB insert
-	txIDStrings := make([]string, nTxs)          // used for successful response
+	// Validate txs individually
+	txIDStrings := make([]string, nTxs) // used for successful response
 	clientIP := c.ClientIP()
 	for i, tx := range receivedTxs {
-		writeTx := tx.toPoolL2TxWrite()
-		if err := a.verifyPoolL2TxWrite(writeTx); err != nil {
+		if err := a.verifyPoolL2Tx(tx); err != nil {
 			retBadReq(err, c)
 			return
 		}
-		writeTx.ClientIP = clientIP
-		writeTxs[i] = *writeTx
-		txIDStrings[i] = writeTx.TxID.String()
+		receivedTxs[i].ClientIP = clientIP
+		txIDStrings[i] = tx.TxID.String()
 	}
 	// Validate that all txs in the payload represent an atomic group
-	if !isAtomicGroup(writeTxs) {
+	if !isAtomicGroup(receivedTxs) {
 		retBadReq(errors.New(ErrTxsNotAtomic), c)
 		return
 	}
 	// Insert to DB
-	if err := a.l2.AddAtomicTxsAPI(writeTxs); err != nil {
+	if err := a.l2.AddAtomicTxsAPI(receivedTxs); err != nil {
 		retSQLErr(err, c)
 		return
 	}
@@ -85,7 +82,7 @@ func (a *API) postAtomicPool(c *gin.Context) {
 
 // isAtomicGroup returns true if all the txs are needed to be forged
 // (all txs will be forged in the same batch or non of them will be forged)
-func isAtomicGroup(txs []l2db.PoolL2TxWrite) bool {
+func isAtomicGroup(txs []common.PoolL2Tx) bool {
 	// Create a graph from the given txs to represent requests between transactions
 	g := graph.New(len(txs))
 	idToPos := make(map[common.TxID]int, len(txs))
@@ -95,12 +92,12 @@ func isAtomicGroup(txs []l2db.PoolL2TxWrite) bool {
 	}
 	// Create vertices that connect nodes of the graph (txs) using RqTxID
 	for i, tx := range txs {
-		if tx.RqTxID == nil {
+		if tx.RqTxID == common.EmptyTxID {
 			// if just one tx doesn't request any other tx, this tx could be forged alone
 			// making the hole group not atomic
 			return false
 		}
-		if rqTxPos, ok := idToPos[*tx.RqTxID]; ok {
+		if rqTxPos, ok := idToPos[tx.RqTxID]; ok {
 			g.Add(i, rqTxPos)
 		} else {
 			// tx is requesting a tx that is not provided in the payload

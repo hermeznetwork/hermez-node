@@ -16,7 +16,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
@@ -81,83 +80,73 @@ func genTestPoolTxs(
 ) (poolTxsToSend []common.PoolL2Tx, poolTxsToReceive []testPoolTxReceive) {
 	poolTxsToSend = []common.PoolL2Tx{}
 	poolTxsToReceive = []testPoolTxReceive{}
-	for _, poolTx := range poolTxs {
+	for i := range poolTxs {
 		// common.PoolL2Tx ==> poolTxsToSend (add token symbols for proper marshaling)
-		token := getTokenByID(poolTx.TokenID, tokens)
-		txToSend := poolTx
+		token := getTokenByID(poolTxs[i].TokenID, tokens)
+		txToSend := poolTxs[i]
 		txToSend.TokenSymbol = token.Symbol
 		var rqToken historydb.TokenWithUSD
-		if poolTx.RqToIdx != 0 {
-			rqToken = getTokenByID(poolTx.RqTokenID, tokens)
+		if poolTxs[i].RqToIdx != 0 {
+			rqToken = getTokenByID(poolTxs[i].RqTokenID, tokens)
 			txToSend.RqTokenSymbol = rqToken.Symbol
 		}
 		poolTxsToSend = append(poolTxsToSend, txToSend)
 		// common.PoolL2Tx ==> testPoolTxReceive
 		genReceiveTx := testPoolTxReceive{
-			TxID:      poolTx.TxID,
-			Type:      poolTx.Type,
-			FromIdx:   common.IdxToHez(poolTx.FromIdx, token.Symbol),
-			Amount:    poolTx.Amount.String(),
-			Fee:       poolTx.Fee,
-			Nonce:     poolTx.Nonce,
-			State:     poolTx.State,
-			Signature: poolTx.Signature,
-			Timestamp: poolTx.Timestamp,
+			TxID:      poolTxs[i].TxID,
+			Type:      poolTxs[i].Type,
+			FromIdx:   common.IdxToHez(poolTxs[i].FromIdx, token.Symbol),
+			Amount:    poolTxs[i].Amount.String(),
+			Fee:       poolTxs[i].Fee,
+			Nonce:     poolTxs[i].Nonce,
+			State:     poolTxs[i].State,
+			Signature: poolTxs[i].Signature,
+			Timestamp: poolTxs[i].Timestamp,
 			Token:     token,
 		}
-		fromAcc := getAccountByIdx(poolTx.FromIdx, accs)
-		fromAddr := common.EthAddrToHez(fromAcc.EthAddr)
+		fromAcc := getAccountByIdx(poolTxs[i].FromIdx, accs)
+		fromAddr := ethAddrToHez(fromAcc.EthAddr)
 		genReceiveTx.FromEthAddr = &fromAddr
 		fromBjj := common.BjjToString(fromAcc.BJJ)
 		genReceiveTx.FromBJJ = &fromBjj
 		toIdx := common.IdxToHez(poolTx.ToIdx, token.Symbol)
 		genReceiveTx.ToIdx = &toIdx
-		if poolTx.ToEthAddr != common.EmptyAddr {
-			toEth := ethAddrToHez(poolTx.ToEthAddr)
+		if poolTxs[i].ToEthAddr != common.EmptyAddr {
+			toEth := ethAddrToHez(poolTxs[i].ToEthAddr)
 			genReceiveTx.ToEthAddr = &toEth
-		} else if poolTx.ToIdx > 255 {
-			acc := getAccountByIdx(poolTx.ToIdx, accs)
+		} else if poolTxs[i].ToIdx > 255 {
+			acc := getAccountByIdx(poolTxs[i].ToIdx, accs)
 			addr := common.EthAddrToHez(acc.EthAddr)
 			genReceiveTx.ToEthAddr = &addr
 		}
-		if poolTx.ToBJJ != common.EmptyBJJComp {
-			toBJJ := common.BjjToString(poolTx.ToBJJ)
+		if poolTxs[i].ToBJJ != common.EmptyBJJComp {
+			toBJJ := common.BjjToString(poolTxs[i].ToBJJ)
 			genReceiveTx.ToBJJ = &toBJJ
-		} else if poolTx.ToIdx > 255 {
-			acc := getAccountByIdx(poolTx.ToIdx, accs)
+		} else if poolTxs[i].ToIdx > 255 {
+			acc := getAccountByIdx(poolTxs[i].ToIdx, accs)
 			bjj := common.BjjToString(acc.BJJ)
 			genReceiveTx.ToBJJ = &bjj
 		}
-		if poolTx.RqFromIdx != 0 {
-			rqFromIdx := common.IdxToHez(poolTx.RqFromIdx, token.Symbol)
-			rqTxID := poolTx.RqTxID
-			rqFee := poolTx.RqFee
-			rqNonce := poolTx.RqNonce
-			genSendTx.RqTxID = &rqTxID
-			genReceiveTx.RqTxID = &rqTxID
-			genSendTx.RqFee = &rqFee
-			genReceiveTx.RqFee = &rqFee
-			genSendTx.RqNonce = &rqNonce
-			genReceiveTx.RqNonce = &rqNonce
-			genSendTx.RqFromIdx = &rqFromIdx
-			rqFromIdx := common.IdxToHez(poolTx.RqFromIdx, rqToken.Symbol)
+		if poolTxs[i].RqFromIdx != 0 {
+			rqFromIdx := common.IdxToHez(poolTxs[i].RqFromIdx, rqToken.Symbol)
 			genReceiveTx.RqFromIdx = &rqFromIdx
+			genReceiveTx.RqTxID = &poolTxs[i].RqTxID
 			genReceiveTx.RqTokenID = &rqToken.TokenID
-			rqAmount := poolTx.RqAmount.String()
+			rqAmount := poolTxs[i].RqAmount.String()
 			genReceiveTx.RqAmount = &rqAmount
-			genReceiveTx.RqFee = &poolTx.RqFee
-			genReceiveTx.RqNonce = &poolTx.RqNonce
+			genReceiveTx.RqFee = &poolTxs[i].RqFee
+			genReceiveTx.RqNonce = &poolTxs[i].RqNonce
 
-			if poolTx.RqToIdx != 0 {
-				rqToIdx := common.IdxToHez(poolTx.RqToIdx, rqToken.Symbol)
+			if poolTxs[i].RqToIdx != 0 {
+				rqToIdx := common.IdxToHez(poolTxs[i].RqToIdx, rqToken.Symbol)
 				genReceiveTx.RqToIdx = &rqToIdx
 			}
-			if poolTx.RqToEthAddr != common.EmptyAddr {
-				rqToEth := common.EthAddrToHez(poolTx.RqToEthAddr)
+			if poolTxs[i].RqToEthAddr != common.EmptyAddr {
+				rqToEth := common.EthAddrToHez(poolTxs[i].RqToEthAddr)
 				genReceiveTx.RqToEthAddr = &rqToEth
 			}
-			if poolTx.RqToBJJ != common.EmptyBJJComp {
-				rqToBJJ := common.BjjToString(poolTx.RqToBJJ)
+			if poolTxs[i].RqToBJJ != common.EmptyBJJComp {
+				rqToBJJ := common.BjjToString(poolTxs[i].RqToBJJ)
 				genReceiveTx.RqToBJJ = &rqToBJJ
 			}
 		}
@@ -548,7 +537,7 @@ func TestAtomicPool(t *testing.T) {
 	err = api.h.AddAccountUpdates(accountUpdates)
 	assert.NoError(t, err)
 
-	signAndTransformTxs := func(txs []common.PoolL2Tx) ([]testPoolTxSend, []testPoolTxReceive) {
+	signAndTransformTxs := func(txs []common.PoolL2Tx) ([]common.PoolL2Tx, []testPoolTxReceive) {
 		for i := 0; i < len(txs); i++ {
 			// Set TxID and type
 			_, err := common.NewPoolL2Tx(&txs[i])
@@ -759,7 +748,7 @@ func TestAtomicPool(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test send only one tx
-	jsonTxBytes, err = json.Marshal([]testPoolTxSend{tc.poolTxsToSend[0]})
+	jsonTxBytes, err = json.Marshal([]common.PoolL2Tx{tc.poolTxsToSend[0]})
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", path, jsonTxReader, 400)
@@ -791,42 +780,42 @@ func generateKeys(random int) (ethCommon.Address, babyjub.PrivateKey) {
 func TestIsAtomic(t *testing.T) {
 	// NOT atomic cases
 	// Empty group
-	txs := []l2db.PoolL2TxWrite{}
+	txs := []common.PoolL2Tx{}
 	assert.False(t, isAtomicGroup(txs))
 
 	// Case missing tx: 1 ==> 2 ==> 3 ==> (4: not provided)
-	txs = []l2db.PoolL2TxWrite{
-		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: &common.TxID{3}},
-		{TxID: common.TxID{3}, RqTxID: &common.TxID{4}},
+	txs = []common.PoolL2Tx{
+		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
+		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
 	}
 	assert.False(t, isAtomicGroup(txs))
 
 	// Case loneley tx: 1 ==> 2 ==> 3 ==> 1 <== (4: no buddy references 4th tx)
-	txs = []l2db.PoolL2TxWrite{
-		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: &common.TxID{3}},
-		{TxID: common.TxID{3}, RqTxID: &common.TxID{1}},
-		{TxID: common.TxID{4}, RqTxID: &common.TxID{1}},
+	txs = []common.PoolL2Tx{
+		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
+		{TxID: common.TxID{3}, RqTxID: common.TxID{1}},
+		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
 	}
 	assert.False(t, isAtomicGroup(txs))
 
 	// Case two groups: 1 <==> 2  3 <==> 4
-	txs = []l2db.PoolL2TxWrite{
-		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: &common.TxID{1}},
-		{TxID: common.TxID{3}, RqTxID: &common.TxID{4}},
-		{TxID: common.TxID{4}, RqTxID: &common.TxID{3}},
+	txs = []common.PoolL2Tx{
+		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: common.TxID{1}},
+		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
+		{TxID: common.TxID{4}, RqTxID: common.TxID{3}},
 	}
 	assert.False(t, isAtomicGroup(txs))
 
 	// Atomic cases
 	// Case circular: 1 ==> 2 ==> 3 ==> 4 ==> 1
-	txs = []l2db.PoolL2TxWrite{
-		{TxID: common.TxID{1}, RqTxID: &common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: &common.TxID{3}},
-		{TxID: common.TxID{3}, RqTxID: &common.TxID{4}},
-		{TxID: common.TxID{4}, RqTxID: &common.TxID{1}},
+	txs = []common.PoolL2Tx{
+		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
+		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
+		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
+		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
 	}
 	assert.True(t, isAtomicGroup(txs))
 }

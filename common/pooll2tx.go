@@ -486,7 +486,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		Fee         FeeSelector           `json:"fee"`
 		Nonce       Nonce                 `json:"nonce"`
 		Signature   babyjub.SignatureComp `json:"signature"`
-		RqTxID      *TxID                 `json:"requestId`
+		RqTxID      *TxID                 `json:"requestId"`
 		RqFromIdx   *string               `json:"requestFromAccountIndex"`
 		RqToIdx     *string               `json:"requestToAccountIndex"`
 		RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
