@@ -2,6 +2,7 @@ package l2db
 
 import (
 	"fmt"
+	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -70,25 +71,15 @@ func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 			feeUSD, l2db.maxFeeUSD))
 	}
 	// Add tx if pool is not full
-	res, err := l2db.addTx(tx, true)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	// Return error if pool was full
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	if rowsAffected == 0 {
-		return tracerr.Wrap(errPoolFull)
-	}
-	return nil
+	return tracerr.Wrap(
+		l2db.addTxs([]common.PoolL2Tx{*tx}, true),
+	)
 }
 
 // AddAtomicTxsAPI inserts transactions into the pool
 // if minFeeUSD <= total fee in USD <= maxFeeUSD.
 // It's assumed that the given txs conform an atomic group
-func (l2db *L2DB) AddAtomicTxsAPI(txs []PoolL2TxWrite) error {
+func (l2db *L2DB) AddAtomicTxsAPI(txs []common.PoolL2Tx) error {
 	if len(txs) == 0 {
 		return nil
 	}
@@ -103,10 +94,12 @@ func (l2db *L2DB) AddAtomicTxsAPI(txs []PoolL2TxWrite) error {
 	// Calculate fee in token amount per each used token (don't include tokens with fee 0)
 	feeMap := make(map[common.TokenID]float64)
 	for _, tx := range txs {
-		if _, ok := feeMap[tx.TokenID]; !ok && tx.AmountFloat > 0 {
-			feeMap[tx.TokenID] = tx.Fee.Percentage() * tx.AmountFloat
+		f := big.NewFloat(0).SetInt(tx.Amount)
+		amountF, _ := f.Float64()
+		if _, ok := feeMap[tx.TokenID]; !ok && amountF > 0 {
+			feeMap[tx.TokenID] = tx.Fee.Percentage() * amountF
 		} else {
-			feeMap[tx.TokenID] += tx.Fee.Percentage() * tx.AmountFloat
+			feeMap[tx.TokenID] += tx.Fee.Percentage() * amountF
 		}
 	}
 	tokenIDs := make([]common.TokenID, len(feeMap))
@@ -151,49 +144,8 @@ func (l2db *L2DB) AddAtomicTxsAPI(txs []PoolL2TxWrite) error {
 			avgFeeUSD, l2db.maxFeeUSD))
 	}
 
-	// Check if pool is full
-	row := l2db.dbRead.QueryRow(`SELECT COUNT(*) > $1
-		FROM tx_pool
-		WHERE state = $2 AND NOT external_delete;`,
-		l2db.maxTxs, common.PoolL2TxStatePending)
-	var poolIsFull bool
-	if err := row.Scan(&poolIsFull); err != nil {
-		return tracerr.Wrap(err)
-	}
-	if poolIsFull {
-		return tracerr.Wrap(errPoolFull)
-	}
-
-	// Insert txs
-	return tracerr.Wrap(db.BulkInsert(
-		l2db.dbWrite,
-		`INSERT INTO tx_pool (
-			tx_id,
-			from_idx,
-			to_idx,
-			to_eth_addr,
-			to_bjj,
-			token_id,
-			amount,
-			amount_f,
-			fee,
-			nonce,
-			state,
-			signature,
-			rq_from_idx,
-			rq_to_idx,
-			rq_to_eth_addr,
-			rq_to_bjj,
-			rq_token_id,
-			rq_amount,
-			rq_fee,
-			rq_nonce,
-			rq_tx_id,
-			tx_type,
-			client_ip
-		) VALUES %s;`,
-		txs,
-	))
+	// Insert txs if the pool is not full
+	return tracerr.Wrap(l2db.addTxs(txs, true))
 }
 
 // selectPoolTxAPI select part of queries to get PoolL2TxRead
