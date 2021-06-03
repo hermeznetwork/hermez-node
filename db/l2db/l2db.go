@@ -18,7 +18,6 @@ In some cases, some of the structs defined in this file also include custom Mars
 package l2db
 
 import (
-	"database/sql"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -152,92 +151,126 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx, batchNum common.BatchNum)
 // AddTxTest inserts a tx into the L2DB, without security checks. This is useful for test purposes,
 func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 	// Add tx without checking if pool is full
-	_, err := l2db.addTx(tx, false)
-	return err
+	return tracerr.Wrap(
+		l2db.addTxs([]common.PoolL2Tx{*tx}, false),
+	)
 }
 
-func (l2db *L2DB) addTx(tx *common.PoolL2Tx, checkPoolIsFull bool) (sql.Result, error) {
-	// Prepare extra DB fields and nullables
-	var (
-		toEthAddr *ethCommon.Address
-		toBJJ     *babyjub.PublicKeyComp
-		// Info (always nil)
-		info *string
-		// Rq fields, nil unless tx.RqFromIdx != 0
-		rqFromIdx   *common.Idx
-		rqToIdx     *common.Idx
-		rqToEthAddr *ethCommon.Address
-		rqToBJJ     *babyjub.PublicKeyComp
-		rqTokenID   *common.TokenID
-		rqAmount    *string
-		rqFee       *common.FeeSelector
-		rqNonce     *common.Nonce
-	)
-	// AmountFloat
-	f := new(big.Float).SetInt((*big.Int)(tx.Amount))
-	amountF, _ := f.Float64()
-	// ToEthAddr
-	if tx.ToEthAddr != common.EmptyAddr {
-		toEthAddr = &tx.ToEthAddr
-	}
-	// ToBJJ
-	if tx.ToBJJ != common.EmptyBJJComp {
-		toBJJ = &tx.ToBJJ
-	}
-	// Rq fields
-	if tx.RqFromIdx != 0 {
-		// RqFromIdx
-		rqFromIdx = &tx.RqFromIdx
-		// RqToIdx
-		if tx.RqToIdx != 0 {
-			rqToIdx = &tx.RqToIdx
-		}
-		// RqToEthAddr
-		if tx.RqToEthAddr != common.EmptyAddr {
-			rqToEthAddr = &tx.RqToEthAddr
-		}
-		// RqToBJJ
-		if tx.RqToBJJ != common.EmptyBJJComp {
-			rqToBJJ = &tx.RqToBJJ
-		}
-		// RqTokenID
-		rqTokenID = &tx.RqTokenID
-		// RqAmount
-		if tx.RqAmount != nil {
-			rqAmountStr := tx.RqAmount.String()
-			rqAmount = &rqAmountStr
-		}
-		// RqFee
-		rqFee = &tx.RqFee
-		// RqNonce
-		rqNonce = &tx.RqNonce
-	}
+// Insert PoolL2Tx transactions into the pool. If checkPoolIsFull is set to true the insert will
+// fail if the pool is fool and errPoolFull will be returned
+func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
+	// Set the columns that will be affected by the insert on the table
 	const queryInsertPart = `INSERT INTO tx_pool (
 		tx_id, from_idx, to_idx, to_eth_addr, to_bjj, token_id,
-		amount, fee, nonce, state, info, signature, rq_from_idx, 
+		amount, fee, nonce, state, info, signature, rq_tx_id, rq_from_idx, 
 		rq_to_idx, rq_to_eth_addr, rq_to_bjj, rq_token_id, rq_amount, rq_fee, rq_nonce, 
 		tx_type, amount_f, client_ip
 	)`
-	const queryVarsPart = `$1, $2, $3, $4, $5, $6, 
-	$7, $8, $9, $10, $11, $12, $13,
-	$14, $15, $16, $17, $18, $19, $20,
-	$21, $22, $23`
-	queryVars := []interface{}{tx.TxID, tx.FromIdx, tx.ToIdx, toEthAddr, toBJJ, tx.TokenID,
-		tx.Amount.String(), tx.Fee, tx.Nonce, tx.State, info, tx.Signature, rqFromIdx,
-		rqToIdx, rqToEthAddr, rqToBJJ, rqTokenID, rqAmount, rqFee, rqNonce,
-		tx.Type, amountF, tx.ClientIP}
-	var query string
+	var (
+		queryVarsPart string
+		queryVars     []interface{}
+	)
+	for i := range txs {
+		// Format extra DB fields and nullables
+		var (
+			toEthAddr *ethCommon.Address
+			toBJJ     *babyjub.PublicKeyComp
+			// Info (always nil)
+			info *string
+			// Rq fields, nil unless tx.RqFromIdx != 0
+			rqTxID      *common.TxID
+			rqFromIdx   *common.Idx
+			rqToIdx     *common.Idx
+			rqToEthAddr *ethCommon.Address
+			rqToBJJ     *babyjub.PublicKeyComp
+			rqTokenID   *common.TokenID
+			rqAmount    *string
+			rqFee       *common.FeeSelector
+			rqNonce     *common.Nonce
+		)
+		// AmountFloat
+		f := new(big.Float).SetInt((*big.Int)(txs[i].Amount))
+		amountF, _ := f.Float64()
+		// ToEthAddr
+		if txs[i].ToEthAddr != common.EmptyAddr {
+			toEthAddr = &txs[i].ToEthAddr
+		}
+		// ToBJJ
+		if txs[i].ToBJJ != common.EmptyBJJComp {
+			toBJJ = &txs[i].ToBJJ
+		}
+		// Rq fields
+		if txs[i].RqFromIdx != 0 {
+			// RqTxID
+			rqTxID = &txs[i].RqTxID
+			// RqFromIdx
+			rqFromIdx = &txs[i].RqFromIdx
+			// RqToIdx
+			if txs[i].RqToIdx != 0 {
+				rqToIdx = &txs[i].RqToIdx
+			}
+			// RqToEthAddr
+			if txs[i].RqToEthAddr != common.EmptyAddr {
+				rqToEthAddr = &txs[i].RqToEthAddr
+			}
+			// RqToBJJ
+			if txs[i].RqToBJJ != common.EmptyBJJComp {
+				rqToBJJ = &txs[i].RqToBJJ
+			}
+			// RqTokenID
+			rqTokenID = &txs[i].RqTokenID
+			// RqAmount
+			if txs[i].RqAmount != nil {
+				rqAmountStr := txs[i].RqAmount.String()
+				rqAmount = &rqAmountStr
+			}
+			// RqFee
+			rqFee = &txs[i].RqFee
+			// RqNonce
+			rqNonce = &txs[i].RqNonce
+		}
+		// Each ? match one of the columns to be inserted as defined in queryInsertPart
+		const queryVarsPartPerTx = `(?::BYTEA, ?::BIGINT, ?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT, 
+		?::NUMERIC, ?::SMALLINT, ?::BIGINT, ?::CHAR(4), ?::VARCHAR, ?::BYTEA, ?::BYTEA, ?::BIGINT,
+		?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT, ?::NUMERIC, ?::SMALLINT, ?::BIGINT,
+		?::VARCHAR(40), ?::NUMERIC, ?::VARCHAR)`
+		if i == 0 {
+			queryVarsPart += queryVarsPartPerTx
+		} else {
+			// Add coma before next tx values.
+			queryVarsPart += ", " + queryVarsPartPerTx
+		}
+		// Add values that will replace the ?
+		queryVars = append(queryVars,
+			txs[i].TxID, txs[i].FromIdx, txs[i].ToIdx, toEthAddr, toBJJ, txs[i].TokenID,
+			txs[i].Amount.String(), txs[i].Fee, txs[i].Nonce, txs[i].State, info, txs[i].Signature, rqTxID, rqFromIdx,
+			rqToIdx, rqToEthAddr, rqToBJJ, rqTokenID, rqAmount, rqFee, rqNonce,
+			txs[i].Type, amountF, txs[i].ClientIP,
+		)
+	}
+	// Query begins with the insert statement
+	query := queryInsertPart
 	if checkPoolIsFull {
-		query = queryInsertPart +
-			"SELECT " +
-			queryVarsPart +
-			"WHERE (SELECT COUNT (*) FROM tx_pool WHERE state = $24 AND NOT external_delete) < $25;"
+		// This query creates a temporary table containing the values to insert
+		// that will only get selected if the pool is not full
+		query += " SELECT * FROM ( VALUES " + queryVarsPart + " ) as tmp " + // Temporary table with the values of the txs
+			" WHERE (SELECT COUNT (*) FROM tx_pool WHERE state = ? AND NOT external_delete) < ?;" // Check if the pool is full
 		queryVars = append(queryVars, common.PoolL2TxStatePending, l2db.maxTxs)
 	} else {
-		query = queryInsertPart + "VALUES(" + queryVarsPart + ");"
+		query += " VALUES " + queryVarsPart + ";"
 	}
+	// Replace "?, ?, ... ?" ==> "$1, $2, ..., $(len(queryVars))"
+	query = l2db.dbRead.Rebind(query)
+	// Execute query
 	res, err := l2db.dbWrite.Exec(query, queryVars...)
-	return res, tracerr.Wrap(err)
+	if err == nil && checkPoolIsFull {
+		if rowsAffected, err := res.RowsAffected(); err != nil || rowsAffected == 0 {
+			// If the query didn't affect any row, and there is no error in the query
+			// it's safe to assume that the WERE clause wasn't true, and so the pool is full
+			return tracerr.Wrap(errPoolFull)
+		}
+	}
+	return tracerr.Wrap(err)
 }
 
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
