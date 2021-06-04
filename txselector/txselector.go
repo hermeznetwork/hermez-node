@@ -122,6 +122,7 @@ func (s *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config, l1Us
 	for _, tx := range l1UserTxs {
 		log.Debugw("TxSelector: processing L1 user tx", "TxID", tx.TxID.String())
 		// assumption: l1usertx are sorted by L1Tx.Position
+		// TODO: why is the output of the function ignored?
 		_, _, _, _, err := processor.ProcessL1Tx(nil, &tx) //nolint:gosec
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)

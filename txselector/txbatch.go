@@ -72,6 +72,7 @@ func (b *TxBatch) getSelection() ([]common.Idx, [][]byte, []common.L1Tx, []commo
 		auths = append(auths, auth...)
 
 		l1UserTxs = append(l1UserTxs, group.l1UserTxs...)
+		// TODO: How can we have L1 coord txs at this point?
 		l1CoordTxs = append(l1CoordTxs, group.l1CoordTxs...)
 		poolL2Txs = append(poolL2Txs, group.l2Txs...)
 		discardedL2Txs = append(discardedL2Txs, group.discardedTxs...)
@@ -127,6 +128,7 @@ func (b *TxBatch) prune() error {
 	// check if the batch length is greater than the maximum transaction
 	i := len(b.txs) - 1
 	for b.length() > maxTx && i >= 0 {
+		// TODO: how can we have l1 coord txs at this point?
 		last := b.txs[i]
 		if last == nil {
 			return fmt.Errorf("invalid TxGroup")
