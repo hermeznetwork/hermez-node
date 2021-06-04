@@ -137,6 +137,7 @@ func (g *TxGroup) createL1Txs(processor txProcessor, l2db l2DB, localAccountsDB 
 
 	// create L1 transactions based in the L2
 	for _, l2Tx := range g.l2Txs {
+		// TODO: ¿check if it's actually needed to create account to receive fee, fee could be 0! ?
 		// generate the unique hash from the coordinator account and check if this tx already exist
 		accHash := hashAccount(g.coordAccount.Addr, g.coordAccount.BJJ, l2Tx.TokenID)
 		_, ok := l1TxsCheck[accHash]
@@ -184,7 +185,7 @@ func (g *TxGroup) createL1Txs(processor txProcessor, l2db l2DB, localAccountsDB 
 				continue
 			}
 			// create L1CoordinatorTx for the accountCreation
-			g.l1UserTxs = append(g.l1UserTxs, common.L1Tx{
+			g.l1CoordTxs = append(g.l1CoordTxs, common.L1Tx{
 				UserOrigin:    false,
 				FromEthAddr:   accAuth.EthAddr,
 				FromBJJ:       accAuth.BJJ,
@@ -207,7 +208,7 @@ func (g *TxGroup) createL1Txs(processor txProcessor, l2db l2DB, localAccountsDB 
 			if _, err := localAccountsDB.GetIdxByEthAddrBJJ(l2Tx.ToEthAddr, l2Tx.ToBJJ, l2Tx.TokenID); err == nil {
 				continue
 			}
-			g.l1UserTxs = append(g.l1UserTxs, common.L1Tx{
+			g.l1CoordTxs = append(g.l1CoordTxs, common.L1Tx{
 				UserOrigin:    false,
 				FromEthAddr:   l2Tx.ToEthAddr,
 				FromBJJ:       l2Tx.ToBJJ,
