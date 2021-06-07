@@ -298,17 +298,17 @@ func TestTxGroup_addPoolTxs(t *testing.T) {
 				l1txs:  []common.L1Tx{},
 				l2Txs: []common.PoolL2Tx{
 					{TxID: txID1, FromIdx: 350, ToIdx: 351, TokenID: 0, Amount: big.NewInt(999900), Fee: 10,
-						Nonce: 1, Type: common.TxTypeTransfer},
+						Nonce: 1, Type: common.TxTypeTransfer, RqTxID: txID2},
 					{TxID: txID2, FromIdx: 352, ToIdx: 350, TokenID: 0, Amount: big.NewInt(999999), Fee: 22,
-						Nonce: 33, Type: common.TxTypeTransfer},
+						Nonce: 33, Type: common.TxTypeTransfer, RqTxID: txID1},
 				},
 			},
 			want: want{
 				l2Txs: []common.PoolL2Tx{
 					{TxID: txID2, FromIdx: 352, ToIdx: 350, TokenID: 0, Amount: big.NewInt(999999), Fee: 22,
-						Nonce: 33, Type: common.TxTypeTransfer},
+						Nonce: 33, Type: common.TxTypeTransfer, RqTxID: txID1, RqOffset: 1},
 					{TxID: txID1, FromIdx: 350, ToIdx: 351, TokenID: 0, Amount: big.NewInt(999900), Fee: 10,
-						Nonce: 1, Type: common.TxTypeTransfer},
+						Nonce: 1, Type: common.TxTypeTransfer, RqTxID: txID2, RqOffset: 7},
 				},
 				discardedTxs: []common.PoolL2Tx{},
 				coordIdxs:    map[common.TokenID]common.Idx{0: 350},
@@ -323,17 +323,17 @@ func TestTxGroup_addPoolTxs(t *testing.T) {
 				l1txs:  []common.L1Tx{},
 				l2Txs: []common.PoolL2Tx{
 					{TxID: txID1, FromIdx: 352, ToIdx: 350, TokenID: 0, Amount: big.NewInt(999999), Fee: 22,
-						Nonce: 33, Type: common.TxTypeTransfer},
+						Nonce: 33, Type: common.TxTypeTransfer, RqTxID: txID2, RqOffset: 1},
 					{TxID: txID2, FromIdx: 350, ToIdx: 351, TokenID: 0, Amount: big.NewInt(999900), Fee: 10,
-						Nonce: 1, Type: common.TxTypeTransfer},
+						Nonce: 1, Type: common.TxTypeTransfer, RqTxID: txID1, RqOffset: 7},
 				},
 			},
 			want: want{
 				l2Txs: []common.PoolL2Tx{
 					{TxID: txID1, FromIdx: 352, ToIdx: 350, TokenID: 0, Amount: big.NewInt(999999), Fee: 22,
-						Nonce: 33, Type: common.TxTypeTransfer},
+						Nonce: 33, Type: common.TxTypeTransfer, RqTxID: txID2, RqOffset: 1},
 					{TxID: txID2, FromIdx: 350, ToIdx: 351, TokenID: 0, Amount: big.NewInt(999900), Fee: 10,
-						Nonce: 1, Type: common.TxTypeTransfer},
+						Nonce: 1, Type: common.TxTypeTransfer, RqTxID: txID1, RqOffset: 7},
 				},
 				discardedTxs: []common.PoolL2Tx{},
 				coordIdxs:    map[common.TokenID]common.Idx{0: 350},
