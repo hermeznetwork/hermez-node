@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -61,8 +62,12 @@ type PoolL2Tx struct {
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
 	AbsoluteFeeUpdate time.Time             `meddler:"usd_update,utctimez"`
 	Type              TxType                `meddler:"tx_type"`
+	// Extra DB write fields (not included in JSON)
+	ClientIP string `meddler:"client_ip"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
+	TokenSymbol        string `meddler:"-"` // Used for JSON marshaling the ToIdx
+	RqTokenSymbol      string `meddler:"-"` // Used for JSON marshaling the RqToIdx
 }
 
 // NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated
@@ -281,12 +286,19 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 // [ 48 bits ] rqFromIdx // 6 bytes
 // Total bits compressed data:  217 bits // 28 bytes in *big.Int representation
 func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
+	var amountFloat40 Float40
 	if tx.RqAmount == nil {
-		tx.RqAmount = big.NewInt(0)
-	}
-	amountFloat40, err := NewFloat40(tx.RqAmount)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
+		af40, err := NewFloat40(big.NewInt(0))
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		amountFloat40 = af40
+	} else {
+		af40, err := NewFloat40(tx.RqAmount)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		amountFloat40 = af40
 	}
 	amountFloat40Bytes, err := amountFloat40.Bytes()
 	if err != nil {
@@ -445,3 +457,163 @@ const (
 	// PoolL2TxStateInvalid represents a L2Tx that has been invalidated
 	PoolL2TxStateInvalid PoolL2TxState = "invl"
 )
+
+// IsValid returns true if matches one of the supported PoolL2TxState
+func (s PoolL2TxState) IsValid() bool {
+	switch s {
+	case PoolL2TxStatePending, PoolL2TxStateForging, PoolL2TxStateForged, PoolL2TxStateInvalid:
+		return true
+	default:
+		return false
+	}
+}
+
+// MarshalJSON formats a PoolL2Tx in the expected JSON defined by the API,
+// this format is specified in `api/swagger.yml:schemas/PostPoolL2Transaction`
+func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
+	if tx.TokenSymbol == "" {
+		return nil, errors.New("Invalid tx.TokenSymbol")
+	}
+	type jsonFormat struct {
+		TxID        TxID                  `json:"id"`
+		Type        TxType                `json:"type"`
+		TokenID     TokenID               `json:"tokenId"`
+		FromIdx     string                `json:"fromAccountIndex"`
+		ToIdx       *string               `json:"toAccountIndex"`
+		ToEthAddr   *string               `json:"toHezEthereumAddress"`
+		ToBJJ       *string               `json:"toBjj"`
+		Amount      string                `json:"amount"`
+		Fee         FeeSelector           `json:"fee"`
+		Nonce       Nonce                 `json:"nonce"`
+		Signature   babyjub.SignatureComp `json:"signature"`
+		RqTxID      *TxID                 `json:"requestId"`
+		RqFromIdx   *string               `json:"requestFromAccountIndex"`
+		RqToIdx     *string               `json:"requestToAccountIndex"`
+		RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
+		RqToBJJ     *string               `json:"requestToBjj"`
+		RqTokenID   *TokenID              `json:"requestTokenId"`
+		RqAmount    *string               `json:"requestAmount"`
+		RqFee       *FeeSelector          `json:"requestFee"`
+		RqNonce     *Nonce                `json:"requestNonce"`
+	}
+	// Set fields that do not require extra logic
+	toMarshal := jsonFormat{
+		TxID:      tx.TxID,
+		Type:      tx.Type,
+		TokenID:   tx.TokenID,
+		FromIdx:   idxToHez(tx.FromIdx, tx.TokenSymbol),
+		Amount:    tx.Amount.String(),
+		Fee:       tx.Fee,
+		Nonce:     tx.Nonce,
+		Signature: tx.Signature,
+		RqFee:     &tx.RqFee,
+		RqNonce:   &tx.RqNonce,
+	}
+	// Set To fileds
+	if tx.ToIdx != 0 {
+		toIdx := idxToHez(tx.ToIdx, tx.TokenSymbol)
+		toMarshal.ToIdx = &toIdx
+	}
+	if tx.ToEthAddr != EmptyAddr {
+		toEth := ethAddrToHez(tx.ToEthAddr)
+		toMarshal.ToEthAddr = &toEth
+	}
+	if tx.ToBJJ != EmptyBJJComp {
+		toBJJ := bjjToString(tx.ToBJJ)
+		toMarshal.ToBJJ = &toBJJ
+	}
+	// Set Rq fields
+	if tx.RqFromIdx != 0 {
+		if tx.RqTokenSymbol == "" {
+			return nil, errors.New("Invalid tx.RqTokenSymbol")
+		}
+		toMarshal.RqTxID = &tx.RqTxID
+		rqFromIdx := idxToHez(tx.RqFromIdx, tx.TokenSymbol)
+		toMarshal.RqFromIdx = &rqFromIdx
+		toMarshal.RqTokenID = &tx.RqTokenID
+		rqAmount := tx.RqAmount.String()
+		toMarshal.RqAmount = &rqAmount
+		toMarshal.RqNonce = &tx.RqNonce
+		toMarshal.RqFee = &tx.RqFee
+		if tx.RqToIdx != 0 {
+			rqToIdx := idxToHez(tx.RqToIdx, tx.RqTokenSymbol)
+			toMarshal.RqToIdx = &rqToIdx
+		}
+		if tx.RqToEthAddr != EmptyAddr {
+			rqToEth := ethAddrToHez(tx.RqToEthAddr)
+			toMarshal.RqToEthAddr = &rqToEth
+		}
+		if tx.RqToBJJ != EmptyBJJComp {
+			rqToBJJ := bjjToString(tx.RqToBJJ)
+			toMarshal.RqToBJJ = &rqToBJJ
+		}
+	}
+	return json.Marshal(toMarshal)
+}
+
+// UnmarshalJSON unmarshals a PoolL2Tx that has been formated in json as specified in `api/swagger.yml:schemas/PostPoolL2Transaction`.
+// Note that ClientIP is not included as part of the json and will be set to "".
+// If State is not setted (State == ""), it will be set to PoolL2TxStatePending.
+func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
+	receivedJSON := struct {
+		TxID        TxID                  `json:"id" binding:"required"`
+		Type        TxType                `json:"type" binding:"required"`
+		TokenID     TokenID               `json:"tokenId"`
+		FromIdx     StrHezIdx             `json:"fromAccountIndex" binding:"required"`
+		ToIdx       StrHezIdx             `json:"toAccountIndex"`
+		ToEthAddr   StrHezEthAddr         `json:"toHezEthereumAddress"`
+		ToBJJ       StrHezBJJ             `json:"toBjj"`
+		Amount      *StrBigInt            `json:"amount" binding:"required"`
+		Fee         FeeSelector           `json:"fee"`
+		Nonce       Nonce                 `json:"nonce"`
+		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
+		RqTxID      TxID                  `json:"requestId"`
+		RqFromIdx   StrHezIdx             `json:"requestFromAccountIndex"`
+		RqToIdx     StrHezIdx             `json:"requestToAccountIndex"`
+		RqToEthAddr StrHezEthAddr         `json:"requestToHezEthereumAddress"`
+		RqToBJJ     StrHezBJJ             `json:"requestToBjj"`
+		RqTokenID   TokenID               `json:"requestTokenId"`
+		RqAmount    *StrBigInt            `json:"requestAmount"`
+		RqFee       FeeSelector           `json:"requestFee"`
+		RqNonce     Nonce                 `json:"requestNonce"`
+		State       string                `json:"state"`
+	}{}
+	if err := json.Unmarshal(data, &receivedJSON); err != nil {
+		return err
+	}
+	// Check state
+	state := PoolL2TxStatePending
+	if receivedJSON.State != "" {
+		state = PoolL2TxState(receivedJSON.State)
+		if !state.IsValid() {
+			return fmt.Errorf("Invalid state: %s", state)
+		}
+	}
+	// Set values to destination struct
+	*tx = PoolL2Tx{
+		TxID:          receivedJSON.TxID,
+		FromIdx:       Idx(receivedJSON.FromIdx.Idx),
+		ToIdx:         Idx(receivedJSON.ToIdx.Idx),
+		ToEthAddr:     ethCommon.Address(receivedJSON.ToEthAddr),
+		ToBJJ:         babyjub.PublicKeyComp(receivedJSON.ToBJJ),
+		TokenID:       receivedJSON.TokenID,
+		Amount:        (*big.Int)(receivedJSON.Amount),
+		Fee:           receivedJSON.Fee,
+		Nonce:         receivedJSON.Nonce,
+		Signature:     receivedJSON.Signature,
+		RqTxID:        receivedJSON.RqTxID,
+		RqFromIdx:     (Idx)(receivedJSON.RqFromIdx.Idx),
+		RqToIdx:       (Idx)(receivedJSON.RqToIdx.Idx),
+		RqToEthAddr:   (ethCommon.Address)(receivedJSON.RqToEthAddr),
+		RqToBJJ:       (babyjub.PublicKeyComp)(receivedJSON.RqToBJJ),
+		RqTokenID:     receivedJSON.RqTokenID,
+		RqAmount:      (*big.Int)(receivedJSON.RqAmount),
+		RqFee:         receivedJSON.RqFee,
+		RqNonce:       receivedJSON.RqNonce,
+		Type:          receivedJSON.Type,
+		State:         state,
+		TokenSymbol:   receivedJSON.FromIdx.TokenSymbol,
+		RqTokenSymbol: receivedJSON.RqFromIdx.TokenSymbol,
+	}
+	return nil
+}
