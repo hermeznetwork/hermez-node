@@ -367,6 +367,15 @@ func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
 	return tokensIDs, symbols, nameStr, nil
 }
 
+func parseCurrencyFilters(c querier) ([]string, error) {
+	symbolsStr := c.Query("symbols")
+	var symbols []string
+	if symbolsStr != "" {
+		symbols = strings.Split(symbolsStr, "|")
+	}
+	return symbols, nil
+}
+
 func parseBidFilters(c querier) (*int64, *ethCommon.Address, error) {
 	slotNum, err := parseQueryInt64("slotNum", nil, 0, maxInt64, c)
 	if err != nil {

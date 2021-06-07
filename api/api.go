@@ -122,6 +122,9 @@ func NewAPI(
 		// Tokens
 		v1.GET("/tokens", a.getTokens)
 		v1.GET("/tokens/:id", a.getToken)
+		// Fiat Currencies
+		v1.GET("/currencies", a.getFiatCurrencies)
+		v1.GET("/currencies/:symbol", a.getFiatCurrency)
 		// Coordinators
 		v1.GET("/coordinators", a.getCoordinators)
 	}

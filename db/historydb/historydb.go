@@ -478,6 +478,57 @@ func (hdb *HistoryDB) UpdateTokenValue(tokenAddr ethCommon.Address, value float6
 	return tracerr.Wrap(err)
 }
 
+// UpdateTokenValueByTokenID updates the USD value of a token. Value is the price in
+// USD of a normalized token (1 token = 10^decimals units)
+func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID uint, value float64) error {
+	// usd_update field is gonna be updated automatically due to trigger trigger_token_usd_update
+	_, err := hdb.dbWrite.Exec(
+		"UPDATE token SET usd = $1 WHERE token_id = $2;",
+		value, tokenID,
+	)
+	return tracerr.Wrap(err)
+}
+
+// UpdateFiatPrice updates the USD value per currency
+func (hdb *HistoryDB) UpdateFiatPrice(currency string, baseCurrency string, price float64) error {
+	// last_update field is gonna be updated automatically by the trigger trigger_fiat_price_update
+	_, err := hdb.dbWrite.Exec(
+		"UPDATE fiat SET price = $1 WHERE currency = $2 AND base_currency = $3;",
+		price, currency, baseCurrency,
+	)
+	return tracerr.Wrap(err)
+}
+
+// CreateFiatPrice creates a new entry for a new currency or pair currency/baseCurrency
+func (hdb *HistoryDB) CreateFiatPrice(currency string, baseCurrency string, price float64) error {
+	// last_update field is gonna be filled automatically by the trigger trigger_fiat_price_update
+	_, err := hdb.dbWrite.Exec(
+		"INSERT INTO fiat(currency, base_currency, price) VALUES ($1, $2, $3);",
+		currency, baseCurrency, price,
+	)
+	return tracerr.Wrap(err)
+}
+
+// GetFiatPrice recover the price for a currency
+func (hdb *HistoryDB) GetFiatPrice(currency, baseCurrency string) (FiatCurrency, error) {
+	var currencyPrice = &FiatCurrency{}
+	err := meddler.QueryRow(
+		hdb.dbRead, currencyPrice, `SELECT currency, base_currency, price, last_update FROM fiat WHERE currency = $1 AND base_currency = $2;`,
+		currency, baseCurrency,
+	)
+	return *currencyPrice, tracerr.Wrap(err)
+}
+
+// GetAllFiatPrice recover the price for all currencies
+func (hdb *HistoryDB) GetAllFiatPrice(baseCurrency string) ([]FiatCurrency, error) {
+	var currencyPrices []*FiatCurrency
+	err := meddler.QueryAll(
+		hdb.dbRead, &currencyPrices, `SELECT currency, base_currency, price, last_update FROM fiat WHERE base_currency = $1;`,
+		baseCurrency,
+	)
+	return db.SlicePtrsToSlice(currencyPrices).([]FiatCurrency), tracerr.Wrap(err)
+}
+
 // GetToken returns a token from the DB given a TokenID
 func (hdb *HistoryDB) GetToken(tokenID common.TokenID) (*TokenWithUSD, error) {
 	token := &TokenWithUSD{}
@@ -502,7 +553,7 @@ func (hdb *HistoryDB) GetTokenSymbolsAndAddrs() ([]TokenSymbolAndAddr, error) {
 	var tokens []*TokenSymbolAndAddr
 	err := meddler.QueryAll(
 		hdb.dbRead, &tokens,
-		"SELECT symbol, eth_addr FROM token;",
+		"SELECT symbol, eth_addr, token_id FROM token;",
 	)
 	return db.SlicePtrsToSlice(tokens).([]TokenSymbolAndAddr), tracerr.Wrap(err)
 }

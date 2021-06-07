@@ -235,8 +235,9 @@ type txWrite struct {
 
 // TokenSymbolAndAddr token representation with only Eth addr and symbol
 type TokenSymbolAndAddr struct {
-	Symbol string            `meddler:"symbol"`
-	Addr   ethCommon.Address `meddler:"eth_addr"`
+	TokenID uint              `meddler:"token_id"`
+	Symbol  string            `meddler:"symbol"`
+	Addr    ethCommon.Address `meddler:"eth_addr"`
 }
 
 // TokenWithUSD add USD info to common.Token
@@ -323,6 +324,14 @@ type CoordinatorAPI struct {
 	TotalItems  uint64            `json:"-" meddler:"total_items"`
 	FirstItem   uint64            `json:"-" meddler:"first_item"`
 	LastItem    uint64            `json:"-" meddler:"last_item"`
+}
+
+// FiatCurrency is a representation of a currency price object
+type FiatCurrency struct {
+	Currency     string    `json:"currency" meddler:"currency"`
+	BaseCurrency string    `json:"baseCurrency" meddler:"base_currency"`
+	Price        float64   `json:"price" meddler:"price"`
+	LastUpdate   time.Time `json:"lastUpdate" meddler:"last_update"`
 }
 
 // AccountAPI is a representation of a account with additional information
