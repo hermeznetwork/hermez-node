@@ -29,4 +29,6 @@ var (
 	ErrMaxL2TxSlot = "tx not selected due not available slots for L2Txs"
 	// ErrInvalidRqTx request transaction id not found
 	ErrInvalidRqTx = "request transaction id not found"
+	// ErrUnexpectedRqOffset One of the transactions within an atomic group has RqOffset == 0
+	ErrUnexpectedRqOffset = "One of the transactions within an atomic group has RqOffset == 0"
 )

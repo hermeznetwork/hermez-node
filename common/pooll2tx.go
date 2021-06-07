@@ -59,6 +59,7 @@ type PoolL2Tx struct {
 	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"`
 	RqFee             FeeSelector           `meddler:"rq_fee,zeroisnull"`
 	RqNonce           Nonce                 `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
+	RqOffset          uint8                 `meddler:"-"`                   // (max 3 bits)
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
 	AbsoluteFeeUpdate time.Time             `meddler:"usd_update,utctimez"`
 	Type              TxType                `meddler:"tx_type"`
