@@ -789,11 +789,22 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 		tp.zki.AmountF[tp.i] = big.NewInt(int64(amountF40))
 		tp.zki.NewAccount[tp.i] = big.NewInt(0)
 
-		// L2Txs
-		// tp.zki.RqOffset[tp.i] =  // TODO Rq once TxSelector is ready
-		// tp.zki.RqTxCompressedDataV2[tp.i] = // TODO
-		// tp.zki.RqToEthAddr[tp.i] = common.EthAddrToBigInt(tx.RqToEthAddr) // TODO
-		// tp.zki.RqToBJJAy[tp.i] = tx.ToBJJ.Y // TODO
+		// Rq fields: set zki to link the requested tx
+		if tx.RqOffset != 0 {
+			if tx.RqOffset > 7 {
+				return nil, nil, false, tracerr.New(ErrInvalidRqOffset)
+			}
+			rqOffset := big.NewInt(int64(tx.RqOffset))
+			tp.zki.RqOffset[tp.i] = rqOffset
+			tp.zki.RqTxCompressedDataV2[tp.i], err = tx.RqTxCompressedDataV2()
+			if err != nil {
+				return nil, nil, false, tracerr.Wrap(err)
+			}
+			if tx.RqToBJJ != common.EmptyBJJComp {
+				_, tp.zki.RqToBJJAy[tp.i] = babyjub.UnpackSignY(tx.RqToBJJ)
+			}
+			tp.zki.RqToEthAddr[tp.i] = common.EthAddrToBigInt(tx.RqToEthAddr)
+		}
 
 		signature, err := tx.Signature.Decompress()
 		if err != nil {

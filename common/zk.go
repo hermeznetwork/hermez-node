@@ -126,7 +126,17 @@ type ZKInputs struct {
 	//
 
 	// RqOffset relative transaction position to be linked. Used to perform
-	// atomic transactions.
+	// atomic transactions. The format works like this:
+	// rqTxOffset   |	relativeIndex
+	// ----------------------------------------
+	// 0 			|	no linked transaction
+	// 1 			|	1
+	// 2 			|	2
+	// 3 			|	3
+	// 4 			|	-4
+	// 5 			|	-3
+	// 6 			|	-2
+	// 7 			|	-1
 	RqOffset []*big.Int `json:"rqOffset"` // uint8 (max 3 bits), len: [maxTx]
 
 	// transaction L2 request data
