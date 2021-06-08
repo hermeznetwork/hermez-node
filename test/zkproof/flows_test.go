@@ -1,6 +1,7 @@
 package zkproof
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"math/big"
 	"strconv"
@@ -415,7 +416,7 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 	configBatch := &batchbuilder.ConfigBatch{
 		TxProcessorConfig: txprocessor.Config{
 			NLevels:  16,
-			MaxFeeTx: 3, // Different from CC
+			MaxFeeTx: 2, // Different from CC
 			MaxL1Tx:  2,
 			MaxTx:    3,
 		},
@@ -444,21 +445,24 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedRoots[i], bb.LocalStateDB().MT.Root().BigInt().String())
 		sendProofAndCheckResp(t, zki)
+		zkInputsJSON, err := json.Marshal(zki)
+		log.Error(string(zkInputsJSON))
 	}
 	// Manualy generate atomic txs
 	atomicTxA := common.PoolL2Tx{
 		FromIdx:   256,
 		ToIdx:     257,
 		TokenID:   0,
-		Amount:    big.NewInt(0),
+		Amount:    big.NewInt(100),
 		Fee:       0,
 		Nonce:     0,
 		RqFromIdx: 257,
 		RqToIdx:   256,
 		RqTokenID: 0,
-		RqAmount:  big.NewInt(0),
+		RqAmount:  big.NewInt(50),
 		RqFee:     0,
 		RqNonce:   0,
+		State:     common.PoolL2TxStatePending,
 	}
 	_, err = common.NewPoolL2Tx(&atomicTxA)
 	require.NoError(t, err)
@@ -470,15 +474,16 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 		FromIdx:   257,
 		ToIdx:     256,
 		TokenID:   0,
-		Amount:    big.NewInt(0),
+		Amount:    big.NewInt(50),
 		Fee:       0,
 		Nonce:     0,
 		RqFromIdx: 256,
 		RqToIdx:   257,
 		RqTokenID: 0,
-		RqAmount:  big.NewInt(0),
+		RqAmount:  big.NewInt(100),
 		RqFee:     0,
 		RqNonce:   0,
+		State:     common.PoolL2TxStatePending,
 	}
 	_, err = common.NewPoolL2Tx(&atomicTxB)
 	require.NoError(t, err)
@@ -500,4 +505,6 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[3], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
+	zkInputsJSON, err := json.Marshal(zki)
+	log.Error(string(zkInputsJSON))
 }
