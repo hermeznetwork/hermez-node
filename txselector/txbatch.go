@@ -43,6 +43,7 @@ func NewTxBatch(selectionConfig txprocessor.Config, l2db l2DB, coordAccount Coor
 // selected or created to the next batch inside the TxGroup's
 func (b *TxBatch) getSelection() ([]common.Idx, [][]byte, []common.L1Tx, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	coordIdxs := make([]common.Idx, 0)
+	alreadyAddedCoordIdx := make(map[common.Idx]bool)
 	auths := make([][]byte, 0)
 	l1UserTxs := make([]common.L1Tx, 0)
 	l1CoordTxs := make([]common.L1Tx, 0)
@@ -53,7 +54,10 @@ func (b *TxBatch) getSelection() ([]common.Idx, [][]byte, []common.L1Tx, []commo
 	l1UserTxs = append(l1UserTxs, b.l1UserTxs...)
 	for _, group := range b.txs {
 		for _, idx := range group.coordIdxsMap {
-			coordIdxs = append(coordIdxs, idx)
+			if _, ok := alreadyAddedCoordIdx[idx]; !ok {
+				coordIdxs = append(coordIdxs, idx)
+				alreadyAddedCoordIdx[idx] = true
+			}
 		}
 
 		auth := group.accAuths
