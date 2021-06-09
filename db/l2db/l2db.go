@@ -276,7 +276,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
 const selectPoolTxCommon = `SELECT  tx_pool.tx_id, from_idx, to_idx, tx_pool.to_eth_addr, 
 tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, rq_tx_id, rq_from_idx, 
 rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 (fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f) /

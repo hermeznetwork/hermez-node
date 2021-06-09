@@ -278,8 +278,9 @@ func (g *TxGroup) addPoolTxs(atomic bool, poolTxs []common.PoolL2Tx, processor t
 }
 
 // RelativePositionToRqOffset transforms a natura relative position to the expected RqOffset format,
-// as decribed here: https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier
+// as described here: https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier
 func RelativePositionToRqOffset(relativePosition int) (uint8, error) {
+	//nolint:gomnd
 	switch relativePosition {
 	case -4:
 		return 4, nil
@@ -299,7 +300,6 @@ func RelativePositionToRqOffset(relativePosition int) (uint8, error) {
 		return 3, nil
 	default:
 		return 0, tracerr.New(txprocessor.ErrInvalidRqOffset)
-
 	}
 }
 

@@ -1,7 +1,6 @@
 package zkproof
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"math/big"
 	"strconv"
@@ -419,6 +418,7 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 			MaxFeeTx: 2, // Different from CC
 			MaxL1Tx:  2,
 			MaxTx:    3,
+			ChainID:  ChainID,
 		},
 	}
 
@@ -445,10 +445,8 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedRoots[i], bb.LocalStateDB().MT.Root().BigInt().String())
 		sendProofAndCheckResp(t, zki)
-		zkInputsJSON, err := json.Marshal(zki)
-		log.Error(string(zkInputsJSON))
 	}
-	// Manualy generate atomic txs
+	// Manually generate atomic txs
 	atomicTxA := common.PoolL2Tx{
 		FromIdx:   256,
 		ToIdx:     257,
@@ -500,11 +498,10 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 	coordIdxs, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
 		txsel.GetL1L2TxSelection(txprocConfig, nil, nil)
 	require.NoError(t, err)
+
 	// BatchBuilder build Batch
 	zki, err := bb.BuildBatch(coordIdxs, configBatch, oL1UserTxs, oL1CoordTxs, oL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[3], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
-	zkInputsJSON, err := json.Marshal(zki)
-	log.Error(string(zkInputsJSON))
 }

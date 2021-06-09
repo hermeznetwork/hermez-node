@@ -206,7 +206,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	}
 	defer tp.resetZKInputs()
 
-	if len(coordIdxs) >= int(tp.config.MaxFeeTx) {
+	if len(coordIdxs) > int(tp.config.MaxFeeTx) {
 		return nil, tracerr.Wrap(
 			fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)",
 				len(coordIdxs), tp.config.MaxFeeTx))
@@ -791,7 +791,7 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 
 		// Rq fields: set zki to link the requested tx
 		if tx.RqOffset != 0 {
-			if tx.RqOffset > 7 {
+			if tx.RqOffset > 7 { //nolint:gomnd
 				return nil, nil, false, tracerr.New(ErrInvalidRqOffset)
 			}
 			rqOffset := big.NewInt(int64(tx.RqOffset))
