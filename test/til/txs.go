@@ -727,6 +727,7 @@ func (tc *Context) generateKeys(userNames []string) {
 	}
 }
 
+// NewUser creates a User deriving its keys at the path keyDerivationIndex
 func NewUser(keyDerivationIndex int, name string) User {
 	// babyjubjub key
 	var sk babyjub.PrivateKey
