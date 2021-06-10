@@ -51,6 +51,7 @@ type Provider struct {
 	Symbols        string
 	Addresses      string
 }
+
 type staticMap struct {
 	Statictokens map[uint]float64
 }
@@ -189,7 +190,7 @@ func NewPriceUpdater(
 	httpClient := &http.Client{Transport: tr}
 	providersMap := make(map[string]Provider)
 	for i := 0; i < len(providers); i++ {
-		//create mappings
+		// create mappings
 		err := providers[i].SymbolsMap.strToMapSymbol(providers[i].Symbols)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -198,10 +199,10 @@ func NewPriceUpdater(
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		//Create Client providers for each provider
+		// Create Client providers for each provider
 		clientProviders[providers[i].Provider] = sling.New().Base(providers[i].BaseURL).Client(httpClient)
 		clientProviders["fiat"] = sling.New().Base(fiat.URL).Client(httpClient)
-		//Add provider to providersMap
+		// Add provider to providersMap
 		providersMap[providers[i].Provider] = providers[i]
 	}
 	return &PriceUpdater{
@@ -240,7 +241,7 @@ func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID ui
 			var data interface{}
 			res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
 			if data != nil {
-				//The token price is received inside an array in the sixth position
+				// The token price is received inside an array in the sixth position
 				result = data.([]interface{})[6].(float64)
 			} else {
 				isEmptyResult = true
@@ -257,7 +258,16 @@ func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID ui
 			return 0, tracerr.Wrap(fmt.Errorf("Error: Unknown price provider: " + provider.Provider))
 		}
 		if err != nil || isEmptyResult || res.StatusCode != http.StatusOK {
-			log.Warn("Trying another price provider if it's possible: ", err, " http error code: ", res.StatusCode, " tokenId: ", tokenID, ". URL: ", url)
+			var errMsg strings.Builder
+			errMsg.WriteString("Trying another price provider if it's possible.")
+			if err != nil {
+				errMsg.WriteString(" - Error: " + err.Error())
+			}
+			if res != nil {
+				errMsg.WriteString(fmt.Sprintf(" - HTTP Error: %d %s", res.StatusCode, res.Status))
+			}
+			errMsg.WriteString(fmt.Sprintf(" - TokenID: %d - URL: %s", tokenID, url))
+			log.Warn(errMsg.String())
 			continue
 		} else {
 			return result, nil
@@ -276,7 +286,7 @@ func (p *PriceUpdater) UpdatePrices(ctx context.Context) {
 				"err", err)
 		}
 	}
-	//Update token prices but ignore ones
+	// Update token prices but ignore ones
 	for _, token := range p.tokensList {
 		if p.providers[p.updateMethodsPriority[0]].AddressesMap.Addresses[token.TokenID] != common.FFAddr ||
 			p.providers[p.updateMethodsPriority[0]].SymbolsMap.Symbols[token.TokenID] == UpdateMethodTypeIgnore {
@@ -357,12 +367,12 @@ func (p *PriceUpdater) getFiatPrices(ctx context.Context) (map[string]interface{
 // UpdateFiatPrices updates the fiat prices
 func (p *PriceUpdater) UpdateFiatPrices(ctx context.Context) error {
 	log.Debug("Updating fiat prices")
-	//Retrieve fiat prices
+	// Retrieve fiat prices
 	prices, err := p.getFiatPrices(ctx)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	//Getting all price from database with baseCurrency USD
+	// Getting all price from database with baseCurrency USD
 	currencies, err := p.db.GetAllFiatPrice("USD")
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -391,14 +401,14 @@ func (p *PriceUpdater) UpdateFiatPrices(ctx context.Context) error {
 // UpdateFiatPricesMock updates the fiat prices
 func (p *PriceUpdater) UpdateFiatPricesMock(ctx context.Context) error {
 	log.Debug("Updating fiat prices")
-	//Retrieve fiat prices
+	// Retrieve fiat prices
 	prices := make(map[string]interface{})
 	prices["CNY"] = 6.4306
 	prices["EUR"] = 0.817675
 	prices["JPY"] = 108.709503
 	prices["GBP"] = 0.70335
 
-	//Getting all price from database with baseCurrency USD
+	// Getting all price from database with baseCurrency USD
 	currencies, err := p.db.GetAllFiatPrice("USD")
 	if err != nil {
 		return tracerr.Wrap(err)
