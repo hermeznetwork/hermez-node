@@ -43,6 +43,7 @@ func NewTxBatch(selectionConfig txprocessor.Config, l2db l2DB, coordAccount Coor
 // selected or created to the next batch inside the TxGroup's
 func (b *TxBatch) getSelection() ([]common.Idx, [][]byte, []common.L1Tx, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	coordIdxs := make([]common.Idx, 0)
+	alreadyAddedCoordIdx := make(map[common.Idx]bool)
 	auths := make([][]byte, 0)
 	l1UserTxs := make([]common.L1Tx, 0)
 	l1CoordTxs := make([]common.L1Tx, 0)
@@ -52,8 +53,19 @@ func (b *TxBatch) getSelection() ([]common.Idx, [][]byte, []common.L1Tx, []commo
 	// iterate from the TxGroup's to append all returns
 	l1UserTxs = append(l1UserTxs, b.l1UserTxs...)
 	for _, group := range b.txs {
-		for _, idx := range group.coordIdxsMap {
-			coordIdxs = append(coordIdxs, idx)
+		// Add idx for the coordinator to get the fee, if maximum is not reached
+		// and that idx is not already used
+		// TODO: avoid repeating idxs of the same tokenID? (may already be the case)
+		// Ideal situation: maximize the fee value by having b.selectionConfig.MaxFeeTx idxs
+		// all of them linked to different tokenIDs in a way that the selected tokenIDs have the maximum fee value
+		// among the different tokenIDs that can be used to get fees
+		if len(coordIdxs) <= int(b.selectionConfig.MaxFeeTx) {
+			for _, idx := range group.coordIdxsMap {
+				if _, ok := alreadyAddedCoordIdx[idx]; !ok {
+					coordIdxs = append(coordIdxs, idx)
+					alreadyAddedCoordIdx[idx] = true
+				}
+			}
 		}
 
 		auth := group.accAuths
@@ -185,7 +197,7 @@ func (b *TxBatch) createTxGroups(poolTxs []common.PoolL2Tx, l1UserTxs, l1UserFut
 	l1Position := len(l1UserTxs)
 	// create the groups for the atomic transactions
 	for idx, pool := range txAtomicMapping {
-		group, err := NewTxGroup(false, pool, b.processor, b.l2db, b.localAccountsDB,
+		group, err := NewTxGroup(true, pool, b.processor, b.l2db, b.localAccountsDB,
 			l1Position, b.coordAccount, allL1Txs)
 		if err != nil {
 			return err

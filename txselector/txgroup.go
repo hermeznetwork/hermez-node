@@ -11,6 +11,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -252,8 +253,54 @@ func (g *TxGroup) addPoolTxs(atomic bool, poolTxs []common.PoolL2Tx, processor t
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	// TODO: why is sort called twice?
 	g.sort()
+	// After sorting set RqOffset for atomic txs
+	if g.atomic {
+		for i := 0; i < len(g.l2Txs); i++ {
+			for j := 0; j < len(g.l2Txs); j++ {
+				if g.l2Txs[i].RqTxID == g.l2Txs[j].TxID {
+					// Tx i is requesting tx j
+					rqOffset, err := RelativePositionToRqOffset(j - i)
+					if err != nil {
+						return tracerr.Wrap(err)
+					}
+					g.l2Txs[i].RqOffset = rqOffset
+					break
+				}
+			}
+			if g.l2Txs[i].RqOffset == 0 {
+				return tracerr.New(ErrUnexpectedRqOffset)
+			}
+		}
+	}
 	return g.distributeFee(coordIdxsMap, processor, localAccountsDB)
+}
+
+// RelativePositionToRqOffset transforms a natura relative position to the expected RqOffset format,
+// as described here: https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier
+func RelativePositionToRqOffset(relativePosition int) (uint8, error) {
+	//nolint:gomnd
+	switch relativePosition {
+	case -4:
+		return 4, nil
+	case -3:
+		return 5, nil
+	case -2:
+		return 6, nil
+	case -1:
+		return 7, nil
+	case 0:
+		return 0, nil
+	case 1:
+		return 1, nil
+	case 2:
+		return 2, nil
+	case 3:
+		return 3, nil
+	default:
+		return 0, tracerr.New(txprocessor.ErrInvalidRqOffset)
+	}
 }
 
 // addL1Positions add batch positions into the L1 transactions
