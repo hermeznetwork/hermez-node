@@ -109,9 +109,9 @@ func TestTxGroup_addPoolTxs(t *testing.T) {
 						Info: statedb.ErrIdxNotFound.Error(), Amount: big.NewInt(10), Fee: 33, Nonce: 1,
 						Type: common.TxTypeTransferToBJJ},
 				},
-				coordIdxs:  map[common.TokenID]common.Idx{},
-				l1CoordTxs: []common.L1Tx{},
-				l1UserTxs: []common.L1Tx{
+				coordIdxs: map[common.TokenID]common.Idx{},
+				l1UserTxs: []common.L1Tx{},
+				l1CoordTxs: []common.L1Tx{
 					{
 						UserOrigin:    false,
 						FromEthAddr:   common.FFAddr,
@@ -835,8 +835,8 @@ func TestTxGroup_createL1Txs(t *testing.T) {
 				l1Txs: []common.L1Tx{},
 			},
 			want: want{
-				l1CoordTxs: []common.L1Tx{},
-				l1UserTxs: []common.L1Tx{{
+				l1UserTxs: []common.L1Tx{},
+				l1CoordTxs: []common.L1Tx{{
 					UserOrigin:    false,
 					FromEthAddr:   _invalidEthAddr1,
 					FromBJJ:       _bjj1,
@@ -861,8 +861,8 @@ func TestTxGroup_createL1Txs(t *testing.T) {
 				l1Txs: []common.L1Tx{},
 			},
 			want: want{
-				l1CoordTxs: []common.L1Tx{},
-				l1UserTxs: []common.L1Tx{{
+				l1UserTxs: []common.L1Tx{},
+				l1CoordTxs: []common.L1Tx{{
 					UserOrigin:    false,
 					FromEthAddr:   _invalidEthAddr1,
 					FromBJJ:       _bjj1,
@@ -909,8 +909,8 @@ func TestTxGroup_createL1Txs(t *testing.T) {
 				l1Txs: []common.L1Tx{},
 			},
 			want: want{
-				l1CoordTxs: []common.L1Tx{},
-				l1UserTxs: []common.L1Tx{{
+				l1UserTxs: []common.L1Tx{},
+				l1CoordTxs: []common.L1Tx{{
 					UserOrigin:    false,
 					FromEthAddr:   common.FFAddr,
 					FromBJJ:       _bjj1,
@@ -950,8 +950,8 @@ func TestTxGroup_createL1Txs(t *testing.T) {
 				l1Txs: []common.L1Tx{},
 			},
 			want: want{
-				l1CoordTxs: []common.L1Tx{},
-				l1UserTxs: []common.L1Tx{{
+				l1UserTxs: []common.L1Tx{},
+				l1CoordTxs: []common.L1Tx{{
 					UserOrigin:    false,
 					FromEthAddr:   common.FFAddr,
 					FromBJJ:       _bjj1,
@@ -1012,6 +1012,7 @@ func TestTxGroup_createL1Txs(t *testing.T) {
 				l1Txs: []common.L1Tx{},
 			},
 			want: want{
+				l1UserTxs: []common.L1Tx{},
 				l1CoordTxs: []common.L1Tx{
 					{
 						UserOrigin:    false,
@@ -1022,10 +1023,7 @@ func TestTxGroup_createL1Txs(t *testing.T) {
 						DepositAmount: big.NewInt(0),
 						Position:      0,
 						Type:          common.TxTypeCreateAccountDeposit,
-					},
-				},
-				l1UserTxs: []common.L1Tx{
-					{
+					}, {
 						UserOrigin:    false,
 						FromEthAddr:   _invalidEthAddr1,
 						FromBJJ:       _bjj1,
