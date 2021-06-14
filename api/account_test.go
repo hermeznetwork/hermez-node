@@ -162,8 +162,19 @@ func TestGetAccounts(t *testing.T) {
 	path = fmt.Sprintf("%s/hez:12345", endpoint)
 	err = doBadReq("GET", path, nil, 400)
 	require.NoError(t, err)
+
 	// 404
 	path = fmt.Sprintf("%s/hez:10:12345", endpoint)
 	err = doBadReq("GET", path, nil, 404)
+	require.NoError(t, err)
+
+	// 400
+	path = fmt.Sprintf("%s?hez:hez:25641", endpoint)
+	err = doBadReq("GET", path, nil, 400)
+	require.NoError(t, err)
+
+	// 400
+	path = fmt.Sprintf("%s?hez:hez:0xb4A2333993a70fD103b7cC39883797Aa209bAa21", endpoint)
+	err = doBadReq("GET", path, nil, 400)
 	require.NoError(t, err)
 }

@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// This migration adds the column `item_id` on `tx_pool`
+// This migration adds the column `rq_tx_id` on `tx_pool`
 
-type migrationTest0002 struct{}
+type migrationTest0005 struct{}
 
-func (m migrationTest0002) InsertData(db *sqlx.DB) error {
+func (m migrationTest0005) InsertData(db *sqlx.DB) error {
 	// insert block to respect the FKey of token
 	const queryInsertBlock = `INSERT INTO block (
 		eth_block_num,"timestamp",hash
@@ -52,7 +52,7 @@ func (m migrationTest0002) InsertData(db *sqlx.DB) error {
 		717, 
 		115.047487133272
 	);`
-	// insert account to set effective_from_eth_addr, effective_from_bjj through trigger
+	// isert account to set effective_from_eth_addr, effective_from_bjj through trigger
 	const queryInsertAccount = `INSERT INTO account (
 		idx,token_id,batch_num,bjj,eth_addr
 	) VALUES (
@@ -104,7 +104,7 @@ func (m migrationTest0002) InsertData(db *sqlx.DB) error {
 	return err
 }
 
-func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB) {
+func (m migrationTest0005) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB) {
 	// check that the tx_pool inserted in previous step is persisted
 	// with same content, except item_id is added
 	const queryGetTxPool = `SELECT COUNT(*) FROM tx_pool WHERE
@@ -138,14 +138,15 @@ func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 		tx_type = 'Exit' AND
 		client_ip = '93.176.174.84' AND
 		external_delete = true AND
-		item_id = 1; -- Note that item_id is an autoincremental column, so this value is setted automatically`
+		item_id = 1 AND -- Note that item_id is an autoincremental column, so this value is setted automatically
+		rq_tx_id IS NULL;`
 	row := db.QueryRow(queryGetTxPool)
 	var result int
 	assert.NoError(t, row.Scan(&result))
 	assert.Equal(t, 1, result)
 }
 
-func (m migrationTest0002) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
+func (m migrationTest0005) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
 	// check that the tx_pool inserted in previous step is persisted with same content
 	const queryGetTxPool = `SELECT COUNT(*) FROM tx_pool WHERE
 		tx_id = decode('023A0D72BEB1095C28A7130D896F484CC9D465C1C95F1617C0A7B2094E3E1F11FF', 'hex') AND
@@ -177,17 +178,18 @@ func (m migrationTest0002) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 		rq_nonce = 4 AND
 		tx_type = 'Exit' AND
 		client_ip = '93.176.174.84' AND
+		item_id = 1 AND
 		external_delete = true;`
 	row := db.QueryRow(queryGetTxPool)
 	var result int
 	assert.NoError(t, row.Scan(&result))
 	assert.Equal(t, 1, result)
-	// check that item_id column doesn't exist anymore
-	const queryCheckItemID = `SELECT COUNT(*) FROM tx_pool WHERE item_id = 1;`
+	// check that rq_tx_id colum doesn't exist anymore
+	const queryCheckItemID = `SELECT COUNT(*) FROM tx_pool WHERE rq_tx_id IS NULL;`
 	row = db.QueryRow(queryCheckItemID)
-	assert.Equal(t, `pq: column "item_id" does not exist`, row.Scan(&result).Error())
+	assert.Equal(t, `pq: column "rq_tx_id" does not exist`, row.Scan(&result).Error())
 }
 
-func TestMigration0002(t *testing.T) {
-	runMigrationTest(t, 2, migrationTest0002{})
+func TestMigration0005(t *testing.T) {
+	runMigrationTest(t, 4, migrationTest0005{})
 }
