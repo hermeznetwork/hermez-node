@@ -533,10 +533,13 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 				Balance:     exitAccount.Balance,
 			}
 			if prevExit, ok := exitInfosByIdx[exitIdx]; !ok {
-				exitInfos = append(exitInfos, ei)
-				exitInfosByIdx[exitIdx] = &exitInfos[len(exitInfos)-1]
+				exitInfosByIdx[exitIdx] = &ei
 			} else {
-				*prevExit = ei
+				prevExit.Balance.Add(prevExit.Balance, ei.Balance)
+				exitInfosByIdx[exitIdx] = prevExit
+			}
+			for _, exit := range exitInfosByIdx {
+				exitInfos = append(exitInfos, *exit)
 			}
 		}
 
