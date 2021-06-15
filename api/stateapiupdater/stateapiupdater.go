@@ -49,7 +49,7 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 	switch rfp.PolicyType {
 	case RecommendedFeePolicyTypeStatic:
 		if rfp.StaticValue == 0 {
-			log.Warn("RcommendedFee is set to 0 USD, and the policy is static")
+			log.Warn("RecommendedFee is set to 0 USD, and the policy is static")
 		}
 		return true
 	case RecommendedFeePolicyTypeAvgLastHour:

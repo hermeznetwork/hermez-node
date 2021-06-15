@@ -17,7 +17,7 @@ var historyDB *historydb.HistoryDB
 
 const usdtAddr = "0xdac17f958d2ee523a2206206994597c13d831ec7"
 
-func TestPriceUpdaterBitfinex(t *testing.T) {
+func TestPriceUpdater(t *testing.T) {
 	// Init DB
 	db, err := dbUtils.InitTestSQLDB()
 	if err != nil {
@@ -39,7 +39,7 @@ func TestPriceUpdaterBitfinex(t *testing.T) {
 			Name:        "DAI",
 			Symbol:      "DAI",
 			Decimals:    18,
-		}, // Used to test get by SC addr
+		}, // Used to test get by token symbol
 		{
 			TokenID:     2,
 			EthBlockNum: blocks[0].Num,
@@ -47,7 +47,7 @@ func TestPriceUpdaterBitfinex(t *testing.T) {
 			Name:        "Tether",
 			Symbol:      "USDT",
 			Decimals:    18,
-		}, // Used to test get by token symbol
+		}, // Used to test get by SC addr
 		{
 			TokenID:     3,
 			EthBlockNum: blocks[0].Num,
@@ -79,42 +79,44 @@ func TestPriceUpdaterBitfinex(t *testing.T) {
 	require.NoError(t, historyDB.UpdateTokenValue(tokens[2].EthAddr, ignoreValue))
 
 	// Prepare token config
-	staticValue := 0.12345
-	tc := []TokenConfig{
-		// ETH and UNI tokens use default method
-		{ // DAI uses SC addr
-			UpdateMethod: UpdateMethodTypeBitFinexV2,
-			Addr:         ethCommon.HexToAddress("0x1"),
-			Symbol:       "DAI",
+	tc := []Provider{
+		{
+			Provider:       "bitfinexV2",
+			BaseURL:        "https://api-pub.bitfinex.com/v2/",
+			URL:            "ticker/t",
+			URLExtraParams: "USD",
+			Symbols:        "1=DAI,2=USDT,3=ignore,5=UNI",
 		},
-		{ // USDT uses symbol
-			UpdateMethod: UpdateMethodTypeCoingeckoV3,
-			Addr:         ethCommon.HexToAddress(usdtAddr),
-		},
-		{ // FOO uses ignore
-			UpdateMethod: UpdateMethodTypeIgnore,
-			Addr:         ethCommon.HexToAddress("0x2"),
-		},
-		{ // BAR uses static
-			UpdateMethod: UpdateMethodTypeStatic,
-			Addr:         ethCommon.HexToAddress("0x3"),
-			StaticValue:  staticValue,
+		{
+			Provider:       "CoinGeckoV3",
+			BaseURL:        "https://api.coingecko.com/api/v3/",
+			URL:            "simple/token_price/ethereum?contract_addresses=",
+			URLExtraParams: "&vs_currencies=usd",
+			Addresses:      "1=0x1,2=" + usdtAddr + ",3=ignore,5=0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
 		},
 	}
+	var priority string = "bitfinexV2,CoinGeckoV3"
+	var staticTokens = "4=30.02"
+	var fiat = Fiat{
+		APIKey:       "FFFFFFFFFF",
+		URL:          "https://api.exchangeratesapi.io/v1/",
+		BaseCurrency: "USD",
+		Currencies:   "CNY,EUR,JPY,GBP",
+	}
 
-	bitfinexV2URL := "https://api-pub.bitfinex.com/v2/"
-	coingeckoV3URL := "https://api.coingecko.com/api/v3/"
 	// Init price updater
 	pu, err := NewPriceUpdater(
-		UpdateMethodTypeCoingeckoV3,
+		priority,
 		tc,
+		staticTokens,
+		fiat,
 		historyDB,
-		bitfinexV2URL,
-		coingeckoV3URL,
 	)
 	require.NoError(t, err)
+
 	// Update token list
 	require.NoError(t, pu.UpdateTokenList())
+
 	// Update prices
 	pu.UpdatePrices(context.Background())
 
@@ -137,5 +139,21 @@ func TestPriceUpdaterBitfinex(t *testing.T) {
 	// Check ignored token
 	assert.Equal(t, ignoreValue, *fetchedTokens[3].USD)
 	// Check static value
-	assert.Equal(t, staticValue, *fetchedTokens[4].USD)
+	assert.Equal(t, 30.02, *fetchedTokens[4].USD)
+
+	// Get fiat currencies: get currencies from DB
+	fetchedcurrencies, err := historyDB.GetAllFiatPrice("USD")
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(fetchedcurrencies))
+	//Update fiat currencies
+	err = pu.UpdateFiatPricesMock(context.Background())
+	require.NoError(t, err)
+
+	// Check results: get fiat currencies from DB
+	fetchedcurrencies, err = historyDB.GetAllFiatPrice("USD")
+	require.NoError(t, err)
+	assert.Greater(t, fetchedcurrencies[0].Price, 0.0)
+	assert.Greater(t, fetchedcurrencies[1].Price, 0.0)
+	assert.Greater(t, fetchedcurrencies[2].Price, 0.0)
+	assert.Greater(t, fetchedcurrencies[3].Price, 0.0)
 }

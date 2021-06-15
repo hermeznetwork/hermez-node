@@ -114,16 +114,16 @@ The executable is `bin/heznode` .
 ## Usage Examples
 
 The following commands assume you have built the node previously.  You can also
-run the following examples by replacing `./bin/heznode` with `go run ./cmd/heznode`.
+run the following examples by replacing `./dist/heznode` with `go run ./cmd/heznode`.
 
 Run the node in mode synchronizer:
 ```shell
-./bin/heznode run --mode sync --cfg cfg.buidler.toml
+./dist/heznode run --mode sync --cfg cfg.buidler.toml
 ```
 
 Run the node in mode coordinator:
 ```shell
-./bin/heznode run --mode coord --cfg cfg.buidler.toml
+./dist/heznode run --mode coord --cfg cfg.buidler.toml
 ```
 
 Serve the API in standalone mode.  This command allows serving the API just
@@ -131,28 +131,28 @@ with access to the PostgreSQL database that a node is using.  Several instances
 of `serveapi` can be running at the same time with a single PostgreSQL
 database:
 ```shell
-./bin/heznode serveapi --mode coord --cfg cfg.buidler.toml
+./dist/heznode serveapi --mode coord --cfg cfg.buidler.toml
 ```
 
 Import an ethereum private key into the keystore:
 ```shell
-./bin/heznode importkey --mode coord --cfg cfg.buidler.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
+./dist/heznode importkey --mode coord --cfg cfg.buidler.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
 ```
 
 Generate a new random BabyJubJub key pair:
 ```shell
-./bin/heznode genbjj
+./dist/heznode genbjj
 ```
 
 Check the binary version:
 ```shell
-./bin/heznode version
+./dist/heznode version
 ```
 
 Wipe the entier SQL database (this will destroy all synchronized and pool
 data):
 ```shell
-./bin/heznode wipedbs --mode coord --cfg cfg.buidler.toml 
+./dist/heznode wipedbs --mode coord --cfg cfg.buidler.toml 
 ```
 
 Discard all synchronized blocks and associated state up to a given block
@@ -160,5 +160,5 @@ number.  This command is useful in case the synchronizer reaches an invalid
 state and you want to roll back a few blocks and try again (maybe with some
 fixes in the code).
 ```shell
-./bin/heznode discard --mode coord --cfg cfg.buidler.toml --block 8061330
+./dist/heznode discard --mode coord --cfg cfg.buidler.toml --block 8061330
 ```

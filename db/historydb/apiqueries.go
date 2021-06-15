@@ -51,8 +51,8 @@ func (hdb *HistoryDB) getBatchAPI(d meddler.DB, batchNum common.BatchNum) (*Batc
 		`SELECT batch.item_id, batch.batch_num, batch.eth_block_num,
 		batch.forger_addr, batch.fees_collected, batch.total_fees_usd, batch.state_root,
 		batch.num_accounts, batch.exit_root, batch.forge_l1_txs_num, batch.slot_num,
-		batch.eth_tx_hash, block.timestamp, block.hash,
-	    COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs
+		COALESCE(batch.eth_tx_hash, DECODE('0000000000000000000000000000000000000000000000000000000000000000', 'hex')) as eth_tx_hash,
+		block.timestamp, block.hash, COALESCE ((SELECT COUNT(*) FROM tx WHERE batch_num = batch.batch_num), 0) AS forged_txs
 	    FROM batch INNER JOIN block ON batch.eth_block_num = block.eth_block_num
 	 	WHERE batch_num = $1;`, batchNum,
 	); err != nil {
@@ -452,6 +452,50 @@ func (hdb *HistoryDB) GetTokensAPI(
 		return []TokenWithUSD{}, 0, nil
 	}
 	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), uint64(len(tokens)) - tokens[0].TotalItems, nil
+}
+
+// GetCurrencyAPI returns a Currency from the DB given its symbol
+func (hdb *HistoryDB) GetCurrencyAPI(symbol string) (FiatCurrency, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return FiatCurrency{}, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	return hdb.GetFiatPrice(symbol, "USD")
+}
+
+// GetCurrenciesAPI returns a list of Currencies from the DB
+func (hdb *HistoryDB) GetCurrenciesAPI(
+	symbols []string,
+) ([]FiatCurrency, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	var query string
+	var args []interface{}
+	queryStr := `SELECT currency, base_currency, price, last_update FROM fiat `
+	// Apply filters
+	if len(symbols) > 0 {
+		queryStr += "WHERE currency IN (?)"
+		args = append(args, symbols)
+	}
+	query, argsQ, err := sqlx.In(queryStr, args...)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	query = hdb.dbRead.Rebind(query)
+	currencies := []*FiatCurrency{}
+	if err := meddler.QueryAll(hdb.dbRead, &currencies, query, argsQ...); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if len(currencies) == 0 {
+		return []FiatCurrency{}, nil
+	}
+	return db.SlicePtrsToSlice(currencies).([]FiatCurrency), nil
 }
 
 // GetTxAPI returns a tx from the DB given a TxID
