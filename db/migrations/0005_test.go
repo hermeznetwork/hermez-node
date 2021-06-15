@@ -191,5 +191,5 @@ func (m migrationTest0005) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 }
 
 func TestMigration0005(t *testing.T) {
-	runMigrationTest(t, 4, migrationTest0005{})
+	runMigrationTest(t, 5, migrationTest0005{})
 }
