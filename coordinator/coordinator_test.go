@@ -120,7 +120,7 @@ func newTestModules(t *testing.T) modules {
 		BJJ:                 bjj,
 		AccountCreationAuth: nil,
 	}
-	txSelector, err := txselector.NewTxSelector(coordAccount, txSelDBPath, syncStateDB, l2DB)
+	txSelector, err := txselector.NewTxSelector(&coordAccount, txSelDBPath, syncStateDB, l2DB)
 	assert.NoError(t, err)
 
 	batchBuilderDBPath, err = ioutil.TempDir("", "tmpBatchBuilderDB")

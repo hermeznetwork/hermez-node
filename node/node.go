@@ -316,7 +316,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			BJJ:                 cfg.Coordinator.FeeAccount.BJJ,
 			AccountCreationAuth: auth.Signature,
 		}
-		txSelector, err := txselector.NewTxSelector(coordAccount,
+		txSelector, err := txselector.NewTxSelector(&coordAccount,
 			cfg.Coordinator.TxSelector.Path, stateDB, l2DB)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
