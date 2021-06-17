@@ -28,6 +28,16 @@ type CoordAccount struct {
 	AccountCreationAuth []byte // signature in byte array format
 }
 
+type atomicGroup struct {
+	TxIDs      []common.TxID
+	AverageFee float64
+}
+
+type selectableTx struct {
+	Tx      common.PoolL2Tx
+	GroupID int // 0 means not belonging to a group, so non atomic tx
+}
+
 // TxSelector implements all the functionalities to select the txs for the next
 // batch
 type TxSelector struct {
@@ -207,7 +217,13 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
-	l2TxsForgable, l2TxsNonForgable := splitL2ForgableAndNonForgable(tp, l2TxsFromDB)
+	selectableTxs, _, l2TxsNonForgable, _ := splitL2ForgableAndNonForgable(tp, l2TxsFromDB)
+
+	// This code is temporary in order to split the task, by already having a common interface
+	l2TxsForgable := []common.PoolL2Tx{}
+	for i := 0; i < len(selectableTxs); i++ {
+		l2TxsForgable = append(l2TxsForgable, selectableTxs[i].Tx)
+	}
 
 	// in case that length of l2TxsForgable is 0, no need to continue, there
 	// is no L2Txs to forge at all
@@ -731,8 +747,17 @@ func sortL2Txs(l2Txs []common.PoolL2Tx) []common.PoolL2Tx {
 }
 
 func splitL2ForgableAndNonForgable(tp *txprocessor.TxProcessor,
-	l2Txs []common.PoolL2Tx) ([]common.PoolL2Tx, []common.PoolL2Tx) {
-	var l2TxsForgable, l2TxsNonForgable []common.PoolL2Tx
+	l2Txs []common.PoolL2Tx) (
+	l2TxsForgable []selectableTx,
+	atomicTxsMap map[int]atomicGroup,
+	l2TxsNonForgable []common.PoolL2Tx, // Txs that can't be forged right now
+	invalidL2Txs []common.PoolL2Tx, // Txs that will never be forjable (given the current situation)
+) {
+	/* TODO:
+	- set atomicTxsMap
+	- set RqOffset
+	- add txs from invalid groups to invalidL2Txs and remove them from l2Txs
+	*/
 	for i := 0; i < len(l2Txs); i++ {
 		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
 		if err != nil {
@@ -740,14 +765,15 @@ func splitL2ForgableAndNonForgable(tp *txprocessor.TxProcessor,
 			l2TxsNonForgable = append(l2TxsNonForgable, l2Txs[i])
 			continue
 		}
-
+		// TODO: diferentiate between not forjable right now (nonce doesn't match)
+		// and invalid (nonce of the tx smaller than noce from the state)
 		if l2Txs[i].Nonce != accSender.Nonce {
 			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to wrong nonce, tx nonce %d, account sender nonce %d",
 				l2Txs[i].Nonce, accSender.Nonce)
 			l2TxsNonForgable = append(l2TxsNonForgable, l2Txs[i])
 			continue
 		}
-		l2TxsForgable = append(l2TxsForgable, l2Txs[i])
+		l2TxsForgable = append(l2TxsForgable, selectableTx{Tx: l2Txs[i]})
 	}
-	return l2TxsForgable, l2TxsNonForgable
+	return l2TxsForgable, nil, l2TxsNonForgable, nil
 }
