@@ -1065,3 +1065,5 @@ func TestL1UserFutureTxs(t *testing.T) {
 	stateDB.Close()
 	txsel.LocalAccountsDB().Close()
 }
+
+// TODO: add unit test for sortL2Txs
