@@ -217,20 +217,13 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
-	selectableTxs, _, l2TxsNonForgable, _ := splitL2ForgableAndNonForgable(tp, l2TxsFromDB)
-
-	// This code is temporary in order to split the task, by already having a common interface
-	l2TxsForgable := []common.PoolL2Tx{}
-	for i := 0; i < len(selectableTxs); i++ {
-		l2TxsForgable = append(l2TxsForgable, selectableTxs[i].Tx)
-	}
+	selectableTxs, l2TxsNonForgable, atomicTxsMap, discardedL2Txs := splitL2ForgableAndNonForgable(tp, l2TxsFromDB)
 
 	// in case that length of l2TxsForgable is 0, no need to continue, there
 	// is no L2Txs to forge at all
-	if len(l2TxsForgable) == 0 {
-		var discardedL2Txs []common.PoolL2Tx
+	if len(selectableTxs) == 0 {
 		for i := 0; i < len(l2TxsNonForgable); i++ {
-			discardedL2Txs = append(discardedL2Txs, l2TxsNonForgable[i])
+			discardedL2Txs = append(discardedL2Txs, l2TxsNonForgable[i].Tx)
 		}
 		err = tp.StateDB().MakeCheckpoint()
 		if err != nil {
@@ -247,8 +240,16 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 
 	var accAuths [][]byte
 	var l1CoordinatorTxs []common.L1Tx
-	var validTxs, discardedL2Txs []common.PoolL2Tx
-	l2TxsForgable = sortL2Txs(l2TxsForgable)
+	var validTxs []common.PoolL2Tx
+
+	selectableTxs = sortL2Txs(selectableTxs, atomicTxsMap)
+
+	// Temporary code to be able to pass the tests while doing small PRs
+	l2TxsForgable := []common.PoolL2Tx{}
+	for i := 0; i < len(selectableTxs); i++ {
+		l2TxsForgable = append(l2TxsForgable, selectableTxs[i].Tx)
+	}
+
 	accAuths, l1CoordinatorTxs, validTxs, discardedL2Txs, err =
 		txsel.processL2Txs(tp, selectionConfig, len(l1UserTxs), l1UserFutureTxs,
 			l2TxsForgable, validTxs, discardedL2Txs)
@@ -259,13 +260,18 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	// if there is space for more txs get also the NonForgable txs, that may
 	// be unblocked once the Forgable ones are processed
 	if len(validTxs) < int(selectionConfig.MaxTx)-(len(l1UserTxs)+len(l1CoordinatorTxs)) {
-		l2TxsNonForgable = sortL2Txs(l2TxsNonForgable)
+		l2TxsNonForgable = sortL2Txs(l2TxsNonForgable, atomicTxsMap)
 		var accAuths2 [][]byte
 		var l1CoordinatorTxs2 []common.L1Tx
+		// Temporary code to be able to pass the tests while doing small PRs
+		tmpL2TxsNonForgable := []common.PoolL2Tx{}
+		for i := 0; i < len(l2TxsNonForgable); i++ {
+			tmpL2TxsNonForgable = append(tmpL2TxsNonForgable, l2TxsNonForgable[i].Tx)
+		}
 		accAuths2, l1CoordinatorTxs2, validTxs, discardedL2Txs, err =
 			txsel.processL2Txs(tp, selectionConfig,
 				len(l1UserTxs)+len(l1CoordinatorTxs), l1UserFutureTxs,
-				l2TxsNonForgable, validTxs, discardedL2Txs)
+				tmpL2TxsNonForgable, validTxs, discardedL2Txs)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		}
@@ -276,9 +282,9 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 		// if there is no space for NonForgable txs, put them at the
 		// discardedL2Txs array
 		for i := 0; i < len(l2TxsNonForgable); i++ {
-			l2TxsNonForgable[i].Info =
+			l2TxsNonForgable[i].Tx.Info =
 				"Tx not selected due not available slots for L2Txs"
-			discardedL2Txs = append(discardedL2Txs, l2TxsNonForgable[i])
+			discardedL2Txs = append(discardedL2Txs, l2TxsNonForgable[i].Tx)
 		}
 	}
 
@@ -726,31 +732,88 @@ func checkPendingToCreateFutureTxs(l1UserFutureTxs []common.L1Tx, tokenID common
 	return false
 }
 
-// sortL2Txs sorts the PoolL2Txs by AbsoluteFee and then by Nonce
-func sortL2Txs(l2Txs []common.PoolL2Tx) []common.PoolL2Tx {
-	// Sort by absolute fee with SliceStable, so that txs with same
-	// AbsoluteFee are not rearranged and nonce order is kept in such case
-	sort.SliceStable(l2Txs, func(i, j int) bool {
-		return l2Txs[i].AbsoluteFee > l2Txs[j].AbsoluteFee
+// sortL2Txs sorts the PoolL2Txs by AverageFee if they are atomic and AbsoluteFee and then by Nonce if they aren't
+// atomic txs that are within the same atomic group are guaranteed to manatin order and consecutiveness
+func sortL2Txs(l2Txs []selectableTx, atomicGroupsFee map[int]atomicGroup) []selectableTx {
+	// Separate atomic txs
+	atomicGroupsMap := make(map[int][]selectableTx)
+	nonAtomicTxs := []selectableTx{}
+	for i := 0; i < len(l2Txs); i++ {
+		groupID := l2Txs[i].GroupID
+		if groupID != 0 { // If it's an atomic tx
+			if _, ok := atomicGroupsMap[groupID]; !ok { // If it's the first tx of the group initialise slice
+				atomicGroupsMap[groupID] = []selectableTx{}
+			}
+			atomicGroupsMap[groupID] = append(atomicGroupsMap[groupID], l2Txs[i])
+		} else { // If it's a non atomic tx
+			nonAtomicTxs = append(nonAtomicTxs, l2Txs[i])
+		}
+	}
+	// Sort atomic groups by average fee
+	// First, convert map to slice
+	atomicGroups := [][]selectableTx{}
+	for groupID := range atomicGroupsMap {
+		atomicGroups = append(atomicGroups, atomicGroupsMap[groupID])
+	}
+	sort.SliceStable(atomicGroups, func(i, j int) bool {
+		// Sort by the average fee of each tx group
+		// assumption: each atomic group has at least one tx, and they all share the same groupID
+		return atomicGroupsFee[atomicGroups[i][0].GroupID].AverageFee >
+			atomicGroupsFee[atomicGroups[j][0].GroupID].AverageFee
 	})
 
-	// sort l2Txs by Nonce. This can be done in many different ways, what
+	// Sort non atomic txs by absolute fee with SliceStable, so that txs with same
+	// AbsoluteFee are not rearranged and nonce order is kept in such case
+	sort.SliceStable(nonAtomicTxs, func(i, j int) bool {
+		return nonAtomicTxs[i].Tx.AbsoluteFee > nonAtomicTxs[j].Tx.AbsoluteFee
+	})
+
+	// sort non atomic txs by Nonce. This can be done in many different ways, what
 	// is needed is to output the l2Txs where the Nonce of l2Txs for each
 	// Account is sorted, but the l2Txs can not be grouped by sender Account
 	// neither by Fee. This is because later on the Nonces will need to be
 	// sequential for the zkproof generation.
-	sort.Slice(l2Txs, func(i, j int) bool {
-		return l2Txs[i].Nonce < l2Txs[j].Nonce
+	sort.Slice(nonAtomicTxs, func(i, j int) bool {
+		return nonAtomicTxs[i].Tx.Nonce < nonAtomicTxs[j].Tx.Nonce
 	})
 
-	return l2Txs
+	// Combine atomic and non atomic txs in a single slice, ordering them by AbsoluteFee vs AverageFee
+	// and making sure that the atomic txs within same groups are consecutive and preserve the original order (otherwise the RqOffsets will broke)
+	sortedL2Txs := []selectableTx{}
+	var nextNonAtomicToAppend, nextAtomicGroupToAppend int
+	// Iterate until all the non atoic txs has been appended OR all the atomic txs inside atomic groups has been appended
+	for nextNonAtomicToAppend != len(nonAtomicTxs) && nextAtomicGroupToAppend != len(atomicGroups) {
+		if nonAtomicTxs[nextNonAtomicToAppend].Tx.AbsoluteFee >
+			atomicGroupsFee[atomicGroups[nextAtomicGroupToAppend][0].GroupID].AverageFee {
+			// The fee of the next non atomic txs is greater than the average fee of the next atomic group
+			sortedL2Txs = append(sortedL2Txs, nonAtomicTxs[nextNonAtomicToAppend])
+			nextNonAtomicToAppend++
+		} else {
+			// The fee of the next non atomic txs is smaller than the average fee of the next atomic group
+			// append all the txs of the group
+			sortedL2Txs = append(sortedL2Txs, atomicGroups[nextAtomicGroupToAppend]...)
+			nextAtomicGroupToAppend++
+		}
+	}
+	// At this point one of the two slices (nonAtomicTxs and atomicGroups) is fully apended to sortedL2Txs
+	// while the other is not. Append remaining txs
+	if nextNonAtomicToAppend == len(nonAtomicTxs) { // nonAtomicTxs is fully appended, append remaining txs in atomicGroups
+		for i := nextAtomicGroupToAppend; i < len(atomicGroups); i++ {
+			sortedL2Txs = append(sortedL2Txs, atomicGroups[i]...)
+		}
+	} else { // all txs in atomicGroups appended, append remaining nonAtomicTxs
+		for i := nextNonAtomicToAppend; i < len(nonAtomicTxs); i++ {
+			sortedL2Txs = append(sortedL2Txs, nonAtomicTxs[i])
+		}
+	}
+	return sortedL2Txs
 }
 
 func splitL2ForgableAndNonForgable(tp *txprocessor.TxProcessor,
 	l2Txs []common.PoolL2Tx) (
 	l2TxsForgable []selectableTx,
+	l2TxsNonForgable []selectableTx, // Txs that can't be forged right now
 	atomicTxsMap map[int]atomicGroup,
-	l2TxsNonForgable []common.PoolL2Tx, // Txs that can't be forged right now
 	invalidL2Txs []common.PoolL2Tx, // Txs that will never be forjable (given the current situation)
 ) {
 	/* TODO:
@@ -762,7 +825,7 @@ func splitL2ForgableAndNonForgable(tp *txprocessor.TxProcessor,
 		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
 		if err != nil {
 			l2Txs[i].Info = fmt.Sprintf("Invalid transaction, FromIdx account not found %d", l2Txs[i].FromIdx)
-			l2TxsNonForgable = append(l2TxsNonForgable, l2Txs[i])
+			l2TxsNonForgable = append(l2TxsNonForgable, selectableTx{Tx: l2Txs[i]})
 			continue
 		}
 		// TODO: diferentiate between not forjable right now (nonce doesn't match)
@@ -770,10 +833,10 @@ func splitL2ForgableAndNonForgable(tp *txprocessor.TxProcessor,
 		if l2Txs[i].Nonce != accSender.Nonce {
 			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to wrong nonce, tx nonce %d, account sender nonce %d",
 				l2Txs[i].Nonce, accSender.Nonce)
-			l2TxsNonForgable = append(l2TxsNonForgable, l2Txs[i])
+			l2TxsNonForgable = append(l2TxsNonForgable, selectableTx{Tx: l2Txs[i]})
 			continue
 		}
 		l2TxsForgable = append(l2TxsForgable, selectableTx{Tx: l2Txs[i]})
 	}
-	return l2TxsForgable, nil, l2TxsNonForgable, nil
+	return l2TxsForgable, l2TxsNonForgable, nil, nil
 }
