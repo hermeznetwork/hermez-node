@@ -704,8 +704,8 @@ func TestPoolL2TxInvalidNonces(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
-	require.Equal(t, 0, len(oL2Txs))
-	require.Equal(t, 10, len(discardedL2Txs))
+	require.Equal(t, 2, len(oL2Txs))
+	require.Equal(t, 8, len(discardedL2Txs))
 	require.Equal(t, 0, len(accAuths))
 
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
@@ -720,7 +720,7 @@ func TestPoolL2TxInvalidNonces(t *testing.T) {
 
 	require.Equal(t, 0, len(oL1UserTxs))
 	require.Equal(t, 3, len(oL1CoordTxs))
-	require.Equal(t, 8, len(oL2Txs))
+	require.Equal(t, 6, len(oL2Txs))
 	require.Equal(t, 2, len(discardedL2Txs))
 	require.Equal(t, 3, len(accAuths))
 
@@ -905,6 +905,13 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 	// not be included as will be processed first when there is not enough
 	// balance at B (processed first as the TxSelector sorts by Fee and then
 	// by Nonce).
+	// TODO: The explanation of the test just above is outdated, as the new itereation of txselector
+	// is capable of detecting more complicated situations. Before merging to develop the explanation
+	// should be updated. Leaving like this to remember that we have altered the original test, since the
+	// code is not stable yet, is good to remember of this test modification. The correctness of the result
+	// has been checked by forging more batches in the original code, and ensuring that the order of the L2Tx
+	// is the same, but contained in less batches. Also the limits in terms of MaxTxs and MaxL1Tx can be checked by
+	// comparing the configuration and the asserts
 	batchPoolL2 := `
 	Type: PoolL2
 	PoolTransfer(0) B-A: 40 (130) // B-A txs are only possible once A-B txs are processed
@@ -931,8 +938,8 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 
 	require.Equal(t, 0, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
-	require.Equal(t, 3, len(oL2Txs))         // the 3 txs A-B
-	require.Equal(t, 8, len(discardedL2Txs)) // the 8 txs B-A
+	require.Equal(t, 5, len(oL2Txs))         // the 3 txs A-B
+	require.Equal(t, 6, len(discardedL2Txs)) // the 8 txs B-A
 	require.Equal(t, 0, len(accAuths))
 
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
@@ -947,7 +954,7 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 	require.Equal(t, 0, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
 	require.Equal(t, 5, len(oL2Txs))
-	require.Equal(t, 3, len(discardedL2Txs))
+	require.Equal(t, 1, len(discardedL2Txs))
 	require.Equal(t, 0, len(accAuths))
 
 	stateDB.Close()
