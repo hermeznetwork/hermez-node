@@ -451,7 +451,7 @@ func (hdb *HistoryDB) GetTokensAPI(
 	if len(tokens) == 0 {
 		return []TokenWithUSD{}, 0, nil
 	}
-	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), uint64(len(tokens)) - tokens[0].TotalItems, nil
+	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), tokens[0].TotalItems - uint64(len(tokens)), nil
 }
 
 // GetCurrencyAPI returns a Currency from the DB given its symbol
