@@ -130,7 +130,7 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config, l1
 	[][]byte, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	metric.GetL2TxSelection.Inc()
 	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs,
-	discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig,
+		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig,
 		[]common.L1Tx{}, l1UserFutureTxs)
 	return coordIdxs, accCreationAuths, l1CoordinatorTxs, l2Txs,
 		discardedL2Txs, tracerr.Wrap(err)
@@ -149,7 +149,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	metric.GetL1L2TxSelection.Inc()
 	coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
-	discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, l1UserTxs, l1UserFutureTxs)
+		discardedL2Txs, err := txsel.getL1L2TxSelection(selectionConfig, l1UserTxs, l1UserFutureTxs)
 	return coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
 		discardedL2Txs, tracerr.Wrap(err)
 }
