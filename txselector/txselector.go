@@ -393,6 +393,7 @@ func (txsel *TxSelector) processL2Txs(tp *txprocessor.TxProcessor,
 		l2Txs[i].TokenID = accSender.TokenID
 
 		// Check enough Balance on sender
+		// TODO: check if this should be removed since we are validating at splitL2ForgableAndNonForgable
 		enoughBalance, balance, feeAndAmount := tp.CheckEnoughBalance(l2Txs[i])
 		if !enoughBalance {
 			// not valid Amount with current Balance. Discard L2Tx,
@@ -836,7 +837,20 @@ func splitL2ForgableAndNonForgable(tp *txprocessor.TxProcessor,
 			l2TxsNonForgable = append(l2TxsNonForgable, selectableTx{Tx: l2Txs[i]})
 			continue
 		}
+		// Check Balance
+		enoughBalance, balance, feeAndAmount := tp.CheckEnoughBalance(l2Txs[i])
+		if !enoughBalance {
+			// not valid Amount with current Balance. Discard L2Tx,
+			// and update Info parameter of the tx, and add it to
+			// the discardedTxs array
+			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not enough Balance at the sender. "+
+				"Current sender account Balance: %s, Amount+Fee: %s",
+				balance.String(), feeAndAmount.String())
+			l2TxsNonForgable = append(l2TxsNonForgable, selectableTx{Tx: l2Txs[i]})
+			continue
+		}
 		l2TxsForgable = append(l2TxsForgable, selectableTx{Tx: l2Txs[i]})
 	}
+	// TODO: simulator?
 	return l2TxsForgable, l2TxsNonForgable, nil, nil
 }

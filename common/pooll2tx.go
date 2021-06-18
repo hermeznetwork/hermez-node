@@ -49,7 +49,7 @@ type PoolL2Tx struct {
 	Info      string                `meddler:"info,zeroisnull"`
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
-	// Stored in DB: optional fileds, may be uninitialized
+	// Stored in DB: optional fields, may be uninitialized
 	RqTxID            TxID                  `meddler:"rq_tx_id,zeroisnull"`
 	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
 	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
