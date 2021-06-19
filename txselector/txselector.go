@@ -778,9 +778,10 @@ func setAtomicMetadata(tp *txprocessor.TxProcessor, l2Txs []common.PoolL2Tx) (
 ) {
 	/* TODO:
 	- set atomicTxsMap
-	- set RqOffset
+	- set RqOffset (line 66+ of txspool.go)
 	- add txs from invalid groups to invalidL2Txs and remove them from l2Txs
 	*/
+
 	for i := 0; i < len(l2Txs); i++ {
 		l2TxsForgable = append(l2TxsForgable, selectableTx{Tx: l2Txs[i]})
 	}

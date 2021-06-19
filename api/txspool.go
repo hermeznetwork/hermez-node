@@ -63,6 +63,12 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		retBadReq(errors.New(ErrTxsNotAtomic), c)
 		return
 	}
+	// Set the RqOffset
+	var currentReqOffset uint8 = 0
+	for _, tx := range receivedTxs {
+		tx.RqOffset = currentReqOffset
+		currentReqOffset++
+	}
 	// Insert to DB
 	if err := a.l2.AddAtomicTxsAPI(receivedTxs); err != nil {
 		retSQLErr(err, c)
