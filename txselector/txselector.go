@@ -781,10 +781,105 @@ func setAtomicMetadata(tp *txprocessor.TxProcessor, l2Txs []common.PoolL2Tx) (
 	- set RqOffset
 	- add txs from invalid groups to invalidL2Txs and remove them from l2Txs
 	*/
+	atomics, invalids := buildAtomicTxs(l2Txs)
 	for i := 0; i < len(l2Txs); i++ {
+		// TODO: check each transaction to see if is inside atomics or invalids, if not in one
+		// of these add to invalidL2Txs
+
 		l2TxsForgable = append(l2TxsForgable, selectableTx{Tx: l2Txs[i]})
 	}
-	return l2TxsForgable, nil, nil
+
+	// TODO: convert atomics to atomicTxMap
+
+	// TODO: add invalids to invalidL2Txs
+
+	return l2TxsForgable, atomicTxsMap, invalidL2Txs
+}
+
+// buildAtomicTxs build the atomic transactions groups and add into a mapping
+func buildAtomicTxs(poolTxs []common.PoolL2Tx) (map[common.TxID][]common.PoolL2Tx, map[common.TxID]bool) {
+	atomics := make(map[common.TxID][]common.PoolL2Tx)
+	discarded := make(map[common.TxID]bool)
+	owners := make(map[common.TxID]common.TxID)
+	// Check if the input data is empty
+	if len(poolTxs) == 0 {
+		return atomics, discarded
+	}
+	// Create a helper map with txs and true
+	txMap := make(map[common.TxID]bool)
+	for _, tx := range poolTxs {
+		txMap[tx.TxID] = true
+	}
+	// filter
+	for _, tx := range poolTxs {
+		// check if the tx rq tx exist
+		_, ok := txMap[tx.RqTxID]
+		if tx.RqTxID != common.EmptyTxID && !ok {
+			discarded[tx.TxID] = true
+			continue
+		}
+		// check if the tx already have a group owner
+		rootTxID, ok := owners[tx.TxID]
+		if !ok {
+			rootTxID = tx.TxID
+		}
+		// check if the root tx already exist into the mapping
+		txs, ok := atomics[rootTxID]
+		if ok {
+			// only add if exist
+			atomics[rootTxID] = append(txs, tx)
+		} else if tx.RqTxID != common.EmptyTxID {
+			// if not exist, check if the nested atomic transaction exist
+			auxTxID, ok := owners[tx.RqTxID]
+			if ok {
+				// set the nested atomic as a root and add the child
+				rootTxID = auxTxID
+				atomics[rootTxID] = append(atomics[rootTxID], tx)
+			} else {
+				// create a new atomic group if not exist
+				atomics[rootTxID] = []common.PoolL2Tx{tx}
+			}
+		} else {
+			// create a new atomic group if not exist
+			atomics[rootTxID] = []common.PoolL2Tx{tx}
+		}
+		// add the tx to the owner mapping
+		if tx.RqTxID != common.EmptyTxID {
+			owners[tx.RqTxID] = rootTxID
+		} else {
+			owners[rootTxID] = tx.TxID
+		}
+	}
+	// sanitize the atomic transaction removing the non-atomics
+	for key, group := range atomics {
+		if len(group) > 1 {
+			continue
+		}
+		delete(atomics, key)
+		delete(owners, key)
+		tx := group[0]
+		if tx.RqTxID != common.EmptyTxID {
+			discarded[tx.TxID] = true
+		}
+	}
+	// Set the RqOffset
+	for _, pool := range atomics {
+		for i, tx := range pool {
+			tx.RqOffset = findL2TxIndex(pool, tx.RqTxID)
+			// TODO: if i is greater than 7 should I return empty map for
+			// atomics and add all to discarded?
+		}
+	}
+	return atomics, discarded
+}
+
+func findL2TxIndex(txs []common.PoolL2Tx, id2find common.TxID)(uint8) {
+	for i, tx := range txs {
+		if tx.RqTxID == id2find {
+			return uint8(i)
+		}
+	}
+	return 0
 }
 
 func canAddL2TxThatNeedsNewCoordL1Tx(nAddedL1Txs, nAddedL2txs int, selectionConfig txprocessor.Config) bool {
