@@ -863,9 +863,11 @@ func buildAtomicTxs(poolTxs []common.PoolL2Tx) (map[common.TxID][]common.PoolL2T
 		}
 	}
 	// Set the RqOffset
+	// rqOffset: relative transaction position to be linked. Used to perform atomic transactions (3 bits)
+	// TODO: if findL2TxRelativeIndex returns 0 (no linked transaction found), this should be discarded?
 	for _, pool := range atomics {
 		for i, tx := range pool {
-			tx.RqOffset = findL2TxIndex(pool, tx.RqTxID)
+			tx.RqOffset = findL2TxRelativeIndex(pool, tx.RqTxID)
 			// TODO: if i is greater than 7 should I return empty map for
 			// atomics and add all to discarded?
 		}
@@ -873,7 +875,7 @@ func buildAtomicTxs(poolTxs []common.PoolL2Tx) (map[common.TxID][]common.PoolL2T
 	return atomics, discarded
 }
 
-func findL2TxIndex(txs []common.PoolL2Tx, id2find common.TxID)(uint8) {
+func findL2TxRelativeIndex(txs []common.PoolL2Tx, id2find common.TxID)(uint8) {
 	for i, tx := range txs {
 		if tx.RqTxID == id2find {
 			return uint8(i)
