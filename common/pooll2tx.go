@@ -488,14 +488,6 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		Nonce       Nonce                 `json:"nonce"`
 		Signature   babyjub.SignatureComp `json:"signature"`
 		RqTxID      *TxID                 `json:"requestId"`
-		RqFromIdx   *string               `json:"requestFromAccountIndex"`
-		RqToIdx     *string               `json:"requestToAccountIndex"`
-		RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
-		RqToBJJ     *string               `json:"requestToBjj"`
-		RqTokenID   *TokenID              `json:"requestTokenId"`
-		RqAmount    *string               `json:"requestAmount"`
-		RqFee       *FeeSelector          `json:"requestFee"`
-		RqNonce     *Nonce                `json:"requestNonce"`
 	}
 	// Set fields that do not require extra logic
 	toMarshal := jsonFormat{
@@ -507,8 +499,6 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		Fee:       tx.Fee,
 		Nonce:     tx.Nonce,
 		Signature: tx.Signature,
-		RqFee:     &tx.RqFee,
-		RqNonce:   &tx.RqNonce,
 	}
 	// Set To fileds
 	if tx.ToIdx != 0 {
@@ -522,32 +512,6 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 	if tx.ToBJJ != EmptyBJJComp {
 		toBJJ := bjjToString(tx.ToBJJ)
 		toMarshal.ToBJJ = &toBJJ
-	}
-	// Set Rq fields
-	if tx.RqFromIdx != 0 {
-		if tx.RqTokenSymbol == "" {
-			return nil, errors.New("Invalid tx.RqTokenSymbol")
-		}
-		toMarshal.RqTxID = &tx.RqTxID
-		rqFromIdx := idxToHez(tx.RqFromIdx, tx.TokenSymbol)
-		toMarshal.RqFromIdx = &rqFromIdx
-		toMarshal.RqTokenID = &tx.RqTokenID
-		rqAmount := tx.RqAmount.String()
-		toMarshal.RqAmount = &rqAmount
-		toMarshal.RqNonce = &tx.RqNonce
-		toMarshal.RqFee = &tx.RqFee
-		if tx.RqToIdx != 0 {
-			rqToIdx := idxToHez(tx.RqToIdx, tx.RqTokenSymbol)
-			toMarshal.RqToIdx = &rqToIdx
-		}
-		if tx.RqToEthAddr != EmptyAddr {
-			rqToEth := ethAddrToHez(tx.RqToEthAddr)
-			toMarshal.RqToEthAddr = &rqToEth
-		}
-		if tx.RqToBJJ != EmptyBJJComp {
-			rqToBJJ := bjjToString(tx.RqToBJJ)
-			toMarshal.RqToBJJ = &rqToBJJ
-		}
 	}
 	return json.Marshal(toMarshal)
 }
@@ -569,14 +533,6 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Nonce       Nonce                 `json:"nonce"`
 		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
 		RqTxID      TxID                  `json:"requestId"`
-		RqFromIdx   StrHezIdx             `json:"requestFromAccountIndex"`
-		RqToIdx     StrHezIdx             `json:"requestToAccountIndex"`
-		RqToEthAddr StrHezEthAddr         `json:"requestToHezEthereumAddress"`
-		RqToBJJ     StrHezBJJ             `json:"requestToBjj"`
-		RqTokenID   TokenID               `json:"requestTokenId"`
-		RqAmount    *StrBigInt            `json:"requestAmount"`
-		RqFee       FeeSelector           `json:"requestFee"`
-		RqNonce     Nonce                 `json:"requestNonce"`
 		State       string                `json:"state"`
 	}{}
 	if err := json.Unmarshal(data, &receivedJSON); err != nil {
@@ -603,18 +559,9 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Nonce:         receivedJSON.Nonce,
 		Signature:     receivedJSON.Signature,
 		RqTxID:        receivedJSON.RqTxID,
-		RqFromIdx:     (Idx)(receivedJSON.RqFromIdx.Idx),
-		RqToIdx:       (Idx)(receivedJSON.RqToIdx.Idx),
-		RqToEthAddr:   (ethCommon.Address)(receivedJSON.RqToEthAddr),
-		RqToBJJ:       (babyjub.PublicKeyComp)(receivedJSON.RqToBJJ),
-		RqTokenID:     receivedJSON.RqTokenID,
-		RqAmount:      (*big.Int)(receivedJSON.RqAmount),
-		RqFee:         receivedJSON.RqFee,
-		RqNonce:       receivedJSON.RqNonce,
 		Type:          receivedJSON.Type,
 		State:         state,
 		TokenSymbol:   receivedJSON.FromIdx.TokenSymbol,
-		RqTokenSymbol: receivedJSON.RqFromIdx.TokenSymbol,
 	}
 	return nil
 }
