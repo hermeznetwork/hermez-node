@@ -119,6 +119,9 @@ func genTestPoolTxs(
 			bjj := bjjToString(acc.BJJ)
 			genReceiveTx.ToBJJ = &bjj
 		}
+		if poolTxs[i].RqFromIdx != 0 {
+			genReceiveTx.RqTxID = &poolTxs[i].RqTxID
+		}
 
 		poolTxsToReceive = append(poolTxsToReceive, genReceiveTx)
 	}
