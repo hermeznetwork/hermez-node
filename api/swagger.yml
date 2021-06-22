@@ -1439,48 +1439,6 @@ components:
           description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
           example: "0x00000000000001e240004700" 
           nullable: true
-        requestFromAccountIndex:
-          type: string
-          description: References the `fromAccountIndex` of the requested transaction.
-          example: null
-          nullable: true
-        requestToAccountIndex:
-          type: string
-          description: References the `toAccountIndex` of the requested transaction.
-          example: null
-          nullable: true
-        requestToHezEthereumAddress:
-          type: string
-          description: References the `toHezEthereumAddress` of the requested transaction.
-          pattern: "^hez:0x[a-fA-F0-9]{40}$"
-          example: null
-          nullable: true
-        requestToBjj:
-          type: string
-          description: References the `toBjj` of the requested transaction.
-          pattern: "^hez:[A-Za-z0-9_-]{44}$"
-          example: null
-          nullable: true
-        requestTokenId:
-          type: integer
-          description: References the `tokenId` of the requested transaction.
-          example: null
-          nullable: true
-        requestAmount:
-          type: string
-          description: References the `amount` of the requested transaction.
-          example: null
-          nullable: true
-        requestFee:
-          type: integer
-          description: References the `fee` of the requested transaction.
-          example: null
-          nullable: true
-        requestNonce:
-          type: integer
-          description: References the `nonce` of the requested transaction.
-          example: null
-          nullable: true
       example:
         id: '0x020000000001000000000006'
         type: Transfer
@@ -1573,56 +1531,6 @@ components:
           type: string
           description: Moment in which the transaction was added to the pool.
           format: date-time
-        requestFromAccountIndex:
-          type: string
-          description: >-
-            Identifier of an account. It references the position where the account is inside the state Merkle tree.
-            The identifier is built using: `hez:` + `token symbol:` + `index`
-          nullable: true
-          example: null
-        requestToAccountIndex:
-          type: string
-          description: >-
-            Identifier of an account. It references the position where the account is inside the state Merkle tree.
-            The identifier is built using: `hez:` + `token symbol:` + `index`
-          nullable: true
-          example: null
-        requestToHezEthereumAddress:
-          type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
-          pattern: "^hez:0x[a-fA-F0-9]{40}$"
-          nullable: true
-          example: null
-        requestToBJJ:
-          type: string
-          description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
-          pattern: "^hez:[A-Za-z0-9_-]{44}$"
-          nullable: true
-          example: null
-        requestTokenId:
-          type: integer
-          description: References the `tokenId` of the requested transaction.
-          example: null
-          nullable: true
-        requestAmount:
-          type: string
-          description: BigInt is an integer encoded as a string for numbers that are very large.
-          nullable: true
-          example: null
-        requestFee:
-          type: integer
-          description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
-          minimum: 0
-          maximum: 256
-          nullable: true
-          example: null
-        requestNonce:
-          type: integer
-          description: Number that can only be used once per account. Increments by one with each transaction.
-          minimum: 0
-          maximum: 1.84467440737096e+19
-          nullable: true
-          example: null
         token:
           $ref: '#/components/schemas/Token'
       example:
@@ -1633,14 +1541,6 @@ components:
         fromHezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
         id: '0x020000000001000000000006'
         nonce: 6
-        requestAmount: 
-        requestFee: 0
-        requestFromAccountIndex: 
-        requestNonce: 0
-        requestToAccountIndex: 
-        requestToBJJ: 
-        requestToHezEthereumAddress: 
-        requestTokenId: 
         signature: 5ee9c7b5baa243ba282d18596a55cc357b01513eaed75165365f802102cce4a7a1dd35e3ab31cf9039e2b8a9f570d935115be9379a3dd47813dfc014031ab201
         state: pend
         timestamp: '2020-11-17T13:58:54.422232Z'
@@ -1674,14 +1574,6 @@ components:
         - info
         - signature
         - timestamp
-        - requestFromAccountIndex
-        - requestToAccountIndex
-        - requestToHezEthereumAddress
-        - requestToBJJ
-        - requestTokenId
-        - requestAmount
-        - requestFee
-        - requestNonce
         - token
     PoolL2Transactions:
       type: object
