@@ -513,6 +513,9 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		toBJJ := bjjToString(tx.ToBJJ)
 		toMarshal.ToBJJ = &toBJJ
 	}
+	if tx.RqFromIdx != 0 {
+		toMarshal.RqTxID = &tx.RqTxID
+	}
 	return json.Marshal(toMarshal)
 }
 
