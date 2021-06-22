@@ -476,18 +476,18 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("Invalid tx.TokenSymbol")
 	}
 	type jsonFormat struct {
-		TxID        TxID                  `json:"id"`
-		Type        TxType                `json:"type"`
-		TokenID     TokenID               `json:"tokenId"`
-		FromIdx     string                `json:"fromAccountIndex"`
-		ToIdx       *string               `json:"toAccountIndex"`
-		ToEthAddr   *string               `json:"toHezEthereumAddress"`
-		ToBJJ       *string               `json:"toBjj"`
-		Amount      string                `json:"amount"`
-		Fee         FeeSelector           `json:"fee"`
-		Nonce       Nonce                 `json:"nonce"`
-		Signature   babyjub.SignatureComp `json:"signature"`
-		RqTxID      *TxID                 `json:"requestId"`
+		TxID      TxID                  `json:"id"`
+		Type      TxType                `json:"type"`
+		TokenID   TokenID               `json:"tokenId"`
+		FromIdx   string                `json:"fromAccountIndex"`
+		ToIdx     *string               `json:"toAccountIndex"`
+		ToEthAddr *string               `json:"toHezEthereumAddress"`
+		ToBJJ     *string               `json:"toBjj"`
+		Amount    string                `json:"amount"`
+		Fee       FeeSelector           `json:"fee"`
+		Nonce     Nonce                 `json:"nonce"`
+		Signature babyjub.SignatureComp `json:"signature"`
+		RqTxID    *TxID                 `json:"requestId"`
 	}
 	// Set fields that do not require extra logic
 	toMarshal := jsonFormat{
@@ -521,19 +521,19 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 // If State is not setted (State == ""), it will be set to PoolL2TxStatePending.
 func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	receivedJSON := struct {
-		TxID        TxID                  `json:"id" binding:"required"`
-		Type        TxType                `json:"type" binding:"required"`
-		TokenID     TokenID               `json:"tokenId"`
-		FromIdx     StrHezIdx             `json:"fromAccountIndex" binding:"required"`
-		ToIdx       StrHezIdx             `json:"toAccountIndex"`
-		ToEthAddr   StrHezEthAddr         `json:"toHezEthereumAddress"`
-		ToBJJ       StrHezBJJ             `json:"toBjj"`
-		Amount      *StrBigInt            `json:"amount" binding:"required"`
-		Fee         FeeSelector           `json:"fee"`
-		Nonce       Nonce                 `json:"nonce"`
-		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
-		RqTxID      TxID                  `json:"requestId"`
-		State       string                `json:"state"`
+		TxID      TxID                  `json:"id" binding:"required"`
+		Type      TxType                `json:"type" binding:"required"`
+		TokenID   TokenID               `json:"tokenId"`
+		FromIdx   StrHezIdx             `json:"fromAccountIndex" binding:"required"`
+		ToIdx     StrHezIdx             `json:"toAccountIndex"`
+		ToEthAddr StrHezEthAddr         `json:"toHezEthereumAddress"`
+		ToBJJ     StrHezBJJ             `json:"toBjj"`
+		Amount    *StrBigInt            `json:"amount" binding:"required"`
+		Fee       FeeSelector           `json:"fee"`
+		Nonce     Nonce                 `json:"nonce"`
+		Signature babyjub.SignatureComp `json:"signature" binding:"required"`
+		RqTxID    TxID                  `json:"requestId"`
+		State     string                `json:"state"`
 	}{}
 	if err := json.Unmarshal(data, &receivedJSON); err != nil {
 		return err
@@ -548,20 +548,20 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	}
 	// Set values to destination struct
 	*tx = PoolL2Tx{
-		TxID:          receivedJSON.TxID,
-		FromIdx:       Idx(receivedJSON.FromIdx.Idx),
-		ToIdx:         Idx(receivedJSON.ToIdx.Idx),
-		ToEthAddr:     ethCommon.Address(receivedJSON.ToEthAddr),
-		ToBJJ:         babyjub.PublicKeyComp(receivedJSON.ToBJJ),
-		TokenID:       receivedJSON.TokenID,
-		Amount:        (*big.Int)(receivedJSON.Amount),
-		Fee:           receivedJSON.Fee,
-		Nonce:         receivedJSON.Nonce,
-		Signature:     receivedJSON.Signature,
-		RqTxID:        receivedJSON.RqTxID,
-		Type:          receivedJSON.Type,
-		State:         state,
-		TokenSymbol:   receivedJSON.FromIdx.TokenSymbol,
+		TxID:        receivedJSON.TxID,
+		FromIdx:     Idx(receivedJSON.FromIdx.Idx),
+		ToIdx:       Idx(receivedJSON.ToIdx.Idx),
+		ToEthAddr:   ethCommon.Address(receivedJSON.ToEthAddr),
+		ToBJJ:       babyjub.PublicKeyComp(receivedJSON.ToBJJ),
+		TokenID:     receivedJSON.TokenID,
+		Amount:      (*big.Int)(receivedJSON.Amount),
+		Fee:         receivedJSON.Fee,
+		Nonce:       receivedJSON.Nonce,
+		Signature:   receivedJSON.Signature,
+		RqTxID:      receivedJSON.RqTxID,
+		Type:        receivedJSON.Type,
+		State:       state,
+		TokenSymbol: receivedJSON.FromIdx.TokenSymbol,
 	}
 	return nil
 }
