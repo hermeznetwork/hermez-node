@@ -40,6 +40,14 @@ type testPoolTxReceive struct {
 	State       common.PoolL2TxState   `json:"state"`
 	Signature   babyjub.SignatureComp  `json:"signature"`
 	RqTxID      *common.TxID           `json:"requestId"`
+	RqFromIdx   *string                `json:"requestFromAccountIndex"`
+	RqToIdx     *string                `json:"requestToAccountIndex"`
+	RqToEthAddr *string                `json:"requestToHezEthereumAddress"`
+	RqToBJJ     *string                `json:"requestToBJJ"`
+	RqTokenID   *common.TokenID        `json:"requestTokenId"`
+	RqAmount    *string                `json:"requestAmount"`
+	RqFee       *common.FeeSelector    `json:"requestFee"`
+	RqNonce     *common.Nonce          `json:"requestNonce"`
 	BatchNum    *common.BatchNum       `json:"batchNum"`
 	Timestamp   time.Time              `json:"timestamp"`
 	Token       historydb.TokenWithUSD `json:"token"`
@@ -120,7 +128,27 @@ func genTestPoolTxs(
 			genReceiveTx.ToBJJ = &bjj
 		}
 		if poolTxs[i].RqFromIdx != 0 {
+			rqFromIdx := idxToHez(poolTxs[i].RqFromIdx, rqToken.Symbol)
+			genReceiveTx.RqFromIdx = &rqFromIdx
 			genReceiveTx.RqTxID = &poolTxs[i].RqTxID
+			genReceiveTx.RqTokenID = &rqToken.TokenID
+			rqAmount := poolTxs[i].RqAmount.String()
+			genReceiveTx.RqAmount = &rqAmount
+			genReceiveTx.RqFee = &poolTxs[i].RqFee
+			genReceiveTx.RqNonce = &poolTxs[i].RqNonce
+
+			if poolTxs[i].RqToIdx != 0 {
+				rqToIdx := idxToHez(poolTxs[i].RqToIdx, rqToken.Symbol)
+				genReceiveTx.RqToIdx = &rqToIdx
+			}
+			if poolTxs[i].RqToEthAddr != common.EmptyAddr {
+				rqToEth := ethAddrToHez(poolTxs[i].RqToEthAddr)
+				genReceiveTx.RqToEthAddr = &rqToEth
+			}
+			if poolTxs[i].RqToBJJ != common.EmptyBJJComp {
+				rqToBJJ := bjjToString(poolTxs[i].RqToBJJ)
+				genReceiveTx.RqToBJJ = &rqToBJJ
+			}
 		}
 
 		poolTxsToReceive = append(poolTxsToReceive, genReceiveTx)
