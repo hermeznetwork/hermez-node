@@ -50,6 +50,7 @@ type PoolL2Tx struct {
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
+	AtomicGroupID     int                   `meddler:"atomic_group_id,zeroisnull"`
 	RqTxID            TxID                  `meddler:"rq_tx_id,zeroisnull"`
 	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
 	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
@@ -59,10 +60,10 @@ type PoolL2Tx struct {
 	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"`
 	RqFee             FeeSelector           `meddler:"rq_fee,zeroisnull"`
 	RqNonce           Nonce                 `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
-	RqOffset          uint8                 `meddler:"-"`                   // (max 3 bits)
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
 	AbsoluteFeeUpdate time.Time             `meddler:"usd_update,utctimez"`
 	Type              TxType                `meddler:"tx_type"`
+	RqOffset          uint8                 `meddler:"rq_offset,zeroisnull"` // (max 3 bits)
 	// Extra DB write fields (not included in JSON)
 	ClientIP string `meddler:"client_ip"`
 	// Extra metadata, may be uninitialized
