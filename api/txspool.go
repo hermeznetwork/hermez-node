@@ -21,6 +21,10 @@ func (a *API) postPoolTx(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
+	if receivedTx.RqOffset != 0 || receivedTx.RqTxID != common.EmptyTxID {
+		retBadReq(errors.New(ErrNotAtomicTxsInPostPoolTx), c)
+		return
+	}
 	// Check that tx is valid
 	if err := a.verifyPoolL2Tx(receivedTx); err != nil {
 		retBadReq(err, c)
