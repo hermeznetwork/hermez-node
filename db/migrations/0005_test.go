@@ -139,7 +139,9 @@ func (m migrationTest0005) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 		client_ip = '93.176.174.84' AND
 		external_delete = true AND
 		item_id = 1 AND -- Note that item_id is an autoincremental column, so this value is setted automatically
-		rq_tx_id IS NULL;`
+		rq_tx_id IS NULL AND
+		rq_offset IS NULL AND
+		atomic_group_id IS NULL;`
 	row := db.QueryRow(queryGetTxPool)
 	var result int
 	assert.NoError(t, row.Scan(&result))
