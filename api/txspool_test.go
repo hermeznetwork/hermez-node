@@ -207,7 +207,7 @@ func TestPoolTxs(t *testing.T) {
 	jsonTxBytes, err = json.Marshal(badTx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", endpoint, jsonTxReader, 400)
+	err = doBadReq("POST", endpoint, jsonTxReader, 409)
 	require.NoError(t, err)
 	// GET
 	// init structures
@@ -634,6 +634,11 @@ func TestAtomicPool(t *testing.T) {
 		} else if i == nAccounts-1 {
 			tx.RqFee = 200
 		}
+		if i != nAccounts-1 {
+			tx.RqOffset = 1
+		} else {
+			tx.RqOffset = 5
+		}
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
@@ -669,8 +674,10 @@ func TestAtomicPool(t *testing.T) {
 		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
 		if i == 0 {
 			tx.Fee = 5
+			tx.RqOffset = 1
 		} else if i == nAccounts-1 {
 			tx.RqFee = 5
+			tx.RqOffset = 5
 		}
 		txs = append(txs, tx)
 	}
@@ -680,7 +687,7 @@ func TestAtomicPool(t *testing.T) {
 	jsonTxBytes, err = json.Marshal(txsToSend)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", path, jsonTxReader, 500)
+	err = doBadReq("POST", path, jsonTxReader, 400)
 	assert.NoError(t, err)
 
 	// Test group that is not atomic #1
@@ -698,6 +705,7 @@ func TestAtomicPool(t *testing.T) {
 	A.ToIdx = accounts[0].Idx
 	A.RqFromIdx = accounts[0].Idx
 	A.RqToIdx = accounts[1].Idx
+	A.RqOffset = 1
 	txs = append(txs, A)
 	/* Cyclic part:
 	B ───────► C
@@ -711,49 +719,17 @@ func TestAtomicPool(t *testing.T) {
 		tx.ToIdx = accounts[(i+1)%nAccountsMinus1].Idx
 		tx.RqFromIdx = accounts[(i+1)%nAccountsMinus1].Idx
 		tx.RqToIdx = accounts[(i+2)%nAccountsMinus1].Idx
+		if i != nAccountsMinus1-1 {
+			tx.RqOffset = 1
+		} else {
+			tx.RqOffset = 6
+		}
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
 	txsToSend, _ = signAndTransformTxs(txs)
 	// Send txs
 	jsonTxBytes, err = json.Marshal(txsToSend)
-	require.NoError(t, err)
-	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", path, jsonTxReader, 400)
-	assert.NoError(t, err)
-
-	// Test group that is not atomic #2
-	/* Note that in this example txs A and B could be forged without C and D and viceversa
-
-	A ───────► B
-	▲          │
-	└──────────┘
-
-	C ───────► D
-	▲          │
-	└──────────┘
-	*/
-	// Generate txs
-	txs = []common.PoolL2Tx{}
-	for i := 0; i < nAccounts; i++ {
-		tx := baseTx
-		tx.FromIdx = accounts[i].Idx
-		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
-		tx.RqFromIdx = accounts[(i+2)%nAccounts].Idx
-		tx.RqToIdx = accounts[(i+3)%nAccounts].Idx
-		txs = append(txs, tx)
-	}
-	// Sign and format txs
-	txsToSend, _ = signAndTransformTxs(txs)
-	// Send txs
-	jsonTxBytes, err = json.Marshal(txsToSend)
-	require.NoError(t, err)
-	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", path, jsonTxReader, 400)
-	assert.NoError(t, err)
-
-	// Test send only one tx
-	jsonTxBytes, err = json.Marshal([]common.PoolL2Tx{tc.poolTxsToSend[0]})
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", path, jsonTxReader, 400)

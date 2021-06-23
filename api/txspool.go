@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -23,14 +22,12 @@ func (a *API) postPoolTx(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	// Transform from received to insert format and validate
-	writeTx := receivedTx.toPoolL2TxWrite()
-	// Reject atomic transactions
-	if isAtomic(*writeTx) {
-		retBadReq(errors.New(ErrIsAtomic), c)
+	if receivedTx.RqOffset != 0 || receivedTx.RqTxID != common.EmptyTxID {
+		retBadReq(errors.New(ErrNotAtomicTxsInPostPoolTx), c)
 		return
 	}
-	if err := a.verifyPoolL2TxWrite(writeTx); err != nil {
+	// Check that tx is valid
+	if err := a.verifyPoolL2Tx(receivedTx); err != nil {
 		retBadReq(err, c)
 		return
 	}

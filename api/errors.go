@@ -31,4 +31,7 @@ const (
 
 	// ErrRqOffsetOutOfBounds
 	ErrRqOffsetOutOfBounds = "One of the transactions requested another one otside the bounds of the provided array"
+
+	// ErrNotAtomicTxsInPostPoolTx
+	ErrNotAtomicTxsInPostPoolTx = "Atomic transactions are only accepted in POST /atomic-pool"
 )
