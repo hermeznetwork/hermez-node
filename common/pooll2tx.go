@@ -477,26 +477,19 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("Invalid tx.TokenSymbol")
 	}
 	type jsonFormat struct {
-		TxID        TxID                  `json:"id"`
-		Type        TxType                `json:"type"`
-		TokenID     TokenID               `json:"tokenId"`
-		FromIdx     string                `json:"fromAccountIndex"`
-		ToIdx       *string               `json:"toAccountIndex"`
-		ToEthAddr   *string               `json:"toHezEthereumAddress"`
-		ToBJJ       *string               `json:"toBjj"`
-		Amount      string                `json:"amount"`
-		Fee         FeeSelector           `json:"fee"`
-		Nonce       Nonce                 `json:"nonce"`
-		Signature   babyjub.SignatureComp `json:"signature"`
-		RqTxID      *TxID                 `json:"requestId"`
-		RqFromIdx   *string               `json:"requestFromAccountIndex"`
-		RqToIdx     *string               `json:"requestToAccountIndex"`
-		RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
-		RqToBJJ     *string               `json:"requestToBjj"`
-		RqTokenID   *TokenID              `json:"requestTokenId"`
-		RqAmount    *string               `json:"requestAmount"`
-		RqFee       *FeeSelector          `json:"requestFee"`
-		RqNonce     *Nonce                `json:"requestNonce"`
+		TxID      TxID                  `json:"id"`
+		Type      TxType                `json:"type"`
+		TokenID   TokenID               `json:"tokenId"`
+		FromIdx   string                `json:"fromAccountIndex"`
+		ToIdx     *string               `json:"toAccountIndex"`
+		ToEthAddr *string               `json:"toHezEthereumAddress"`
+		ToBJJ     *string               `json:"toBjj"`
+		Amount    string                `json:"amount"`
+		Fee       FeeSelector           `json:"fee"`
+		Nonce     Nonce                 `json:"nonce"`
+		Signature babyjub.SignatureComp `json:"signature"`
+		RqTxID    *TxID                 `json:"requestId"`
+		RqOffset  *uint8                `json:"requestOffset"`
 	}
 	// Set fields that do not require extra logic
 	toMarshal := jsonFormat{
@@ -508,10 +501,8 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		Fee:       tx.Fee,
 		Nonce:     tx.Nonce,
 		Signature: tx.Signature,
-		RqFee:     &tx.RqFee,
-		RqNonce:   &tx.RqNonce,
 	}
-	// Set To fileds
+	// Set To fields
 	if tx.ToIdx != 0 {
 		toIdx := idxToHez(tx.ToIdx, tx.TokenSymbol)
 		toMarshal.ToIdx = &toIdx
@@ -524,31 +515,10 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		toBJJ := bjjToString(tx.ToBJJ)
 		toMarshal.ToBJJ = &toBJJ
 	}
-	// Set Rq fields
+	// Check if is a atomic and require another tx
 	if tx.RqFromIdx != 0 {
-		if tx.RqTokenSymbol == "" {
-			return nil, errors.New("Invalid tx.RqTokenSymbol")
-		}
 		toMarshal.RqTxID = &tx.RqTxID
-		rqFromIdx := idxToHez(tx.RqFromIdx, tx.TokenSymbol)
-		toMarshal.RqFromIdx = &rqFromIdx
-		toMarshal.RqTokenID = &tx.RqTokenID
-		rqAmount := tx.RqAmount.String()
-		toMarshal.RqAmount = &rqAmount
-		toMarshal.RqNonce = &tx.RqNonce
-		toMarshal.RqFee = &tx.RqFee
-		if tx.RqToIdx != 0 {
-			rqToIdx := idxToHez(tx.RqToIdx, tx.RqTokenSymbol)
-			toMarshal.RqToIdx = &rqToIdx
-		}
-		if tx.RqToEthAddr != EmptyAddr {
-			rqToEth := ethAddrToHez(tx.RqToEthAddr)
-			toMarshal.RqToEthAddr = &rqToEth
-		}
-		if tx.RqToBJJ != EmptyBJJComp {
-			rqToBJJ := bjjToString(tx.RqToBJJ)
-			toMarshal.RqToBJJ = &rqToBJJ
-		}
+		toMarshal.RqOffset = &tx.RqOffset
 	}
 	return json.Marshal(toMarshal)
 }
@@ -558,27 +528,20 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 // If State is not setted (State == ""), it will be set to PoolL2TxStatePending.
 func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	receivedJSON := struct {
-		TxID        TxID                  `json:"id" binding:"required"`
-		Type        TxType                `json:"type" binding:"required"`
-		TokenID     TokenID               `json:"tokenId"`
-		FromIdx     StrHezIdx             `json:"fromAccountIndex" binding:"required"`
-		ToIdx       StrHezIdx             `json:"toAccountIndex"`
-		ToEthAddr   StrHezEthAddr         `json:"toHezEthereumAddress"`
-		ToBJJ       StrHezBJJ             `json:"toBjj"`
-		Amount      *StrBigInt            `json:"amount" binding:"required"`
-		Fee         FeeSelector           `json:"fee"`
-		Nonce       Nonce                 `json:"nonce"`
-		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
-		RqTxID      TxID                  `json:"requestId"`
-		RqFromIdx   StrHezIdx             `json:"requestFromAccountIndex"`
-		RqToIdx     StrHezIdx             `json:"requestToAccountIndex"`
-		RqToEthAddr StrHezEthAddr         `json:"requestToHezEthereumAddress"`
-		RqToBJJ     StrHezBJJ             `json:"requestToBjj"`
-		RqTokenID   TokenID               `json:"requestTokenId"`
-		RqAmount    *StrBigInt            `json:"requestAmount"`
-		RqFee       FeeSelector           `json:"requestFee"`
-		RqNonce     Nonce                 `json:"requestNonce"`
-		State       string                `json:"state"`
+		TxID      TxID                  `json:"id" binding:"required"`
+		Type      TxType                `json:"type" binding:"required"`
+		TokenID   TokenID               `json:"tokenId"`
+		FromIdx   StrHezIdx             `json:"fromAccountIndex" binding:"required"`
+		ToIdx     StrHezIdx             `json:"toAccountIndex"`
+		ToEthAddr StrHezEthAddr         `json:"toHezEthereumAddress"`
+		ToBJJ     StrHezBJJ             `json:"toBjj"`
+		Amount    *StrBigInt            `json:"amount" binding:"required"`
+		Fee       FeeSelector           `json:"fee"`
+		Nonce     Nonce                 `json:"nonce"`
+		Signature babyjub.SignatureComp `json:"signature" binding:"required"`
+		RqTxID    TxID                  `json:"requestId"`
+		State     string                `json:"state"`
+		RqOffset  uint8                 `json:"requestOffset"`
 	}{}
 	if err := json.Unmarshal(data, &receivedJSON); err != nil {
 		return err
@@ -593,29 +556,21 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	}
 	// Set values to destination struct
 	*tx = PoolL2Tx{
-		TxID:          receivedJSON.TxID,
-		FromIdx:       Idx(receivedJSON.FromIdx.Idx),
-		ToIdx:         Idx(receivedJSON.ToIdx.Idx),
-		ToEthAddr:     ethCommon.Address(receivedJSON.ToEthAddr),
-		ToBJJ:         babyjub.PublicKeyComp(receivedJSON.ToBJJ),
-		TokenID:       receivedJSON.TokenID,
-		Amount:        (*big.Int)(receivedJSON.Amount),
-		Fee:           receivedJSON.Fee,
-		Nonce:         receivedJSON.Nonce,
-		Signature:     receivedJSON.Signature,
-		RqTxID:        receivedJSON.RqTxID,
-		RqFromIdx:     (Idx)(receivedJSON.RqFromIdx.Idx),
-		RqToIdx:       (Idx)(receivedJSON.RqToIdx.Idx),
-		RqToEthAddr:   (ethCommon.Address)(receivedJSON.RqToEthAddr),
-		RqToBJJ:       (babyjub.PublicKeyComp)(receivedJSON.RqToBJJ),
-		RqTokenID:     receivedJSON.RqTokenID,
-		RqAmount:      (*big.Int)(receivedJSON.RqAmount),
-		RqFee:         receivedJSON.RqFee,
-		RqNonce:       receivedJSON.RqNonce,
-		Type:          receivedJSON.Type,
-		State:         state,
-		TokenSymbol:   receivedJSON.FromIdx.TokenSymbol,
-		RqTokenSymbol: receivedJSON.RqFromIdx.TokenSymbol,
+		TxID:        receivedJSON.TxID,
+		FromIdx:     Idx(receivedJSON.FromIdx.Idx),
+		ToIdx:       Idx(receivedJSON.ToIdx.Idx),
+		ToEthAddr:   ethCommon.Address(receivedJSON.ToEthAddr),
+		ToBJJ:       babyjub.PublicKeyComp(receivedJSON.ToBJJ),
+		TokenID:     receivedJSON.TokenID,
+		Amount:      (*big.Int)(receivedJSON.Amount),
+		Fee:         receivedJSON.Fee,
+		Nonce:       receivedJSON.Nonce,
+		Signature:   receivedJSON.Signature,
+		RqTxID:      receivedJSON.RqTxID,
+		Type:        receivedJSON.Type,
+		State:       state,
+		TokenSymbol: receivedJSON.FromIdx.TokenSymbol,
+		RqOffset:    receivedJSON.RqOffset,
 	}
 	return nil
 }

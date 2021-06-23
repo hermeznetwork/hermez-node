@@ -207,7 +207,7 @@ func TestPoolTxs(t *testing.T) {
 	jsonTxBytes, err = json.Marshal(badTx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", endpoint, jsonTxReader, 400)
+	err = doBadReq("POST", endpoint, jsonTxReader, 409)
 	require.NoError(t, err)
 	// GET
 	// init structures
@@ -504,7 +504,7 @@ func TestAllTosNull(t *testing.T) {
 
 func TestAtomicPool(t *testing.T) {
 	// Generate N "wallets" (account + private key)
-	const nAccounts = 4 // for the test to work 4 is the minimum value
+	const nAccounts = 4 // don't change this value
 	const usedToken = 0 // this test will use only a token
 	accounts := make([]common.Account, nAccounts)
 	accountUpdates := make([]common.AccountUpdate, nAccounts)
@@ -591,6 +591,11 @@ func TestAtomicPool(t *testing.T) {
 		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
 		tx.RqFromIdx = accounts[(i+1)%nAccounts].Idx
 		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
+		if i != nAccounts-1 {
+			tx.RqOffset = 1
+		} else {
+			tx.RqOffset = 5
+		}
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
@@ -629,6 +634,11 @@ func TestAtomicPool(t *testing.T) {
 		} else if i == nAccounts-1 {
 			tx.RqFee = 200
 		}
+		if i != nAccounts-1 {
+			tx.RqOffset = 1
+		} else {
+			tx.RqOffset = 5
+		}
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
@@ -664,8 +674,10 @@ func TestAtomicPool(t *testing.T) {
 		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
 		if i == 0 {
 			tx.Fee = 5
+			tx.RqOffset = 1
 		} else if i == nAccounts-1 {
 			tx.RqFee = 5
+			tx.RqOffset = 5
 		}
 		txs = append(txs, tx)
 	}
@@ -675,7 +687,7 @@ func TestAtomicPool(t *testing.T) {
 	jsonTxBytes, err = json.Marshal(txsToSend)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", path, jsonTxReader, 500)
+	err = doBadReq("POST", path, jsonTxReader, 400)
 	assert.NoError(t, err)
 
 	// Test group that is not atomic #1
@@ -693,6 +705,7 @@ func TestAtomicPool(t *testing.T) {
 	A.ToIdx = accounts[0].Idx
 	A.RqFromIdx = accounts[0].Idx
 	A.RqToIdx = accounts[1].Idx
+	A.RqOffset = 1
 	txs = append(txs, A)
 	/* Cyclic part:
 	B ───────► C
@@ -706,49 +719,17 @@ func TestAtomicPool(t *testing.T) {
 		tx.ToIdx = accounts[(i+1)%nAccountsMinus1].Idx
 		tx.RqFromIdx = accounts[(i+1)%nAccountsMinus1].Idx
 		tx.RqToIdx = accounts[(i+2)%nAccountsMinus1].Idx
+		if i != nAccountsMinus1-1 {
+			tx.RqOffset = 1
+		} else {
+			tx.RqOffset = 6
+		}
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
 	txsToSend, _ = signAndTransformTxs(txs)
 	// Send txs
 	jsonTxBytes, err = json.Marshal(txsToSend)
-	require.NoError(t, err)
-	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", path, jsonTxReader, 400)
-	assert.NoError(t, err)
-
-	// Test group that is not atomic #2
-	/* Note that in this example txs A and B could be forged without C and D and viceversa
-
-	A ───────► B
-	▲          │
-	└──────────┘
-
-	C ───────► D
-	▲          │
-	└──────────┘
-	*/
-	// Generate txs
-	txs = []common.PoolL2Tx{}
-	for i := 0; i < nAccounts; i++ {
-		tx := baseTx
-		tx.FromIdx = accounts[i].Idx
-		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
-		tx.RqFromIdx = accounts[(i+2)%nAccounts].Idx
-		tx.RqToIdx = accounts[(i+3)%nAccounts].Idx
-		txs = append(txs, tx)
-	}
-	// Sign and format txs
-	txsToSend, _ = signAndTransformTxs(txs)
-	// Send txs
-	jsonTxBytes, err = json.Marshal(txsToSend)
-	require.NoError(t, err)
-	jsonTxReader = bytes.NewReader(jsonTxBytes)
-	err = doBadReq("POST", path, jsonTxReader, 400)
-	assert.NoError(t, err)
-
-	// Test send only one tx
-	jsonTxBytes, err = json.Marshal([]common.PoolL2Tx{tc.poolTxsToSend[0]})
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", path, jsonTxReader, 400)
@@ -781,7 +762,7 @@ func TestIsAtomic(t *testing.T) {
 	// NOT atomic cases
 	// Empty group
 	txs := []common.PoolL2Tx{}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case missing tx: 1 ==> 2 ==> 3 ==> (4: not provided)
 	txs = []common.PoolL2Tx{
@@ -789,7 +770,7 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
 		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
 	}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case loneley tx: 1 ==> 2 ==> 3 ==> 1 <== (4: no buddy references 4th tx)
 	txs = []common.PoolL2Tx{
@@ -798,7 +779,7 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{3}, RqTxID: common.TxID{1}},
 		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
 	}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case two groups: 1 <==> 2  3 <==> 4
 	txs = []common.PoolL2Tx{
@@ -807,7 +788,7 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
 		{TxID: common.TxID{4}, RqTxID: common.TxID{3}},
 	}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Atomic cases
 	// Case circular: 1 ==> 2 ==> 3 ==> 4 ==> 1
@@ -817,5 +798,5 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
 		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
 	}
-	assert.True(t, isAtomicGroup(txs))
+	assert.True(t, isSingleAtomicGroup(txs))
 }
