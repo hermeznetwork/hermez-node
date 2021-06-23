@@ -1313,7 +1313,7 @@ func TestFailingAtomicTx(t *testing.T) {
 	tx1.Signature = accAWallet.BJJ.SignPoseidon(hashTx1).Compress()
 	// Tx2 fields
 	tx2 := common.PoolL2Tx{
-		FromIdx:       258, // account B (balance 350, as the previos tx will be already processed)
+		FromIdx:       258, // account B (balance 350, as the previous tx will be already processed)
 		ToIdx:         257, // account A
 		TokenID:       0,
 		Amount:        big.NewInt(400),
@@ -1344,6 +1344,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		Amount:  big.NewInt(10),
 		Fee:     0,
 		Nonce:   0,
+		State:   common.PoolL2TxStatePending,
 	}
 	// Tx3 signature
 	_, err = common.NewPoolL2Tx(&tx3)
@@ -1441,7 +1442,6 @@ func TestFilterFailedAtomicGroups(t *testing.T) {
 	failedGroups = []int{1}
 	selected, filtered = filterFailedAtomicGroups(txs, failedGroups)
 	assertResult(t, []common.TxID{id1, id3}, []common.TxID{id2}, selected, filtered)
-
 }
 
 func TestCalculateAtomicGroupsAverageFee(t *testing.T) {
@@ -1648,8 +1648,5 @@ func TestSortL2Txs(t *testing.T) {
 	}
 	fees = calculateAtomicGroupsAverageFee(txs)
 	actual = sortL2Txs(txs, fees)
-	for _, v := range actual {
-		log.Error(v.TxID)
-	}
 	assertResult(t, []common.TxID{id7, id3, id4, id5, id1, id2, id6}, actual)
 }
