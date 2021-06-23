@@ -62,7 +62,7 @@ func (a *API) postAtomicPool(c *gin.Context) {
 				break
 			}
 			// check if was last and not set
-			if i == (len(receivedTxs) + 1) {
+			if i == (len(receivedTxs) - 1) {
 				retBadReq(errors.New(ErrRqTxIDNotProvided), c)
 				return
 			}
