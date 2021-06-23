@@ -1515,6 +1515,11 @@ components:
           description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
           example: "0x00000000000001e240004700" 
           nullable: true
+        requestOffset:
+          type: integer
+          description: TODO improve
+          example: 1
+          nullable: true
       example:
         id: '0x020000000001000000000006'
         type: Transfer
