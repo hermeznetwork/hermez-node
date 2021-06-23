@@ -9,9 +9,9 @@ import (
 
 // This migration adds the column `rq_tx_id` on `tx_pool`
 
-type migrationTest0006 struct{}
+type migrationTest0008 struct{}
 
-func (m migrationTest0006) InsertData(db *sqlx.DB) error {
+func (m migrationTest0008) InsertData(db *sqlx.DB) error {
 	// insert block to respect the FKey of token
 	const queryInsertBlock = `INSERT INTO block (
 		eth_block_num,"timestamp",hash
@@ -62,7 +62,8 @@ func (m migrationTest0006) InsertData(db *sqlx.DB) error {
 	const queryInsertTxPool = `INSERT INTO tx_pool (
 		tx_id, from_idx, effective_from_eth_addr, effective_from_bjj, to_idx, to_eth_addr, to_bjj, effective_to_eth_addr, effective_to_bjj,
 		token_id, amount, amount_f, fee, nonce, state, info, signature, "timestamp", batch_num,
-		rq_from_idx,rq_to_idx,rq_to_eth_addr,rq_to_bjj,rq_token_id,rq_amount,rq_fee,rq_nonce,tx_type,client_ip,external_delete,rq_offset
+		rq_from_idx,rq_to_idx,rq_to_eth_addr,rq_to_bjj,rq_token_id,rq_amount,rq_fee,rq_nonce,tx_type,client_ip,external_delete,
+        atomic_group_id,rq_offset
 	) VALUES (
 		decode('023A0D72BEB1095C28A7130D896F484CC9D465C1C95F1617C0A7B2094E3E1F11FF', 'hex'),
 		789,
@@ -94,6 +95,7 @@ func (m migrationTest0006) InsertData(db *sqlx.DB) error {
 		'Exit',
 		'93.176.174.84',
 		true,
+        1,
         decode('023A0D72BEB1095C28A7130D896F484CC9D465C1C95F1617C0A7B2094E3E1F11FF', 'hex')
 	);`
 	_, err := db.Exec(queryInsertBlock +
@@ -105,7 +107,7 @@ func (m migrationTest0006) InsertData(db *sqlx.DB) error {
 	return err
 }
 
-func (m migrationTest0006) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB) {
+func (m migrationTest0008) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB) {
 	// check that the tx_pool inserted in previous step is persisted
 	// with same content, except item_id is added
 	const queryGetTxPool = `SELECT COUNT(*) FROM tx_pool WHERE
@@ -141,6 +143,7 @@ func (m migrationTest0006) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 		external_delete = true AND
 		item_id = 1 AND -- Note that item_id is an autoincremental column, so this value is setted automatically
 		rq_tx_id IS NULL AND
+        atomic_group_id = 1 AND
         rq_offset = decode('023A0D72BEB1095C28A7130D896F484CC9D465C1C95F1617C0A7B2094E3E1F11FF', 'hex');`
 	row := db.QueryRow(queryGetTxPool)
 	var result int
@@ -148,19 +151,14 @@ func (m migrationTest0006) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 	assert.Equal(t, 1, result)
 }
 
-func (m migrationTest0006) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
+func (m migrationTest0008) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
 	var result int
 	// check that atomic_group_id colum doesn't exist anymore
 	const queryCheckAtomicGroupID = `SELECT COUNT(*) FROM tx_pool WHERE atomic_group_id = 1;`
 	row := db.QueryRow(queryCheckAtomicGroupID)
 	assert.Equal(t, `pq: column "atomic_group_id" does not exist`, row.Scan(&result).Error())
-
-	// check that rq_offset colum doesn't exist anymore
-	const queryCheckRqOffset = `SELECT COUNT(*) FROM tx_pool WHERE rq_offset = 1;`
-	row = db.QueryRow(queryCheckRqOffset)
-	assert.Equal(t, `pq: column "rq_offset" does not exist`, row.Scan(&result).Error())
 }
 
-func TestMigration0006(t *testing.T) {
-	runMigrationTest(t, 6, migrationTest0006{})
+func TestMigration0008(t *testing.T) {
+	runMigrationTest(t, 8, migrationTest0008{})
 }
