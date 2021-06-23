@@ -56,21 +56,21 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		return
 	}
 	// set the Rq fields
-	for _, tx1 := range receivedTxs {
-		for i, tx2 := range receivedTxs {
+	for i1, tx1 := range receivedTxs {
+		for i2, tx2 := range receivedTxs {
 			if tx1.RqTxID == tx2.TxID {
-				tx1.RqFromIdx = tx2.FromIdx
-				tx1.RqToIdx = tx2.ToIdx
-				tx1.RqToEthAddr = tx2.ToEthAddr
-				tx1.RqToBJJ = tx2.ToBJJ
-				tx1.RqTokenID = tx2.TokenID
-				tx1.RqAmount = tx2.Amount
-				tx1.RqFee = tx2.Fee
-				tx1.RqNonce = tx2.Nonce
+				receivedTxs[i1].RqFromIdx = tx2.FromIdx
+				receivedTxs[i1].RqToIdx = tx2.ToIdx
+				receivedTxs[i1].RqToEthAddr = tx2.ToEthAddr
+				receivedTxs[i1].RqToBJJ = tx2.ToBJJ
+				receivedTxs[i1].RqTokenID = tx2.TokenID
+				receivedTxs[i1].RqAmount = tx2.Amount
+				receivedTxs[i1].RqFee = tx2.Fee
+				receivedTxs[i1].RqNonce = tx2.Nonce
 				break
 			}
 			// check if was last and not set
-			if i == (len(receivedTxs) - 1) {
+			if i2 == (len(receivedTxs) - 1) {
 				retBadReq(errors.New(ErrRqTxIDNotProvided), c)
 				return
 			}
