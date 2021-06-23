@@ -152,47 +152,10 @@ func (m migrationTest0006) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 }
 
 func (m migrationTest0006) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
-	// check that the tx_pool inserted in previous step is persisted with same content
-	const queryGetTxPool = `SELECT COUNT(*) FROM tx_pool WHERE
-		tx_id = decode('023A0D72BEB1095C28A7130D896F484CC9D465C1C95F1617C0A7B2094E3E1F11FF', 'hex') AND
-		from_idx = 789 AND
-		effective_from_eth_addr = decode('A631BE6995643E6085330A31B9E1AF48DD5D6B7F', 'hex') AND
-		effective_from_bjj = decode('FDDACE21457376B0952CCD19CE66B854FDD7C6E45905B0A0A75747C87D41719A', 'hex') AND
-		to_idx = 1 AND
-		to_eth_addr = decode('1224456678907543564567567567567657567567', 'hex') AND
-		to_bjj = decode('1224456678907543564567567567567657567567000000000000000000000000', 'hex') AND
-		effective_to_eth_addr = decode('1224456678907543564567567567567657567567', 'hex') AND
-		effective_to_bjj = decode('1224456678907543564567567567567657567567000000000000000000000000', 'hex') AND
-		token_id = 2 AND
-		amount = 5 AND
-		amount_f = 5 AND
-		fee = 227 AND
-		nonce = 3 AND
-		state = 'pend' AND
-		info = 'Exits with amount 0 have no sense, not accepting to prevent unintended transactions' AND
-		signature = decode('9C6A159C57D7FC58E3E5D3510FBC64EAC9C0D56A1B3144D94D6BBA4C23B9402CEE57D0CFF4A3BE135CBD2393AB8FD2A1840A62281B1721801DBF708D27F1DF00', 'hex') AND
-		"timestamp" = '2021-05-06 15:02:47.616' AND
-		batch_num = 32 AND
-		rq_from_idx = 765 AND
-		rq_to_idx = 567 AND
-		rq_to_eth_addr = decode('A631BE6995643E6085330A31B9E1AF48DD5D6B7F', 'hex') AND
-		rq_to_bjj = decode('FDDACE21457376B0952CCD19CE66B854FDD7C6E45905B0A0A75747C87D41719A', 'hex') AND
-		rq_token_id = 5 AND
-		rq_amount = 345345345 AND
-		rq_fee = 33 AND
-		rq_nonce = 4 AND
-		tx_type = 'Exit' AND
-		client_ip = '93.176.174.84' AND
-		item_id = 1 AND
-		external_delete = true;`
-	row := db.QueryRow(queryGetTxPool)
 	var result int
-	assert.NoError(t, row.Scan(&result))
-	assert.Equal(t, 1, result)
-
 	// check that atomic_group_id colum doesn't exist anymore
 	const queryCheckAtomicGroupID = `SELECT COUNT(*) FROM tx_pool WHERE atomic_group_id = 1;`
-	row = db.QueryRow(queryCheckAtomicGroupID)
+	row := db.QueryRow(queryCheckAtomicGroupID)
 	assert.Equal(t, `pq: column "atomic_group_id" does not exist`, row.Scan(&result).Error())
 
 	// check that rq_offset colum doesn't exist anymore

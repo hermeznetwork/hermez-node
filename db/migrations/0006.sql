@@ -1,5 +1,5 @@
 -- +migrate Up
-ALTER TABLE tx_pool ADD COLUMN rq_offset BYTEA;
+ALTER TABLE tx_pool ADD COLUMN rq_offset BYTEA DEFAULT NULL;
 ALTER TABLE tx_pool ADD COLUMN atomic_group_id INTEGER;
 
 -- +migrate Down
