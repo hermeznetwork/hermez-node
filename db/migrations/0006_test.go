@@ -197,7 +197,7 @@ func (m migrationTest0006) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 
 	// check that rq_offset colum doesn't exist anymore
 	const queryCheckRqOffset = `SELECT COUNT(*) FROM tx_pool WHERE rq_offset = 1;`
-	row = db.QueryRow(queryCheckAtomicGroupID)
+	row = db.QueryRow(queryCheckRqOffset)
 	assert.Equal(t, `pq: column "rq_offset" does not exist`, row.Scan(&result).Error())
 }
 
