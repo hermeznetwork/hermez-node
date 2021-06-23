@@ -1517,7 +1517,7 @@ components:
           nullable: true
         requestOffset:
           type: integer
-          description: TODO improve
+          description: Identifier of the relative index of the transaction that would be linked. More info on how the identifiers are built [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier)
           example: 1
           nullable: true
       example:
