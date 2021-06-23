@@ -3,6 +3,7 @@ package l2db
 import (
 	"database/sql"
 	"fmt"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -289,6 +290,18 @@ func TestGetPending(t *testing.T) {
 	poolL2Txs, err := generatePoolL2Txs()
 	require.NoError(t, err)
 	var pendingTxs []*common.PoolL2Tx
+	// Add case for atomic related fields
+	poolL2Txs[0].AtomicGroupID = 1
+	poolL2Txs[0].RqTxID = common.TxID([common.TxIDLen]byte{7})
+	poolL2Txs[0].RqNonce = 1
+	poolL2Txs[0].RqTokenID = 1
+	poolL2Txs[0].RqFromIdx = 678
+	poolL2Txs[0].RqToIdx = 679
+	poolL2Txs[0].RqAmount = big.NewInt(99999)
+	poolL2Txs[0].RqFee = 200
+	poolL2Txs[0].RqOffset = 3
+	poolL2Txs[0].RqToEthAddr = ethCommon.BigToAddress(big.NewInt(11111111))
+
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])
 		require.NoError(t, err)
