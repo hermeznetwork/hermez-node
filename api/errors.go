@@ -26,12 +26,12 @@ const (
 
 	// ErrIsAtomic filter atomic transactions on POST /transactions-pool
 	ErrIsAtomic = "Thies endpoint does not accept atomic transactions"
-	// ErrInvalidRqOffset
+	// ErrInvalidRqOffset error message returned when received an invalid request offset
 	ErrInvalidRqOffset = "Invalid requestOffset. Valid values goes from 0 to 7"
 
-	// ErrRqOffsetOutOfBounds
-	ErrRqOffsetOutOfBounds = "One of the transactions requested another one otside the bounds of the provided array"
+	// ErrRqOffsetOutOfBounds error message returned when transaction tries to access another out the bounds of the array
+	ErrRqOffsetOutOfBounds = "One of the transactions requested another one outside the bounds of the provided array"
 
-	// ErrNotAtomicTxsInPostPoolTx
+	// ErrNotAtomicTxsInPostPoolTx error message returned when received an non-atomic transaction inside atomic pool
 	ErrNotAtomicTxsInPostPoolTx = "Atomic transactions are only accepted in POST /atomic-pool"
 )

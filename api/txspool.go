@@ -105,26 +105,39 @@ func (a *API) postAtomicPool(c *gin.Context) {
 
 // requestOffset2RelativePosition translates from 0 to 7 to protocol position
 func requestOffset2RelativePosition(rqoffset uint8) (int, error) {
+	const rqOffsetZero = 0
+	const rqOffsetOne = 1
+	const rqOffsetTwo = 2
+	const rqOffsetThree = 3
+	const rqOffsetFour = 4
+	const rqOffsetFive = 5
+	const rqOffsetSix = 6
+	const rqOffsetSeven = 7
+	const rqOffsetMinusFour = -4
+	const rqOffsetMinusThree = -3
+	const rqOffsetMinusTwo = -2
+	const rqOffsetMinusOne = -1
+
 	switch rqoffset {
-	case 0:
+	case rqOffsetZero:
 		log.Error("requestOffset2RelativePosition")
-		return 0, errors.New(ErrTxsNotAtomic)
-	case 1:
-		return 1, nil
-	case 2:
-		return 2, nil
-	case 3:
-		return 3, nil
-	case 4:
-		return -4, nil
-	case 5:
-		return -3, nil
-	case 6:
-		return -2, nil
-	case 7:
-		return -1, nil
+		return rqOffsetZero, errors.New(ErrTxsNotAtomic)
+	case rqOffsetOne:
+		return rqOffsetOne, nil
+	case rqOffsetTwo:
+		return rqOffsetTwo, nil
+	case rqOffsetThree:
+		return rqOffsetThree, nil
+	case rqOffsetFour:
+		return rqOffsetMinusFour, nil
+	case rqOffsetFive:
+		return rqOffsetMinusThree, nil
+	case rqOffsetSix:
+		return rqOffsetMinusTwo, nil
+	case rqOffsetSeven:
+		return rqOffsetMinusOne, nil
 	default:
-		return 0, errors.New(ErrInvalidRqOffset)
+		return rqOffsetZero, errors.New(ErrInvalidRqOffset)
 	}
 }
 
