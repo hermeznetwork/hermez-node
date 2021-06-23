@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/yourbasic/graph"
 )
@@ -48,24 +49,27 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		return
 	}
 	// set the Rq fields
-	for i1, tx1 := range receivedTxs {
-		for i2, tx2 := range receivedTxs {
-			if tx1.RqTxID == tx2.TxID {
-				receivedTxs[i1].RqFromIdx = tx2.FromIdx
-				receivedTxs[i1].RqToIdx = tx2.ToIdx
-				receivedTxs[i1].RqToEthAddr = tx2.ToEthAddr
-				receivedTxs[i1].RqToBJJ = tx2.ToBJJ
-				receivedTxs[i1].RqTokenID = tx2.TokenID
-				receivedTxs[i1].RqAmount = tx2.Amount
-				receivedTxs[i1].RqFee = tx2.Fee
-				receivedTxs[i1].RqNonce = tx2.Nonce
-				break
-			}
-			// check if was last and not set
-			if i2 == (len(receivedTxs) - 1) {
-				retBadReq(errors.New(ErrRqTxIDNotProvided), c)
-				return
-			}
+	for i, tx1 := range receivedTxs {
+		relativePosition, err := requestOffset2RelativePosition(tx1.RqOffset)
+		if err != nil {
+			retBadReq(err, c)
+			return
+		}
+		requestedPosition := i + relativePosition
+		if requestedPosition > len(receivedTxs)-1 || requestedPosition < 0 {
+			retBadReq(errors.New(ErrRqOffsetOutOfBounds), c)
+			return
+		}
+		requestedTx := receivedTxs[requestedPosition]
+		if tx1.RqTxID == requestedTx.TxID {
+			receivedTxs[i].RqFromIdx = requestedTx.FromIdx
+			receivedTxs[i].RqToIdx = requestedTx.ToIdx
+			receivedTxs[i].RqToEthAddr = requestedTx.ToEthAddr
+			receivedTxs[i].RqToBJJ = requestedTx.ToBJJ
+			receivedTxs[i].RqTokenID = requestedTx.TokenID
+			receivedTxs[i].RqAmount = requestedTx.Amount
+			receivedTxs[i].RqFee = requestedTx.Fee
+			receivedTxs[i].RqNonce = requestedTx.Nonce
 		}
 	}
 	// Validate txs individually
@@ -80,7 +84,8 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		txIDStrings[i] = tx.TxID.String()
 	}
 	// Validate that all txs in the payload represent an atomic group
-	if !isAtomicGroup(receivedTxs) {
+	if !isSingleAtomicGroup(receivedTxs) {
+		log.Error("isSingleAtomicGroup")
 		retBadReq(errors.New(ErrTxsNotAtomic), c)
 		return
 	}
@@ -93,9 +98,34 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	c.JSON(http.StatusOK, txIDStrings)
 }
 
-// isAtomicGroup returns true if all the txs are needed to be forged
+// requestOffset2RelativePosition translates from 0 to 7 to protocol position
+func requestOffset2RelativePosition(rqoffset uint8) (int, error) {
+	switch rqoffset {
+	case 0:
+		log.Error("requestOffset2RelativePosition")
+		return 0, errors.New(ErrTxsNotAtomic)
+	case 1:
+		return 1, nil
+	case 2:
+		return 2, nil
+	case 3:
+		return 3, nil
+	case 4:
+		return -4, nil
+	case 5:
+		return -3, nil
+	case 6:
+		return -2, nil
+	case 7:
+		return -1, nil
+	default:
+		return 0, errors.New(ErrInvalidRqOffset)
+	}
+}
+
+// isSingleAtomicGroup returns true if all the txs are needed to be forged
 // (all txs will be forged in the same batch or non of them will be forged)
-func isAtomicGroup(txs []common.PoolL2Tx) bool {
+func isSingleAtomicGroup(txs []common.PoolL2Tx) bool {
 	// Create a graph from the given txs to represent requests between transactions
 	g := graph.New(len(txs))
 	idToPos := make(map[common.TxID]int, len(txs))

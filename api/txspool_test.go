@@ -504,7 +504,7 @@ func TestAllTosNull(t *testing.T) {
 
 func TestAtomicPool(t *testing.T) {
 	// Generate N "wallets" (account + private key)
-	const nAccounts = 4 // for the test to work 4 is the minimum value
+	const nAccounts = 4 // don't change this value
 	const usedToken = 0 // this test will use only a token
 	accounts := make([]common.Account, nAccounts)
 	accountUpdates := make([]common.AccountUpdate, nAccounts)
@@ -591,6 +591,11 @@ func TestAtomicPool(t *testing.T) {
 		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
 		tx.RqFromIdx = accounts[(i+1)%nAccounts].Idx
 		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
+		if i != nAccounts-1 {
+			tx.RqOffset = 1
+		} else {
+			tx.RqOffset = 5
+		}
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
@@ -781,7 +786,7 @@ func TestIsAtomic(t *testing.T) {
 	// NOT atomic cases
 	// Empty group
 	txs := []common.PoolL2Tx{}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case missing tx: 1 ==> 2 ==> 3 ==> (4: not provided)
 	txs = []common.PoolL2Tx{
@@ -789,7 +794,7 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
 		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
 	}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case loneley tx: 1 ==> 2 ==> 3 ==> 1 <== (4: no buddy references 4th tx)
 	txs = []common.PoolL2Tx{
@@ -798,7 +803,7 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{3}, RqTxID: common.TxID{1}},
 		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
 	}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case two groups: 1 <==> 2  3 <==> 4
 	txs = []common.PoolL2Tx{
@@ -807,7 +812,7 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
 		{TxID: common.TxID{4}, RqTxID: common.TxID{3}},
 	}
-	assert.False(t, isAtomicGroup(txs))
+	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Atomic cases
 	// Case circular: 1 ==> 2 ==> 3 ==> 4 ==> 1
@@ -817,5 +822,5 @@ func TestIsAtomic(t *testing.T) {
 		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
 		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
 	}
-	assert.True(t, isAtomicGroup(txs))
+	assert.True(t, isSingleAtomicGroup(txs))
 }

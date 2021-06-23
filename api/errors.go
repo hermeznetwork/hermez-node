@@ -23,4 +23,10 @@ const (
 
 	// ErrInvalidSymbol error message returned when receiving (and rejecting) an invalid Symbol
 	ErrInvalidSymbol = "Invalid Symbol"
+
+	// ErrInvalidRqOffset
+	ErrInvalidRqOffset = "Invalid requestOffset. Valid values goes from 0 to 7"
+
+	// ErrRqOffsetOutOfBounds
+	ErrRqOffsetOutOfBounds = "One of the transactions requested another one otside the bounds of the provided array"
 )
