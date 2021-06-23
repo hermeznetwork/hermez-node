@@ -3,6 +3,7 @@ package txselector
 import (
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"strconv"
 	"testing"
@@ -1073,4 +1074,579 @@ func TestL1UserFutureTxs(t *testing.T) {
 	txsel.LocalAccountsDB().Close()
 }
 
-// TODO: add unit test for sortL2Txs
+func TestSimpleAtomicTx(t *testing.T) {
+	// This test will perform the most simple atomic tx case:
+	// 1. Create three accounts (with deposit) for the same token: one for coordinator and two for users
+	// 2. Each account will do a transfer to the other account and request the other tx.
+	//    AccountA does tx 1 to AccountB requesting tx 2. AccountB does tx 2 to AccountA requesting tx 1.
+
+	// Use til to create the account deposits
+	chainID := uint16(0)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(`
+		Type: Blockchain
+		> batch
+		CreateAccountDeposit(0) Coord: 1000
+		CreateAccountDeposit(0) A: 500
+		CreateAccountDeposit(0) B: 300
+		> batchL1
+		> batchL1
+		> batchL1
+		> block
+	`)
+	require.NoError(t, err)
+
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	txsel, _, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+
+	tpc := txprocessor.Config{
+		NLevels:  16,
+		MaxFeeTx: 10,
+		MaxTx:    20,
+		MaxL1Tx:  10,
+		ChainID:  chainID,
+	}
+
+	// Forge the 3 first batches, to reach the point were accounts are created
+	log.Debug("block:0 batch:1")
+	l1UserTxs := []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+
+	log.Debug("block:0 batch:2")
+	l1UserTxs = []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+
+	log.Debug("block:0 batch:3")
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(3), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	checkBalance(t, tc, txsel, "Coord", 0, "1000")
+	checkBalance(t, tc, txsel, "A", 0, "500")
+	checkBalance(t, tc, txsel, "B", 0, "300")
+
+	// Generate the simple atomic txs
+	// Tx1 fields
+	tx1 := common.PoolL2Tx{
+		FromIdx:       257, // account A
+		ToIdx:         258, // account B
+		TokenID:       0,
+		Amount:        big.NewInt(100),
+		Fee:           0,
+		Nonce:         0,
+		RqOffset:      1, // Request tx bellow (position +1)
+		AtomicGroupID: 1,
+		RqFromIdx:     258, // account B
+		RqToIdx:       257, // account A
+		RqTokenID:     0,
+		RqAmount:      big.NewInt(200),
+		RqFee:         0,
+		RqNonce:       0,
+		State:         common.PoolL2TxStatePending,
+	}
+	// Tx1 signature
+	_, err = common.NewPoolL2Tx(&tx1)
+	require.NoError(t, err)
+	hashTx1, err := tx1.HashToSign(chainID)
+	require.NoError(t, err)
+	accAWallet := til.NewUser(2, "A")
+	tx1.Signature = accAWallet.BJJ.SignPoseidon(hashTx1).Compress()
+	// Tx2 fields
+	tx2 := common.PoolL2Tx{
+		FromIdx:       258, // account B
+		ToIdx:         257, // account A
+		TokenID:       0,
+		Amount:        big.NewInt(200),
+		Fee:           0,
+		Nonce:         0,
+		RqOffset:      7, // Request tx above (position -1)
+		AtomicGroupID: 1,
+		RqFromIdx:     257, // account A
+		RqToIdx:       258, // account B
+		RqTokenID:     0,
+		RqAmount:      big.NewInt(100),
+		RqFee:         0,
+		RqNonce:       0,
+		State:         common.PoolL2TxStatePending,
+	}
+	// Tx2 signature
+	_, err = common.NewPoolL2Tx(&tx2)
+	require.NoError(t, err)
+	hashTx2, err := tx2.HashToSign(chainID)
+	require.NoError(t, err)
+	accBWallet := til.NewUser(3, "B")
+	tx2.Signature = accBWallet.BJJ.SignPoseidon(hashTx2).Compress()
+
+	// Add txs to the pool
+	addL2Txs(t, txsel, []common.PoolL2Tx{tx1, tx2})
+
+	log.Debug("block:1 batch:4")
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
+		txsel.GetL1L2TxSelection(tpc, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 2, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	checkBalance(t, tc, txsel, "Coord", 0, "1000")
+	checkBalance(t, tc, txsel, "A", 0, "600") // 500 -100 +200
+	checkBalance(t, tc, txsel, "B", 0, "200") // 300 +100 -200
+}
+
+func TestFailingAtomicTx(t *testing.T) {
+	// This test will atempt to select an atomic group, which will be rejected due to insufficient balance:
+	// 1. Create four accounts (with deposit) for the same token: one for coordinator and three for users
+	// 2. Account A and B will atempt to do an atomic tx, first tx will be valid, but the 2nd won't have enough funds.
+	//    Account C will send a transfer to account Coord, just to check that even with invalid atomic txs, the batch can still forge valid txs
+
+	// Use til to create the account deposits
+	chainID := uint16(0)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(`
+		Type: Blockchain
+		> batch
+		CreateAccountDeposit(0) Coord: 1000
+		CreateAccountDeposit(0) A: 500
+		CreateAccountDeposit(0) B: 300
+		CreateAccountDeposit(0) C: 300
+		> batchL1
+		> batchL1
+		> batchL1
+		> block
+	`)
+	require.NoError(t, err)
+
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	txsel, _, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+
+	tpc := txprocessor.Config{
+		NLevels:  16,
+		MaxFeeTx: 10,
+		MaxTx:    20,
+		MaxL1Tx:  10,
+		ChainID:  chainID,
+	}
+
+	// Forge the 3 first batches, to reach the point were accounts are created
+	log.Debug("block:0 batch:1")
+	l1UserTxs := []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+
+	log.Debug("block:0 batch:2")
+	l1UserTxs = []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+
+	log.Debug("block:0 batch:3")
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 4, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(3), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
+	checkBalance(t, tc, txsel, "Coord", 0, "1000")
+	checkBalance(t, tc, txsel, "A", 0, "500")
+	checkBalance(t, tc, txsel, "B", 0, "300")
+	checkBalance(t, tc, txsel, "C", 0, "300")
+
+	// Generate the failing atomic txs + one simple valid tx
+	// Tx1 fields
+	tx1 := common.PoolL2Tx{
+		FromIdx:       257, // account A (balance 500)
+		ToIdx:         258, // account B
+		TokenID:       0,
+		Amount:        big.NewInt(50), // Ok
+		Fee:           0,
+		Nonce:         0,
+		RqOffset:      1, // Request tx bellow (position +1)
+		AtomicGroupID: 1,
+		RqFromIdx:     258, // account B
+		RqToIdx:       257, // account A
+		RqTokenID:     0,
+		RqAmount:      big.NewInt(400),
+		RqFee:         0,
+		RqNonce:       0,
+		State:         common.PoolL2TxStatePending,
+	}
+	// Tx1 signature
+	_, err = common.NewPoolL2Tx(&tx1)
+	require.NoError(t, err)
+	hashTx1, err := tx1.HashToSign(chainID)
+	require.NoError(t, err)
+	accAWallet := til.NewUser(2, "A")
+	tx1.Signature = accAWallet.BJJ.SignPoseidon(hashTx1).Compress()
+	// Tx2 fields
+	tx2 := common.PoolL2Tx{
+		FromIdx:       258, // account B (balance 350, as the previous tx will be already processed)
+		ToIdx:         257, // account A
+		TokenID:       0,
+		Amount:        big.NewInt(400),
+		Fee:           0,
+		Nonce:         0,
+		RqOffset:      7, // Request tx above (position -1)
+		AtomicGroupID: 1,
+		RqFromIdx:     257, // account A
+		RqToIdx:       258, // account B
+		RqTokenID:     0,
+		RqAmount:      big.NewInt(50), // OK
+		RqFee:         0,
+		RqNonce:       0,
+		State:         common.PoolL2TxStatePending,
+	}
+	// Tx2 signature
+	_, err = common.NewPoolL2Tx(&tx2)
+	require.NoError(t, err)
+	hashTx2, err := tx2.HashToSign(chainID)
+	require.NoError(t, err)
+	accBWallet := til.NewUser(3, "B")
+	tx2.Signature = accBWallet.BJJ.SignPoseidon(hashTx2).Compress()
+	// Tx3 fields
+	tx3 := common.PoolL2Tx{
+		FromIdx: 259, // account C
+		ToIdx:   256, // account Coord
+		TokenID: 0,
+		Amount:  big.NewInt(10),
+		Fee:     0,
+		Nonce:   0,
+		State:   common.PoolL2TxStatePending,
+	}
+	// Tx3 signature
+	_, err = common.NewPoolL2Tx(&tx3)
+	require.NoError(t, err)
+	hashTx3, err := tx3.HashToSign(chainID)
+	require.NoError(t, err)
+	accCWallet := til.NewUser(4, "C")
+	tx3.Signature = accCWallet.BJJ.SignPoseidon(hashTx3).Compress()
+
+	// Add txs to the pool
+	addL2Txs(t, txsel, []common.PoolL2Tx{tx1, tx2, tx3})
+
+	log.Debug("block:1 batch:4")
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
+		txsel.GetL1L2TxSelection(tpc, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 2, len(discardedL2Txs))
+	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
+	checkBalance(t, tc, txsel, "Coord", 0, "1010") // 1000 + 10
+	checkBalance(t, tc, txsel, "A", 0, "500")      // Balance not affected due to rejected atomic txs
+	checkBalance(t, tc, txsel, "B", 0, "300")      // Balance not affected due to rejected atomic txs
+	checkBalance(t, tc, txsel, "C", 0, "290")      // 300 - 10
+}
+
+func TestFilterFailedAtomicGroups(t *testing.T) {
+	// Helper function to perform asserts
+	assertResult := func(
+		t *testing.T,
+		expectedSelectedTxIDs, expectedFilteredTxIDs []common.TxID,
+		actualSelected, actualFiltered []common.PoolL2Tx,
+	) {
+		// Check if expected and actual have the same amount of items
+		assert.Equal(t, len(expectedSelectedTxIDs), len(actualSelected))
+		assert.Equal(t, len(expectedFilteredTxIDs), len(actualFiltered))
+		// Check if the TxIDs of the slected txs much the expectations
+		for i, txID := range expectedSelectedTxIDs {
+			assert.Equal(t, txID, actualSelected[i].TxID)
+		}
+		// Check if the TxIDs of the slected txs much the expectations
+		for i, txID := range expectedFilteredTxIDs {
+			assert.Equal(t, txID, actualFiltered[i].TxID)
+		}
+	}
+	// TxIDs
+	id1 := common.TxID([common.TxIDLen]byte{1})
+	id2 := common.TxID([common.TxIDLen]byte{2})
+	id3 := common.TxID([common.TxIDLen]byte{3})
+	// Case no failing groups
+	txs := []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: 1,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: 0,
+		},
+	}
+	failedGroups := []int{}
+	selected, filtered := filterFailedAtomicGroups(txs, failedGroups)
+	assertResult(t, []common.TxID{id1, id2}, nil, selected, filtered)
+	// Case all failing
+	txs = []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: 1,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: 2,
+		},
+	}
+	failedGroups = []int{1, 2}
+	selected, filtered = filterFailedAtomicGroups(txs, failedGroups)
+	assertResult(t, nil, []common.TxID{id1, id2}, selected, filtered)
+	// Case mixed
+	txs = []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: 0,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: 1,
+		},
+		{
+			TxID:          id3,
+			AtomicGroupID: 2,
+		},
+	}
+	failedGroups = []int{1}
+	selected, filtered = filterFailedAtomicGroups(txs, failedGroups)
+	assertResult(t, []common.TxID{id1, id3}, []common.TxID{id2}, selected, filtered)
+}
+
+func TestCalculateAtomicGroupsAverageFee(t *testing.T) {
+	// Case no atomic groups
+	txs := []common.PoolL2Tx{
+		{
+			AtomicGroupID: 0,
+			AbsoluteFee:   1234.567,
+		},
+	}
+	expected := make(map[int]float64)
+	actual := calculateAtomicGroupsAverageFee(txs)
+	assert.Equal(t, expected, actual)
+	// Case 3 ordered groups
+	txs = []common.PoolL2Tx{
+		{
+			AtomicGroupID: 0,
+			AbsoluteFee:   1234.567,
+		},
+		{
+			AtomicGroupID: 1,
+			AbsoluteFee:   1.0,
+		},
+		{
+			AtomicGroupID: 2,
+			AbsoluteFee:   2.0,
+		},
+		{
+			AtomicGroupID: 2,
+			AbsoluteFee:   2.0,
+		},
+		{
+			AtomicGroupID: 3,
+			AbsoluteFee:   3.0,
+		},
+		{
+			AtomicGroupID: 3,
+			AbsoluteFee:   3.0,
+		},
+		{
+			AtomicGroupID: 3,
+			AbsoluteFee:   3.0,
+		},
+	}
+	expected = make(map[int]float64)
+	expected[1] = 1.0
+	expected[2] = (2.0 + 2.0) / 2
+	expected[3] = (3.0 + 3.0 + 3.0) / 3
+	actual = calculateAtomicGroupsAverageFee(txs)
+	assert.Equal(t, expected, actual)
+	// Case 3 not ordered groups
+	txs = []common.PoolL2Tx{
+		{
+			AtomicGroupID: 0,
+			AbsoluteFee:   1234.567,
+		},
+		{
+			AtomicGroupID: 3,
+			AbsoluteFee:   3.0,
+		},
+		{
+			AtomicGroupID: 2,
+			AbsoluteFee:   2.0,
+		},
+		{
+			AtomicGroupID: 2,
+			AbsoluteFee:   2.0,
+		},
+		{
+			AtomicGroupID: 3,
+			AbsoluteFee:   3.0,
+		},
+		{
+			AtomicGroupID: 3,
+			AbsoluteFee:   3.0,
+		},
+		{
+			AtomicGroupID: 1,
+			AbsoluteFee:   1.0,
+		},
+	}
+	expected = make(map[int]float64)
+	expected[1] = 1.0
+	expected[2] = (2.0 + 2.0) / 2
+	expected[3] = (3.0 + 3.0 + 3.0) / 3
+	actual = calculateAtomicGroupsAverageFee(txs)
+	assert.Equal(t, expected, actual)
+}
+
+func TestSortL2Txs(t *testing.T) {
+	// Helper function to perform asserts
+	assertResult := func(t *testing.T, expected []common.TxID, actual []common.PoolL2Tx) {
+		assert.Equal(t, len(expected), len(actual))
+		for i, a := range actual {
+			assert.Equal(t, expected[i], a.TxID)
+		}
+	}
+	// TxIDs
+	id1 := common.TxID([common.TxIDLen]byte{1})
+	id2 := common.TxID([common.TxIDLen]byte{2})
+	id3 := common.TxID([common.TxIDLen]byte{3})
+	id4 := common.TxID([common.TxIDLen]byte{4})
+	id5 := common.TxID([common.TxIDLen]byte{5})
+	id6 := common.TxID([common.TxIDLen]byte{6})
+	id7 := common.TxID([common.TxIDLen]byte{7})
+	// Case only non atomic
+	txs := []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: 0,
+			AbsoluteFee:   3,
+			Nonce:         2,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: 0,
+			AbsoluteFee:   3,
+			Nonce:         1,
+		},
+		{
+			TxID:          id3,
+			AtomicGroupID: 0,
+			AbsoluteFee:   7,
+			Nonce:         2,
+		},
+	}
+	fees := calculateAtomicGroupsAverageFee(txs)
+	actual := sortL2Txs(txs, fees)
+	assertResult(t, []common.TxID{id2, id3, id1}, actual)
+	// Case only atomic
+	txs = []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: 2,
+			AbsoluteFee:   3,
+			Nonce:         2220,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: 2,
+			AbsoluteFee:   3,
+			Nonce:         1,
+		},
+		{
+			TxID:          id3,
+			AtomicGroupID: 1,
+			AbsoluteFee:   7,
+			Nonce:         300,
+		},
+		{
+			TxID:          id4,
+			AtomicGroupID: 1,
+			AbsoluteFee:   700,
+			Nonce:         2,
+		},
+	}
+	fees = calculateAtomicGroupsAverageFee(txs)
+	actual = sortL2Txs(txs, fees)
+	assertResult(t, []common.TxID{id3, id4, id1, id2}, actual)
+	// Case mixed
+	txs = []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: 2,
+			AbsoluteFee:   20,
+			Nonce:         2220,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: 2,
+			AbsoluteFee:   20,
+			Nonce:         1,
+		},
+		{
+			TxID:          id3,
+			AtomicGroupID: 1,
+			AbsoluteFee:   30,
+			Nonce:         300,
+		},
+		{
+			TxID:          id4,
+			AtomicGroupID: 1,
+			AbsoluteFee:   30,
+			Nonce:         2,
+		},
+		{
+			TxID:          id5,
+			AtomicGroupID: 0,
+			AbsoluteFee:   25,
+			Nonce:         2,
+		},
+		{
+			TxID:          id6,
+			AtomicGroupID: 0,
+			AbsoluteFee:   10,
+			Nonce:         2,
+		},
+		{
+			TxID:          id7,
+			AtomicGroupID: 0,
+			AbsoluteFee:   35,
+			Nonce:         2,
+		},
+	}
+	fees = calculateAtomicGroupsAverageFee(txs)
+	actual = sortL2Txs(txs, fees)
+	assertResult(t, []common.TxID{id7, id3, id4, id5, id1, id2, id6}, actual)
+}

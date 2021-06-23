@@ -78,7 +78,8 @@ func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 
 // AddAtomicTxsAPI inserts transactions into the pool
 // if minFeeUSD <= total fee in USD <= maxFeeUSD.
-// It's assumed that the given txs conform an atomic group
+// It's assumed that the given txs conform a single atomic group
+// and AtomicGroupID will be set for all the txs awith value last AtomigGroupID in the DB +1
 func (l2db *L2DB) AddAtomicTxsAPI(txs []common.PoolL2Tx) error {
 	if len(txs) == 0 {
 		return nil
@@ -142,6 +143,17 @@ func (l2db *L2DB) AddAtomicTxsAPI(txs []common.PoolL2Tx) error {
 	if avgFeeUSD > l2db.maxFeeUSD {
 		return tracerr.Wrap(fmt.Errorf("avgFeeUSD (%v) > maxFeeUSD (%v)",
 			avgFeeUSD, l2db.maxFeeUSD))
+	}
+
+	// Set AtomicGroupID
+	var lastAtomicGroup int
+	row := l2db.dbRead.QueryRow(`SELECT COALESCE(MAX(atomic_group_id), 0) FROM tx_pool`)
+	if err := row.Scan(&lastAtomicGroup); err != nil {
+		return tracerr.Wrap(err)
+	}
+	atomicGroupID := lastAtomicGroup + 1
+	for i := 0; i < len(txs); i++ {
+		txs[i].AtomicGroupID = atomicGroupID
 	}
 
 	// Insert txs if the pool is not full
