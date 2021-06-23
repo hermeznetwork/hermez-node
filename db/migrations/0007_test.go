@@ -26,6 +26,7 @@ func (m migrationTest0007) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 }
 
 func (m migrationTest0007) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
+	var result int
 	const queryQueryDefaults = `SELECT COUNT(*) FROM atomic_group_index WHERE atomic_group_index.atomic_group_index = 1;`
 	row := db.QueryRow(queryQueryDefaults)
 	assert.Equal(t, `pq:  relation "atomic_group_index" does not exist`, row.Scan(&result).Error())
