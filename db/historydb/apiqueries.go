@@ -651,7 +651,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 			queryStr += "WHERE "
 		}
 		queryStr += "tx.effective_from_idx = ? "
-		args = append(args, request.Idx)
+		args = append(args, request.FromIdx)
 		nextIsAnd = true
 	} else if request.ToIdx != nil {
 		if nextIsAnd {
