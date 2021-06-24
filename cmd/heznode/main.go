@@ -300,7 +300,7 @@ func cmdServeAPI(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version)
+	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version, nil, nil)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting api server: %w", err))
 	}
