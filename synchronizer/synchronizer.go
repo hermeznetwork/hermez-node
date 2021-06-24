@@ -552,6 +552,10 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 	log.Debug("Sync - nextBlockNum ", nextBlockNum)
 
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
+	if err != nil {
+		log.Error("Sync - Could not get block number... Error: ", err.Error())
+	}
+
 	if tracerr.Unwrap(err) == ethereum.NotFound {
 		return nil, nil, nil
 	} else if err != nil {
