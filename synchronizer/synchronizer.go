@@ -513,7 +513,7 @@ func (s *Synchronizer) resetIntermediateState() error {
 // synchronization will be made.
 // TODO: Be smart about locking: only lock during the read/write operations
 func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
-	log.Debugw("Start Sync method... lastSavedBlock", lastSavedBlock, "ethLastBlock", s.stats.Eth.LastBlock)
+	log.Debugw("Start Sync method... lastSavedBlock", lastSavedBlock)
 
 	if s.resetStateFailed {
 		if err := s.resetIntermediateState(); err != nil {
