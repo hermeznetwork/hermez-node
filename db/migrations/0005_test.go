@@ -14,6 +14,7 @@ type migrationTest0005 struct{}
 
 func (m migrationTest0005) InsertData(db *sqlx.DB) error {
 	// insert token
+	/* #nosec */
 	const queryInsertToken = `INSERT INTO token (
 		token_id, eth_block_num, eth_addr, name, symbol, decimals, usd, usd_update
 	) VALUES (
@@ -25,6 +26,7 @@ func (m migrationTest0005) InsertData(db *sqlx.DB) error {
 }
 
 func (m migrationTest0005) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB) {
+	/* #nosec */
 	const queryGetToken = `SELECT COUNT(*) FROM token WHERE 
 		token_id = 16 AND
 		eth_block_num = 0 AND
@@ -41,6 +43,7 @@ func (m migrationTest0005) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 }
 
 func (m migrationTest0005) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
+	/* #nosec */
 	const queryGetToken = `SELECT COUNT(*) FROM token WHERE 
 		token_id = 16 AND
 		eth_block_num = 0 AND
