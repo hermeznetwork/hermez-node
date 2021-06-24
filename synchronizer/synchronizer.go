@@ -547,8 +547,8 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 		log.Debugw("lastSavedBlock stills null...")
 	}
 
-	log.Debug("Sync - lastSavedBlock ", lastSavedBlock)
-	log.Debug("Sync - nextBlockNum ", nextBlockNum)
+	// log.Debug("Sync - lastSavedBlock ", lastSavedBlock)
+	// log.Debug("Sync - nextBlockNum ", nextBlockNum)
 
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
 	if err != nil {
