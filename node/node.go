@@ -715,6 +715,9 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 // don't have to pass it around.
 func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block, time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
+	if err != nil {
+		log.Debug("syncLoopFn Sync Error: ", err.Error())
+	}
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
