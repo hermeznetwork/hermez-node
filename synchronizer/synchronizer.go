@@ -553,7 +553,7 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
 	if err != nil {
 		log.Error("Sync - Could not get block number... Error: ", err.Error())
-		return nil, nil, fmt.Errorf("EthBlockByNumber: %s not found. Check or change Ethereum Node.", err.Error())
+		return nil, nil, fmt.Errorf("EthBlockByNumber: %d - Error: %s. Check or change Ethereum Node.", nextBlockNum, err.Error())
 	}
 
 	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v", ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
