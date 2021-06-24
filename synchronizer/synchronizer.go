@@ -513,7 +513,7 @@ func (s *Synchronizer) resetIntermediateState() error {
 // synchronization will be made.
 // TODO: Be smart about locking: only lock during the read/write operations
 func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
-	log.Debugw("Start Sync method... lastSavedBlock", lastSavedBlock.Num)
+	log.Debugw("Start Sync method...")
 
 	if s.resetStateFailed {
 		if err := s.resetIntermediateState(); err != nil {
@@ -523,6 +523,7 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 
 	var nextBlockNum int64 // next block number to sync
 	if lastSavedBlock == nil {
+		log.Debugw("lastSavedBlock is null...")
 		// Get lastSavedBlock from History DB
 		lastSavedBlock, err = s.historyDB.GetLastBlock()
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
@@ -535,6 +536,7 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 			lastSavedBlock = nil
 		}
 	}
+
 	if lastSavedBlock != nil {
 		nextBlockNum = lastSavedBlock.Num + 1
 		if lastSavedBlock.Num < s.startBlockNum {
@@ -542,7 +544,11 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 				fmt.Errorf("lastSavedBlock (%v) < startBlockNum (%v)",
 					lastSavedBlock.Num, s.startBlockNum))
 		}
+	} else {
+		log.Debugw("lastSavedBlock stills null...")
 	}
+
+	log.Debugw("Sync - lastSavedBlock ", lastSavedBlock, " nextBlockNum ", nextBlockNum)
 
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
 	if tracerr.Unwrap(err) == ethereum.NotFound {
