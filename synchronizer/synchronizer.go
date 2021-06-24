@@ -40,7 +40,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -554,13 +553,9 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
 	if err != nil {
 		log.Error("Sync - Could not get block number... Error: ", err.Error())
+		return nil, nil, fmt.Errorf("EthBlockByNumber: %s not found. Check or change Ethereum Node.", err.Error())
 	}
 
-	if tracerr.Unwrap(err) == ethereum.NotFound {
-		return nil, nil, nil
-	} else if err != nil {
-		return nil, nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
-	}
 	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v", ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
 
 	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in
