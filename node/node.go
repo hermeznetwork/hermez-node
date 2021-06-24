@@ -713,8 +713,7 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 
 // TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
 // don't have to pass it around.
-func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
-	time.Duration, error) {
+func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block, time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
 	stats := n.sync.Stats()
 	if err != nil {
@@ -772,8 +771,8 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(waitDuration):
-				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx,
-					lastBlock); err != nil {
+				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx, lastBlock); err != nil {
+					log.Error("Error syncing: ", err.Error())
 					if n.ctx.Err() != nil {
 						continue
 					}
