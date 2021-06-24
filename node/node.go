@@ -771,8 +771,9 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(waitDuration):
+				log.Debug("n.syncLoopFn is going to be called...")
 				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx, lastBlock); err != nil {
-					log.Error("Error syncing: ", err.Error())
+					log.Error("syncLoopFn - Error syncing: ", err.Error())
 					if n.ctx.Err() != nil {
 						continue
 					}
