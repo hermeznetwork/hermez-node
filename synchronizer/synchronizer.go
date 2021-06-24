@@ -58,12 +58,10 @@ const (
 	errStrUnknownBlock = "unknown block"
 )
 
-var (
-	// ErrUnknownBlock is the error returned by the Synchronizer when a
-	// block is queried by hash but the ethereum node doesn't find it due
-	// to it being discarded from a reorg.
-	ErrUnknownBlock = fmt.Errorf("unknown block")
-)
+// ErrUnknownBlock is the error returned by the Synchronizer when a
+// block is queried by hash but the ethereum node doesn't find it due
+// to it being discarded from a reorg.
+var ErrUnknownBlock = fmt.Errorf("unknown block")
 
 // Stats of the synchronizer
 type Stats struct {
@@ -514,8 +512,9 @@ func (s *Synchronizer) resetIntermediateState() error {
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
 // TODO: Be smart about locking: only lock during the read/write operations
-func (s *Synchronizer) Sync(ctx context.Context,
-	lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
+func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
+	log.Debugw("Start Sync method... lastSavedBlock", lastSavedBlock, "ethLastBlock", s.stats.Eth.LastBlock)
+
 	if s.resetStateFailed {
 		if err := s.resetIntermediateState(); err != nil {
 			return nil, nil, tracerr.Wrap(err)
@@ -551,8 +550,7 @@ func (s *Synchronizer) Sync(ctx context.Context,
 	} else if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
 	}
-	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v",
-		ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
+	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v", ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
 
 	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in
 	// UpdateFrequencyDivider blocks
@@ -563,10 +561,7 @@ func (s *Synchronizer) Sync(ctx context.Context,
 		}
 	}
 
-	log.Debugw("Syncing...",
-		"block", nextBlockNum,
-		"ethLastBlock", s.stats.Eth.LastBlock,
-	)
+	log.Debugw("Syncing... BlockNum", nextBlockNum, "ethLastBlock", s.stats.Eth.LastBlock)
 
 	// Check that the obtained ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
 	if lastSavedBlock != nil {
@@ -833,7 +828,7 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 // ethBlock.blockNum with ethBlock.Hash.
 func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, error) {
 	blockNum := ethBlock.Num
-	var rollupData = common.NewRollupData()
+	rollupData := common.NewRollupData()
 	// var forgeL1TxsNum int64
 
 	// Get rollup events in the block, and make sure the block hash matches
@@ -1187,7 +1182,7 @@ func cutStringMax(s string, max int) string {
 // auctionSync gets information from the Auction Contract
 func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData, error) {
 	blockNum := ethBlock.Num
-	var auctionData = common.NewAuctionData()
+	auctionData := common.NewAuctionData()
 
 	// Get auction events in the block
 	auctionEvents, err := s.ethClient.AuctionEventsByBlock(blockNum, &ethBlock.Hash)
