@@ -18,9 +18,10 @@ type healthResponse struct {
 		Status        string `json:"status"`
 		Version       string `json:"version"`
 	} `json:"l2DB"`
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-	Version   string    `json:"version"`
+	Status                   string    `json:"status"`
+	Timestamp                time.Time `json:"timestamp"`
+	Version                  string    `json:"version"`
+	CoordinatorForgerBalance string    `json:"coordinatorForgerBalance"`
 }
 
 func TestHealth(t *testing.T) {

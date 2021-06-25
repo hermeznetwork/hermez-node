@@ -32,7 +32,7 @@ func (a *API) healthRoute(version string, ethClient *ethclient.Client, forgerAdd
 		if err != nil {
 			return healthHandler
 		}
-		healthHandler.AddInfo("coordinatorBalance", balance.String())
+		healthHandler.AddInfo("coordinatorForgerBalance", balance.String())
 	}
 	return healthHandler
 }
