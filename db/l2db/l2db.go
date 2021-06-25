@@ -304,7 +304,7 @@ func (l2db *L2DB) GetPendingTxs() ([]common.PoolL2Tx, error) {
 	var txs []*common.PoolL2Tx
 	err := meddler.QueryAll(
 		l2db.dbRead, &txs,
-		selectPoolTxCommon+"WHERE state = $1 AND NOT external_delete;",
+		selectPoolTxCommon+"WHERE state = $1 AND NOT external_delete ORDER BY tx_pool.item_id ASC;",
 		common.PoolL2TxStatePending,
 	)
 	return db.SlicePtrsToSlice(txs).([]common.PoolL2Tx), tracerr.Wrap(err)
