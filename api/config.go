@@ -22,7 +22,6 @@ type rollupConstants struct {
 	MaxL1UserTx             int                    `json:"maxL1UserTx"`
 	MaxL1Tx                 int                    `json:"maxL1Tx"`
 	InputSHAConstantBytes   int                    `json:"inputSHAConstantBytes"`
-	NumBuckets              int                    `json:"numBuckets"`
 	MaxWithdrawalDelay      int                    `json:"maxWithdrawalDelay"`
 	ExchangeMultiplier      int                    `json:"exchangeMultiplier"`
 }

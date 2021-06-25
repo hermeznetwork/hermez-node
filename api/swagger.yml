@@ -3302,10 +3302,6 @@ components:
               type: integer
               description: Input SHA constant bytes 
               example: 18542
-            numBuckets:
-              type: integer
-              description: Number of buckets
-              example: 5
             maxWithdrawalDelay:
               type: integer
               description: Maximum delay to withdraw tokens. Time is measured in seconds.
@@ -3326,7 +3322,6 @@ components:
             - maxL1UserTx
             - maxL1Tx
             - inputSHAConstantBytes
-            - numBuckets
             - maxWithdrawalDelay
             - exchangeMultiplier
           additionalProperties: false
