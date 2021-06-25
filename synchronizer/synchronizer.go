@@ -543,16 +543,11 @@ func (s *Synchronizer) Sync(ctx context.Context, lastSavedBlock *common.Block) (
 				fmt.Errorf("lastSavedBlock (%v) < startBlockNum (%v)",
 					lastSavedBlock.Num, s.startBlockNum))
 		}
-	} else {
-		log.Debugw("lastSavedBlock stills null...")
 	}
 
-	// log.Debug("Sync - lastSavedBlock ", lastSavedBlock)
-	// log.Debug("Sync - nextBlockNum ", nextBlockNum)
-
+	log.Debug("Start to sync the block ", nextBlockNum, " ...")
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
 	if err != nil {
-		log.Error("Sync - Could not get block number... Error: ", err.Error())
 		return nil, nil, fmt.Errorf("EthBlockByNumber: %d - Error: %s. Check or change Ethereum Node.", nextBlockNum, err.Error())
 	}
 
