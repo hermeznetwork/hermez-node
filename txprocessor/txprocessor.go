@@ -512,6 +512,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		// once all txs processed (exitTree root frozen), for each Exit,
 		// generate common.ExitInfo data
 		var exitInfos []common.ExitInfo
+		var exitIdxs []common.Idx
 		exitInfosByIdx := make(map[common.Idx]*common.ExitInfo)
 		for i := 0; i < nTx; i++ {
 			if !exits[i].exit {
@@ -532,15 +533,15 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 				MerkleProof: p,
 				Balance:     exitAccount.Balance,
 			}
-			if prevExit, ok := exitInfosByIdx[exitIdx]; !ok {
-				exitInfos = append(exitInfos, ei)
-				exitInfosByIdx[exitIdx] = &exitInfos[len(exitInfos)-1]
-			} else {
-				*prevExit = ei
+			if _, ok := exitInfosByIdx[exitIdx]; !ok {
+				exitIdxs = append(exitIdxs, exitIdx)
 			}
+			exitInfosByIdx[exitIdx] = &ei
 		}
-
-		// retun exitInfos, createdAccounts and collectedFees, so Synchronizer will
+		for _, idx := range exitIdxs {
+			exitInfos = append(exitInfos, *exitInfosByIdx[idx])
+		}
+		// return exitInfos, createdAccounts and collectedFees, so Synchronizer will
 		// be able to store it into HistoryDB for the concrete BatchNum
 		return &ProcessTxOutput{
 			ZKInputs:           nil,
