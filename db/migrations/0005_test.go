@@ -110,8 +110,7 @@ func (m migrationTest0005) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 	assert.Equal(t, 1, result)
 }
 
-func TestMigration0005(t *testing.T) {
-	migrationNumber := 5
+func runMigration0005TestWithLongName(t *testing.T, migrationNumber int) {
 	miter := migrationTest0005{}
 	// Initialize an empty DB
 	db, err := initCleanSQLDB()
@@ -131,6 +130,10 @@ func TestMigration0005(t *testing.T) {
 	require.NoError(t, dbUtils.MigrationsDown(db.DB, 1))
 	// Check that data is persisted properly after migration down
 	miter.RunAssertsAfterMigrationDownWithLongName(t, db)
+}
 
-	runMigrationTest(t, 5, migrationTest0005{})
+func TestMigration0005(t *testing.T) {
+	migrationNumber := 5
+	runMigration0005TestWithLongName(t, migrationNumber)
+	runMigrationTest(t, migrationNumber, migrationTest0005{})
 }
