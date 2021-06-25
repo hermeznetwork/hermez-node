@@ -715,9 +715,6 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 // don't have to pass it around.
 func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block, time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
-	if err != nil {
-		log.Debug("syncLoopFn Sync Error: ", err.Error())
-	}
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
@@ -777,7 +774,6 @@ func (n *Node) StartSynchronizer() {
 			case <-time.After(waitDuration):
 				log.Debug("n.syncLoopFn is going to be called...")
 				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx, lastBlock); err != nil {
-					log.Error("syncLoopFn - Error syncing: ", err.Error())
 					if n.ctx.Err() != nil {
 						continue
 					}
@@ -786,7 +782,9 @@ func (n *Node) StartSynchronizer() {
 					} else if errors.Is(err, synchronizer.ErrUnknownBlock) {
 						log.Warnw("Synchronizer.Sync", "err", err)
 					} else {
+						log.Error("***************************************")
 						log.Errorw("Synchronizer.Sync", "err", err)
+						log.Error("***************************************")
 					}
 				}
 			}
