@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -445,6 +446,8 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			server,
 			historyDB,
 			l2DB,
+			ethClient,
+			&cfg.Coordinator.ForgerAddress,
 		)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -492,7 +495,7 @@ type APIServer struct {
 }
 
 // NewAPIServer creates a new APIServer
-func NewAPIServer(mode Mode, cfg *config.APIServer, version string) (*APIServer, error) {
+func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *ethclient.Client, forgerAddress *ethCommon.Address) (*APIServer, error) {
 	meddler.Debug = cfg.Debug.MeddlerLogs
 	// Stablish DB connection
 	dbWrite, err := dbUtils.InitSQLDB(
@@ -557,6 +560,8 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string) (*APIServer,
 		server,
 		historyDB,
 		l2DB,
+		ethClient,
+		forgerAddress,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -611,6 +616,8 @@ func NewNodeAPI(
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
 	l2db *l2db.L2DB,
+	ethClient *ethclient.Client,
+	forgerAddress *ethCommon.Address,
 ) (*NodeAPI, error) {
 	engine := gin.Default()
 	engine.Use(cors.Default())
@@ -620,6 +627,8 @@ func NewNodeAPI(
 		engine,
 		hdb,
 		l2db,
+		ethClient,
+		forgerAddress,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)

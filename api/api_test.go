@@ -257,6 +257,8 @@ func TestMain(m *testing.M) {
 		apiGin,
 		hdb,
 		l2DB,
+		nil,
+		nil,
 	)
 	if err != nil {
 		log.Error(err)
@@ -664,6 +666,8 @@ func TestTimeout(t *testing.T) {
 		apiGinTO,
 		hdbTO,
 		l2DBTO,
+		nil,
+		nil,
 	)
 	require.NoError(t, err)
 

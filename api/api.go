@@ -28,6 +28,7 @@ import (
 	"errors"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -50,6 +51,8 @@ func NewAPI(
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
 	l2db *l2db.L2DB,
+	ethClient *ethclient.Client,
+	forgerAddress *ethCommon.Address,
 ) (*API, error) {
 	// Check input
 	if coordinatorEndpoints && l2db == nil {
@@ -84,7 +87,7 @@ func NewAPI(
 
 	v1 := server.Group("/v1")
 
-	v1.GET("/health", gin.WrapH(a.healthRoute(version)))
+	v1.GET("/health", gin.WrapH(a.healthRoute(version, ethClient, forgerAddress)))
 	// Add coordinator endpoints
 	if coordinatorEndpoints {
 		// Account creation authorization

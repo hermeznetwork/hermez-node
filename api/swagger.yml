@@ -3457,6 +3457,10 @@ components:
           type: string
           description: Current version of the hermez-node
           example: v1.2.0
+        coordinatorForgerBalance:
+          type: string
+          description: Coordinator balance in ether. Returned with 18 decimals.
+          example: 48901270356066543960
       required:
         - historyDB
         - l2DB
