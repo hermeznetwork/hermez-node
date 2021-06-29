@@ -291,8 +291,7 @@ func TestGetPending(t *testing.T) {
 	require.NoError(t, err)
 	var pendingTxs []*common.PoolL2Tx
 	// Add case for atomic related fields
-	poolL2Txs[0].AtomicGroupID = 1
-	poolL2Txs[0].RqTxID = common.TxID([common.TxIDLen]byte{7})
+	poolL2Txs[0].AtomicGroupID = common.AtomicGroupID([common.AtomicGroupIDLen]byte{9})
 	poolL2Txs[0].RqNonce = 1
 	poolL2Txs[0].RqTokenID = 1
 	poolL2Txs[0].RqFromIdx = 678
