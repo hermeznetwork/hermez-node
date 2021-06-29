@@ -16,17 +16,19 @@ USAGE:
    heznode [global options] command [command options] [arguments...]
 
 VERSION:
-   v1.2.0-rc2-5-g94a7043
+   v1.4.0-rc1-5-gcfc7635
 
 COMMANDS:
-   version    Show the application version
-   importkey  Import ethereum private key
-   genbjj     Generate a new random BabyJubJub key
-   wipedbs    Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
-   run        Run the hermez-node in the indicated mode
-   serveapi   Serve the API only
-   discard    Discard blocks up to a specified block number
-   help, h    Shows a list of commands or help for one command
+   version         Show the application version and build
+   importkey       Import ethereum private key
+   genbjj          Generate a new random BabyJubJub key
+   wipedbs         Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
+   migratesqldown  Revert migrations of the SQL DB (HistoryDB and L2DB), leaving the SQL schema as in previous versions
+   run             Run the hermez-node in the indicated mode
+   serveapi        Serve the API only
+   discard         Discard blocks up to a specified block number
+   accountInfo     get information about the specified account
+   help, h         Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
    --help, -h     show help (default: false)
@@ -161,4 +163,9 @@ state and you want to roll back a few blocks and try again (maybe with some
 fixes in the code).
 ```shell
 ./dist/heznode discard --mode coord --cfg cfg.buidler.toml --block 8061330
+```
+
+Read information about an account:
+```shell
+./dist/heznode accountInfo --ethNodeUrl https://geth.marcelonode.xyz --auctContractAddrHex 0x1D5c3Dd2003118743D596D7DB7EA07de6C90fB20 --accountAddrHex 0x715ea08DAE7dCD40E98379D11af237b587BC2f77
 ```
