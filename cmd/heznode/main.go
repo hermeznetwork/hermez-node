@@ -37,7 +37,7 @@ const (
 	modeCoord               = "coord"
 	nMigrations             = "nMigrations"
 	flagAuctContractAddrHex = "auctContractAddrHex"
-	flagEthNodeUrl          = "ethNodeUrl"
+	flagEthNodeURL          = "ethNodeUrl"
 	flagAccountAddrHex      = "accountAddrHex"
 )
 
@@ -50,14 +50,14 @@ var (
 	date = ""
 )
 
-func cmdVersion(c *cli.Context) error {
+func cmdVersion(*cli.Context) error {
 	fmt.Printf("Version = \"%v\"\n", version)
 	fmt.Printf("Build = \"%v\"\n", commit)
 	fmt.Printf("Date = \"%v\"\n", date)
 	return nil
 }
 
-func cmdGenBJJ(c *cli.Context) error {
+func cmdGenBJJ(*cli.Context) error {
 	sk := babyjub.NewRandPrivKey()
 	skBuf := [32]byte(sk)
 	pk := sk.Public()
@@ -289,13 +289,13 @@ func cmdRun(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	node, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
+	innerNode, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
 	}
-	node.Start()
+	innerNode.Start()
 	waitSigInt()
-	node.Stop()
+	innerNode.Stop()
 
 	return nil
 }
@@ -317,7 +317,7 @@ func cmdServeAPI(c *cli.Context) error {
 }
 
 func cmdGetAccountDetails(c *cli.Context) error {
-	ethereumNodeURL := c.String(flagEthNodeUrl)
+	ethereumNodeURL := c.String(flagEthNodeURL)
 	auctionContractAddressHex := c.String(flagAuctContractAddrHex)
 	accountAddrHex := c.String(flagAccountAddrHex)
 
@@ -593,9 +593,9 @@ func main() {
 			Aliases: []string{},
 			Usage:   "get information about the specified account",
 			Action:  cmdGetAccountDetails,
-			Flags: []cli.Flag {
+			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:     flagEthNodeUrl,
+					Name:     flagEthNodeURL,
 					Usage:    "ethereum node URL, example: http://geth.node.com:8545",
 					Required: true,
 				},
