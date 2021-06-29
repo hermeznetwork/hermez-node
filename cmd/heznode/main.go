@@ -11,6 +11,8 @@ import (
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/hermeznetwork/hermez-go-sdk/account"
+	"github.com/hermeznetwork/hermez-go-sdk/client"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
@@ -26,14 +28,17 @@ import (
 )
 
 const (
-	flagCfg     = "cfg"
-	flagMode    = "mode"
-	flagSK      = "privatekey"
-	flagYes     = "yes"
-	flagBlock   = "block"
-	modeSync    = "sync"
-	modeCoord   = "coord"
-	nMigrations = "nMigrations"
+	flagCfg                 = "cfg"
+	flagMode                = "mode"
+	flagSK                  = "privatekey"
+	flagYes                 = "yes"
+	flagBlock               = "block"
+	modeSync                = "sync"
+	modeCoord               = "coord"
+	nMigrations             = "nMigrations"
+	flagAuctContractAddrHex = "auctContractAddrHex"
+	flagEthNodeUrl          = "ethNodeUrl"
+	flagAccountAddrHex      = "accountAddrHex"
 )
 
 var (
@@ -311,6 +316,28 @@ func cmdServeAPI(c *cli.Context) error {
 	return nil
 }
 
+func cmdGetAccountDetails(c *cli.Context) error {
+	ethereumNodeURL := c.String(flagEthNodeUrl)
+	auctionContractAddressHex := c.String(flagAuctContractAddrHex)
+	accountAddrHex := c.String(flagAccountAddrHex)
+
+	hezClient, err := client.NewHermezClient(ethereumNodeURL, auctionContractAddressHex)
+	if err != nil {
+		log.Errorf("Error during Hermez client initialization: %s\n", err.Error())
+		return err
+	}
+	log.Infof("Connected to Hermez Smart Contracts...")
+	log.Infof("Pulling account info from a coordinator...")
+	accountDetails, err := account.GetAccountInfo(hezClient, accountAddrHex)
+	if err != nil {
+		log.Errorf("Error obtaining account details. Account: %s - Error: %s\n", accountAddrHex, err.Error())
+		return err
+	}
+	log.Infof("\n\nAccount info is: %+v\n\n", accountDetails)
+
+	return nil
+}
+
 func cmdDiscard(c *cli.Context) error {
 	_cfg, err := parseCli(c)
 	if err != nil {
@@ -560,6 +587,29 @@ func main() {
 					Usage:    "last block number to keep",
 					Required: false,
 				}),
+		},
+		{
+			Name:    "accountInfo",
+			Aliases: []string{},
+			Usage:   "get information about the specified account",
+			Action:  cmdGetAccountDetails,
+			Flags: []cli.Flag {
+				&cli.StringFlag{
+					Name:     flagEthNodeUrl,
+					Usage:    "ethereum node URL, example: http://geth.node.com:8545",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     flagAuctContractAddrHex,
+					Usage:    "auction contract address in hex",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     flagAccountAddrHex,
+					Usage:    "account address in hex",
+					Required: true,
+				},
+			},
 		},
 	}
 
