@@ -145,17 +145,6 @@ func (l2db *L2DB) AddAtomicTxsAPI(txs []common.PoolL2Tx) error {
 			avgFeeUSD, l2db.maxFeeUSD))
 	}
 
-	// Set AtomicGroupID
-	var lastAtomicGroup int
-	row := l2db.dbRead.QueryRow(`SELECT COALESCE(MAX(atomic_group_id), 0) FROM tx_pool`)
-	if err := row.Scan(&lastAtomicGroup); err != nil {
-		return tracerr.Wrap(err)
-	}
-	atomicGroupID := lastAtomicGroup + 1
-	for i := 0; i < len(txs); i++ {
-		txs[i].AtomicGroupID = atomicGroupID
-	}
-
 	// Insert txs if the pool is not full
 	return tracerr.Wrap(l2db.addTxs(txs, true))
 }
@@ -164,7 +153,7 @@ func (l2db *L2DB) AddAtomicTxsAPI(txs []common.PoolL2Tx) error {
 const selectPoolTxAPI = `SELECT tx_pool.item_id, tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
 tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, tx_pool.rq_tx_id, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
@@ -174,7 +163,7 @@ FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 const selectPoolTxsAPI = `SELECT tx_pool.item_id, tx_pool.tx_id, hez_idx(tx_pool.from_idx, token.symbol) AS from_idx, tx_pool.effective_from_eth_addr, 
 tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_pool.effective_to_eth_addr, 
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, tx_pool.rq_tx_id, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 

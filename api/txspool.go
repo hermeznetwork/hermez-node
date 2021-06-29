@@ -10,7 +10,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/yourbasic/graph"
 )
@@ -22,7 +21,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 		retBadReq(err, c)
 		return
 	}
-	if receivedTx.RqOffset != 0 || receivedTx.RqTxID != common.EmptyTxID {
+	if receivedTx.RqOffset != 0 {
 		retBadReq(errors.New(ErrNotAtomicTxsInPostPoolTx), c)
 		return
 	}
@@ -41,61 +40,94 @@ func (a *API) postPoolTx(c *gin.Context) {
 	c.JSON(http.StatusOK, receivedTx.TxID.String())
 }
 
+// AtomicGroup represents a set of atomic transactions
+type AtomicGroup struct {
+	AtomicGroupID common.AtomicGroupID `json:"atomicGroupId"`
+	Txs           []common.PoolL2Tx    `json:"transactions"`
+}
+
+// SetAtomicGroupID set the atomic group ID for an atomic group that already has Txs
+func (ag *AtomicGroup) SetAtomicGroupID() {
+	ids := []common.TxID{}
+	for _, tx := range ag.Txs {
+		ids = append(ids, tx.TxID)
+	}
+	ag.AtomicGroupID = common.CalculateAtomicGroupID(ids)
+}
+
+// IsAtomicGroupIDValid return false if the atomic group ID that is set
+// doesn't match with the calculated
+func (ag AtomicGroup) IsAtomicGroupIDValid() bool {
+	ids := []common.TxID{}
+	for _, tx := range ag.Txs {
+		ids = append(ids, tx.TxID)
+	}
+	actualAGID := common.CalculateAtomicGroupID(ids)
+	return actualAGID == ag.AtomicGroupID
+}
+
 func (a *API) postAtomicPool(c *gin.Context) {
 	// Parse body
-	var receivedTxs []common.PoolL2Tx
-	if err := c.ShouldBindJSON(&receivedTxs); err != nil {
+	var receivedAtomicGroup AtomicGroup
+	if err := c.ShouldBindJSON(&receivedAtomicGroup); err != nil {
 		retBadReq(err, c)
 		return
 	}
-	nTxs := len(receivedTxs)
+	// Validate atomic group id
+	if !receivedAtomicGroup.IsAtomicGroupIDValid() {
+		retBadReq(errors.New(ErrInvalidAtomicGroupID), c)
+		return
+	}
+	nTxs := len(receivedAtomicGroup.Txs)
 	if nTxs <= 1 {
 		retBadReq(errors.New(ErrSingleTxInAtomicEndpoint), c)
 		return
 	}
-	// set the Rq fields
-	for i, tx1 := range receivedTxs {
+	// Validate txs
+	txIDStrings := make([]string, nTxs) // used for successful response
+	clientIP := c.ClientIP()
+	for i, tx1 := range receivedAtomicGroup.Txs {
+		// Find requested transaction
 		relativePosition, err := requestOffset2RelativePosition(tx1.RqOffset)
 		if err != nil {
 			retBadReq(err, c)
 			return
 		}
 		requestedPosition := i + relativePosition
-		if requestedPosition > len(receivedTxs)-1 || requestedPosition < 0 {
+		if requestedPosition > len(receivedAtomicGroup.Txs)-1 || requestedPosition < 0 {
 			retBadReq(errors.New(ErrRqOffsetOutOfBounds), c)
 			return
 		}
-		requestedTx := receivedTxs[requestedPosition]
-		if tx1.RqTxID == requestedTx.TxID {
-			receivedTxs[i].RqFromIdx = requestedTx.FromIdx
-			receivedTxs[i].RqToIdx = requestedTx.ToIdx
-			receivedTxs[i].RqToEthAddr = requestedTx.ToEthAddr
-			receivedTxs[i].RqToBJJ = requestedTx.ToBJJ
-			receivedTxs[i].RqTokenID = requestedTx.TokenID
-			receivedTxs[i].RqAmount = requestedTx.Amount
-			receivedTxs[i].RqFee = requestedTx.Fee
-			receivedTxs[i].RqNonce = requestedTx.Nonce
-		}
-	}
-	// Validate txs individually
-	txIDStrings := make([]string, nTxs) // used for successful response
-	clientIP := c.ClientIP()
-	for i, tx := range receivedTxs {
-		if err := a.verifyPoolL2Tx(tx); err != nil {
+		// Set fields that are omitted in the JSON
+		requestedTx := receivedAtomicGroup.Txs[requestedPosition]
+		receivedAtomicGroup.Txs[i].RqFromIdx = requestedTx.FromIdx
+		receivedAtomicGroup.Txs[i].RqToIdx = requestedTx.ToIdx
+		receivedAtomicGroup.Txs[i].RqToEthAddr = requestedTx.ToEthAddr
+		receivedAtomicGroup.Txs[i].RqToBJJ = requestedTx.ToBJJ
+		receivedAtomicGroup.Txs[i].RqTokenID = requestedTx.TokenID
+		receivedAtomicGroup.Txs[i].RqAmount = requestedTx.Amount
+		receivedAtomicGroup.Txs[i].RqFee = requestedTx.Fee
+		receivedAtomicGroup.Txs[i].RqNonce = requestedTx.Nonce
+		receivedAtomicGroup.Txs[i].ClientIP = clientIP
+		receivedAtomicGroup.Txs[i].AtomicGroupID = receivedAtomicGroup.AtomicGroupID
+
+		// Validate transaction
+		if err := a.verifyPoolL2Tx(receivedAtomicGroup.Txs[i]); err != nil {
 			retBadReq(err, c)
 			return
 		}
-		receivedTxs[i].ClientIP = clientIP
-		txIDStrings[i] = tx.TxID.String()
+
+		// Prepare response
+		txIDStrings[i] = receivedAtomicGroup.Txs[i].TxID.String()
 	}
-	// Validate that all txs in the payload represent an atomic group
-	if !isSingleAtomicGroup(receivedTxs) {
-		log.Error("isSingleAtomicGroup")
+
+	// Validate that all txs in the payload represent a single atomic group
+	if !isSingleAtomicGroup(receivedAtomicGroup.Txs) {
 		retBadReq(errors.New(ErrTxsNotAtomic), c)
 		return
 	}
 	// Insert to DB
-	if err := a.l2.AddAtomicTxsAPI(receivedTxs); err != nil {
+	if err := a.l2.AddAtomicTxsAPI(receivedAtomicGroup.Txs); err != nil {
 		retSQLErr(err, c)
 		return
 	}
@@ -120,7 +152,6 @@ func requestOffset2RelativePosition(rqoffset uint8) (int, error) {
 
 	switch rqoffset {
 	case rqOffsetZero:
-		log.Error("requestOffset2RelativePosition")
 		return rqOffsetZero, errors.New(ErrTxsNotAtomic)
 	case rqOffsetOne:
 		return rqOffsetOne, nil
@@ -146,24 +177,18 @@ func requestOffset2RelativePosition(rqoffset uint8) (int, error) {
 func isSingleAtomicGroup(txs []common.PoolL2Tx) bool {
 	// Create a graph from the given txs to represent requests between transactions
 	g := graph.New(len(txs))
-	idToPos := make(map[common.TxID]int, len(txs))
-	// Map tx ID to integers that will represent the nodes of the graph
+	// Create vertices that connect nodes of the graph (txs) using RqOffset
 	for i, tx := range txs {
-		idToPos[tx.TxID] = i
-	}
-	// Create vertices that connect nodes of the graph (txs) using RqTxID
-	for i, tx := range txs {
-		if tx.RqTxID == common.EmptyTxID {
-			// if just one tx doesn't request any other tx, this tx could be forged alone
-			// making the hole group not atomic
+		requestedRelativePosition, err := requestOffset2RelativePosition(tx.RqOffset)
+		if err != nil {
 			return false
 		}
-		if rqTxPos, ok := idToPos[tx.RqTxID]; ok {
-			g.Add(i, rqTxPos)
-		} else {
-			// tx is requesting a tx that is not provided in the payload
+		requestedPosition := i + requestedRelativePosition
+		if requestedPosition < 0 || requestedPosition >= len(txs) {
+			// Safety check: requested tx is not out of array bounds
 			return false
 		}
+		g.Add(i, requestedPosition)
 	}
 	// A graph with a single strongly connected component,
 	// means that all the nodes can be reached from all the nodes.

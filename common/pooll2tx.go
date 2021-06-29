@@ -1,14 +1,18 @@
 package common
 
 import (
+	"database/sql/driver"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -50,8 +54,7 @@ type PoolL2Tx struct {
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
-	AtomicGroupID     int                   `meddler:"atomic_group_id,zeroisnull"`
-	RqTxID            TxID                  `meddler:"rq_tx_id,zeroisnull"`
+	AtomicGroupID     AtomicGroupID         `meddler:"atomic_group_id,zeroisnull"`
 	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
 	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
 	RqToEthAddr       ethCommon.Address     `meddler:"rq_to_eth_addr,zeroisnull"`
@@ -95,16 +98,6 @@ func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
 			txIDOld.String(), tx.TxID.String()))
 	}
 
-	rqTxIDOld := tx.TxID
-	if err := tx.SetRqID(); err != nil {
-		return nil, tracerr.Wrap(err)
-	}
-	// If original RqTxID doesn't match the correct one, return error
-	if rqTxIDOld != (TxID{}) && rqTxIDOld != tx.TxID {
-		return tx, tracerr.Wrap(fmt.Errorf("PoolL2Tx.RqTxID: %s, should be: %s",
-			rqTxIDOld.String(), tx.RqTxID.String()))
-	}
-
 	return tx, nil
 }
 
@@ -138,30 +131,6 @@ func (tx *PoolL2Tx) SetID() error {
 		return tracerr.Wrap(err)
 	}
 	tx.TxID = txID
-	return nil
-}
-
-// SetRqID sets the request ID of the transaction
-func (tx *PoolL2Tx) SetRqID() error {
-	if tx.RqAmount == nil {
-		tx.RqTxID = TxID{}
-		return nil
-	}
-	requestedTx := PoolL2Tx{
-		FromIdx:   tx.RqFromIdx,
-		ToIdx:     tx.RqToIdx,
-		ToEthAddr: tx.RqToEthAddr,
-		ToBJJ:     tx.RqToBJJ,
-		TokenID:   tx.RqTokenID,
-		Amount:    tx.RqAmount,
-		Fee:       tx.RqFee,
-		Nonce:     tx.RqNonce,
-	}
-	rqID, err := requestedTx.L2Tx().CalculateTxID()
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	tx.RqTxID = rqID
 	return nil
 }
 
@@ -488,7 +457,6 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		Fee       FeeSelector           `json:"fee"`
 		Nonce     Nonce                 `json:"nonce"`
 		Signature babyjub.SignatureComp `json:"signature"`
-		RqTxID    *TxID                 `json:"requestId"`
 		RqOffset  *uint8                `json:"requestOffset"`
 	}
 	// Set fields that do not require extra logic
@@ -517,7 +485,6 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 	}
 	// Check if is a atomic and require another tx
 	if tx.RqFromIdx != 0 {
-		toMarshal.RqTxID = &tx.RqTxID
 		toMarshal.RqOffset = &tx.RqOffset
 	}
 	return json.Marshal(toMarshal)
@@ -539,7 +506,6 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Fee       FeeSelector           `json:"fee"`
 		Nonce     Nonce                 `json:"nonce"`
 		Signature babyjub.SignatureComp `json:"signature" binding:"required"`
-		RqTxID    TxID                  `json:"requestId"`
 		State     string                `json:"state"`
 		RqOffset  uint8                 `json:"requestOffset"`
 	}{}
@@ -566,11 +532,89 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Fee:         receivedJSON.Fee,
 		Nonce:       receivedJSON.Nonce,
 		Signature:   receivedJSON.Signature,
-		RqTxID:      receivedJSON.RqTxID,
 		Type:        receivedJSON.Type,
 		State:       state,
 		TokenSymbol: receivedJSON.FromIdx.TokenSymbol,
 		RqOffset:    receivedJSON.RqOffset,
 	}
+	return nil
+}
+
+// AtomicGroupIDLen is the length of a Hermez network atomic group
+const AtomicGroupIDLen = 32
+
+// AtomicGroupID is the identifier of a Hermez network atomic group
+type AtomicGroupID [AtomicGroupIDLen]byte
+
+// EmptyAtomicGroupID represents an empty Hermez network atomic group identifier
+var EmptyAtomicGroupID = AtomicGroupID([32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+
+// CalculateAtomicGroupID calculates the atomic group ID given the identifiers of
+// the transactions that conform the atomic group
+func CalculateAtomicGroupID(txIDs []TxID) AtomicGroupID {
+	txIDConcatenation := make([]byte, TxIDLen*len(txIDs))
+	for i, id := range txIDs {
+		idBytes := [TxIDLen]byte(id)
+		copy(txIDConcatenation[i*TxIDLen:(i+1)*TxIDLen], idBytes[:])
+	}
+	h := ethCrypto.Keccak256Hash(txIDConcatenation).Bytes()
+	var agid AtomicGroupID
+	copy(agid[:], h)
+	return agid
+}
+
+// Scan implements Scanner for database/sql.
+func (agid *AtomicGroupID) Scan(src interface{}) error {
+	srcB, ok := src.([]byte)
+	if !ok {
+		return tracerr.Wrap(fmt.Errorf("can't scan %T into AtomicGroupID", src))
+	}
+	if len(srcB) != AtomicGroupIDLen {
+		return tracerr.Wrap(fmt.Errorf("can't scan []byte of len %d into AtomicGroupID, need %d",
+			len(srcB), AtomicGroupIDLen))
+	}
+	copy(agid[:], srcB)
+	return nil
+}
+
+// Value implements valuer for database/sql.
+func (agid AtomicGroupID) Value() (driver.Value, error) {
+	return agid[:], nil
+}
+
+// String returns a string hexadecimal representation of the AtomicGroupID
+func (agid AtomicGroupID) String() string {
+	return "0x" + hex.EncodeToString(agid[:])
+}
+
+// NewAtomicGroupIDFromString returns a string hexadecimal representation of the AtomicGroupID
+func NewAtomicGroupIDFromString(idStr string) (AtomicGroupID, error) {
+	agid := AtomicGroupID{}
+	idStr = strings.TrimPrefix(idStr, "0x")
+	decoded, err := hex.DecodeString(idStr)
+	if err != nil {
+		return AtomicGroupID{}, tracerr.Wrap(err)
+	}
+	if len(decoded) != AtomicGroupIDLen {
+		return agid, tracerr.Wrap(errors.New("Invalid idStr"))
+	}
+	copy(agid[:], decoded)
+	return agid, nil
+}
+
+// MarshalText marshals a AtomicGroupID
+func (agid AtomicGroupID) MarshalText() ([]byte, error) {
+	return []byte(agid.String()), nil
+}
+
+// UnmarshalText unmarshalls a AtomicGroupID
+func (agid *AtomicGroupID) UnmarshalText(data []byte) error {
+	idStr := string(data)
+	id, err := NewAtomicGroupIDFromString(idStr)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	*agid = id
 	return nil
 }

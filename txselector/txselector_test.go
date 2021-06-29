@@ -1145,6 +1145,7 @@ func TestSimpleAtomicTx(t *testing.T) {
 	checkBalance(t, tc, txsel, "B", 0, "300")
 
 	// Generate the simple atomic txs
+	agid := common.AtomicGroupID([common.AtomicGroupIDLen]byte{1})
 	// Tx1 fields
 	tx1 := common.PoolL2Tx{
 		FromIdx:       257, // account A
@@ -1154,7 +1155,7 @@ func TestSimpleAtomicTx(t *testing.T) {
 		Fee:           0,
 		Nonce:         0,
 		RqOffset:      1, // Request tx bellow (position +1)
-		AtomicGroupID: 1,
+		AtomicGroupID: agid,
 		RqFromIdx:     258, // account B
 		RqToIdx:       257, // account A
 		RqTokenID:     0,
@@ -1179,7 +1180,7 @@ func TestSimpleAtomicTx(t *testing.T) {
 		Fee:           0,
 		Nonce:         0,
 		RqOffset:      7, // Request tx above (position -1)
-		AtomicGroupID: 1,
+		AtomicGroupID: agid,
 		RqFromIdx:     257, // account A
 		RqToIdx:       258, // account B
 		RqTokenID:     0,
@@ -1286,6 +1287,7 @@ func TestFailingAtomicTx(t *testing.T) {
 	checkBalance(t, tc, txsel, "C", 0, "300")
 
 	// Generate the failing atomic txs + one simple valid tx
+	agid := common.AtomicGroupID([common.AtomicGroupIDLen]byte{1})
 	// Tx1 fields
 	tx1 := common.PoolL2Tx{
 		FromIdx:       257, // account A (balance 500)
@@ -1295,7 +1297,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		Fee:           0,
 		Nonce:         0,
 		RqOffset:      1, // Request tx bellow (position +1)
-		AtomicGroupID: 1,
+		AtomicGroupID: agid,
 		RqFromIdx:     258, // account B
 		RqToIdx:       257, // account A
 		RqTokenID:     0,
@@ -1320,7 +1322,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		Fee:           0,
 		Nonce:         0,
 		RqOffset:      7, // Request tx above (position -1)
-		AtomicGroupID: 1,
+		AtomicGroupID: agid,
 		RqFromIdx:     257, // account A
 		RqToIdx:       258, // account B
 		RqTokenID:     0,
@@ -1396,137 +1398,145 @@ func TestFilterFailedAtomicGroups(t *testing.T) {
 	id1 := common.TxID([common.TxIDLen]byte{1})
 	id2 := common.TxID([common.TxIDLen]byte{2})
 	id3 := common.TxID([common.TxIDLen]byte{3})
+	// AtomicGroupIDs
+	agid1 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{1})
+	agid2 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{2})
+
 	// Case no failing groups
 	txs := []common.PoolL2Tx{
 		{
 			TxID:          id1,
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 		},
 		{
 			TxID:          id2,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 		},
 	}
-	failedGroups := []int{}
+	failedGroups := []common.AtomicGroupID{}
 	selected, filtered := filterFailedAtomicGroups(txs, failedGroups)
 	assertResult(t, []common.TxID{id1, id2}, nil, selected, filtered)
 	// Case all failing
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 		},
 		{
 			TxID:          id2,
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 		},
 	}
-	failedGroups = []int{1, 2}
+	failedGroups = []common.AtomicGroupID{agid1, agid2}
 	selected, filtered = filterFailedAtomicGroups(txs, failedGroups)
 	assertResult(t, nil, []common.TxID{id1, id2}, selected, filtered)
 	// Case mixed
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 		},
 		{
 			TxID:          id2,
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 		},
 		{
 			TxID:          id3,
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 		},
 	}
-	failedGroups = []int{1}
+	failedGroups = []common.AtomicGroupID{agid1}
 	selected, filtered = filterFailedAtomicGroups(txs, failedGroups)
 	assertResult(t, []common.TxID{id1, id3}, []common.TxID{id2}, selected, filtered)
 }
 
 func TestCalculateAtomicGroupsAverageFee(t *testing.T) {
+	// AtomicGroupIDs
+	agid1 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{1})
+	agid2 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{2})
+	agid3 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{3})
 	// Case no atomic groups
 	txs := []common.PoolL2Tx{
 		{
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   1234.567,
 		},
 	}
-	expected := make(map[int]float64)
+	expected := make(map[common.AtomicGroupID]float64)
 	actual := calculateAtomicGroupsAverageFee(txs)
 	assert.Equal(t, expected, actual)
 	// Case 3 ordered groups
 	txs = []common.PoolL2Tx{
 		{
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   1234.567,
 		},
 		{
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 			AbsoluteFee:   1.0,
 		},
 		{
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   2.0,
 		},
 		{
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   2.0,
 		},
 		{
-			AtomicGroupID: 3,
+			AtomicGroupID: agid3,
 			AbsoluteFee:   3.0,
 		},
 		{
-			AtomicGroupID: 3,
+			AtomicGroupID: agid3,
 			AbsoluteFee:   3.0,
 		},
 		{
-			AtomicGroupID: 3,
+			AtomicGroupID: agid3,
 			AbsoluteFee:   3.0,
 		},
 	}
-	expected = make(map[int]float64)
-	expected[1] = 1.0
-	expected[2] = (2.0 + 2.0) / 2
-	expected[3] = (3.0 + 3.0 + 3.0) / 3
+	expected = make(map[common.AtomicGroupID]float64)
+	expected[agid1] = 1.0
+	expected[agid2] = (2.0 + 2.0) / 2
+	expected[agid3] = (3.0 + 3.0 + 3.0) / 3
 	actual = calculateAtomicGroupsAverageFee(txs)
 	assert.Equal(t, expected, actual)
 	// Case 3 not ordered groups
 	txs = []common.PoolL2Tx{
 		{
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   1234.567,
 		},
 		{
-			AtomicGroupID: 3,
+			AtomicGroupID: agid3,
 			AbsoluteFee:   3.0,
 		},
 		{
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   2.0,
 		},
 		{
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   2.0,
 		},
 		{
-			AtomicGroupID: 3,
+			AtomicGroupID: agid3,
 			AbsoluteFee:   3.0,
 		},
 		{
-			AtomicGroupID: 3,
+			AtomicGroupID: agid3,
 			AbsoluteFee:   3.0,
 		},
 		{
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 			AbsoluteFee:   1.0,
 		},
 	}
-	expected = make(map[int]float64)
-	expected[1] = 1.0
-	expected[2] = (2.0 + 2.0) / 2
-	expected[3] = (3.0 + 3.0 + 3.0) / 3
+	expected = make(map[common.AtomicGroupID]float64)
+	expected[agid1] = 1.0
+	expected[agid2] = (2.0 + 2.0) / 2
+	expected[agid3] = (3.0 + 3.0 + 3.0) / 3
 	actual = calculateAtomicGroupsAverageFee(txs)
 	assert.Equal(t, expected, actual)
 }
@@ -1547,23 +1557,27 @@ func TestSortL2Txs(t *testing.T) {
 	id5 := common.TxID([common.TxIDLen]byte{5})
 	id6 := common.TxID([common.TxIDLen]byte{6})
 	id7 := common.TxID([common.TxIDLen]byte{7})
+
+	// AtomicGroupIDs
+	agid1 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{1})
+	agid2 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{2})
 	// Case only non atomic
 	txs := []common.PoolL2Tx{
 		{
 			TxID:          id1,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   3,
 			Nonce:         2,
 		},
 		{
 			TxID:          id2,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   3,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   7,
 			Nonce:         2,
 		},
@@ -1575,25 +1589,25 @@ func TestSortL2Txs(t *testing.T) {
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   3,
 			Nonce:         2220,
 		},
 		{
 			TxID:          id2,
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   3,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 			AbsoluteFee:   7,
 			Nonce:         300,
 		},
 		{
 			TxID:          id4,
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 			AbsoluteFee:   700,
 			Nonce:         2,
 		},
@@ -1605,43 +1619,43 @@ func TestSortL2Txs(t *testing.T) {
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   20,
 			Nonce:         2220,
 		},
 		{
 			TxID:          id2,
-			AtomicGroupID: 2,
+			AtomicGroupID: agid2,
 			AbsoluteFee:   20,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 			AbsoluteFee:   30,
 			Nonce:         300,
 		},
 		{
 			TxID:          id4,
-			AtomicGroupID: 1,
+			AtomicGroupID: agid1,
 			AbsoluteFee:   30,
 			Nonce:         2,
 		},
 		{
 			TxID:          id5,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   25,
 			Nonce:         2,
 		},
 		{
 			TxID:          id6,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   10,
 			Nonce:         2,
 		},
 		{
 			TxID:          id7,
-			AtomicGroupID: 0,
+			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   35,
 			Nonce:         2,
 		},

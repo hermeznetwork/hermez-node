@@ -1434,11 +1434,6 @@ components:
             - $ref: '#/components/schemas/BJJSignature'
             - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
-        requestId:
-          type: string
-          description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
-          example: "0x00000000000001e240004700" 
-          nullable: true
         requestOffset:
           type: integer
           description: Identifier of the relative index of the transaction that would be linked. More info on how the identifiers are built [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier)
@@ -1466,63 +1461,80 @@ components:
       - fee
       - nonce
       - signature
+    AtomicGroupID:
+      type: string
+      description: |
+        Identifier for atomic groups (set of transactions that have to be forged in the same batch, constrained by the request fields of the transactions on the group).
+        This identifier is calculated by hashing the concatenation of the transaction id bytes that conform the group).
+      example:  '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
     PostPoolL2Transactions:
-      type: array
-      items:
-        $ref: '#/components/schemas/PostPoolL2Transaction'
+      type: object
+      properties:
+        atomicGroupId:
+          $ref: '#/components/schemas/AtomicGroupID'
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostPoolL2Transaction'
+      required:
+        - atomicGroupId
+        - transactions
+      additionalProperties: false
       example:
-        - id: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
-          type: Transfer
-          tokenId: 0
-          fromAccountIndex: hez:ETH:789
-          toAccountIndex: hez:ETH:790
-          toHezEthereumAddress:
-          toBjj:
-          amount: '1000'
-          fee: 229
-          nonce: 4
-          signature: 6472c352ae96f3cc6c698e6c19d07b46fd70a8035a8131605f4442d57bc5941a0a87240f4ad3d9cfc662bf5bbe2f42db4a5f77fef28fad06cb41b0c00c589905
-          requestId: '0x026c26d626dd40bf4f83737b9237674a1e7d235b38393a008dfc8d401ca2f7a412'
-          requestOffset: 1
-        - id: '0x026c26d626dd40bf4f83737b9237674a1e7d235b38393a008dfc8d401ca2f7a412'
-          type: Transfer
-          tokenId: 0
-          fromAccountIndex: hez:ETH:790
-          toAccountIndex: hez:ETH:789
-          toHezEthereumAddress:
-          toBjj:
-          amount: '1000'
-          fee: 229
-          nonce: 4
-          signature: 62945599b3b3cfafdf71ec6fe935634234bc5c7f9cd13e84850646deb62b348b35c23c327917f869162f625c5848c8c6b83bd1456fd76fea181c757ddc811f04
-          requestId: '0x0247ecd484e9f5710a703ee1cf36f6e7e00a294e93be7de0463a7108255eac6fa9'
-          requestOffset: 1
-        - id: '0x0247ecd484e9f5710a703ee1cf36f6e7e00a294e93be7de0463a7108255eac6fa9'
-          type: Transfer
-          tokenId: 0
-          fromAccountIndex: hez:ETH:789
-          toAccountIndex: hez:ETH:790
-          toHezEthereumAddress:
-          toBjj:
-          amount: '1000'
-          fee: 229
-          nonce: 5
-          signature: d71fa5d4ee8c12f111bf3d80dfb7e99af4eccab59c90a5b092e3b18c77860d140de73e2c104b77bcd6564af7db330ab626a29ae72a777fd00d4f56bf16334f01
-          requestId: '0x024be7ae4f0df9c956628d187069fde63e616749e2d2ce447b7386c4fa431b7d45'
-          requestOffset: 1
-        - id: '0x024be7ae4f0df9c956628d187069fde63e616749e2d2ce447b7386c4fa431b7d45'
-          type: Transfer
-          tokenId: 0
-          fromAccountIndex: hez:ETH:790
-          toAccountIndex: hez:ETH:789
-          toHezEthereumAddress:
-          toBjj:
-          amount: '1000'
-          fee: 229
-          nonce: 5
-          signature: 8738afdc744b5e87d79f09a61924a89811f12c74fdff4314afdb5966264276a5a44748dbb6540c8a0029e1e03a1b01ede4ceaffa49b8e6f7f98a16bccd400005
-          requestId: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
-          requestOffset: 5
+        atomicGroupId: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
+        transactions:
+          - id: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
+            type: Transfer
+            tokenId: 0
+            fromAccountIndex: hez:ETH:789
+            toAccountIndex: hez:ETH:790
+            toHezEthereumAddress:
+            toBjj:
+            amount: '1000'
+            fee: 229
+            nonce: 4
+            signature: 6472c352ae96f3cc6c698e6c19d07b46fd70a8035a8131605f4442d57bc5941a0a87240f4ad3d9cfc662bf5bbe2f42db4a5f77fef28fad06cb41b0c00c589905
+            requestId: '0x026c26d626dd40bf4f83737b9237674a1e7d235b38393a008dfc8d401ca2f7a412'
+            requestOffset: 1
+          - id: '0x026c26d626dd40bf4f83737b9237674a1e7d235b38393a008dfc8d401ca2f7a412'
+            type: Transfer
+            tokenId: 0
+            fromAccountIndex: hez:ETH:790
+            toAccountIndex: hez:ETH:789
+            toHezEthereumAddress:
+            toBjj:
+            amount: '1000'
+            fee: 229
+            nonce: 4
+            signature: 62945599b3b3cfafdf71ec6fe935634234bc5c7f9cd13e84850646deb62b348b35c23c327917f869162f625c5848c8c6b83bd1456fd76fea181c757ddc811f04
+            requestId: '0x0247ecd484e9f5710a703ee1cf36f6e7e00a294e93be7de0463a7108255eac6fa9'
+            requestOffset: 1
+          - id: '0x0247ecd484e9f5710a703ee1cf36f6e7e00a294e93be7de0463a7108255eac6fa9'
+            type: Transfer
+            tokenId: 0
+            fromAccountIndex: hez:ETH:789
+            toAccountIndex: hez:ETH:790
+            toHezEthereumAddress:
+            toBjj:
+            amount: '1000'
+            fee: 229
+            nonce: 5
+            signature: d71fa5d4ee8c12f111bf3d80dfb7e99af4eccab59c90a5b092e3b18c77860d140de73e2c104b77bcd6564af7db330ab626a29ae72a777fd00d4f56bf16334f01
+            requestId: '0x024be7ae4f0df9c956628d187069fde63e616749e2d2ce447b7386c4fa431b7d45'
+            requestOffset: 1
+          - id: '0x024be7ae4f0df9c956628d187069fde63e616749e2d2ce447b7386c4fa431b7d45'
+            type: Transfer
+            tokenId: 0
+            fromAccountIndex: hez:ETH:790
+            toAccountIndex: hez:ETH:789
+            toHezEthereumAddress:
+            toBjj:
+            amount: '1000'
+            fee: 229
+            nonce: 5
+            signature: 8738afdc744b5e87d79f09a61924a89811f12c74fdff4314afdb5966264276a5a44748dbb6540c8a0029e1e03a1b01ede4ceaffa49b8e6f7f98a16bccd400005
+            requestId: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
+            requestOffset: 5
     PoolL2Transaction:
       type: object
       properties:

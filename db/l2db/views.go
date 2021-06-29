@@ -26,7 +26,6 @@ type PoolTxAPI struct {
 	State                common.PoolL2TxState  `meddler:"state"`
 	Info                 *string               `meddler:"info"`
 	Signature            babyjub.SignatureComp `meddler:"signature"`
-	RqTxID               *common.TxID          `meddler:"rq_tx_id"`
 	RqFromIdx            *apitypes.HezIdx      `meddler:"rq_from_idx"`
 	RqToIdx              *apitypes.HezIdx      `meddler:"rq_to_idx"`
 	RqToEthAddr          *apitypes.HezEthAddr  `meddler:"rq_to_eth_addr"`
@@ -71,7 +70,6 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 		"info":                        tx.Info,
 		"signature":                   tx.Signature,
 		"timestamp":                   tx.Timestamp,
-		"requestId":                   tx.RqTxID,
 		"requestFromAccountIndex":     tx.RqFromIdx,
 		"requestToAccountIndex":       tx.RqToIdx,
 		"requestToHezEthereumAddress": tx.RqToEthAddr,
