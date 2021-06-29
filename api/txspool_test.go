@@ -681,7 +681,7 @@ func TestAtomicPool(t *testing.T) {
 	}
 	// Sign and format txs
 	atomicGroup, _ = signAndTransformTxs(txs)
-	atomicGroup.AtomicGroupID = common.AtomicGroupID([32]byte{1, 2, 3, 4})
+	atomicGroup.ID = common.AtomicGroupID([32]byte{1, 2, 3, 4})
 	// Send txs
 	jsonTxBytes, err = json.Marshal(atomicGroup)
 	require.NoError(t, err)
