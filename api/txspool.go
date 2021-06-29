@@ -41,8 +41,8 @@ func (a *API) postPoolTx(c *gin.Context) {
 
 // AtomicGroup represents a set of atomic transactions
 type AtomicGroup struct {
-	AtomicGroupID common.AtomicGroupID `json:"atomicGroupId"`
-	Txs           []common.PoolL2Tx    `json:"transactions"`
+	ID  common.AtomicGroupID `json:"atomicGroupId"`
+	Txs []common.PoolL2Tx    `json:"transactions"`
 }
 
 // SetAtomicGroupID set the atomic group ID for an atomic group that already has Txs
@@ -51,7 +51,7 @@ func (ag *AtomicGroup) SetAtomicGroupID() {
 	for _, tx := range ag.Txs {
 		ids = append(ids, tx.TxID)
 	}
-	ag.AtomicGroupID = common.CalculateAtomicGroupID(ids)
+	ag.ID = common.CalculateAtomicGroupID(ids)
 }
 
 // IsAtomicGroupIDValid return false if the atomic group ID that is set
@@ -62,7 +62,7 @@ func (ag AtomicGroup) IsAtomicGroupIDValid() bool {
 		ids = append(ids, tx.TxID)
 	}
 	actualAGID := common.CalculateAtomicGroupID(ids)
-	return actualAGID == ag.AtomicGroupID
+	return actualAGID == ag.ID
 }
 
 func (a *API) postAtomicPool(c *gin.Context) {
@@ -108,7 +108,7 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		receivedAtomicGroup.Txs[i].RqFee = requestedTx.Fee
 		receivedAtomicGroup.Txs[i].RqNonce = requestedTx.Nonce
 		receivedAtomicGroup.Txs[i].ClientIP = clientIP
-		receivedAtomicGroup.Txs[i].AtomicGroupID = receivedAtomicGroup.AtomicGroupID
+		receivedAtomicGroup.Txs[i].AtomicGroupID = receivedAtomicGroup.ID
 
 		// Validate transaction
 		if err := a.verifyPoolL2Tx(receivedAtomicGroup.Txs[i]); err != nil {
