@@ -462,7 +462,7 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 		RqNonce:       0,
 		State:         common.PoolL2TxStatePending,
 		RqOffset:      1,
-		AtomicGroupID: 1,
+		AtomicGroupID: common.AtomicGroupID([common.AtomicGroupIDLen]byte{1}),
 	}
 	_, err = common.NewPoolL2Tx(&atomicTxA)
 	require.NoError(t, err)
@@ -485,7 +485,7 @@ func TestZKInputsAtomicTxs(t *testing.T) {
 		RqNonce:       0,
 		State:         common.PoolL2TxStatePending,
 		RqOffset:      7,
-		AtomicGroupID: 1,
+		AtomicGroupID: common.AtomicGroupID([common.AtomicGroupIDLen]byte{1}),
 	}
 	_, err = common.NewPoolL2Tx(&atomicTxB)
 	require.NoError(t, err)

@@ -162,7 +162,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 	// Set the columns that will be affected by the insert on the table
 	const queryInsertPart = `INSERT INTO tx_pool (
 		tx_id, from_idx, to_idx, to_eth_addr, to_bjj, token_id,
-		amount, fee, nonce, state, info, signature, rq_tx_id, rq_from_idx, 
+		amount, fee, nonce, state, info, signature, rq_from_idx, 
 		rq_to_idx, rq_to_eth_addr, rq_to_bjj, rq_token_id, rq_amount, rq_fee, rq_nonce, 
 		tx_type, amount_f, client_ip, rq_offset, atomic_group_id
 	)`
@@ -178,7 +178,6 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			// Info (always nil)
 			info *string
 			// Rq fields, nil unless tx.RqFromIdx != 0
-			rqTxID        *common.TxID
 			rqFromIdx     *common.Idx
 			rqToIdx       *common.Idx
 			rqToEthAddr   *ethCommon.Address
@@ -188,7 +187,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			rqFee         *common.FeeSelector
 			rqNonce       *common.Nonce
 			rqOffset      *uint8
-			atomicGroupID *int
+			atomicGroupID *common.AtomicGroupID
 		)
 		// AmountFloat
 		f := new(big.Float).SetInt((*big.Int)(txs[i].Amount))
@@ -203,8 +202,6 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		}
 		// Rq fields
 		if txs[i].RqFromIdx != 0 {
-			// RqTxID
-			rqTxID = &txs[i].RqTxID
 			// RqFromIdx
 			rqFromIdx = &txs[i].RqFromIdx
 			// RqToIdx
@@ -237,9 +234,9 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		}
 		// Each ? match one of the columns to be inserted as defined in queryInsertPart
 		const queryVarsPartPerTx = `(?::BYTEA, ?::BIGINT, ?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT, 
-		?::NUMERIC, ?::SMALLINT, ?::BIGINT, ?::CHAR(4), ?::VARCHAR, ?::BYTEA, ?::BYTEA, ?::BIGINT,
+		?::NUMERIC, ?::SMALLINT, ?::BIGINT, ?::CHAR(4), ?::VARCHAR, ?::BYTEA, ?::BIGINT,
 		?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT, ?::NUMERIC, ?::SMALLINT, ?::BIGINT,
-		?::VARCHAR(40), ?::NUMERIC, ?::VARCHAR, ?::SMALLINT, ?::BIGINT)`
+		?::VARCHAR(40), ?::NUMERIC, ?::VARCHAR, ?::SMALLINT, ?::BYTEA)`
 		if i == 0 {
 			queryVarsPart += queryVarsPartPerTx
 		} else {
@@ -249,7 +246,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		// Add values that will replace the ?
 		queryVars = append(queryVars,
 			txs[i].TxID, txs[i].FromIdx, txs[i].ToIdx, toEthAddr, toBJJ, txs[i].TokenID,
-			txs[i].Amount.String(), txs[i].Fee, txs[i].Nonce, txs[i].State, info, txs[i].Signature, rqTxID, rqFromIdx,
+			txs[i].Amount.String(), txs[i].Fee, txs[i].Nonce, txs[i].State, info, txs[i].Signature, rqFromIdx,
 			rqToIdx, rqToEthAddr, rqToBJJ, rqTokenID, rqAmount, rqFee, rqNonce,
 			txs[i].Type, amountF, txs[i].ClientIP, rqOffset, atomicGroupID,
 		)
@@ -282,7 +279,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx
 const selectPoolTxCommon = `SELECT  tx_pool.tx_id, from_idx, to_idx, tx_pool.to_eth_addr, 
 tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
-tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, rq_tx_id, rq_from_idx, 
+tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, rq_from_idx, 
 rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
 tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, tx_pool.rq_offset, tx_pool.atomic_group_id, 
 (fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f) /

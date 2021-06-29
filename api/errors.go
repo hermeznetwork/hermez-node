@@ -13,8 +13,6 @@ const (
 	ErrTxsNotAtomic = "There is at least one transaction in the payload that could be forged without the others"
 	// ErrSingleTxInAtomicEndpoint only one tx sent to the atomic-pool endpoint
 	ErrSingleTxInAtomicEndpoint = "To use the atomic-pool endpoint at least two transactions are required"
-	// ErrRqTxIDNotProvided error message returned when receiving (and rejecting) a tx that has malformed RqTxID
-	ErrRqTxIDNotProvided = "Transaction requestId is not set or is invalid"
 
 	// Internal error messages (used for logs or handling errors returned from internal comopnents)
 
@@ -32,4 +30,7 @@ const (
 
 	// ErrNotAtomicTxsInPostPoolTx error message returned when received an non-atomic transaction inside atomic pool
 	ErrNotAtomicTxsInPostPoolTx = "Atomic transactions are only accepted in POST /atomic-pool"
+
+	// ErrInvalidAtomicGroupID error message returned when received an invalid AtomicGroupID
+	ErrInvalidAtomicGroupID = "Invalid atomicGroupId"
 )

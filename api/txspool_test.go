@@ -39,7 +39,6 @@ type testPoolTxReceive struct {
 	Nonce       common.Nonce           `json:"nonce"`
 	State       common.PoolL2TxState   `json:"state"`
 	Signature   babyjub.SignatureComp  `json:"signature"`
-	RqTxID      *common.TxID           `json:"requestId"`
 	RqFromIdx   *string                `json:"requestFromAccountIndex"`
 	RqToIdx     *string                `json:"requestToAccountIndex"`
 	RqToEthAddr *string                `json:"requestToHezEthereumAddress"`
@@ -130,7 +129,6 @@ func genTestPoolTxs(
 		if poolTxs[i].RqFromIdx != 0 {
 			rqFromIdx := idxToHez(poolTxs[i].RqFromIdx, rqToken.Symbol)
 			genReceiveTx.RqFromIdx = &rqFromIdx
-			genReceiveTx.RqTxID = &poolTxs[i].RqTxID
 			genReceiveTx.RqTokenID = &rqToken.TokenID
 			rqAmount := poolTxs[i].RqAmount.String()
 			genReceiveTx.RqAmount = &rqAmount
@@ -537,7 +535,7 @@ func TestAtomicPool(t *testing.T) {
 	err = api.h.AddAccountUpdates(accountUpdates)
 	assert.NoError(t, err)
 
-	signAndTransformTxs := func(txs []common.PoolL2Tx) ([]common.PoolL2Tx, []testPoolTxReceive) {
+	signAndTransformTxs := func(txs []common.PoolL2Tx) (AtomicGroup, []testPoolTxReceive) {
 		for i := 0; i < len(txs); i++ {
 			// Set TxID and type
 			_, err := common.NewPoolL2Tx(&txs[i])
@@ -548,7 +546,10 @@ func TestAtomicPool(t *testing.T) {
 			sig := privateKeys[txs[i].FromIdx].SignPoseidon(toSign)
 			txs[i].Signature = sig.Compress()
 		}
-		return genTestPoolTxs(txs, []historydb.TokenWithUSD{tc.tokens[usedToken]}, accounts)
+		txsToSend, txsToReceive := genTestPoolTxs(txs, []historydb.TokenWithUSD{tc.tokens[usedToken]}, accounts)
+		atomicGroup := AtomicGroup{Txs: txsToSend}
+		atomicGroup.SetAtomicGroupID()
+		return atomicGroup, txsToReceive
 	}
 	assertTxs := func(txsToReceive []testPoolTxReceive) {
 		for _, tx := range txsToReceive {
@@ -599,9 +600,9 @@ func TestAtomicPool(t *testing.T) {
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
-	txsToSend, txsToReceive := signAndTransformTxs(txs)
+	atomicGroup, txsToReceive := signAndTransformTxs(txs)
 	// Send txs
-	jsonTxBytes, err := json.Marshal(txsToSend)
+	jsonTxBytes, err := json.Marshal(atomicGroup)
 	require.NoError(t, err)
 	jsonTxReader := bytes.NewReader(jsonTxBytes)
 	fetchedTxIDs := []common.TxID{}
@@ -642,9 +643,9 @@ func TestAtomicPool(t *testing.T) {
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
-	txsToSend, txsToReceive = signAndTransformTxs(txs)
+	atomicGroup, txsToReceive = signAndTransformTxs(txs)
 	// Send txs
-	jsonTxBytes, err = json.Marshal(txsToSend)
+	jsonTxBytes, err = json.Marshal(atomicGroup)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	fetchedTxIDs = []common.TxID{}
@@ -659,11 +660,40 @@ func TestAtomicPool(t *testing.T) {
 	// Check txs in the DB
 	assertTxs(txsToReceive)
 
-	// Test fee too low
-	// Generate txs
+	// Test wrong atomic group id
 	txs = []common.PoolL2Tx{}
 	baseTx.Nonce = 2
 	baseTx.RqNonce = 2 // Nonce incremented just to avoid TxID conflicts
+	for i := 0; i < nAccounts; i++ {
+		tx := baseTx
+		tx.FromIdx = accounts[i].Idx
+		tx.ToIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqFromIdx = accounts[(i+1)%nAccounts].Idx
+		tx.RqToIdx = accounts[(i+2)%nAccounts].Idx
+		if i == 0 {
+			tx.Fee = 5
+			tx.RqOffset = 1
+		} else if i == nAccounts-1 {
+			tx.RqFee = 5
+			tx.RqOffset = 5
+		}
+		txs = append(txs, tx)
+	}
+	// Sign and format txs
+	atomicGroup, _ = signAndTransformTxs(txs)
+	atomicGroup.AtomicGroupID = common.AtomicGroupID([32]byte{1, 2, 3, 4})
+	// Send txs
+	jsonTxBytes, err = json.Marshal(atomicGroup)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", path, jsonTxReader, 400)
+	assert.NoError(t, err)
+
+	// Test fee too low
+	// Generate txs
+	txs = []common.PoolL2Tx{}
+	baseTx.Nonce = 3
+	baseTx.RqNonce = 3 // Nonce incremented just to avoid TxID conflicts
 	baseTx.Fee = 0
 	baseTx.RqFee = 0
 	for i := 0; i < nAccounts; i++ {
@@ -682,9 +712,9 @@ func TestAtomicPool(t *testing.T) {
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
-	txsToSend, _ = signAndTransformTxs(txs)
+	atomicGroup, _ = signAndTransformTxs(txs)
 	// Send txs
-	jsonTxBytes, err = json.Marshal(txsToSend)
+	jsonTxBytes, err = json.Marshal(atomicGroup)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", path, jsonTxReader, 400)
@@ -727,9 +757,9 @@ func TestAtomicPool(t *testing.T) {
 		txs = append(txs, tx)
 	}
 	// Sign and format txs
-	txsToSend, _ = signAndTransformTxs(txs)
+	atomicGroup, _ = signAndTransformTxs(txs)
 	// Send txs
-	jsonTxBytes, err = json.Marshal(txsToSend)
+	jsonTxBytes, err = json.Marshal(atomicGroup)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", path, jsonTxReader, 400)
@@ -766,37 +796,37 @@ func TestIsAtomic(t *testing.T) {
 
 	// Case missing tx: 1 ==> 2 ==> 3 ==> (4: not provided)
 	txs = []common.PoolL2Tx{
-		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
-		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
+		{TxID: common.TxID{1}, RqOffset: 1},
+		{TxID: common.TxID{2}, RqOffset: 1},
+		{TxID: common.TxID{3}, RqOffset: 1},
 	}
 	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case loneley tx: 1 ==> 2 ==> 3 ==> 1 <== (4: no buddy references 4th tx)
 	txs = []common.PoolL2Tx{
-		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
-		{TxID: common.TxID{3}, RqTxID: common.TxID{1}},
-		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
+		{TxID: common.TxID{1}, RqOffset: 1},
+		{TxID: common.TxID{2}, RqOffset: 1},
+		{TxID: common.TxID{3}, RqOffset: 6}, // 6 represents -2
+		{TxID: common.TxID{4}, RqOffset: 5}, // 5 represents -3
 	}
 	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Case two groups: 1 <==> 2  3 <==> 4
 	txs = []common.PoolL2Tx{
-		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: common.TxID{1}},
-		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
-		{TxID: common.TxID{4}, RqTxID: common.TxID{3}},
+		{TxID: common.TxID{1}, RqOffset: 1},
+		{TxID: common.TxID{2}, RqOffset: 7}, // 7 represents -1
+		{TxID: common.TxID{3}, RqOffset: 1},
+		{TxID: common.TxID{4}, RqOffset: 7}, // 7 represents -1
 	}
 	assert.False(t, isSingleAtomicGroup(txs))
 
 	// Atomic cases
 	// Case circular: 1 ==> 2 ==> 3 ==> 4 ==> 1
 	txs = []common.PoolL2Tx{
-		{TxID: common.TxID{1}, RqTxID: common.TxID{2}},
-		{TxID: common.TxID{2}, RqTxID: common.TxID{3}},
-		{TxID: common.TxID{3}, RqTxID: common.TxID{4}},
-		{TxID: common.TxID{4}, RqTxID: common.TxID{1}},
+		{TxID: common.TxID{1}, RqOffset: 1},
+		{TxID: common.TxID{2}, RqOffset: 1},
+		{TxID: common.TxID{3}, RqOffset: 1},
+		{TxID: common.TxID{4}, RqOffset: 5}, // 5 represents -3
 	}
 	assert.True(t, isSingleAtomicGroup(txs))
 }
