@@ -333,8 +333,16 @@ func cmdGetAccountDetails(c *cli.Context) error {
 		log.Errorf("Error obtaining account details. Account: %s - Error: %s\n", accountAddrHex, err.Error())
 		return err
 	}
-	log.Infof("\n\nAccount info is: %+v\n\n", accountDetails)
-
+	log.Infof("Found %d account(s)", len(accountDetails.Accounts))
+	for index, account := range accountDetails.Accounts {
+		log.Infof("Details for account %d", index)
+		log.Infof(" - Account index: %s", account.AccountIndex)
+		log.Infof(" - Account BJJ  : %s", account.BJJAddress)
+		log.Infof(" - Balance      : %s", account.Balance)
+		log.Infof(" - HEZ Address  : %s", account.HezEthereumAddress)
+		log.Infof(" - Token name   : %s", account.Token.Name)
+		log.Infof(" - Token symbol : %s", account.Token.Symbol)
+	}
 	return nil
 }
 
