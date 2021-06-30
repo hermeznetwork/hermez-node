@@ -16,6 +16,7 @@ import (
 var historyDB *historydb.HistoryDB
 
 const usdtAddr = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+const daiAddr = "0x6b175474e89094c44da98b954eedeac495271d0f"
 
 func TestPriceUpdater(t *testing.T) {
 	// Init DB
@@ -35,7 +36,7 @@ func TestPriceUpdater(t *testing.T) {
 		{
 			TokenID:     1,
 			EthBlockNum: blocks[0].Num,
-			EthAddr:     ethCommon.HexToAddress("0x1"),
+			EthAddr:     ethCommon.HexToAddress(daiAddr),
 			Name:        "DAI",
 			Symbol:      "DAI",
 			Decimals:    18,
@@ -92,7 +93,7 @@ func TestPriceUpdater(t *testing.T) {
 			BaseURL:        "https://api.coingecko.com/api/v3/",
 			URL:            "simple/token_price/ethereum?contract_addresses=",
 			URLExtraParams: "&vs_currencies=usd",
-			Addresses:      "1=0x1,2=" + usdtAddr + ",3=ignore,5=0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+			Addresses:      "1=" + daiAddr + ",2=" + usdtAddr + ",3=ignore,5=0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
 		},
 	}
 	var priority string = "bitfinexV2,CoinGeckoV3"
