@@ -216,14 +216,16 @@ func NewPriceUpdater(
 	}, nil
 }
 
-type coingecko map[ethCommon.Address]map[string]float64
-
 func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID uint) (float64, error) {
 	for i := 0; i < len(p.updateMethodsPriority); i++ {
 		provider := p.providers[p.updateMethodsPriority[i]]
 		var url string
 		if _, ok := provider.AddressesMap.Addresses[tokenID]; ok {
-			url = provider.URL + provider.AddressesMap.Addresses[tokenID].String() + provider.URLExtraParams
+			if provider.AddressesMap.Addresses[tokenID] == common.EmptyAddr {
+				url = "simple/price?ids=ethereum" + provider.URLExtraParams
+			} else {
+				url = provider.URL + provider.AddressesMap.Addresses[tokenID].String() + provider.URLExtraParams
+			}
 		} else {
 			url = provider.URL + provider.SymbolsMap.Symbols[tokenID] + provider.URLExtraParams
 		}
@@ -247,11 +249,20 @@ func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID ui
 				isEmptyResult = true
 			}
 		case UpdateMethodTypeCoingeckoV3:
-			var data coingecko
-			res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
-			result = data[provider.AddressesMap.Addresses[tokenID]]["usd"]
-			if len(data) == 0 {
-				isEmptyResult = true
+			if provider.AddressesMap.Addresses[tokenID] == common.EmptyAddr {
+				var data map[string]map[string]float64
+				res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
+				result = data["ethereum"]["usd"]
+				if len(data) == 0 {
+					isEmptyResult = true
+				}
+			} else {
+				var data map[ethCommon.Address]map[string]float64
+				res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
+				result = data[provider.AddressesMap.Addresses[tokenID]]["usd"]
+				if len(data) == 0 {
+					isEmptyResult = true
+				}
 			}
 		default:
 			log.Error("Unknown price provider: ", provider.Provider)
