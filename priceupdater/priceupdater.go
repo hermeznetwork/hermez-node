@@ -111,6 +111,8 @@ func (d *symbolsMap) strToMapSymbol(str string) error {
 		}
 		d.Symbols = mapping
 		log.Debug("Symbol mapping from config file: ", mapping)
+	} else {
+		d.Symbols = make(map[uint]string)
 	}
 	return lastErr
 }
@@ -141,6 +143,8 @@ func (d *addressesMap) strToMapAddress(str string) error {
 		}
 		d.Addresses = mapping
 		log.Debug("Address mapping from config file: ", mapping)
+	} else {
+		d.Addresses = make(map[uint]ethCommon.Address)
 	}
 	return lastErr
 }
@@ -331,15 +335,18 @@ func (p *PriceUpdater) UpdateTokenList() error {
 			}
 		}
 		for _, provider := range p.providers {
-			if len(provider.SymbolsMap.Symbols) != 0 {
+			switch provider.Provider {
+			case UpdateMethodTypeBitFinexV2:
 				if _, ok := provider.SymbolsMap.Symbols[dbToken.TokenID]; !ok {
 					provider.SymbolsMap.Symbols[dbToken.TokenID] = dbToken.Symbol
 				}
-			}
-			if len(provider.AddressesMap.Addresses) != 0 {
+			case UpdateMethodTypeCoingeckoV3:
 				if _, ok := provider.AddressesMap.Addresses[dbToken.TokenID]; !ok {
 					provider.AddressesMap.Addresses[dbToken.TokenID] = dbToken.Addr
 				}
+			default:
+				log.Error("Unknown provider detected: ", provider.Provider)
+				return tracerr.Wrap(fmt.Errorf("Error: Unknown price provider: " + provider.Provider))
 			}
 		}
 	}
