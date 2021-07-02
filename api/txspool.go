@@ -40,7 +40,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 
 func (a *API) getPoolTx(c *gin.Context) {
 	// Get TxID
-	txID, err := parseParamTxID(c)
+	txID, err := parsePoolTxFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -56,47 +56,13 @@ func (a *API) getPoolTx(c *gin.Context) {
 }
 
 func (a *API) getPoolTxs(c *gin.Context) {
-	txFilters, err := parseTxsFilters(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// TxType
-	txType, err := parseQueryTxType(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Get state
-	state, err := parseQueryPoolL2TxState(c)
+	txApiRequest, err := parsePoolTxsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
 	// Fetch txs from l2DB
-	txs, pendingItems, err := a.l2.GetPoolTxsAPI(l2db.GetPoolTxsAPIRequest{
-		EthAddr:     txFilters.addr,
-		FromEthAddr: txFilters.fromAddr,
-		ToEthAddr:   txFilters.toAddr,
-		Bjj:         txFilters.bjj,
-		FromBjj:     txFilters.fromBjj,
-		ToBjj:       txFilters.toBjj,
-		TxType:      txType,
-		TokenID:     txFilters.tokenID,
-		Idx:         txFilters.idx,
-		FromIdx:     txFilters.fromIdx,
-		ToIdx:       txFilters.toIdx,
-		State:       state,
-		FromItem:    fromItem,
-		Limit:       limit,
-		Order:       order,
-	})
+	txs, pendingItems, err := a.l2.GetPoolTxsAPI(txApiRequest)
 	if err != nil {
 		retSQLErr(err, c)
 		return

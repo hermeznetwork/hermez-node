@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,28 +8,18 @@ import (
 )
 
 func (a *API) getBids(c *gin.Context) {
-	slotNum, bidderAddr, err := parseBidFilters(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	if slotNum == nil && bidderAddr == nil {
-		retBadReq(errors.New("It is necessary to add at least one filter: slotNum or/and bidderAddr"), c)
-		return
-	}
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
+	filters, err := parseBidsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
 
 	bids, pendingItems, err := a.h.GetBidsAPI(historydb.GetBidsAPIRequest{
-		SlotNum:    slotNum,
-		BidderAddr: bidderAddr,
-		FromItem:   fromItem,
-		Limit:      limit,
-		Order:      order,
+		SlotNum:    filters.SlotNum,
+		BidderAddr: filters.BidderAddr,
+		FromItem:   filters.FromItem,
+		Limit:      filters.Limit,
+		Order:      filters.Order,
 	})
 
 	if err != nil {

@@ -10,8 +10,8 @@ import (
 
 func (a *API) getFiatCurrency(c *gin.Context) {
 	// Get symbol
-	symbol := c.Param("symbol")
-	if symbol == "" { // symbol is required
+	symbol, err := parseCurrencyFilter(c)
+	if err != nil {
 		retBadReq(errors.New(ErrInvalidSymbol), c)
 		return
 	}
@@ -26,7 +26,7 @@ func (a *API) getFiatCurrency(c *gin.Context) {
 
 func (a *API) getFiatCurrencies(c *gin.Context) {
 	// Currency filters
-	symbols, err := parseCurrencyFilters(c)
+	symbols, err := parseCurrenciesFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

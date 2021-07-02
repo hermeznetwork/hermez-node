@@ -26,7 +26,6 @@ package api
 
 import (
 	"errors"
-
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
@@ -83,6 +82,9 @@ func NewAPI(
 	}
 	server.Use(middleware)
 
+	//if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+	//	_ = v.RegisterValidation("ethAddr", ethAddress)
+	//}
 	server.NoRoute(a.noRoute)
 
 	v1 := server.Group("/v1")
