@@ -345,7 +345,7 @@ func (p *PriceUpdater) UpdateTokenList() error {
 					provider.AddressesMap.Addresses[dbToken.TokenID] = dbToken.Addr
 				}
 			default:
-				log.Error("Unknown provider detected: ", provider.Provider)
+				log.Warn("This price provider is not supported: ", provider.Provider)
 				return tracerr.Wrap(fmt.Errorf("Error: Unknown price provider: " + provider.Provider))
 			}
 		}
