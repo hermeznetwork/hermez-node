@@ -24,6 +24,11 @@ func (a *API) getFiatCurrency(c *gin.Context) {
 	c.JSON(http.StatusOK, currency)
 }
 
+// CurrenciesResponse is the response object for multiple fiat prices
+type CurrenciesResponse struct {
+	Currencies []historydb.FiatCurrency `json:"currencies"`
+}
+
 func (a *API) getFiatCurrencies(c *gin.Context) {
 	// Currency filters
 	symbols, err := parseCurrencyFilters(c)
@@ -40,9 +45,6 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 	}
 
 	// Build successful response
-	type CurrenciesResponse struct {
-		Currencies []historydb.FiatCurrency `json:"currencies"`
-	}
 	c.JSON(http.StatusOK, &CurrenciesResponse{
 		Currencies: currencies,
 	})
