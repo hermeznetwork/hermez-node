@@ -17,4 +17,7 @@ const (
 
 	// ErrInvalidSymbol error message returned when receiving (and rejecting) an invalid Symbol
 	ErrInvalidSymbol = "Invalid Symbol"
+
+	// ErrIsAtomic filter atomic transactions on POST /transactions-pool
+	ErrIsAtomic = "Thies endpoint does not accept atomic transactions"
 )
