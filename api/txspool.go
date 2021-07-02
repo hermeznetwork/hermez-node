@@ -24,6 +24,11 @@ func (a *API) postPoolTx(c *gin.Context) {
 	}
 	// Transform from received to insert format and validate
 	writeTx := receivedTx.toPoolL2TxWrite()
+	// Reject atomic transactions
+	if isAtomic(*writeTx) {
+		retBadReq(errors.New(ErrIsAtomic), c)
+		return
+	}
 	if err := a.verifyPoolL2TxWrite(writeTx); err != nil {
 		retBadReq(err, c)
 		return
@@ -289,4 +294,16 @@ func (a *API) verifyPoolL2TxWrite(txw *l2db.PoolL2TxWrite) error {
 		}
 	}
 	return nil
+}
+
+func isAtomic(tx l2db.PoolL2TxWrite) bool {
+	// If a single "Rq" field is different from 0
+	return (tx.RqFromIdx != nil && *tx.RqFromIdx != 0) ||
+		(tx.RqToIdx != nil && *tx.RqToIdx != 0) ||
+		(tx.RqToEthAddr != nil && *tx.RqToEthAddr != common.EmptyAddr) ||
+		(tx.RqToBJJ != nil && *tx.RqToBJJ != common.EmptyBJJComp) ||
+		(tx.RqAmount != nil && tx.RqAmount != big.NewInt(0)) ||
+		(tx.RqFee != nil && *tx.RqFee != 0) ||
+		(tx.RqNonce != nil && *tx.RqNonce != 0) ||
+		(tx.RqTokenID != nil && *tx.RqTokenID != 0)
 }
