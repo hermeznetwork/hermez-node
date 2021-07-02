@@ -17,6 +17,7 @@ package node
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -304,15 +305,16 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			cfg.Coordinator.EthClient.Keystore.Password); err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		//Swap bjj from bigEndian to LittleEndian
-		bjjRaw, err := cfg.Coordinator.FeeAccount.BJJ.MarshalText()
+		//Swap bjj endianness
+		decodedBjjPubKey, err := hex.DecodeString(cfg.Coordinator.FeeAccount.BJJ.String())
 		if err != nil {
+			log.Error("Error decoding BJJ public key from config file. Error: ", err.Error())
 			return nil, tracerr.Wrap(err)
 		}
+		bSwapped := common.SwapEndianness(decodedBjjPubKey)
 		var bjj babyjub.PublicKeyComp
-		if err := bjj.UnmarshalText(common.SwapEndianness(bjjRaw)); err != nil {
-			return nil, tracerr.Wrap(err)
-		}
+		copy(bjj[:], bSwapped[:])
+
 		auth := &common.AccountCreationAuth{
 			EthAddr: cfg.Coordinator.FeeAccount.Address,
 			BJJ:     bjj,
