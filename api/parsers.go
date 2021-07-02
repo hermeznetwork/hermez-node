@@ -16,153 +16,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// Query parsers
-
-type querier interface {
-	Query(string) string
-}
-
-// nolint reason: res may be not overwritten
-func parseQueryUint(name string, dflt *uint, min, max uint, c querier) (*uint, error) { //nolint:SA4009
-	str := c.Query(name)
-	return stringToUint(str, name, dflt, min, max)
-}
-
-// nolint reason: res may be not overwritten
-func parseQueryInt64(name string, dflt *int64, min, max int64, c querier) (*int64, error) { //nolint:SA4009
-	str := c.Query(name)
-	return stringToInt64(str, name, dflt, min, max)
-}
-
-// nolint reason: res may be not overwritten
-func parseQueryBool(name string, dflt *bool, c querier) (*bool, error) { //nolint:SA4009
-	str := c.Query(name)
-	return stringToBool(name, str, dflt)
-}
-
-func stringToBool(name, str string, dflt *bool) (*bool, error) {
-	if str == "" {
-		return dflt, nil
-	}
-	if str == "true" {
-		res := new(bool)
-		*res = true
-		return res, nil
-	}
-	if str == "false" {
-		res := new(bool)
-		*res = false
-		return res, nil
-	}
-	return nil, tracerr.Wrap(fmt.Errorf("invalid %s. Must be either true or false", name))
-}
-
-func parseQueryHezEthAddr(c querier) (*ethCommon.Address, error) {
-	const name = "hezEthereumAddress"
-	addrStr := c.Query(name)
-	return hezStringToEthAddr(addrStr, name)
-}
-
-func parseQueryFromHezEthAddr(c querier) (*ethCommon.Address, error) {
-	const name = "fromHezEthereumAddress"
-	addrStr := c.Query(name)
-	return hezStringToEthAddr(addrStr, name)
-}
-
-func parseQueryToHezEth(c querier) (*ethCommon.Address, error) {
-	const name = "toHezEthereumAddress"
-	addrStr := c.Query(name)
-	return hezStringToEthAddr(addrStr, name)
-}
-
-func parseQueryBJJ(c querier) (*babyjub.PublicKeyComp, error) {
-	const name = "BJJ"
-	bjjStr := c.Query(name)
-	return hezStringToBJJ(bjjStr, name)
-}
-
-func parseQueryFromBJJ(c querier) (*babyjub.PublicKeyComp, error) {
-	const name = "fromBJJ"
-	bjjStr := c.Query(name)
-	return hezStringToBJJ(bjjStr, name)
-}
-
-func parseQueryToBJJ(c querier) (*babyjub.PublicKeyComp, error) {
-	const name = "toBJJ"
-	bjjStr := c.Query(name)
-	return hezStringToBJJ(bjjStr, name)
-}
-
-func parseQueryPoolL2TxState(c querier) (*common.PoolL2TxState, error) {
-	const name = "state"
-	stateStr := c.Query(name)
-	if stateStr == "" {
-		return nil, nil
-	}
-	switch common.PoolL2TxState(stateStr) {
-	case common.PoolL2TxStatePending:
-		ret := common.PoolL2TxStatePending
-		return &ret, nil
-	case common.PoolL2TxStateForged:
-		ret := common.PoolL2TxStateForged
-		return &ret, nil
-	case common.PoolL2TxStateForging:
-		ret := common.PoolL2TxStateForging
-		return &ret, nil
-	case common.PoolL2TxStateInvalid:
-		ret := common.PoolL2TxStateInvalid
-		return &ret, nil
-	}
-	return nil, tracerr.Wrap(fmt.Errorf(
-		"invalid %s, %s is not a valid option. Check the valid options in the documentation",
-		name, stateStr,
-	))
-}
-
-func parseQueryTxType(c querier) (*common.TxType, error) {
-	const name = "type"
-	typeStr := c.Query(name)
-	if typeStr == "" {
-		return nil, nil
-	}
-	switch common.TxType(typeStr) {
-	case common.TxTypeExit:
-		ret := common.TxTypeExit
-		return &ret, nil
-	case common.TxTypeTransfer:
-		ret := common.TxTypeTransfer
-		return &ret, nil
-	case common.TxTypeDeposit:
-		ret := common.TxTypeDeposit
-		return &ret, nil
-	case common.TxTypeCreateAccountDeposit:
-		ret := common.TxTypeCreateAccountDeposit
-		return &ret, nil
-	case common.TxTypeCreateAccountDepositTransfer:
-		ret := common.TxTypeCreateAccountDepositTransfer
-		return &ret, nil
-	case common.TxTypeDepositTransfer:
-		ret := common.TxTypeDepositTransfer
-		return &ret, nil
-	case common.TxTypeForceTransfer:
-		ret := common.TxTypeForceTransfer
-		return &ret, nil
-	case common.TxTypeForceExit:
-		ret := common.TxTypeForceExit
-		return &ret, nil
-	case common.TxTypeTransferToEthAddr:
-		ret := common.TxTypeTransferToEthAddr
-		return &ret, nil
-	case common.TxTypeTransferToBJJ:
-		ret := common.TxTypeTransferToBJJ
-		return &ret, nil
-	}
-	return nil, tracerr.Wrap(fmt.Errorf(
-		"invalid %s, %s is not a valid option. Check the valid options in the documentation",
-		name, typeStr,
-	))
-}
-
 func stringToTxType(txType string) (*common.TxType, error) {
 	if txType == "" {
 		return nil, nil
@@ -196,23 +49,6 @@ func stringToL2TxState(txState string) (*common.PoolL2TxState, error) {
 		))
 	}
 }
-func parseIdx(c querier) (*common.Idx, error) {
-	const name = "accountIndex"
-	idxStr := c.Query(name)
-	return stringToIdx(idxStr, name)
-}
-
-func parseFromIdx(c querier) (*common.Idx, error) {
-	const name = "fromAccountIndex"
-	idxStr := c.Query(name)
-	return stringToIdx(idxStr, name)
-}
-
-func parseToIdx(c querier) (*common.Idx, error) {
-	const name = "toAccountIndex"
-	idxStr := c.Query(name)
-	return stringToIdx(idxStr, name)
-}
 
 type exitFilter struct {
 	BatchNum     uint   `uri:"batchNum" binding:"required"`
@@ -234,12 +70,12 @@ func parseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
 }
 
 type exitsFilters struct {
-	TokenID              string `form:"tokenId"`
+	TokenID              *uint  `form:"tokenId"`
 	Addr                 string `form:"hezEthereumAddress"`
 	Bjj                  string `form:"BJJ"`
 	AccountIndex         string `form:"accountIndex"`
-	BatchNum             string `form:"batchNum"`
-	OnlyPendingWithdraws string `form:"onlyPendingWithdraws"`
+	BatchNum             *uint  `form:"batchNum"`
+	OnlyPendingWithdraws *bool  `form:"onlyPendingWithdraws"`
 
 	FromItem *uint   `form:"fromItem"`
 	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
@@ -248,20 +84,15 @@ type exitsFilters struct {
 
 func parseExitsFilters(c *gin.Context) (historydb.GetExitsAPIRequest, error) {
 	var exitsFilters exitsFilters
-	if err := c.BindQuery(&exitsFilters); err != nil {
+	if err := c.ShouldBindQuery(&exitsFilters); err != nil {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	// Token ID
-	tid, err := stringToUint(exitsFilters.TokenID, "tokenId", nil, 0, maxUint32)
-	if err != nil {
-		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	var tokenID *common.TokenID
-	if tid != nil {
+	if exitsFilters.TokenID != nil {
 		tokenID = new(common.TokenID)
-		*tokenID = common.TokenID(*tid)
+		*tokenID = common.TokenID(*exitsFilters.TokenID)
 	}
 
 	addr, err := hezStringToEthAddr(exitsFilters.Addr, "hezEthereumAddress")
@@ -287,40 +118,17 @@ func parseExitsFilters(c *gin.Context) (historydb.GetExitsAPIRequest, error) {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
 	}
 
-	batchNum, err := stringToUint(exitsFilters.BatchNum, "batchNum", nil, 0, maxUint32)
-	if err != nil {
-		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
-	}
-
-	onlyPendingWithdraws, err := stringToBool("onlyPendingWithdraws", exitsFilters.OnlyPendingWithdraws, nil)
-	if err != nil {
-		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetExitsAPIRequest{
 		EthAddr:              addr,
 		Bjj:                  bjj,
 		TokenID:              tokenID,
 		Idx:                  idx,
-		BatchNum:             batchNum,
-		OnlyPendingWithdraws: onlyPendingWithdraws,
+		BatchNum:             exitsFilters.BatchNum,
+		OnlyPendingWithdraws: exitsFilters.OnlyPendingWithdraws,
 		FromItem:             exitsFilters.FromItem,
 		Limit:                exitsFilters.Limit,
 		Order:                *exitsFilters.Order,
 	}, nil
-}
-
-type txsFilters struct {
-	tokenID  *common.TokenID
-	addr     *ethCommon.Address
-	fromAddr *ethCommon.Address
-	toAddr   *ethCommon.Address
-	bjj      *babyjub.PublicKeyComp
-	fromBjj  *babyjub.PublicKeyComp
-	toBjj    *babyjub.PublicKeyComp
-	idx      *common.Idx
-	fromIdx  *common.Idx
-	toIdx    *common.Idx
 }
 
 type poolTxFilter struct {
@@ -340,7 +148,7 @@ func parsePoolTxFilter(c *gin.Context) (common.TxID, error) {
 }
 
 type poolTxsFilter struct {
-	TokenId                string `form:"tokenId"`
+	TokenId                *uint  `form:"tokenId"`
 	HezEthereumAddress     string `form:"hezEthereumAddress"`
 	FromHezEthereumAddress string `form:"fromHezEthereumAddress"`
 	ToHezEthereumAddress   string `form:"toHezEthereumAddress"`
@@ -364,14 +172,10 @@ func parsePoolTxsFilters(c *gin.Context) (l2db.GetPoolTxsAPIRequest, error) {
 		return l2db.GetPoolTxsAPIRequest{}, err
 	}
 	// TokenID
-	tid, err := stringToUint(poolTxsFilter.TokenId, "tokenId", nil, 0, maxUint32)
-	if err != nil {
-		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
-	}
 	var tokenID *common.TokenID
-	if tid != nil {
+	if poolTxsFilter.TokenId != nil {
 		tokenID = new(common.TokenID)
-		*tokenID = common.TokenID(*tid)
+		*tokenID = common.TokenID(*poolTxsFilter.TokenId)
 	}
 
 	addr, err := hezStringToEthAddr(poolTxsFilter.HezEthereumAddress, "hezEthereumAddress")
@@ -482,7 +286,7 @@ func parseTxIDParam(c *gin.Context) (common.TxID, error) {
 }
 
 type historyTxsFilters struct {
-	TokenID             string `form:"tokenId"`
+	TokenID             *uint  `form:"tokenId"`
 	HezEthereumAddr     string `form:"hezEthereumAddress"`
 	FromHezEthereumAddr string `form:"fromHezEthereumAddress"`
 	ToHezEthereumAddr   string `form:"toHezEthereumAddress"`
@@ -492,9 +296,9 @@ type historyTxsFilters struct {
 	AccountIndex        string `form:"accountIndex"`
 	FromAccountIndex    string `form:"fromAccountIndex"`
 	ToAccountIndex      string `form:"toAccountIndex"`
-	BatchNum            string `form:"batchNum"`
+	BatchNum            *uint  `form:"batchNum"`
 	TxType              string `form:"type"`
-	IncludePendingTxs   string `form:"includePendingL1s"`
+	IncludePendingTxs   *bool  `form:"includePendingL1s"`
 
 	FromItem *uint   `form:"fromItem"`
 	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
@@ -503,19 +307,15 @@ type historyTxsFilters struct {
 
 func parseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) {
 	var historyTxsFilters historyTxsFilters
-	if err := c.BindQuery(&historyTxsFilters); err != nil {
+	if err := c.ShouldBindQuery(&historyTxsFilters); err != nil {
 		return historydb.GetTxsAPIRequest{}, err
 	}
 
 	// TokenID
-	tid, err := stringToUint(historyTxsFilters.TokenID, "tokenId", nil, 0, maxUint32)
-	if err != nil {
-		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
-	}
 	var tokenID *common.TokenID
-	if tid != nil {
+	if historyTxsFilters.TokenID != nil {
 		tokenID = new(common.TokenID)
-		*tokenID = common.TokenID(*tid)
+		*tokenID = common.TokenID(*historyTxsFilters.TokenID)
 	}
 
 	addr, err := hezStringToEthAddr(historyTxsFilters.HezEthereumAddr, "hezEthereumAddress")
@@ -584,18 +384,6 @@ func parseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) 
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	batchNum, err := stringToUint(historyTxsFilters.BatchNum, "batchNum", nil, 0, maxUint32)
-	if err != nil {
-		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
-	}
-
-	includePendingL1s := new(bool)
-	*includePendingL1s = false
-	includePendingL1s, err = stringToBool("includePendingL1s", historyTxsFilters.IncludePendingTxs, includePendingL1s)
-	if err != nil {
-		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetTxsAPIRequest{
 		EthAddr:           addr,
 		FromEthAddr:       fromAddr,
@@ -607,9 +395,9 @@ func parseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) 
 		Idx:               idx,
 		FromIdx:           fromIdx,
 		ToIdx:             toIdx,
-		BatchNum:          batchNum,
+		BatchNum:          historyTxsFilters.BatchNum,
 		TxType:            txType,
-		IncludePendingL1s: includePendingL1s,
+		IncludePendingL1s: historyTxsFilters.IncludePendingTxs,
 		FromItem:          historyTxsFilters.FromItem,
 		Limit:             historyTxsFilters.Limit,
 		Order:             *historyTxsFilters.Order,
@@ -629,9 +417,9 @@ func parseBatchFilter(c *gin.Context) (*uint, error) {
 }
 
 type batchesFilters struct {
-	MinBatchNum string `form:"minBatchNum"`
-	MaxBatchNum string `form:"maxBatchNum"`
-	SlotNum     string `form:"slotNum"`
+	MinBatchNum *uint  `form:"minBatchNum"`
+	MaxBatchNum *uint  `form:"maxBatchNum"`
+	SlotNum     *uint  `form:"slotNum"`
 	ForgerAddr  string `form:"forgerAddr"`
 
 	FromItem *uint   `form:"fromItem"`
@@ -641,23 +429,8 @@ type batchesFilters struct {
 
 func parseBatchesFilter(c *gin.Context) (historydb.GetBatchesAPIRequest, error) {
 	var batchesFilters batchesFilters
-	if err := c.BindQuery(&batchesFilters); err != nil {
+	if err := c.ShouldBindQuery(&batchesFilters); err != nil {
 		return historydb.GetBatchesAPIRequest{}, err
-	}
-
-	minBatchNum, err := stringToUint(batchesFilters.MinBatchNum, "minBatchNum", nil, 0, maxUint32)
-	if err != nil {
-		return historydb.GetBatchesAPIRequest{}, tracerr.Wrap(err)
-	}
-
-	maxBatchNum, err := stringToUint(batchesFilters.MaxBatchNum, "maxBatchNum", nil, 0, maxUint32)
-	if err != nil {
-		return historydb.GetBatchesAPIRequest{}, tracerr.Wrap(err)
-	}
-
-	slotNum, err := stringToUint(batchesFilters.SlotNum, "slotNum", nil, 0, maxUint32)
-	if err != nil {
-		return historydb.GetBatchesAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	addr, err := parseEthAddr(batchesFilters.ForgerAddr)
@@ -666,95 +439,14 @@ func parseBatchesFilter(c *gin.Context) (historydb.GetBatchesAPIRequest, error) 
 	}
 
 	return historydb.GetBatchesAPIRequest{
-		MinBatchNum: minBatchNum,
-		MaxBatchNum: maxBatchNum,
-		SlotNum:     slotNum,
+		MinBatchNum: batchesFilters.MinBatchNum,
+		MaxBatchNum: batchesFilters.MaxBatchNum,
+		SlotNum:     batchesFilters.SlotNum,
 		ForgerAddr:  addr,
 		FromItem:    batchesFilters.FromItem,
 		Limit:       batchesFilters.Limit,
 		Order:       *batchesFilters.Order,
 	}, nil
-}
-
-func parseTxsFilters(c querier) (txsFilters, error) {
-	// TokenID
-	tid, err := parseQueryUint("tokenId", nil, 0, maxUint32, c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	var tokenID *common.TokenID
-	if tid != nil {
-		tokenID = new(common.TokenID)
-		*tokenID = common.TokenID(*tid)
-	}
-	// Hez Eth addr
-	addr, err := parseQueryHezEthAddr(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	fromAddr, err := parseQueryFromHezEthAddr(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	toAddr, err := parseQueryToHezEth(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	// BJJ
-	bjj, err := parseQueryBJJ(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	fromBjj, err := parseQueryFromBJJ(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	toBjj, err := parseQueryToBJJ(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	isAddrNotNil := addr != nil || toAddr != nil || fromAddr != nil
-	isBjjNotNil := bjj != nil || toBjj != nil || fromBjj != nil
-
-	if isAddrNotNil && isBjjNotNil {
-		return txsFilters{}, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
-	}
-	// Idx
-	idx, err := parseIdx(c)
-	if err != nil {
-		return txsFilters{}, err
-	}
-	// from Idx
-	fromIdx, err := parseFromIdx(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	// to Idx
-	toIdx, err := parseToIdx(c)
-	if err != nil {
-		return txsFilters{}, tracerr.Wrap(err)
-	}
-	if (fromIdx != nil || toIdx != nil) && idx != nil {
-		return txsFilters{}, tracerr.Wrap(errors.New("accountIndex is incompatible with fromAccountIndex or toAccountIndex"))
-	}
-	isIdxNotNil := fromIdx != nil || toIdx != nil || idx != nil
-
-	if isIdxNotNil &&
-		(isAddrNotNil || isBjjNotNil || tokenID != nil) {
-		return txsFilters{}, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
-	}
-	return txsFilters{
-		tokenID:  tokenID,
-		addr:     addr,
-		fromAddr: fromAddr,
-		toAddr:   toAddr,
-		bjj:      bjj,
-		fromBjj:  fromBjj,
-		toBjj:    toBjj,
-		idx:      idx,
-		fromIdx:  fromIdx,
-		toIdx:    toIdx,
-	}, err
 }
 
 type tokenFilter struct {
@@ -813,30 +505,6 @@ func parseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
 	}, nil
 }
 
-func parseTokenFilters(c querier) ([]common.TokenID, []string, string, error) {
-	idsStr := c.Query("ids")
-	symbolsStr := c.Query("symbols")
-	nameStr := c.Query("name")
-	var tokensIDs []common.TokenID
-	if idsStr != "" {
-		ids := strings.Split(idsStr, ",")
-
-		for _, id := range ids {
-			idUint, err := strconv.Atoi(id)
-			if err != nil {
-				return nil, nil, "", tracerr.Wrap(err)
-			}
-			tokenID := common.TokenID(idUint)
-			tokensIDs = append(tokensIDs, tokenID)
-		}
-	}
-	var symbols []string
-	if symbolsStr != "" {
-		symbols = strings.Split(symbolsStr, ",")
-	}
-	return tokensIDs, symbols, nameStr, nil
-}
-
 type currencyFilter struct {
 	Symbol string `uri:"symbol" binding:"required"`
 }
@@ -865,17 +533,8 @@ func parseCurrenciesFilters(c *gin.Context) ([]string, error) {
 	return symbols, nil
 }
 
-func parseCurrencyFilters(c querier) ([]string, error) {
-	symbolsStr := c.Query("symbols")
-	var symbols []string
-	if symbolsStr != "" {
-		symbols = strings.Split(symbolsStr, "|")
-	}
-	return symbols, nil
-}
-
 type bidsFilters struct {
-	SlotNum    string `form:"slotNum"`
+	SlotNum    *int64 `form:"slotNum" binding:"omitempty,min=0"`
 	BidderAddr string `form:"bidderAddr"`
 
 	FromItem *uint   `form:"fromItem"`
@@ -888,21 +547,17 @@ func parseBidsFilters(c *gin.Context) (historydb.GetBidsAPIRequest, error) {
 	if err := c.BindQuery(&bidsFilters); err != nil {
 		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(err)
 	}
-	slotNum, err := stringToInt64(bidsFilters.SlotNum, "slotNum", nil, 0, maxInt64)
-	if err != nil {
-		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(err)
-	}
 	bidderAddress, err := parseEthAddr(bidsFilters.BidderAddr)
 	if err != nil {
 		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	if slotNum == nil && bidderAddress == nil {
+	if bidsFilters.SlotNum == nil && bidderAddress == nil {
 		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(errors.New("It is necessary to add at least one filter: slotNum or/and bidderAddr"))
 	}
 
 	return historydb.GetBidsAPIRequest{
-		SlotNum:    slotNum,
+		SlotNum:    bidsFilters.SlotNum,
 		BidderAddr: bidderAddress,
 		FromItem:   bidsFilters.FromItem,
 		Order:      *bidsFilters.Order,
@@ -910,35 +565,11 @@ func parseBidsFilters(c *gin.Context) (historydb.GetBidsAPIRequest, error) {
 	}, nil
 }
 
-func parseBidFilters(c querier) (*int64, *ethCommon.Address, error) {
-	slotNum, err := parseQueryInt64("slotNum", nil, 0, maxInt64, c)
-	if err != nil {
-		return nil, nil, tracerr.Wrap(err)
-	}
-	bidderAddr, err := parseQueryEthAddr("bidderAddr", c)
-	if err != nil {
-		return nil, nil, tracerr.Wrap(err)
-	}
-	return slotNum, bidderAddr, nil
-}
-
-type slotFilter struct {
-	SlotNum *uint `uri:"slotNum" binding:"required"`
-}
-
-func parseSlotFilter(c *gin.Context) (*uint, error) {
-	var slotFilter slotFilter
-	if err := c.ShouldBindUri(&slotFilter); err != nil {
-		return nil, err
-	}
-	return slotFilter.SlotNum, nil
-}
-
 type slotsFilters struct {
-	MinSlotNum           string `form:"minSlotNum"`
-	MaxSlotNum           string `form:"maxSlotNum"`
+	MinSlotNum           *int64 `form:"minSlotNum" binding:"omitempty,min=0"`
+	MaxSlotNum           *int64 `form:"maxSlotNum" binding:"omitempty,min=0"`
 	WonByEthereumAddress string `form:"wonByEthereumAddress"`
-	FinishedAuction      string `form:"finishedAuction"`
+	FinishedAuction      *bool  `form:"finishedAuction"`
 
 	FromItem *uint   `form:"fromItem"`
 	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
@@ -951,54 +582,20 @@ func parseSlotsFilters(c *gin.Context) (historydb.GetBestBidsAPIRequest, error) 
 		return historydb.GetBestBidsAPIRequest{}, err
 	}
 
-	minSlotNum, err := stringToInt64(slotsFilters.MinSlotNum, "minSlotNum", nil, 0, maxInt64)
-	if err != nil {
-		return historydb.GetBestBidsAPIRequest{}, tracerr.Wrap(err)
-	}
-
-	maxSlotNum, err := stringToInt64(slotsFilters.MaxSlotNum, "maxSlotNum", nil, 0, maxInt64)
-	if err != nil {
-		return historydb.GetBestBidsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	wonByEthereumAddress, err := parseEthAddr(slotsFilters.WonByEthereumAddress)
 	if err != nil {
 		return historydb.GetBestBidsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	finishedAuction, err := stringToBool("finishedAuction", slotsFilters.FinishedAuction, nil)
-	if err != nil {
-		return historydb.GetBestBidsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetBestBidsAPIRequest{
-		MinSlotNum:      minSlotNum,
-		MaxSlotNum:      maxSlotNum,
+		MinSlotNum:      slotsFilters.MinSlotNum,
+		MaxSlotNum:      slotsFilters.MaxSlotNum,
 		BidderAddr:      wonByEthereumAddress,
-		FinishedAuction: finishedAuction,
+		FinishedAuction: slotsFilters.FinishedAuction,
 		FromItem:        slotsFilters.FromItem,
 		Order:           *slotsFilters.Order,
 		Limit:           slotsFilters.Limit,
 	}, nil
-}
-func parseSlotFilters(c querier) (*int64, *int64, *ethCommon.Address, *bool, error) {
-	minSlotNum, err := parseQueryInt64("minSlotNum", nil, 0, maxInt64, c)
-	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
-	}
-	maxSlotNum, err := parseQueryInt64("maxSlotNum", nil, 0, maxInt64, c)
-	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
-	}
-	wonByEthereumAddress, err := parseQueryEthAddr("wonByEthereumAddress", c)
-	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
-	}
-	finishedAuction, err := parseQueryBool("finishedAuction", nil, c)
-	if err != nil {
-		return nil, nil, nil, nil, tracerr.Wrap(err)
-	}
-	return minSlotNum, maxSlotNum, wonByEthereumAddress, finishedAuction, nil
 }
 
 type coordinatorsFilters struct {
@@ -1098,74 +695,9 @@ func parseAccountsFilters(c *gin.Context) (historydb.GetAccountsAPIRequest, erro
 	}, nil
 }
 
-func parseAccountFilters(c querier) ([]common.TokenID, *ethCommon.Address, *babyjub.PublicKeyComp, error) {
-	// TokenID
-	idsStr := c.Query("tokenIds")
-	var tokenIDs []common.TokenID
-	if idsStr != "" {
-		ids := strings.Split(idsStr, ",")
-
-		for _, id := range ids {
-			idUint, err := strconv.Atoi(id)
-			if err != nil {
-				return nil, nil, nil, tracerr.Wrap(err)
-			}
-			tokenID := common.TokenID(idUint)
-			tokenIDs = append(tokenIDs, tokenID)
-		}
-	}
-	// Hez Eth addr
-	addr, err := parseQueryHezEthAddr(c)
-	if err != nil {
-		return nil, nil, nil, tracerr.Wrap(err)
-	}
-	// BJJ
-	bjj, err := parseQueryBJJ(c)
-	if err != nil {
-		return nil, nil, nil, tracerr.Wrap(err)
-	}
-	if addr != nil && bjj != nil {
-		return nil, nil, nil, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
-	}
-
-	return tokenIDs, addr, bjj, nil
-}
-
 // Param parsers
-
 type paramer interface {
 	Param(string) string
-}
-
-func parseParamTxID(c paramer) (common.TxID, error) {
-	const name = "id"
-	txIDStr := c.Param(name)
-	if txIDStr == "" {
-		return common.TxID{}, tracerr.Wrap(fmt.Errorf("%s is required", name))
-	}
-	txID, err := common.NewTxIDFromString(txIDStr)
-	if err != nil {
-		return common.TxID{}, tracerr.Wrap(fmt.Errorf("invalid %s", name))
-	}
-	return txID, nil
-}
-
-func parseParamIdx(c paramer) (*common.Idx, error) {
-	const name = "accountIndex"
-	idxStr := c.Param(name)
-	return stringToIdx(idxStr, name)
-}
-
-// nolint reason: res may be not overwritten
-func parseParamUint(name string, dflt *uint, min, max uint, c paramer) (*uint, error) { //nolint:SA4009
-	str := c.Param(name)
-	return stringToUint(str, name, dflt, min, max)
-}
-
-// nolint reason: res may be not overwritten
-func parseParamInt64(name string, dflt *int64, min, max int64, c paramer) (*int64, error) { //nolint:SA4009
-	str := c.Param(name)
-	return stringToInt64(str, name, dflt, min, max)
 }
 
 func stringToIdx(idxStr, name string) (*common.Idx, error) {
@@ -1182,34 +714,6 @@ func stringToIdx(idxStr, name string) (*common.Idx, error) {
 	idxInt, err := strconv.Atoi(splitted[2])
 	idx := common.Idx(idxInt)
 	return &idx, tracerr.Wrap(err)
-}
-
-func stringToUint(uintStr, name string, dflt *uint, min, max uint) (*uint, error) {
-	if uintStr != "" {
-		resInt, err := strconv.Atoi(uintStr)
-		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
-			return nil, tracerr.Wrap(fmt.Errorf(
-				"Invalid %s. Must be an integer within the range [%d, %d]",
-				name, min, max))
-		}
-		res := uint(resInt)
-		return &res, nil
-	}
-	return dflt, nil
-}
-
-func stringToInt64(uintStr, name string, dflt *int64, min, max int64) (*int64, error) {
-	if uintStr != "" {
-		resInt, err := strconv.Atoi(uintStr)
-		if err != nil || resInt < 0 || resInt < int(min) || resInt > int(max) {
-			return nil, tracerr.Wrap(fmt.Errorf(
-				"Invalid %s. Must be an integer within the range [%d, %d]",
-				name, min, max))
-		}
-		res := int64(resInt)
-		return &res, nil
-	}
-	return dflt, nil
 }
 
 func hezStringToEthAddr(addrStr, name string) (*ethCommon.Address, error) {
@@ -1262,11 +766,6 @@ func hezStringToBJJ(bjjStr, name string) (*babyjub.PublicKeyComp, error) {
 	return &bjjComp, nil
 }
 
-func parseQueryEthAddr(name string, c querier) (*ethCommon.Address, error) {
-	addrStr := c.Query(name)
-	return parseEthAddr(addrStr)
-}
-
 func parseEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 	if ethAddrStr == "" {
 		return nil, nil
@@ -1276,10 +775,16 @@ func parseEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 	return &addr, tracerr.Wrap(err)
 }
 
-func parseParamHezEthAddr(c paramer) (*ethCommon.Address, error) {
-	const name = "hezEthereumAddress"
-	addrStr := c.Param(name)
-	return hezStringToEthAddr(addrStr, name)
+type getAccountCreationAuthFilter struct {
+	Addr string `form:"hezEthereumAddress"`
+}
+
+func parseGetAccountCreationAuthFilter(c *gin.Context) (*ethCommon.Address, error) {
+	var getAccountCreationAuthFilter getAccountCreationAuthFilter
+	if err := c.ShouldBindQuery(&getAccountCreationAuthFilter); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return hezStringToEthAddr(getAccountCreationAuthFilter.Addr, "hezEthereumAddress")
 }
 
 type errorMsg struct {

@@ -41,7 +41,7 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 
 func (a *API) getAccountCreationAuth(c *gin.Context) {
 	// Get hezEthereumAddress
-	addr, err := parseParamHezEthAddr(c)
+	addr, err := parseGetAccountCreationAuthFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
