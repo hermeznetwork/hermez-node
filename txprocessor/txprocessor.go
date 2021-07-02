@@ -495,7 +495,9 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 		if tp.zki != nil {
 			tp.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
-			tp.zki.ISStateRootFee[iFee] = tp.s.MT.Root().BigInt()
+			if iFee < len(tp.zki.ISStateRootFee) {
+				tp.zki.ISStateRootFee[iFee] = tp.s.MT.Root().BigInt()
+			}
 		}
 		iFee++
 	}
@@ -1176,9 +1178,6 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 
 		tp.zki.AuxFromIdx[tp.i] = auxFromIdx.BigInt()
 		tp.zki.NewAccount[tp.i] = big.NewInt(1)
-
-		// intermediate states
-		tp.zki.ISOnChain[tp.i] = big.NewInt(1)
 	}
 	var accReceiver *common.Account
 	if tx.ToIdx == auxFromIdx {
@@ -1355,7 +1354,6 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			}
 			tp.zki.OldKey2[tp.i] = p.OldKey.BigInt()
 			tp.zki.OldValue2[tp.i] = p.OldValue.BigInt()
-			tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
 		}
 		return exitAccount, true, nil
 	} else if err != nil {
@@ -1393,7 +1391,6 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		tp.zki.OldKey2[tp.i] = p.OldKey.BigInt()
 		tp.zki.OldValue2[tp.i] = p.OldValue.BigInt()
-		tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
 	}
 
 	return exitAccount, false, nil
