@@ -10,7 +10,6 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/tracerr"
@@ -21,36 +20,6 @@ import (
 
 type querier interface {
 	Query(string) string
-}
-
-func parsePagination(c querier) (fromItem *uint, order string, limit *uint, err error) {
-	// FromItem
-	fromItem, err = parseQueryUint("fromItem", nil, 0, maxUint32, c)
-	if err != nil {
-		return nil, "", nil, tracerr.Wrap(err)
-	}
-	// Order
-	order = dfltOrder
-	const orderName = "order"
-	orderStr := c.Query(orderName)
-	if orderStr != "" && !(orderStr == db.OrderAsc || db.OrderDesc == orderStr) {
-		return nil, "", nil, tracerr.Wrap(errors.New(
-			"order must have the value " + db.OrderAsc + " or " + db.OrderDesc,
-		))
-	}
-	if orderStr == db.OrderAsc {
-		order = db.OrderAsc
-	} else if orderStr == db.OrderDesc {
-		order = db.OrderDesc
-	}
-	// Limit
-	limit = new(uint)
-	*limit = dfltLimit
-	limit, err = parseQueryUint("limit", limit, 1, maxLimit, c)
-	if err != nil {
-		return nil, "", nil, tracerr.Wrap(err)
-	}
-	return fromItem, order, limit, nil
 }
 
 // nolint reason: res may be not overwritten
@@ -272,9 +241,9 @@ type exitsFilters struct {
 	BatchNum             string `form:"batchNum"`
 	OnlyPendingWithdraws string `form:"onlyPendingWithdraws"`
 
-	FromItem string `form:"fromItem"`
-	Order    string `form:"order"`
-	Limit    string `form:"limit"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseExitsFilters(c *gin.Context) (historydb.GetExitsAPIRequest, error) {
@@ -328,11 +297,6 @@ func parseExitsFilters(c *gin.Context) (historydb.GetExitsAPIRequest, error) {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(exitsFilters.FromItem, exitsFilters.Order, exitsFilters.Limit)
-	if err != nil {
-		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetExitsAPIRequest{
 		EthAddr:              addr,
 		Bjj:                  bjj,
@@ -340,9 +304,9 @@ func parseExitsFilters(c *gin.Context) (historydb.GetExitsAPIRequest, error) {
 		Idx:                  idx,
 		BatchNum:             batchNum,
 		OnlyPendingWithdraws: onlyPendingWithdraws,
-		FromItem:             fromItem,
-		Limit:                limit,
-		Order:                order,
+		FromItem:             exitsFilters.FromItem,
+		Limit:                exitsFilters.Limit,
+		Order:                *exitsFilters.Order,
 	}, nil
 }
 
@@ -389,9 +353,9 @@ type poolTxsFilter struct {
 	TxType                 string `form:"type"`
 	State                  string `form:"state"`
 
-	FromItem string `form:"fromItem"`
-	Order    string `form:"order"`
-	Limit    string `form:"limit"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parsePoolTxsFilters(c *gin.Context) (l2db.GetPoolTxsAPIRequest, error) {
@@ -481,11 +445,6 @@ func parsePoolTxsFilters(c *gin.Context) (l2db.GetPoolTxsAPIRequest, error) {
 		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(poolTxsFilter.FromItem, poolTxsFilter.Order, poolTxsFilter.Limit)
-	if err != nil {
-		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return l2db.GetPoolTxsAPIRequest{
 		EthAddr:     addr,
 		FromEthAddr: fromAddr,
@@ -500,9 +459,9 @@ func parsePoolTxsFilters(c *gin.Context) (l2db.GetPoolTxsAPIRequest, error) {
 		ToIdx:       toIdx,
 		State:       txState,
 
-		FromItem: fromItem,
-		Limit:    limit,
-		Order:    order,
+		FromItem: poolTxsFilter.FromItem,
+		Limit:    poolTxsFilter.Limit,
+		Order:    *poolTxsFilter.Order,
 	}, nil
 }
 
@@ -537,9 +496,9 @@ type historyTxsFilters struct {
 	TxType              string `form:"type"`
 	IncludePendingTxs   string `form:"includePendingL1s"`
 
-	FromItem string `form:"fromItem"`
-	Order    string `form:"order"`
-	Limit    string `form:"limit"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) {
@@ -637,11 +596,6 @@ func parseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) 
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(historyTxsFilters.FromItem, historyTxsFilters.Order, historyTxsFilters.Limit)
-	if err != nil {
-		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetTxsAPIRequest{
 		EthAddr:           addr,
 		FromEthAddr:       fromAddr,
@@ -656,9 +610,9 @@ func parseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) 
 		BatchNum:          batchNum,
 		TxType:            txType,
 		IncludePendingL1s: includePendingL1s,
-		FromItem:          fromItem,
-		Limit:             limit,
-		Order:             order,
+		FromItem:          historyTxsFilters.FromItem,
+		Limit:             historyTxsFilters.Limit,
+		Order:             *historyTxsFilters.Order,
 	}, nil
 }
 
@@ -680,9 +634,9 @@ type batchesFilters struct {
 	SlotNum     string `form:"slotNum"`
 	ForgerAddr  string `form:"forgerAddr"`
 
-	FromItem string `form:"fromItem"`
-	Limit    string `form:"limit"`
-	Order    string `form:"order"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseBatchesFilter(c *gin.Context) (historydb.GetBatchesAPIRequest, error) {
@@ -711,46 +665,15 @@ func parseBatchesFilter(c *gin.Context) (historydb.GetBatchesAPIRequest, error) 
 		return historydb.GetBatchesAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(batchesFilters.FromItem, batchesFilters.Order, batchesFilters.Limit)
-	if err != nil {
-		return historydb.GetBatchesAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetBatchesAPIRequest{
 		MinBatchNum: minBatchNum,
 		MaxBatchNum: maxBatchNum,
 		SlotNum:     slotNum,
 		ForgerAddr:  addr,
-		FromItem:    fromItem,
-		Limit:       limit,
-		Order:       order,
+		FromItem:    batchesFilters.FromItem,
+		Limit:       batchesFilters.Limit,
+		Order:       *batchesFilters.Order,
 	}, nil
-}
-
-func parseFiltersPagination(fromItemStr, order, limitStr string) (*uint, string, *uint, error) {
-	fromItem, err := stringToUint(fromItemStr, "fromItem", nil, 0, maxUint32)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	if order != "" && !(order == db.OrderAsc || db.OrderDesc == order) {
-		return nil, "", nil, errors.New(
-			"order must have the value " + db.OrderAsc + " or " + db.OrderDesc,
-		)
-	}
-
-	if order == "" {
-		order = dfltOrder
-	}
-
-	limit := new(uint)
-	*limit = dfltLimit
-	limit, err = stringToUint(limitStr, "limit", limit, 1, maxLimit)
-	if err != nil {
-		return nil, "", nil, tracerr.Wrap(err)
-	}
-
-	return fromItem, order, limit, nil
 }
 
 func parseTxsFilters(c querier) (txsFilters, error) {
@@ -851,9 +774,9 @@ type tokensFilters struct {
 	Symbols string `form:"symbols"`
 	Name    string `form:"name"`
 
-	FromItem string `form:"fromItem"`
-	Order    string `form:"order"`
-	Limit    string `form:"limit"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
@@ -880,18 +803,13 @@ func parseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
 		symbols = strings.Split(tokensFilters.Symbols, ",")
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(tokensFilters.FromItem, tokensFilters.Order, tokensFilters.Limit)
-	if err != nil {
-		return historydb.GetTokensAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetTokensAPIRequest{
 		Ids:      tokensIDs,
 		Symbols:  symbols,
 		Name:     tokensFilters.Name,
-		FromItem: fromItem,
-		Limit:    limit,
-		Order:    order,
+		FromItem: tokensFilters.FromItem,
+		Limit:    tokensFilters.Limit,
+		Order:    *tokensFilters.Order,
 	}, nil
 }
 
@@ -960,9 +878,9 @@ type bidsFilters struct {
 	SlotNum    string `form:"slotNum"`
 	BidderAddr string `form:"bidderAddr"`
 
-	FromItem string `form:"fromItem"`
-	Order    string `form:"order"`
-	Limit    string `form:"limit"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseBidsFilters(c *gin.Context) (historydb.GetBidsAPIRequest, error) {
@@ -983,17 +901,12 @@ func parseBidsFilters(c *gin.Context) (historydb.GetBidsAPIRequest, error) {
 		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(errors.New("It is necessary to add at least one filter: slotNum or/and bidderAddr"))
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(bidsFilters.FromItem, bidsFilters.Order, bidsFilters.Limit)
-	if err != nil {
-		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetBidsAPIRequest{
 		SlotNum:    slotNum,
 		BidderAddr: bidderAddress,
-		FromItem:   fromItem,
-		Order:      order,
-		Limit:      limit,
+		FromItem:   bidsFilters.FromItem,
+		Order:      *bidsFilters.Order,
+		Limit:      bidsFilters.Limit,
 	}, nil
 }
 
@@ -1027,9 +940,9 @@ type slotsFilters struct {
 	WonByEthereumAddress string `form:"wonByEthereumAddress"`
 	FinishedAuction      string `form:"finishedAuction"`
 
-	FromItem string `form:"fromItem"`
-	Limit    string `form:"limit"`
-	Order    string `form:"order"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseSlotsFilters(c *gin.Context) (historydb.GetBestBidsAPIRequest, error) {
@@ -1058,19 +971,14 @@ func parseSlotsFilters(c *gin.Context) (historydb.GetBestBidsAPIRequest, error) 
 		return historydb.GetBestBidsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(slotsFilters.FromItem, slotsFilters.Order, slotsFilters.Limit)
-	if err != nil {
-		return historydb.GetBestBidsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetBestBidsAPIRequest{
 		MinSlotNum:      minSlotNum,
 		MaxSlotNum:      maxSlotNum,
 		BidderAddr:      wonByEthereumAddress,
 		FinishedAuction: finishedAuction,
-		FromItem:        fromItem,
-		Order:           order,
-		Limit:           limit,
+		FromItem:        slotsFilters.FromItem,
+		Order:           *slotsFilters.Order,
+		Limit:           slotsFilters.Limit,
 	}, nil
 }
 func parseSlotFilters(c querier) (*int64, *int64, *ethCommon.Address, *bool, error) {
@@ -1097,9 +1005,9 @@ type coordinatorsFilters struct {
 	BidderAddr string `form:"bidderAddr"`
 	ForgerAddr string `form:"forgerAddr"`
 
-	FromItem string `form:"fromItem"`
-	Order    string `form:"order"`
-	Limit    string `form:"limit"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseCoordinatorsFilters(c *gin.Context) (historydb.GetCoordinatorsAPIRequest, error) {
@@ -1116,17 +1024,12 @@ func parseCoordinatorsFilters(c *gin.Context) (historydb.GetCoordinatorsAPIReque
 		return historydb.GetCoordinatorsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(coordinatorsFilters.FromItem, coordinatorsFilters.Order, coordinatorsFilters.Limit)
-	if err != nil {
-		return historydb.GetCoordinatorsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetCoordinatorsAPIRequest{
 		BidderAddr: bidderAddr,
 		ForgerAddr: forgerAddr,
-		FromItem:   fromItem,
-		Limit:      limit,
-		Order:      order,
+		FromItem:   coordinatorsFilters.FromItem,
+		Limit:      coordinatorsFilters.Limit,
+		Order:      *coordinatorsFilters.Order,
 	}, nil
 }
 
@@ -1147,9 +1050,9 @@ type accountsFilter struct {
 	Addr string `form:"hezEthereumAddress"`
 	Bjj  string `form:"BJJ"`
 
-	FromItem string `form:"fromItem"`
-	Order    string `form:"order"`
-	Limit    string `form:"limit"`
+	FromItem *uint   `form:"fromItem"`
+	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`
+	Limit    *uint   `form:"limit,default=20" binding:"omitempty,min=1,max=2049"`
 }
 
 func parseAccountsFilters(c *gin.Context) (historydb.GetAccountsAPIRequest, error) {
@@ -1185,18 +1088,13 @@ func parseAccountsFilters(c *gin.Context) (historydb.GetAccountsAPIRequest, erro
 		return historydb.GetAccountsAPIRequest{}, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
 	}
 
-	fromItem, order, limit, err := parseFiltersPagination(accountsFilter.FromItem, accountsFilter.Order, accountsFilter.Limit)
-	if err != nil {
-		return historydb.GetAccountsAPIRequest{}, tracerr.Wrap(err)
-	}
-
 	return historydb.GetAccountsAPIRequest{
 		TokenIDs: tokenIDs,
 		EthAddr:  addr,
 		Bjj:      bjj,
-		FromItem: fromItem,
-		Order:    order,
-		Limit:    limit,
+		FromItem: accountsFilter.FromItem,
+		Order:    *accountsFilter.Order,
+		Limit:    accountsFilter.Limit,
 	}, nil
 }
 

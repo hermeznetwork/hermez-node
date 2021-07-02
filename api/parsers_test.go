@@ -116,52 +116,6 @@ func TestParseQueryBool(t *testing.T) {
 	assert.True(t, *res)
 }
 
-func TestParsePagination(t *testing.T) {
-	c := &queryParser{}
-	c.m = make(map[string]string)
-	// fromItem out of range
-	c.m["fromItem"] = "-1"
-	_, _, _, err := parsePagination(c)
-	assert.Error(t, err)
-	c.m["fromItem"] = strconv.Itoa(maxUint32 + 1)
-	_, _, _, err = parsePagination(c)
-	assert.Error(t, err)
-	c.m["fromItem"] = ""
-	// Bad order
-	c.m["order"] = "0"
-	_, _, _, err = parsePagination(c)
-	assert.Error(t, err)
-	c.m["order"] = strconv.Itoa(int(maxLimit) + 1)
-	_, _, _, err = parsePagination(c)
-	assert.Error(t, err)
-	// Default
-	c.m["fromItem"] = ""
-	c.m["order"] = ""
-	c.m["limit"] = ""
-	fromItem, order, limit, err := parsePagination(c)
-	assert.NoError(t, err)
-	assert.Nil(t, fromItem)
-	assert.Equal(t, dfltOrder, order)
-	assert.Equal(t, dfltLimit, *limit)
-	// Correct
-	c.m["fromItem"] = ""
-	c.m["order"] = "ASC"
-	c.m["limit"] = "25"
-	fromItem, order, limit, err = parsePagination(c)
-	assert.NoError(t, err)
-	assert.Nil(t, fromItem)
-	assert.Equal(t, "ASC", order)
-	assert.Equal(t, 25, int(*limit))
-	c.m["fromItem"] = "25"
-	c.m["order"] = "DESC"
-	c.m["limit"] = "50"
-	fromItem, order, limit, err = parsePagination(c)
-	assert.NoError(t, err)
-	assert.Equal(t, 25, int(*fromItem))
-	assert.Equal(t, "DESC", order)
-	assert.Equal(t, 50, int(*limit))
-}
-
 func TestParseQueryHezEthAddr(t *testing.T) {
 	name := "hezEthereumAddress"
 	c := &queryParser{}
