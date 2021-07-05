@@ -11,6 +11,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+// StringToTxType converts string to transaction type
 func StringToTxType(txType string) (*TxType, error) {
 	if txType == "" {
 		return nil, nil
@@ -29,6 +30,7 @@ func StringToTxType(txType string) (*TxType, error) {
 	}
 }
 
+// StringToL2TxState converts string to l2 transaction state
 func StringToL2TxState(txState string) (*PoolL2TxState, error) {
 	if txState == "" {
 		return nil, nil
@@ -45,6 +47,7 @@ func StringToL2TxState(txState string) (*PoolL2TxState, error) {
 	}
 }
 
+// StringToIdx converts string to account index
 func StringToIdx(idxStr, name string) (*Idx, error) {
 	if idxStr == "" {
 		return nil, nil
@@ -61,6 +64,7 @@ func StringToIdx(idxStr, name string) (*Idx, error) {
 	return &idx, tracerr.Wrap(err)
 }
 
+// HezStringToEthAddr converts hez ethereum address to ethereum address
 func HezStringToEthAddr(addrStr, name string) (*ethCommon.Address, error) {
 	if addrStr == "" {
 		return nil, nil
@@ -75,6 +79,7 @@ func HezStringToEthAddr(addrStr, name string) (*ethCommon.Address, error) {
 	return &addr, tracerr.Wrap(err)
 }
 
+// HezStringToBJJ converts hez ethereum address string to bjj
 func HezStringToBJJ(bjjStr, name string) (*babyjub.PublicKeyComp, error) {
 	if bjjStr == "" {
 		return nil, nil
@@ -111,6 +116,7 @@ func HezStringToBJJ(bjjStr, name string) (*babyjub.PublicKeyComp, error) {
 	return &bjjComp, nil
 }
 
+// StringToEthAddr converts string to ethereum address
 func StringToEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 	if ethAddrStr == "" {
 		return nil, nil
@@ -120,6 +126,7 @@ func StringToEthAddr(ethAddrStr string) (*ethCommon.Address, error) {
 	return &addr, tracerr.Wrap(err)
 }
 
+// BjjToString converts baby jub jub public key to string
 func BjjToString(bjj babyjub.PublicKeyComp) string {
 	pkComp := [32]byte(bjj)
 	sum := pkComp[0]
@@ -130,10 +137,12 @@ func BjjToString(bjj babyjub.PublicKeyComp) string {
 	return "hez:" + base64.RawURLEncoding.EncodeToString(bjjSum)
 }
 
+// EthAddrToHez converts ethereum address to hermez ethereum address
 func EthAddrToHez(addr ethCommon.Address) string {
 	return "hez:" + addr.String()
 }
 
+// IdxToHez converts account index to hez account index with token symbol
 func IdxToHez(idx Idx, tokenSymbol string) string {
 	return "hez:" + tokenSymbol + ":" + strconv.Itoa(int(idx))
 }

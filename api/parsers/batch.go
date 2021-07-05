@@ -11,6 +11,7 @@ type batchFilter struct {
 	BatchNum uint `uri:"batchNum" binding:"required"`
 }
 
+// ParseBatchFilter parsing /batches request to the batch num
 func ParseBatchFilter(c *gin.Context) (*uint, error) {
 	var batchFilter batchFilter
 	if err := c.ShouldBindUri(&batchFilter); err != nil {
@@ -28,6 +29,7 @@ type batchesFilters struct {
 	Pagination
 }
 
+// ParseBatchesFilter parsing batches filter to the GetBatchesAPIRequest
 func ParseBatchesFilter(c *gin.Context) (historydb.GetBatchesAPIRequest, error) {
 	var batchesFilters batchesFilters
 	if err := c.ShouldBindQuery(&batchesFilters); err != nil {

@@ -14,6 +14,7 @@ type coordinatorsFilters struct {
 	Pagination
 }
 
+// ParseCoordinatorsFilters func for parsing coordinator filters from the /coordinators request
 func ParseCoordinatorsFilters(c *gin.Context) (historydb.GetCoordinatorsAPIRequest, error) {
 	var coordinatorsFilters coordinatorsFilters
 	if err := c.BindQuery(&coordinatorsFilters); err != nil {

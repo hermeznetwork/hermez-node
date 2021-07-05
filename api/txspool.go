@@ -57,13 +57,13 @@ func (a *API) getPoolTx(c *gin.Context) {
 }
 
 func (a *API) getPoolTxs(c *gin.Context) {
-	txApiRequest, err := parsers.ParsePoolTxsFilters(c, a.validate)
+	txAPIRequest, err := parsers.ParsePoolTxsFilters(c, a.validate)
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
 	// Fetch txs from l2DB
-	txs, pendingItems, err := a.l2.GetPoolTxsAPI(txApiRequest)
+	txs, pendingItems, err := a.l2.GetPoolTxsAPI(txAPIRequest)
 	if err != nil {
 		retSQLErr(err, c)
 		return

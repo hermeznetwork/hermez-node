@@ -13,6 +13,7 @@ type exitFilter struct {
 	AccountIndex string `uri:"accountIndex" binding:"required"`
 }
 
+// ParseExitFilter func parsing exit filter from the /exits request to the accountIndex and batchNum
 func ParseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
 	var exitFilter exitFilter
 	if err := c.ShouldBindUri(&exitFilter); err != nil {
@@ -27,6 +28,7 @@ func ParseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
 	return &exitFilter.BatchNum, idx, nil
 }
 
+// ExitsFilters struct for holding exits filters
 type ExitsFilters struct {
 	TokenID              *uint  `form:"tokenId"`
 	Addr                 string `form:"hezEthereumAddress"`
@@ -38,6 +40,7 @@ type ExitsFilters struct {
 	Pagination
 }
 
+// ExitsFiltersStructValidation func validates ExitsFilters
 func ExitsFiltersStructValidation(sl validator.StructLevel) {
 	ef := sl.Current().Interface().(ExitsFilters)
 
@@ -54,6 +57,7 @@ func ExitsFiltersStructValidation(sl validator.StructLevel) {
 	}
 }
 
+// ParseExitsFilters func parsing exits filters
 func ParseExitsFilters(c *gin.Context, v *validator.Validate) (historydb.GetExitsAPIRequest, error) {
 	var exitsFilters ExitsFilters
 	if err := c.ShouldBindQuery(&exitsFilters); err != nil {

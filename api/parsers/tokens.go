@@ -14,6 +14,7 @@ type tokenFilter struct {
 	ID *uint `uri:"id" binding:"required"`
 }
 
+// ParseTokenFilter for parsing token filter from uri to the id
 func ParseTokenFilter(c *gin.Context) (*uint, error) {
 	var tokenFilter tokenFilter
 	if err := c.ShouldBindUri(&tokenFilter); err != nil {
@@ -30,6 +31,7 @@ type tokensFilters struct {
 	Pagination
 }
 
+// ParseTokensFilters function for parsing tokens filters to the GetTokensAPIRequest
 func ParseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
 	var tokensFilters tokensFilters
 	if err := c.BindQuery(&tokensFilters); err != nil {

@@ -1,5 +1,6 @@
 package parsers
 
+// Pagination type for holding pagination params
 type Pagination struct {
 	FromItem *uint   `form:"fromItem"`
 	Order    *string `form:"order,default=ASC" binding:"omitempty,oneof=ASC DESC"`

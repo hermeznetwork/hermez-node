@@ -15,6 +15,7 @@ type accountFilter struct {
 	AccountIndex string `uri:"accountIndex" binding:"required"`
 }
 
+// ParseAccountFilter parses account filter to the account index
 func ParseAccountFilter(c *gin.Context) (*common.Idx, error) {
 	var accountFilter accountFilter
 	if err := c.ShouldBindUri(&accountFilter); err != nil {
@@ -23,6 +24,7 @@ func ParseAccountFilter(c *gin.Context) (*common.Idx, error) {
 	return common.StringToIdx(accountFilter.AccountIndex, "accountIndex")
 }
 
+// AccountsFilters for parsing /accounts query params to struct
 type AccountsFilters struct {
 	IDs  string `form:"tokenIds"`
 	Addr string `form:"hezEthereumAddress"`
@@ -31,6 +33,7 @@ type AccountsFilters struct {
 	Pagination
 }
 
+// AccountsFiltersStructValidation validates AccountsFilters
 func AccountsFiltersStructValidation(sl validator.StructLevel) {
 	ef := sl.Current().Interface().(AccountsFilters)
 
@@ -40,6 +43,7 @@ func AccountsFiltersStructValidation(sl validator.StructLevel) {
 	}
 }
 
+// ParseAccountsFilters parsing /accounts query params to GetAccountsAPIRequest
 func ParseAccountsFilters(c *gin.Context, v *validator.Validate) (historydb.GetAccountsAPIRequest, error) {
 	var accountsFilter AccountsFilters
 	if err := c.BindQuery(&accountsFilter); err != nil {

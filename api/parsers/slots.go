@@ -11,6 +11,7 @@ type slotFilter struct {
 	SlotNum *uint `uri:"slotNum" binding:"required"`
 }
 
+// ParseSlotFilter func to parse slot filter from uri to the slot number
 func ParseSlotFilter(c *gin.Context) (*uint, error) {
 	var slotFilter slotFilter
 	if err := c.ShouldBindUri(&slotFilter); err != nil {
@@ -28,6 +29,7 @@ type slotsFilters struct {
 	Pagination
 }
 
+// ParseSlotsFilters func for parsing slots filters to the GetBestBidsAPIRequest
 func ParseSlotsFilters(c *gin.Context) (historydb.GetBestBidsAPIRequest, error) {
 	var slotsFilters slotsFilters
 	if err := c.ShouldBindQuery(&slotsFilters); err != nil {

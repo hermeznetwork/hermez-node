@@ -10,6 +10,7 @@ type currencyFilter struct {
 	Symbol string `uri:"symbol" binding:"required"`
 }
 
+// ParseCurrencyFilter func for parsing currency filter from uri to the symbol
 func ParseCurrencyFilter(c *gin.Context) (string, error) {
 	var currencyFilter currencyFilter
 	if err := c.ShouldBindUri(&currencyFilter); err != nil {
@@ -22,6 +23,7 @@ type currenciesFilters struct {
 	Symbols string `form:"symbols"`
 }
 
+// ParseCurrenciesFilters func for parsing currencies filters from query to the symbols
 func ParseCurrenciesFilters(c *gin.Context) ([]string, error) {
 	var currenciesFilters currenciesFilters
 	var symbols []string

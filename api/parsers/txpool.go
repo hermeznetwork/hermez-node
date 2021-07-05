@@ -14,6 +14,7 @@ type poolTxFilter struct {
 	TxID string `uri:"id" binding:"required"`
 }
 
+// ParsePoolTxFilter func for parsing tx filter to the transaction id
 func ParsePoolTxFilter(c *gin.Context) (common.TxID, error) {
 	var poolTxFilter poolTxFilter
 	if err := c.ShouldBindUri(&poolTxFilter); err != nil {
@@ -26,6 +27,7 @@ func ParsePoolTxFilter(c *gin.Context) (common.TxID, error) {
 	return txID, nil
 }
 
+// PoolTxsFilters struct for holding query params from /tx-pool request
 type PoolTxsFilters struct {
 	TokenID             *uint  `form:"tokenId"`
 	HezEthereumAddr     string `form:"hezEthereumAddress"`
@@ -43,6 +45,7 @@ type PoolTxsFilters struct {
 	Pagination
 }
 
+// PoolTxsTxsFiltersStructValidation func for pool txs query params validation
 func PoolTxsTxsFiltersStructValidation(sl validator.StructLevel) {
 	ef := sl.Current().Interface().(PoolTxsFilters)
 
@@ -74,6 +77,7 @@ func PoolTxsTxsFiltersStructValidation(sl validator.StructLevel) {
 	}
 }
 
+// ParsePoolTxsFilters func to parse pool txs filters from the /tx-pool request to the GetPoolTxsAPIRequest
 func ParsePoolTxsFilters(c *gin.Context, v *validator.Validate) (l2db.GetPoolTxsAPIRequest, error) {
 	var poolTxsFilter PoolTxsFilters
 	if err := c.BindQuery(&poolTxsFilter); err != nil {

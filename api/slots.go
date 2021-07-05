@@ -190,6 +190,10 @@ func (a *API) getSlots(c *gin.Context) {
 
 	// Get filters
 	filters, err := parsers.ParseSlotsFilters(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
 
 	currentBlock, err := a.h.GetLastBlockAPI()
 	if err != nil {

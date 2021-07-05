@@ -11,6 +11,7 @@ type getAccountCreationAuthFilter struct {
 	Addr string `uri:"hezEthereumAddress" binding:"required"`
 }
 
+// ParseGetAccountCreationAuthFilter parsing uri request to the eth address
 func ParseGetAccountCreationAuthFilter(c *gin.Context) (*ethCommon.Address, error) {
 	var getAccountCreationAuthFilter getAccountCreationAuthFilter
 	if err := c.ShouldBindUri(&getAccountCreationAuthFilter); err != nil {

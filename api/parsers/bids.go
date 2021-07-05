@@ -8,6 +8,7 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
+// BidsFilters struct to hold bids filters
 type BidsFilters struct {
 	SlotNum    *int64 `form:"slotNum" binding:"omitempty,min=0"`
 	BidderAddr string `form:"bidderAddr"`
@@ -15,6 +16,7 @@ type BidsFilters struct {
 	Pagination
 }
 
+// BidsFiltersStructValidation func for bids filters validation
 func BidsFiltersStructValidation(sl validator.StructLevel) {
 	ef := sl.Current().Interface().(BidsFilters)
 
@@ -24,6 +26,7 @@ func BidsFiltersStructValidation(sl validator.StructLevel) {
 	}
 }
 
+// ParseBidsFilters function for parsing bids filters from the request /bids to the GetBidsAPIRequest
 func ParseBidsFilters(c *gin.Context, v *validator.Validate) (historydb.GetBidsAPIRequest, error) {
 	var bidsFilters BidsFilters
 	if err := c.ShouldBindQuery(&bidsFilters); err != nil {

@@ -14,6 +14,7 @@ type historyTxFilter struct {
 	TxID string `uri:"id" binding:"required"`
 }
 
+// ParseHistoryTxFilter function for parsing history tx filter to the txID
 func ParseHistoryTxFilter(c *gin.Context) (common.TxID, error) {
 	var historyTxFilter historyTxFilter
 	if err := c.ShouldBindUri(&historyTxFilter); err != nil {
@@ -26,6 +27,7 @@ func ParseHistoryTxFilter(c *gin.Context) (common.TxID, error) {
 	return txID, nil
 }
 
+// HistoryTxsFilters struct for holding filters from the /transaction-history request
 type HistoryTxsFilters struct {
 	TokenID             *uint  `form:"tokenId"`
 	HezEthereumAddr     string `form:"hezEthereumAddress"`
@@ -44,6 +46,7 @@ type HistoryTxsFilters struct {
 	Pagination
 }
 
+// HistoryTxsFiltersStructValidation func to validate history txs filters
 func HistoryTxsFiltersStructValidation(sl validator.StructLevel) {
 	ef := sl.Current().Interface().(HistoryTxsFilters)
 
@@ -74,6 +77,7 @@ func HistoryTxsFiltersStructValidation(sl validator.StructLevel) {
 	}
 }
 
+// ParseHistoryTxsFilters func to parse history txs filters from query to the GetTxsAPIRequest
 func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.GetTxsAPIRequest, error) {
 	var historyTxsFilters HistoryTxsFilters
 	if err := c.ShouldBindQuery(&historyTxsFilters); err != nil {
