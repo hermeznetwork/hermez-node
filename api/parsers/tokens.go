@@ -1,0 +1,65 @@
+package parsers
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/tracerr"
+)
+
+type tokenFilter struct {
+	ID *uint `uri:"id" binding:"required"`
+}
+
+func ParseTokenFilter(c *gin.Context) (*uint, error) {
+	var tokenFilter tokenFilter
+	if err := c.ShouldBindUri(&tokenFilter); err != nil {
+		return nil, err
+	}
+	return tokenFilter.ID, nil
+}
+
+type tokensFilters struct {
+	IDs     string `form:"ids"`
+	Symbols string `form:"symbols"`
+	Name    string `form:"name"`
+
+	Pagination
+}
+
+func ParseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
+	var tokensFilters tokensFilters
+	if err := c.BindQuery(&tokensFilters); err != nil {
+		return historydb.GetTokensAPIRequest{}, err
+	}
+	var tokensIDs []common.TokenID
+	if tokensFilters.IDs != "" {
+		ids := strings.Split(tokensFilters.IDs, ",")
+
+		for _, id := range ids {
+			idUint, err := strconv.Atoi(id)
+			if err != nil {
+				return historydb.GetTokensAPIRequest{}, tracerr.Wrap(err)
+			}
+			tokenID := common.TokenID(idUint)
+			tokensIDs = append(tokensIDs, tokenID)
+		}
+	}
+
+	var symbols []string
+	if tokensFilters.Symbols != "" {
+		symbols = strings.Split(tokensFilters.Symbols, ",")
+	}
+
+	return historydb.GetTokensAPIRequest{
+		Ids:      tokensIDs,
+		Symbols:  symbols,
+		Name:     tokensFilters.Name,
+		FromItem: tokensFilters.FromItem,
+		Limit:    tokensFilters.Limit,
+		Order:    *tokensFilters.Order,
+	}, nil
+}

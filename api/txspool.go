@@ -9,6 +9,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/tracerr"
@@ -40,7 +41,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 
 func (a *API) getPoolTx(c *gin.Context) {
 	// Get TxID
-	txID, err := parsePoolTxFilter(c)
+	txID, err := parsers.ParsePoolTxFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -56,7 +57,7 @@ func (a *API) getPoolTx(c *gin.Context) {
 }
 
 func (a *API) getPoolTxs(c *gin.Context) {
-	txApiRequest, err := parsePoolTxsFilters(c)
+	txApiRequest, err := parsers.ParsePoolTxsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

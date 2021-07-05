@@ -4,11 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getBids(c *gin.Context) {
-	filters, err := parseBidsFilters(c)
+	filters, err := parsers.ParseBidsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

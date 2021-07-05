@@ -4,11 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getHistoryTxs(c *gin.Context) {
-	txFilters, err := parseHistoryTxsFilters(c)
+	txFilters, err := parsers.ParseHistoryTxsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -33,7 +34,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 
 func (a *API) getHistoryTx(c *gin.Context) {
 	// Get TxID
-	txID, err := parseTxIDParam(c)
+	txID, err := parsers.ParseHistoryTxFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

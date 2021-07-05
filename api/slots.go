@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -93,7 +94,7 @@ func (a *API) addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64
 }
 
 func (a *API) getSlot(c *gin.Context) {
-	slotNumUint, err := parseSlotFilter(c)
+	slotNumUint, err := parsers.ParseSlotFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -188,7 +189,7 @@ func (a *API) getSlots(c *gin.Context) {
 	minSlotNumDflt := int64(0)
 
 	// Get filters
-	filters, err := parseSlotsFilters(c)
+	filters, err := parsers.ParseSlotsFilters(c)
 
 	currentBlock, err := a.h.GetLastBlockAPI()
 	if err != nil {

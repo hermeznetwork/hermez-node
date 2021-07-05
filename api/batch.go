@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -13,7 +14,7 @@ import (
 
 func (a *API) getBatches(c *gin.Context) {
 	// Get query parameters
-	filter, err := parseBatchesFilter(c)
+	filter, err := parsers.ParseBatchesFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -38,7 +39,7 @@ func (a *API) getBatches(c *gin.Context) {
 
 func (a *API) getBatch(c *gin.Context) {
 	// Get batchNum
-	batchNum, err := parseBatchFilter(c)
+	batchNum, err := parsers.ParseBatchFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -60,7 +61,7 @@ type fullBatch struct {
 
 func (a *API) getFullBatch(c *gin.Context) {
 	// Get batchNum
-	batchNum, err := parseBatchFilter(c)
+	batchNum, err := parsers.ParseBatchFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

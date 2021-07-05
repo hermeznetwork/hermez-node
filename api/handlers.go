@@ -30,6 +30,10 @@ const (
 	maxInt64 = 9223372036854775807
 )
 
+type errorMsg struct {
+	Message string
+}
+
 func retSQLErr(err error, c *gin.Context) {
 	log.Warnw("HTTP API SQL request error", "err", err)
 	unwrapErr := tracerr.Unwrap(err)

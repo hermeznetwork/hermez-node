@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getToken(c *gin.Context) {
 	// Get TokenID
-	tokenIDUint, err := parseTokenFilter(c)
+	tokenIDUint, err := parsers.ParseTokenFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -27,7 +28,7 @@ func (a *API) getToken(c *gin.Context) {
 
 func (a *API) getTokens(c *gin.Context) {
 	// Account filters
-	filters, err := parseTokensFilters(c)
+	filters, err := parsers.ParseTokensFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

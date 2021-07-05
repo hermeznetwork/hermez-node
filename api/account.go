@@ -5,12 +5,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getAccount(c *gin.Context) {
 	// Get Addr
-	idx, err := parseAccountFilter(c)
+	idx, err := parsers.ParseAccountFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -33,7 +34,7 @@ func (a *API) getAccounts(c *gin.Context) {
 		}
 	}
 
-	accountsFilter, err := parseAccountsFilters(c)
+	accountsFilter, err := parsers.ParseAccountsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

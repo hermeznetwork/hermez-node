@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getExits(c *gin.Context) {
 	// Get query parameters
-	exitsFilters, err := parseExitsFilters(c)
+	exitsFilters, err := parsers.ParseExitsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -35,7 +36,7 @@ func (a *API) getExits(c *gin.Context) {
 
 func (a *API) getExit(c *gin.Context) {
 	// Get batchNum and accountIndex
-	batchNum, idx, err := parseExitFilter(c)
+	batchNum, idx, err := parsers.ParseExitFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return

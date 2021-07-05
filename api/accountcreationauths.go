@@ -8,6 +8,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -41,7 +42,7 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 
 func (a *API) getAccountCreationAuth(c *gin.Context) {
 	// Get hezEthereumAddress
-	addr, err := parseGetAccountCreationAuthFilter(c)
+	addr, err := parsers.ParseGetAccountCreationAuthFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
