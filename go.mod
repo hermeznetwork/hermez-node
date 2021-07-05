@@ -21,13 +21,14 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20210626002539-518b14aa39c0
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/mapstructure v1.3.0
 	github.com/prometheus/client_golang v1.3.0
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/russross/meddler v1.0.1
 	github.com/stretchr/testify v1.7.0
+	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
