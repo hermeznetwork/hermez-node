@@ -291,8 +291,10 @@ func ethAddTokens(blocks []common.BlockData, client *test.Client) {
 	}
 }
 
-var chainID uint16 = 0
-var deleteme = []string{}
+var (
+	chainID  uint16 = 0
+	deleteme        = []string{}
+)
 
 func TestMain(m *testing.M) {
 	exitVal := m.Run()
@@ -310,8 +312,10 @@ func newTestModules(t *testing.T) (*statedb.StateDB, *historydb.HistoryDB, *l2db
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	stateDB, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
-		Type: statedb.TypeSynchronizer, NLevels: 32})
+	stateDB, err := statedb.NewStateDB(statedb.Config{
+		Path: dir, Keep: 128,
+		Type: statedb.TypeSynchronizer, NLevels: 32,
+	})
 	require.NoError(t, err)
 
 	// Init History DB
@@ -771,6 +775,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 		// Slot = 0
 
 		> block // 2
+		> batch
 		> block // 3
 		> block // 4
 		> block // 5
