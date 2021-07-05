@@ -57,7 +57,7 @@ func (a *API) getPoolTx(c *gin.Context) {
 }
 
 func (a *API) getPoolTxs(c *gin.Context) {
-	txApiRequest, err := parsers.ParsePoolTxsFilters(c)
+	txApiRequest, err := parsers.ParsePoolTxsFilters(c, a.validate)
 	if err != nil {
 		retBadReq(err, c)
 		return

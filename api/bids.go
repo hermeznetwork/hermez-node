@@ -9,7 +9,7 @@ import (
 )
 
 func (a *API) getBids(c *gin.Context) {
-	filters, err := parsers.ParseBidsFilters(c)
+	filters, err := parsers.ParseBidsFilters(c, a.validate)
 	if err != nil {
 		retBadReq(err, c)
 		return

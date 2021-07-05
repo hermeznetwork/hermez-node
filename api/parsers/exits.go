@@ -1,12 +1,11 @@
 package parsers
 
 import (
-	"errors"
-
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 type exitFilter struct {
@@ -28,7 +27,7 @@ func ParseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
 	return &exitFilter.BatchNum, idx, nil
 }
 
-type exitsFilters struct {
+type ExitsFilters struct {
 	TokenID              *uint  `form:"tokenId"`
 	Addr                 string `form:"hezEthereumAddress"`
 	Bjj                  string `form:"BJJ"`
@@ -39,13 +38,32 @@ type exitsFilters struct {
 	Pagination
 }
 
-func ParseExitsFilters(c *gin.Context) (historydb.GetExitsAPIRequest, error) {
-	var exitsFilters exitsFilters
+func ExitsFiltersStructValidation(sl validator.StructLevel) {
+	ef := sl.Current().Interface().(ExitsFilters)
+
+	if ef.Addr != "" && ef.Bjj != "" {
+		sl.ReportError(ef.Addr, "hezEthereumAddress", "Addr", "hezethaddrorbjj", "")
+		sl.ReportError(ef.Bjj, "BJJ", "Bjj", "hezethaddrorbjj", "")
+	}
+
+	if ef.AccountIndex != "" && (ef.Addr != "" || ef.Bjj != "" || ef.TokenID != nil) {
+		sl.ReportError(ef.AccountIndex, "accountIndex", "AccountIndex", "onlyaccountindex", "")
+		sl.ReportError(ef.Addr, "hezEthereumAddress", "Addr", "onlyaccountindex", "")
+		sl.ReportError(ef.Bjj, "BJJ", "Bjj", "onlyaccountindex", "")
+		sl.ReportError(ef.TokenID, "tokenId", "TokenID", "onlyaccountindex", "")
+	}
+}
+
+func ParseExitsFilters(c *gin.Context, v *validator.Validate) (historydb.GetExitsAPIRequest, error) {
+	var exitsFilters ExitsFilters
 	if err := c.ShouldBindQuery(&exitsFilters); err != nil {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	// Token ID
+	if err := v.Struct(exitsFilters); err != nil {
+		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
+	}
+
 	var tokenID *common.TokenID
 	if exitsFilters.TokenID != nil {
 		tokenID = new(common.TokenID)
@@ -62,17 +80,9 @@ func ParseExitsFilters(c *gin.Context) (historydb.GetExitsAPIRequest, error) {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	if addr != nil && bjj != nil {
-		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
-	}
-
 	idx, err := common.StringToIdx(exitsFilters.AccountIndex, "accountIndex")
 	if err != nil {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
-	}
-
-	if idx != nil && (addr != nil || bjj != nil || tokenID != nil) {
-		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
 	}
 
 	return historydb.GetExitsAPIRequest{

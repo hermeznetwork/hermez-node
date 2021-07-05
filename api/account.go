@@ -34,7 +34,7 @@ func (a *API) getAccounts(c *gin.Context) {
 		}
 	}
 
-	accountsFilter, err := parsers.ParseAccountsFilters(c)
+	accountsFilter, err := parsers.ParseAccountsFilters(c, a.validate)
 	if err != nil {
 		retBadReq(err, c)
 		return

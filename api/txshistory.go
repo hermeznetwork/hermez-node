@@ -9,7 +9,7 @@ import (
 )
 
 func (a *API) getHistoryTxs(c *gin.Context) {
-	txFilters, err := parsers.ParseHistoryTxsFilters(c)
+	txFilters, err := parsers.ParseHistoryTxsFilters(c, a.validate)
 	if err != nil {
 		retBadReq(err, c)
 		return

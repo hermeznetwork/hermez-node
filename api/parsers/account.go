@@ -1,7 +1,6 @@
 package parsers
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 type accountFilter struct {
@@ -23,7 +23,7 @@ func ParseAccountFilter(c *gin.Context) (*common.Idx, error) {
 	return common.StringToIdx(accountFilter.AccountIndex, "accountIndex")
 }
 
-type accountsFilter struct {
+type AccountsFilters struct {
 	IDs  string `form:"tokenIds"`
 	Addr string `form:"hezEthereumAddress"`
 	Bjj  string `form:"BJJ"`
@@ -31,10 +31,23 @@ type accountsFilter struct {
 	Pagination
 }
 
-func ParseAccountsFilters(c *gin.Context) (historydb.GetAccountsAPIRequest, error) {
-	var accountsFilter accountsFilter
+func AccountsFiltersStructValidation(sl validator.StructLevel) {
+	ef := sl.Current().Interface().(AccountsFilters)
+
+	if ef.Addr != "" && ef.Bjj != "" {
+		sl.ReportError(ef.Addr, "hezEthereumAddress", "Addr", "hezethaddrorbjj", "")
+		sl.ReportError(ef.Bjj, "BJJ", "Bjj", "hezethaddrorbjj", "")
+	}
+}
+
+func ParseAccountsFilters(c *gin.Context, v *validator.Validate) (historydb.GetAccountsAPIRequest, error) {
+	var accountsFilter AccountsFilters
 	if err := c.BindQuery(&accountsFilter); err != nil {
 		return historydb.GetAccountsAPIRequest{}, err
+	}
+
+	if err := v.Struct(accountsFilter); err != nil {
+		return historydb.GetAccountsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	var tokenIDs []common.TokenID
@@ -58,10 +71,6 @@ func ParseAccountsFilters(c *gin.Context) (historydb.GetAccountsAPIRequest, erro
 	bjj, err := common.HezStringToBJJ(accountsFilter.Bjj, "BJJ")
 	if err != nil {
 		return historydb.GetAccountsAPIRequest{}, err
-	}
-
-	if addr != nil && bjj != nil {
-		return historydb.GetAccountsAPIRequest{}, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
 	}
 
 	return historydb.GetAccountsAPIRequest{

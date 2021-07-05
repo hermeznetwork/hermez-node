@@ -1,13 +1,13 @@
 package parsers
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 type historyTxFilter struct {
@@ -26,14 +26,14 @@ func ParseHistoryTxFilter(c *gin.Context) (common.TxID, error) {
 	return txID, nil
 }
 
-type historyTxsFilters struct {
+type HistoryTxsFilters struct {
 	TokenID             *uint  `form:"tokenId"`
 	HezEthereumAddr     string `form:"hezEthereumAddress"`
 	FromHezEthereumAddr string `form:"fromHezEthereumAddress"`
 	ToHezEthereumAddr   string `form:"toHezEthereumAddress"`
 	Bjj                 string `form:"BJJ"`
 	ToBjj               string `form:"toBJJ"`
-	FromBjj             string `form:"toBJJ"`
+	FromBjj             string `form:"fromBJJ"`
 	AccountIndex        string `form:"accountIndex"`
 	FromAccountIndex    string `form:"fromAccountIndex"`
 	ToAccountIndex      string `form:"toAccountIndex"`
@@ -44,12 +44,45 @@ type historyTxsFilters struct {
 	Pagination
 }
 
-func ParseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) {
-	var historyTxsFilters historyTxsFilters
+func HistoryTxsFiltersStructValidation(sl validator.StructLevel) {
+	ef := sl.Current().Interface().(HistoryTxsFilters)
+
+	isAddrNotNil := ef.HezEthereumAddr != "" || ef.ToHezEthereumAddr != "" || ef.FromHezEthereumAddr != ""
+	isBjjNotNil := ef.Bjj != "" || ef.ToBjj != "" || ef.FromBjj != ""
+
+	if isAddrNotNil && isBjjNotNil {
+		sl.ReportError(ef.HezEthereumAddr, "hezEthereumAddress", "HezEthereumAddr", "hezethaddrorbjj", "")
+		sl.ReportError(ef.FromHezEthereumAddr, "fromHezEthereumAddress", "FromHezEthereumAddr", "hezethaddrorbjj", "")
+		sl.ReportError(ef.ToHezEthereumAddr, "toHezEthereumAddress", "ToHezEthereumAddr", "hezethaddrorbjj", "")
+		sl.ReportError(ef.Bjj, "BJJ", "Bjj", "hezethaddrorbjj", "")
+		sl.ReportError(ef.ToBjj, "toBJJ", "ToBjj", "hezethaddrorbjj", "")
+		sl.ReportError(ef.FromBjj, "fromBJJ", "FromBjj", "hezethaddrorbjj", "")
+	}
+
+	isIdxNotNil := ef.FromAccountIndex != "" || ef.ToAccountIndex != "" || ef.AccountIndex != ""
+	if isIdxNotNil &&
+		(isAddrNotNil || isBjjNotNil || ef.TokenID != nil) {
+		sl.ReportError(ef.HezEthereumAddr, "hezEthereumAddress", "HezEthereumAddr", "onlyaccountindex", "")
+		sl.ReportError(ef.FromHezEthereumAddr, "fromHezEthereumAddress", "FromHezEthereumAddr", "onlyaccountindex", "")
+		sl.ReportError(ef.ToHezEthereumAddr, "toHezEthereumAddress", "ToHezEthereumAddr", "onlyaccountindex", "")
+		sl.ReportError(ef.Bjj, "BJJ", "Bjj", "onlyaccountindex", "")
+		sl.ReportError(ef.ToBjj, "toBJJ", "ToBjj", "onlyaccountindex", "")
+		sl.ReportError(ef.FromBjj, "fromBJJ", "FromBjj", "onlyaccountindex", "")
+		sl.ReportError(ef.AccountIndex, "accountIndex", "AccountIndex", "onlyaccountindex", "")
+		sl.ReportError(ef.FromAccountIndex, "fromAccountIndex", "FromAccountIndex", "onlyaccountindex", "")
+		sl.ReportError(ef.ToAccountIndex, "toAccountIndex", "ToAccountIndex", "onlyaccountindex", "")
+	}
+}
+
+func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.GetTxsAPIRequest, error) {
+	var historyTxsFilters HistoryTxsFilters
 	if err := c.ShouldBindQuery(&historyTxsFilters); err != nil {
 		return historydb.GetTxsAPIRequest{}, err
 	}
 
+	if err := v.Struct(historyTxsFilters); err != nil {
+		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
+	}
 	// TokenID
 	var tokenID *common.TokenID
 	if historyTxsFilters.TokenID != nil {
@@ -87,13 +120,6 @@ func ParseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) 
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	isAddrNotNil := addr != nil || toAddr != nil || fromAddr != nil
-	isBjjNotNil := bjj != nil || toBjj != nil || fromBjj != nil
-
-	if isAddrNotNil && isBjjNotNil {
-		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(errors.New("bjj and hezEthereumAddress params are incompatible"))
-	}
-
 	// Idx
 	idx, err := common.StringToIdx(historyTxsFilters.AccountIndex, "accountIndex")
 	if err != nil {
@@ -108,14 +134,6 @@ func ParseHistoryTxsFilters(c *gin.Context) (historydb.GetTxsAPIRequest, error) 
 	toIdx, err := common.StringToIdx(historyTxsFilters.ToAccountIndex, "toAccountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
-	}
-
-	// TODO: move to this https://github.com/go-playground/validator/releases/tag/v8.7
-	isIdxNotNil := fromIdx != nil || toIdx != nil || idx != nil
-
-	if isIdxNotNil &&
-		(isAddrNotNil || isBjjNotNil || tokenID != nil) {
-		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(errors.New("accountIndex is incompatible with BJJ, hezEthereumAddress and tokenId"))
 	}
 
 	txType, err := common.StringToTxType(historyTxsFilters.TxType)

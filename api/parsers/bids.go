@@ -1,33 +1,42 @@
 package parsers
 
 import (
-	"errors"
-	"github.com/hermeznetwork/hermez-node/common"
-
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
-type bidsFilters struct {
+type BidsFilters struct {
 	SlotNum    *int64 `form:"slotNum" binding:"omitempty,min=0"`
 	BidderAddr string `form:"bidderAddr"`
 
 	Pagination
 }
 
-func ParseBidsFilters(c *gin.Context) (historydb.GetBidsAPIRequest, error) {
-	var bidsFilters bidsFilters
+func BidsFiltersStructValidation(sl validator.StructLevel) {
+	ef := sl.Current().Interface().(BidsFilters)
+
+	if ef.SlotNum == nil && ef.BidderAddr == "" {
+		sl.ReportError(ef.SlotNum, "slotNum", "SlotNum", "slotnumorbidderaddress", "")
+		sl.ReportError(ef.BidderAddr, "bidderAddr", "BidderAddr", "slotnumorbidderaddress", "")
+	}
+}
+
+func ParseBidsFilters(c *gin.Context, v *validator.Validate) (historydb.GetBidsAPIRequest, error) {
+	var bidsFilters BidsFilters
 	if err := c.ShouldBindQuery(&bidsFilters); err != nil {
 		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(err)
 	}
-	bidderAddress, err := common.StringToEthAddr(bidsFilters.BidderAddr)
-	if err != nil {
+
+	if err := v.Struct(bidsFilters); err != nil {
 		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	if bidsFilters.SlotNum == nil && bidderAddress == nil {
-		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(errors.New("It is necessary to add at least one filter: slotNum or/and bidderAddr"))
+	bidderAddress, err := common.StringToEthAddr(bidsFilters.BidderAddr)
+	if err != nil {
+		return historydb.GetBidsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	return historydb.GetBidsAPIRequest{

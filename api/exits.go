@@ -10,7 +10,7 @@ import (
 
 func (a *API) getExits(c *gin.Context) {
 	// Get query parameters
-	exitsFilters, err := parsers.ParseExitsFilters(c)
+	exitsFilters, err := parsers.ParseExitsFilters(c, a.validate)
 	if err != nil {
 		retBadReq(err, c)
 		return
