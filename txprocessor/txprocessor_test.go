@@ -408,7 +408,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, 0, len(blocks[0].Rollup.Batches[1].L1CoordinatorTxs))
 	assert.Equal(t, 22, len(blocks[0].Rollup.Batches[2].L2Txs))
 	assert.Equal(t, 1, len(blocks[1].Rollup.Batches[0].L1CoordinatorTxs))
-	assert.Equal(t, 62, len(blocks[1].Rollup.Batches[0].L2Txs))
+	assert.Equal(t, 65, len(blocks[1].Rollup.Batches[0].L2Txs))
 	assert.Equal(t, 1, len(blocks[1].Rollup.Batches[1].L1CoordinatorTxs))
 	assert.Equal(t, 8, len(blocks[1].Rollup.Batches[1].L2Txs))
 
@@ -473,6 +473,22 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, common.Nonce(0), l2Txs[1].Nonce)
 	assert.Equal(t, common.Nonce(0), l2Txs[2].Nonce)
 
+	// Idx of user 'X'
+	idxX1 := tc.Users["X"].Accounts[common.TokenID(1)].Idx
+	// Idx of user 'Y'
+	idxY1 := tc.Users["Y"].Accounts[common.TokenID(1)].Idx
+	// Idx of user 'Z'
+	idxZ1 := tc.Users["Z"].Accounts[common.TokenID(1)].Idx
+	accX1, err := sdb.GetAccount(idxX1)
+	require.NoError(t, err)
+	assert.Equal(t, "25000000000000000010", accX1.Balance.String())
+	accY1, err := sdb.GetAccount(idxY1)
+	require.NoError(t, err)
+	assert.Equal(t, "25000000000000000010", accY1.Balance.String())
+	accZ1, err := sdb.GetAccount(idxZ1)
+	require.NoError(t, err)
+	assert.Equal(t, "25000000000000000015", accZ1.Balance.String())
+
 	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
@@ -488,9 +504,24 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, "1", ptOut.CollectedFees[common.TokenID(1)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(2)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(3)].String())
+	assert.Equal(t, big.NewInt(5), ptOut.ExitInfos[0].Balance)
+	assert.Equal(t, big.NewInt(13), ptOut.ExitInfos[1].Balance)
+	assert.Equal(t, big.NewInt(12), ptOut.ExitInfos[2].Balance)
+	assert.Equal(t, big.NewInt(16), ptOut.ExitInfos[3].Balance)
+
 	acc, err = sdb.GetAccount(idxA1)
 	require.NoError(t, err)
 	assert.Equal(t, "57", acc.Balance.String())
+
+	accX1, err = sdb.GetAccount(idxX1)
+	require.NoError(t, err)
+	assert.Equal(t, "24999999999999999976", accX1.Balance.String())
+	accY1, err = sdb.GetAccount(idxY1)
+	require.NoError(t, err)
+	assert.Equal(t, "25000000000000000004", accY1.Balance.String())
+	accZ1, err = sdb.GetAccount(idxZ1)
+	require.NoError(t, err)
+	assert.Equal(t, "25000000000000000024", accZ1.Balance.String())
 
 	log.Debug("block:1 batch:2")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
@@ -616,7 +647,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Equal(t, "2", acc.Balance.String())
 
 	assert.Equal(t,
-		"18702154359941252155463263732782081721632595649781775986280568467618682348921",
+		"8499500340673457131709907313180428395258466720027480159049632090608270570263",
 		sdb.MT.Root().BigInt().String())
 
 	sdb.Close()

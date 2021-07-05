@@ -12,11 +12,22 @@ The `hermez-node` has been tested with go version 1.14
 
 ### Build
 
-Build the binary and check the current version:
-
+- Build the binary in the local environment for you current OS and check the current version:
 ```shell
 $ make
-$ ./bin/heznode version
+$ ./dist/heznode version
+```
+
+- Build the binary in a docker container for all supported OS and check the current version (only docker needed):
+```shell
+$ make docker-build
+$ ./dist/heznode_<LOCAL_OS>_amd64/heznode version
+```
+
+- Build the binary in the local environment for all supported OS using Goreleaser and check the current version:
+```shell
+$ make goreleaser
+$ ./dist/heznode_<LOCAL_OS>_amd64/heznode version
 ```
 
 ### Run

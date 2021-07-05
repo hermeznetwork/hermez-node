@@ -48,9 +48,9 @@ CreateAccountDeposit(1) T: 25
 CreateAccountDeposit(1) U: 25
 CreateAccountDeposit(1) V: 25
 CreateAccountDeposit(1) W: 25
-CreateAccountDeposit(1) X: 25
-CreateAccountDeposit(1) Y: 25
-CreateAccountDeposit(1) Z: 25
+CreateAccountDeposit(1) X: 25000000000000000000
+CreateAccountDeposit(1) Y: 25000000000000000000
+CreateAccountDeposit(1) Z: 25000000000000000000
 // deposits TokenID: 2
 CreateAccountDeposit(2) B: 5
 CreateAccountDeposit(2) A: 20
@@ -156,9 +156,12 @@ Transfer(1) Z-A: 5 (1)
 // exits
 ForceExit(1) A: 5
 Exit(1) K: 5 (1)
-Exit(1) X: 5 (1)
+Exit(1) X: 7 (1)
 Exit(1) Y: 5 (1)
-Exit(1) Z: 5 (1)
+Exit(1) Z: 8 (1)
+Exit(1) X: 6 (1)
+Exit(1) Y: 7 (1)
+Exit(1) Z: 8 (1)
 
 > batch
 // block:1 batch:2

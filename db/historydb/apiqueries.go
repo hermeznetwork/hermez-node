@@ -451,7 +451,51 @@ func (hdb *HistoryDB) GetTokensAPI(
 	if len(tokens) == 0 {
 		return []TokenWithUSD{}, 0, nil
 	}
-	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), uint64(len(tokens)) - tokens[0].TotalItems, nil
+	return db.SlicePtrsToSlice(tokens).([]TokenWithUSD), tokens[0].TotalItems - uint64(len(tokens)), nil
+}
+
+// GetCurrencyAPI returns a Currency from the DB given its symbol
+func (hdb *HistoryDB) GetCurrencyAPI(symbol string) (FiatCurrency, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return FiatCurrency{}, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	return hdb.GetFiatPrice(symbol, "USD")
+}
+
+// GetCurrenciesAPI returns a list of Currencies from the DB
+func (hdb *HistoryDB) GetCurrenciesAPI(
+	symbols []string,
+) ([]FiatCurrency, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	var query string
+	var args []interface{}
+	queryStr := `SELECT currency, base_currency, price, last_update FROM fiat `
+	// Apply filters
+	if len(symbols) > 0 {
+		queryStr += "WHERE currency IN (?)"
+		args = append(args, symbols)
+	}
+	query, argsQ, err := sqlx.In(queryStr, args...)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	query = hdb.dbRead.Rebind(query)
+	currencies := []*FiatCurrency{}
+	if err := meddler.QueryAll(hdb.dbRead, &currencies, query, argsQ...); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if len(currencies) == 0 {
+		return []FiatCurrency{}, nil
+	}
+	return db.SlicePtrsToSlice(currencies).([]FiatCurrency), nil
 }
 
 // GetTxAPI returns a tx from the DB given a TxID
@@ -607,7 +651,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 			queryStr += "WHERE "
 		}
 		queryStr += "tx.effective_from_idx = ? "
-		args = append(args, request.Idx)
+		args = append(args, request.FromIdx)
 		nextIsAnd = true
 	} else if request.ToIdx != nil {
 		if nextIsAnd {
