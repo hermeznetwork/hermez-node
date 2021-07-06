@@ -7,20 +7,22 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-type batchFilter struct {
+// BatchFilter struct to hold batch num from request /batches/:batchNum
+type BatchFilter struct {
 	BatchNum uint `uri:"batchNum" binding:"required"`
 }
 
 // ParseBatchFilter parsing /batches request to the batch num
 func ParseBatchFilter(c *gin.Context) (*uint, error) {
-	var batchFilter batchFilter
+	var batchFilter BatchFilter
 	if err := c.ShouldBindUri(&batchFilter); err != nil {
 		return nil, err
 	}
 	return &batchFilter.BatchNum, nil
 }
 
-type batchesFilters struct {
+// BatchesFilters struct to hold batch num from request /batches/:batchNum
+type BatchesFilters struct {
 	MinBatchNum *uint  `form:"minBatchNum"`
 	MaxBatchNum *uint  `form:"maxBatchNum"`
 	SlotNum     *uint  `form:"slotNum"`
@@ -31,7 +33,7 @@ type batchesFilters struct {
 
 // ParseBatchesFilter parsing batches filter to the GetBatchesAPIRequest
 func ParseBatchesFilter(c *gin.Context) (historydb.GetBatchesAPIRequest, error) {
-	var batchesFilters batchesFilters
+	var batchesFilters BatchesFilters
 	if err := c.ShouldBindQuery(&batchesFilters); err != nil {
 		return historydb.GetBatchesAPIRequest{}, err
 	}

@@ -7,20 +7,22 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-type slotFilter struct {
+// SlotFilter struct to get slot filter uri param from /slots/:slotNum request
+type SlotFilter struct {
 	SlotNum *uint `uri:"slotNum" binding:"required"`
 }
 
 // ParseSlotFilter func to parse slot filter from uri to the slot number
 func ParseSlotFilter(c *gin.Context) (*uint, error) {
-	var slotFilter slotFilter
+	var slotFilter SlotFilter
 	if err := c.ShouldBindUri(&slotFilter); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	return slotFilter.SlotNum, nil
 }
 
-type slotsFilters struct {
+// SlotsFilters struct to get slots filters from query params from /slots request
+type SlotsFilters struct {
 	MinSlotNum           *int64 `form:"minSlotNum" binding:"omitempty,min=0"`
 	MaxSlotNum           *int64 `form:"maxSlotNum" binding:"omitempty,min=0"`
 	WonByEthereumAddress string `form:"wonByEthereumAddress"`
@@ -31,7 +33,7 @@ type slotsFilters struct {
 
 // ParseSlotsFilters func for parsing slots filters to the GetBestBidsAPIRequest
 func ParseSlotsFilters(c *gin.Context) (historydb.GetBestBidsAPIRequest, error) {
-	var slotsFilters slotsFilters
+	var slotsFilters SlotsFilters
 	if err := c.ShouldBindQuery(&slotsFilters); err != nil {
 		return historydb.GetBestBidsAPIRequest{}, err
 	}

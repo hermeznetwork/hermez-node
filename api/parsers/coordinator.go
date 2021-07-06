@@ -7,7 +7,8 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-type coordinatorsFilters struct {
+// CoordinatorsFilters struct to get coordinator query params from /coordinators request
+type CoordinatorsFilters struct {
 	BidderAddr string `form:"bidderAddr"`
 	ForgerAddr string `form:"forgerAddr"`
 
@@ -16,7 +17,7 @@ type coordinatorsFilters struct {
 
 // ParseCoordinatorsFilters func for parsing coordinator filters from the /coordinators request
 func ParseCoordinatorsFilters(c *gin.Context) (historydb.GetCoordinatorsAPIRequest, error) {
-	var coordinatorsFilters coordinatorsFilters
+	var coordinatorsFilters CoordinatorsFilters
 	if err := c.BindQuery(&coordinatorsFilters); err != nil {
 		return historydb.GetCoordinatorsAPIRequest{}, tracerr.Wrap(err)
 	}

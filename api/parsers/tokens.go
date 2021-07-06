@@ -10,20 +10,22 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-type tokenFilter struct {
+// TokenFilter struct to get token uri param from /tokens/:id request
+type TokenFilter struct {
 	ID *uint `uri:"id" binding:"required"`
 }
 
 // ParseTokenFilter for parsing token filter from uri to the id
 func ParseTokenFilter(c *gin.Context) (*uint, error) {
-	var tokenFilter tokenFilter
+	var tokenFilter TokenFilter
 	if err := c.ShouldBindUri(&tokenFilter); err != nil {
 		return nil, err
 	}
 	return tokenFilter.ID, nil
 }
 
-type tokensFilters struct {
+// TokensFilters struct to get token query params from /tokens request
+type TokensFilters struct {
 	IDs     string `form:"ids"`
 	Symbols string `form:"symbols"`
 	Name    string `form:"name"`
@@ -33,7 +35,7 @@ type tokensFilters struct {
 
 // ParseTokensFilters function for parsing tokens filters to the GetTokensAPIRequest
 func ParseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
-	var tokensFilters tokensFilters
+	var tokensFilters TokensFilters
 	if err := c.BindQuery(&tokensFilters); err != nil {
 		return historydb.GetTokensAPIRequest{}, err
 	}

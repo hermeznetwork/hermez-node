@@ -11,13 +11,14 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type accountFilter struct {
+// AccountFilter for parsing /accounts/{accountIndex} request to struct
+type AccountFilter struct {
 	AccountIndex string `uri:"accountIndex" binding:"required"`
 }
 
 // ParseAccountFilter parses account filter to the account index
 func ParseAccountFilter(c *gin.Context) (*common.Idx, error) {
-	var accountFilter accountFilter
+	var accountFilter AccountFilter
 	if err := c.ShouldBindUri(&accountFilter); err != nil {
 		return nil, tracerr.Wrap(err)
 	}

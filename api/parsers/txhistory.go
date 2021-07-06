@@ -10,13 +10,14 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type historyTxFilter struct {
+// HistoryTxFilter struct to get history tx uri param from /transaction-history/:id request
+type HistoryTxFilter struct {
 	TxID string `uri:"id" binding:"required"`
 }
 
 // ParseHistoryTxFilter function for parsing history tx filter to the txID
 func ParseHistoryTxFilter(c *gin.Context) (common.TxID, error) {
-	var historyTxFilter historyTxFilter
+	var historyTxFilter HistoryTxFilter
 	if err := c.ShouldBindUri(&historyTxFilter); err != nil {
 		return common.TxID{}, err
 	}

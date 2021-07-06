@@ -8,14 +8,15 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type exitFilter struct {
+// ExitFilter struct to hold exit filter
+type ExitFilter struct {
 	BatchNum     uint   `uri:"batchNum" binding:"required"`
 	AccountIndex string `uri:"accountIndex" binding:"required"`
 }
 
 // ParseExitFilter func parsing exit filter from the /exits request to the accountIndex and batchNum
 func ParseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
-	var exitFilter exitFilter
+	var exitFilter ExitFilter
 	if err := c.ShouldBindUri(&exitFilter); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
