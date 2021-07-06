@@ -160,6 +160,7 @@ func (c *EthereumClient) NewAuth() (*bind.TransactOpts, error) {
 	auth.Value = big.NewInt(0) // in wei
 	auth.GasLimit = c.config.CallGasLimit
 	auth.GasPrice = gasPrice
+	auth.Context = context.Background()
 
 	return auth, nil
 }

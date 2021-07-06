@@ -205,6 +205,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 	auth.Nonce = nil
+	auth.Context = ctx
 
 	return auth, nil
 }
@@ -261,6 +262,7 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 		batchInfo.Auth = auth
 		auth.Nonce = big.NewInt(int64(t.accNextNonce))
 	}
+	auth.Context = ctx
 	for attempt := 0; attempt < t.cfg.EthClientAttempts; attempt++ {
 		if auth.GasPrice.Cmp(t.cfg.MaxGasPrice) > 0 {
 			return tracerr.Wrap(fmt.Errorf("calculated gasPrice (%v) > maxGasPrice (%v)",
