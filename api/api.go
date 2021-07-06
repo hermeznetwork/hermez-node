@@ -26,14 +26,18 @@ package api
 
 import (
 	"errors"
+	"reflect"
+	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 // API serves HTTP requests to allow external interaction with the Hermez node
@@ -42,6 +46,7 @@ type API struct {
 	cg            *configAPI
 	l2            *l2db.L2DB
 	hermezAddress ethCommon.Address
+	validate      *validator.Validate
 }
 
 // NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
@@ -65,6 +70,7 @@ func NewAPI(
 	if err != nil {
 		return nil, err
 	}
+
 	a := &API{
 		h: hdb,
 		cg: &configAPI{
@@ -75,6 +81,7 @@ func NewAPI(
 		},
 		l2:            l2db,
 		hermezAddress: consts.HermezAddress,
+		validate:      newValidate(),
 	}
 
 	middleware, err := metric.PrometheusMiddleware()
@@ -133,4 +140,23 @@ func NewAPI(
 	}
 
 	return a, nil
+}
+
+func newValidate() *validator.Validate {
+	validate := validator.New()
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("form"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
+
+	validate.RegisterStructValidation(parsers.ExitsFiltersStructValidation, parsers.ExitsFilters{})
+	validate.RegisterStructValidation(parsers.BidsFiltersStructValidation, parsers.BidsFilters{})
+	validate.RegisterStructValidation(parsers.AccountsFiltersStructValidation, parsers.AccountsFilters{})
+	validate.RegisterStructValidation(parsers.HistoryTxsFiltersStructValidation, parsers.HistoryTxsFilters{})
+	validate.RegisterStructValidation(parsers.PoolTxsTxsFiltersStructValidation, parsers.PoolTxsFilters{})
+
+	return validate
 }

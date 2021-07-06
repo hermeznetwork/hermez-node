@@ -24,8 +24,8 @@ func genTestAuths(auths []*common.AccountCreationAuth) []testAuth {
 	testAuths := []testAuth{}
 	for _, auth := range auths {
 		testAuths = append(testAuths, testAuth{
-			EthAddr:   ethAddrToHez(auth.EthAddr),
-			BJJ:       bjjToString(auth.BJJ),
+			EthAddr:   common.EthAddrToHez(auth.EthAddr),
+			BJJ:       common.BjjToString(auth.BJJ),
 			Signature: "0x" + hex.EncodeToString(auth.Signature),
 			Timestamp: auth.Timestamp,
 		})
@@ -65,7 +65,7 @@ func TestAccountCreationAuth(t *testing.T) {
 	// 400
 	// Wrong addr
 	badAuth := tc.auths[0]
-	badAuth.EthAddr = ethAddrToHez(ethCommon.BigToAddress(big.NewInt(1)))
+	badAuth.EthAddr = common.EthAddrToHez(ethCommon.BigToAddress(big.NewInt(1)))
 	jsonAuthBytes, err := json.Marshal(badAuth)
 	assert.NoError(t, err)
 	jsonAuthReader := bytes.NewReader(jsonAuthBytes)
