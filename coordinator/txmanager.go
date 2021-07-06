@@ -133,14 +133,10 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	// First we try getting the gas price from etherscan. Later we get the gas price from the ethereum node.
 
 	var err error
-
 	// If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
 	const maxGasPrice = 2000
-	// If gas price is to low, probably there is an error or at Etherscan or Ethereum node.
-	// So setting a minimum value
-	const minGasPrice = 5
 
-	eGasPrice := big.NewInt(minGasPrice)
+	eGasPrice := big.NewInt(t.cfg.MinGasPrice)
 
 	if t.etherscanService != nil {
 		etherscanGasPrice, err := t.etherscanService.GetGasPrice(ctx)
@@ -161,7 +157,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	}
 
 	maxGasPriceBig := big.NewInt(maxGasPrice)
-	minGasPriceBig := big.NewInt(minGasPrice)
+	minGasPriceBig := big.NewInt(t.cfg.MinGasPrice)
 
 	if eGasPrice.Cmp(maxGasPriceBig) == 1 {
 		eGasPrice = maxGasPriceBig

@@ -130,6 +130,7 @@ AttemptsDelay = "500ms"
 TxResendTimeout = "2m"
 NoReuseNonce = false
 MaxGasPrice = "5000000000"
+MinGasPrice = 5
 GasPriceIncPerc = 10
 
 [Coordinator.EthClient.Keystore]

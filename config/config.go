@@ -193,6 +193,8 @@ type Coordinator struct {
 		// MaxGasPrice is the maximum gas price allowed for ethereum
 		// transactions
 		MaxGasPrice *big.Int `validate:"required"`
+		// MinGasPrice is the minimum gas price in gwei allowed for ethereum
+		MinGasPrice int64 `validate:"required"`
 		// GasPriceIncPerc is the percentage increase of gas price set
 		// in an ethereum transaction from the suggested gas price by
 		// the ethereum node
