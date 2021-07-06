@@ -1175,7 +1175,9 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 		tp.zki.OldValue1[tp.i] = p.OldValue.BigInt()
 
 		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx() + 1
-
+		if tp.i < len(tp.zki.ISOnChain) {
+			tp.zki.ISOnChain[tp.i] = big.NewInt(1)
+		}
 		tp.zki.AuxFromIdx[tp.i] = auxFromIdx.BigInt()
 		tp.zki.NewAccount[tp.i] = big.NewInt(1)
 	}
@@ -1352,6 +1354,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			if p.IsOld0 {
 				tp.zki.IsOld0_2[tp.i] = big.NewInt(1)
 			}
+			if tp.i < len(tp.zki.ISExitRoot) {
+				tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
+			}
 			tp.zki.OldKey2[tp.i] = p.OldKey.BigInt()
 			tp.zki.OldValue2[tp.i] = p.OldValue.BigInt()
 		}
@@ -1391,6 +1396,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		tp.zki.OldKey2[tp.i] = p.OldKey.BigInt()
 		tp.zki.OldValue2[tp.i] = p.OldValue.BigInt()
+		if tp.i < len(tp.zki.ISExitRoot) {
+			tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
+		}
 	}
 
 	return exitAccount, false, nil
