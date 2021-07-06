@@ -98,6 +98,7 @@ func NewAPI(
 		v1.POST("/atomic-pool", a.postAtomicPool)
 		v1.GET("/transactions-pool/:id", a.getPoolTx)
 		v1.GET("/transactions-pool", a.getPoolTxs)
+		v1.GET("/atomic-pool/:id", a.getAtomicGroup)
 	}
 
 	// Add explorer endpoints

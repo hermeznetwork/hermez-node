@@ -372,3 +372,27 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 	}
 	return txs, txs[0].TotalItems - uint64(len(txs)), tracerr.Wrap(err)
 }
+
+// GetPoolTxsByAtomicGroupIDAPI return Txs from the pool that belong to the given atomicGroupID
+func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]PoolTxAPI, error) {
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+
+	txsPtrs := []*PoolTxAPI{}
+	if err := meddler.QueryAll(
+		l2db.dbRead, &txsPtrs,
+		selectPoolTxsAPI+" WHERE atomic_group_id = $1;",
+		atomicGroupID,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
+	if len(txs) == 0 {
+		return txs, nil
+	}
+	return txs, nil
+}
