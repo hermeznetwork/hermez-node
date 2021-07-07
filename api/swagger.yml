@@ -1557,60 +1557,61 @@ components:
         - transactions
       additionalProperties: false
       example:
-        atomicGroupId: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
+        atomicGroupId: '0x0cd3d5c747145f70055156c565446441b60b8ca0dd7c8ddbb913529ed39773a7'
         transactions:
-          - id: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
-            type: Transfer
-            tokenId: 0
-            fromAccountIndex: hez:ETH:789
-            toAccountIndex: hez:ETH:790
-            toHezEthereumAddress:
-            toBjj:
-            amount: '1000'
-            fee: 229
-            nonce: 4
-            signature: 6472c352ae96f3cc6c698e6c19d07b46fd70a8035a8131605f4442d57bc5941a0a87240f4ad3d9cfc662bf5bbe2f42db4a5f77fef28fad06cb41b0c00c589905
-            requestId: '0x026c26d626dd40bf4f83737b9237674a1e7d235b38393a008dfc8d401ca2f7a412'
-            requestOffset: 1
-          - id: '0x026c26d626dd40bf4f83737b9237674a1e7d235b38393a008dfc8d401ca2f7a412'
-            type: Transfer
-            tokenId: 0
-            fromAccountIndex: hez:ETH:790
-            toAccountIndex: hez:ETH:789
-            toHezEthereumAddress:
-            toBjj:
-            amount: '1000'
-            fee: 229
-            nonce: 4
-            signature: 62945599b3b3cfafdf71ec6fe935634234bc5c7f9cd13e84850646deb62b348b35c23c327917f869162f625c5848c8c6b83bd1456fd76fea181c757ddc811f04
-            requestId: '0x0247ecd484e9f5710a703ee1cf36f6e7e00a294e93be7de0463a7108255eac6fa9'
-            requestOffset: 1
-          - id: '0x0247ecd484e9f5710a703ee1cf36f6e7e00a294e93be7de0463a7108255eac6fa9'
-            type: Transfer
-            tokenId: 0
-            fromAccountIndex: hez:ETH:789
-            toAccountIndex: hez:ETH:790
-            toHezEthereumAddress:
-            toBjj:
-            amount: '1000'
-            fee: 229
-            nonce: 5
-            signature: d71fa5d4ee8c12f111bf3d80dfb7e99af4eccab59c90a5b092e3b18c77860d140de73e2c104b77bcd6564af7db330ab626a29ae72a777fd00d4f56bf16334f01
-            requestId: '0x024be7ae4f0df9c956628d187069fde63e616749e2d2ce447b7386c4fa431b7d45'
-            requestOffset: 1
-          - id: '0x024be7ae4f0df9c956628d187069fde63e616749e2d2ce447b7386c4fa431b7d45'
-            type: Transfer
-            tokenId: 0
-            fromAccountIndex: hez:ETH:790
-            toAccountIndex: hez:ETH:789
-            toHezEthereumAddress:
-            toBjj:
-            amount: '1000'
-            fee: 229
-            nonce: 5
-            signature: 8738afdc744b5e87d79f09a61924a89811f12c74fdff4314afdb5966264276a5a44748dbb6540c8a0029e1e03a1b01ede4ceaffa49b8e6f7f98a16bccd400005
-            requestId: '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
-            requestOffset: 5
+        - id: '0x02d4cbab2c32a7afb59c923cbf54a5f82d6ea1b1c553599a8a301c7109ea1eff17'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5000
+          toAccountIndex: hez:ETH:5001
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: dd4c93adedd4ee678819c89f45150fa098265d38a81042d72d5d8040ce64a500b40f2f7acb190620eb537bd22ec26310b660b76bba0697276173e2331e62b204
+          requestOffset: 1
+        - id: '0x0200d87a0e641fb84bb76a013cc3db1b423203f7dfc3f07afdbe3e7b78b6a527de'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5001
+          toAccountIndex: hez:ETH:5002
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: f20a2b83227e10b5e46b215c3b27f2bf1b39fb05ce3bb70bb1504ca9e700e49a99b023e15ddfbdc262be3996dbea255445c850f366f954ee352b665c0b648403
+          requestOffset: 1
+        - id: '0x0219ffcb5d99b25614ca81f94fd3947095b07aaf5bf4ba7d1078aa85d06c8a0fc2'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5002
+          toAccountIndex: hez:ETH:5003
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: d39134d192a63d0529d0575b5d7c0e1f3e9115c53186194b27e1c29c701442848206ee52e8b477a9804fb5cbff91f5e99ee04e4f1e22909bb6962df8464c0900
+          requestOffset: 1
+        - id: '0x02814c29cf2bbdaa024920fdd71c6d976a0bed2de6d91c61c38daee74bf6a08cba'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5003
+          toAccountIndex: hez:ETH:5000
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: 7b9e3e4e8148ccf22532148576118f1212ba2a9ed8ee50022d65bb5c2af5df0307894e739af9fdbc2ebb8a1accd2396144a4937c735bc38658fcf6a1caf4eb03
+          requestOffset: 5
+
     PoolL2Transaction:
       type: object
       properties:
