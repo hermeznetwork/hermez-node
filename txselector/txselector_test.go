@@ -1413,7 +1413,7 @@ func TestFilterFailedAtomicGroups(t *testing.T) {
 			AtomicGroupID: common.EmptyAtomicGroupID,
 		},
 	}
-	failedGroups := []common.AtomicGroupID{}
+	failedGroups := []failedAtomicGroup{}
 	selected, filtered := filterFailedAtomicGroups(txs, failedGroups)
 	assertResult(t, []common.TxID{id1, id2}, nil, selected, filtered)
 	// Case all failing
@@ -1427,7 +1427,7 @@ func TestFilterFailedAtomicGroups(t *testing.T) {
 			AtomicGroupID: agid2,
 		},
 	}
-	failedGroups = []common.AtomicGroupID{agid1, agid2}
+	failedGroups = []failedAtomicGroup{{id: agid1}, {id: agid2}}
 	selected, filtered = filterFailedAtomicGroups(txs, failedGroups)
 	assertResult(t, nil, []common.TxID{id1, id2}, selected, filtered)
 	// Case mixed
@@ -1445,7 +1445,7 @@ func TestFilterFailedAtomicGroups(t *testing.T) {
 			AtomicGroupID: agid2,
 		},
 	}
-	failedGroups = []common.AtomicGroupID{agid1}
+	failedGroups = []failedAtomicGroup{{id: agid1}}
 	selected, filtered = filterFailedAtomicGroups(txs, failedGroups)
 	assertResult(t, []common.TxID{id1, id3}, []common.TxID{id2}, selected, filtered)
 }

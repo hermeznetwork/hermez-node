@@ -204,6 +204,12 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 		discardedL2Txs, tracerr.Wrap(err)
 }
 
+type failedAtomicGroup struct {
+	id         common.AtomicGroupID
+	failedTxID common.TxID // ID of the tx that made the entire atomic group fail
+	reason     string
+}
+
 // getL1L2TxSelection returns the selection of L1 + L2 txs.
 // It returns: the CoordinatorIdxs used to receive the fees of the selected
 // L2Txs. An array of bytearrays with the signatures of the
@@ -243,7 +249,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	// - Prepare coordIdxsMap & AccumulatedFees
 	// - Distribute AccumulatedFees to CoordIdxs
 	// - MakeCheckpoint
-	failedAtomicGroups := []common.AtomicGroupID{}
+	failedAtomicGroups := []failedAtomicGroup{}
 START_SELECTION:
 	txselStateDB := txsel.localAccountsDB.StateDB
 	tp := txprocessor.NewTxProcessor(txselStateDB, selectionConfig)
@@ -303,9 +309,10 @@ START_SELECTION:
 			l1UserFutureTxs,                      // L1Txs that will be added in the future, used to prevent the creation of unnecessary accounts
 			selectableTxs,                        // Txs that can be selected
 		)
-		if failedAtomicGroup != common.EmptyAtomicGroupID {
+		if failedAtomicGroup.id != common.EmptyAtomicGroupID {
 			// An atomic group failed to be processed after at least one tx from the group already alteredthe state.
 			// Revert state to current batch and start the selection process again, ignoring the txs from the group that failed
+			log.Info(err)
 			failedAtomicGroups = append(failedAtomicGroups, failedAtomicGroup)
 			if err := txsel.localAccountsDB.Reset(txsel.localAccountsDB.CurrentBatch(), false); err != nil {
 				return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
@@ -409,9 +416,10 @@ func (txsel *TxSelector) processL2Txs(
 	selectedL2Txs []common.PoolL2Tx, // Processed L2Txs
 	nonSelectedL2Txs []common.PoolL2Tx, // L2Txs that are not selected but could get selected in future iterations
 	unforjableL2Txs []common.PoolL2Tx, // Discarded txs that are impossible to forge (nonce too small or impossible to create destinatary account)
-	failedAtomicGroup common.AtomicGroupID, // ID of the atomic group that failed
+	failedAG failedAtomicGroup, // Info for the atomic group that failed
 	err error,
 ) {
+	const failedGroupErrMsg = "Failed forging atomic tx from Group %d. Restarting selection process without txs from this group"
 	// TODO: differentiate between nonSelectedL2Txs and unforjableL2Txs (right now all fall into nonSelectedL2Txs, which is safe but non optimal)
 	positionL1 := nAlreadyProcessedL1Txs
 	// Iterate over l2Txs
@@ -424,17 +432,22 @@ func (txsel *TxSelector) processL2Txs(
 		// Check if there is space for more L2Txs in the selection
 		if !canAddL2Tx(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig) {
 			// If tx is atomic, restart process without txs from the atomic group
+			const failingMsg = "Tx not selected due not available slots for L2Txs"
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-				return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-					"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+				failedAG = failedAtomicGroup{
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
+				}
+				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+					failedGroupErrMsg,
 					l2Txs[i].AtomicGroupID,
 				))
 			}
 			// no more available slots for L2Txs, so mark this tx
 			// but also the rest of remaining txs as discarded
 			for j := i; j < len(l2Txs); j++ {
-				l2Txs[j].Info =
-					"Tx not selected due not available slots for L2Txs"
+				l2Txs[j].Info = failingMsg
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[j])
 			}
 			break
@@ -444,8 +457,13 @@ func (txsel *TxSelector) processL2Txs(
 		if l2Txs[i].Type == common.TxTypeExit && l2Txs[i].Amount.Cmp(big.NewInt(0)) <= 0 {
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-				return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-					"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+				failedAG = failedAtomicGroup{
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     "Exits with amount 0 have no sense, not accepting to prevent unintended transactions",
+				}
+				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+					failedGroupErrMsg,
 					l2Txs[i].AtomicGroupID,
 				))
 			}
@@ -457,44 +475,56 @@ func (txsel *TxSelector) processL2Txs(
 		// get Nonce & TokenID from the Account by l2Tx.FromIdx
 		accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
 		if err != nil {
-			return nil, nil, nil, nil, nil, common.EmptyAtomicGroupID, tracerr.Wrap(err)
+			return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
 		}
 		l2Txs[i].TokenID = accSender.TokenID
 
 		// Check enough Balance on sender
 		enoughBalance, balance, feeAndAmount := tp.CheckEnoughBalance(l2Txs[i])
 		if !enoughBalance {
+			failingMsg := fmt.Sprintf("Tx not selected due to not enough Balance at the sender. "+
+				"Current sender account Balance: %s, Amount+Fee: %s",
+				balance.String(), feeAndAmount.String())
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-				return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-					"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+				failedAG = failedAtomicGroup{
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
+				}
+				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+					failedGroupErrMsg,
 					l2Txs[i].AtomicGroupID,
 				))
 			}
 			// not valid Amount with current Balance. Discard L2Tx,
 			// and update Info parameter of the tx, and add it to
 			// the discardedTxs array
-			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not enough Balance at the sender. "+
-				"Current sender account Balance: %s, Amount+Fee: %s",
-				balance.String(), feeAndAmount.String())
+			l2Txs[i].Info = failingMsg
 			nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 			continue
 		}
 
 		// Check if Nonce is correct
 		if l2Txs[i].Nonce != accSender.Nonce {
+			failingMsg := fmt.Sprintf("Tx not selected due to not current Nonce. "+
+				"Tx.Nonce: %d, Account.Nonce: %d", l2Txs[i].Nonce, accSender.Nonce)
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-				return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-					"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+				failedAG = failedAtomicGroup{
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
+				}
+				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+					failedGroupErrMsg,
 					l2Txs[i].AtomicGroupID,
 				))
 			}
 			// not valid Nonce at tx. Discard L2Tx, and update Info
 			// parameter of the tx, and add it to the discardedTxs
 			// array
-			l2Txs[i].Info = fmt.Sprintf("Tx not selected due to not current Nonce. "+
-				"Tx.Nonce: %d, Account.Nonce: %d", l2Txs[i].Nonce, accSender.Nonce)
+			l2Txs[i].Info = failingMsg
 			nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 			continue
 		}
@@ -507,23 +537,28 @@ func (txsel *TxSelector) processL2Txs(
 		var newL1CoordTx *common.L1Tx
 		newL1CoordTx, positionL1, err = txsel.coordAccountForTokenID(accSender.TokenID, positionL1)
 		if err != nil {
-			return nil, nil, nil, nil, nil, common.EmptyAtomicGroupID, tracerr.Wrap(err)
+			return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
 		}
 		if newL1CoordTx != nil {
+			const failingMsg = "Tx not selected because the L2Tx depends on a L1CoordinatorTx and there is not enough space for L1Coordinator"
 			// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
 			// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
 			if !canAddL2TxThatNeedsNewCoordL1Tx(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig) {
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-					return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-						"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+					failedAG = failedAtomicGroup{
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     failingMsg,
+					}
+					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+						failedGroupErrMsg,
 						l2Txs[i].AtomicGroupID,
 					))
 				}
 				// discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = "Tx not selected because the L2Tx depends on a " +
-					"L1CoordinatorTx and there is not enough space for L1Coordinator"
+				l2Txs[i].Info = failingMsg
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
@@ -535,7 +570,7 @@ func (txsel *TxSelector) processL2Txs(
 			// process the L1CoordTx
 			_, _, _, _, err := tp.ProcessL1Tx(nil, newL1CoordTx)
 			if err != nil {
-				return nil, nil, nil, nil, nil, common.EmptyAtomicGroupID, tracerr.Wrap(err)
+				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
 			}
 			nAlreadyProcessedL1Txs++
 		}
@@ -558,18 +593,24 @@ func (txsel *TxSelector) processL2Txs(
 				l2Txs[i],
 			)
 			if err != nil {
+				failingMsg := fmt.Sprintf("Tx not selected (in processTxToEthAddrBJJ) due to %s",
+					err.Error())
 				log.Debugw("txsel.processTxToEthAddrBJJ", "err", err)
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-					return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-						"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+					failedAG = failedAtomicGroup{
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     failingMsg,
+					}
+					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+						failedGroupErrMsg,
 						l2Txs[i].AtomicGroupID,
 					))
 				}
 				// Discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = fmt.Sprintf("Tx not selected (in processTxToEthAddrBJJ) due to %s",
-					err.Error())
+				l2Txs[i].Info = failingMsg
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
@@ -594,39 +635,50 @@ func (txsel *TxSelector) processL2Txs(
 				// process the L1CoordTx
 				_, _, _, _, err := tp.ProcessL1Tx(nil, l1CoordinatorTx)
 				if err != nil {
-					return nil, nil, nil, nil, nil, common.EmptyAtomicGroupID, tracerr.Wrap(err)
+					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
 				}
 				nAlreadyProcessedL1Txs++
 			}
 			if validL2Tx == nil {
+				// TODO: Missing info on why this tx is not selected? Check l2Txs.Info at this point!
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-					return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-						"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+					failedAG = failedAtomicGroup{
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     l2Txs[i].Info,
+					}
+					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+						failedGroupErrMsg,
 						l2Txs[i].AtomicGroupID,
 					))
 				}
-				// TODO: Missing info on why this tx is not selected?
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
 		} else if l2Txs[i].ToIdx >= common.IdxUserThreshold {
 			_, err := txsel.localAccountsDB.GetAccount(l2Txs[i].ToIdx)
 			if err != nil {
+				failingMsg := fmt.Sprintf("Tx not selected due to tx.ToIdx not found in StateDB. "+
+					"ToIdx: %d", l2Txs[i].ToIdx)
 				// tx not valid
 				log.Debugw("invalid L2Tx: ToIdx not found in StateDB",
 					"ToIdx", l2Txs[i].ToIdx)
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-					return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-						"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+					failedAG = failedAtomicGroup{
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     failingMsg,
+					}
+					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+						failedGroupErrMsg,
 						l2Txs[i].AtomicGroupID,
 					))
 				}
 				// Discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = fmt.Sprintf("Tx not selected due to tx.ToIdx not found in StateDB. "+
-					"ToIdx: %d", l2Txs[i].ToIdx)
+				l2Txs[i].Info = failingMsg
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
@@ -640,7 +692,7 @@ func (txsel *TxSelector) processL2Txs(
 			// if err is db.ErrNotFound, should not happen, as all
 			// the selectedTxs.TokenID should have a CoordinatorIdx
 			// created in the DB at this point
-			return nil, nil, nil, nil, nil, common.EmptyAtomicGroupID,
+			return nil, nil, nil, nil, nil, failedAG,
 				tracerr.Wrap(fmt.Errorf("Could not get CoordIdx for TokenID=%d, "+
 					"due: %s", tokenID, err))
 		}
@@ -654,18 +706,24 @@ func (txsel *TxSelector) processL2Txs(
 
 		_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
 		if err != nil {
+			failingMsg := fmt.Sprintf("Tx not selected (in ProcessL2Tx) due to %s",
+				err.Error())
 			log.Debugw("txselector.getL1L2TxSelection at ProcessL2Tx", "err", err)
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-				return nil, nil, nil, nil, nil, l2Txs[i].AtomicGroupID, tracerr.Wrap(fmt.Errorf(
-					"Failed forging atomic tx from Group %d. Restarting selection process without txs from this group",
+				failedAG = failedAtomicGroup{
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
+				}
+				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+					failedGroupErrMsg,
 					l2Txs[i].AtomicGroupID,
 				))
 			}
 			// Discard L2Tx, and update Info parameter of the tx,
 			// and add it to the discardedTxs array
-			l2Txs[i].Info = fmt.Sprintf("Tx not selected (in ProcessL2Tx) due to %s",
-				err.Error())
+			l2Txs[i].Info = failingMsg
 			nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 			continue
 		}
@@ -674,7 +732,7 @@ func (txsel *TxSelector) processL2Txs(
 		selectedL2Txs = append(selectedL2Txs, l2Txs[i])
 	} // after this loop, no checks to discard txs should be done
 
-	return accAuths, l1CoordinatorTxs, selectedL2Txs, nonSelectedL2Txs, unforjableL2Txs, common.EmptyAtomicGroupID, nil
+	return accAuths, l1CoordinatorTxs, selectedL2Txs, nonSelectedL2Txs, unforjableL2Txs, failedAG, nil
 }
 
 // processTxsToEthAddrBJJ process the common.PoolL2Tx in the case where
@@ -909,15 +967,7 @@ func canAddL2Tx(nAddedL1Txs, nAddedL2txs int, selectionConfig txprocessor.Config
 
 // filterFailedAtomicGroups split the txs into the ones that can be porcessed and the ones that can't because they belong
 // to an AtomicGroupID that is part of failedGroups. The order of txsToProcess is consistent with the order of txs
-func filterFailedAtomicGroups(txs []common.PoolL2Tx, faildeGroups []common.AtomicGroupID) (txsToProcess []common.PoolL2Tx, filteredTxs []common.PoolL2Tx) {
-	hasTheGroupFailed := func(groupID common.AtomicGroupID) bool {
-		for _, id := range faildeGroups {
-			if id == groupID {
-				return true
-			}
-		}
-		return false
-	}
+func filterFailedAtomicGroups(txs []common.PoolL2Tx, faildeGroups []failedAtomicGroup) (txsToProcess []common.PoolL2Tx, filteredTxs []common.PoolL2Tx) {
 	// Filter failed atomic groups
 	for i := 0; i < len(txs); i++ {
 		if txs[i].AtomicGroupID == common.EmptyAtomicGroupID {
@@ -925,11 +975,21 @@ func filterFailedAtomicGroups(txs []common.PoolL2Tx, faildeGroups []common.Atomi
 			txsToProcess = append(txsToProcess, txs[i])
 			continue
 		}
-		if hasTheGroupFailed(txs[i].AtomicGroupID) {
-			// This tx belongs to a failing group, filetering
-			txs[i].Info = "Transaction rejected because it is part of an atomic group that contains a tx that could not be forged"
-			filteredTxs = append(filteredTxs, txs[i])
-		} else {
+		txFailed := false
+		for _, failedAtomicGroup := range faildeGroups {
+			if failedAtomicGroup.id == txs[i].AtomicGroupID {
+				txs[i].Info = setInfoForFailedAtomicTx(
+					txs[i].TxID == failedAtomicGroup.failedTxID,
+					txs[i].AtomicGroupID,
+					failedAtomicGroup.failedTxID,
+					failedAtomicGroup.reason,
+				)
+				filteredTxs = append(filteredTxs, txs[i])
+				txFailed = true
+				break
+			}
+		}
+		if !txFailed {
 			txsToProcess = append(txsToProcess, txs[i])
 		}
 	}
@@ -961,4 +1021,21 @@ func calculateAtomicGroupsAverageFee(txs []common.PoolL2Tx) map[common.AtomicGro
 		groupAverageFee[groupID] = groupAverageFee[groupID] / float64(txsPerGroup[groupID])
 	}
 	return groupAverageFee
+}
+
+func setInfoForFailedAtomicTx(
+	isOriginOfFailure bool,
+	failedAtomicGroupID common.AtomicGroupID,
+	failedTxID common.TxID,
+	failMessage string,
+) string {
+	if isOriginOfFailure {
+		return fmt.Sprintf(
+			"Unselectable atomic group %s, tx %s failed due to: %s",
+			failedAtomicGroupID,
+			failedTxID,
+			failMessage,
+		)
+	}
+	return failMessage
 }
