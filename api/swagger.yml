@@ -424,6 +424,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+  '/atomic-pool/{id}':
+    get:
+      tags:
+        - Coordinator
+      summary: Get details and status of transactions that conform an atomic group and are on the coordinators pool.
+      description: >-
+        Get transactions from the pool by its atomic group ID. This endpoint is specially useful for tracking the status of atomic transactions that may not be forged yet.
+        Only transactions from the pool will be returned.
+        Note that the transaction pool is different for each coordinator and therefore only a coordinator that has received a specific atomic group
+        will be able to provide information about that set of transactions.
+      operationId: getAtomicPool
+      parameters:
+        - name: id
+          in: path
+          description: Atomic group identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/AtomicGroupID'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AtomicGroup'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  
   '/transactions-pool':
     post:
       tags:
@@ -1736,6 +1780,10 @@ components:
         - transactions
         - pendingItems
       additionalProperties: false
+    AtomicGroup:
+      type: array
+      items:
+        $ref: '#/components/schemas/PoolL2Transaction'
     TransactionId:
       type: string
       description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)

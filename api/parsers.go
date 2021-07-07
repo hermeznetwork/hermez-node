@@ -460,6 +460,19 @@ func parseParamTxID(c paramer) (common.TxID, error) {
 	return txID, nil
 }
 
+func parseParamAtomicGroupID(c paramer) (common.AtomicGroupID, error) {
+	const name = "id"
+	atomicGroupIDStr := c.Param(name)
+	if atomicGroupIDStr == "" {
+		return common.AtomicGroupID{}, tracerr.Wrap(fmt.Errorf("%s is required", name))
+	}
+	atomicGroupID, err := common.NewAtomicGroupIDFromString(atomicGroupIDStr)
+	if err != nil {
+		return common.AtomicGroupID{}, tracerr.Wrap(fmt.Errorf("invalid %s", name))
+	}
+	return atomicGroupID, nil
+}
+
 func parseParamIdx(c paramer) (*common.Idx, error) {
 	const name = "accountIndex"
 	idxStr := c.Param(name)

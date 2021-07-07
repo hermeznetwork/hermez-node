@@ -551,7 +551,8 @@ func TestAtomicPool(t *testing.T) {
 		atomicGroup.SetAtomicGroupID()
 		return atomicGroup, txsToReceive
 	}
-	assertTxs := func(txsToReceive []testPoolTxReceive) {
+	assertTxs := func(txsToReceive []testPoolTxReceive, atomicGroupID common.AtomicGroupID) {
+		// Fetch txs one by one
 		for _, tx := range txsToReceive {
 			const path = apiURL + "transactions-pool/"
 			fetchedTx := testPoolTxReceive{}
@@ -563,6 +564,20 @@ func TestAtomicPool(t *testing.T) {
 				),
 			)
 			assertPoolTx(t, tx, fetchedTx)
+		}
+		// Fetch all the group using GET /atomic-pool/{id}
+		const path = apiURL + "atomic-pool/"
+		fetchedTxs := []testPoolTxReceive{}
+		require.NoError(
+			t, doGoodReq(
+				"GET",
+				path+atomicGroupID.String(),
+				nil, &fetchedTxs,
+			),
+		)
+		assert.Equal(t, len(txsToReceive), len(fetchedTxs))
+		for i, tx := range txsToReceive {
+			assertPoolTx(t, tx, fetchedTxs[i])
 		}
 	}
 
@@ -615,7 +630,7 @@ func TestAtomicPool(t *testing.T) {
 	}
 	assert.Equal(t, expectedTxIDs, fetchedTxIDs)
 	// Check txs in the DB
-	assertTxs(txsToReceive)
+	assertTxs(txsToReceive, atomicGroup.ID)
 
 	// Test only one tx with fee
 	// Generate txs
@@ -658,7 +673,7 @@ func TestAtomicPool(t *testing.T) {
 	}
 	assert.Equal(t, expectedTxIDs, fetchedTxIDs)
 	// Check txs in the DB
-	assertTxs(txsToReceive)
+	assertTxs(txsToReceive, atomicGroup.ID)
 
 	// Test wrong atomic group id
 	txs = []common.PoolL2Tx{}

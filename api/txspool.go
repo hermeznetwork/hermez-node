@@ -85,9 +85,9 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	// Validate txs
 	txIDStrings := make([]string, nTxs) // used for successful response
 	clientIP := c.ClientIP()
-	for i, tx1 := range receivedAtomicGroup.Txs {
+	for i, tx := range receivedAtomicGroup.Txs {
 		// Find requested transaction
-		relativePosition, err := requestOffset2RelativePosition(tx1.RqOffset)
+		relativePosition, err := requestOffset2RelativePosition(tx.RqOffset)
 		if err != nil {
 			retBadReq(err, c)
 			return
@@ -339,4 +339,21 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
 		}
 	}
 	return nil
+}
+
+func (a *API) getAtomicGroup(c *gin.Context) {
+	// Get TxID
+	atomicGroupID, err := parseParamAtomicGroupID(c)
+	if err != nil {
+		retBadReq(err, c)
+		return
+	}
+	// Fetch tx from l2DB
+	txs, err := a.l2.GetPoolTxsByAtomicGroupIDAPI(atomicGroupID)
+	if err != nil {
+		retSQLErr(err, c)
+		return
+	}
+	// Build successful response
+	c.JSON(http.StatusOK, txs)
 }
