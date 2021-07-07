@@ -28,6 +28,20 @@ func ParsePoolTxFilter(c *gin.Context) (common.TxID, error) {
 	return txID, nil
 }
 
+// ParseParamAtomicGroupID func for parsing AtomicGroupID
+func ParseParamAtomicGroupID(c *gin.Context) (common.AtomicGroupID, error) {
+	const name = "id"
+	atomicGroupIDStr := c.Param(name)
+	if atomicGroupIDStr == "" {
+		return common.AtomicGroupID{}, tracerr.Wrap(fmt.Errorf("%s is required", name))
+	}
+	atomicGroupID, err := common.NewAtomicGroupIDFromString(atomicGroupIDStr)
+	if err != nil {
+		return common.AtomicGroupID{}, tracerr.Wrap(fmt.Errorf("invalid %s", name))
+	}
+	return atomicGroupID, nil
+}
+
 // PoolTxsFilters struct for holding query params from /transactions-pool request
 type PoolTxsFilters struct {
 	TokenID             *uint  `form:"tokenId"`
