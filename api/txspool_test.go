@@ -83,7 +83,6 @@ func genTestPoolTxs(
 		var rqToken historydb.TokenWithUSD
 		if poolTxs[i].RqToIdx != 0 {
 			rqToken = getTokenByID(poolTxs[i].RqTokenID, tokens)
-			txToSend.RqTokenSymbol = rqToken.Symbol
 		}
 		poolTxsToSend = append(poolTxsToSend, txToSend)
 		// common.PoolL2Tx ==> testPoolTxReceive
@@ -197,7 +196,6 @@ func TestPoolTxs(t *testing.T) {
 	// Wrong rq
 	badTx = tc.poolTxsToSend[0]
 	badTx.RqFromIdx = 30
-	badTx.RqTokenSymbol = "FOO"
 	jsonTxBytes, err = json.Marshal(badTx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)

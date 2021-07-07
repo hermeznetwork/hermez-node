@@ -72,7 +72,6 @@ type PoolL2Tx struct {
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
 	TokenSymbol        string `meddler:"-"` // Used for JSON marshaling the ToIdx
-	RqTokenSymbol      string `meddler:"-"` // Used for JSON marshaling the RqToIdx
 }
 
 // NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated
@@ -464,7 +463,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		TxID:      tx.TxID,
 		Type:      tx.Type,
 		TokenID:   tx.TokenID,
-		FromIdx:   idxToHez(tx.FromIdx, tx.TokenSymbol),
+		FromIdx:   IdxToHez(tx.FromIdx, tx.TokenSymbol),
 		Amount:    tx.Amount.String(),
 		Fee:       tx.Fee,
 		Nonce:     tx.Nonce,
@@ -472,15 +471,15 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 	}
 	// Set To fields
 	if tx.ToIdx != 0 {
-		toIdx := idxToHez(tx.ToIdx, tx.TokenSymbol)
+		toIdx := IdxToHez(tx.ToIdx, tx.TokenSymbol)
 		toMarshal.ToIdx = &toIdx
 	}
 	if tx.ToEthAddr != EmptyAddr {
-		toEth := ethAddrToHez(tx.ToEthAddr)
+		toEth := EthAddrToHez(tx.ToEthAddr)
 		toMarshal.ToEthAddr = &toEth
 	}
 	if tx.ToBJJ != EmptyBJJComp {
-		toBJJ := bjjToString(tx.ToBJJ)
+		toBJJ := BjjToString(tx.ToBJJ)
 		toMarshal.ToBJJ = &toBJJ
 	}
 	// Check if is a atomic and require another tx

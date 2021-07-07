@@ -150,29 +150,12 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
 
 func isAtomic(tx common.PoolL2Tx) bool {
 	// If a single "Rq" field is different from 0
-	if tx.RqFromIdx != 0 {
-		panic("here")
-	}
-	if tx.RqToIdx != 0 {
-		panic("here")
-	}
-	if tx.RqToEthAddr != common.EmptyAddr {
-		panic("here")
-	}
-	if tx.RqToBJJ != common.EmptyBJJComp {
-		panic("here")
-	}
-	if tx.RqAmount != nil && tx.RqAmount.Cmp(big.NewInt(0)) != 0 {
-		panic("here")
-	}
-	if tx.RqFee != 0 {
-		panic("here")
-	}
-	if tx.RqNonce != 0 {
-		panic("here")
-	}
-	if tx.RqTokenID != 0 {
-		panic("here")
-	}
-	return false
+	return tx.RqFromIdx != 0 ||
+		tx.RqToIdx != 0 ||
+		tx.RqToEthAddr != common.EmptyAddr ||
+		tx.RqToBJJ != common.EmptyBJJComp ||
+		(tx.RqAmount != nil && tx.RqAmount.Cmp(big.NewInt(0)) != 0) ||
+		tx.RqFee != 0 ||
+		tx.RqNonce != 0 ||
+		tx.RqTokenID != 0
 }

@@ -107,18 +107,20 @@ func (a *API) postAtomicPool(c *gin.Context) {
 
 // requestOffset2RelativePosition translates from 0 to 7 to protocol position
 func requestOffset2RelativePosition(rqoffset uint8) (int, error) {
-	const rqOffsetZero = 0
-	const rqOffsetOne = 1
-	const rqOffsetTwo = 2
-	const rqOffsetThree = 3
-	const rqOffsetFour = 4
-	const rqOffsetFive = 5
-	const rqOffsetSix = 6
-	const rqOffsetSeven = 7
-	const rqOffsetMinusFour = -4
-	const rqOffsetMinusThree = -3
-	const rqOffsetMinusTwo = -2
-	const rqOffsetMinusOne = -1
+	const (
+		rqOffsetZero       = 0
+		rqOffsetOne        = 1
+		rqOffsetTwo        = 2
+		rqOffsetThree      = 3
+		rqOffsetFour       = 4
+		rqOffsetFive       = 5
+		rqOffsetSix        = 6
+		rqOffsetSeven      = 7
+		rqOffsetMinusFour  = -4
+		rqOffsetMinusThree = -3
+		rqOffsetMinusTwo   = -2
+		rqOffsetMinusOne   = -1
+	)
 
 	switch rqoffset {
 	case rqOffsetZero:
