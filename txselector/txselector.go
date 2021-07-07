@@ -145,9 +145,9 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 }
 
 type failedAtomicGroup struct {
-	id     common.AtomicGroupID
-	txID   common.TxID
-	reason string
+	id         common.AtomicGroupID
+	failedTxID common.TxID // ID of the tx that made the entire atomic group fail
+	reason     string
 }
 
 // getL1L2TxSelection returns the selection of L1 + L2 txs.
@@ -375,9 +375,9 @@ func (txsel *TxSelector) processL2Txs(
 			const failingMsg = "Tx not selected due not available slots for L2Txs"
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
-					id:     l2Txs[i].AtomicGroupID,
-					txID:   l2Txs[i].TxID,
-					reason: failingMsg,
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -398,9 +398,9 @@ func (txsel *TxSelector) processL2Txs(
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
-					id:     l2Txs[i].AtomicGroupID,
-					txID:   l2Txs[i].TxID,
-					reason: "Exits with amount 0 have no sense, not accepting to prevent unintended transactions",
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     "Exits with amount 0 have no sense, not accepting to prevent unintended transactions",
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -428,9 +428,9 @@ func (txsel *TxSelector) processL2Txs(
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
-					id:     l2Txs[i].AtomicGroupID,
-					txID:   l2Txs[i].TxID,
-					reason: failingMsg,
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -452,9 +452,9 @@ func (txsel *TxSelector) processL2Txs(
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
-					id:     l2Txs[i].AtomicGroupID,
-					txID:   l2Txs[i].TxID,
-					reason: failingMsg,
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -487,9 +487,9 @@ func (txsel *TxSelector) processL2Txs(
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 					failedAG = failedAtomicGroup{
-						id:     l2Txs[i].AtomicGroupID,
-						txID:   l2Txs[i].TxID,
-						reason: failingMsg,
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     failingMsg,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -539,9 +539,9 @@ func (txsel *TxSelector) processL2Txs(
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 					failedAG = failedAtomicGroup{
-						id:     l2Txs[i].AtomicGroupID,
-						txID:   l2Txs[i].TxID,
-						reason: failingMsg,
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     failingMsg,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -584,9 +584,9 @@ func (txsel *TxSelector) processL2Txs(
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 					failedAG = failedAtomicGroup{
-						id:     l2Txs[i].AtomicGroupID,
-						txID:   l2Txs[i].TxID,
-						reason: l2Txs[i].Info,
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     l2Txs[i].Info,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -607,9 +607,9 @@ func (txsel *TxSelector) processL2Txs(
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 					failedAG = failedAtomicGroup{
-						id:     l2Txs[i].AtomicGroupID,
-						txID:   l2Txs[i].TxID,
-						reason: failingMsg,
+						id:         l2Txs[i].AtomicGroupID,
+						failedTxID: l2Txs[i].TxID,
+						reason:     failingMsg,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -652,9 +652,9 @@ func (txsel *TxSelector) processL2Txs(
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
-					id:     l2Txs[i].AtomicGroupID,
-					txID:   l2Txs[i].TxID,
-					reason: failingMsg,
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -919,9 +919,9 @@ func filterFailedAtomicGroups(txs []common.PoolL2Tx, faildeGroups []failedAtomic
 		for _, failedAtomicGroup := range faildeGroups {
 			if failedAtomicGroup.id == txs[i].AtomicGroupID {
 				txs[i].Info = setInfoForFailedAtomicTx(
-					txs[i].TxID == failedAtomicGroup.txID,
+					txs[i].TxID == failedAtomicGroup.failedTxID,
 					txs[i].AtomicGroupID,
-					failedAtomicGroup.txID,
+					failedAtomicGroup.failedTxID,
 					failedAtomicGroup.reason,
 				)
 				filteredTxs = append(filteredTxs, txs[i])
