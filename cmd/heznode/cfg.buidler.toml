@@ -129,7 +129,7 @@ Attempts = 4
 AttemptsDelay = "500ms"
 TxResendTimeout = "2m"
 NoReuseNonce = false
-MaxGasPrice = "5000000000"
+MaxGasPrice = 2000
 MinGasPrice = 5
 GasPriceIncPerc = 10
 
