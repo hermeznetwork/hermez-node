@@ -1,6 +1,6 @@
-# Setup Hermez Node
+# Set up Hermez Nede
 
-This tutorial will help you to setup an Hermez Node and run as sync mode.
+This tutorial will help you to set up an Hermez Node and run as sync mode.
 
 ## Golang
 
@@ -15,7 +15,7 @@ This tutorial will help you to setup an Hermez Node and run as sync mode.
 ## Go-Ethereum
 
 - [ ] Clone [GETH](https://github.com/ethereum/go-ethereum) project and do a `make all` command into project folder.
-  - Need have to gcc on PATH.
+  - Need to have `gcc` on PATH.
 
     On Ubuntu/Debian you need install `build-essential`
 
@@ -49,7 +49,7 @@ folder.
 ## PostgreSQL
 
 - [ ] [Install](https://www.postgresql.org/download/) PostgreSQL
-- [ ] Create a PostgreSQL User to project.
+- [ ] Create a PostgreSQL User called `hermez` to project.
 
     ```command
     createuser --interactive
@@ -61,7 +61,7 @@ folder.
     createdb hermez-db
     ```
 
-- [ ] Create a password to User created at step 2
+- [ ] Create a password to `hermez` user created at step 2
 
     ```command
     ALTER USER hermez WITH PASSWORD 'Your#Password';
@@ -70,7 +70,7 @@ folder.
 - [ ] Test connection on localhost with all steps made until now
 
     ```command
-    psql --host=localhost --dbname=hermez-db --username=db-username
+    psql --host=localhost --dbname=hermez-db --username=hermez
     ```
 
 - [ ] If you need expose the database:
@@ -103,12 +103,92 @@ folder.
         server_name EXTERNAL_IP;
 
         location / {
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $http_host;
             proxy_pass http://localhost:8086/;
         }
     }
     ```
 
-    This nginx configuration will help us to expose the hermez node.
+    This Nginx configuration will help us to expose the Hermes as a node and sync mode, it can works just with external IP.
+
+    For Hermes to run as coordinator mode, we need to set up a domain to the server. We do this in the next step.
+
+- [ ] Configure HTTPS
+    - [ ] Update the `hermeznode.conf` nginx file
+
+
+    Before of configure the file, you need have to a record of A type on DNS.
+
+    ```txt
+        server {
+            listen 80;
+            listen [::]:80;
+
+            server_name DOMAIN_NAME;
+
+            location / {
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host $http_host;
+                proxy_pass http://localhost:8086/;
+            }
+        }
+    ```
+
+    - [ ] Install the `certbot`
+
+      On Debian/Ubuntu:
+
+      ```command
+      apt update
+      apt install cerbot python3-certbot-nginx
+      sudo certbot --nginx
+      ```
+
+      You must awnser the wizard questions (from `certbot`) and waiting the update.
+
+      The `hermeznde.conf` nginx file should look's like:
+      ```text
+        server {
+            listen 80;
+            listen [::]:80;
+
+            server_name DOMAIN_NAME;
+
+            location / {
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host $http_host;
+                proxy_pass http://localhost:8086/;
+            }
+
+            listen [::]:443 ssl ipv6only=on; # managed by Certbot
+            listen 443 ssl; # managed by Certbot
+            ssl_certificate /etc/letsencrypt/live/DOMAIN_NAME/fullchain.pem; # managed by Certbot
+            ssl_certificate_key /etc/letsencrypt/live/DOMAIN_NAME/privkey.pem; # managed by Certbot
+            include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+            ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+        }
+        server {
+            if ($host = DOMAIN_NAME) {
+                return 301 https://$host$request_uri;
+            } # managed by Certbot
+
+
+          listen 80;
+          listen [::]:80;
+
+          server_name DOMAIN_NAME;
+          return 404; # managed by Certbot
+        }
+      ```
+
 
 ## Hermez-Node
 
@@ -129,36 +209,36 @@ folder.
 
 - [ ] Copy the config file from `cmd/heznode/cfg.builder.toml` to
 `localconfig/cfg.builder.toml` and change some values:
-  - Use `0.0.0.0` instead of `localhost` to [API.Address] value
+  - [ ] Use `0.0.0.0` instead of `localhost` to [API.Address] value
 
     Is so that the API can be accessed by users outside the host.
 
-  - Add APIKey to `PriceUpdater.Fiat` section.
+  - [ ] Add APIKey to `PriceUpdater.Fiat` section.
       Get a key [here](https://exchangeratesapi.io/)
 
-  - Change PostgreSQL section with the values of user created before.
+  - [ ] Change PostgreSQL section with the values of user created before.
     - HostWrite:  Use the IP from server instead of localhost
 
-  - Use the IP from host instead of localhost to [Web3.URL], the port is same.
+  - [ ] Use the IP from host instead of localhost to [Web3.URL], the port is same.
     Example:
 
     ```text
     URL = "IP:8545"
     ```
 
-  - In the [SmartContracts] section:
+  - [ ] In the [SmartContracts] section:
     At Rollup, change to `0xf08a226B67a8A9f99cCfCF51c50867bc18a54F53`. 
     This is the address of Smart Contract used on Goerli.
-  - In the [Coordinator] section:
-    - At ForgerAddress, you need add the your metamask address.
+  - [ ] In the [Coordinator] section:
+    - At ForgerAddress, you need add the your wallet address.
     - At ProofServerPollInterval, change to `3s`.
     - At SyncRetryInterval, change to `2s`.
     - At ForgeNoTxsDelay, change to `300s`.
-  - In the [Coordinator.FeeAccount] section
-    - At Address, you need add the your metamask address.
-  - In the [Coordinator.EthClient] section
+  - [ ] In the [Coordinator.FeeAccount] section
+    - At Address, you need add the your wallet address.
+  - [ ] In the [Coordinator.EthClient] section
     - At MaxGasPrice, change to `12500000000000000000`
-  - In the [Coordinator.Etherscan] section
+  - [ ] In the [Coordinator.Etherscan] section
     - Use this value to APIKey: `Insert an Etherscan key`.
 
 - [ ] Run the hermez-node as sync mode
