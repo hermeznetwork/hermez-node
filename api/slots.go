@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -96,7 +95,11 @@ func (a *API) addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64
 func (a *API) getSlot(c *gin.Context) {
 	slotNumUint, err := parsers.ParseSlotFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	currentBlock, err := a.h.GetLastBlockAPI()
@@ -189,9 +192,13 @@ func (a *API) getSlots(c *gin.Context) {
 	minSlotNumDflt := int64(0)
 
 	// Get filters
-	filters, err := parsers.ParseSlotsFilters(c)
+	filters, err := parsers.ParseSlotsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 
@@ -207,36 +214,21 @@ func (a *API) getSlots(c *gin.Context) {
 	}
 
 	// Check filters
-	if filters.MaxSlotNum == nil && filters.FinishedAuction == nil {
-		retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
-		return
-	} else if filters.FinishedAuction != nil {
-		if filters.MaxSlotNum == nil && !*filters.FinishedAuction {
-			retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
+	if filters.FinishedAuction != nil && *filters.FinishedAuction {
+		currentBlock, err := a.h.GetLastBlockAPI()
+		if err != nil {
+			retBadReq(err, c)
 			return
-		} else if *filters.FinishedAuction {
-			currentBlock, err := a.h.GetLastBlockAPI()
-			if err != nil {
-				retBadReq(err, c)
-				return
-			}
-			currentSlot := a.getCurrentSlot(currentBlock.Num)
-			auctionVars, err := a.h.GetAuctionVarsAPI()
-			if err != nil {
-				retBadReq(err, c)
-				return
-			}
-			closedAuctionSlots := currentSlot + int64(auctionVars.ClosedAuctionSlots)
-			if filters.MaxSlotNum == nil {
-				filters.MaxSlotNum = &closedAuctionSlots
-			} else if closedAuctionSlots < *filters.MaxSlotNum {
-				filters.MaxSlotNum = &closedAuctionSlots
-			}
 		}
-	} else if filters.MaxSlotNum != nil && filters.MinSlotNum != nil {
-		if *filters.MinSlotNum > *filters.MaxSlotNum {
-			retBadReq(errors.New("It is necessary to add valid filter (minSlotNum <= maxSlotNum)"), c)
+		currentSlot := a.getCurrentSlot(currentBlock.Num)
+		auctionVars, err := a.h.GetAuctionVarsAPI()
+		if err != nil {
+			retBadReq(err, c)
 			return
+		}
+		closedAuctionSlots := currentSlot + int64(auctionVars.ClosedAuctionSlots)
+		if filters.MaxSlotNum == nil || closedAuctionSlots < *filters.MaxSlotNum {
+			filters.MaxSlotNum = &closedAuctionSlots
 		}
 	}
 	if filters.MinSlotNum == nil {

@@ -12,7 +12,11 @@ func (a *API) getExits(c *gin.Context) {
 	// Get query parameters
 	exitsFilters, err := parsers.ParseExitsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 
@@ -38,7 +42,11 @@ func (a *API) getExit(c *gin.Context) {
 	// Get batchNum and accountIndex
 	batchNum, idx, err := parsers.ParseExitFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch tx from historyDB

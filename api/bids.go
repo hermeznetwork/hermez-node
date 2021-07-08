@@ -11,7 +11,11 @@ import (
 func (a *API) getBids(c *gin.Context) {
 	filters, err := parsers.ParseBidsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 

@@ -13,7 +13,11 @@ func (a *API) getAccount(c *gin.Context) {
 	// Get Addr
 	idx, err := parsers.ParseAccountFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	apiAccount, err := a.h.GetAccountAPI(*idx)
@@ -29,14 +33,22 @@ func (a *API) getAccounts(c *gin.Context) {
 	for id := range c.Request.URL.Query() {
 		if id != "tokenIds" && id != "hezEthereumAddress" && id != "BJJ" &&
 			id != "fromItem" && id != "order" && id != "limit" {
-			retBadReq(fmt.Errorf("invalid Param: %s", id), c)
+			retBadReq(&apiError{
+				Err:  fmt.Errorf("invalid Param: %s", id),
+				Code: ErrParamValidationFailedCode,
+				Type: ErrParamValidationFailedType,
+			}, c)
 			return
 		}
 	}
 
 	accountsFilter, err := parsers.ParseAccountsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 

@@ -3362,11 +3362,17 @@ components:
       properties:
         message:
           type: string
+        code:
+          type: integer
+        type:
+          type: string
     Error400:
       allOf:
         - $ref: '#/components/schemas/Error'
         - example:
             message: Invalid signature.
+            code: 4
+            type: ErrInvalidSignature
     Error404:
       allOf:
         - $ref: '#/components/schemas/Error'

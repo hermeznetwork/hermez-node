@@ -10,7 +10,7 @@ import (
 	"github.com/iden3/go-merkletree"
 )
 
-func AddAditionalInformation(blocks []common.BlockData) {
+func AddAdditionalInformation(blocks []common.BlockData) {
 	for i := range blocks {
 		blocks[i].Block.Timestamp = time.Now().Add(time.Second * 13).UTC()
 		blocks[i].Block.Hash = ethCommon.BigToHash(big.NewInt(blocks[i].Block.Num))

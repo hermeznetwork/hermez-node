@@ -295,7 +295,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	AddAditionalInformation(blocksData)
+	AddAdditionalInformation(blocksData)
 	// Generate L2 Txs with til
 	commonPoolTxs, err := tcc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow0)
 	if err != nil {
