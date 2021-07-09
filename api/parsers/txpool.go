@@ -82,11 +82,11 @@ func PoolTxsTxsFiltersStructValidation(sl validator.StructLevel) {
 func ParsePoolTxsFilters(c *gin.Context, v *validator.Validate) (l2db.GetPoolTxsAPIRequest, error) {
 	var poolTxsFilter PoolTxsFilters
 	if err := c.BindQuery(&poolTxsFilter); err != nil {
-		return l2db.GetPoolTxsAPIRequest{}, err
+		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	if err := v.Struct(poolTxsFilter); err != nil {
-		return l2db.GetPoolTxsAPIRequest{}, err
+		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	// TokenID
@@ -170,18 +170,4 @@ func ParsePoolTxsFilters(c *gin.Context, v *validator.Validate) (l2db.GetPoolTxs
 		Limit:    poolTxsFilter.Limit,
 		Order:    *poolTxsFilter.Order,
 	}, nil
-}
-
-// ParseParamAtomicGroupID func for parsing AtomicGroupID
-func ParseParamAtomicGroupID(c *gin.Context) (common.AtomicGroupID, error) {
-	const name = "id"
-	atomicGroupIDStr := c.Param(name)
-	if atomicGroupIDStr == "" {
-		return common.AtomicGroupID{}, tracerr.Wrap(fmt.Errorf("%s is required", name))
-	}
-	atomicGroupID, err := common.NewAtomicGroupIDFromString(atomicGroupIDStr)
-	if err != nil {
-		return common.AtomicGroupID{}, tracerr.Wrap(fmt.Errorf("invalid %s", name))
-	}
-	return atomicGroupID, nil
 }

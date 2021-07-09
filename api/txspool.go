@@ -25,10 +25,10 @@ func (a *API) postPoolTx(c *gin.Context) {
 		return
 	}
 	if isAtomic(receivedTx) {
-		// TODO
 		retBadReq(&apiError{
-			Err: errors.New(ErrNotAtomicTxsInPostPoolTx),
-
+			Err:  errors.New(ErrNotAtomicTxsInPostPoolTx),
+			Code: ErrNotAtomicTxsInPostPoolTxCode,
+			Type: ErrNotAtomicTxsInPostPoolTxType,
 		}, c)
 		return
 	}
@@ -119,7 +119,7 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
 	account, err := a.h.GetCommonAccountAPI(tx.FromIdx)
 	if err != nil {
 		return &apiError{
-			Err:  tracerr.Wrap(fmt.Errorf("error getting sender account, idx %s, error: %w", poolTx.FromIdx, err)),
+			Err:  tracerr.Wrap(fmt.Errorf("error getting sender account, idx %s, error: %w", tx.FromIdx, err)),
 			Code: ErrGettingSenderAccountCode,
 			Type: ErrGettingSenderAccountType,
 		}

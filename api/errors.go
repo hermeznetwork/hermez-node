@@ -77,12 +77,12 @@ const (
 	// ErrCantSendToEthAddrType type when can't send to eth addr code error appeared
 	ErrCantSendToEthAddrType apiErrorType = "ErrCantSendToEthAddr"
 
-	// ErrIsAtomic filter atomic transactions on POST /transactions-pool
-	ErrIsAtomic = "this endpoint does not accept atomic transactions"
-	// ErrIsAtomicCode code filter atomic transactions on POST /transactions-pool
-	ErrIsAtomicCode apiErrorCode = 14
-	// ErrIsAtomicType type filter atomic transactions on POST /transactions-pool
-	ErrIsAtomicType apiErrorType = "ErrIsAtomic"
+	// ErrNotAtomicTxsInPostPoolTx error message returned when received an non-atomic transaction inside atomic pool
+	ErrNotAtomicTxsInPostPoolTx = "atomic transactions are only accepted in POST /atomic-pool"
+	// ErrNotAtomicTxsInPostPoolTxCode code filter atomic transactions on POST /transactions-pool
+	ErrNotAtomicTxsInPostPoolTxCode apiErrorCode = 14
+	// ErrNotAtomicTxsInPostPoolTxType type filter atomic transactions on POST /transactions-pool
+	ErrNotAtomicTxsInPostPoolTxType apiErrorType = "ErrNotAtomicTxsInPostPoolTx"
 
 	// ErrFailedToGetCurrentBlockCode code when can't get current block in /slots request
 	ErrFailedToGetCurrentBlockCode apiErrorCode = 15
@@ -100,21 +100,40 @@ const (
 	ErrFailedToAddEmptySlotType apiErrorType = "ErrFailedToAddEmptySlot"
 
 	// ErrTxsNotAtomic error message returned when receiving (and rejecting) txs in the atomic endpoint with not all txs being atomic
-	ErrTxsNotAtomic = "There is at least one transaction in the payload that could be forged without the others"
+	ErrTxsNotAtomic = "there is at least one transaction in the payload that could be forged without the others"
+	// ErrTxsNotAtomicCode error code
+	ErrTxsNotAtomicCode apiErrorCode = 18
+	// ErrTxsNotAtomicType error type
+	ErrTxsNotAtomicType apiErrorType = "ErrTxsNotAtomic"
+
 	// ErrSingleTxInAtomicEndpoint only one tx sent to the atomic-pool endpoint
-	ErrSingleTxInAtomicEndpoint = "To use the atomic-pool endpoint at least two transactions are required"
+	ErrSingleTxInAtomicEndpoint = "to use the atomic-pool endpoint at least two transactions are required"
+	// ErrSingleTxInAtomicEndpointCode error code
+	ErrSingleTxInAtomicEndpointCode apiErrorCode = 19
+	// ErrSingleTxInAtomicEndpointType error type
+	ErrSingleTxInAtomicEndpointType apiErrorType = "ErrSingleTxInAtomicEndpoint"
 
 	// ErrInvalidRqOffset error message returned when received an invalid request offset
-	ErrInvalidRqOffset = "Invalid requestOffset. Valid values goes from 0 to 7"
+	ErrInvalidRqOffset = "invalid requestOffset. Valid values goes from 0 to 7"
 
 	// ErrRqOffsetOutOfBounds error message returned when transaction tries to access another out the bounds of the array
-	ErrRqOffsetOutOfBounds = "One of the transactions requested another one outside the bounds of the provided array"
-
-	// ErrNotAtomicTxsInPostPoolTx error message returned when received an non-atomic transaction inside atomic pool
-	ErrNotAtomicTxsInPostPoolTx = "Atomic transactions are only accepted in POST /atomic-pool"
+	ErrRqOffsetOutOfBounds = "one of the transactions requested another one outside the bounds of the provided array"
+	// ErrRqOffsetOutOfBoundsCode error code
+	ErrRqOffsetOutOfBoundsCode = 20
+	// ErrRqOffsetOutOfBoundsType error type
+	ErrRqOffsetOutOfBoundsType = "ErrRqOffsetOutOfBounds"
 
 	// ErrInvalidAtomicGroupID error message returned when received an invalid AtomicGroupID
-	ErrInvalidAtomicGroupID = "Invalid atomicGroupId"
+	ErrInvalidAtomicGroupID = "invalid atomicGroupId"
+	// ErrInvalidAtomicGroupIDCode error code
+	ErrInvalidAtomicGroupIDCode = 21
+	// ErrInvalidAtomicGroupIDType error type
+	ErrInvalidAtomicGroupIDType = "ErrInvalidAtomicGroupID"
+
+	// ErrFailedToFindOffsetToRelativePositionCode error code when can't find offset to relative position
+	ErrFailedToFindOffsetToRelativePositionCode = 22
+	// ErrFailedToFindOffsetToRelativePositionType error type
+	ErrFailedToFindOffsetToRelativePositionType = "ErrFailedToFindOffsetToRelativePosition"
 
 	// Internal error messages (used for logs or handling errors returned from internal components)
 

@@ -74,5 +74,4 @@ func retBadReq(err error, c *gin.Context) {
 	c.JSON(http.StatusBadRequest, errorMsg{
 		Message: err.Error(),
 	})
-
 }
