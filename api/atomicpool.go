@@ -71,7 +71,11 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	for i, tx := range receivedAtomicGroup.Txs {
 		// Check MaxNumBatch
 		if tx.MaxNumBatch != 0 {
-			retBadReq(errors.New(ErrUnsupportedMaxNumBatch), c)
+			retBadReq(&apiError{
+				Err:  errors.New(ErrUnsupportedMaxNumBatch),
+				Code: ErrParamValidationFailedCode,
+				Type: ErrParamValidationFailedType,
+			}, c)
 			return
 		}
 		// Find requested transaction
