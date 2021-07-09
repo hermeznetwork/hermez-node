@@ -2,12 +2,14 @@ package l2db
 
 import (
 	"fmt"
+	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/jmoiron/sqlx"
 	"github.com/russross/meddler"
 )
 
@@ -43,19 +45,19 @@ func (l2db *L2DB) GetAccountCreationAuthAPI(addr ethCommon.Address) (*AccountCre
 }
 
 // AddTxAPI inserts a tx to the pool
-func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
+func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
 	defer l2db.apiConnCon.Release()
-
+	// Check fee is in range
 	row := l2db.dbRead.QueryRow(`SELECT
 		($1::NUMERIC * COALESCE(token.usd, 0) * fee_percentage($2::NUMERIC)) /
 			(10.0 ^ token.decimals::NUMERIC)
 		FROM token WHERE token.token_id = $3;`,
-		tx.AmountFloat, tx.Fee, tx.TokenID)
+		tx.Amount.String(), tx.Fee, tx.TokenID)
 	var feeUSD float64
 	if err := row.Scan(&feeUSD); err != nil {
 		return tracerr.Wrap(err)
@@ -68,40 +70,83 @@ func (l2db *L2DB) AddTxAPI(tx *PoolL2TxWrite) error {
 		return tracerr.Wrap(fmt.Errorf("tx.feeUSD (%v) > maxFeeUSD (%v)",
 			feeUSD, l2db.maxFeeUSD))
 	}
+	// Add tx if pool is not full
+	return tracerr.Wrap(
+		l2db.addTxs([]common.PoolL2Tx{*tx}, true),
+	)
+}
 
-	// Prepare insert SQL query argument parameters
-	namesPart, err := meddler.Default.ColumnsQuoted(tx, false)
-	if err != nil {
-		return err
+// AddAtomicTxsAPI inserts transactions into the pool
+// if minFeeUSD <= total fee in USD <= maxFeeUSD.
+// It's assumed that the given txs conform a single atomic group
+// and AtomicGroupID will be set for all the txs awith value last AtomigGroupID in the DB +1
+func (l2db *L2DB) AddAtomicTxsAPI(txs []common.PoolL2Tx) error {
+	if len(txs) == 0 {
+		return nil
 	}
-	valuesPart, err := meddler.Default.PlaceholdersString(tx, false)
-	if err != nil {
-		return err
-	}
-	values, err := meddler.Default.Values(tx, false)
-	if err != nil {
-		return err
-	}
-
-	q := fmt.Sprintf(
-		`INSERT INTO tx_pool (%s)
-		SELECT %s
-		WHERE (SELECT COUNT(*) FROM tx_pool WHERE state = $%v AND NOT external_delete) < $%v;`,
-		namesPart, valuesPart,
-		len(values)+1, len(values)+2) //nolint:gomnd
-	values = append(values, common.PoolL2TxStatePending, l2db.maxTxs)
-	res, err := l2db.dbWrite.Exec(q, values...)
+	// DB connection handling
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	rowsAffected, err := res.RowsAffected()
+	defer l2db.apiConnCon.Release()
+
+	// Calculate fee in token amount per each used token (don't include tokens with fee 0)
+	feeMap := make(map[common.TokenID]float64)
+	for _, tx := range txs {
+		f := big.NewFloat(0).SetInt(tx.Amount)
+		amountF, _ := f.Float64()
+		if _, ok := feeMap[tx.TokenID]; !ok && amountF > 0 {
+			feeMap[tx.TokenID] = tx.Fee.Percentage() * amountF
+		} else {
+			feeMap[tx.TokenID] += tx.Fee.Percentage() * amountF
+		}
+	}
+	tokenIDs := make([]common.TokenID, len(feeMap))
+	pos := 0
+	for id := range feeMap {
+		tokenIDs[pos] = id
+		pos++
+	}
+
+	// Get value in USD for the used tokens (value peer token without decimals)
+	query, args, err := sqlx.In(
+		`SELECT token_id, COALESCE(usd, 0) / (10.0 ^ token.decimals::NUMERIC) AS usd_no_decimals
+		FROM token WHERE token_id IN(?);`,
+		tokenIDs,
+	)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	if rowsAffected == 0 {
-		return tracerr.Wrap(errPoolFull)
+	query = l2db.dbRead.Rebind(query)
+	type tokenUSDValue struct {
+		TokenID     common.TokenID `meddler:"token_id"`
+		USDPerToken float64        `meddler:"usd_no_decimals"`
 	}
-	return nil
+	USDValues := []*tokenUSDValue{}
+	if err := meddler.QueryAll(l2db.dbRead, &USDValues, query, args...); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	// Calculate average fee per transaction
+	var avgFeeUSD float64
+	for _, USDValue := range USDValues {
+		avgFeeUSD += feeMap[USDValue.TokenID] * USDValue.USDPerToken
+	}
+	avgFeeUSD = avgFeeUSD / float64(len(txs))
+	// Check that the fee is in accepted range
+	if avgFeeUSD < l2db.minFeeUSD {
+		return tracerr.Wrap(fmt.Errorf("avgFeeUSD (%v) < minFeeUSD (%v)",
+			avgFeeUSD, l2db.minFeeUSD))
+	}
+	if avgFeeUSD > l2db.maxFeeUSD {
+		return tracerr.Wrap(fmt.Errorf("avgFeeUSD (%v) > maxFeeUSD (%v)",
+			avgFeeUSD, l2db.maxFeeUSD))
+	}
+
+	// Insert txs if the pool is not full
+	return tracerr.Wrap(l2db.addTxs(txs, true))
 }
 
 // selectPoolTxAPI select part of queries to get PoolL2TxRead
@@ -326,4 +371,28 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 		return txs, 0, nil
 	}
 	return txs, txs[0].TotalItems - uint64(len(txs)), tracerr.Wrap(err)
+}
+
+// GetPoolTxsByAtomicGroupIDAPI return Txs from the pool that belong to the given atomicGroupID
+func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]PoolTxAPI, error) {
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+
+	txsPtrs := []*PoolTxAPI{}
+	if err := meddler.QueryAll(
+		l2db.dbRead, &txsPtrs,
+		selectPoolTxsAPI+" WHERE atomic_group_id = $1;",
+		atomicGroupID,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
+	if len(txs) == 0 {
+		return txs, nil
+	}
+	return txs, nil
 }

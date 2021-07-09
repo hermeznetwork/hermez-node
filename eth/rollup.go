@@ -160,8 +160,7 @@ type RollupEventUpdateTokenExchange struct {
 }
 
 // RollupEventSafeMode is an event of the Rollup Smart Contract
-type RollupEventSafeMode struct {
-}
+type RollupEventSafeMode struct{}
 
 // RollupEvents is the list of events in a block of the Rollup Smart Contract
 type RollupEvents struct {
@@ -317,8 +316,7 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address) (*Rollup
 }
 
 // RollupForgeBatch is the interface to call the smart contract function
-func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs,
-	auth *bind.TransactOpts) (tx *types.Transaction, err error) {
+func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs, auth *bind.TransactOpts) (tx *types.Transaction, err error) {
 	if auth == nil {
 		auth, err = c.client.NewAuth()
 		if err != nil {
@@ -381,8 +379,7 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs,
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		feeIdxCoordinator = append(feeIdxCoordinator,
-			bytesFeeIdx[len(bytesFeeIdx)-int(lenBytes):]...)
+		feeIdxCoordinator = append(feeIdxCoordinator, bytesFeeIdx[len(bytesFeeIdx)-int(lenBytes):]...)
 	}
 	tx, err = c.hermez.ForgeBatch(auth, newLastIdx, args.NewStRoot, args.NewExitRoot,
 		l1CoordinatorBytes, l1l2TxData, feeIdxCoordinator, args.VerifierIdx, args.L1Batch,

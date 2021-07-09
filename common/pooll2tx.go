@@ -1,13 +1,18 @@
 package common
 
 import (
+	"database/sql/driver"
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -49,6 +54,7 @@ type PoolL2Tx struct {
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
+	AtomicGroupID     AtomicGroupID         `meddler:"atomic_group_id,zeroisnull"`
 	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
 	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
 	RqToEthAddr       ethCommon.Address     `meddler:"rq_to_eth_addr,zeroisnull"`
@@ -60,8 +66,12 @@ type PoolL2Tx struct {
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
 	AbsoluteFeeUpdate time.Time             `meddler:"usd_update,utctimez"`
 	Type              TxType                `meddler:"tx_type"`
+	RqOffset          uint8                 `meddler:"rq_offset,zeroisnull"` // (max 3 bits)
+	// Extra DB write fields (not included in JSON)
+	ClientIP string `meddler:"client_ip"`
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
+	TokenSymbol        string `meddler:"-"` // Used for JSON marshaling the ToIdx
 }
 
 // NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated
@@ -246,12 +256,19 @@ func (tx *PoolL2Tx) TxCompressedDataV2() (*big.Int, error) {
 // [ 48 bits ] rqFromIdx // 6 bytes
 // Total bits compressed data:  217 bits // 28 bytes in *big.Int representation
 func (tx *PoolL2Tx) RqTxCompressedDataV2() (*big.Int, error) {
+	var amountFloat40 Float40
 	if tx.RqAmount == nil {
-		tx.RqAmount = big.NewInt(0)
-	}
-	amountFloat40, err := NewFloat40(tx.RqAmount)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
+		af40, err := NewFloat40(big.NewInt(0))
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		amountFloat40 = af40
+	} else {
+		af40, err := NewFloat40(tx.RqAmount)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		amountFloat40 = af40
 	}
 	amountFloat40Bytes, err := amountFloat40.Bytes()
 	if err != nil {
@@ -410,3 +427,193 @@ const (
 	// PoolL2TxStateInvalid represents a L2Tx that has been invalidated
 	PoolL2TxStateInvalid PoolL2TxState = "invl"
 )
+
+// IsValid returns true if matches one of the supported PoolL2TxState
+func (s PoolL2TxState) IsValid() bool {
+	switch s {
+	case PoolL2TxStatePending, PoolL2TxStateForging, PoolL2TxStateForged, PoolL2TxStateInvalid:
+		return true
+	default:
+		return false
+	}
+}
+
+// MarshalJSON formats a PoolL2Tx in the expected JSON defined by the API,
+// this format is specified in `api/swagger.yml:schemas/PostPoolL2Transaction`
+func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
+	if tx.TokenSymbol == "" {
+		return nil, errors.New("Invalid tx.TokenSymbol")
+	}
+	type jsonFormat struct {
+		TxID      TxID                  `json:"id"`
+		Type      TxType                `json:"type"`
+		TokenID   TokenID               `json:"tokenId"`
+		FromIdx   string                `json:"fromAccountIndex"`
+		ToIdx     *string               `json:"toAccountIndex"`
+		ToEthAddr *string               `json:"toHezEthereumAddress"`
+		ToBJJ     *string               `json:"toBjj"`
+		Amount    string                `json:"amount"`
+		Fee       FeeSelector           `json:"fee"`
+		Nonce     Nonce                 `json:"nonce"`
+		Signature babyjub.SignatureComp `json:"signature"`
+		RqOffset  *uint8                `json:"requestOffset"`
+	}
+	// Set fields that do not require extra logic
+	toMarshal := jsonFormat{
+		TxID:      tx.TxID,
+		Type:      tx.Type,
+		TokenID:   tx.TokenID,
+		FromIdx:   IdxToHez(tx.FromIdx, tx.TokenSymbol),
+		Amount:    tx.Amount.String(),
+		Fee:       tx.Fee,
+		Nonce:     tx.Nonce,
+		Signature: tx.Signature,
+	}
+	// Set To fields
+	if tx.ToIdx != 0 {
+		toIdx := IdxToHez(tx.ToIdx, tx.TokenSymbol)
+		toMarshal.ToIdx = &toIdx
+	}
+	if tx.ToEthAddr != EmptyAddr {
+		toEth := EthAddrToHez(tx.ToEthAddr)
+		toMarshal.ToEthAddr = &toEth
+	}
+	if tx.ToBJJ != EmptyBJJComp {
+		toBJJ := BjjToString(tx.ToBJJ)
+		toMarshal.ToBJJ = &toBJJ
+	}
+	// Check if is a atomic and require another tx
+	if tx.RqFromIdx != 0 {
+		toMarshal.RqOffset = &tx.RqOffset
+	}
+	return json.Marshal(toMarshal)
+}
+
+// UnmarshalJSON unmarshals a PoolL2Tx that has been formated in json as specified in `api/swagger.yml:schemas/PostPoolL2Transaction`.
+// Note that ClientIP is not included as part of the json and will be set to "".
+// If State is not setted (State == ""), it will be set to PoolL2TxStatePending.
+func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
+	receivedJSON := struct {
+		TxID      TxID                  `json:"id" binding:"required"`
+		Type      TxType                `json:"type" binding:"required"`
+		TokenID   TokenID               `json:"tokenId"`
+		FromIdx   StrHezIdx             `json:"fromAccountIndex" binding:"required"`
+		ToIdx     StrHezIdx             `json:"toAccountIndex"`
+		ToEthAddr StrHezEthAddr         `json:"toHezEthereumAddress"`
+		ToBJJ     StrHezBJJ             `json:"toBjj"`
+		Amount    *StrBigInt            `json:"amount" binding:"required"`
+		Fee       FeeSelector           `json:"fee"`
+		Nonce     Nonce                 `json:"nonce"`
+		Signature babyjub.SignatureComp `json:"signature" binding:"required"`
+		State     string                `json:"state"`
+		RqOffset  uint8                 `json:"requestOffset"`
+	}{}
+	if err := json.Unmarshal(data, &receivedJSON); err != nil {
+		return err
+	}
+	// Check state
+	state := PoolL2TxStatePending
+	if receivedJSON.State != "" {
+		state = PoolL2TxState(receivedJSON.State)
+		if !state.IsValid() {
+			return fmt.Errorf("Invalid state: %s", state)
+		}
+	}
+	// Set values to destination struct
+	*tx = PoolL2Tx{
+		TxID:        receivedJSON.TxID,
+		FromIdx:     Idx(receivedJSON.FromIdx.Idx),
+		ToIdx:       Idx(receivedJSON.ToIdx.Idx),
+		ToEthAddr:   ethCommon.Address(receivedJSON.ToEthAddr),
+		ToBJJ:       babyjub.PublicKeyComp(receivedJSON.ToBJJ),
+		TokenID:     receivedJSON.TokenID,
+		Amount:      (*big.Int)(receivedJSON.Amount),
+		Fee:         receivedJSON.Fee,
+		Nonce:       receivedJSON.Nonce,
+		Signature:   receivedJSON.Signature,
+		Type:        receivedJSON.Type,
+		State:       state,
+		TokenSymbol: receivedJSON.FromIdx.TokenSymbol,
+		RqOffset:    receivedJSON.RqOffset,
+	}
+	return nil
+}
+
+// AtomicGroupIDLen is the length of a Hermez network atomic group
+const AtomicGroupIDLen = 32
+
+// AtomicGroupID is the identifier of a Hermez network atomic group
+type AtomicGroupID [AtomicGroupIDLen]byte
+
+// EmptyAtomicGroupID represents an empty Hermez network atomic group identifier
+var EmptyAtomicGroupID = AtomicGroupID([32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+
+// CalculateAtomicGroupID calculates the atomic group ID given the identifiers of
+// the transactions that conform the atomic group
+func CalculateAtomicGroupID(txIDs []TxID) AtomicGroupID {
+	txIDConcatenation := make([]byte, TxIDLen*len(txIDs))
+	for i, id := range txIDs {
+		idBytes := [TxIDLen]byte(id)
+		copy(txIDConcatenation[i*TxIDLen:(i+1)*TxIDLen], idBytes[:])
+	}
+	h := ethCrypto.Keccak256Hash(txIDConcatenation).Bytes()
+	var agid AtomicGroupID
+	copy(agid[:], h)
+	return agid
+}
+
+// Scan implements Scanner for database/sql.
+func (agid *AtomicGroupID) Scan(src interface{}) error {
+	srcB, ok := src.([]byte)
+	if !ok {
+		return tracerr.Wrap(fmt.Errorf("can't scan %T into AtomicGroupID", src))
+	}
+	if len(srcB) != AtomicGroupIDLen {
+		return tracerr.Wrap(fmt.Errorf("can't scan []byte of len %d into AtomicGroupID, need %d",
+			len(srcB), AtomicGroupIDLen))
+	}
+	copy(agid[:], srcB)
+	return nil
+}
+
+// Value implements valuer for database/sql.
+func (agid AtomicGroupID) Value() (driver.Value, error) {
+	return agid[:], nil
+}
+
+// String returns a string hexadecimal representation of the AtomicGroupID
+func (agid AtomicGroupID) String() string {
+	return "0x" + hex.EncodeToString(agid[:])
+}
+
+// NewAtomicGroupIDFromString returns a string hexadecimal representation of the AtomicGroupID
+func NewAtomicGroupIDFromString(idStr string) (AtomicGroupID, error) {
+	agid := AtomicGroupID{}
+	idStr = strings.TrimPrefix(idStr, "0x")
+	decoded, err := hex.DecodeString(idStr)
+	if err != nil {
+		return AtomicGroupID{}, tracerr.Wrap(err)
+	}
+	if len(decoded) != AtomicGroupIDLen {
+		return agid, tracerr.Wrap(errors.New("Invalid idStr"))
+	}
+	copy(agid[:], decoded)
+	return agid, nil
+}
+
+// MarshalText marshals a AtomicGroupID
+func (agid AtomicGroupID) MarshalText() ([]byte, error) {
+	return []byte(agid.String()), nil
+}
+
+// UnmarshalText unmarshalls a AtomicGroupID
+func (agid *AtomicGroupID) UnmarshalText(data []byte) error {
+	idStr := string(data)
+	id, err := NewAtomicGroupIDFromString(idStr)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	*agid = id
+	return nil
+}

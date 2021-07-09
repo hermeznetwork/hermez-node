@@ -39,6 +39,10 @@ var (
 	// format, which is equivalent to 3322668559 as uint32 in byte array in
 	// big endian representation.
 	SignatureConstantBytes = []byte{198, 11, 230, 15}
+
+	// EmptyTxID is used to check if a TxID is 0
+	EmptyTxID = TxID([TxIDLen]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 )
 
 // TxID is the identifier of a Hermez network transaction

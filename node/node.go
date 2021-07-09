@@ -312,12 +312,12 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		}, chainIDU16, cfg.SmartContracts.Rollup); err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		coordAccount := &txselector.CoordAccount{
+		coordAccount := txselector.CoordAccount{
 			Addr:                cfg.Coordinator.FeeAccount.Address,
 			BJJ:                 cfg.Coordinator.FeeAccount.BJJ,
 			AccountCreationAuth: auth.Signature,
 		}
-		txSelector, err := txselector.NewTxSelector(coordAccount,
+		txSelector, err := txselector.NewTxSelector(&coordAccount,
 			cfg.Coordinator.TxSelector.Path, stateDB, l2DB)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -399,6 +399,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 				EthNoReuseNonce:         cfg.Coordinator.EthClient.NoReuseNonce,
 				EthTxResendTimeout:      cfg.Coordinator.EthClient.TxResendTimeout.Duration,
 				MaxGasPrice:             cfg.Coordinator.EthClient.MaxGasPrice,
+				MinGasPrice:             cfg.Coordinator.EthClient.MinGasPrice,
 				GasPriceIncPerc:         cfg.Coordinator.EthClient.GasPriceIncPerc,
 				TxManagerCheckInterval:  cfg.Coordinator.EthClient.CheckLoopInterval.Duration,
 				DebugBatchPath:          cfg.Coordinator.Debug.BatchPath,
