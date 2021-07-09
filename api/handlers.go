@@ -47,7 +47,7 @@ func retSQLErr(err error, c *gin.Context) {
 		retDupKey(sqlErr.(*pq.Error).Code)
 	} else if tracerr.Unwrap(err) == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, apiErrorResponse{
-			Message: errMsg,
+			Message: ErrSQLNoRows,
 			Code:    ErrSQLNoRowsCode,
 			Type:    ErrSQLNoRowsType,
 		})
