@@ -24,6 +24,10 @@ func (a *API) postPoolTx(c *gin.Context) {
 		retBadReq(errors.New(ErrNotAtomicTxsInPostPoolTx), c)
 		return
 	}
+	if receivedTx.MaxNumBatch != 0 {
+		retBadReq(errors.New(ErrUnsupportedMaxNumBatch), c)
+		return
+	}
 	// Check that tx is valid
 	if err := a.verifyPoolL2Tx(receivedTx); err != nil {
 		retBadReq(err, c)

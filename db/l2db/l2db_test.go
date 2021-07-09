@@ -290,7 +290,7 @@ func TestGetPending(t *testing.T) {
 	poolL2Txs, err := generatePoolL2Txs()
 	require.NoError(t, err)
 	var pendingTxs []*common.PoolL2Tx
-	// Add case for atomic related fields
+	// Add case for fields that have been added after the original schema
 	poolL2Txs[0].AtomicGroupID = common.AtomicGroupID([common.AtomicGroupIDLen]byte{9})
 	poolL2Txs[0].RqNonce = 1
 	poolL2Txs[0].RqTokenID = 1
@@ -300,6 +300,7 @@ func TestGetPending(t *testing.T) {
 	poolL2Txs[0].RqFee = 200
 	poolL2Txs[0].RqOffset = 3
 	poolL2Txs[0].RqToEthAddr = ethCommon.BigToAddress(big.NewInt(11111111))
+	poolL2Txs[0].MaxNumBatch = 123456
 
 	for i := range poolL2Txs {
 		err := l2DB.AddTxTest(&poolL2Txs[i])

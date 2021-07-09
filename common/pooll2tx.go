@@ -38,14 +38,15 @@ type PoolL2Tx struct {
 	// AuxToIdx is only used internally at the StateDB to avoid repeated
 	// computation when processing transactions (from Synchronizer,
 	// TxSelector, BatchBuilder)
-	AuxToIdx  Idx                   `meddler:"-"`
-	ToEthAddr ethCommon.Address     `meddler:"to_eth_addr,zeroisnull"`
-	ToBJJ     babyjub.PublicKeyComp `meddler:"to_bjj,zeroisnull"`
-	TokenID   TokenID               `meddler:"token_id"`
-	Amount    *big.Int              `meddler:"amount,bigint"`
-	Fee       FeeSelector           `meddler:"fee"`
-	Nonce     Nonce                 `meddler:"nonce"` // effective 40 bits used
-	State     PoolL2TxState         `meddler:"state"`
+	AuxToIdx    Idx                   `meddler:"-"`
+	ToEthAddr   ethCommon.Address     `meddler:"to_eth_addr,zeroisnull"`
+	ToBJJ       babyjub.PublicKeyComp `meddler:"to_bjj,zeroisnull"`
+	TokenID     TokenID               `meddler:"token_id"`
+	Amount      *big.Int              `meddler:"amount,bigint"`
+	Fee         FeeSelector           `meddler:"fee"`
+	Nonce       Nonce                 `meddler:"nonce"` // effective 40 bits used
+	State       PoolL2TxState         `meddler:"state"`
+	MaxNumBatch int64                 `meddler:"max_num_batch,zeroisnull"`
 	// Info contains information about the status & State of the
 	// transaction. As for example, if the Tx has not been selected in the
 	// last batch due not enough Balance at the Sender account, this reason
@@ -445,29 +446,31 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("Invalid tx.TokenSymbol")
 	}
 	type jsonFormat struct {
-		TxID      TxID                  `json:"id"`
-		Type      TxType                `json:"type"`
-		TokenID   TokenID               `json:"tokenId"`
-		FromIdx   string                `json:"fromAccountIndex"`
-		ToIdx     *string               `json:"toAccountIndex"`
-		ToEthAddr *string               `json:"toHezEthereumAddress"`
-		ToBJJ     *string               `json:"toBjj"`
-		Amount    string                `json:"amount"`
-		Fee       FeeSelector           `json:"fee"`
-		Nonce     Nonce                 `json:"nonce"`
-		Signature babyjub.SignatureComp `json:"signature"`
-		RqOffset  *uint8                `json:"requestOffset"`
+		TxID        TxID                  `json:"id"`
+		Type        TxType                `json:"type"`
+		TokenID     TokenID               `json:"tokenId"`
+		FromIdx     string                `json:"fromAccountIndex"`
+		ToIdx       *string               `json:"toAccountIndex"`
+		ToEthAddr   *string               `json:"toHezEthereumAddress"`
+		ToBJJ       *string               `json:"toBjj"`
+		Amount      string                `json:"amount"`
+		Fee         FeeSelector           `json:"fee"`
+		Nonce       Nonce                 `json:"nonce"`
+		MaxNumBatch int64                 `json:"maxNumBatch"`
+		Signature   babyjub.SignatureComp `json:"signature"`
+		RqOffset    *uint8                `json:"requestOffset"`
 	}
 	// Set fields that do not require extra logic
 	toMarshal := jsonFormat{
-		TxID:      tx.TxID,
-		Type:      tx.Type,
-		TokenID:   tx.TokenID,
-		FromIdx:   IdxToHez(tx.FromIdx, tx.TokenSymbol),
-		Amount:    tx.Amount.String(),
-		Fee:       tx.Fee,
-		Nonce:     tx.Nonce,
-		Signature: tx.Signature,
+		TxID:        tx.TxID,
+		Type:        tx.Type,
+		TokenID:     tx.TokenID,
+		FromIdx:     IdxToHez(tx.FromIdx, tx.TokenSymbol),
+		Amount:      tx.Amount.String(),
+		Fee:         tx.Fee,
+		Nonce:       tx.Nonce,
+		MaxNumBatch: tx.MaxNumBatch,
+		Signature:   tx.Signature,
 	}
 	// Set To fields
 	if tx.ToIdx != 0 {
@@ -494,19 +497,20 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 // If State is not setted (State == ""), it will be set to PoolL2TxStatePending.
 func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	receivedJSON := struct {
-		TxID      TxID                  `json:"id" binding:"required"`
-		Type      TxType                `json:"type" binding:"required"`
-		TokenID   TokenID               `json:"tokenId"`
-		FromIdx   StrHezIdx             `json:"fromAccountIndex" binding:"required"`
-		ToIdx     StrHezIdx             `json:"toAccountIndex"`
-		ToEthAddr StrHezEthAddr         `json:"toHezEthereumAddress"`
-		ToBJJ     StrHezBJJ             `json:"toBjj"`
-		Amount    *StrBigInt            `json:"amount" binding:"required"`
-		Fee       FeeSelector           `json:"fee"`
-		Nonce     Nonce                 `json:"nonce"`
-		Signature babyjub.SignatureComp `json:"signature" binding:"required"`
-		State     string                `json:"state"`
-		RqOffset  uint8                 `json:"requestOffset"`
+		TxID        TxID                  `json:"id" binding:"required"`
+		Type        TxType                `json:"type" binding:"required"`
+		TokenID     TokenID               `json:"tokenId"`
+		FromIdx     StrHezIdx             `json:"fromAccountIndex" binding:"required"`
+		ToIdx       StrHezIdx             `json:"toAccountIndex"`
+		ToEthAddr   StrHezEthAddr         `json:"toHezEthereumAddress"`
+		ToBJJ       StrHezBJJ             `json:"toBjj"`
+		Amount      *StrBigInt            `json:"amount" binding:"required"`
+		Fee         FeeSelector           `json:"fee"`
+		Nonce       Nonce                 `json:"nonce"`
+		MaxNumBatch int64                 `json:"maxNumBatch"`
+		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
+		State       string                `json:"state"`
+		RqOffset    uint8                 `json:"requestOffset"`
 	}{}
 	if err := json.Unmarshal(data, &receivedJSON); err != nil {
 		return err
@@ -530,6 +534,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Amount:      (*big.Int)(receivedJSON.Amount),
 		Fee:         receivedJSON.Fee,
 		Nonce:       receivedJSON.Nonce,
+		MaxNumBatch: receivedJSON.MaxNumBatch,
 		Signature:   receivedJSON.Signature,
 		Type:        receivedJSON.Type,
 		State:       state,

@@ -164,7 +164,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		tx_id, from_idx, to_idx, to_eth_addr, to_bjj, token_id,
 		amount, fee, nonce, state, info, signature, rq_from_idx, 
 		rq_to_idx, rq_to_eth_addr, rq_to_bjj, rq_token_id, rq_amount, rq_fee, rq_nonce, 
-		tx_type, amount_f, client_ip, rq_offset, atomic_group_id
+		tx_type, amount_f, client_ip, rq_offset, atomic_group_id, max_num_batch
 	)`
 	var (
 		queryVarsPart string
@@ -188,6 +188,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			rqNonce       *common.Nonce
 			rqOffset      *uint8
 			atomicGroupID *common.AtomicGroupID
+			maxNumBatch   *int64
 		)
 		// AmountFloat
 		f := new(big.Float).SetInt((*big.Int)(txs[i].Amount))
@@ -199,6 +200,10 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		// ToBJJ
 		if txs[i].ToBJJ != common.EmptyBJJComp {
 			toBJJ = &txs[i].ToBJJ
+		}
+		// MAxNumBatch
+		if txs[i].MaxNumBatch != 0 {
+			maxNumBatch = &txs[i].MaxNumBatch
 		}
 		// Rq fields
 		if txs[i].RqFromIdx != 0 {
@@ -236,7 +241,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		const queryVarsPartPerTx = `(?::BYTEA, ?::BIGINT, ?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT, 
 		?::NUMERIC, ?::SMALLINT, ?::BIGINT, ?::CHAR(4), ?::VARCHAR, ?::BYTEA, ?::BIGINT,
 		?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT, ?::NUMERIC, ?::SMALLINT, ?::BIGINT,
-		?::VARCHAR(40), ?::NUMERIC, ?::VARCHAR, ?::SMALLINT, ?::BYTEA)`
+		?::VARCHAR(40), ?::NUMERIC, ?::VARCHAR, ?::SMALLINT, ?::BYTEA, ?::BIGINT)`
 		if i == 0 {
 			queryVarsPart += queryVarsPartPerTx
 		} else {
@@ -248,7 +253,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			txs[i].TxID, txs[i].FromIdx, txs[i].ToIdx, toEthAddr, toBJJ, txs[i].TokenID,
 			txs[i].Amount.String(), txs[i].Fee, txs[i].Nonce, txs[i].State, info, txs[i].Signature, rqFromIdx,
 			rqToIdx, rqToEthAddr, rqToBJJ, rqTokenID, rqAmount, rqFee, rqNonce,
-			txs[i].Type, amountF, txs[i].ClientIP, rqOffset, atomicGroupID,
+			txs[i].Type, amountF, txs[i].ClientIP, rqOffset, atomicGroupID, maxNumBatch,
 		)
 	}
 	// Query begins with the insert statement
@@ -281,7 +286,7 @@ const selectPoolTxCommon = `SELECT  tx_pool.tx_id, from_idx, to_idx, tx_pool.to_
 tx_pool.to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
 tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, rq_from_idx, 
 rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
-tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, tx_pool.rq_offset, tx_pool.atomic_group_id, 
+tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, tx_pool.rq_offset, tx_pool.atomic_group_id, tx_pool.max_num_batch, 
 (fee_percentage(tx_pool.fee::NUMERIC) * token.usd * tx_pool.amount_f) /
 	(10.0 ^ token.decimals::NUMERIC) AS fee_usd, token.usd_update
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `

@@ -35,4 +35,6 @@ const (
 
 	// ErrInvalidAtomicGroupID error message returned when received an invalid AtomicGroupID
 	ErrInvalidAtomicGroupID = "Invalid atomicGroupId"
+	// ErrUnsupportedMaxNumBatch error message returned when tx.MaxNumBatch != 0 until the feature is fully implemented
+	ErrUnsupportedMaxNumBatch = "Currently only supported value for maxNumBatch is 0, this will change soon when the feature is fully implemented"
 )

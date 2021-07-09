@@ -201,6 +201,14 @@ func TestPoolTxs(t *testing.T) {
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", endpoint, jsonTxReader, 409)
 	require.NoError(t, err)
+	// Wrong maxNumBatch
+	badTx = tc.poolTxsToSend[0]
+	badTx.MaxNumBatch = 30
+	jsonTxBytes, err = json.Marshal(badTx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", endpoint, jsonTxReader, 400)
+	require.NoError(t, err)
 	// GET
 	// init structures
 	fetchedTxsTotal := []testPoolTxReceive{}
