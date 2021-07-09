@@ -155,7 +155,7 @@ tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
 tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
-tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
+tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, tx_pool.max_num_batch, 
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update 
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
@@ -165,7 +165,7 @@ tx_pool.effective_from_bjj, hez_idx(tx_pool.to_idx, token.symbol) AS to_idx, tx_
 tx_pool.effective_to_bjj, tx_pool.token_id, tx_pool.amount, tx_pool.fee, tx_pool.nonce, 
 tx_pool.state, tx_pool.info, tx_pool.signature, tx_pool.timestamp, tx_pool.batch_num, hez_idx(tx_pool.rq_from_idx, token.symbol) AS rq_from_idx, 
 hez_idx(tx_pool.rq_to_idx, token.symbol) AS rq_to_idx, tx_pool.rq_to_eth_addr, tx_pool.rq_to_bjj, tx_pool.rq_token_id, tx_pool.rq_amount, 
-tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, 
+tx_pool.rq_fee, tx_pool.rq_nonce, tx_pool.tx_type, tx_pool.max_num_batch,
 token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
 count(*) OVER() AS total_items 
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `

@@ -137,6 +137,9 @@ const (
 	// ErrFailedToFindOffsetToRelativePositionType error type
 	ErrFailedToFindOffsetToRelativePositionType = "ErrFailedToFindOffsetToRelativePosition"
 
+	// ErrUnsupportedMaxNumBatch error message returned when tx.MaxNumBatch != 0 until the feature is fully implemented
+	ErrUnsupportedMaxNumBatch = "Currently only supported value for maxNumBatch is 0, this will change soon when the feature is fully implemented"
+
 	// Internal error messages (used for logs or handling errors returned from internal components)
 
 	// errCtxTimeout error message received internally when context reaches timeout

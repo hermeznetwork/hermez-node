@@ -69,6 +69,11 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	txIDStrings := make([]string, nTxs) // used for successful response
 	clientIP := c.ClientIP()
 	for i, tx := range receivedAtomicGroup.Txs {
+		// Check MaxNumBatch
+		if tx.MaxNumBatch != 0 {
+			retBadReq(errors.New(ErrUnsupportedMaxNumBatch), c)
+			return
+		}
 		// Find requested transaction
 		relativePosition, err := requestOffset2RelativePosition(tx.RqOffset)
 		if err != nil {
