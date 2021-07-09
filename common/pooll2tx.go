@@ -46,7 +46,7 @@ type PoolL2Tx struct {
 	Fee         FeeSelector           `meddler:"fee"`
 	Nonce       Nonce                 `meddler:"nonce"` // effective 40 bits used
 	State       PoolL2TxState         `meddler:"state"`
-	MaxNumBatch int64                 `meddler:"max_num_batch,zeroisnull"`
+	MaxNumBatch uint32                `meddler:"max_num_batch,zeroisnull"`
 	// Info contains information about the status & State of the
 	// transaction. As for example, if the Tx has not been selected in the
 	// last batch due not enough Balance at the Sender account, this reason
@@ -316,8 +316,10 @@ func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 		return nil, tracerr.Wrap(err)
 	}
 
-	// e1: [5 bytes AmountFloat40 | 20 bytes ToEthAddr]
-	var e1B [25]byte
+	// e1: [4 bytes MaxBatchNum | 5 bytes AmountFloat40 | 20 bytes ToEthAddr]
+	var e1B [29]byte
+	maxNumBatchBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(maxNumBatchBytes, tx.MaxNumBatch)
 	amountFloat40, err := NewFloat40(tx.Amount)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -326,8 +328,9 @@ func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	copy(e1B[0:5], amountFloat40Bytes)
-	copy(e1B[5:25], tx.ToEthAddr[:])
+	copy(e1B[0:4], maxNumBatchBytes)
+	copy(e1B[4:9], amountFloat40Bytes)
+	copy(e1B[9:29], tx.ToEthAddr[:])
 	e1 := new(big.Int).SetBytes(e1B[:])
 	rqToEthAddr := EthAddrToBigInt(tx.RqToEthAddr)
 
@@ -456,7 +459,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		Amount      string                `json:"amount"`
 		Fee         FeeSelector           `json:"fee"`
 		Nonce       Nonce                 `json:"nonce"`
-		MaxNumBatch int64                 `json:"maxNumBatch"`
+		MaxNumBatch uint32                `json:"maxNumBatch"`
 		Signature   babyjub.SignatureComp `json:"signature"`
 		RqOffset    *uint8                `json:"requestOffset"`
 	}
@@ -507,7 +510,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Amount      *StrBigInt            `json:"amount" binding:"required"`
 		Fee         FeeSelector           `json:"fee"`
 		Nonce       Nonce                 `json:"nonce"`
-		MaxNumBatch int64                 `json:"maxNumBatch"`
+		MaxNumBatch uint32                `json:"maxNumBatch"`
 		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
 		State       string                `json:"state"`
 		RqOffset    uint8                 `json:"requestOffset"`
