@@ -26,7 +26,7 @@ const (
 	ErrSQLTimeoutType apiErrorType = "ErrSQLTimeout"
 
 	// ErrSQLNoRows error message returned when there is no such records
-	ErrSQLNoRows = "record not found for this query and the parameters informed"
+	ErrSQLNoRows = "record(s) were not found for this query and/or the parameters entered"
 	// ErrSQLNoRowsCode code for no rows error
 	ErrSQLNoRowsCode apiErrorCode = 4
 	// ErrSQLNoRowsType type for now rows error
