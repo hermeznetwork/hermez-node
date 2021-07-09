@@ -19,7 +19,7 @@ const (
 	ErrDuplicatedKeyType apiErrorType = "ErrDuplicatedKey"
 
 	// ErrSQLTimeout error message returned when timeout due to SQL connection
-	ErrSQLTimeout = "The node is under heavy preasure, please try again later"
+	ErrSQLTimeout = "The node is under heavy pressure, please try again later"
 	// ErrSQLTimeoutCode code for sql timeout error
 	ErrSQLTimeoutCode apiErrorCode = 3
 	// ErrSQLTimeoutType type for sql timeout type
@@ -30,7 +30,7 @@ const (
 	// ErrSQLNoRowsType type for now rows error
 	ErrSQLNoRowsType apiErrorType = "ErrSQLNoRows"
 
-	// ErrExitAmount0 error message returned when receiving (and rejecting) a tr of type exit with amount 0
+	// ErrExitAmount0 error message returned when receiving (and rejecting) a tx of type exit with amount 0
 	ErrExitAmount0 = "Transaction rejected because an exit with amount 0 has no sense"
 	// ErrExitAmount0Code code for 0 exit amount error
 	ErrExitAmount0Code apiErrorCode = 5
@@ -77,17 +77,32 @@ const (
 	// ErrCantSendToEthAddrType type when can't send to eth addr code error appeared
 	ErrCantSendToEthAddrType apiErrorType = "ErrCantSendToEthAddr"
 
+	// ErrIsAtomic filter atomic transactions on POST /transactions-pool
+	ErrIsAtomic = "this endpoint does not accept atomic transactions"
+	// ErrIsAtomicCode code filter atomic transactions on POST /transactions-pool
+	ErrIsAtomicCode apiErrorCode = 14
+	// ErrIsAtomicType type filter atomic transactions on POST /transactions-pool
+	ErrIsAtomicType apiErrorType = "ErrIsAtomic"
+
+	// ErrFailedToGetCurrentBlockCode code when can't get current block in /slots request
+	ErrFailedToGetCurrentBlockCode apiErrorCode = 15
+	// ErrFailedToGetCurrentBlockType type when can't get current block in /slots request
+	ErrFailedToGetCurrentBlockType apiErrorType = "ErrFailedToGetCurrentBlock"
+
+	// ErrFailedToGetAuctionVarsCode code when can't get auction vars in /slots request
+	ErrFailedToGetAuctionVarsCode apiErrorCode = 16
+	// ErrFailedToGetAuctionVarsType type when can't get auction vars in /slots request
+	ErrFailedToGetAuctionVarsType apiErrorType = "ErrFailedToGetAuctionVars"
+
+	// ErrFailedToAddEmptySlotCode code when can't add empty slot in /slots request
+	ErrFailedToAddEmptySlotCode apiErrorCode = 17
+	// ErrFailedToAddEmptySlotType type when can't add empty slot in /slots request
+	ErrFailedToAddEmptySlotType apiErrorType = "ErrFailedToAddEmptySlot"
+
 	// Internal error messages (used for logs or handling errors returned from internal components)
 
 	// errCtxTimeout error message received internally when context reaches timeout
 	errCtxTimeout = "context deadline exceeded"
-
-	// ErrIsAtomic filter atomic transactions on POST /transactions-pool
-	ErrIsAtomic = "this endpoint does not accept atomic transactions"
-	// ErrIsAtomicCode code filter atomic transactions on POST /transactions-pool
-	ErrIsAtomicCode = 14
-	// ErrIsAtomicType type filter atomic transactions on POST /transactions-pool
-	ErrIsAtomicType = "ErrIsAtomic"
 )
 
 type apiError struct {

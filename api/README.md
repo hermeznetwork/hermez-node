@@ -13,7 +13,7 @@ To use a mock up of the endpoints in the API run `./run.sh doc` (UI + mock up se
 
 ## Editor
 
-It is recomended to edit `swagger.yml` using a dedicated editor as they provide spec validation and real time visualization. Of course you can use your prefered editor. To use the editor run `./run.sh editor` and then [opening the editor in your browser](http://localhost:8002).
+It is recommended to edit `swagger.yml` using a dedicated editor as they provide spec validation and real time visualization. Of course you can use your prefered editor. To use the editor run `./run.sh editor` and then [opening the editor in your browser](http://localhost:8002).
 **Keep in mind that you will need to manually save the file otherwise you will lose the changes** you made once you close your browser seshion or stop the server.
 
 **Note:** Your browser may cache the swagger definition, so in order to see updated changes it may be needed to refresh the page without cache (Ctrl + Shift + R).
