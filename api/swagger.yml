@@ -3484,19 +3484,19 @@ components:
             - ErrFailedToFindOffsetToRelativePosition
           description: >
             Error types:
-              * `ErrParamValidationFailed` - this error appears when user sending wrong info in query|uri|form params
+              * `ErrParamValidationFailed` - this error appears when user sends wrong info in query|uri|form params
               * `ErrDuplicatedKey` - record already exists in db
               * `ErrSQLTimeout` - node is under heavy pressure and sql connection timeout happened
               * `ErrSQLNoRows` - there is no such item in database
               * `ErrExitAmount0` - receiving (and rejecting) a tx of type exit with amount 0 in /transactions-pool request
               * `ErrInvalidTxTypeOrTxID` - tx with invalid type or txID was sent in /transactions-pool request
-              * `ErrFeeOverflow` - tx with fee overflow was sent in /transactions-pool request
+              * `ErrFeeOverflow` - tx with fee amount that doesn't fit in 128 bits was sent in /transactions-pool request
               * `ErrGettingSenderAccount` - sender account for tx was not found in /transactions-pool request
-              * `ErrAccountTokenNotEqualTxToken` - account token is not equal tx token in /transactions-pool request
+              * `ErrAccountTokenNotEqualTxToken` - account token is not equal to tx token in /transactions-pool request
               * `ErrInvalidNonce` - invalid nonce was sent in /transactions-pool request
               * `ErrInvalidSignature` - invalid signature was sent in /transactions-pool or /account-creation-authorization requests
               * `ErrGettingReceiverAccount` - receiver account for tx was not fount in /transactions-pool request
-              * `ErrCantSendToEthAddr` - it's not possible to send to eth addr when there is an idx not associated to the Eth addr and token or the coordinator hasn't an authorization to create a valid account
+              * `ErrCantSendToEthAddr` - it's not possible to send to Eth address when there is no account index associated to this Eth address and token, or the coordinator hasn't got an authorization to create an account
               * `ErrNotAtomicTxsInPostPoolTx` - user sending atomic tx to /transactions-pool request
               * `ErrFailedToGetCurrentBlock` - can't get current block in /slots request
               * `ErrFailedToGetAuctionVars` - can't get auction vars in /slots request
