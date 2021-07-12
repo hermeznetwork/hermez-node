@@ -188,7 +188,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			rqNonce       *common.Nonce
 			rqOffset      *uint8
 			atomicGroupID *common.AtomicGroupID
-			maxNumBatch   *int64
+			maxNumBatch   *uint32
 		)
 		// AmountFloat
 		f := new(big.Float).SetInt((*big.Int)(txs[i].Amount))
