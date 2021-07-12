@@ -54,7 +54,7 @@ func TestAtomicPool(t *testing.T) {
 	assert.NoError(t, err)
 
 	txsToClean := []common.TxID{}
-	signAndTransformTxs := func(txs []common.PoolL2Tx) (AtomicGroup, []testPoolTxReceive) {
+	signAndTransformTxs := func(txs []common.PoolL2Tx) (common.AtomicGroup, []testPoolTxReceive) {
 		for i := 0; i < len(txs); i++ {
 			// Set TxID and type
 			_, err := common.NewPoolL2Tx(&txs[i])
@@ -67,7 +67,7 @@ func TestAtomicPool(t *testing.T) {
 			txs[i].Signature = sig.Compress()
 		}
 		txsToSend, txsToReceive := genTestPoolTxs(txs, []historydb.TokenWithUSD{tc.tokens[usedToken]}, accounts)
-		atomicGroup := AtomicGroup{Txs: txsToSend}
+		atomicGroup := common.AtomicGroup{Txs: txsToSend}
 		atomicGroup.SetAtomicGroupID()
 		return atomicGroup, txsToReceive
 	}
