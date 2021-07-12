@@ -159,6 +159,7 @@ func newValidate() *validator.Validate {
 	validate.RegisterStructValidation(parsers.AccountsFiltersStructValidation, parsers.AccountsFilters{})
 	validate.RegisterStructValidation(parsers.HistoryTxsFiltersStructValidation, parsers.HistoryTxsFilters{})
 	validate.RegisterStructValidation(parsers.PoolTxsTxsFiltersStructValidation, parsers.PoolTxsFilters{})
+	validate.RegisterStructValidation(parsers.SlotsFiltersStructValidation, parsers.SlotsFilters{})
 
 	return validate
 }

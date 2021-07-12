@@ -19,11 +19,11 @@ type HistoryTxFilter struct {
 func ParseHistoryTxFilter(c *gin.Context) (common.TxID, error) {
 	var historyTxFilter HistoryTxFilter
 	if err := c.ShouldBindUri(&historyTxFilter); err != nil {
-		return common.TxID{}, err
+		return common.TxID{}, tracerr.Wrap(err)
 	}
 	txID, err := common.NewTxIDFromString(historyTxFilter.TxID)
 	if err != nil {
-		return common.TxID{}, tracerr.Wrap(fmt.Errorf("invalid %s", err))
+		return common.TxID{}, tracerr.Wrap(fmt.Errorf("invalid txID"))
 	}
 	return txID, nil
 }
@@ -82,7 +82,7 @@ func HistoryTxsFiltersStructValidation(sl validator.StructLevel) {
 func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.GetTxsAPIRequest, error) {
 	var historyTxsFilters HistoryTxsFilters
 	if err := c.ShouldBindQuery(&historyTxsFilters); err != nil {
-		return historydb.GetTxsAPIRequest{}, err
+		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	if err := v.Struct(historyTxsFilters); err != nil {

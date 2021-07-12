@@ -3431,11 +3431,88 @@ components:
       properties:
         message:
           type: string
+        code:
+          type: integer
+          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+          description: >
+            Error codes:
+              * `1` - ErrParamValidationFailed error
+              * `2` - ErrDuplicatedKey error
+              * `3` - ErrSQLTimeout error
+              * `4` - ErrSQLNoRows error
+              * `5` - ErrExitAmount0 error
+              * `6` - ErrInvalidTxTypeOrTxID error
+              * `7` - ErrFeeOverflow error
+              * `8` - ErrGettingSenderAccount error
+              * `9` - ErrGettingSenderAccount error
+              * `10` - ErrInvalidNonce error
+              * `11` - ErrInvalidSignature error
+              * `12` - ErrGettingReceiverAccount error
+              * `13` - ErrCantSendToEthAddr error
+              * `14` - ErrNotAtomicTxsInPostPoolTx error
+              * `15` - ErrFailedToGetCurrentBlock error
+              * `16` - ErrFailedToGetAuctionVars error
+              * `17` - ErrFailedToAddEmptySlot error
+              * `18` - ErrTxsNotAtomic error
+              * `19` - ErrSingleTxInAtomicEndpoint error
+              * `20` - ErrRqOffsetOutOfBounds error
+              * `21` - ErrInvalidAtomicGroupID error
+              * `22` - ErrFailedToFindOffsetToRelativePositionCode error
+        type:
+          type: string
+          enum:
+            - ErrParamValidationFailed
+            - ErrDuplicatedKey
+            - ErrSQLTimeout
+            - ErrSQLNoRows
+            - ErrExitAmount0
+            - ErrInvalidTxTypeOrTxID
+            - ErrFeeOverflow
+            - ErrGettingSenderAccount
+            - ErrAccountTokenNotEqualTxToken
+            - ErrInvalidNonce
+            - ErrInvalidSignature
+            - ErrGettingReceiverAccount
+            - ErrCantSendToEthAddr
+            - ErrNotAtomicTxsInPostPoolTx
+            - ErrFailedToGetCurrentBlock
+            - ErrFailedToGetAuctionVars
+            - ErrFailedToAddEmptySlot
+            - ErrTxsNotAtomic
+            - ErrSingleTxInAtomicEndpoint
+            - ErrInvalidAtomicGroupID
+            - ErrFailedToFindOffsetToRelativePosition
+          description: >
+            Error types:
+              * `ErrParamValidationFailed` - this error appears when user sends wrong info in query|uri|form params
+              * `ErrDuplicatedKey` - record already exists in db
+              * `ErrSQLTimeout` - node is under heavy pressure and sql connection timeout happened
+              * `ErrSQLNoRows` - there is no such item in database
+              * `ErrExitAmount0` - receiving (and rejecting) a tx of type exit with amount 0 in /transactions-pool request
+              * `ErrInvalidTxTypeOrTxID` - tx with invalid type or txID was sent in /transactions-pool request
+              * `ErrFeeOverflow` - tx with fee amount that doesn't fit in 128 bits was sent in /transactions-pool request
+              * `ErrGettingSenderAccount` - sender account for tx was not found in /transactions-pool request
+              * `ErrAccountTokenNotEqualTxToken` - account token is not equal to tx token in /transactions-pool request
+              * `ErrInvalidNonce` - invalid nonce was sent in /transactions-pool request
+              * `ErrInvalidSignature` - invalid signature was sent in /transactions-pool or /account-creation-authorization requests
+              * `ErrGettingReceiverAccount` - receiver account for tx was not fount in /transactions-pool request
+              * `ErrCantSendToEthAddr` - it's not possible to send to Eth address when there is no account index associated to this Eth address and token, or the coordinator hasn't got an authorization to create an account
+              * `ErrNotAtomicTxsInPostPoolTx` - user sending atomic tx to /transactions-pool request
+              * `ErrFailedToGetCurrentBlock` - can't get current block in /slots request
+              * `ErrFailedToGetAuctionVars` - can't get auction vars in /slots request
+              * `ErrFailedToAddEmptySlot` - can't add empty slot in /slots request
+              * `ErrTxsNotAtomic` - there is at least one transaction in the payload that could be forged without the others
+              * `ErrSingleTxInAtomicEndpoint` - to use the atomic-pool endpoint at least two transactions are required
+              * `ErrRqOffsetOutOfBounds` - one of the transactions requested another one outside the bounds of the provided array
+              * `ErrInvalidAtomicGroupID` - invalid atomicGroupId
+              * `ErrFailedToFindOffsetToRelativePosition` - can't find offset to relative position
     Error400:
       allOf:
         - $ref: '#/components/schemas/Error'
         - example:
             message: Invalid signature.
+            code: 4
+            type: ErrInvalidSignature
     Error404:
       allOf:
         - $ref: '#/components/schemas/Error'

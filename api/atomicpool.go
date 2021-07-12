@@ -40,17 +40,29 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	// Parse body
 	var receivedAtomicGroup AtomicGroup
 	if err := c.ShouldBindJSON(&receivedAtomicGroup); err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Validate atomic group id
 	if !receivedAtomicGroup.IsAtomicGroupIDValid() {
-		retBadReq(errors.New(ErrInvalidAtomicGroupID), c)
+		retBadReq(&apiError{
+			Err:  errors.New(ErrInvalidAtomicGroupID),
+			Code: ErrInvalidAtomicGroupIDCode,
+			Type: ErrInvalidAtomicGroupIDType,
+		}, c)
 		return
 	}
 	nTxs := len(receivedAtomicGroup.Txs)
 	if nTxs <= 1 {
-		retBadReq(errors.New(ErrSingleTxInAtomicEndpoint), c)
+		retBadReq(&apiError{
+			Err:  errors.New(ErrSingleTxInAtomicEndpoint),
+			Code: ErrSingleTxInAtomicEndpointCode,
+			Type: ErrSingleTxInAtomicEndpointType,
+		}, c)
 		return
 	}
 	// Validate txs
@@ -59,18 +71,30 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	for i, tx := range receivedAtomicGroup.Txs {
 		// Check MaxNumBatch
 		if tx.MaxNumBatch != 0 {
-			retBadReq(errors.New(ErrUnsupportedMaxNumBatch), c)
+			retBadReq(&apiError{
+				Err:  errors.New(ErrUnsupportedMaxNumBatch),
+				Code: ErrParamValidationFailedCode,
+				Type: ErrParamValidationFailedType,
+			}, c)
 			return
 		}
 		// Find requested transaction
 		relativePosition, err := requestOffset2RelativePosition(tx.RqOffset)
 		if err != nil {
-			retBadReq(err, c)
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrFailedToFindOffsetToRelativePositionCode,
+				Type: ErrFailedToFindOffsetToRelativePositionType,
+			}, c)
 			return
 		}
 		requestedPosition := i + relativePosition
 		if requestedPosition > len(receivedAtomicGroup.Txs)-1 || requestedPosition < 0 {
-			retBadReq(errors.New(ErrRqOffsetOutOfBounds), c)
+			retBadReq(&apiError{
+				Err:  errors.New(ErrRqOffsetOutOfBounds),
+				Code: ErrRqOffsetOutOfBoundsCode,
+				Type: ErrRqOffsetOutOfBoundsType,
+			}, c)
 			return
 		}
 		// Set fields that are omitted in the JSON
@@ -98,7 +122,11 @@ func (a *API) postAtomicPool(c *gin.Context) {
 
 	// Validate that all txs in the payload represent a single atomic group
 	if !isSingleAtomicGroup(receivedAtomicGroup.Txs) {
-		retBadReq(errors.New(ErrTxsNotAtomic), c)
+		retBadReq(&apiError{
+			Err:  errors.New(ErrTxsNotAtomic),
+			Code: ErrTxsNotAtomicCode,
+			Type: ErrTxsNotAtomicType,
+		}, c)
 		return
 	}
 	// Insert to DB
@@ -180,7 +208,11 @@ func (a *API) getAtomicGroup(c *gin.Context) {
 	// Get TxID
 	atomicGroupID, err := parsers.ParseParamAtomicGroupID(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch tx from l2DB

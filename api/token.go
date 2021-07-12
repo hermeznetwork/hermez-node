@@ -13,7 +13,11 @@ func (a *API) getToken(c *gin.Context) {
 	// Get TokenID
 	tokenIDUint, err := parsers.ParseTokenFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	tokenID := common.TokenID(*tokenIDUint)
@@ -30,7 +34,11 @@ func (a *API) getTokens(c *gin.Context) {
 	// Account filters
 	filters, err := parsers.ParseTokensFilters(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch exits from historyDB
