@@ -17,6 +17,7 @@ package node
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -50,6 +51,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 	"github.com/russross/meddler"
 )
@@ -303,9 +305,19 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			cfg.Coordinator.EthClient.Keystore.Password); err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		//Swap bjj endianness
+		decodedBjjPubKey, err := hex.DecodeString(cfg.Coordinator.FeeAccount.BJJ.String())
+		if err != nil {
+			log.Error("Error decoding BJJ public key from config file. Error: ", err.Error())
+			return nil, tracerr.Wrap(err)
+		}
+		bSwapped := common.SwapEndianness(decodedBjjPubKey)
+		var bjj babyjub.PublicKeyComp
+		copy(bjj[:], bSwapped[:])
+
 		auth := &common.AccountCreationAuth{
 			EthAddr: cfg.Coordinator.FeeAccount.Address,
-			BJJ:     cfg.Coordinator.FeeAccount.BJJ,
+			BJJ:     bjj,
 		}
 		if err := auth.Sign(func(msg []byte) ([]byte, error) {
 			return keyStore.SignHash(feeAccount, msg)
@@ -314,7 +326,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		}
 		coordAccount := txselector.CoordAccount{
 			Addr:                cfg.Coordinator.FeeAccount.Address,
-			BJJ:                 cfg.Coordinator.FeeAccount.BJJ,
+			BJJ:                 bjj,
 			AccountCreationAuth: auth.Signature,
 		}
 		txSelector, err := txselector.NewTxSelector(&coordAccount,
