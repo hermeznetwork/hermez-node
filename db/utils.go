@@ -37,23 +37,26 @@ const (
 	OrderDesc = "DESC"
 )
 
-var migrations *migrate.PackrMigrationSource
-
-func init() {
-	migrations = &migrate.PackrMigrationSource{
+func loadMigrations() (*migrate.PackrMigrationSource, error) {
+	migrations := &migrate.PackrMigrationSource{
 		Box: packr.New("hermez-db-migrations", "./migrations"),
 	}
 	ms, err := migrations.FindMigrations()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if len(ms) == 0 {
-		panic(fmt.Errorf("no SQL migrations found"))
+		return nil, fmt.Errorf("no SQL migrations found")
 	}
+	return migrations, nil
 }
 
 // MigrationsUp runs the SQL migrations Up
 func MigrationsUp(db *sql.DB) error {
+	migrations, err := loadMigrations()
+	if err != nil {
+		return err
+	}
 	nMigrations, err := migrate.Exec(db, "postgres", migrations, migrate.Up)
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -65,6 +68,10 @@ func MigrationsUp(db *sql.DB) error {
 // MigrationsDown runs the SQL migrations Down,
 // migrationsToRun specifies how many migrations will be run, 0 means any.
 func MigrationsDown(db *sql.DB, migrationsToRun uint) error {
+	migrations, err := loadMigrations()
+	if err != nil {
+		return err
+	}
 	nMigrations, err := migrate.ExecMax(db, "postgres", migrations, migrate.Down, int(migrationsToRun))
 	if err != nil {
 		return tracerr.Wrap(err)
