@@ -131,16 +131,9 @@ func (t *TxManager) syncSCVars(vars common.SCVariablesPtr) {
 // NewAuth generates a new auth object for an ethereum transaction
 func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.TransactOpts, error) {
 	// First we try getting the gas price from etherscan. Later we get the gas price from the ethereum node.
-
 	var err error
 
-	// If gas price is higher than 2000, probably we are going to get the gasLimit exceed error
-	const maxGasPrice = 2000
-	// If gas price is to low, probably there is an error or at Etherscan or Ethereum node.
-	// So setting a minimum value
-	const minGasPrice = 5
-
-	eGasPrice := big.NewInt(minGasPrice)
+	eGasPrice := big.NewInt(t.cfg.MinGasPrice)
 
 	if t.etherscanService != nil {
 		etherscanGasPrice, err := t.etherscanService.GetGasPrice(ctx)
@@ -160,8 +153,8 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 		return nil, tracerr.Wrap(err)
 	}
 
-	maxGasPriceBig := big.NewInt(maxGasPrice)
-	minGasPriceBig := big.NewInt(minGasPrice)
+	maxGasPriceBig := big.NewInt(t.cfg.MaxGasPrice)
+	minGasPriceBig := big.NewInt(t.cfg.MinGasPrice)
 
 	if eGasPrice.Cmp(maxGasPriceBig) == 1 {
 		eGasPrice = maxGasPriceBig
@@ -205,6 +198,7 @@ func (t *TxManager) NewAuth(ctx context.Context, batchInfo *BatchInfo) (*bind.Tr
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 	auth.Nonce = nil
+	auth.Context = ctx
 
 	return auth, nil
 }
@@ -261,8 +255,11 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 		batchInfo.Auth = auth
 		auth.Nonce = big.NewInt(int64(t.accNextNonce))
 	}
+	auth.Context = ctx
 	for attempt := 0; attempt < t.cfg.EthClientAttempts; attempt++ {
-		if auth.GasPrice.Cmp(t.cfg.MaxGasPrice) > 0 {
+		maxGasPrice := big.NewInt(t.cfg.MaxGasPrice)
+		maxGasPrice.Mul(maxGasPrice, big.NewInt(params.GWei))
+		if auth.GasPrice.Cmp(maxGasPrice) > 0 {
 			return tracerr.Wrap(fmt.Errorf("calculated gasPrice (%v) > maxGasPrice (%v)",
 				auth.GasPrice, t.cfg.MaxGasPrice))
 		}

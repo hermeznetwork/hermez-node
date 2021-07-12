@@ -170,6 +170,11 @@ func (tp *TxProcessor) StateDB() *statedb.StateDB {
 	return tp.s
 }
 
+// AccumulatedCoordFees returns the accumulated fees for each token (coordinator idx) in the processed batch
+func (tp *TxProcessor) AccumulatedCoordFees() map[common.Idx]*big.Int {
+	return tp.AccumulatedFees
+}
+
 func (tp *TxProcessor) resetZKInputs() {
 	tp.zki = nil
 	tp.i = 0 // initialize current transaction index in the ZKInputs generation
@@ -201,7 +206,7 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 	}
 	defer tp.resetZKInputs()
 
-	if len(coordIdxs) >= int(tp.config.MaxFeeTx) {
+	if len(coordIdxs) > int(tp.config.MaxFeeTx) {
 		return nil, tracerr.Wrap(
 			fmt.Errorf("CoordIdxs (%d) length must be smaller than MaxFeeTx (%d)",
 				len(coordIdxs), tp.config.MaxFeeTx))
@@ -490,7 +495,9 @@ func (tp *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinat
 		}
 		if tp.zki != nil {
 			tp.zki.Siblings3[iFee] = siblingsToZKInputFormat(pFee.Siblings)
-			tp.zki.ISStateRootFee[iFee] = tp.s.MT.Root().BigInt()
+			if iFee < len(tp.zki.ISStateRootFee) {
+				tp.zki.ISStateRootFee[iFee] = tp.s.MT.Root().BigInt()
+			}
 		}
 		iFee++
 	}
@@ -785,11 +792,22 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 		tp.zki.AmountF[tp.i] = big.NewInt(int64(amountF40))
 		tp.zki.NewAccount[tp.i] = big.NewInt(0)
 
-		// L2Txs
-		// tp.zki.RqOffset[tp.i] =  // TODO Rq once TxSelector is ready
-		// tp.zki.RqTxCompressedDataV2[tp.i] = // TODO
-		// tp.zki.RqToEthAddr[tp.i] = common.EthAddrToBigInt(tx.RqToEthAddr) // TODO
-		// tp.zki.RqToBJJAy[tp.i] = tx.ToBJJ.Y // TODO
+		// Rq fields: set zki to link the requested tx
+		if tx.RqOffset != 0 {
+			if tx.RqOffset > 7 { //nolint:gomnd
+				return nil, nil, false, tracerr.New(ErrInvalidRqOffset)
+			}
+			rqOffset := big.NewInt(int64(tx.RqOffset))
+			tp.zki.RqOffset[tp.i] = rqOffset
+			tp.zki.RqTxCompressedDataV2[tp.i], err = tx.RqTxCompressedDataV2()
+			if err != nil {
+				return nil, nil, false, tracerr.Wrap(err)
+			}
+			if tx.RqToBJJ != common.EmptyBJJComp {
+				_, tp.zki.RqToBJJAy[tp.i] = babyjub.UnpackSignY(tx.RqToBJJ)
+			}
+			tp.zki.RqToEthAddr[tp.i] = common.EthAddrToBigInt(tx.RqToEthAddr)
+		}
 
 		signature, err := tx.Signature.Decompress()
 		if err != nil {
@@ -1039,7 +1057,11 @@ func (tp *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
 						accSender.TokenID, coordIdxsMap[accSender.TokenID]))
 			}
 			// accumulate the fee for the Coord account
-			accumulated := tp.AccumulatedFees[accCoord.Idx]
+			accumulated, ok := tp.AccumulatedFees[accCoord.Idx]
+			if !ok {
+				accumulated = big.NewInt(0)
+				tp.AccumulatedFees[accCoord.Idx] = accumulated
+			}
 			accumulated.Add(accumulated, fee)
 
 			if tp.s.Type() == statedb.TypeSynchronizer ||
@@ -1153,12 +1175,11 @@ func (tp *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error 
 		tp.zki.OldValue1[tp.i] = p.OldValue.BigInt()
 
 		tp.zki.Metadata.NewLastIdxRaw = tp.s.CurrentIdx() + 1
-
+		if tp.i < len(tp.zki.ISOnChain) {
+			tp.zki.ISOnChain[tp.i] = big.NewInt(1)
+		}
 		tp.zki.AuxFromIdx[tp.i] = auxFromIdx.BigInt()
 		tp.zki.NewAccount[tp.i] = big.NewInt(1)
-
-		// intermediate states
-		tp.zki.ISOnChain[tp.i] = big.NewInt(1)
 	}
 	var accReceiver *common.Account
 	if tx.ToIdx == auxFromIdx {
@@ -1246,7 +1267,11 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			}
 
 			// accumulate the fee for the Coord account
-			accumulated := tp.AccumulatedFees[accCoord.Idx]
+			accumulated, ok := tp.AccumulatedFees[accCoord.Idx]
+			if !ok {
+				accumulated = big.NewInt(0)
+				tp.AccumulatedFees[accCoord.Idx] = accumulated
+			}
 			accumulated.Add(accumulated, fee)
 
 			if tp.s.Type() == statedb.TypeSynchronizer ||
@@ -1329,9 +1354,11 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 			if p.IsOld0 {
 				tp.zki.IsOld0_2[tp.i] = big.NewInt(1)
 			}
+			if tp.i < len(tp.zki.ISExitRoot) {
+				tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
+			}
 			tp.zki.OldKey2[tp.i] = p.OldKey.BigInt()
 			tp.zki.OldValue2[tp.i] = p.OldValue.BigInt()
-			tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
 		}
 		return exitAccount, true, nil
 	} else if err != nil {
@@ -1369,7 +1396,9 @@ func (tp *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		tp.zki.OldKey2[tp.i] = p.OldKey.BigInt()
 		tp.zki.OldValue2[tp.i] = p.OldValue.BigInt()
-		tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
+		if tp.i < len(tp.zki.ISExitRoot) {
+			tp.zki.ISExitRoot[tp.i] = exitTree.Root().BigInt()
+		}
 	}
 
 	return exitAccount, false, nil

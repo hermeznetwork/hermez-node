@@ -9,7 +9,7 @@ import (
 func (a *API) getState(c *gin.Context) {
 	stateAPI, err := a.h.GetStateAPI()
 	if err != nil {
-		retBadReq(err, c)
+		retSQLErr(err, c)
 		return
 	}
 	c.JSON(http.StatusOK, stateAPI)

@@ -160,6 +160,7 @@ func (c *EthereumClient) NewAuth() (*bind.TransactOpts, error) {
 	auth.Value = big.NewInt(0) // in wei
 	auth.GasLimit = c.config.CallGasLimit
 	auth.GasPrice = gasPrice
+	auth.Context = context.Background()
 
 	return auth, nil
 }
@@ -167,8 +168,7 @@ func (c *EthereumClient) NewAuth() (*bind.TransactOpts, error) {
 // CallAuth performs a Smart Contract method call that requires authorization.
 // This call requires a valid account with Ether that can be spend during the
 // call.
-func (c *EthereumClient) CallAuth(gasLimit uint64,
-	fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction,
+func (c *EthereumClient) CallAuth(gasLimit uint64, fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction,
 	error) {
 	if c.account == nil {
 		return nil, tracerr.Wrap(ErrAccountNil)
@@ -194,6 +194,7 @@ func (c *EthereumClient) CallAuth(gasLimit uint64,
 		auth.GasLimit = gasLimit // in units
 	}
 	auth.GasPrice = gasPrice
+	auth.Context = context.Background()
 
 	tx, err := fn(c.client, auth)
 	if tx != nil {

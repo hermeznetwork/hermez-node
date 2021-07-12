@@ -1,6 +1,9 @@
 package api
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
 
@@ -33,11 +36,26 @@ func TestFiat(t *testing.T) {
 
 	//Get all fiat currencies
 	endpoint := apiURL + "currencies/"
-	type responseTest struct {
-		Currencies []historydb.FiatCurrency
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
 	}
-	var response responseTest
-	err = doGoodReq("GET", endpoint, nil, &response)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	//nolint
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	var response CurrenciesResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		t.Fatalf("Error message: %v", response)
+	}
 	assert.NoError(t, err)
 	assert.Equal(t, response.Currencies[0].BaseCurrency, "USD")
 	assert.Equal(t, response.Currencies[0].Currency, "EUR")
@@ -45,7 +63,24 @@ func TestFiat(t *testing.T) {
 
 	//Get some fiat currencies
 	endpoint = endpoint + "?symbols=EUR"
-	err = doGoodReq("GET", endpoint, nil, &response)
+	req, err = http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	//nolint
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		t.Fatalf("Error message: %v", response)
+	}
 	assert.NoError(t, err)
 	assert.Equal(t, response.Currencies[0].BaseCurrency, "USD")
 	assert.Equal(t, response.Currencies[0].Currency, "EUR")
@@ -54,7 +89,24 @@ func TestFiat(t *testing.T) {
 	//Get EUR fiat currency
 	endpoint = apiURL + "currencies/EUR"
 	var singleItemResp historydb.FiatCurrency
-	err = doGoodReq("GET", endpoint, nil, &singleItemResp)
+	req, err = http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	//nolint
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	err = json.Unmarshal(body, &singleItemResp)
+	if err != nil {
+		t.Fatalf("Error message: %v", singleItemResp)
+	}
 	assert.NoError(t, err)
 	assert.Equal(t, singleItemResp.BaseCurrency, "USD")
 	assert.Equal(t, singleItemResp.Currency, "EUR")

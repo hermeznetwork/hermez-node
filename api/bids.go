@@ -1,36 +1,30 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getBids(c *gin.Context) {
-	slotNum, bidderAddr, err := parseBidFilters(c)
+	filters, err := parsers.ParseBidsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	if slotNum == nil && bidderAddr == nil {
-		retBadReq(errors.New("It is necessary to add at least one filter: slotNum or/and bidderAddr"), c)
-		return
-	}
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
-	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 
 	bids, pendingItems, err := a.h.GetBidsAPI(historydb.GetBidsAPIRequest{
-		SlotNum:    slotNum,
-		BidderAddr: bidderAddr,
-		FromItem:   fromItem,
-		Limit:      limit,
-		Order:      order,
+		SlotNum:    filters.SlotNum,
+		BidderAddr: filters.BidderAddr,
+		FromItem:   filters.FromItem,
+		Limit:      filters.Limit,
+		Order:      filters.Order,
 	})
 
 	if err != nil {

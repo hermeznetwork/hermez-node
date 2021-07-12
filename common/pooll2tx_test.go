@@ -358,3 +358,33 @@ func TestPoolL2Tx_SetType(t *testing.T) {
 		})
 	}
 }
+
+func TestHashMaxNumBatch(t *testing.T) {
+	toBJJ, err := HezStringToBJJ("hez:xut2umeShR_Lmquf3wjnbT7j_p-5T9qZ24Iewr4KUR8W", "")
+	require.NoError(t, err)
+	rqToBJJ, err := HezStringToBJJ("hez:JjTLlgy5ZcPIudKBNX_ejAJMT3jA-dYqC1FhHgvlyQsH", "")
+	require.NoError(t, err)
+	amount := big.NewInt(0)
+	amount.SetString("5300000000000000000", 10)
+	tx := PoolL2Tx{
+		FromIdx:     439,
+		ToIdx:       825429,
+		ToEthAddr:   ethCommon.HexToAddress("0xf4e2b0fcbd0dc4b326d8a52b718a7bb43bdbd072"),
+		ToBJJ:       *toBJJ,
+		Amount:      amount,
+		TokenID:     1,
+		Nonce:       6,
+		Fee:         226,
+		RqFromIdx:   227051877307886,
+		RqToIdx:     350,
+		RqToEthAddr: ethCommon.HexToAddress("0x4a4547136a017c665fcedcdddca9dfd6d7dbc77f"),
+		RqToBJJ:     *rqToBJJ,
+		MaxNumBatch: 16385,
+	}
+	chainID := uint16(1)
+	toSign, err := tx.HashToSign(chainID)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		"06226f6b16dc853fa8225e82e5fd675f51858e7cd6b3a951c169ac01d7125c71",
+		hex.EncodeToString(toSign.Bytes()))
+}
