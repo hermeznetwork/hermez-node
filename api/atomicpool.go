@@ -10,35 +10,9 @@ import (
 	"github.com/yourbasic/graph"
 )
 
-// AtomicGroup represents a set of atomic transactions
-type AtomicGroup struct {
-	ID  common.AtomicGroupID `json:"atomicGroupId"`
-	Txs []common.PoolL2Tx    `json:"transactions"`
-}
-
-// SetAtomicGroupID set the atomic group ID for an atomic group that already has Txs
-func (ag *AtomicGroup) SetAtomicGroupID() {
-	ids := []common.TxID{}
-	for _, tx := range ag.Txs {
-		ids = append(ids, tx.TxID)
-	}
-	ag.ID = common.CalculateAtomicGroupID(ids)
-}
-
-// IsAtomicGroupIDValid return false if the atomic group ID that is set
-// doesn't match with the calculated
-func (ag AtomicGroup) IsAtomicGroupIDValid() bool {
-	ids := []common.TxID{}
-	for _, tx := range ag.Txs {
-		ids = append(ids, tx.TxID)
-	}
-	actualAGID := common.CalculateAtomicGroupID(ids)
-	return actualAGID == ag.ID
-}
-
 func (a *API) postAtomicPool(c *gin.Context) {
 	// Parse body
-	var receivedAtomicGroup AtomicGroup
+	var receivedAtomicGroup common.AtomicGroup
 	if err := c.ShouldBindJSON(&receivedAtomicGroup); err != nil {
 		retBadReq(&apiError{
 			Err:  err,
