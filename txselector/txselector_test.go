@@ -1375,6 +1375,129 @@ func TestFailingAtomicTx(t *testing.T) {
 	checkBalance(t, tc, txsel, "C", 0, "290")      // 300 - 10
 }
 
+func TestFilterMaxNumBatch(t *testing.T) {
+	// This test will check that txs are rejected if MaxNumBatch is exceeded
+
+	// Use til to create the account deposits
+	chainID := uint16(0)
+	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
+	blocks, err := tc.GenerateBlocks(`
+		Type: Blockchain
+		> batch
+		CreateAccountDeposit(0) Coord: 1000
+		CreateAccountDeposit(0) A: 500
+		CreateAccountDeposit(0) B: 300
+		> batchL1
+		> batchL1
+		> batchL1
+		> block
+	`)
+	require.NoError(t, err)
+
+	hermezContractAddr := ethCommon.HexToAddress("0xc344E203a046Da13b0B4467EB7B3629D0C99F6E6")
+	txsel, _, _ := initTest(t, chainID, hermezContractAddr, tc.Users["Coord"])
+
+	tpc := txprocessor.Config{
+		NLevels:  16,
+		MaxFeeTx: 10,
+		MaxTx:    20,
+		MaxL1Tx:  10,
+		ChainID:  chainID,
+	}
+
+	// Forge the 3 first batches, to reach the point were accounts are created
+	log.Debug("block:0 batch:1")
+	l1UserTxs := []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err :=
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+
+	log.Debug("block:0 batch:2")
+	l1UserTxs = []common.L1Tx{}
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+
+	log.Debug("block:0 batch:3")
+	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
+		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 0, len(oL2Txs))
+	assert.Equal(t, common.BatchNum(3), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	checkBalance(t, tc, txsel, "Coord", 0, "1000")
+	checkBalance(t, tc, txsel, "A", 0, "500")
+	checkBalance(t, tc, txsel, "B", 0, "300")
+
+	// Tx1 fields (this tx won't be processed due to MaxNumBatch > current batch num)
+	tx1 := common.PoolL2Tx{
+		FromIdx:     257, // account A
+		ToIdx:       258, // account B
+		TokenID:     0,
+		Amount:      big.NewInt(100),
+		Fee:         0,
+		Nonce:       0,
+		MaxNumBatch: 3,
+		State:       common.PoolL2TxStatePending,
+	}
+	// Tx1 signature
+	_, err = common.NewPoolL2Tx(&tx1)
+	require.NoError(t, err)
+	hashTx1, err := tx1.HashToSign(chainID)
+	require.NoError(t, err)
+	accAWallet := til.NewUser(2, "A")
+	tx1.Signature = accAWallet.BJJ.SignPoseidon(hashTx1).Compress()
+	// Tx2 fields
+	tx2 := common.PoolL2Tx{
+		FromIdx:     258, // account B
+		ToIdx:       257, // account A
+		TokenID:     0,
+		Amount:      big.NewInt(200),
+		Fee:         0,
+		Nonce:       0,
+		MaxNumBatch: 4,
+		State:       common.PoolL2TxStatePending,
+	}
+	// Tx2 signature
+	_, err = common.NewPoolL2Tx(&tx2)
+	require.NoError(t, err)
+	hashTx2, err := tx2.HashToSign(chainID)
+	require.NoError(t, err)
+	accBWallet := til.NewUser(3, "B")
+	tx2.Signature = accBWallet.BJJ.SignPoseidon(hashTx2).Compress()
+
+	// Add txs to the pool
+	addL2Txs(t, txsel, []common.PoolL2Tx{tx1, tx2})
+
+	log.Debug("block:1 batch:4")
+	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
+		txsel.GetL1L2TxSelection(tpc, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(oL1UserTxs))
+	assert.Equal(t, 0, len(oL1CoordTxs))
+	assert.Equal(t, 1, len(oL2Txs))
+	assert.Equal(t, 1, len(discardedL2Txs))
+	assert.Equal(t, "MaxNumBatch exceeded", discardedL2Txs[0].Info)
+	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
+	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	checkBalance(t, tc, txsel, "Coord", 0, "1000")
+	checkBalance(t, tc, txsel, "A", 0, "700") // 500 +200
+	checkBalance(t, tc, txsel, "B", 0, "100") // 300 -200
+}
+
 func TestFilterFailedAtomicGroups(t *testing.T) {
 	// Helper function to perform asserts
 	assertResult := func(

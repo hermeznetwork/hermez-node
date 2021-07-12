@@ -441,6 +441,7 @@ func (txsel *TxSelector) processL2Txs(
 	// TODO: differentiate between nonSelectedL2Txs and unforjableL2Txs
 	// (right now all fall into nonSelectedL2Txs, which is safe but non optimal)
 	positionL1 := nAlreadyProcessedL1Txs
+	nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
 	// Iterate over l2Txs
 	// - check Nonces
 	// - check enough Balance for the Amount+Fee
@@ -472,8 +473,8 @@ func (txsel *TxSelector) processL2Txs(
 			break
 		}
 
-		// Check if MaxNumBatch is exceeded
-		if l2Txs[i].MaxNumBatch > int64(txsel.localAccountsDB.CurrentBatch())+1 {
+		// Reject tx if the batch that is being selected is greater than MaxNumBatch
+		if l2Txs[i].MaxNumBatch != 0 && nextBatchNum > l2Txs[i].MaxNumBatch {
 			const failingMsg = "MaxNumBatch exceeded"
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
