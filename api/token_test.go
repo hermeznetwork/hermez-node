@@ -106,14 +106,30 @@ func TestGetTokens(t *testing.T) {
 	tokensFiltered = append(tokensFiltered, tc.tokens[8])
 	assertTokensAPIs(t, tokensFiltered, fetchedTokens)
 
+	// Get by addresses
+	fetchedTokens = []historydb.TokenWithUSD{}
+	limit = 7
+	stringAddresses := tc.tokens[1].EthAddr.String() + "|" + tc.tokens[3].EthAddr.String()
+	path = fmt.Sprintf(
+		"%s?addresses=%s&limit=%d",
+		endpoint, stringAddresses, limit,
+	)
+	err = doGoodReqPaginated(path, db.OrderAsc, &testTokensResponse{}, appendIter)
+	assert.NoError(t, err)
+	tokensFiltered = nil
+	tokensFiltered = append(tokensFiltered, tc.tokens[1])
+	tokensFiltered = append(tokensFiltered, tc.tokens[3])
+	assertTokensAPIs(t, tokensFiltered, fetchedTokens)
+
 	// Multiple filters
 	fetchedTokens = []historydb.TokenWithUSD{}
 	limit = 5
 	stringSymbols = tc.tokens[2].Symbol + "|" + tc.tokens[6].Symbol
 	stringIds = strconv.Itoa(int(tc.tokens[2].TokenID)) + "|" + strconv.Itoa(int(tc.tokens[5].TokenID)) + "|" + strconv.Itoa(int(tc.tokens[6].TokenID))
+	stringAddresses = tc.tokens[2].EthAddr.String() + "|" + tc.tokens[6].EthAddr.String() + "|" + tc.tokens[4].EthAddr.String()
 	path = fmt.Sprintf(
-		"%s?symbols=%s&ids=%s&limit=%d",
-		endpoint, stringSymbols, stringIds, limit,
+		"%s?symbols=%s&ids=%s&addresses=%s&limit=%d",
+		endpoint, stringSymbols, stringIds, stringAddresses, limit,
 	)
 	err = doGoodReqPaginated(path, db.OrderAsc, &testTokensResponse{}, appendIter)
 	assert.NoError(t, err)
