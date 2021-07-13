@@ -5,16 +5,19 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 )
 
+// StateDBChecker struct for state db connection checker
 type StateDBChecker struct {
 	stateDB *statedb.StateDB
 }
 
+// NewStateDBChecker init state db connection checker
 func NewStateDBChecker(sdb *statedb.StateDB) StateDBChecker {
 	return StateDBChecker{
 		stateDB: sdb,
 	}
 }
 
+// Check state db health
 func (sdb StateDBChecker) Check() health.Health {
 	h := health.NewHealth()
 
