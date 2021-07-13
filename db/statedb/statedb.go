@@ -149,7 +149,6 @@ func NewStateDB(cfg Config) (*StateDB, error) {
 		return nil, tracerr.Wrap(
 			fmt.Errorf("invalid StateDB parameters: StateDB type==TypeStateDB can not have nLevels!=0"))
 	}
-
 	return &StateDB{
 		cfg: cfg,
 		db:  kv,
