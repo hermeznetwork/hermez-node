@@ -126,17 +126,17 @@ func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.Ge
 	}
 
 	// Idx
-	idx, _, err := common.StringToIdx(historyTxsFilters.AccountIndex, "accountIndex")
+	queryAccount, err := common.StringToIdx(historyTxsFilters.AccountIndex, "accountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromIdx, _, err := common.StringToIdx(historyTxsFilters.FromAccountIndex, "fromAccountIndex")
+	fromQueryAccount, err := common.StringToIdx(historyTxsFilters.FromAccountIndex, "fromAccountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	toIdx, _, err := common.StringToIdx(historyTxsFilters.ToAccountIndex, "toAccountIndex")
+	toQueryAccount, err := common.StringToIdx(historyTxsFilters.ToAccountIndex, "toAccountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
@@ -154,9 +154,9 @@ func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.Ge
 		FromBjj:           fromBjj,
 		ToBjj:             toBjj,
 		TokenID:           tokenID,
-		Idx:               idx,
-		FromIdx:           fromIdx,
-		ToIdx:             toIdx,
+		Idx:               queryAccount.AccountIndex,
+		FromIdx:           fromQueryAccount.AccountIndex,
+		ToIdx:             toQueryAccount.AccountIndex,
 		BatchNum:          historyTxsFilters.BatchNum,
 		TxType:            txType,
 		IncludePendingL1s: historyTxsFilters.IncludePendingTxs,

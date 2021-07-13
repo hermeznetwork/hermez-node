@@ -48,20 +48,26 @@ func StringToL2TxState(txState string) (*PoolL2TxState, error) {
 	}
 }
 
+// QueryAccount is a representation of an account with accountIndex and its token symbol
+type QueryAccount struct {
+	AccountIndex *Idx
+	Symbol       string
+}
+
 // StringToIdx converts string to account index
-func StringToIdx(idxStr, name string) (*Idx, string, error) {
+func StringToIdx(idxStr, name string) (QueryAccount, error) {
 	if idxStr == "" {
-		return nil, "", nil
+		return QueryAccount{}, nil
 	}
 	splitted := strings.Split(idxStr, ":")
 	const expectedLen = 3
 	if len(splitted) != expectedLen || splitted[0] != "hez" {
-		return nil, "", tracerr.Wrap(fmt.Errorf(
+		return QueryAccount{}, tracerr.Wrap(fmt.Errorf(
 			"invalid %s, must follow this: hez:<tokenSymbol>:index", name))
 	}
 	idxInt, err := strconv.Atoi(splitted[2])
 	idx := Idx(idxInt)
-	return &idx, splitted[1], tracerr.Wrap(err)
+	return QueryAccount{AccountIndex: &idx, Symbol: splitted[1]}, tracerr.Wrap(err)
 }
 
 // HezStringToEthAddr converts hez ethereum address to ethereum address

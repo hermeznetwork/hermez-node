@@ -21,12 +21,12 @@ func ParseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
-	idx, _, err := common.StringToIdx(exitFilter.AccountIndex, "accountIndex")
+	queryAccount, err := common.StringToIdx(exitFilter.AccountIndex, "accountIndex")
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
-	return &exitFilter.BatchNum, idx, nil
+	return &exitFilter.BatchNum, queryAccount.AccountIndex, nil
 }
 
 // ExitsFilters struct for holding exits filters
@@ -85,7 +85,7 @@ func ParseExitsFilters(c *gin.Context, v *validator.Validate) (historydb.GetExit
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	idx, _, err := common.StringToIdx(exitsFilters.AccountIndex, "accountIndex")
+	queryAccount, err := common.StringToIdx(exitsFilters.AccountIndex, "accountIndex")
 	if err != nil {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}
@@ -94,7 +94,7 @@ func ParseExitsFilters(c *gin.Context, v *validator.Validate) (historydb.GetExit
 		EthAddr:              addr,
 		Bjj:                  bjj,
 		TokenID:              tokenID,
-		Idx:                  idx,
+		Idx:                  queryAccount.AccountIndex,
 		BatchNum:             exitsFilters.BatchNum,
 		OnlyPendingWithdraws: exitsFilters.OnlyPendingWithdraws,
 		FromItem:             exitsFilters.FromItem,
