@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
@@ -48,6 +49,10 @@ func (a *API) postPoolTx(c *gin.Context) {
 	receivedTx.ClientIP = c.ClientIP()
 	// Insert to DB
 	if err := a.l2.AddTxAPI(&receivedTx); err != nil {
+		if strings.Contains(err.Error(), "tx.feeUSD") {
+			retBadReq(err, c)
+			return
+		}
 		retSQLErr(err, c)
 		return
 	}
