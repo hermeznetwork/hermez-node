@@ -441,6 +441,7 @@ func (txsel *TxSelector) processL2Txs(
 	// TODO: differentiate between nonSelectedL2Txs and unforjableL2Txs
 	// (right now all fall into nonSelectedL2Txs, which is safe but non optimal)
 	positionL1 := nAlreadyProcessedL1Txs
+	nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
 	// Iterate over l2Txs
 	// - check Nonces
 	// - check enough Balance for the Amount+Fee
@@ -472,10 +473,31 @@ func (txsel *TxSelector) processL2Txs(
 			break
 		}
 
+		// Reject tx if the batch that is being selected is greater than MaxNumBatch
+		if l2Txs[i].MaxNumBatch != 0 && nextBatchNum > l2Txs[i].MaxNumBatch {
+			const failingMsg = "MaxNumBatch exceeded"
+			// If tx is atomic, restart process without txs from the atomic group
+			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
+				failedAG = failedAtomicGroup{
+					id:         l2Txs[i].AtomicGroupID,
+					failedTxID: l2Txs[i].TxID,
+					reason:     failingMsg,
+				}
+				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
+					failedGroupErrMsg,
+					l2Txs[i].AtomicGroupID,
+				))
+			}
+			l2Txs[i].Info = failingMsg
+			// Tx won't be forjable since the current batch num won't go backwards
+			unforjableL2Txs = append(unforjableL2Txs, l2Txs[i])
+			continue
+		}
+
 		// Discard exits with amount 0
 		if l2Txs[i].Type == common.TxTypeExit && l2Txs[i].Amount.Cmp(big.NewInt(0)) <= 0 {
 			// If tx is atomic, restart process without txs from the atomic group
-			const failingMsg = "Exits with amount 0 have no sense, " +
+			const failingMsg = "Exits with amount 0 make no sense, " +
 				"not accepting to prevent unintended transactions"
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{

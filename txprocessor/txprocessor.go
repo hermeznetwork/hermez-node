@@ -791,6 +791,7 @@ func (tp *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
 		}
 		tp.zki.AmountF[tp.i] = big.NewInt(int64(amountF40))
 		tp.zki.NewAccount[tp.i] = big.NewInt(0)
+		tp.zki.MaxNumBatch[tp.i] = big.NewInt(int64(tx.MaxNumBatch))
 
 		// Rq fields: set zki to link the requested tx
 		if tx.RqOffset != 0 {

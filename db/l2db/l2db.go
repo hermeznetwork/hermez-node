@@ -458,6 +458,8 @@ func (l2db *L2DB) Purge(currentBatchNum common.BatchNum) (err error) {
 			batch_num < $1 AND (state = $2 OR state = $3)
 		) OR (
 			state = $4 AND timestamp < $5
+		) OR (
+			max_num_batch < $1
 		);`,
 		currentBatchNum-l2db.safetyPeriod,
 		common.PoolL2TxStateForged,
