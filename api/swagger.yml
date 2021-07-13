@@ -1264,22 +1264,30 @@ paths:
           description: Include only specific tokens by their Hermez identifiers.
           schema:
             type: string
-            description: Comma separated list of token identifiers
-            example: "2,44,689"
+            description: Pipeline "|" separated list of token identifiers
+            example: "2|44|689"
         - name: symbols
           in: query
           required: false
           description: Include only specific tokens by their symbols.
           schema:
             type: string
-            description: Comma separated list of token symbols.
-            example: "DAI,NEC,UMA"
+            description: Pipeline "|" separated list of token symbols.
+            example: "DAI|NEC|UMA"
         - name: name
           in: query
           required: false
           description: Include token(s) by their names (or a substring of the name).
           schema:
             type: string
+        - name: addresses
+          in: query
+          required: false
+          description: Include only specific tokens by their SC addresses.
+          schema:
+            type: string
+            description: Pipeline "|" separated list of token identifiers
+            example: "0xdac17f959d2ee523a2206207994597c13d831ec8|0xdac17f958e2ee523a2207206994597c12d831ec7|0xfac17f058d2ee527a2206206994597d13d831ec7"
         - name: fromItem
           in: query
           required: false

@@ -371,9 +371,10 @@ func (hdb *HistoryDB) GetTokenAPI(tokenID common.TokenID) (*TokenWithUSD, error)
 
 // GetTokensAPIRequest is an API request struct for getting tokens
 type GetTokensAPIRequest struct {
-	Ids     []common.TokenID
-	Symbols []string
-	Name    string
+	Ids       []common.TokenID
+	Symbols   []string
+	Name      string
+	Addresses []ethCommon.Address
 
 	FromItem *uint
 	Limit    *uint
@@ -418,6 +419,16 @@ func (hdb *HistoryDB) GetTokensAPI(
 		}
 		queryStr += "name ~ ? "
 		args = append(args, request.Name)
+		nextIsAnd = true
+	}
+	if len(request.Addresses) > 0 {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "eth_addr IN (?) "
+		args = append(args, request.Addresses)
 		nextIsAnd = true
 	}
 	if request.FromItem != nil {
