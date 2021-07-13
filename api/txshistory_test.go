@@ -347,7 +347,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs = []testTx{}
 	limit = 4
 	idxStr := tc.txs[0].ToIdx
-	idx, err := common.StringToIdx(idxStr, "")
+	queryAccount, err := common.StringToIdx(idxStr, "")
 	assert.NoError(t, err)
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&limit=%d",
@@ -360,18 +360,18 @@ func TestGetHistoryTxs(t *testing.T) {
 		if tc.txs[i].BatchNum == nil {
 			continue
 		}
-		var fromIdx *common.Idx
+		var fromQueryAccount common.QueryAccount
 		if tc.txs[i].FromIdx != nil {
-			fromIdx, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
+			fromQueryAccount, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
 			assert.NoError(t, err)
-			if *fromIdx == *idx {
+			if *fromQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 				idxTxs = append(idxTxs, tc.txs[i])
 				continue
 			}
 		}
-		toIdx, err := common.StringToIdx((tc.txs[i].ToIdx), "")
+		toQueryAccount, err := common.StringToIdx((tc.txs[i].ToIdx), "")
 		assert.NoError(t, err)
-		if *toIdx == *idx {
+		if *toQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 			idxTxs = append(idxTxs, tc.txs[i])
 		}
 	}
@@ -383,11 +383,11 @@ func TestGetHistoryTxs(t *testing.T) {
 	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	for i := 0; i < len(tc.txs); i++ {
-		var fromIdx *common.Idx
+		var fromQueryAccount common.QueryAccount
 		if tc.txs[i].FromIdx != nil {
-			fromIdx, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
+			fromQueryAccount, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
 			assert.NoError(t, err)
-			if *fromIdx == *idx {
+			if *fromQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 				idxTxs = append(idxTxs, tc.txs[i])
 				continue
 			}
@@ -401,9 +401,9 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	idxTxs = []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
-		toIdx, err := common.StringToIdx(tc.txs[i].ToIdx, "")
+		toQueryAccount, err := common.StringToIdx(tc.txs[i].ToIdx, "")
 		assert.NoError(t, err)
-		if *toIdx == *idx {
+		if *toQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 			idxTxs = append(idxTxs, tc.txs[i])
 		}
 	}
@@ -495,7 +495,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// 400
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&hezEthereumAddress=%s",
-		endpoint, idx, account.EthAddr,
+		endpoint, queryAccount.AccountIndex, account.EthAddr,
 	)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)

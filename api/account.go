@@ -11,7 +11,7 @@ import (
 
 func (a *API) getAccount(c *gin.Context) {
 	// Get Addr
-	idx, err := parsers.ParseAccountFilter(c)
+	account, err := parsers.ParseAccountFilter(c)
 	if err != nil {
 		retBadReq(&apiError{
 			Err:  err,
@@ -20,12 +20,20 @@ func (a *API) getAccount(c *gin.Context) {
 		}, c)
 		return
 	}
-	apiAccount, err := a.h.GetAccountAPI(*idx)
+	apiAccount, err := a.h.GetAccountAPI(*account.AccountIndex)
 	if err != nil {
 		retSQLErr(err, c)
 		return
 	}
-
+	//Check if symbol is correct
+	if apiAccount.TokenSymbol != account.Symbol {
+		retBadReq(&apiError{
+			Err:  fmt.Errorf("invalid token symbol"),
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
 	c.JSON(http.StatusOK, apiAccount)
 }
 
