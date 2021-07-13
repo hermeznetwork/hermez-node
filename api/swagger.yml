@@ -1265,7 +1265,7 @@ paths:
           schema:
             type: string
             description: Pipeline "|" separated list of token identifiers
-            example: "2,44,689"
+            example: "2|44|689"
         - name: symbols
           in: query
           required: false
@@ -1273,7 +1273,7 @@ paths:
           schema:
             type: string
             description: Pipeline "|" separated list of token symbols.
-            example: "DAI,NEC,UMA"
+            example: "DAI|NEC|UMA"
         - name: name
           in: query
           required: false
