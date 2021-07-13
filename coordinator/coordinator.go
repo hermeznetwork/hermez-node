@@ -393,7 +393,7 @@ func canForge(auctionConstants *common.AuctionConstants, auctionVars *common.Auc
 	if slot.Forger == addr || (anyoneForge && mustForgeAtDeadline) {
 		return true
 	}
-	log.Debugw("canForge: can't forge", "slot.Forger", slot.Forger)
+	log.Debugw("canForge: can't forge because you didn't win the auction. Current slot auction winner: ", "slot.Forger", slot.Forger)
 	return false
 }
 
