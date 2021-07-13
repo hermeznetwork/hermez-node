@@ -561,7 +561,7 @@ func TestMain(m *testing.M) {
 	for i := 0; i < len(accounts); i++ {
 		balance := new(big.Int)
 		balance.SetString(string(*accounts[i].Balance), 10)
-		idx, err := common.StringToIdx(string(accounts[i].Idx), "foo")
+		idx, _, err := common.StringToIdx(string(accounts[i].Idx), "foo")
 		if err != nil {
 			panic(err)
 		}

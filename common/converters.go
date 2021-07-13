@@ -49,20 +49,19 @@ func StringToL2TxState(txState string) (*PoolL2TxState, error) {
 }
 
 // StringToIdx converts string to account index
-func StringToIdx(idxStr, name string) (*Idx, error) {
+func StringToIdx(idxStr, name string) (*Idx, string, error) {
 	if idxStr == "" {
-		return nil, nil
+		return nil, "", nil
 	}
 	splitted := strings.Split(idxStr, ":")
 	const expectedLen = 3
 	if len(splitted) != expectedLen || splitted[0] != "hez" {
-		return nil, tracerr.Wrap(fmt.Errorf(
+		return nil, "", tracerr.Wrap(fmt.Errorf(
 			"invalid %s, must follow this: hez:<tokenSymbol>:index", name))
 	}
-	// TODO: check that the tokenSymbol match the token related to the account index
 	idxInt, err := strconv.Atoi(splitted[2])
 	idx := Idx(idxInt)
-	return &idx, tracerr.Wrap(err)
+	return &idx, splitted[1], tracerr.Wrap(err)
 }
 
 // HezStringToEthAddr converts hez ethereum address to ethereum address

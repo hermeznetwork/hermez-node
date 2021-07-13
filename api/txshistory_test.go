@@ -347,7 +347,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs = []testTx{}
 	limit = 4
 	idxStr := tc.txs[0].ToIdx
-	idx, err := common.StringToIdx(idxStr, "")
+	idx, _, err := common.StringToIdx(idxStr, "")
 	assert.NoError(t, err)
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&limit=%d",
@@ -362,14 +362,14 @@ func TestGetHistoryTxs(t *testing.T) {
 		}
 		var fromIdx *common.Idx
 		if tc.txs[i].FromIdx != nil {
-			fromIdx, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
+			fromIdx, _, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
 			assert.NoError(t, err)
 			if *fromIdx == *idx {
 				idxTxs = append(idxTxs, tc.txs[i])
 				continue
 			}
 		}
-		toIdx, err := common.StringToIdx((tc.txs[i].ToIdx), "")
+		toIdx, _, err := common.StringToIdx((tc.txs[i].ToIdx), "")
 		assert.NoError(t, err)
 		if *toIdx == *idx {
 			idxTxs = append(idxTxs, tc.txs[i])
@@ -385,7 +385,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	for i := 0; i < len(tc.txs); i++ {
 		var fromIdx *common.Idx
 		if tc.txs[i].FromIdx != nil {
-			fromIdx, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
+			fromIdx, _, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
 			assert.NoError(t, err)
 			if *fromIdx == *idx {
 				idxTxs = append(idxTxs, tc.txs[i])
@@ -401,7 +401,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	idxTxs = []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
-		toIdx, err := common.StringToIdx(tc.txs[i].ToIdx, "")
+		toIdx, _, err := common.StringToIdx(tc.txs[i].ToIdx, "")
 		assert.NoError(t, err)
 		if *toIdx == *idx {
 			idxTxs = append(idxTxs, tc.txs[i])

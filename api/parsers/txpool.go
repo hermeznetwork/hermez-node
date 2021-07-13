@@ -127,17 +127,17 @@ func ParsePoolTxsFilters(c *gin.Context, v *validator.Validate) (l2db.GetPoolTxs
 	}
 
 	// Idx
-	idx, err := common.StringToIdx(poolTxsFilter.AccountIndex, "accountIndex")
+	idx, _, err := common.StringToIdx(poolTxsFilter.AccountIndex, "accountIndex")
 	if err != nil {
 		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromIdx, err := common.StringToIdx(poolTxsFilter.FromAccountIndex, "fromAccountIndex")
+	fromIdx, _, err := common.StringToIdx(poolTxsFilter.FromAccountIndex, "fromAccountIndex")
 	if err != nil {
 		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	toIdx, err := common.StringToIdx(poolTxsFilter.ToAccountIndex, "toAccountIndex")
+	toIdx, _, err := common.StringToIdx(poolTxsFilter.ToAccountIndex, "toAccountIndex")
 	if err != nil {
 		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}

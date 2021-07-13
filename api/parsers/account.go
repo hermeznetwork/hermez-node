@@ -17,10 +17,10 @@ type AccountFilter struct {
 }
 
 // ParseAccountFilter parses account filter to the account index
-func ParseAccountFilter(c *gin.Context) (*common.Idx, error) {
+func ParseAccountFilter(c *gin.Context) (*common.Idx, string, error) {
 	var accountFilter AccountFilter
 	if err := c.ShouldBindUri(&accountFilter); err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, "", tracerr.Wrap(err)
 	}
 	return common.StringToIdx(accountFilter.AccountIndex, "accountIndex")
 }

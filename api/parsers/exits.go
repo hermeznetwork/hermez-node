@@ -21,7 +21,7 @@ func ParseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
-	idx, err := common.StringToIdx(exitFilter.AccountIndex, "accountIndex")
+	idx, _, err := common.StringToIdx(exitFilter.AccountIndex, "accountIndex")
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
@@ -85,7 +85,7 @@ func ParseExitsFilters(c *gin.Context, v *validator.Validate) (historydb.GetExit
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	idx, err := common.StringToIdx(exitsFilters.AccountIndex, "accountIndex")
+	idx, _, err := common.StringToIdx(exitsFilters.AccountIndex, "accountIndex")
 	if err != nil {
 		return historydb.GetExitsAPIRequest{}, tracerr.Wrap(err)
 	}

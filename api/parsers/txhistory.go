@@ -126,17 +126,17 @@ func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.Ge
 	}
 
 	// Idx
-	idx, err := common.StringToIdx(historyTxsFilters.AccountIndex, "accountIndex")
+	idx, _, err := common.StringToIdx(historyTxsFilters.AccountIndex, "accountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromIdx, err := common.StringToIdx(historyTxsFilters.FromAccountIndex, "fromAccountIndex")
+	fromIdx, _, err := common.StringToIdx(historyTxsFilters.FromAccountIndex, "fromAccountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	toIdx, err := common.StringToIdx(historyTxsFilters.ToAccountIndex, "toAccountIndex")
+	toIdx, _, err := common.StringToIdx(historyTxsFilters.ToAccountIndex, "toAccountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
