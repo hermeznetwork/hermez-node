@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"os"
 	"os/signal"
 	"path"
@@ -33,6 +35,7 @@ const (
 	flagSK                  = "privatekey"
 	flagYes                 = "yes"
 	flagBlock               = "block"
+	flagBatchNum            = "batchNum"
 	modeSync                = "sync"
 	modeCoord               = "coord"
 	nMigrations             = "nMigrations"
@@ -96,6 +99,66 @@ func cmdImportKey(c *cli.Context) error {
 	}
 	log.Infow("Imported private key", "addr", acc.Address.Hex())
 	return nil
+}
+
+func restoreStateDB(c *cli.Context) error {
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	cfg := _cfg.node
+	batchNum := c.Int64(flagBatchNum)
+	db, err := dbUtils.ConnectSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
+	)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	apiConnCon := dbUtils.NewAPIConnectionController(
+		cfg.API.MaxSQLConnections,
+		cfg.API.SQLConnectionTimeout.Duration,
+	)
+
+	historyDB := historydb.NewHistoryDB(db, db, apiConnCon)
+
+	limit := uint(100)
+
+	stateDB, err := statedb.NewStateDB(statedb.Config{
+		Path:    cfg.StateDB.Path,
+		Keep:    cfg.StateDB.Keep,
+		Type:    statedb.TypeSynchronizer,
+		NLevels: statedb.MaxNLevels,
+	})
+
+	accounts, pendingItems, err := historyDB.GetAccountsAPI(historydb.GetAccountsAPIRequest{Limit: &limit})
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	for pendingItems != 0 {
+		for i, acc := range accounts {
+			stateDB.CreateAccount(acc.Idx, &common.Account{
+				Idx:      acc.Idx,
+				TokenID:  acc.TokenID,
+				BatchNum: acc.BatchNum,
+				BJJ:      acc.Bjj,
+				EthAddr:  acc.EthAddr,
+				Nonce:    acc.Nonce,
+				Balance:  acc.Balance,
+			})
+		}
+
+	}
+
+	historyDB.GetAllAccounts()
+
+	stateDB.CreateAccount()
+	log.Infof("Restore stateDB from batchNum %v...", batchNum)
+
 }
 
 func resetStateDBs(cfg *Config, batchNum common.BatchNum) error {
