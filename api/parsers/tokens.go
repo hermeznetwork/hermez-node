@@ -60,12 +60,12 @@ func ParseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
 		symbols = strings.Split(tokensFilters.Symbols, "|")
 	}
 
-	var tokensAddress []ethCommon.Address
+	var tokenAddresses []ethCommon.Address
 	if tokensFilters.Addresses != "" {
 		addrs := strings.Split(tokensFilters.Addresses, "|")
 		for _, addr := range addrs {
 			address := ethCommon.HexToAddress(addr)
-			tokensAddress = append(tokensAddress, address)
+			tokenAddresses = append(tokenAddresses, address)
 		}
 	}
 
@@ -73,7 +73,7 @@ func ParseTokensFilters(c *gin.Context) (historydb.GetTokensAPIRequest, error) {
 		Ids:       tokensIDs,
 		Symbols:   symbols,
 		Name:      tokensFilters.Name,
-		Addresses: tokensAddress,
+		Addresses: tokenAddresses,
 		FromItem:  tokensFilters.FromItem,
 		Limit:     tokensFilters.Limit,
 		Order:     *tokensFilters.Order,
