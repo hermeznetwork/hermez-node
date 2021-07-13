@@ -63,7 +63,7 @@ func TestGetTokens(t *testing.T) {
 	// Get by tokenIds
 	fetchedTokens = []historydb.TokenWithUSD{}
 	limit = 7
-	stringIds := strconv.Itoa(int(tc.tokens[2].TokenID)) + "," + strconv.Itoa(int(tc.tokens[5].TokenID)) + "," + strconv.Itoa(int(tc.tokens[6].TokenID))
+	stringIds := strconv.Itoa(int(tc.tokens[2].TokenID)) + "|" + strconv.Itoa(int(tc.tokens[5].TokenID)) + "|" + strconv.Itoa(int(tc.tokens[6].TokenID))
 	path = fmt.Sprintf(
 		"%s?ids=%s&limit=%d",
 		endpoint, stringIds, limit,
@@ -79,7 +79,7 @@ func TestGetTokens(t *testing.T) {
 	// Get by symbols
 	fetchedTokens = []historydb.TokenWithUSD{}
 	limit = 7
-	stringSymbols := tc.tokens[1].Symbol + "," + tc.tokens[3].Symbol
+	stringSymbols := tc.tokens[1].Symbol + "|" + tc.tokens[3].Symbol
 	path = fmt.Sprintf(
 		"%s?symbols=%s&limit=%d",
 		endpoint, stringSymbols, limit,
@@ -109,8 +109,8 @@ func TestGetTokens(t *testing.T) {
 	// Multiple filters
 	fetchedTokens = []historydb.TokenWithUSD{}
 	limit = 5
-	stringSymbols = tc.tokens[2].Symbol + "," + tc.tokens[6].Symbol
-	stringIds = strconv.Itoa(int(tc.tokens[2].TokenID)) + "," + strconv.Itoa(int(tc.tokens[5].TokenID)) + "," + strconv.Itoa(int(tc.tokens[6].TokenID))
+	stringSymbols = tc.tokens[2].Symbol + "|" + tc.tokens[6].Symbol
+	stringIds = strconv.Itoa(int(tc.tokens[2].TokenID)) + "|" + strconv.Itoa(int(tc.tokens[5].TokenID)) + "|" + strconv.Itoa(int(tc.tokens[6].TokenID))
 	path = fmt.Sprintf(
 		"%s?symbols=%s&ids=%s&limit=%d",
 		endpoint, stringSymbols, stringIds, limit,
