@@ -11,6 +11,8 @@ import (
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/hermeznetwork/hermez-go-sdk/account"
+	"github.com/hermeznetwork/hermez-go-sdk/client"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
@@ -26,14 +28,17 @@ import (
 )
 
 const (
-	flagCfg     = "cfg"
-	flagMode    = "mode"
-	flagSK      = "privatekey"
-	flagYes     = "yes"
-	flagBlock   = "block"
-	modeSync    = "sync"
-	modeCoord   = "coord"
-	nMigrations = "nMigrations"
+	flagCfg                 = "cfg"
+	flagMode                = "mode"
+	flagSK                  = "privatekey"
+	flagYes                 = "yes"
+	flagBlock               = "block"
+	modeSync                = "sync"
+	modeCoord               = "coord"
+	nMigrations             = "nMigrations"
+	flagAuctContractAddrHex = "auctContractAddrHex"
+	flagEthNodeURL          = "ethNodeUrl"
+	flagAccountAddrHex      = "accountAddrHex"
 )
 
 var (
@@ -45,14 +50,14 @@ var (
 	date = ""
 )
 
-func cmdVersion(c *cli.Context) error {
+func cmdVersion(*cli.Context) error {
 	fmt.Printf("Version = \"%v\"\n", version)
 	fmt.Printf("Build = \"%v\"\n", commit)
 	fmt.Printf("Date = \"%v\"\n", date)
 	return nil
 }
 
-func cmdGenBJJ(c *cli.Context) error {
+func cmdGenBJJ(*cli.Context) error {
 	sk := babyjub.NewRandPrivKey()
 	skBuf := [32]byte(sk)
 	pk := sk.Public()
@@ -284,13 +289,13 @@ func cmdRun(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	node, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
+	innerNode, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
 	}
-	node.Start()
+	innerNode.Start()
 	waitSigInt()
-	node.Stop()
+	innerNode.Stop()
 
 	return nil
 }
@@ -308,6 +313,36 @@ func cmdServeAPI(c *cli.Context) error {
 	waitSigInt()
 	srv.Stop()
 
+	return nil
+}
+
+func cmdGetAccountDetails(c *cli.Context) error {
+	ethereumNodeURL := c.String(flagEthNodeURL)
+	auctionContractAddressHex := c.String(flagAuctContractAddrHex)
+	accountAddrHex := c.String(flagAccountAddrHex)
+
+	hezClient, err := client.NewHermezClient(ethereumNodeURL, auctionContractAddressHex)
+	if err != nil {
+		log.Errorf("Error during Hermez client initialization: %s\n", err.Error())
+		return err
+	}
+	log.Infof("Connected to Hermez Smart Contracts...")
+	log.Infof("Pulling account info from a coordinator...")
+	accountDetails, err := account.GetAccountInfo(hezClient, accountAddrHex)
+	if err != nil {
+		log.Errorf("Error obtaining account details. Account: %s - Error: %s\n", accountAddrHex, err.Error())
+		return err
+	}
+	log.Infof("Found %d account(s)", len(accountDetails.Accounts))
+	for index, account := range accountDetails.Accounts {
+		log.Infof("Details for account %d", index)
+		log.Infof(" - Account index: %s", account.AccountIndex)
+		log.Infof(" - Account BJJ  : %s", account.BJJAddress)
+		log.Infof(" - Balance      : %s", account.Balance)
+		log.Infof(" - HEZ Address  : %s", account.HezEthereumAddress)
+		log.Infof(" - Token name   : %s", account.Token.Name)
+		log.Infof(" - Token symbol : %s", account.Token.Symbol)
+	}
 	return nil
 }
 
@@ -560,6 +595,29 @@ func main() {
 					Usage:    "last block number to keep",
 					Required: false,
 				}),
+		},
+		{
+			Name:    "accountInfo",
+			Aliases: []string{},
+			Usage:   "get information about the specified account",
+			Action:  cmdGetAccountDetails,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     flagEthNodeURL,
+					Usage:    "ethereum node URL, example: http://geth.node.com:8545",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     flagAuctContractAddrHex,
+					Usage:    "auction contract address in hex",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     flagAccountAddrHex,
+					Usage:    "account address in hex",
+					Required: true,
+				},
+			},
 		},
 	}
 

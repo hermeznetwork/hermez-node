@@ -109,7 +109,7 @@ func genTestPoolTxs(
 			TxID:      poolTx.TxID,
 			Type:      poolTx.Type,
 			TokenID:   poolTx.TokenID,
-			FromIdx:   idxToHez(poolTx.FromIdx, token.Symbol),
+			FromIdx:   common.IdxToHez(poolTx.FromIdx, token.Symbol),
 			Amount:    poolTx.Amount.String(),
 			Fee:       poolTx.Fee,
 			Nonce:     poolTx.Nonce,
@@ -121,7 +121,7 @@ func genTestPoolTxs(
 		genReceiveTx := testPoolTxReceive{
 			TxID:      poolTx.TxID,
 			Type:      poolTx.Type,
-			FromIdx:   idxToHez(poolTx.FromIdx, token.Symbol),
+			FromIdx:   common.IdxToHez(poolTx.FromIdx, token.Symbol),
 			Amount:    poolTx.Amount.String(),
 			Fee:       poolTx.Fee,
 			Nonce:     poolTx.Nonce,
@@ -134,35 +134,35 @@ func genTestPoolTxs(
 			Token:   token,
 		}
 		fromAcc := getAccountByIdx(poolTx.FromIdx, accs)
-		fromAddr := ethAddrToHez(fromAcc.EthAddr)
+		fromAddr := common.EthAddrToHez(fromAcc.EthAddr)
 		genReceiveTx.FromEthAddr = &fromAddr
-		fromBjj := bjjToString(fromAcc.BJJ)
+		fromBjj := common.BjjToString(fromAcc.BJJ)
 		genReceiveTx.FromBJJ = &fromBjj
 		if poolTx.ToIdx != 0 {
-			toIdx := idxToHez(poolTx.ToIdx, token.Symbol)
+			toIdx := common.IdxToHez(poolTx.ToIdx, token.Symbol)
 			genSendTx.ToIdx = &toIdx
 			genReceiveTx.ToIdx = &toIdx
 		}
 		if poolTx.ToEthAddr != common.EmptyAddr {
-			toEth := ethAddrToHez(poolTx.ToEthAddr)
+			toEth := common.EthAddrToHez(poolTx.ToEthAddr)
 			genSendTx.ToEthAddr = &toEth
 			genReceiveTx.ToEthAddr = &toEth
 		} else if poolTx.ToIdx > 255 {
 			acc := getAccountByIdx(poolTx.ToIdx, accs)
-			addr := ethAddrToHez(acc.EthAddr)
+			addr := common.EthAddrToHez(acc.EthAddr)
 			genReceiveTx.ToEthAddr = &addr
 		}
 		if poolTx.ToBJJ != common.EmptyBJJComp {
-			toBJJ := bjjToString(poolTx.ToBJJ)
+			toBJJ := common.BjjToString(poolTx.ToBJJ)
 			genSendTx.ToBJJ = &toBJJ
 			genReceiveTx.ToBJJ = &toBJJ
 		} else if poolTx.ToIdx > 255 {
 			acc := getAccountByIdx(poolTx.ToIdx, accs)
-			bjj := bjjToString(acc.BJJ)
+			bjj := common.BjjToString(acc.BJJ)
 			genReceiveTx.ToBJJ = &bjj
 		}
 		if poolTx.RqFromIdx != 0 {
-			rqFromIdx := idxToHez(poolTx.RqFromIdx, token.Symbol)
+			rqFromIdx := common.IdxToHez(poolTx.RqFromIdx, token.Symbol)
 			genSendTx.RqFromIdx = &rqFromIdx
 			genReceiveTx.RqFromIdx = &rqFromIdx
 			genSendTx.RqTokenID = &token.TokenID
@@ -172,17 +172,17 @@ func genTestPoolTxs(
 			genReceiveTx.RqAmount = &rqAmount
 
 			if poolTx.RqToIdx != 0 {
-				rqToIdx := idxToHez(poolTx.RqToIdx, token.Symbol)
+				rqToIdx := common.IdxToHez(poolTx.RqToIdx, token.Symbol)
 				genSendTx.RqToIdx = &rqToIdx
 				genReceiveTx.RqToIdx = &rqToIdx
 			}
 			if poolTx.RqToEthAddr != common.EmptyAddr {
-				rqToEth := ethAddrToHez(poolTx.RqToEthAddr)
+				rqToEth := common.EthAddrToHez(poolTx.RqToEthAddr)
 				genSendTx.RqToEthAddr = &rqToEth
 				genReceiveTx.RqToEthAddr = &rqToEth
 			}
 			if poolTx.RqToBJJ != common.EmptyBJJComp {
-				rqToBJJ := bjjToString(poolTx.RqToBJJ)
+				rqToBJJ := common.BjjToString(poolTx.RqToBJJ)
 				genSendTx.RqToBJJ = &rqToBJJ
 				genReceiveTx.RqToBJJ = &rqToBJJ
 			}
@@ -539,7 +539,7 @@ func TestAllTosNull(t *testing.T) {
 		TxID:      tx.TxID,
 		Type:      tx.Type,
 		TokenID:   tx.TokenID,
-		FromIdx:   idxToHez(tx.FromIdx, "ETH"),
+		FromIdx:   common.IdxToHez(tx.FromIdx, "ETH"),
 		Amount:    tx.Amount.String(),
 		Fee:       tx.Fee,
 		Nonce:     tx.Nonce,

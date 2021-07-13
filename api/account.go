@@ -5,18 +5,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getAccount(c *gin.Context) {
-	for id := range c.Request.URL.Query() {
-		if id != "accountIndex" {
-			retBadReq(fmt.Errorf("invalid Param: %s", id), c)
-			return
-		}
-	}
 	// Get Addr
-	idx, err := parseParamIdx(c)
+	idx, err := parsers.ParseAccountFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -38,28 +33,15 @@ func (a *API) getAccounts(c *gin.Context) {
 			return
 		}
 	}
-	// Account filters
-	tokenIDs, addr, bjj, err := parseAccountFilters(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
+
+	accountsFilter, err := parsers.ParseAccountsFilters(c, a.validate)
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
 
 	// Fetch Accounts from historyDB
-	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(historydb.GetAccountsAPIRequest{
-		TokenIDs: tokenIDs,
-		EthAddr:  addr,
-		Bjj:      bjj,
-		FromItem: fromItem,
-		Limit:    limit,
-		Order:    order,
-	})
+	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(accountsFilter)
 	if err != nil {
 		retSQLErr(err, c)
 		return

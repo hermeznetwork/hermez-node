@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -93,7 +94,7 @@ func (a *API) addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64
 }
 
 func (a *API) getSlot(c *gin.Context) {
-	slotNumUint, err := parseParamUint("slotNum", nil, 0, maxUint32, c)
+	slotNumUint, err := parsers.ParseSlotFilter(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -188,14 +189,7 @@ func (a *API) getSlots(c *gin.Context) {
 	minSlotNumDflt := int64(0)
 
 	// Get filters
-	minSlotNum, maxSlotNum, wonByEthereumAddress, finishedAuction, err := parseSlotFilters(c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
+	filters, err := parsers.ParseSlotsFilters(c)
 	if err != nil {
 		retBadReq(err, c)
 		return
@@ -213,14 +207,14 @@ func (a *API) getSlots(c *gin.Context) {
 	}
 
 	// Check filters
-	if maxSlotNum == nil && finishedAuction == nil {
+	if filters.MaxSlotNum == nil && filters.FinishedAuction == nil {
 		retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
 		return
-	} else if finishedAuction != nil {
-		if maxSlotNum == nil && !*finishedAuction {
+	} else if filters.FinishedAuction != nil {
+		if filters.MaxSlotNum == nil && !*filters.FinishedAuction {
 			retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
 			return
-		} else if *finishedAuction {
+		} else if *filters.FinishedAuction {
 			currentBlock, err := a.h.GetLastBlockAPI()
 			if err != nil {
 				retBadReq(err, c)
@@ -233,48 +227,48 @@ func (a *API) getSlots(c *gin.Context) {
 				return
 			}
 			closedAuctionSlots := currentSlot + int64(auctionVars.ClosedAuctionSlots)
-			if maxSlotNum == nil {
-				maxSlotNum = &closedAuctionSlots
-			} else if closedAuctionSlots < *maxSlotNum {
-				maxSlotNum = &closedAuctionSlots
+			if filters.MaxSlotNum == nil {
+				filters.MaxSlotNum = &closedAuctionSlots
+			} else if closedAuctionSlots < *filters.MaxSlotNum {
+				filters.MaxSlotNum = &closedAuctionSlots
 			}
 		}
-	} else if maxSlotNum != nil && minSlotNum != nil {
-		if *minSlotNum > *maxSlotNum {
+	} else if filters.MaxSlotNum != nil && filters.MinSlotNum != nil {
+		if *filters.MinSlotNum > *filters.MaxSlotNum {
 			retBadReq(errors.New("It is necessary to add valid filter (minSlotNum <= maxSlotNum)"), c)
 			return
 		}
 	}
-	if minSlotNum == nil {
-		minSlotNum = &minSlotNumDflt
+	if filters.MinSlotNum == nil {
+		filters.MinSlotNum = &minSlotNumDflt
 	}
 
 	// Get bids and pagination according to filters
 	var slotMinLim, slotMaxLim int64
 	var bids []historydb.BidAPI
 	var pendingItems uint64
-	if wonByEthereumAddress == nil {
-		slotMinLim, slotMaxLim, pendingItems = getLimits(*minSlotNum, *maxSlotNum, fromItem, limit, order)
+	if filters.BidderAddr == nil {
+		slotMinLim, slotMaxLim, pendingItems = getLimits(*filters.MinSlotNum, *filters.MaxSlotNum, filters.FromItem, filters.Limit, filters.Order)
 		// Get best bids in range maxSlotNum - minSlotNum
 		bids, _, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
-			BidderAddr: wonByEthereumAddress,
+			BidderAddr: filters.BidderAddr,
 			Limit:      nil,
-			Order:      order,
+			Order:      filters.Order,
 		})
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
 			return
 		}
 	} else {
-		slotMinLim, slotMaxLim = getLimitsWithAddr(minSlotNum, maxSlotNum, fromItem, limit, order)
+		slotMinLim, slotMaxLim = getLimitsWithAddr(filters.MinSlotNum, filters.MaxSlotNum, filters.FromItem, filters.Limit, filters.Order)
 		bids, pendingItems, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
-			BidderAddr: wonByEthereumAddress,
-			Limit:      limit,
-			Order:      order,
+			BidderAddr: filters.BidderAddr,
+			Limit:      filters.Limit,
+			Order:      filters.Order,
 		})
 		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 			retSQLErr(err, c)
@@ -285,7 +279,7 @@ func (a *API) getSlots(c *gin.Context) {
 	// Build the slot information with previous bids
 	var slotsBids []SlotAPI
 	if len(bids) > 0 {
-		slotsBids = a.newSlotsAPIFromWinnerBids(fromItem, order, bids, currentBlock.Num, auctionVars)
+		slotsBids = a.newSlotsAPIFromWinnerBids(filters.FromItem, filters.Order, bids, currentBlock.Num, auctionVars)
 		if err != nil {
 			retBadReq(err, c)
 			return
@@ -293,19 +287,19 @@ func (a *API) getSlots(c *gin.Context) {
 	}
 
 	// Build the other slots
-	if wonByEthereumAddress == nil {
+	if filters.BidderAddr == nil {
 		// Build hte information of the slots with bids or not
 		for i := slotMinLim; i <= slotMaxLim; i++ {
 			found := false
 			for j := range slotsBids {
 				if slotsBids[j].SlotNum == i {
 					found = true
-					if order == db.OrderAsc {
-						if fromItem == nil || slotsBids[j].ItemID >= uint64(*fromItem) {
+					if filters.Order == db.OrderAsc {
+						if filters.FromItem == nil || slotsBids[j].ItemID >= uint64(*filters.FromItem) {
 							slots = append(slots, slotsBids[j])
 						}
 					} else {
-						if fromItem == nil || slotsBids[j].ItemID <= uint64(*fromItem) {
+						if filters.FromItem == nil || slotsBids[j].ItemID <= uint64(*filters.FromItem) {
 							slots = append([]SlotAPI{slotsBids[j]}, slots...)
 						}
 					}
@@ -313,7 +307,7 @@ func (a *API) getSlots(c *gin.Context) {
 				}
 			}
 			if !found {
-				slots, err = a.addEmptySlot(slots, i, currentBlock.Num, auctionVars, fromItem, order)
+				slots, err = a.addEmptySlot(slots, i, currentBlock.Num, auctionVars, filters.FromItem, filters.Order)
 				if err != nil {
 					retBadReq(err, c)
 					return

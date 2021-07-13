@@ -200,12 +200,14 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 
 // GetBestBidsAPIRequest is an API request struct for getting best bids
 type GetBestBidsAPIRequest struct {
-	MinSlotNum *int64
-	MaxSlotNum *int64
-	BidderAddr *ethCommon.Address
+	MinSlotNum      *int64
+	MaxSlotNum      *int64
+	BidderAddr      *ethCommon.Address
+	FinishedAuction *bool
 
-	Limit *uint
-	Order string
+	Limit    *uint
+	Order    string
+	FromItem *uint
 }
 
 // GetBestBidsAPI returns the best bid in specific slot by slotNum

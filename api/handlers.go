@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
@@ -13,22 +12,9 @@ import (
 	"github.com/russross/meddler"
 )
 
-const (
-	// maxLimit is the max permitted items to be returned in paginated responses
-	maxLimit uint = 2049
-
-	// dfltOrder indicates how paginated endpoints are ordered if not specified
-	dfltOrder = db.OrderAsc
-
-	// dfltLimit indicates the limit of returned items in paginated responses if the query param limit is not provided
-	dfltLimit uint = 20
-
-	// 2^32 -1
-	maxUint32 = 4294967295
-
-	// 2^64 /2 -1
-	maxInt64 = 9223372036854775807
-)
+type errorMsg struct {
+	Message string
+}
 
 func retSQLErr(err error, c *gin.Context) {
 	log.Warnw("HTTP API SQL request error", "err", err)
