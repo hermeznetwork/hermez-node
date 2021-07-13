@@ -112,14 +112,15 @@ func TestAtomicPool(t *testing.T) {
 	// Generate txs
 	txs := []common.PoolL2Tx{}
 	baseTx := common.PoolL2Tx{
-		TokenID:   tc.tokens[usedToken].TokenID,
-		Amount:    big.NewInt(10000000000),
-		Fee:       200,
-		Nonce:     0,
-		RqTokenID: tc.tokens[usedToken].TokenID,
-		RqAmount:  big.NewInt(10000000000),
-		RqFee:     200,
-		RqNonce:   0,
+		TokenID:     tc.tokens[usedToken].TokenID,
+		Amount:      big.NewInt(10000000000),
+		Fee:         200,
+		Nonce:       0,
+		RqTokenID:   tc.tokens[usedToken].TokenID,
+		RqAmount:    big.NewInt(10000000000),
+		RqFee:       200,
+		RqNonce:     0,
+		MaxNumBatch: 9999999,
 	}
 	for i := 0; i < nAccounts; i++ {
 		tx := baseTx

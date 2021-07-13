@@ -33,14 +33,6 @@ func (a *API) postPoolTx(c *gin.Context) {
 		}, c)
 		return
 	}
-	if receivedTx.MaxNumBatch != 0 {
-		retBadReq(&apiError{
-			Err:  errors.New(ErrUnsupportedMaxNumBatch),
-			Code: ErrParamValidationFailedCode,
-			Type: ErrParamValidationFailedType,
-		}, c)
-		return
-	}
 	// Check that tx is valid
 	if err := a.verifyPoolL2Tx(receivedTx); err != nil {
 		retBadReq(&apiError{
