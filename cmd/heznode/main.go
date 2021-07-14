@@ -6,9 +6,12 @@ import (
 	"fmt"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/iden3/go-merkletree/db"
+	"math/big"
 	"os"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
@@ -101,14 +104,15 @@ func cmdImportKey(c *cli.Context) error {
 	return nil
 }
 
-func restoreStateDB(c *cli.Context) error {
+func cmdRestoreStateDB(c *cli.Context) error {
+	var err error
 	_cfg, err := parseCli(c)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
 	cfg := _cfg.node
 	batchNum := c.Int64(flagBatchNum)
-	db, err := dbUtils.ConnectSQLDB(
+	wrDB, err := dbUtils.ConnectSQLDB(
 		cfg.PostgreSQL.PortWrite,
 		cfg.PostgreSQL.HostWrite,
 		cfg.PostgreSQL.UserWrite,
@@ -124,7 +128,7 @@ func restoreStateDB(c *cli.Context) error {
 		cfg.API.SQLConnectionTimeout.Duration,
 	)
 
-	historyDB := historydb.NewHistoryDB(db, db, apiConnCon)
+	historyDB := historydb.NewHistoryDB(wrDB, wrDB, apiConnCon)
 
 	limit := uint(100)
 
@@ -139,26 +143,69 @@ func restoreStateDB(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	var (
+		bjj        babyjub.PublicKeyComp
+		idx        common.Idx
+		ethAddr    ethCommon.Address
+		balance    *big.Int
+		idxConv    int
+		newAccount *common.Account
+
+		fromItem uint
+		ok       bool
+	)
+
 	for pendingItems != 0 {
-		for i, acc := range accounts {
-			stateDB.CreateAccount(acc.Idx, &common.Account{
-				Idx:      acc.Idx,
+		for _, acc := range accounts {
+			idxConv, err = strconv.Atoi(string(acc.Idx))
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+			idx = common.Idx(idxConv)
+
+			bjj, err = acc.PublicKey.ToBJJ()
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+
+			ethAddr, err = acc.EthAddr.ToEthAddr()
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+
+			balance, ok = big.NewInt(0).SetString(string(*acc.Balance), 10)
+			if !ok {
+				return tracerr.Wrap(errors.New("failed to set balance from string to big int"))
+			}
+			_, err = stateDB.GetAccount(idx)
+			newAccount = &common.Account{
+				Idx:      idx,
 				TokenID:  acc.TokenID,
 				BatchNum: acc.BatchNum,
-				BJJ:      acc.Bjj,
-				EthAddr:  acc.EthAddr,
+				BJJ:      bjj,
+				EthAddr:  ethAddr,
 				Nonce:    acc.Nonce,
-				Balance:  acc.Balance,
-			})
+				Balance:  balance,
+			}
+			if err != nil {
+				if tracerr.Unwrap(err) != db.ErrNotFound {
+					return tracerr.Wrap(err)
+				}
+				_, err = stateDB.CreateAccount(idx, newAccount)
+			}
+			_, err = stateDB.UpdateAccount(idx, newAccount)
 		}
 
+		fromItem += limit
+
+		accounts, pendingItems, err = historyDB.GetAccountsAPI(historydb.GetAccountsAPIRequest{FromItem: &fromItem, Limit: &limit})
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
 	}
 
-	historyDB.GetAllAccounts()
-
-	stateDB.CreateAccount()
 	log.Infof("Restore stateDB from batchNum %v...", batchNum)
-
+	return nil
 }
 
 func resetStateDBs(cfg *Config, batchNum common.BatchNum) error {
@@ -614,6 +661,14 @@ func main() {
 					Usage:    "automatic yes to the prompt",
 					Required: false,
 				}),
+		},
+		{
+			Name:    "restore-statedb",
+			Aliases: []string{},
+			Usage:   "Restoring statedb from the info from postgres",
+			Action:  cmdRestoreStateDB,
+			Flags: append(flags,
+				&cli.BoolFlag{}),
 		},
 		{
 			Name:    "migratesqldown",

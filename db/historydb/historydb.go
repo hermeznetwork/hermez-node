@@ -620,27 +620,6 @@ func (hdb *HistoryDB) GetAllAccountUpdates() ([]common.AccountUpdate, error) {
 	return db.SlicePtrsToSlice(accUpdates).([]common.AccountUpdate), tracerr.Wrap(err)
 }
 
-func (hdb *HistoryDB) GetAccountsWithLimit(fromItem *uint) ([]common.Account, error) {
-	var query string
-	var args []interface{}
-	queryStr := `SELECT account.item_id, hez_idx(account.idx, token.symbol) as idx, account.batch_num, 
-	account.bjj, account.eth_addr, token.token_id, token.item_id AS token_item_id, token.eth_block_num AS token_block,
-	token.eth_addr as token_eth_addr, token.name, token.symbol, token.decimals, token.usd, token.usd_update, 
-	account_update.nonce, account_update.balance, COUNT(*) OVER() AS total_items
-	FROM account INNER JOIN (
-		SELECT DISTINCT idx,
-		first_value(nonce) OVER w AS nonce,
-		first_value(balance) OVER w AS balance
-		FROM account_update
-		WINDOW w as (PARTITION BY idx ORDER BY item_id DESC)
-	) AS account_update ON account_update.idx = account.idx INNER JOIN token ON account.token_id = token.token_id `
-
-	if fromItem != nil {
-		queryStr += "account.item_id >= ? ORDER BY account.item_id ASC "
-	}
-
-}
-
 // AddL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
 // If the tx is originated by a coordinator, BatchNum must be provided. If it's originated by a user,
 // BatchNum should be null, and the value will be setted by a trigger when a batch forges the tx.
