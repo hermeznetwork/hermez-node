@@ -5,13 +5,14 @@ set -e
 gen() {
     local name=$1
     local pkg=$2
-    local folder=$3
-    if [ -z "$3" ]; then
-        folder=$name
+    local package=$3
+    local folder=$4
+    if [ -z "$4" ]; then
+        folder=$package
     fi
 
     jq .abi "${CONTRACTS}/artifacts/contracts/${name}/${pkg}.sol/${pkg}.json" > /tmp/${name}.abi
-    abigen --abi /tmp/${name}.abi --pkg=${pkg} --out=${folder}/${pkg}.go
+    abigen --abi /tmp/${name}.abi --pkg=${package} --out=${folder}/${package}.go
 }
 
 if [ "$1" = "" ]; then
@@ -21,7 +22,7 @@ fi
 
 CONTRACTS="$1"
 
-gen hermez Hermez
-gen auction HermezAuctionProtocol
-gen withdrawalDelayer WithdrawalDelayer
-gen HEZ HEZ tokenHEZ
+gen hermez Hermez hermez
+gen auction HermezAuctionProtocol auction
+gen withdrawalDelayer WithdrawalDelayer withdrawaldelayer
+gen HEZ HEZ tokenhez
