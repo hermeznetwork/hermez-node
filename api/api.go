@@ -35,6 +35,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
 	"gopkg.in/go-playground/validator.v9"
@@ -45,6 +46,7 @@ type API struct {
 	h             *historydb.HistoryDB
 	cg            *configAPI
 	l2            *l2db.L2DB
+	stateDB       *statedb.StateDB
 	hermezAddress ethCommon.Address
 	validate      *validator.Validate
 }
@@ -56,6 +58,7 @@ func NewAPI(
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
 	l2db *l2db.L2DB,
+	stateDB *statedb.StateDB,
 	ethClient *ethclient.Client,
 	forgerAddress *ethCommon.Address,
 ) (*API, error) {
@@ -80,6 +83,7 @@ func NewAPI(
 			ChainID:           consts.ChainID,
 		},
 		l2:            l2db,
+		stateDB:       stateDB,
 		hermezAddress: consts.HermezAddress,
 		validate:      newValidate(),
 	}

@@ -459,6 +459,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			server,
 			historyDB,
 			l2DB,
+			stateDB,
 			ethClient,
 			&cfg.Coordinator.ForgerAddress,
 		)
@@ -573,6 +574,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 		server,
 		historyDB,
 		l2DB,
+		nil,
 		ethClient,
 		forgerAddress,
 	)
@@ -629,6 +631,7 @@ func NewNodeAPI(
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
 	l2db *l2db.L2DB,
+	stateDB *statedb.StateDB,
 	ethClient *ethclient.Client,
 	forgerAddress *ethCommon.Address,
 ) (*NodeAPI, error) {
@@ -640,6 +643,7 @@ func NewNodeAPI(
 		engine,
 		hdb,
 		l2db,
+		stateDB,
 		ethClient,
 		forgerAddress,
 	)

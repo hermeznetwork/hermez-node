@@ -3410,6 +3410,22 @@ components:
             - status
             - version
           additionalProperties: false
+        statedb:
+          type: object
+          description: state db connection status
+          properties:
+            status:
+              type: string
+              description: Status of the connection. Possible responses - UP or DOWN
+              example: UP
+            batchNum:
+              type: integer
+              description: current batch num in last checkpoint of the state db
+              example: 24025
+            root:
+              type: integer
+              description: root of the underlying Merkle Tree in the last checkpoint of the state db
+              example: 20723800499378797360494097450413598946834655273323161758167114779532027183222
         status:
           type: string
           description: Status of the hermez node. Possible responses - UP or DOWN
@@ -3424,7 +3440,7 @@ components:
           example: v1.2.0
         coordinatorForgerBalance:
           type: string
-          description: Coordinator balance in ether. Returned with 18 decimals.
+          description: Coordinator balance in ether. Returned with 18 decimals. Not returned if node not in coord mode
           example: 48901270356066543960
       required:
         - historyDB
