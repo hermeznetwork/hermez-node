@@ -198,8 +198,9 @@ func cmdRestoreStateDB(c *cli.Context) error {
 					return tracerr.Wrap(err)
 				}
 				_, err = stateDB.CreateAccount(idx, newAccount)
+			} else {
+				_, err = stateDB.UpdateAccount(idx, newAccount)
 			}
-			_, err = stateDB.UpdateAccount(idx, newAccount)
 		}
 
 		fromItem += limit
