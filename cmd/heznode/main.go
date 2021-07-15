@@ -7,6 +7,7 @@ import (
 	ethAccounts "github.com/ethereum/go-ethereum/accounts"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/iden3/go-merkletree/db"
@@ -14,7 +15,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"strconv"
 	"strings"
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
@@ -154,7 +154,6 @@ func cmdRestoreStateDB(c *cli.Context) error {
 		idx        common.Idx
 		ethAddr    ethCommon.Address
 		balance    *big.Int
-		idxConv    int
 		newAccount *common.Account
 
 		fromItem uint
@@ -163,10 +162,8 @@ func cmdRestoreStateDB(c *cli.Context) error {
 
 	for pendingItems != 0 {
 		for _, acc := range accounts {
-			idxConv, err = strconv.Atoi(string(acc.Idx))
-			if err != nil {
-				return tracerr.Wrap(err)
-			}
+			var idxConv apitypes.StrHezIdx
+			err = idxConv.UnmarshalText([]byte(acc.Idx))
 			idx = common.Idx(idxConv)
 
 			bjj, err = acc.PublicKey.ToBJJ()
