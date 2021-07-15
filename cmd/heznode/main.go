@@ -144,6 +144,9 @@ func cmdRestoreStateDB(c *cli.Context) error {
 		Type:    statedb.TypeSynchronizer,
 		NLevels: statedb.MaxNLevels,
 	})
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
 
 	accounts, pendingItems, err := historyDB.GetAccountsAPI(historydb.GetAccountsAPIRequest{Limit: &limit})
 	if err != nil {
