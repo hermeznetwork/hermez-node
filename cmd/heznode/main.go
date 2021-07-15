@@ -195,8 +195,6 @@ func cmdRestoreStateDB(c *cli.Context) error {
 				Nonce:    acc.Nonce,
 				Balance:  balance,
 			}
-			fmt.Println("batchNum")
-			fmt.Println(batchNum)
 			if err != nil {
 				if tracerr.Unwrap(err) != db.ErrNotFound {
 					return tracerr.Wrap(err)
@@ -256,7 +254,8 @@ func cmdRestoreStateDB(c *cli.Context) error {
 	}
 
 	batch, err := historyDB.GetLastBatch()
-
+	fmt.Println("LAST BATCH")
+	fmt.Println(batch.BatchNum.BigInt())
 	err = stateDB.MakeCheckpointWithSpecifiedBatchNumber(batch.BatchNum.BigInt().Int64())
 	if err != nil {
 		return tracerr.Wrap(err)
