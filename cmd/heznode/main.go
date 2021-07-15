@@ -115,6 +115,8 @@ func cmdRestoreStateDB(c *cli.Context) error {
 	}
 	cfg := _cfg.node
 	batchNum := c.Int64(flagBatchNum)
+	log.Infof("Restore stateDB from batchNum %v...", batchNum)
+
 	wrDB, err := dbUtils.ConnectSQLDB(
 		cfg.PostgreSQL.PortWrite,
 		cfg.PostgreSQL.HostWrite,
@@ -197,14 +199,12 @@ func cmdRestoreStateDB(c *cli.Context) error {
 				if tracerr.Unwrap(err) != db.ErrNotFound {
 					return tracerr.Wrap(err)
 				}
-				mt, err := stateDB.CreateAccount(idx, newAccount)
-				fmt.Println(mt)
+				_, err := stateDB.CreateAccount(idx, newAccount)
 				if err != nil {
 					return tracerr.Wrap(err)
 				}
 			} else {
-				mt, err := stateDB.UpdateAccount(idx, newAccount)
-				fmt.Println(mt)
+				_, err := stateDB.UpdateAccount(idx, newAccount)
 				if err != nil {
 					return tracerr.Wrap(err)
 				}
@@ -219,6 +219,10 @@ func cmdRestoreStateDB(c *cli.Context) error {
 		}
 	}
 
+	err = stateDB.MakeCheckpoint()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
 	ethClient, err := ethclient.Dial(cfg.Web3.URL)
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -259,7 +263,6 @@ func cmdRestoreStateDB(c *cli.Context) error {
 	//	return tracerr.Wrap(err)
 	//}
 
-	log.Infof("Restore stateDB from batchNum %v...", batchNum)
 	return nil
 }
 
