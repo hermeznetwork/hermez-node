@@ -197,12 +197,14 @@ func cmdRestoreStateDB(c *cli.Context) error {
 				if tracerr.Unwrap(err) != db.ErrNotFound {
 					return tracerr.Wrap(err)
 				}
-				_, err = stateDB.CreateAccount(idx, newAccount)
+				mt, err := stateDB.CreateAccount(idx, newAccount)
+				fmt.Println(mt)
 				if err != nil {
 					return tracerr.Wrap(err)
 				}
 			} else {
-				_, err = stateDB.UpdateAccount(idx, newAccount)
+				mt, err := stateDB.UpdateAccount(idx, newAccount)
+				fmt.Println(mt)
 				if err != nil {
 					return tracerr.Wrap(err)
 				}
