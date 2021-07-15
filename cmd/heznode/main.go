@@ -134,10 +134,10 @@ func cmdRestoreStateDB(c *cli.Context) error {
 	historyDB := historydb.NewHistoryDB(wrDB, wrDB, apiConnCon)
 
 	limit := uint(100)
-	err = resetStateDBs(_cfg, common.BatchNum(batchNum))
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
+	//err = resetStateDBs(_cfg, common.BatchNum(batchNum))
+	//if err != nil {
+	//	return tracerr.Wrap(err)
+	//}
 	stateDB, err := statedb.NewStateDB(statedb.Config{
 		Path:    cfg.StateDB.Path,
 		Keep:    cfg.StateDB.Keep,
