@@ -255,9 +255,6 @@ func cmdRestoreStateDB(c *cli.Context) error {
 		return tracerr.Wrap(err)
 	}
 
-	if stateRoot.Cmp(lastRoot) != 0 {
-		return tracerr.Wrap(errors.New("state root not equals root from SC"))
-	}
 	batch, err := historyDB.GetLastBatch()
 
 	err = stateDB.MakeCheckpointWithSpecifiedBatchNumber(batch.BatchNum.BigInt().Int64())
@@ -269,6 +266,10 @@ func cmdRestoreStateDB(c *cli.Context) error {
 	//if batch.StateRoot.Cmp(lastRoot) != 0 {
 	//	return tracerr.Wrap(err)
 	//}
+
+	if stateRoot.Cmp(lastRoot) != 0 {
+		return tracerr.Wrap(errors.New("state root not equals root from SC"))
+	}
 
 	return nil
 }
