@@ -4,12 +4,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	ethAccounts "github.com/ethereum/go-ethereum/accounts"
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
-	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/iden3/go-merkletree/db"
 	"math/big"
 	"os"
@@ -223,31 +220,31 @@ func cmdRestoreStateDB(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	ethClient, err := ethclient.Dial(cfg.Web3.URL)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	var (
-		ethCfg   eth.EthereumConfig
-		account  *ethAccounts.Account
-		keyStore *ethKeystore.KeyStore
-	)
+	//ethClient, err := ethclient.Dial(cfg.Web3.URL)
+	//if err != nil {
+	//	return tracerr.Wrap(err)
+	//}
+	//var (
+	//	ethCfg   eth.EthereumConfig
+	//	account  *ethAccounts.Account
+	//	keyStore *ethKeystore.KeyStore
+	//)
 
-	client, err := eth.NewClient(ethClient, account, keyStore, &eth.ClientConfig{
-		Ethereum: ethCfg,
-		Rollup: eth.RollupConfig{
-			Address: cfg.SmartContracts.Rollup,
-		},
-	})
+	//client, err := eth.NewClient(ethClient, account, keyStore, &eth.ClientConfig{
+	//	Ethereum: ethCfg,
+	//	Rollup: eth.RollupConfig{
+	//		Address: cfg.SmartContracts.Rollup,
+	//	},
+	//})
 
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
+	//if err != nil {
+	//	return tracerr.Wrap(err)
+	//}
 
-	stateRoot, err := client.RollupClient.RollupLastMTRoot()
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
+	//stateRoot, err := client.RollupClient.RollupLastMTRoot()
+	//if err != nil {
+	//	return tracerr.Wrap(err)
+	//}
 	lastRoot, err := stateDB.LastMTGetRoot()
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -260,13 +257,8 @@ func cmdRestoreStateDB(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	//lastRoot, err := stateDB.LastMTGetRoot()
-	//
-	//if batch.StateRoot.Cmp(lastRoot) != 0 {
-	//	return tracerr.Wrap(err)
-	//}
 
-	if stateRoot.Cmp(lastRoot) != 0 {
+	if batch.StateRoot.Cmp(lastRoot) != 0 {
 		return tracerr.Wrap(errors.New("state root not equals root from SC"))
 	}
 
