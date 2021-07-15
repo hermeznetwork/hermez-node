@@ -440,6 +440,21 @@ func (c *RollupClient) RollupWithdrawMerkleProof(fromBJJ babyjub.PublicKeyComp, 
 	return tx, nil
 }
 
+func (c *RollupClient) RollupLastMTRoot() (root *big.Int, err error) {
+	if err := c.client.Call(func(ec *ethclient.Client) error {
+		_lastForgedBatch, err := c.hermez.LastForgedBatch(c.opts)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+
+		root, err = c.hermez.StateRootMap(c.opts, _lastForgedBatch)
+		return tracerr.Wrap(err)
+	}); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return root, nil
+}
+
 // RollupWithdrawCircuit is the interface to call the smart contract function
 func (c *RollupClient) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB [2][2]*big.Int,
 	tokenID uint32, numExitRoot, idx int64, amount *big.Int, instantWithdraw bool) (*types.Transaction,
