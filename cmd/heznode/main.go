@@ -714,7 +714,11 @@ func main() {
 			Usage:   "Restoring statedb from the info from postgres",
 			Action:  cmdRestoreStateDB,
 			Flags: append(flags,
-				&cli.BoolFlag{}),
+				&cli.UintFlag{
+					Name:     flagBatchNum,
+					Usage:    "restore state from that batch",
+					Required: false,
+				}),
 		},
 		{
 			Name:    "migratesqldown",
