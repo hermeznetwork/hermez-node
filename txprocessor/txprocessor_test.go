@@ -30,16 +30,16 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-func checkBalance(t *testing.T, tc *til.Context, sdb *statedb.StateDB, username string,
+func checkBalance(t *testing.T, tc *til.Context, statedb *statedb.StateDB, username string,
 	tokenid int, expected string) {
 	idx := tc.Users[username].Accounts[common.TokenID(tokenid)].Idx
-	acc, err := sdb.GetAccount(idx)
+	acc, err := statedb.GetAccount(idx)
 	require.NoError(t, err)
 	assert.Equal(t, expected, acc.Balance.String())
 }
 
-func checkBalanceByIdx(t *testing.T, sdb *statedb.StateDB, idx common.Idx, expected string) {
-	acc, err := sdb.GetAccount(idx)
+func checkBalanceByIdx(t *testing.T, statedb *statedb.StateDB, idx common.Idx, expected string) {
+	acc, err := statedb.GetAccount(idx)
 	require.NoError(t, err)
 	assert.Equal(t, expected, acc.Balance.String())
 }
@@ -49,7 +49,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -76,8 +76,8 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		MaxL1Tx:  16,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
-	_, err = tp.ProcessTxs(nil, blocks[0].Rollup.L1UserTxs, nil, nil)
+	txProcessor := NewTxProcessor(statedb, config)
+	_, err = txProcessor.ProcessTxs(nil, blocks[0].Rollup.L1UserTxs, nil, nil)
 	require.NoError(t, err)
 
 	tx := common.L1Tx{
@@ -88,7 +88,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		FromEthAddr:   tc.Users["A"].Addr,
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(10), tx.EffectiveAmount)
 
@@ -101,7 +101,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		FromEthAddr:   tc.Users["A"].Addr,
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
@@ -114,7 +114,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		DepositAmount: big.NewInt(10),
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(10), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(10), tx.EffectiveAmount)
 
@@ -127,7 +127,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		DepositAmount: big.NewInt(10),
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(10), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
@@ -140,7 +140,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		FromEthAddr:   tc.Users["A"].Addr,
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
@@ -153,7 +153,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		FromEthAddr:   tc.Users["B"].Addr,
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
@@ -167,7 +167,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		FromEthAddr:   tc.Users["A"].Addr,
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
@@ -182,7 +182,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		FromEthAddr:   tc.Users["B"].Addr,
 		UserOrigin:    true,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
@@ -199,7 +199,7 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		UserOrigin:    true,
 		Type:          common.TxTypeCreateAccountDepositTransfer,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
@@ -216,11 +216,11 @@ func TestComputeEffectiveAmounts(t *testing.T) {
 		UserOrigin:    true,
 		Type:          common.TxTypeDepositTransfer,
 	}
-	tp.computeEffectiveAmounts(&tx)
+	txProcessor.computeEffectiveAmounts(&tx)
 	assert.Equal(t, big.NewInt(8), tx.EffectiveDepositAmount)
 	assert.Equal(t, big.NewInt(0), tx.EffectiveAmount)
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func TestProcessTxsBalances(t *testing.T) {
@@ -228,7 +228,7 @@ func TestProcessTxsBalances(t *testing.T) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -245,147 +245,147 @@ func TestProcessTxsBalances(t *testing.T) {
 		MaxL1Tx:  16,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(statedb, config)
 
 	log.Debug("block:0 batch:1, only L1CoordinatorTxs")
-	_, err = tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	_, err = txProcessor.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
-	assert.Equal(t, "0", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t, "0", txProcessor.state.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs := []common.L1Tx{}
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	assert.Equal(t, "0", tp.s.MT.Root().BigInt().String())
+	assert.Equal(t, "0", txProcessor.state.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "A", 0, "500")
+	checkBalance(t, tc, statedb, "A", 0, "500")
 	assert.Equal(t,
 		"10303926118213025243660668481827257778714122989909761705455084995854999537039",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:4")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[3].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[3].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[3].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "A", 0, "500")
-	checkBalance(t, tc, sdb, "A", 1, "500")
+	checkBalance(t, tc, statedb, "A", 0, "500")
+	checkBalance(t, tc, statedb, "A", 1, "500")
 	assert.Equal(t,
 		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:5")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[4].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[4].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[4].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "A", 0, "500")
-	checkBalance(t, tc, sdb, "A", 1, "500")
+	checkBalance(t, tc, statedb, "A", 0, "500")
+	checkBalance(t, tc, statedb, "A", 1, "500")
 	assert.Equal(t,
 		"8530501758307821623834726627056947648600328521261384179220598288701741436285",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:6")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[5].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[5].L2Txs)
-	_, err = tp.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(nil, l1UserTxs, blocks[0].Rollup.Batches[5].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "A", 0, "600")
-	checkBalance(t, tc, sdb, "A", 1, "500")
-	checkBalance(t, tc, sdb, "B", 0, "400")
+	checkBalance(t, tc, statedb, "A", 0, "600")
+	checkBalance(t, tc, statedb, "A", 1, "500")
+	checkBalance(t, tc, statedb, "B", 0, "400")
 	assert.Equal(t,
 		"9061858435528794221929846392270405504056106238451760714188625065949729889651",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	coordIdxs := []common.Idx{261, 263}
 	log.Debug("block:0 batch:7")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[6].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[6].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "Coord", 0, "10")
-	checkBalance(t, tc, sdb, "Coord", 1, "20")
-	checkBalance(t, tc, sdb, "A", 0, "600")
-	checkBalance(t, tc, sdb, "A", 1, "280")
-	checkBalance(t, tc, sdb, "B", 0, "290")
-	checkBalance(t, tc, sdb, "B", 1, "200")
-	checkBalance(t, tc, sdb, "C", 0, "100")
-	checkBalance(t, tc, sdb, "D", 0, "800")
+	checkBalance(t, tc, statedb, "Coord", 0, "10")
+	checkBalance(t, tc, statedb, "Coord", 1, "20")
+	checkBalance(t, tc, statedb, "A", 0, "600")
+	checkBalance(t, tc, statedb, "A", 1, "280")
+	checkBalance(t, tc, statedb, "B", 0, "290")
+	checkBalance(t, tc, statedb, "B", 1, "200")
+	checkBalance(t, tc, statedb, "C", 0, "100")
+	checkBalance(t, tc, statedb, "D", 0, "800")
 	assert.Equal(t,
 		"4392049343656836675348565048374261353937130287163762821533580216441778455298",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	log.Debug("block:0 batch:8")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[7].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[7].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs, blocks[0].Rollup.Batches[7].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "Coord", 0, "35")
-	checkBalance(t, tc, sdb, "Coord", 1, "30")
-	checkBalance(t, tc, sdb, "A", 0, "430")
-	checkBalance(t, tc, sdb, "A", 1, "280")
-	checkBalance(t, tc, sdb, "B", 0, "390")
-	checkBalance(t, tc, sdb, "B", 1, "90")
-	checkBalance(t, tc, sdb, "C", 0, "45")
-	checkBalance(t, tc, sdb, "C", 1, "100")
-	checkBalance(t, tc, sdb, "D", 0, "800")
+	checkBalance(t, tc, statedb, "Coord", 0, "35")
+	checkBalance(t, tc, statedb, "Coord", 1, "30")
+	checkBalance(t, tc, statedb, "A", 0, "430")
+	checkBalance(t, tc, statedb, "A", 1, "280")
+	checkBalance(t, tc, statedb, "B", 0, "390")
+	checkBalance(t, tc, statedb, "B", 1, "90")
+	checkBalance(t, tc, statedb, "C", 0, "45")
+	checkBalance(t, tc, statedb, "C", 1, "100")
+	checkBalance(t, tc, statedb, "D", 0, "800")
 	assert.Equal(t,
 		"8905191229562583213069132470917469035834300549892959854483573322676101624713",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{262}
 	log.Debug("block:1 batch:1")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[0].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "Coord", 1, "30")
-	checkBalance(t, tc, sdb, "Coord", 0, "35")
-	checkBalance(t, tc, sdb, "A", 0, "730")
-	checkBalance(t, tc, sdb, "A", 1, "280")
-	checkBalance(t, tc, sdb, "B", 0, "380")
-	checkBalance(t, tc, sdb, "B", 1, "90")
-	checkBalance(t, tc, sdb, "C", 0, "845")
-	checkBalance(t, tc, sdb, "C", 1, "100")
-	checkBalance(t, tc, sdb, "D", 0, "470")
+	checkBalance(t, tc, statedb, "Coord", 1, "30")
+	checkBalance(t, tc, statedb, "Coord", 0, "35")
+	checkBalance(t, tc, statedb, "A", 0, "730")
+	checkBalance(t, tc, statedb, "A", 1, "280")
+	checkBalance(t, tc, statedb, "B", 0, "380")
+	checkBalance(t, tc, statedb, "B", 1, "90")
+	checkBalance(t, tc, statedb, "C", 0, "845")
+	checkBalance(t, tc, statedb, "C", 1, "100")
+	checkBalance(t, tc, statedb, "D", 0, "470")
 	assert.Equal(t,
 		"12063160053709941400160547588624831667157042937323422396363359123696668555050",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	coordIdxs = []common.Idx{}
 	log.Debug("block:1 batch:2")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs, blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"20375835796927052406196249140510136992262283055544831070430919054949353249481",
-		tp.s.MT.Root().BigInt().String())
+		txProcessor.state.MT.Root().BigInt().String())
 
 	// use Set of PoolL2 txs
 	poolL2Txs, err := tc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow1)
 	assert.NoError(t, err)
 
-	_, err = tp.ProcessTxs(coordIdxs, []common.L1Tx{}, []common.L1Tx{}, poolL2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, []common.L1Tx{}, []common.L1Tx{}, poolL2Txs)
 	require.NoError(t, err)
-	checkBalance(t, tc, sdb, "Coord", 1, "30")
-	checkBalance(t, tc, sdb, "Coord", 0, "35")
-	checkBalance(t, tc, sdb, "A", 0, "510")
-	checkBalance(t, tc, sdb, "A", 1, "170")
-	checkBalance(t, tc, sdb, "B", 0, "480")
-	checkBalance(t, tc, sdb, "B", 1, "190")
-	checkBalance(t, tc, sdb, "C", 0, "845")
-	checkBalance(t, tc, sdb, "C", 1, "100")
-	checkBalance(t, tc, sdb, "D", 0, "360")
-	checkBalance(t, tc, sdb, "F", 0, "100")
+	checkBalance(t, tc, statedb, "Coord", 1, "30")
+	checkBalance(t, tc, statedb, "Coord", 0, "35")
+	checkBalance(t, tc, statedb, "A", 0, "510")
+	checkBalance(t, tc, statedb, "A", 1, "170")
+	checkBalance(t, tc, statedb, "B", 0, "480")
+	checkBalance(t, tc, statedb, "B", 1, "190")
+	checkBalance(t, tc, statedb, "C", 0, "845")
+	checkBalance(t, tc, statedb, "C", 1, "100")
+	checkBalance(t, tc, statedb, "D", 0, "360")
+	checkBalance(t, tc, statedb, "F", 0, "100")
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func TestProcessTxsSynchronizer(t *testing.T) {
@@ -393,7 +393,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -425,19 +425,19 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 		MaxL1Tx:  32,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(statedb, config)
 
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
 	log.Debug("block:0 batch:1, only L1CoordinatorTxs")
-	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := txProcessor.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(ptOut.CreatedAccounts))
 	assert.Equal(t, 0, len(ptOut.CollectedFees))
 
 	log.Debug("block:0 batch:2")
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs,
+	ptOut, err = txProcessor.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs,
 		blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
@@ -447,13 +447,13 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(1)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(2)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(3)].String())
-	acc, err := sdb.GetAccount(idxA1)
+	acc, err := statedb.GetAccount(idxA1)
 	require.NoError(t, err)
 	assert.Equal(t, "50", acc.Balance.String())
 
 	log.Debug("block:0 batch:3")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = txProcessor.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
@@ -462,7 +462,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, "1", ptOut.CollectedFees[common.TokenID(1)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(2)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(3)].String())
-	acc, err = sdb.GetAccount(idxA1)
+	acc, err = statedb.GetAccount(idxA1)
 	require.NoError(t, err)
 	assert.Equal(t, "35", acc.Balance.String())
 
@@ -479,17 +479,17 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	idxY1 := tc.Users["Y"].Accounts[common.TokenID(1)].Idx
 	// Idx of user 'Z'
 	idxZ1 := tc.Users["Z"].Accounts[common.TokenID(1)].Idx
-	accX1, err := sdb.GetAccount(idxX1)
+	accX1, err := statedb.GetAccount(idxX1)
 	require.NoError(t, err)
 	assert.Equal(t, "25000000000000000010", accX1.Balance.String())
-	accY1, err := sdb.GetAccount(idxY1)
+	accY1, err := statedb.GetAccount(idxY1)
 	require.NoError(t, err)
 	assert.Equal(t, "25000000000000000010", accY1.Balance.String())
-	accZ1, err := sdb.GetAccount(idxZ1)
+	accZ1, err := statedb.GetAccount(idxZ1)
 	require.NoError(t, err)
 	assert.Equal(t, "25000000000000000015", accZ1.Balance.String())
 
-	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	ptOut, err = txProcessor.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 
 	// after processing expect l2Txs[0:2].Nonce!=0 and has expected value
@@ -509,23 +509,23 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, big.NewInt(12), ptOut.ExitInfos[2].Balance)
 	assert.Equal(t, big.NewInt(16), ptOut.ExitInfos[3].Balance)
 
-	acc, err = sdb.GetAccount(idxA1)
+	acc, err = statedb.GetAccount(idxA1)
 	require.NoError(t, err)
 	assert.Equal(t, "57", acc.Balance.String())
 
-	accX1, err = sdb.GetAccount(idxX1)
+	accX1, err = statedb.GetAccount(idxX1)
 	require.NoError(t, err)
 	assert.Equal(t, "24999999999999999976", accX1.Balance.String())
-	accY1, err = sdb.GetAccount(idxY1)
+	accY1, err = statedb.GetAccount(idxY1)
 	require.NoError(t, err)
 	assert.Equal(t, "25000000000000000004", accY1.Balance.String())
-	accZ1, err = sdb.GetAccount(idxZ1)
+	accZ1, err = statedb.GetAccount(idxZ1)
 	require.NoError(t, err)
 	assert.Equal(t, "25000000000000000024", accZ1.Balance.String())
 
 	log.Debug("block:1 batch:2")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
+	ptOut, err = txProcessor.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
 		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	// 1, as previous batch was without L1UserTxs, and has pending the
@@ -538,21 +538,21 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(1)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(2)].String())
 	assert.Equal(t, "0", ptOut.CollectedFees[common.TokenID(3)].String())
-	acc, err = sdb.GetAccount(idxA1)
+	acc, err = statedb.GetAccount(idxA1)
 	assert.NoError(t, err)
 	assert.Equal(t, "77", acc.Balance.String())
 
 	idxB0 := tc.Users["C"].Accounts[common.TokenID(0)].Idx
-	acc, err = sdb.GetAccount(idxB0)
+	acc, err = statedb.GetAccount(idxB0)
 	require.NoError(t, err)
 	assert.Equal(t, "51", acc.Balance.String())
 
 	// get balance of Coordinator account for TokenID==0
-	acc, err = sdb.GetAccount(common.Idx(256))
+	acc, err = statedb.GetAccount(common.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, "2", acc.Balance.String())
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func TestProcessTxsBatchBuilder(t *testing.T) {
@@ -560,7 +560,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -583,74 +583,74 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 		MaxL1Tx:  32,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(statedb, config)
 
 	// Process the 1st batch, which contains the L1CoordinatorTxs necessary
 	// to create the Coordinator accounts to receive the fees
 	log.Debug("block:0 batch:1, only L1CoordinatorTxs")
-	ptOut, err := tp.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
+	ptOut, err := txProcessor.ProcessTxs(nil, nil, blocks[0].Rollup.Batches[0].L1CoordinatorTxs, nil)
 	require.NoError(t, err)
 	// expect 0 at CreatedAccount, as is only computed when StateDB.Type==TypeSynchronizer
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
 
 	log.Debug("block:0 batch:2")
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs,
+	ptOut, err = txProcessor.ProcessTxs(coordIdxs, blocks[0].Rollup.L1UserTxs,
 		blocks[0].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
-	acc, err := sdb.GetAccount(idxA1)
+	acc, err := statedb.GetAccount(idxA1)
 	require.NoError(t, err)
 	assert.Equal(t, "50", acc.Balance.String())
 
 	log.Debug("block:0 batch:3")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[2].L2Txs)
-	ptOut, err = tp.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
+	ptOut, err = txProcessor.ProcessTxs(coordIdxs, nil, blocks[0].Rollup.Batches[2].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(ptOut.ExitInfos))
 	assert.Equal(t, 0, len(ptOut.CreatedAccounts))
-	acc, err = sdb.GetAccount(idxA1)
+	acc, err = statedb.GetAccount(idxA1)
 	require.NoError(t, err)
 	assert.Equal(t, "35", acc.Balance.String())
 
 	log.Debug("block:1 batch:1")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[0].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, nil, blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	acc, err = sdb.GetAccount(idxA1)
+	acc, err = statedb.GetAccount(idxA1)
 	require.NoError(t, err)
 	assert.Equal(t, "57", acc.Balance.String())
 
 	log.Debug("block:1 batch:2")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
+	_, err = txProcessor.ProcessTxs(coordIdxs, blocks[1].Rollup.L1UserTxs,
 		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
-	acc, err = sdb.GetAccount(idxA1)
+	acc, err = statedb.GetAccount(idxA1)
 	assert.NoError(t, err)
 	assert.Equal(t, "77", acc.Balance.String())
 
 	idxB0 := tc.Users["C"].Accounts[common.TokenID(0)].Idx
-	acc, err = sdb.GetAccount(idxB0)
+	acc, err = statedb.GetAccount(idxB0)
 	require.NoError(t, err)
 	assert.Equal(t, "51", acc.Balance.String())
 
 	// get balance of Coordinator account for TokenID==0
-	acc, err = sdb.GetAccount(common.Idx(256))
+	acc, err = statedb.GetAccount(common.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, common.TokenID(0), acc.TokenID)
 	assert.Equal(t, "2", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = statedb.GetAccount(common.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, common.TokenID(1), acc.TokenID)
 	assert.Equal(t, "2", acc.Balance.String())
 
 	assert.Equal(t,
 		"8499500340673457131709907313180428395258466720027480159049632090608270570263",
-		sdb.MT.Root().BigInt().String())
+		statedb.MT.Root().BigInt().String())
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func TestProcessTxsRootTestVectors(t *testing.T) {
@@ -658,7 +658,7 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -699,14 +699,14 @@ func TestProcessTxsRootTestVectors(t *testing.T) {
 		MaxL1Tx:  16,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
-	_, err = tp.ProcessTxs(nil, l1Txs, nil, l2Txs)
+	txProcessor := NewTxProcessor(statedb, config)
+	_, err = txProcessor.ProcessTxs(nil, l1Txs, nil, l2Txs)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"16181420716631932805604732887923905079487577323947343079740042260791593140221",
-		sdb.MT.Root().BigInt().String())
+		statedb.MT.Root().BigInt().String())
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func TestCreateAccountDepositMaxValue(t *testing.T) {
@@ -715,7 +715,7 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	deleteme = append(deleteme, dir)
 
 	nLevels := 16
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: nLevels})
 	assert.NoError(t, err)
 
@@ -765,20 +765,20 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 		MaxFeeTx: 2,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(statedb, config)
 
-	_, err = tp.ProcessTxs(nil, l1Txs, nil, nil)
+	_, err = txProcessor.ProcessTxs(nil, l1Txs, nil, nil)
 	require.NoError(t, err)
 
 	// check balances
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := statedb.GetAccount(common.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, daMaxBI, acc.Balance)
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = statedb.GetAccount(common.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, daMax1BI, acc.Balance)
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Context,
@@ -787,7 +787,7 @@ func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Contex
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -821,12 +821,12 @@ func initTestMultipleCoordIdxForTokenID(t *testing.T) (*TxProcessor, *til.Contex
 		MaxL1Tx:  16,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(statedb, config)
 	// batch1
-	_, err = tp.ProcessTxs(nil, nil, nil, nil) // to simulate the first batch from the Til set
+	_, err = txProcessor.ProcessTxs(nil, nil, nil, nil) // to simulate the first batch from the Til set
 	require.NoError(t, err)
 
-	return tp, tc, blocks, sdb
+	return txProcessor, tc, blocks, statedb
 }
 
 func TestMultipleCoordIdxForTokenID(t *testing.T) {
@@ -834,52 +834,52 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	// CoordIdx for each TokenID
 
 	coordIdxs := []common.Idx{257, 257, 257}
-	tp, tc, blocks, sdb := initTestMultipleCoordIdxForTokenID(t)
+	txProcessor, tc, blocks, statedb := initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l1CoordTxs := blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
 	l2Txs := common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err := tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	_, err := txProcessor.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	checkBalanceByIdx(t, tp.s, 256, "90")  // A
-	checkBalanceByIdx(t, tp.s, 257, "10")  // Coord0
-	checkBalanceByIdx(t, tp.s, 258, "100") // B
-	checkBalanceByIdx(t, tp.s, 259, "0")   // Coord0
+	checkBalanceByIdx(t, txProcessor.state, 256, "90")  // A
+	checkBalanceByIdx(t, txProcessor.state, 257, "10")  // Coord0
+	checkBalanceByIdx(t, txProcessor.state, 258, "100") // B
+	checkBalanceByIdx(t, txProcessor.state, 259, "0")   // Coord0
 
 	// reset StateDB values
 	coordIdxs = []common.Idx{259, 257}
-	sdb.Close()
-	tp, tc, blocks, sdb = initTestMultipleCoordIdxForTokenID(t)
+	statedb.Close()
+	txProcessor, tc, blocks, statedb = initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l1CoordTxs = blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	checkBalanceByIdx(t, tp.s, 256, "90")  // A
-	checkBalanceByIdx(t, tp.s, 257, "0")   // Coord0
-	checkBalanceByIdx(t, tp.s, 258, "100") // B
-	checkBalanceByIdx(t, tp.s, 259, "10")  // Coord0
+	checkBalanceByIdx(t, txProcessor.state, 256, "90")  // A
+	checkBalanceByIdx(t, txProcessor.state, 257, "0")   // Coord0
+	checkBalanceByIdx(t, txProcessor.state, 258, "100") // B
+	checkBalanceByIdx(t, txProcessor.state, 259, "10")  // Coord0
 
 	// reset StateDB values
 	coordIdxs = []common.Idx{257, 259}
-	sdb.Close()
-	tp, tc, blocks, sdb = initTestMultipleCoordIdxForTokenID(t)
+	statedb.Close()
+	txProcessor, tc, blocks, statedb = initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l1CoordTxs = blocks[0].Rollup.Batches[1].L1CoordinatorTxs
 	l1CoordTxs = append(l1CoordTxs, l1CoordTxs[0]) // duplicate the CoordAccount for TokenID=0
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[1].L2Txs)
-	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
+	_, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	checkBalanceByIdx(t, tp.s, 256, "90")  // A
-	checkBalanceByIdx(t, tp.s, 257, "10")  // Coord0
-	checkBalanceByIdx(t, tp.s, 258, "100") // B
-	checkBalanceByIdx(t, tp.s, 259, "0")   // Coord0
+	checkBalanceByIdx(t, txProcessor.state, 256, "90")  // A
+	checkBalanceByIdx(t, txProcessor.state, 257, "10")  // Coord0
+	checkBalanceByIdx(t, txProcessor.state, 258, "100") // B
+	checkBalanceByIdx(t, txProcessor.state, 259, "0")   // Coord0
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOutput,
@@ -935,11 +935,11 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 		MaxFeeTx: 2,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(sdb, config)
 	ptOuts := []*ProcessTxOutput{}
 	for _, block := range blocks {
 		for _, batch := range block.Rollup.Batches {
-			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			ptOut, err := txProcessor.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
 			require.NoError(t, err)
 			ptOuts = append(ptOuts, ptOut)
 		}
@@ -987,11 +987,11 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 	err = tc.FillBlocksForgedL1UserTxs(blocks)
 	require.NoError(t, err)
 
-	tp = NewTxProcessor(sdb2, config)
+	txProcessor = NewTxProcessor(sdb2, config)
 	ptOuts2 := []*ProcessTxOutput{}
 	for _, block := range blocks {
 		for _, batch := range block.Rollup.Batches {
-			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			ptOut, err := txProcessor.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
 			require.NoError(t, err)
 			ptOuts2 = append(ptOuts2, ptOut)
 		}
@@ -1038,11 +1038,11 @@ func testTwoExits(t *testing.T, stateDBType statedb.TypeStateDB) ([]*ProcessTxOu
 	err = tc.FillBlocksForgedL1UserTxs(blocks)
 	require.NoError(t, err)
 
-	tp = NewTxProcessor(sdb3, config)
+	txProcessor = NewTxProcessor(sdb3, config)
 	ptOuts3 := []*ProcessTxOutput{}
 	for _, block := range blocks {
 		for _, batch := range block.Rollup.Batches {
-			ptOut, err := tp.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
+			ptOut, err := txProcessor.ProcessTxs(nil, batch.L1UserTxs, nil, nil)
 			require.NoError(t, err)
 			ptOuts3 = append(ptOuts3, ptOut)
 		}
@@ -1073,7 +1073,7 @@ func TestExitOf0Amount(t *testing.T) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeBatchBuilder, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -1126,7 +1126,7 @@ func TestExitOf0Amount(t *testing.T) {
 		MaxL1Tx:  16,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(statedb, config)
 
 	// For this test are only processed the batches with transactions:
 	// - Batch2, equivalent to Batches[1]
@@ -1135,10 +1135,10 @@ func TestExitOf0Amount(t *testing.T) {
 	// - Batch8, equivalent to Batches[7]
 
 	// process Batch2:
-	_, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil)
+	_, err = txProcessor.ProcessTxs(nil, blocks[0].Rollup.Batches[1].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	// process Batch4:
-	ptOut, err := tp.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil)
+	ptOut, err := txProcessor.ProcessTxs(nil, blocks[0].Rollup.Batches[3].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"17688031540912620894848983912708704736922099609001460827147265569563156468242",
@@ -1146,7 +1146,7 @@ func TestExitOf0Amount(t *testing.T) {
 	exitRootBatch4 := ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String()
 
 	// process Batch6:
-	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[5].L1UserTxs, nil, nil)
+	ptOut, err = txProcessor.ProcessTxs(nil, blocks[0].Rollup.Batches[5].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t,
 		"17688031540912620894848983912708704736922099609001460827147265569563156468242",
@@ -1159,11 +1159,11 @@ func TestExitOf0Amount(t *testing.T) {
 	// For the Batch8, as there is only 1 exit with Amount=0, the ExitRoot
 	// should be 0.
 	// process Batch8:
-	ptOut, err = tp.ProcessTxs(nil, blocks[0].Rollup.Batches[7].L1UserTxs, nil, nil)
+	ptOut, err = txProcessor.ProcessTxs(nil, blocks[0].Rollup.Batches[7].L1UserTxs, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "0", ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
-	sdb.Close()
+	statedb.Close()
 }
 
 func TestUpdatedAccounts(t *testing.T) {
@@ -1171,7 +1171,7 @@ func TestUpdatedAccounts(t *testing.T) {
 	require.NoError(t, err)
 	deleteme = append(deleteme, dir)
 
-	sdb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
+	statedb, err := statedb.NewStateDB(statedb.Config{Path: dir, Keep: 128,
 		Type: statedb.TypeSynchronizer, NLevels: 32})
 	assert.NoError(t, err)
 
@@ -1217,7 +1217,7 @@ func TestUpdatedAccounts(t *testing.T) {
 		MaxL1Tx:  16,
 		ChainID:  chainID,
 	}
-	tp := NewTxProcessor(sdb, config)
+	txProcessor := NewTxProcessor(statedb, config)
 
 	sortedKeys := func(m map[common.Idx]*common.Account) []int {
 		keys := make([]int, 0)
@@ -1230,7 +1230,7 @@ func TestUpdatedAccounts(t *testing.T) {
 
 	for _, batch := range blocks[0].Rollup.Batches {
 		l2Txs := common.L2TxsToPoolL2Txs(batch.L2Txs)
-		ptOut, err := tp.ProcessTxs(batch.Batch.FeeIdxsCoordinator, batch.L1UserTxs,
+		ptOut, err := txProcessor.ProcessTxs(batch.Batch.FeeIdxsCoordinator, batch.L1UserTxs,
 			batch.L1CoordinatorTxs, l2Txs)
 		require.NoError(t, err)
 		switch batch.Batch.BatchNum {
@@ -1251,7 +1251,7 @@ func TestUpdatedAccounts(t *testing.T) {
 			assert.Equal(t, []int{257, 261}, sortedKeys(ptOut.UpdatedAccounts))
 		}
 		for idx, updAcc := range ptOut.UpdatedAccounts {
-			acc, err := sdb.GetAccount(idx)
+			acc, err := statedb.GetAccount(idx)
 			require.NoError(t, err)
 			// If acc.Balance is 0, set it to 0 with big.NewInt so
 			// that the comparison succeeds.  Without this, the
@@ -1265,5 +1265,5 @@ func TestUpdatedAccounts(t *testing.T) {
 		}
 	}
 
-	sdb.Close()
+	statedb.Close()
 }
