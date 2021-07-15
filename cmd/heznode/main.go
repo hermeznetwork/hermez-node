@@ -195,6 +195,8 @@ func cmdRestoreStateDB(c *cli.Context) error {
 				Nonce:    acc.Nonce,
 				Balance:  balance,
 			}
+			fmt.Println("batchNum")
+			fmt.Println(batchNum)
 			if err != nil {
 				if tracerr.Unwrap(err) != db.ErrNotFound {
 					return tracerr.Wrap(err)
