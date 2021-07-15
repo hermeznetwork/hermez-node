@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
@@ -42,12 +43,31 @@ func (a *API) postPoolTx(c *gin.Context) {
 	}
 	// Check that tx is valid
 	if err := a.verifyPoolL2Tx(receivedTx); err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	receivedTx.ClientIP = c.ClientIP()
 	// Insert to DB
 	if err := a.l2.AddTxAPI(&receivedTx); err != nil {
+		if strings.Contains(err.Error(), "< minFeeUSD") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrFeeTooLowCode,
+				Type: ErrFeeTooLowType,
+			}, c)
+			return
+		} else if strings.Contains(err.Error(), "> maxFeeUSD") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrFeeTooBigCode,
+				Type: ErrFeeTooBigType,
+			}, c)
+			return
+		}
 		retSQLErr(err, c)
 		return
 	}

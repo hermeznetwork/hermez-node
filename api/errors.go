@@ -137,6 +137,16 @@ const (
 	// ErrFailedToFindOffsetToRelativePositionType error type
 	ErrFailedToFindOffsetToRelativePositionType = "ErrFailedToFindOffsetToRelativePosition"
 
+	// ErrFeeTooLowCode code for fee too low error
+	ErrFeeTooLowCode apiErrorCode = 23
+	// ErrFeeTooLowType type for fee too low error
+	ErrFeeTooLowType apiErrorType = "ErrFeeTooLow"
+
+	// ErrFeeTooBigCode code for fee too big error
+	ErrFeeTooBigCode apiErrorCode = 24
+	// ErrFeeTooBigType type for fee too big error
+	ErrFeeTooBigType apiErrorType = "ErrFeeTooBig"
+
 	// ErrUnsupportedMaxNumBatch error message returned when tx.MaxNumBatch != 0 until the feature is fully implemented
 	ErrUnsupportedMaxNumBatch = "currently only supported value for maxNumBatch is 0, this will change soon when the feature is fully implemented"
 
