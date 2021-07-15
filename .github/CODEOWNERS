@@ -1,9 +1,25 @@
 *.md                    @jeffprestes
-api/                    @arnaubennassar
-db/*.go                 @arnaubennassar
-db/historydb            @arnaubennassar
-db/migrations           @arnaubennassar
-db/l2db                 @arnaubennassar
-txselector/             @arnaubennassar
+api/                    @Mikelle @ARR552
+db/*.go                 @Mikelle @tclemos
+db/historydb            @Mikelle @tclemos
+db/migrations           @Mikelle @arnaubennassar
+db/l2db                 @Mikelle @marioidival
+db/kvdb                 @Mikelle @marioidival
+db/statedb              @Mikelle @marioidival
+txselector/             @mfcastellani @tclemos
 etherscan/              @ARR552
-priceupdater/           @ARR552
+priceupdater/           @marioidival @ARR552
+common/                 @Mikelle @mfcastellani
+config/                 @ARR552 @marioidival
+coordinator/            @mfcastellani @marioidival
+node/                   @Mikelle @ARR552
+eth/                    @ARR552 @arnaubennassar
+cmd/                    @mfcastellani
+txprocessor/            @mfcastellani @tclemos
+health/                 @Mikelle @ARR552
+log/                    @mfcastellani
+metric/                 @mfcastellani
+test/                   @arnaubennassar @mfcastellani
+prover/                 @mfcastellani @marioidival
+synchronizer/           @ARR552 @arnaubennassar
+batchbuilder/           @mfcastellani @marioidival
