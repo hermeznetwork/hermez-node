@@ -459,6 +459,48 @@ func (k *KVDB) MakeCheckpoint() error {
 	return nil
 }
 
+func (k *KVDB) MakeCheckpointWithSpecifiedBatchNumber(batchNum int64) error {
+	k.CurrentBatch = common.BatchNum(batchNum)
+
+	checkpointPath := path.Join(k.cfg.Path, fmt.Sprintf("%s%d", PathBatchNum, k.CurrentBatch))
+
+	if err := k.setCurrentBatch(); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	// if checkpoint BatchNum already exist in disk, delete it
+	if _, err := os.Stat(checkpointPath); os.IsNotExist(err) {
+	} else if err != nil {
+		return tracerr.Wrap(err)
+	} else {
+		if err := os.RemoveAll(checkpointPath); err != nil {
+			return tracerr.Wrap(err)
+		}
+	}
+
+	// execute Checkpoint
+	if err := k.db.Pebble().Checkpoint(checkpointPath); err != nil {
+		return tracerr.Wrap(err)
+	}
+	// copy 'CurrentBatch' to 'last'
+	if k.last != nil {
+		if err := k.last.set(k, k.CurrentBatch); err != nil {
+			return tracerr.Wrap(err)
+		}
+	}
+
+	k.wg.Add(1)
+	go func() {
+		delErr := k.DeleteOldCheckpoints()
+		if delErr != nil {
+			log.Errorw("delete old checkpoints failed", "err", delErr)
+		}
+		k.wg.Done()
+	}()
+
+	return nil
+}
+
 // CheckpointExists returns true if the checkpoint exists
 func (k *KVDB) CheckpointExists(batchNum common.BatchNum) (bool, error) {
 	source := path.Join(k.cfg.Path, fmt.Sprintf("%s%d", PathBatchNum, batchNum))

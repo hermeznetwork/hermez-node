@@ -227,6 +227,11 @@ func (s *StateDB) MakeCheckpoint() error {
 	return s.db.MakeCheckpoint()
 }
 
+func (s *StateDB) MakeCheckpointWithSpecifiedBatchNumber(batchNum int64) error {
+	log.Debugw("Making StateDB checkpoint", "batch", s.CurrentBatch()+1, "type", s.cfg.Type)
+	return s.db.MakeCheckpointWithSpecifiedBatchNumber(batchNum)
+}
+
 // DeleteOldCheckpoints deletes old checkpoints when there are more than
 // `cfg.keep` checkpoints
 func (s *StateDB) DeleteOldCheckpoints() error {
