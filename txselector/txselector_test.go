@@ -815,12 +815,14 @@ func TestProcessL2Selection(t *testing.T) {
 	assert.Equal(t, common.Nonce(0), oL2Txs[0].Nonce)
 	assert.Equal(t, common.Nonce(1), discardedL2Txs[0].Nonce)
 	assert.Equal(t, common.Nonce(2), discardedL2Txs[1].Nonce)
-	assert.Equal(t, "{\n\t\"Message\": \"Tx not selected due to not enough Balance at the sender. "+
-		"Current sender account Balance: 7, Amount+Fee: 11\",\n\t\"Code\": 11,\n\t\"Type\": \"ErrSenderNotEnoughBalance\"\n}",
-		discardedL2Txs[0].Info)
-	assert.Equal(t, "{\n\t\"Message\": \"Tx not selected due to not current Nonce. "+
-		"Tx.Nonce: 2, Account.Nonce: 1\",\n\t\"Code\": 12,\n\t\"Type\": \"ErrNoCurrentNonce\"\n}",
+	assert.Equal(t, "Tx not selected due to not enough Balance at the sender. "+
+		"Current sender account Balance: 7, Amount+Fee: 11", discardedL2Txs[0].Info)
+	assert.Equal(t, 11, discardedL2Txs[0].ErrorCode)
+	assert.Equal(t, "ErrSenderNotEnoughBalance", discardedL2Txs[0].ErrorType)
+	assert.Equal(t, "Tx not selected due to not current Nonce. Tx.Nonce: 2, Account.Nonce: 1",
 		discardedL2Txs[1].Info)
+	assert.Equal(t, 12, discardedL2Txs[1].ErrorCode)
+	assert.Equal(t, "ErrNoCurrentNonce", discardedL2Txs[1].ErrorType)
 
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.localAccountsDB.CurrentBatch())
@@ -1031,11 +1033,12 @@ func TestL1UserFutureTxs(t *testing.T) {
 	// despite that there is an AccountCreationAuth for Account B.
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, 1, len(discardedL2Txs))
-	assert.Equal(t, "{\n\t\"Message\": \"Tx not selected (in processTxToEthAddrBJJ) due to "+
+	assert.Equal(t, "Tx not selected (in processTxToEthAddrBJJ) due to "+
 		"L2Tx discarded at the current batch, as the receiver account does not exist yet, "+
-		"and there is a L1UserTx that will create that account in a future batch.\",\n\t\"Code\": 14,"+
-		"\n\t\"Type\": \"ErrTxDiscartedInProcessTxToEthAddrBJJ\"\n}",
+		"and there is a L1UserTx that will create that account in a future batch.",
 		discardedL2Txs[0].Info)
+	assert.Equal(t, 14, discardedL2Txs[0].ErrorCode)
+	assert.Equal(t, "ErrTxDiscartedInProcessTxToEthAddrBJJ", discardedL2Txs[0].ErrorType)
 
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.localAccountsDB.CurrentBatch())
@@ -1492,8 +1495,9 @@ func TestFilterMaxNumBatch(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 1, len(oL2Txs))
 	assert.Equal(t, 1, len(discardedL2Txs))
-	assert.Equal(t, "{\n\t\"Message\": \"MaxNumBatch exceeded\",\n\t\"Code\": 2,\n\t\"Type\": \"ErrUnsupportedMaxNumBatch\"\n}",
-		discardedL2Txs[0].Info)
+	assert.Equal(t, "MaxNumBatch exceeded", discardedL2Txs[0].Info)
+	assert.Equal(t, 2, discardedL2Txs[0].ErrorCode)
+	assert.Equal(t, "ErrUnsupportedMaxNumBatch", discardedL2Txs[0].ErrorType)
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
 	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1000")
