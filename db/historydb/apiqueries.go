@@ -1163,29 +1163,6 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 	}, nil
 }
 
-// CanSendToEthAddr returns true if it's possible to send a tx to an Eth addr
-// either because there is an idx associated to the Eth addr and token
-// or the cordinator has an authorization to create a valid account
-func (hdb *HistoryDB) CanSendToEthAddr(ethAddr ethCommon.Address, tokenID common.TokenID) (bool, error) {
-	cancel, err := hdb.apiConnCon.Acquire()
-	defer cancel()
-	if err != nil {
-		return false, tracerr.Wrap(err)
-	}
-	defer hdb.apiConnCon.Release()
-
-	row := hdb.dbRead.QueryRow(
-		`SELECT (
-			SELECT COUNT(*) > 0 FROM account WHERE eth_addr = $1 AND token_id = $2 LIMIT 1
-		) OR (
-			SELECT COUNT(*) > 0 FROM account_creation_auth WHERE eth_addr = $1 LIMIT 1
-		);`,
-		ethAddr, tokenID,
-	)
-	var ok bool
-	return ok, tracerr.Wrap(row.Scan(&ok))
-}
-
 // GetCoordinatorAPI returns a coordinator by its bidderAddr
 func (hdb *HistoryDB) GetCoordinatorAPI(bidderAddr ethCommon.Address) (*CoordinatorAPI, error) {
 	cancel, err := hdb.apiConnCon.Acquire()

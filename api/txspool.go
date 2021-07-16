@@ -171,9 +171,9 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
 			Type: ErrInvalidSignatureType,
 		}
 	}
+	switch tx.Type {
 	// Check destination, note that transactions that are not transfers
 	// will always be valid in terms of destination (they use special ToIdx by protocol)
-	switch tx.Type {
 	case common.TxTypeTransfer:
 		// ToIdx exists and match token
 		toAccount, err := a.h.GetCommonAccountAPI(tx.ToIdx)
@@ -192,29 +192,8 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
 				Type: ErrAccountTokenNotEqualTxTokenType,
 			}
 		}
-	case common.TxTypeTransferToEthAddr:
-		// ToEthAddr has account created with matching token ID or authorization
-		ok, err := a.h.CanSendToEthAddr(tx.ToEthAddr, tx.TokenID)
-		if err != nil {
-			return &apiError{
-				Err:  tracerr.Wrap(err),
-				Code: ErrCantSendToEthAddrCode,
-				Type: ErrCantSendToEthAddrType,
-			}
-		}
-		if !ok {
-			return &apiError{
-				Err: tracerr.Wrap(fmt.Errorf(
-					"destination eth addr (%v) has not a valid account created nor authorization",
-					tx.ToEthAddr)),
-				Code: ErrCantSendToEthAddrCode,
-				Type: ErrCantSendToEthAddrType,
-			}
-		}
-	}
 	// Extra sanity checks: those checks are valid as per the protocol, but are very likely to
 	// have unexpected side effects that could have a negative impact on users
-	switch tx.Type {
 	case common.TxTypeExit:
 		if tx.Amount.Cmp(big.NewInt(0)) <= 0 {
 			return &apiError{
