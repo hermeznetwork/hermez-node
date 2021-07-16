@@ -196,12 +196,19 @@ func cmdRestoreStateDB(c *cli.Context) error {
 				if tracerr.Unwrap(err) != db.ErrNotFound {
 					return tracerr.Wrap(err)
 				}
+				fmt.Println("adding account with idx")
+				fmt.Println(idx)
+				fmt.Println(newAccount.BatchNum)
 				_, err := stateDB.CreateAccount(idx, newAccount)
 				if err != nil {
 					return tracerr.Wrap(err)
 				}
 			} else {
 				_, err := stateDB.UpdateAccount(idx, newAccount)
+				fmt.Println("updating account with idx")
+				fmt.Println(idx)
+				fmt.Println(newAccount.BatchNum)
+
 				if err != nil {
 					return tracerr.Wrap(err)
 				}
@@ -258,7 +265,7 @@ func cmdRestoreStateDB(c *cli.Context) error {
 		return tracerr.Wrap(err)
 	}
 
-	fmt.Println("Last comparision")
+	fmt.Println("Last comparison")
 	fmt.Println(lastRoot)
 	fmt.Println(batch.StateRoot)
 	if batch.StateRoot.Cmp(lastRoot) != 0 {
