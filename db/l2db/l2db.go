@@ -122,21 +122,30 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx, batchNum common.BatchNum)
 		return nil
 	}
 	type txUpdate struct {
-		ID   common.TxID `db:"id"`
-		Info string      `db:"info"`
+		ID   	  common.TxID 			 `db:"id"`
+		Info 	  string `db:"info"`
+		ErrorCode int					 `db:"error_code"`
+		ErrorType string				 `db:"error_type"`
 	}
 	txUpdates := make([]txUpdate, len(txs))
 	batchN := strconv.FormatInt(int64(batchNum), 10)
 	for i := range txs {
-		txUpdates[i] = txUpdate{ID: txs[i].TxID, Info: "BatchNum: " + batchN + ". " + txs[i].Info}
+		txUpdates[i] = txUpdate {
+			ID: txs[i].TxID,
+			Info: "BatchNum: " + batchN + ". " + txs[i].Info,
+			ErrorCode: txs[i].ErrorCode,
+			ErrorType: txs[i].ErrorType,
+		}
 	}
 	const query string = `
 		UPDATE tx_pool SET
-			info = tx_update.info
+			info = tx_update.info,
+			error_code = tx_update.error_code,
+			error_type = tx_update.error_type
 		FROM (VALUES
-			(NULL::::BYTEA, NULL::::VARCHAR),
-			(:id, :info)
-		) as tx_update (id, info)
+			(NULL::::BYTEA, NULL::::VARCHAR, NULL::::NUMERIC, NULL::::VARCHAR),
+			(:id, :info, :error_code, :error_type)
+		) as tx_update (id, info, error_code, error_type)
 		WHERE tx_pool.tx_id = tx_update.id;
 	`
 	if len(txUpdates) > 0 {

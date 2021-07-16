@@ -47,7 +47,9 @@ type PoolL2Tx struct {
 	// transaction. As for example, if the Tx has not been selected in the
 	// last batch due not enough Balance at the Sender account, this reason
 	// would appear at this parameter.
-	Info      string                `meddler:"info,zeroisnull"`
+	Info      string       `meddler:"info,zeroisnull"`
+	ErrorCode int          `meddler:"error_code"`
+	ErrorType string       `meddler:"error_type"`
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized
@@ -69,6 +71,13 @@ type PoolL2Tx struct {
 	// Extra metadata, may be uninitialized
 	RqTxCompressedData []byte `meddler:"-"` // 253 bits, optional for atomic txs
 	TokenSymbol        string `meddler:"-"` // Used for JSON marshaling the ToIdx
+}
+
+// TxSelectorError struct that gives more details about the error
+type TxSelectorError struct {
+	Message string `meddler:"info,zeroisnull"`
+	Code    int    `meddler:"error_code"`
+	Type    string `meddler:"error_type"`
 }
 
 // NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated

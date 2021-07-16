@@ -63,7 +63,6 @@ package txselector
 // current: very simple version of TxSelector
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"sort"
@@ -208,7 +207,7 @@ func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
 type failedAtomicGroup struct {
 	id         common.AtomicGroupID
 	failedTxID common.TxID // ID of the tx that made the entire atomic group fail
-	reason     string
+	reason     common.TxSelectorError
 }
 
 // getL1L2TxSelection returns the selection of L1 + L2 txs.
@@ -453,12 +452,16 @@ func (txsel *TxSelector) processL2Txs(
 		// Check if there is space for more L2Txs in the selection
 		if !canAddL2Tx(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig) {
 			// If tx is atomic, restart process without txs from the atomic group
-			const failingMsg = "Tx not selected due not available slots for L2Txs"
+			obj := common.TxSelectorError{
+				Message: ErrNoAvailableSlots,
+				Code:    ErrNoAvailableSlotsCode,
+				Type:    ErrNoAvailableSlotsType,
+			}
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
 					id:         l2Txs[i].AtomicGroupID,
 					failedTxID: l2Txs[i].TxID,
-					reason:     failingMsg,
+					reason:     obj,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -468,7 +471,9 @@ func (txsel *TxSelector) processL2Txs(
 			// no more available slots for L2Txs, so mark this tx
 			// but also the rest of remaining txs as discarded
 			for j := i; j < len(l2Txs); j++ {
-				l2Txs[j].Info = failingMsg
+				l2Txs[i].Info = obj.Message
+				l2Txs[i].ErrorCode = obj.Code
+				l2Txs[i].ErrorType = obj.Type
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[j])
 			}
 			break
@@ -476,26 +481,26 @@ func (txsel *TxSelector) processL2Txs(
 
 		// Reject tx if the batch that is being selected is greater than MaxNumBatch
 		if l2Txs[i].MaxNumBatch != 0 && nextBatchNum > l2Txs[i].MaxNumBatch {
-			obj := txSelectorError{
+			obj := common.TxSelectorError{
 				Message: ErrUnsupportedMaxNumBatch,
 				Code:    ErrUnsupportedMaxNumBatchCode,
 				Type:    ErrUnsupportedMaxNumBatchType,
 			}
-			msg, _ := json.MarshalIndent(obj, "", "\t")
-			failingMsg := string(msg)
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
 					id:         l2Txs[i].AtomicGroupID,
 					failedTxID: l2Txs[i].TxID,
-					reason:     obj.Message,
+					reason:     obj,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
 					l2Txs[i].AtomicGroupID,
 				))
 			}
-			l2Txs[i].Info = failingMsg
+			l2Txs[i].Info = obj.Message
+			l2Txs[i].ErrorCode = obj.Code
+			l2Txs[i].ErrorType = obj.Type
 			// Tx won't be forjable since the current batch num won't go backwards
 			unforjableL2Txs = append(unforjableL2Txs, l2Txs[i])
 			continue
@@ -504,25 +509,25 @@ func (txsel *TxSelector) processL2Txs(
 		// Discard exits with amount 0
 		if l2Txs[i].Type == common.TxTypeExit && l2Txs[i].Amount.Cmp(big.NewInt(0)) <= 0 {
 			// If tx is atomic, restart process without txs from the atomic group
-			obj := txSelectorError{
+			obj := common.TxSelectorError{
 				Message: ErrExitAmount,
 				Code:    ErrExitAmountCode,
 				Type:    ErrExitAmountType,
 			}
-			msg, _ := json.MarshalIndent(obj, "", "\t")
-			failingMsg := string(msg)
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
 					id:         l2Txs[i].AtomicGroupID,
 					failedTxID: l2Txs[i].TxID,
-					reason:     obj.Message,
+					reason:     obj,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
 					l2Txs[i].AtomicGroupID,
 				))
 			}
-			l2Txs[i].Info = failingMsg
+			l2Txs[i].Info = obj.Message
+			l2Txs[i].ErrorCode = obj.Code
+			l2Txs[i].ErrorType = obj.Type
 			// Although tecnicaly forjable, it won't never get forged with current code
 			unforjableL2Txs = append(unforjableL2Txs, l2Txs[i])
 			continue
@@ -538,20 +543,18 @@ func (txsel *TxSelector) processL2Txs(
 		// Check enough Balance on sender
 		enoughBalance, balance, feeAndAmount := tp.CheckEnoughBalance(l2Txs[i])
 		if !enoughBalance {
-			obj := txSelectorError{
+			obj := common.TxSelectorError{
 				Message: fmt.Sprintf(ErrSenderNotEnoughBalance+"Current sender account Balance: %s, Amount+Fee: %s",
 					balance.String(), feeAndAmount.String()),
 				Code: ErrSenderNotEnoughBalanceCode,
 				Type: ErrSenderNotEnoughBalanceType,
 			}
-			msg, _ := json.MarshalIndent(obj, "", "\t")
-			failingMsg := string(msg)
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
 					id:         l2Txs[i].AtomicGroupID,
 					failedTxID: l2Txs[i].TxID,
-					reason:     obj.Message,
+					reason:     obj,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -561,26 +564,26 @@ func (txsel *TxSelector) processL2Txs(
 			// not valid Amount with current Balance. Discard L2Tx,
 			// and update Info parameter of the tx, and add it to
 			// the discardedTxs array
-			l2Txs[i].Info = failingMsg
+			l2Txs[i].Info = obj.Message
+			l2Txs[i].ErrorCode = obj.Code
+			l2Txs[i].ErrorType = obj.Type
 			nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 			continue
 		}
 
 		// Check if Nonce is correct
 		if l2Txs[i].Nonce != accSender.Nonce {
-			obj := txSelectorError{
+			obj := common.TxSelectorError{
 				Message: fmt.Sprintf(ErrNoCurrentNonce+"Tx.Nonce: %d, Account.Nonce: %d", l2Txs[i].Nonce, accSender.Nonce),
 				Code:    ErrNoCurrentNonceCode,
 				Type:    ErrNoCurrentNonceType,
 			}
-			msg, _ := json.MarshalIndent(obj, "", "\t")
-			failingMsg := string(msg)
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
 					id:         l2Txs[i].AtomicGroupID,
 					failedTxID: l2Txs[i].TxID,
-					reason:     obj.Message,
+					reason:     obj,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -590,7 +593,9 @@ func (txsel *TxSelector) processL2Txs(
 			// not valid Nonce at tx. Discard L2Tx, and update Info
 			// parameter of the tx, and add it to the discardedTxs
 			// array
-			l2Txs[i].Info = failingMsg
+			l2Txs[i].Info = obj.Message
+			l2Txs[i].ErrorCode = obj.Code
+			l2Txs[i].ErrorType = obj.Type
 			nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 			continue
 		}
@@ -606,13 +611,11 @@ func (txsel *TxSelector) processL2Txs(
 			return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
 		}
 		if newL1CoordTx != nil {
-			obj := txSelectorError{
+			obj := common.TxSelectorError{
 				Message: ErrNotEnoughSpaceL1Coordinator,
 				Code:    ErrNotEnoughSpaceL1CoordinatorCode,
 				Type:    ErrNotEnoughSpaceL1CoordinatorType,
 			}
-			msg, _ := json.MarshalIndent(obj, "", "\t")
-			failingMsg := string(msg)
 			// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
 			// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
 			if !canAddL2TxThatNeedsNewCoordL1Tx(
@@ -625,7 +628,7 @@ func (txsel *TxSelector) processL2Txs(
 					failedAG = failedAtomicGroup{
 						id:         l2Txs[i].AtomicGroupID,
 						failedTxID: l2Txs[i].TxID,
-						reason:     obj.Message,
+						reason:     obj,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -634,7 +637,9 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				// discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = failingMsg
+				l2Txs[i].Info = obj.Message
+				l2Txs[i].ErrorCode = obj.Code
+				l2Txs[i].ErrorType = obj.Type
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
@@ -669,20 +674,18 @@ func (txsel *TxSelector) processL2Txs(
 				l2Txs[i],
 			)
 			if err != nil {
-				obj := txSelectorError{
+				obj := common.TxSelectorError{
 					Message: fmt.Sprintf(ErrTxDiscartedInProcessTxToEthAddrBJJ+" due to %s", err.Error()),
 					Code:    ErrTxDiscartedInProcessTxToEthAddrBJJCode,
 					Type:    ErrTxDiscartedInProcessTxToEthAddrBJJType,
 				}
-				msg, _ := json.MarshalIndent(obj, "", "\t")
-				failingMsg := string(msg)
 				log.Debugw("txsel.processTxToEthAddrBJJ", "err", err)
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 					failedAG = failedAtomicGroup{
 						id:         l2Txs[i].AtomicGroupID,
 						failedTxID: l2Txs[i].TxID,
-						reason:     obj.Message,
+						reason:     obj,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -691,7 +694,9 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				// Discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = failingMsg
+				l2Txs[i].Info = obj.Message
+				l2Txs[i].ErrorCode = obj.Code
+				l2Txs[i].ErrorType = obj.Type
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
@@ -724,10 +729,15 @@ func (txsel *TxSelector) processL2Txs(
 				// TODO: Missing info on why this tx is not selected? Check l2Txs.Info at this point!
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
+					obj := common.TxSelectorError{
+						Message: l2Txs[i].Info,
+						Code:    l2Txs[i].ErrorCode,
+						Type:    l2Txs[i].ErrorType,
+					}
 					failedAG = failedAtomicGroup{
 						id:         l2Txs[i].AtomicGroupID,
 						failedTxID: l2Txs[i].TxID,
-						reason:     l2Txs[i].Info,
+						reason:     obj,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -740,13 +750,11 @@ func (txsel *TxSelector) processL2Txs(
 		} else if l2Txs[i].ToIdx >= common.IdxUserThreshold {
 			_, err := txsel.localAccountsDB.GetAccount(l2Txs[i].ToIdx)
 			if err != nil {
-				obj := txSelectorError{
+				obj := common.TxSelectorError{
 					Message: fmt.Sprintf(ErrToIdxNotFound+"ToIdx: %d", l2Txs[i].ToIdx),
 					Code:    ErrToIdxNotFoundCode,
 					Type:    ErrToIdxNotFoundType,
 				}
-				msg, _ := json.MarshalIndent(obj, "", "\t")
-				failingMsg := string(msg)
 				// tx not valid
 				log.Debugw("invalid L2Tx: ToIdx not found in StateDB",
 					"ToIdx", l2Txs[i].ToIdx)
@@ -755,7 +763,7 @@ func (txsel *TxSelector) processL2Txs(
 					failedAG = failedAtomicGroup{
 						id:         l2Txs[i].AtomicGroupID,
 						failedTxID: l2Txs[i].TxID,
-						reason:     obj.Message,
+						reason:     obj,
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
@@ -764,7 +772,9 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				// Discard L2Tx, and update Info parameter of
 				// the tx, and add it to the discardedTxs array
-				l2Txs[i].Info = failingMsg
+				l2Txs[i].Info = obj.Message
+				l2Txs[i].ErrorCode = obj.Code
+				l2Txs[i].ErrorType = obj.Type
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
@@ -792,20 +802,18 @@ func (txsel *TxSelector) processL2Txs(
 
 		_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
 		if err != nil {
-			obj := txSelectorError{
+			obj := common.TxSelectorError{
 				Message: fmt.Sprintf(ErrTxDiscartedInProcessL2Tx+" due to %s", err.Error()),
 				Code:    ErrTxDiscartedInProcessL2TxCode,
 				Type:    ErrTxDiscartedInProcessL2TxType,
 			}
-			msg, _ := json.MarshalIndent(obj, "", "\t")
-			failingMsg := string(msg)
 			log.Debugw("txselector.getL1L2TxSelection at ProcessL2Tx", "err", err)
 			// If tx is atomic, restart process without txs from the atomic group
 			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 				failedAG = failedAtomicGroup{
 					id:         l2Txs[i].AtomicGroupID,
 					failedTxID: l2Txs[i].TxID,
-					reason:     obj.Message,
+					reason:     obj,
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
@@ -814,7 +822,9 @@ func (txsel *TxSelector) processL2Txs(
 			}
 			// Discard L2Tx, and update Info parameter of the tx,
 			// and add it to the discardedTxs array
-			l2Txs[i].Info = failingMsg
+			l2Txs[i].Info = obj.Message
+			l2Txs[i].ErrorCode = obj.Code
+			l2Txs[i].ErrorType = obj.Type
 			nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 			continue
 		}
@@ -1090,12 +1100,15 @@ func filterFailedAtomicGroups(
 		txFailed := false
 		for _, failedAtomicGroup := range faildeGroups {
 			if failedAtomicGroup.id == txs[i].AtomicGroupID {
-				txs[i].Info = setInfoForFailedAtomicTx(
+				obj := setInfoForFailedAtomicTx(
 					txs[i].TxID == failedAtomicGroup.failedTxID,
 					txs[i].AtomicGroupID,
 					failedAtomicGroup.failedTxID,
 					failedAtomicGroup.reason,
 				)
+				txs[i].Info = obj.Message
+				txs[i].ErrorCode = obj.Code
+				txs[i].ErrorType = obj.Type
 				filteredTxs = append(filteredTxs, txs[i])
 				txFailed = true
 				break
@@ -1140,10 +1153,10 @@ func setInfoForFailedAtomicTx(
 	isOriginOfFailure bool,
 	failedAtomicGroupID common.AtomicGroupID,
 	failedTxID common.TxID,
-	failMessage string,
-) string {
+	failMessage common.TxSelectorError,
+) common.TxSelectorError {
 	if isOriginOfFailure {
-		obj := txSelectorError{
+		obj := common.TxSelectorError{
 			Message: fmt.Sprintf(
 				ErrUnselectableAtomicGroup+" %s, tx %s failed due to: %s",
 				failedAtomicGroupID,
@@ -1153,9 +1166,7 @@ func setInfoForFailedAtomicTx(
 			Code: ErrUnselectableAtomicGroupCode,
 			Type: ErrUnselectableAtomicGroupType,
 		}
-		msg, _ := json.MarshalIndent(obj, "", "\t")
-		failingMsg := string(msg)
-		return failingMsg
+		return obj
 	}
-	return failMessage
+	return common.TxSelectorError{}
 }
