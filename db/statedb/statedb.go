@@ -379,6 +379,8 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (
 func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
 	account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
+	fmt.Println("ADDING ACCOUNT TO THE STATEDB")
+	fmt.Println(account)
 	v, err := account.HashValue()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -438,6 +440,9 @@ func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (
 func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
 	account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: account.Bytes()
+	fmt.Println("UPDATING ACCOUNT IN THE STATEDB")
+	fmt.Println(account)
+
 	v, err := account.HashValue()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
