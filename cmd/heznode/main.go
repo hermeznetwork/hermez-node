@@ -258,6 +258,9 @@ func cmdRestoreStateDB(c *cli.Context) error {
 		return tracerr.Wrap(err)
 	}
 
+	fmt.Println("Last comparision")
+	fmt.Println(lastRoot)
+	fmt.Println(batch.StateRoot)
 	if batch.StateRoot.Cmp(lastRoot) != 0 {
 		return tracerr.Wrap(errors.New("state root not equals root from SC"))
 	}
