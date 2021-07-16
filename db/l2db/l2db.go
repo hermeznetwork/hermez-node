@@ -122,17 +122,17 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx, batchNum common.BatchNum)
 		return nil
 	}
 	type txUpdate struct {
-		ID   	  common.TxID 			 `db:"id"`
-		Info 	  string `db:"info"`
-		ErrorCode int					 `db:"error_code"`
-		ErrorType string				 `db:"error_type"`
+		ID        common.TxID `db:"id"`
+		Info      string      `db:"info"`
+		ErrorCode int         `db:"error_code"`
+		ErrorType string      `db:"error_type"`
 	}
 	txUpdates := make([]txUpdate, len(txs))
 	batchN := strconv.FormatInt(int64(batchNum), 10)
 	for i := range txs {
-		txUpdates[i] = txUpdate {
-			ID: txs[i].TxID,
-			Info: "BatchNum: " + batchN + ". " + txs[i].Info,
+		txUpdates[i] = txUpdate{
+			ID:        txs[i].TxID,
+			Info:      "BatchNum: " + batchN + ". " + txs[i].Info,
 			ErrorCode: txs[i].ErrorCode,
 			ErrorType: txs[i].ErrorType,
 		}

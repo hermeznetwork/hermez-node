@@ -1,6 +1,5 @@
 package txselector
 
-
 const (
 	// Error messages showed in the info field from tx table
 
@@ -60,18 +59,10 @@ const (
 	// ErrTxDiscartedInProcessL2TxType error type
 	ErrTxDiscartedInProcessL2TxType string = "ErrTxDiscartedInProcessL2Tx"
 
-	// ErrUnselectableAtomicGroup error message returned if tx is discarted in ProcessL2Tx
-	ErrUnselectableAtomicGroup = "Unselectable atomic group"
-	// ErrUnselectableAtomicGroupCode error code
-	ErrUnselectableAtomicGroupCode int = 17
-	// ErrUnselectableAtomicGroupType error type
-	ErrUnselectableAtomicGroupType string = "ErrUnselectableAtomicGroup"
-
 	// ErrNoAvailableSlots error message returned if there is no available slots for L2Txs
 	ErrNoAvailableSlots = "Tx not selected due not available slots for L2Txs"
 	// ErrNoAvailableSlotsCode error code
-	ErrNoAvailableSlotsCode int = 18
+	ErrNoAvailableSlotsCode int = 17
 	// ErrNoAvailableSlotsType error type
 	ErrNoAvailableSlotsType string = "ErrNoAvailableSlots"
 )
-

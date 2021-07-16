@@ -47,9 +47,9 @@ type PoolL2Tx struct {
 	// transaction. As for example, if the Tx has not been selected in the
 	// last batch due not enough Balance at the Sender account, this reason
 	// would appear at this parameter.
-	Info      string       `meddler:"info,zeroisnull"`
-	ErrorCode int          `meddler:"error_code"`
-	ErrorType string       `meddler:"error_type"`
+	Info      string                `meddler:"info,zeroisnull"`
+	ErrorCode int                   `meddler:"error_code,zeroisnull"`
+	ErrorType string                `meddler:"error_type,zeroisnull"`
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fileds, may be uninitialized

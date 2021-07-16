@@ -1157,14 +1157,13 @@ func setInfoForFailedAtomicTx(
 ) common.TxSelectorError {
 	if isOriginOfFailure {
 		obj := common.TxSelectorError{
-			Message: fmt.Sprintf(
-				ErrUnselectableAtomicGroup+" %s, tx %s failed due to: %s",
+			Message: fmt.Sprintf("unselectable atomic group"+" %s, tx %s failed due to: %s",
 				failedAtomicGroupID,
 				failedTxID,
-				failMessage,
+				failMessage.Message,
 			),
-			Code: ErrUnselectableAtomicGroupCode,
-			Type: ErrUnselectableAtomicGroupType,
+			Code: failMessage.Code,
+			Type: failMessage.Type,
 		}
 		return obj
 	}
