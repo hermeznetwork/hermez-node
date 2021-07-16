@@ -43,6 +43,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 		return
 	}
 	receivedTx.ClientIP = c.ClientIP()
+	receivedTx.Info = ""
 	// Insert to DB
 	if err := a.l2.AddTxAPI(&receivedTx); err != nil {
 		if strings.Contains(err.Error(), "< minFeeUSD") {

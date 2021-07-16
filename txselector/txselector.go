@@ -436,7 +436,7 @@ func (txsel *TxSelector) processL2Txs(
 	failedAG failedAtomicGroup,
 	err error,
 ) {
-	const failedGroupErrMsg = "Failed forging atomic tx from Group %d." +
+	const failedGroupErrMsg = "Failed forging atomic tx from Group %s." +
 		" Restarting selection process without txs from this group"
 	// TODO: differentiate between nonSelectedL2Txs and unforjableL2Txs
 	// (right now all fall into nonSelectedL2Txs, which is safe but non optimal)
@@ -465,7 +465,7 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
-					l2Txs[i].AtomicGroupID,
+					l2Txs[i].AtomicGroupID.String(),
 				))
 			}
 			// no more available slots for L2Txs, so mark this tx
@@ -495,7 +495,7 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
-					l2Txs[i].AtomicGroupID,
+					l2Txs[i].AtomicGroupID.String(),
 				))
 			}
 			l2Txs[i].Info = obj.Message
@@ -522,7 +522,7 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
-					l2Txs[i].AtomicGroupID,
+					l2Txs[i].AtomicGroupID.String(),
 				))
 			}
 			l2Txs[i].Info = obj.Message
@@ -558,7 +558,7 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
-					l2Txs[i].AtomicGroupID,
+					l2Txs[i].AtomicGroupID.String(),
 				))
 			}
 			// not valid Amount with current Balance. Discard L2Tx,
@@ -587,7 +587,7 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
-					l2Txs[i].AtomicGroupID,
+					l2Txs[i].AtomicGroupID.String(),
 				))
 			}
 			// not valid Nonce at tx. Discard L2Tx, and update Info
@@ -632,7 +632,7 @@ func (txsel *TxSelector) processL2Txs(
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
-						l2Txs[i].AtomicGroupID,
+						l2Txs[i].AtomicGroupID.String(),
 					))
 				}
 				// discard L2Tx, and update Info parameter of
@@ -689,7 +689,7 @@ func (txsel *TxSelector) processL2Txs(
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
-						l2Txs[i].AtomicGroupID,
+						l2Txs[i].AtomicGroupID.String(),
 					))
 				}
 				// Discard L2Tx, and update Info parameter of
@@ -741,7 +741,7 @@ func (txsel *TxSelector) processL2Txs(
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
-						l2Txs[i].AtomicGroupID,
+						l2Txs[i].AtomicGroupID.String(),
 					))
 				}
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
@@ -767,7 +767,7 @@ func (txsel *TxSelector) processL2Txs(
 					}
 					return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 						failedGroupErrMsg,
-						l2Txs[i].AtomicGroupID,
+						l2Txs[i].AtomicGroupID.String(),
 					))
 				}
 				// Discard L2Tx, and update Info parameter of
@@ -817,7 +817,7 @@ func (txsel *TxSelector) processL2Txs(
 				}
 				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
 					failedGroupErrMsg,
-					l2Txs[i].AtomicGroupID,
+					l2Txs[i].AtomicGroupID.String(),
 				))
 			}
 			// Discard L2Tx, and update Info parameter of the tx,
