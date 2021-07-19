@@ -35,7 +35,7 @@ func (sdb StateDBChecker) Check() health.Health {
 
 	h.Up().
 		AddInfo("batchNum", batchNum).
-		AddInfo("root", root)
+		AddInfo("root", root.String())
 
 	return h
 }
