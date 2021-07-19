@@ -76,8 +76,8 @@ type PoolL2Tx struct {
 // TxSelectorError struct that gives more details about the error
 type TxSelectorError struct {
 	Message string `meddler:"info,zeroisnull"`
-	Code    int    `meddler:"error_code"`
-	Type    string `meddler:"error_type"`
+	Code    int    `meddler:"error_code,zeroisnull"`
+	Type    string `meddler:"error_type,zeroisnull"`
 }
 
 // NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated
