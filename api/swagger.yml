@@ -1460,7 +1460,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
+          description: "Address of an Ethereum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1609,7 +1609,7 @@ components:
           $ref: '#/components/schemas/AccountIndex'
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1628,7 +1628,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: null
           nullable: true
@@ -1684,7 +1684,7 @@ components:
           example: null
         requestToHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           nullable: true
           example: null
@@ -1706,7 +1706,7 @@ components:
           example: null
         requestFee:
           type: integer
-          description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
+          description: Index of the fee type to select, more info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier).
           minimum: 0
           maximum: 256
           nullable: true
@@ -1808,12 +1808,12 @@ components:
           $ref: '#/components/schemas/TransactionId'
     EthereumAddress:
       type: string
-      description: "Address of an Etherum account."
+      description: "Address of an Ethereum account."
       pattern: "^0x[a-fA-F0-9]{40}$"
       example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     HezEthereumAddress:
       type: string
-      description: "Address of an Etherum account linked to the Hermez Network."
+      description: "Address of an Ethereum account linked to the Hermez Network."
       pattern: "^hez:0x[a-fA-F0-9]{40}$"
       example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     BJJ:
@@ -1977,7 +1977,7 @@ components:
           nullable: true
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1993,7 +1993,7 @@ components:
             - example: "hez:DAI:672"
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -2902,7 +2902,7 @@ components:
           items: 
             allOf:
                 - $ref: '#/components/schemas/Slot'
-                - description: Last synchronized Etherum block.
+                - description: Last synchronized Ethereum block.
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
@@ -3001,12 +3001,12 @@ components:
         lastEthereumBlock:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Current Etherum block. Note that this is the actual last block of Ethereum, not the last synchronized block by the node.
+            - description: Current Ethereum block. Note that this is the actual last block of Ethereum, not the last synchronized block by the node.
             - example: 3457437
         lastSynchedBlock:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Last synchronized Etherum block. Compare with lastEthereumBlock to check the synchronization status of the node.
+            - description: Last synchronized Ethereum block. Compare with lastEthereumBlock to check the synchronization status of the node.
             - example: 3457437
         lastBatch:
           $ref: '#/components/schemas/Batch'
