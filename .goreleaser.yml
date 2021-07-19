@@ -31,7 +31,7 @@ archives:
       - LICENSE
       - cmd/heznode/README.md
       - cmd/heznode/cfg.api.toml
-      - cmd/heznode/cfg.buidler.toml
+      - cmd/heznode/cfg.builder.toml
 
 checksum:
   name_template: 'checksums.txt'
