@@ -74,6 +74,7 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		receivedAtomicGroup.Txs[i].RqNonce = requestedTx.Nonce
 		receivedAtomicGroup.Txs[i].ClientIP = clientIP
 		receivedAtomicGroup.Txs[i].AtomicGroupID = receivedAtomicGroup.ID
+		receivedAtomicGroup.Txs[i].Info = ""
 
 		// Validate transaction
 		if err := a.verifyPoolL2Tx(receivedAtomicGroup.Txs[i]); err != nil {

@@ -24,6 +24,7 @@ type PoolTxAPI struct {
 	Fee                  common.FeeSelector    `meddler:"fee"`
 	Nonce                common.Nonce          `meddler:"nonce"`
 	State                common.PoolL2TxState  `meddler:"state"`
+	MaxNumBatch          uint32                `meddler:"max_num_batch,zeroisnull"`
 	Info                 *string               `meddler:"info"`
 	ErrorCode            *int                  `meddler:"error_code"`
 	ErrorType            *string               `meddler:"error_type"`
@@ -69,6 +70,7 @@ func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
 		"fee":                         tx.Fee,
 		"nonce":                       tx.Nonce,
 		"state":                       tx.State,
+		"maxNumBatch":                 tx.MaxNumBatch,
 		"info":                        tx.Info,
 		"errorCode":                   tx.ErrorCode,
 		"errorType":                   tx.ErrorType,

@@ -1460,7 +1460,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
+          description: "Address of an Ethereum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1601,13 +1601,15 @@ components:
       properties:
         id:
           $ref: '#/components/schemas/TransactionId'
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         type:
           $ref: '#/components/schemas/TransactionTypeL2'
         fromAccountIndex:
           $ref: '#/components/schemas/AccountIndex'
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1626,7 +1628,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: null
           nullable: true
@@ -1647,6 +1649,10 @@ components:
           $ref: '#/components/schemas/Nonce'
         state:
           $ref: '#/components/schemas/PoolL2TransactionState'
+        maxNumBatch:
+          type: integer
+          description: Batch until the transaction can be forged. If the transaction isn't forged before batch `maxNumBatch`, it will never be forged. 0 means no restriction.
+          example: 0 
         info:
           type: string
           description: "Info contains information about the status & State of the transaction. As for example, if the Tx has not been selected in the last batch due not enough Balance at the Sender account, this reason would appear at this parameter."
@@ -1658,10 +1664,66 @@ components:
             - $ref: '#/components/schemas/BJJSignature'
             - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+        errorType:
+          type: string
+          nullable: true
+        errorCode:
+          type: integer
+          nullable: true
         timestamp:
           type: string
           description: Moment in which the transaction was added to the pool.
           format: date-time
+        requestFromAccountIndex:
+          type: string
+          description: >-
+            Identifier of an account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`
+          nullable: true
+          example: null
+        requestToAccountIndex:
+          type: string
+          description: >-
+            Identifier of an account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`
+          nullable: true
+          example: null
+        requestToHezEthereumAddress:
+          type: string
+          description: "Address of an Ethereum account linked to the Hermez Network."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          nullable: true
+          example: null
+        requestToBJJ:
+          type: string
+          description: "BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes."
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          nullable: true
+          example: null
+        requestTokenId:
+          type: integer
+          description: References the `tokenId` of the requested transaction.
+          example: null
+          nullable: true
+        requestAmount:
+          type: string
+          description: BigInt is an integer encoded as a string for numbers that are very large.
+          nullable: true
+          example: null
+        requestFee:
+          type: integer
+          description: Index of the fee type to select, more info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier).
+          minimum: 0
+          maximum: 256
+          nullable: true
+          example: null
+        requestNonce:
+          type: integer
+          description: Number that can only be used once per account. Increments by one with each transaction.
+          minimum: 0
+          maximum: 1.84467440737096e+19
+          nullable: true
+          example: null
         token:
           $ref: '#/components/schemas/Token'
       example:
@@ -1672,12 +1734,21 @@ components:
         fromHezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
         id: '0x020000000001000000000006'
         nonce: 6
+        requestAmount: 
+        requestFee: 0
+        requestFromAccountIndex: 
+        requestNonce: 0
+        requestToAccountIndex: 
+        requestToBJJ: 
+        requestToHezEthereumAddress: 
+        requestTokenId: 
         signature: 5ee9c7b5baa243ba282d18596a55cc357b01513eaed75165365f802102cce4a7a1dd35e3ab31cf9039e2b8a9f570d935115be9379a3dd47813dfc014031ab201
         state: pend
         timestamp: '2020-11-17T13:58:54.422232Z'
         toAccountIndex: hez:SCC:257
         toBJJ: hez:r_trOasVEk0zNaalOoS9aLedu6mO7jI5XTIPu_zGXoyn
         toHezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+        maxNumBatch: 0
         token:
           USD: 23.74
           decimals: 7
@@ -1705,7 +1776,16 @@ components:
         - info
         - signature
         - timestamp
+        - requestFromAccountIndex
+        - requestToAccountIndex
+        - requestToHezEthereumAddress
+        - requestToBJJ
+        - requestTokenId
+        - requestAmount
+        - requestFee
+        - requestNonce
         - token
+      additionalProperties: false
     PoolL2Transactions:
       type: object
       properties:
@@ -1734,12 +1814,12 @@ components:
           $ref: '#/components/schemas/TransactionId'
     EthereumAddress:
       type: string
-      description: "Address of an Etherum account."
+      description: "Address of an Ethereum account."
       pattern: "^0x[a-fA-F0-9]{40}$"
       example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     HezEthereumAddress:
       type: string
-      description: "Address of an Etherum account linked to the Hermez Network."
+      description: "Address of an Ethereum account linked to the Hermez Network."
       pattern: "^hez:0x[a-fA-F0-9]{40}$"
       example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     BJJ:
@@ -1903,7 +1983,7 @@ components:
           nullable: true
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1919,7 +1999,7 @@ components:
             - example: "hez:DAI:672"
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -2828,7 +2908,7 @@ components:
           items: 
             allOf:
                 - $ref: '#/components/schemas/Slot'
-                - description: Last synchronized Etherum block.
+                - description: Last synchronized Ethereum block.
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
@@ -2927,12 +3007,12 @@ components:
         lastEthereumBlock:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Current Etherum block. Note that this is the actual last block of Ethereum, not the last synchronized block by the node.
+            - description: Current Ethereum block. Note that this is the actual last block of Ethereum, not the last synchronized block by the node.
             - example: 3457437
         lastSynchedBlock:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Last synchronized Etherum block. Compare with lastEthereumBlock to check the synchronization status of the node.
+            - description: Last synchronized Ethereum block. Compare with lastEthereumBlock to check the synchronization status of the node.
             - example: 3457437
         lastBatch:
           $ref: '#/components/schemas/Batch'

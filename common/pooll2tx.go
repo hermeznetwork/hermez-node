@@ -519,6 +519,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
 		State       string                `json:"state"`
 		RqOffset    uint8                 `json:"requestOffset"`
+		Info        *string               `json:"info"`
 	}{}
 	if err := json.Unmarshal(data, &receivedJSON); err != nil {
 		return err
@@ -530,6 +531,10 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		if !state.IsValid() {
 			return fmt.Errorf("Invalid state: %s", state)
 		}
+	}
+	var info string
+	if receivedJSON.Info != nil {
+		info = *receivedJSON.Info
 	}
 	// Set values to destination struct
 	*tx = PoolL2Tx{
@@ -548,6 +553,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		State:       state,
 		TokenSymbol: receivedJSON.FromIdx.TokenSymbol,
 		RqOffset:    receivedJSON.RqOffset,
+		Info:        info,
 	}
 	return nil
 }
