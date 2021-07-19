@@ -5,6 +5,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenAuths(t *testing.T) {
@@ -14,6 +15,8 @@ func TestGenAuths(t *testing.T) {
 	const nAuths = 5
 	auths := GenAuths(nAuths, chainID, hermezContractAddr)
 	for _, auth := range auths {
-		assert.True(t, auth.VerifySignature(chainID, hermezContractAddr))
+		isValid, err := auth.VerifySignature(chainID, hermezContractAddr)
+		require.NoError(t, err)
+		assert.True(t, isValid)
 	}
 }
