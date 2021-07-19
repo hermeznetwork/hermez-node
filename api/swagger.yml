@@ -1664,6 +1664,12 @@ components:
             - $ref: '#/components/schemas/BJJSignature'
             - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+        errorType:
+          type: string
+          nullable: true
+        errorCode:
+          type: integer
+          nullable: true
         timestamp:
           type: string
           description: Moment in which the transaction was added to the pool.
