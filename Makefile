@@ -192,20 +192,20 @@ ifneq ("$(wildcard $(dist/heznode))","")
 else
 	echo "  - heznode file not found!"
 	echo "  - please, run make build before make install!"
-	$(error)
+	test -f ./dist/heznode
 endif
-ifneq ("$(wildcard $(cmd/heznode/cfg.buidler.toml))","")
+ifneq ("$(wildcard $(cmd/heznode/cfg.builder.toml))","")
 	echo "  - config template found!"
 else
 	echo "  - config template not found!"
 	echo "  - please, check the !"
-	$(error)
+	test -f ./cmd/heznode/cfg.builder.toml
 endif
 	echo "  > Copying hez binary to /usr/local/bin"
 	cp dist/heznode /usr/local/bin/heznode
 	echo "  > Copying config file to /etc/hermez"
-	mkdir /etc/hermez
-	cp cmd/heznode/cfg.buidler.toml /etc/hermez/config.toml
+	mkdir -p /etc/hermez
+	cp cmd/heznode/cfg.builder.toml /etc/hermez/config.toml
 	echo "  > Registering as a service"
 	touch /etc/systemd/system/heznode.service
 	echo "[Unit]" | tee -a /etc/systemd/system/heznode.service > /dev/null
@@ -220,8 +220,8 @@ endif
 	echo "RestartSec=1" | tee -a /etc/systemd/system/heznode.service > /dev/null
 	echo "ExecStart=/usr/local/bin/heznode run --mode coord --cfg /etc/hermez/config.toml" | tee -a /etc/systemd/system/heznode.service > /dev/null
 	echo "KillMode=process" | tee -a /etc/systemd/system/heznode.service > /dev/null
-	echo "StandardOutput=append:/home/ubuntu/logs/hermez-node.log" | tee -a /etc/systemd/system/heznode.service > /dev/null
-	echo "StandardError=append:/home/ubuntu/logs/hermez-node.log" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "StandardOutput=append:/var/log/hermez-node.log" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "StandardError=append:/var/log/hermez-node.log" | tee -a /etc/systemd/system/heznode.service > /dev/null
 	echo "" | tee -a /etc/systemd/system/heznode.service > /dev/null
 	echo "[Install]" | tee -a /etc/systemd/system/heznode.service > /dev/null
 	echo "WantedBy=multi-user.target" | tee -a /etc/systemd/system/heznode.service > /dev/null
