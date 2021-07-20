@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
@@ -76,4 +77,33 @@ func (a *API) getAccounts(c *gin.Context) {
 		Accounts:     apiAccounts,
 		PendingItems: pendingItems,
 	})
+}
+
+func (a *API) getAccountBalanceUsd(c *gin.Context) {
+	// Get hezEthereumAddress
+	addr, err := parsers.ParseGetAccountCreationAuthFilter(c)
+	if err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+	// Fetch auth from historyDB
+	total, err := a.h.GetAccountBalanceUsdAPI(*addr)
+	if err != nil {
+		if strings.Contains(err.Error(), "Account not found") {
+			c.JSON(http.StatusNotFound, apiErrorResponse{
+				Message: ErrSQLNoRows + ". " + err.Error(),
+				Code:    ErrSQLNoRowsCode,
+				Type:    ErrSQLNoRowsType,
+			})
+			return
+		}
+		retSQLErr(err, c)
+		return
+	}
+	// Build successful response
+	c.JSON(http.StatusOK, total)
 }

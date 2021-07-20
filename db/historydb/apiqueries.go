@@ -1022,6 +1022,29 @@ func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
 	return account, nil
 }
 
+// GetAccountBalanceUsdAPI returns the usd balance of an ethereum address
+func (hdb *HistoryDB) GetAccountBalanceUsdAPI(ethAddr ethCommon.Address) (*AccountBalanceUsdAPI, error) {
+	cancel, err := hdb.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	defer hdb.apiConnCon.Release()
+	balance := &AccountBalanceUsdAPI{}
+	err = meddler.QueryRow(hdb.dbRead, balance, `select sum(token.usd*(account_state.balance/POWER(10,token.decimals))) as usd_balance
+		from account 
+		inner join token on token.token_id=account.token_id 
+		inner join account_state on account_state.idx=account.idx 
+		where account.eth_addr=$1;`, ethAddr)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	if balance.Balance == nil {
+		return nil, tracerr.Wrap(fmt.Errorf("Account not found"))
+	}
+	return balance, nil
+}
+
 // GetAccountsAPIRequest is an API request struct for getting accounts
 type GetAccountsAPIRequest struct {
 	TokenIDs []common.TokenID

@@ -255,6 +255,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+  '/account/balance/{hezEthereumAddress}':
+    get:
+      tags:
+        - Explorer
+      summary: Get the balance in usdof an account by its hezEnthereumAddress.
+      description: Get the balance in usd of an account by its hezEnthereumAddress.
+      operationId: getAccountBalanceUsd
+      parameters:
+        - name: hezEthereumAddress
+          in: path
+          description: Ethereum address.
+          required: true
+          schema:
+            $ref: '#/components/schemas/HezEthereumAddress'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceUsd'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
   '/exits':
     get:
       tags:
@@ -2743,7 +2782,19 @@ components:
       required:
           - exits
           - pendingItems
-      additionalProperties: false 
+      additionalProperties: false
+    BalanceUsd:
+      type: object
+      description: It contains the balance in usd of an account.
+      properties:
+        balanceUsd:
+          type: number
+          description: Balance in USD.
+          example: 1.01
+          nullable: true
+      additionalProperties: false
+      required:
+        - balanceUsd
     Account:
       type: object
       description: State tree leaf. It contains balance and nonce of an account.
@@ -3622,6 +3673,8 @@ components:
         - $ref: '#/components/schemas/Error'
         - example:
             message: Item(s) not found.
+            code: 4
+            type: ErrSQLNoRows
     Error500:
       allOf:
         - $ref: '#/components/schemas/Error'

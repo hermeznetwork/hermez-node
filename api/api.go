@@ -117,6 +117,7 @@ func NewAPI(
 		// Account
 		v1.GET("/accounts", a.getAccounts)
 		v1.GET("/accounts/:accountIndex", a.getAccount)
+		v1.GET("/account/balance/:hezEthereumAddress", a.getAccountBalanceUsd)
 		v1.GET("/exits", a.getExits)
 		v1.GET("/exits/:batchNum/:accountIndex", a.getExit)
 		// Transaction

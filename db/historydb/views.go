@@ -470,6 +470,11 @@ type RollupVariablesAPI struct {
 	SafeMode              bool                `json:"safeMode" meddler:"safe_mode"`
 }
 
+// AccountBalanceUsdAPI is the balance in usd
+type AccountBalanceUsdAPI struct {
+	Balance *float64 `json:"balanceUsd" meddler:"usd_balance"`
+}
+
 // NewRollupVariablesAPI creates a RollupVariablesAPI from common.RollupVariables
 func NewRollupVariablesAPI(rollupVariables *common.RollupVariables) *RollupVariablesAPI {
 	buckets := make([]BucketParamsAPI, len(rollupVariables.Buckets))
