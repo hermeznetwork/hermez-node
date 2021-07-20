@@ -25,6 +25,10 @@ type testAccount struct {
 	Token     historydb.TokenWithUSD `json:"token"`
 }
 
+type testAccountBalanceUsd struct {
+	Balance float64 `json:"balanceUsd"`
+}
+
 type testAccountsResponse struct {
 	Accounts     []testAccount `json:"accounts"`
 	PendingItems uint64        `json:"pendingItems"`
@@ -182,4 +186,16 @@ func TestGetAccounts(t *testing.T) {
 	path = fmt.Sprintf("%s?hez:hez:0xb4A2333993a70fD103b7cC39883797Aa209bAa21", endpoint)
 	err = doBadReq("GET", path, nil, 400)
 	require.NoError(t, err)
+
+	//Test account/balance
+	endpoint = apiURL + "account/balance"
+	path = fmt.Sprintf("%s/%s", endpoint, fetchedAccounts[2].EthAddr)
+	balance := testAccountBalanceUsd{}
+	require.NoError(t, doGoodReq("GET", path, nil, &balance))
+	assert.Equal(t, float64(2.3898000000000004e-06), balance.Balance)
+
+	path = fmt.Sprintf("%s/%s", endpoint, fetchedAccounts[0].EthAddr)
+	balance = testAccountBalanceUsd{}
+	require.NoError(t, doGoodReq("GET", path, nil, &balance))
+	assert.Equal(t, float64(2.36711e-06), balance.Balance)
 }
