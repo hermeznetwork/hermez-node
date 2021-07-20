@@ -36,6 +36,9 @@ info:
     * POST /account-creation-authorization: signed using an Ethereum key.
     * POST /transactions-pool: signed using BJJ key.
 
+    It's recommended to use the official SDKs for [Go](https://github.com/hermeznetwork/hermez-go-sdk), [JS](https://github.com/hermeznetwork/hermezjs) and [Flutter](https://github.com/hermeznetwork/hermez_flutter_sdk).
+    If for some reason the previous options doesn't suit your usecase, you can implement the signatures following the spec for [account creation authorizations](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=regular-rollup-account) and [L2 transactions](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2)
+
     More details on how to sign will be provided soon.
 
     ### Contact
@@ -46,12 +49,9 @@ info:
     * [Discord](https://bit.ly/3nohULM)
     * Email: hello@hermez.network 
     * [Twitter](https://twitter.com/hermez_network)
-# TODO: add further documentation on how to sign auths and txs
 
   version: "0.0.1"
   title: Hermez Network API
-# TODO: update with support email
-#  termsOfService: 'http://swagger.io/terms/'
   license:
     name: license AGPLv3
     url: 'https://www.gnu.org/licenses/agpl-3.0.html'
@@ -1484,7 +1484,7 @@ components:
         signature:
           allOf:
             - $ref: '#/components/schemas/BJJSignature'
-            - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
+            - description: Signature of the transaction. More info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
         maxNumBatch:
           type: integer
@@ -1662,7 +1662,7 @@ components:
         signature:
           allOf:
             - $ref: '#/components/schemas/BJJSignature'
-            - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
+            - description: Signature of the transaction. More info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
         errorType:
           type: string
@@ -1712,7 +1712,7 @@ components:
           example: null
         requestFee:
           type: integer
-          description: Index of the fee type to select, more info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier).
+          description: Index of the fee type to select, more info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=user).
           minimum: 0
           maximum: 256
           nullable: true
@@ -1806,7 +1806,7 @@ components:
         $ref: '#/components/schemas/PoolL2Transaction'
     TransactionId:
       type: string
-      description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
+      description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](xxxtxid)
       example: "0x00000000000001e240004700" 
     TransactionIds:
       type: array
@@ -1868,7 +1868,7 @@ components:
       pattern: "^\\d+$"
     FeeSelector:
       type: integer
-      description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
+      description: Index of the fee type to select, more info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=user).
       minimum: 0
       maximum: 256
       example: 36
