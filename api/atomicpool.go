@@ -44,7 +44,7 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	clientIP := c.ClientIP()
 	for i, tx := range receivedAtomicGroup.Txs {
 		// Find requested transaction
-		relativePosition, err := requestOffset2RelativePosition(tx.RqOffset)
+		relativePosition, err := RequestOffset2RelativePosition(tx.RqOffset)
 		if err != nil {
 			retBadReq(&apiError{
 				Err:  err,
@@ -104,8 +104,8 @@ func (a *API) postAtomicPool(c *gin.Context) {
 	c.JSON(http.StatusOK, txIDStrings)
 }
 
-// requestOffset2RelativePosition translates from 0 to 7 to protocol position
-func requestOffset2RelativePosition(rqoffset uint8) (int, error) {
+// RequestOffset2RelativePosition translates from 0 to 7 to protocol position
+func RequestOffset2RelativePosition(rqoffset uint8) (int, error) {
 	const (
 		rqOffsetZero       = 0
 		rqOffsetOne        = 1
@@ -150,7 +150,7 @@ func isSingleAtomicGroup(txs []common.PoolL2Tx) bool {
 	g := graph.New(len(txs))
 	// Create vertices that connect nodes of the graph (txs) using RqOffset
 	for i, tx := range txs {
-		requestedRelativePosition, err := requestOffset2RelativePosition(tx.RqOffset)
+		requestedRelativePosition, err := RequestOffset2RelativePosition(tx.RqOffset)
 		if err != nil {
 			return false
 		}

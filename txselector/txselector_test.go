@@ -1794,3 +1794,158 @@ func TestSortL2Txs(t *testing.T) {
 	actual = sortL2Txs(txs, fees)
 	assertResult(t, []common.TxID{id7, id3, id4, id5, id1, id2, id6}, actual)
 }
+
+func TestFilterInvalidAtomicGroups(t *testing.T) {
+	// TxIDs
+	id1 := common.TxID([common.TxIDLen]byte{1})
+	id2 := common.TxID([common.TxIDLen]byte{2})
+	id3 := common.TxID([common.TxIDLen]byte{3})
+	id4 := common.TxID([common.TxIDLen]byte{4})
+	id5 := common.TxID([common.TxIDLen]byte{5})
+	id6 := common.TxID([common.TxIDLen]byte{6})
+	id7 := common.TxID([common.TxIDLen]byte{7})
+	id8 := common.TxID([common.TxIDLen]byte{8})
+	id9 := common.TxID([common.TxIDLen]byte{9})
+	id10 := common.TxID([common.TxIDLen]byte{10})
+	id11 := common.TxID([common.TxIDLen]byte{11})
+	id12 := common.TxID([common.TxIDLen]byte{12})
+	// AtomicGroupIDs
+	agid1 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{1})
+	agid2 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{2})
+	agid3 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{3})
+	agid4 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{4})
+	agid5 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{5})
+	// Helper to check result
+	assertIds := func(t *testing.T, expected []common.TxID, actual []common.PoolL2Tx) {
+		require.Equal(t, len(expected), len(actual))
+		for i, id := range expected {
+			assert.Equal(t, id, actual[i].TxID)
+		}
+	}
+
+	// All groups invalid
+	txs := []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: agid1,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: agid1,
+			RqOffset:      7,
+			RqFromIdx:     777, // Missmatch of RqFromIdx
+		},
+		{
+			TxID: id3,
+		},
+		{
+			TxID:          id4,
+			AtomicGroupID: agid2,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id5,
+			AtomicGroupID: agid2,
+			RqOffset:      7,
+			RqAmount:      big.NewInt(7), // Missmatch of RqFromIdx
+		},
+		{
+			TxID:          id6,
+			AtomicGroupID: agid3,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id7,
+			AtomicGroupID: agid3,
+			RqOffset:      5, // Invalid RqOffset
+		},
+		{
+			TxID: id8,
+		},
+		{
+			TxID:          id9,
+			AtomicGroupID: agid4,
+			RqOffset:      1,
+		},
+		{
+			TxID: id10,
+		},
+		{
+			TxID:          id11,
+			AtomicGroupID: agid5,
+			RqOffset:      1,
+			Fee:           123,
+		},
+		{
+			TxID:          id12,
+			AtomicGroupID: agid5,
+			RqOffset:      7,
+		},
+	}
+	valid, invalid := filterInvalidAtomicGroups(txs)
+	assertIds(t, []common.TxID{id3, id8, id10}, valid)
+	assertIds(t, []common.TxID{id1, id2, id4, id5, id6, id7, id9, id11, id12}, invalid)
+	// All groups valid
+	txs = []common.PoolL2Tx{
+		{
+			TxID:          id1,
+			AtomicGroupID: agid1,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id2,
+			AtomicGroupID: agid1,
+			RqOffset:      7,
+		},
+		{
+			TxID: id3,
+		},
+		{
+			TxID:          id4,
+			AtomicGroupID: agid2,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id5,
+			AtomicGroupID: agid2,
+			RqOffset:      7,
+		},
+		{
+			TxID:          id6,
+			AtomicGroupID: agid3,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id7,
+			AtomicGroupID: agid3,
+			RqOffset:      7,
+		},
+		{
+			TxID: id8,
+		},
+		{
+			TxID:          id9,
+			AtomicGroupID: agid4,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id10,
+			AtomicGroupID: agid4,
+			RqOffset:      7,
+		},
+		{
+			TxID:          id11,
+			AtomicGroupID: agid5,
+			RqOffset:      1,
+		},
+		{
+			TxID:          id12,
+			AtomicGroupID: agid5,
+			RqOffset:      7,
+		},
+	}
+	valid, invalid = filterInvalidAtomicGroups(txs)
+	assertIds(t, []common.TxID{id1, id2, id3, id4, id5, id6, id7, id8, id9, id10, id11, id12}, valid)
+	assertIds(t, []common.TxID{}, invalid)
+}

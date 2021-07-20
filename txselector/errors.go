@@ -65,4 +65,11 @@ const (
 	ErrNoAvailableSlotsCode int = 17
 	// ErrNoAvailableSlotsType error type
 	ErrNoAvailableSlotsType string = "ErrNoAvailableSlots"
+
+	// ErrInvalidAtomicGroup error message returned if an atomic group is malformed
+	ErrInvalidAtomicGroup = "Tx not selected because it belongs to an atomic group with missing transactions or bad requested tranaction"
+	// ErrInvalidAtomicGroupCode error code
+	ErrInvalidAtomicGroupCode int = 17
+	// ErrInvalidAtomicGroupType error type
+	ErrInvalidAtomicGroupType string = "ErrNoAvailableSlots"
 )

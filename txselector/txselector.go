@@ -68,6 +68,7 @@ import (
 	"sort"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/api"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/kvdb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -270,7 +271,10 @@ START_SELECTION:
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
 	// Filter transactions belonging to failed atomic groups
-	selectableTxs, discardedTxs := filterFailedAtomicGroups(l2TxsFromDB, failedAtomicGroups)
+	selectableTxsTmp, discardedTxs := filterFailedAtomicGroups(l2TxsFromDB, failedAtomicGroups)
+	// Filter invalid atomic groups
+	selectableTxs, discardedTxsTmp := filterInvalidAtomicGroups(selectableTxsTmp)
+	discardedTxs = append(discardedTxs, discardedTxsTmp...)
 
 	// in case that length of l2TxsForgable is 0, no need to continue, there
 	// is no L2Txs to forge at all
@@ -1116,6 +1120,94 @@ func filterFailedAtomicGroups(
 		}
 		if !txFailed {
 			txsToProcess = append(txsToProcess, txs[i])
+		}
+	}
+	return txsToProcess, filteredTxs
+}
+
+// filterInvalidAtomicGroups split the txs into the ones that can be porcessed
+// and the ones that can't because they belong to an AtomicGroup that is impossible to forge
+// due to missing or bad ordered txs
+func filterInvalidAtomicGroups(
+	txs []common.PoolL2Tx,
+) (txsToProcess []common.PoolL2Tx, filteredTxs []common.PoolL2Tx) {
+	// validate if an atomic group is valid in terms of requested txs
+	isValid := func(atomicGroup common.AtomicGroup) bool {
+		for i := 0; i < len(atomicGroup.Txs); i++ {
+			// Find requested tx
+			rqRelativePosition, err := api.RequestOffset2RelativePosition(atomicGroup.Txs[i].RqOffset)
+			if err != nil {
+				// TODO: err should be compliant with txSelectorError
+				return false
+			}
+			requestedPosition := i + rqRelativePosition
+			if requestedPosition > len(atomicGroup.Txs)-1 || requestedPosition < 0 {
+				// TODO: err should be compliant with txSelectorError
+				return false
+			}
+			requestedTx := atomicGroup.Txs[requestedPosition]
+			// Check if the requested tx match the Rq fields
+			if atomicGroup.Txs[i].RqFromIdx != requestedTx.FromIdx ||
+				atomicGroup.Txs[i].RqToIdx != requestedTx.ToIdx ||
+				atomicGroup.Txs[i].RqToEthAddr != requestedTx.ToEthAddr ||
+				atomicGroup.Txs[i].RqToBJJ != requestedTx.ToBJJ ||
+				atomicGroup.Txs[i].RqTokenID != requestedTx.TokenID ||
+				atomicGroup.Txs[i].RqFee != requestedTx.Fee ||
+				atomicGroup.Txs[i].RqNonce != requestedTx.Nonce {
+				// TODO: err should be compliant with txSelectorError
+				return false
+			}
+			// Check amount
+			if atomicGroup.Txs[i].RqAmount != nil && requestedTx.Amount != nil {
+				// If both are different to nil
+				if atomicGroup.Txs[i].RqAmount.Cmp(requestedTx.Amount) != 0 {
+					// They must have same value (to be valid)
+					return false
+				}
+			} else if atomicGroup.Txs[i].RqAmount != requestedTx.Amount {
+				// Else they must be both nil (to be valid)
+				return false
+			}
+		}
+		return true
+	}
+	// build atomic groups
+	for i := 0; i < len(txs); i++ {
+		atomicGroupID := txs[i].AtomicGroupID
+		if atomicGroupID == common.EmptyAtomicGroupID {
+			// Tx is not atomic, not filtering
+			txsToProcess = append(txsToProcess, txs[i])
+			continue
+		} else {
+			// Tx is atomic
+			// Create atomic group
+			atomicGroup := common.AtomicGroup{}
+			for i < len(txs) && txs[i].AtomicGroupID == atomicGroupID {
+				// Append all consecutive txs with same atomic group ID
+				atomicGroup.Txs = append(atomicGroup.Txs, txs[i])
+				i++
+			}
+			// After the previous loop, i will point to the next tx with different atomic group ID,
+			// however before going to the next iteration i will be incremented, therefore it must be decremented
+			// unless the last tx of the array is part of the last atomic group
+			if i < len(txs) {
+				i--
+			}
+			// validate atomic groups
+			if !isValid(atomicGroup) {
+				// Set Info message and add txs of the atomic group to filteredTxs
+				for i := 0; i < len(atomicGroup.Txs); i++ {
+					atomicGroup.Txs[i].Info = ErrInvalidAtomicGroup
+					atomicGroup.Txs[i].ErrorType = ErrInvalidAtomicGroupType
+					atomicGroup.Txs[i].ErrorCode = ErrInvalidAtomicGroupCode
+					filteredTxs = append(filteredTxs, atomicGroup.Txs[i])
+				}
+			} else {
+				// Atomic group is valid, add txs of the atomic group to txsToProcess
+				for i := 0; i < len(atomicGroup.Txs); i++ {
+					txsToProcess = append(txsToProcess, atomicGroup.Txs[i])
+				}
+			}
 		}
 	}
 	return txsToProcess, filteredTxs
