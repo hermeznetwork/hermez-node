@@ -7,14 +7,14 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"strings"
 	"regexp"
 	"strconv"
+	"strings"
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/config"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -29,17 +29,15 @@ import (
 )
 
 const (
-	flagCfg                 = "cfg"
-	flagMode                = "mode"
-	flagSK                  = "privatekey"
-	flagYes                 = "yes"
-	flagBlock               = "block"
-	modeSync                = "sync"
-	modeCoord               = "coord"
-	nMigrations             = "nMigrations"
-	flagAuctContractAddrHex = "auctContractAddrHex"
-	flagEthNodeURL          = "ethNodeUrl"
-	flagAccount      = "account"
+	flagCfg     = "cfg"
+	flagMode    = "mode"
+	flagSK      = "privatekey"
+	flagYes     = "yes"
+	flagBlock   = "block"
+	modeSync    = "sync"
+	modeCoord   = "coord"
+	nMigrations = "nMigrations"
+	flagAccount = "account"
 )
 
 var (
@@ -319,10 +317,12 @@ func cmdServeAPI(c *cli.Context) error {
 
 func cmdGetAccountDetails(c *cli.Context) error {
 	accountParam := c.String(flagAccount)
-	var ( addr *ethCommon.Address
+	const characters = 42
+	var (
+		addr        *ethCommon.Address
 		accountIdxs []common.Idx
-		bjj *babyjub.PublicKeyComp
-		err error
+		bjj         *babyjub.PublicKeyComp
+		err         error
 	)
 	matchIdx, _ := regexp.MatchString("^\\d+$", accountParam)
 	if strings.HasPrefix(accountParam, "0x") { //Check ethereum address
@@ -330,7 +330,7 @@ func cmdGetAccountDetails(c *cli.Context) error {
 		if err != nil {
 			return err
 		}
-	}else if len(accountParam) > 42 { //Check internal hermez account address
+	} else if len(accountParam) > characters { //Check internal hermez account address
 		bjj, err = common.HezStringToBJJ(accountParam, "BJJ")
 		if err != nil {
 			return err
@@ -383,18 +383,18 @@ func cmdGetAccountDetails(c *cli.Context) error {
 	)
 	historyDB := historydb.NewHistoryDB(dbRead, dbWrite, apiConnCon)
 	obj := historydb.GetAccountsAPIRequest{
-		EthAddr:  addr,
-		Bjj:      bjj,
+		EthAddr: addr,
+		Bjj:     bjj,
 	}
 	var apiAccounts []historydb.AccountAPI
 	if len(accountIdxs) == 0 {
-		apiAccounts, _, err = historyDB.GetAccountsAPI(obj);
+		apiAccounts, _, err = historyDB.GetAccountsAPI(obj)
 		if err != nil {
 			return tracerr.Wrap(fmt.Errorf("historyDB.GetAccountsAPI: %w", err))
 		}
 	} else {
-		for i:=0; i<len(accountIdxs); i++ {
-			apiAccount, err := historyDB.GetAccountAPI(accountIdxs[i]);
+		for i := 0; i < len(accountIdxs); i++ {
+			apiAccount, err := historyDB.GetAccountAPI(accountIdxs[i])
 			if err != nil {
 				log.Debug(fmt.Errorf("historyDB.GetAccountAPI: %w", err))
 			} else {
