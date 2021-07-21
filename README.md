@@ -32,7 +32,7 @@ $ ./dist/heznode_<LOCAL_OS>_amd64/heznode version
 
 ### Run
 
-First you must edit the default/template config file into [cmd/heznode/cfg.buidler.toml](cmd/heznode/cfg.buidler.toml), 
+First you must edit the default/template config file into [cmd/heznode/cfg.buidler.toml](cmd/heznode/cfg.builder.toml), 
 there are more information about the config file into [cmd/heznode/README.md](cmd/heznode/README.md)
 
 After setting the config, you can build and run the Hermez Node as a synchronizer:
@@ -44,7 +44,7 @@ $ make run-node
 Or build and run as a coordinator, and also passing the config file from other location:
 
 ```shell
-$ MODE=sync CONFIG=cmd/heznode/cfg.buidler.toml make run-node
+$ MODE=sync CONFIG=cmd/heznode/cfg.builder.toml make run-node
 ```
 
 To check the useful make commands:
@@ -52,6 +52,33 @@ To check the useful make commands:
 ```shell
 $ make help
 ```
+
+
+### Run as a service
+
+```shell
+$ sudo make install
+```
+
+After, update the config file manually at `/etc/hermez/config.toml`
+
+```shell
+$ sudo service heznode start
+```
+
+To check status
+
+```shell
+$ sudo service heznode status
+```
+
+To stop
+
+```shell
+$ sudo service heznode stop
+```
+
+If you just kill the process systemd will restart without asking. 
 
 ### Unit testing
 

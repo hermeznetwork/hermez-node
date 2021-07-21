@@ -16,17 +16,19 @@ USAGE:
    heznode [global options] command [command options] [arguments...]
 
 VERSION:
-   v1.2.0-rc2-5-g94a7043
+   v1.4.0-rc1-5-gcfc7635
 
 COMMANDS:
-   version    Show the application version
-   importkey  Import ethereum private key
-   genbjj     Generate a new random BabyJubJub key
-   wipedbs    Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
-   run        Run the hermez-node in the indicated mode
-   serveapi   Serve the API only
-   discard    Discard blocks up to a specified block number
-   help, h    Shows a list of commands or help for one command
+   version         Show the application version and build
+   importkey       Import ethereum private key
+   genbjj          Generate a new random BabyJubJub key
+   wipedbs         Wipe the SQL DB (HistoryDB and L2DB) and the StateDBs, leaving the DB in a clean state
+   migratesqldown  Revert migrations of the SQL DB (HistoryDB and L2DB), leaving the SQL schema as in previous versions
+   run             Run the hermez-node in the indicated mode
+   serveapi        Serve the API only
+   discard         Discard blocks up to a specified block number
+   accountInfo     get information about the specified account
+   help, h         Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
    --help, -h     show help (default: false)
@@ -47,7 +49,7 @@ The node has two main modes of running:
 The node requires a single configuration file to run.
 
 You can find a testing working configuration example at
-[cfg.buidler.toml](./cfg.buidler.toml)
+[cfg.buidler.toml](cfg.builder.toml)
 
 To read the documentation of each configuration parameter, please check the
 `type Node` and `type Coordinator` at
@@ -118,12 +120,12 @@ run the following examples by replacing `./dist/heznode` with `go run ./cmd/hezn
 
 Run the node in mode synchronizer:
 ```shell
-./dist/heznode run --mode sync --cfg cfg.buidler.toml
+./dist/heznode run --mode sync --cfg cfg.builder.toml
 ```
 
 Run the node in mode coordinator:
 ```shell
-./dist/heznode run --mode coord --cfg cfg.buidler.toml
+./dist/heznode run --mode coord --cfg cfg.builder.toml
 ```
 
 Serve the API in standalone mode.  This command allows serving the API just
@@ -131,12 +133,12 @@ with access to the PostgreSQL database that a node is using.  Several instances
 of `serveapi` can be running at the same time with a single PostgreSQL
 database:
 ```shell
-./dist/heznode serveapi --mode coord --cfg cfg.buidler.toml
+./dist/heznode serveapi --mode coord --cfg cfg.builder.toml
 ```
 
 Import an ethereum private key into the keystore:
 ```shell
-./dist/heznode importkey --mode coord --cfg cfg.buidler.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
+./dist/heznode importkey --mode coord --cfg cfg.builder.toml --privatekey  0x618b35096c477aab18b11a752be619f0023a539bb02dd6c813477a6211916cde
 ```
 
 Generate a new random BabyJubJub key pair:
@@ -152,7 +154,7 @@ Check the binary version:
 Wipe the entier SQL database (this will destroy all synchronized and pool
 data):
 ```shell
-./dist/heznode wipedbs --mode coord --cfg cfg.buidler.toml 
+./dist/heznode wipedbs --mode coord --cfg cfg.builder.toml 
 ```
 
 Discard all synchronized blocks and associated state up to a given block
@@ -160,5 +162,10 @@ number.  This command is useful in case the synchronizer reaches an invalid
 state and you want to roll back a few blocks and try again (maybe with some
 fixes in the code).
 ```shell
-./dist/heznode discard --mode coord --cfg cfg.buidler.toml --block 8061330
+./dist/heznode discard --mode coord --cfg cfg.builder.toml --block 8061330
+```
+
+Read information about an account:
+```shell
+./dist/heznode accountInfo --ethNodeUrl https://geth.marcelonode.xyz --auctContractAddrHex 0x1D5c3Dd2003118743D596D7DB7EA07de6C90fB20 --accountAddrHex 0x715ea08DAE7dCD40E98379D11af237b587BC2f77
 ```

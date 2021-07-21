@@ -111,6 +111,8 @@ func (d *symbolsMap) strToMapSymbol(str string) error {
 		}
 		d.Symbols = mapping
 		log.Debug("Symbol mapping from config file: ", mapping)
+	} else {
+		d.Symbols = make(map[uint]string)
 	}
 	return lastErr
 }
@@ -141,6 +143,8 @@ func (d *addressesMap) strToMapAddress(str string) error {
 		}
 		d.Addresses = mapping
 		log.Debug("Address mapping from config file: ", mapping)
+	} else {
+		d.Addresses = make(map[uint]ethCommon.Address)
 	}
 	return lastErr
 }
@@ -216,14 +220,16 @@ func NewPriceUpdater(
 	}, nil
 }
 
-type coingecko map[ethCommon.Address]map[string]float64
-
 func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID uint) (float64, error) {
 	for i := 0; i < len(p.updateMethodsPriority); i++ {
 		provider := p.providers[p.updateMethodsPriority[i]]
 		var url string
 		if _, ok := provider.AddressesMap.Addresses[tokenID]; ok {
-			url = provider.URL + provider.AddressesMap.Addresses[tokenID].String() + provider.URLExtraParams
+			if provider.AddressesMap.Addresses[tokenID] == common.EmptyAddr {
+				url = "simple/price?ids=ethereum" + provider.URLExtraParams
+			} else {
+				url = provider.URL + provider.AddressesMap.Addresses[tokenID].String() + provider.URLExtraParams
+			}
 		} else {
 			url = provider.URL + provider.SymbolsMap.Symbols[tokenID] + provider.URLExtraParams
 		}
@@ -247,11 +253,20 @@ func (p *PriceUpdater) getTokenPriceFromProvider(ctx context.Context, tokenID ui
 				isEmptyResult = true
 			}
 		case UpdateMethodTypeCoingeckoV3:
-			var data coingecko
-			res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
-			result = data[provider.AddressesMap.Addresses[tokenID]]["usd"]
-			if len(data) == 0 {
-				isEmptyResult = true
+			if provider.AddressesMap.Addresses[tokenID] == common.EmptyAddr {
+				var data map[string]map[string]float64
+				res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
+				result = data["ethereum"]["usd"]
+				if len(data) == 0 {
+					isEmptyResult = true
+				}
+			} else {
+				var data map[ethCommon.Address]map[string]float64
+				res, err = p.clientProviders[provider.Provider].Do(req.WithContext(ctx), &data, nil)
+				result = data[provider.AddressesMap.Addresses[tokenID]]["usd"]
+				if len(data) == 0 {
+					isEmptyResult = true
+				}
 			}
 		default:
 			log.Error("Unknown price provider: ", provider.Provider)
@@ -320,15 +335,18 @@ func (p *PriceUpdater) UpdateTokenList() error {
 			}
 		}
 		for _, provider := range p.providers {
-			if len(provider.SymbolsMap.Symbols) != 0 {
+			switch provider.Provider {
+			case UpdateMethodTypeBitFinexV2:
 				if _, ok := provider.SymbolsMap.Symbols[dbToken.TokenID]; !ok {
 					provider.SymbolsMap.Symbols[dbToken.TokenID] = dbToken.Symbol
 				}
-			}
-			if len(provider.AddressesMap.Addresses) != 0 {
+			case UpdateMethodTypeCoingeckoV3:
 				if _, ok := provider.AddressesMap.Addresses[dbToken.TokenID]; !ok {
 					provider.AddressesMap.Addresses[dbToken.TokenID] = dbToken.Addr
 				}
+			default:
+				log.Warn("This price provider is not supported: ", provider.Provider)
+				return tracerr.Wrap(fmt.Errorf("Error: Unknown price provider: " + provider.Provider))
 			}
 		}
 	}

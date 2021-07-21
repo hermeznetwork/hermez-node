@@ -177,7 +177,7 @@ type testCommon struct {
 	accounts         []testAccount
 	txs              []testTx
 	exits            []testExit
-	poolTxsToSend    []testPoolTxSend
+	poolTxsToSend    []common.PoolL2Tx
 	poolTxsToReceive []testPoolTxReceive
 	auths            []testAuth
 	router           *swagger.Router
@@ -212,7 +212,12 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	// L2DB
-	l2DB := l2db.NewL2DB(database, database, 10, 1000, 0.0, 1000.0, 24*time.Hour, apiConnCon)
+	nodeConfig := &historydb.NodeConfig{
+		MaxPoolTxs: 10,
+		MinFeeUSD:  0.000000000000001,
+		MaxFeeUSD:  10000000000,
+	}
+	l2DB := l2db.NewL2DB(database, database, 10, 1000, nodeConfig.MinFeeUSD, nodeConfig.MaxFeeUSD, 24*time.Hour, apiConnCon)
 	test.WipeDB(l2DB.DB()) // this will clean HistoryDB and L2DB
 	// Config (smart contract constants)
 	chainID := uint16(0)
@@ -241,11 +246,6 @@ func TestMain(m *testing.M) {
 	if err := hdb.SetConstants(constants); err != nil {
 		panic(err)
 	}
-	nodeConfig := &historydb.NodeConfig{
-		MaxPoolTxs: 10,
-		MinFeeUSD:  0,
-		MaxFeeUSD:  10000000000,
-	}
 	if err := hdb.SetNodeConfig(nodeConfig); err != nil {
 		panic(err)
 	}
@@ -257,6 +257,9 @@ func TestMain(m *testing.M) {
 		apiGin,
 		hdb,
 		l2DB,
+		nil,
+		nil,
+		nil,
 	)
 	if err != nil {
 		log.Error(err)
@@ -293,7 +296,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	AddAditionalInformation(blocksData)
+	AddAdditionalInformation(blocksData)
 	// Generate L2 Txs with til
 	commonPoolTxs, err := tcc.GeneratePoolL2Txs(txsets.SetPoolL2MinimumFlow0)
 	if err != nil {
@@ -559,21 +562,21 @@ func TestMain(m *testing.M) {
 	for i := 0; i < len(accounts); i++ {
 		balance := new(big.Int)
 		balance.SetString(string(*accounts[i].Balance), 10)
-		idx, err := stringToIdx(string(accounts[i].Idx), "foo")
+		queryAccount, err := common.StringToIdx(string(accounts[i].Idx), "foo")
 		if err != nil {
 			panic(err)
 		}
 		accUpdates = append(accUpdates, common.AccountUpdate{
 			EthBlockNum: 0,
 			BatchNum:    1,
-			Idx:         *idx,
+			Idx:         *queryAccount.AccountIndex,
 			Nonce:       0,
 			Balance:     balance,
 		})
 		accUpdates = append(accUpdates, common.AccountUpdate{
 			EthBlockNum: 0,
 			BatchNum:    1,
-			Idx:         *idx,
+			Idx:         *queryAccount.AccountIndex,
 			Nonce:       accounts[i].Nonce,
 			Balance:     balance,
 		})
@@ -664,6 +667,9 @@ func TestTimeout(t *testing.T) {
 		apiGinTO,
 		hdbTO,
 		l2DBTO,
+		nil,
+		nil,
+		nil,
 	)
 	require.NoError(t, err)
 
@@ -816,6 +822,7 @@ func doBadReq(method, path string, reqBody io.Reader, expectedResponseCode int) 
 	ctx := context.Background()
 	client := &http.Client{}
 	httpReq, _ := http.NewRequest(method, path, reqBody)
+	httpReq.Header.Add("Content-Type", "application/json")
 	route, pathParams, err := tc.router.FindRoute(httpReq.Method, httpReq.URL)
 	if err != nil {
 		return tracerr.Wrap(err)

@@ -200,12 +200,14 @@ func (hdb *HistoryDB) GetBestBidAPI(slotNum *int64) (BidAPI, error) {
 
 // GetBestBidsAPIRequest is an API request struct for getting best bids
 type GetBestBidsAPIRequest struct {
-	MinSlotNum *int64
-	MaxSlotNum *int64
-	BidderAddr *ethCommon.Address
+	MinSlotNum      *int64
+	MaxSlotNum      *int64
+	BidderAddr      *ethCommon.Address
+	FinishedAuction *bool
 
-	Limit *uint
-	Order string
+	Limit    *uint
+	Order    string
+	FromItem *uint
 }
 
 // GetBestBidsAPI returns the best bid in specific slot by slotNum
@@ -369,9 +371,10 @@ func (hdb *HistoryDB) GetTokenAPI(tokenID common.TokenID) (*TokenWithUSD, error)
 
 // GetTokensAPIRequest is an API request struct for getting tokens
 type GetTokensAPIRequest struct {
-	Ids     []common.TokenID
-	Symbols []string
-	Name    string
+	Ids       []common.TokenID
+	Symbols   []string
+	Name      string
+	Addresses []ethCommon.Address
 
 	FromItem *uint
 	Limit    *uint
@@ -416,6 +419,16 @@ func (hdb *HistoryDB) GetTokensAPI(
 		}
 		queryStr += "name ~ ? "
 		args = append(args, request.Name)
+		nextIsAnd = true
+	}
+	if len(request.Addresses) > 0 {
+		if nextIsAnd {
+			queryStr += "AND "
+		} else {
+			queryStr += "WHERE "
+		}
+		queryStr += "eth_addr IN (?) "
+		args = append(args, request.Addresses)
 		nextIsAnd = true
 	}
 	if request.FromItem != nil {
@@ -1089,7 +1102,9 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	} else {
 		queryStr += " DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
+	if request.Limit != nil {
+		queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
+	}
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
@@ -1148,29 +1163,6 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 		Nonce:    account.Nonce,
 		Balance:  account.Balance,
 	}, nil
-}
-
-// CanSendToEthAddr returns true if it's possible to send a tx to an Eth addr
-// either because there is an idx associated to the Eth addr and token
-// or the cordinator has an authorization to create a valid account
-func (hdb *HistoryDB) CanSendToEthAddr(ethAddr ethCommon.Address, tokenID common.TokenID) (bool, error) {
-	cancel, err := hdb.apiConnCon.Acquire()
-	defer cancel()
-	if err != nil {
-		return false, tracerr.Wrap(err)
-	}
-	defer hdb.apiConnCon.Release()
-
-	row := hdb.dbRead.QueryRow(
-		`SELECT (
-			SELECT COUNT(*) > 0 FROM account WHERE eth_addr = $1 AND token_id = $2 LIMIT 1
-		) OR (
-			SELECT COUNT(*) > 0 FROM account_creation_auth WHERE eth_addr = $1 LIMIT 1
-		);`,
-		ethAddr, tokenID,
-	)
-	var ok bool
-	return ok, tracerr.Wrap(row.Scan(&ok))
 }
 
 // GetCoordinatorAPI returns a coordinator by its bidderAddr

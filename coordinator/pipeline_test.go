@@ -105,8 +105,10 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	closeTestModules(t, modules)
 }
 
-const testTokensLen = 3
-const testUsersLen = 4
+const (
+	testTokensLen = 3
+	testUsersLen  = 4
+)
 
 func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchronizer,
 	historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *til.Context {
@@ -299,6 +301,7 @@ func TestEthRollupForgeBatch(t *testing.T) {
 	batchInfo.ForgeBatchArgs = prepareForgeBatchArgs(batchInfo)
 	auth, err := client.NewAuth()
 	require.NoError(t, err)
+	auth.Context = context.Background()
 	_, err = client.RollupForgeBatch(batchInfo.ForgeBatchArgs, auth)
 	require.NoError(t, err)
 	batchInfo.Proof = proof

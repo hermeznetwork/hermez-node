@@ -46,8 +46,9 @@ func TestAccountCreationAuthSignVerify(t *testing.T) {
 	require.NoError(t, err)
 	sig[64] += 27
 	assert.Equal(t, sig, a.Signature)
-
-	assert.True(t, a.VerifySignature(chainID, hermezContractAddr))
+	isValid, err := a.VerifySignature(chainID, hermezContractAddr)
+	require.NoError(t, err)
+	assert.True(t, isValid)
 }
 
 func TestKeccak256JSComp(t *testing.T) {
@@ -143,7 +144,8 @@ func TestAccountCreationAuthJSComp(t *testing.T) {
 		assert.Equal(t, tv.sigExpected,
 			hex.EncodeToString(sig))
 		a.Signature = sig
-
-		assert.True(t, a.VerifySignature(chainID, hermezContractAddr))
+		isValid, err := a.VerifySignature(chainID, hermezContractAddr)
+		require.NoError(t, err)
+		assert.True(t, isValid)
 	}
 }

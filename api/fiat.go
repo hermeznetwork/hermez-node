@@ -1,18 +1,22 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getFiatCurrency(c *gin.Context) {
 	// Get symbol
-	symbol := c.Param("symbol")
-	if symbol == "" { // symbol is required
-		retBadReq(errors.New(ErrInvalidSymbol), c)
+	symbol, err := parsers.ParseCurrencyFilter(c)
+	if err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch currency from historyDB
@@ -24,11 +28,20 @@ func (a *API) getFiatCurrency(c *gin.Context) {
 	c.JSON(http.StatusOK, currency)
 }
 
+// CurrenciesResponse is the response object for multiple fiat prices
+type CurrenciesResponse struct {
+	Currencies []historydb.FiatCurrency `json:"currencies"`
+}
+
 func (a *API) getFiatCurrencies(c *gin.Context) {
 	// Currency filters
-	symbols, err := parseCurrencyFilters(c)
+	symbols, err := parsers.ParseCurrenciesFilters(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 
@@ -40,9 +53,6 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 	}
 
 	// Build successful response
-	type CurrenciesResponse struct {
-		Currencies []historydb.FiatCurrency `json:"currencies"`
-	}
 	c.JSON(http.StatusOK, &CurrenciesResponse{
 		Currencies: currencies,
 	})

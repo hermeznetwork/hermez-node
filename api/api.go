@@ -26,13 +26,19 @@ package api
 
 import (
 	"errors"
+	"reflect"
+	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
+	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 // API serves HTTP requests to allow external interaction with the Hermez node
@@ -40,7 +46,9 @@ type API struct {
 	h             *historydb.HistoryDB
 	cg            *configAPI
 	l2            *l2db.L2DB
+	stateDB       *statedb.StateDB
 	hermezAddress ethCommon.Address
+	validate      *validator.Validate
 }
 
 // NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
@@ -50,6 +58,9 @@ func NewAPI(
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
 	l2db *l2db.L2DB,
+	stateDB *statedb.StateDB,
+	ethClient *ethclient.Client,
+	forgerAddress *ethCommon.Address,
 ) (*API, error) {
 	// Check input
 	if coordinatorEndpoints && l2db == nil {
@@ -62,6 +73,7 @@ func NewAPI(
 	if err != nil {
 		return nil, err
 	}
+
 	a := &API{
 		h: hdb,
 		cg: &configAPI{
@@ -71,7 +83,9 @@ func NewAPI(
 			ChainID:           consts.ChainID,
 		},
 		l2:            l2db,
+		stateDB:       stateDB,
 		hermezAddress: consts.HermezAddress,
+		validate:      newValidate(),
 	}
 
 	middleware, err := metric.PrometheusMiddleware()
@@ -84,7 +98,7 @@ func NewAPI(
 
 	v1 := server.Group("/v1")
 
-	v1.GET("/health", gin.WrapH(a.healthRoute(version)))
+	v1.GET("/health", gin.WrapH(a.healthRoute(version, ethClient, forgerAddress)))
 	// Add coordinator endpoints
 	if coordinatorEndpoints {
 		// Account creation authorization
@@ -92,8 +106,10 @@ func NewAPI(
 		v1.GET("/account-creation-authorization/:hezEthereumAddress", a.getAccountCreationAuth)
 		// Transaction
 		v1.POST("/transactions-pool", a.postPoolTx)
+		v1.POST("/atomic-pool", a.postAtomicPool)
 		v1.GET("/transactions-pool/:id", a.getPoolTx)
 		v1.GET("/transactions-pool", a.getPoolTxs)
+		v1.GET("/atomic-pool/:id", a.getAtomicGroup)
 	}
 
 	// Add explorer endpoints
@@ -130,4 +146,24 @@ func NewAPI(
 	}
 
 	return a, nil
+}
+
+func newValidate() *validator.Validate {
+	validate := validator.New()
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("form"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
+
+	validate.RegisterStructValidation(parsers.ExitsFiltersStructValidation, parsers.ExitsFilters{})
+	validate.RegisterStructValidation(parsers.BidsFiltersStructValidation, parsers.BidsFilters{})
+	validate.RegisterStructValidation(parsers.AccountsFiltersStructValidation, parsers.AccountsFilters{})
+	validate.RegisterStructValidation(parsers.HistoryTxsFiltersStructValidation, parsers.HistoryTxsFilters{})
+	validate.RegisterStructValidation(parsers.PoolTxsTxsFiltersStructValidation, parsers.PoolTxsFilters{})
+	validate.RegisterStructValidation(parsers.SlotsFiltersStructValidation, parsers.SlotsFilters{})
+
+	return validate
 }

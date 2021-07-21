@@ -2,10 +2,10 @@ package api
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -14,46 +14,17 @@ import (
 
 func (a *API) getBatches(c *gin.Context) {
 	// Get query parameters
-	// minBatchNum
-	minBatchNum, err := parseQueryUint("minBatchNum", nil, 0, maxUint32, c)
+	filter, err := parsers.ParseBatchesFilter(c)
 	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// maxBatchNum
-	maxBatchNum, err := parseQueryUint("maxBatchNum", nil, 0, maxUint32, c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// slotNum
-	slotNum, err := parseQueryUint("slotNum", nil, 0, maxUint32, c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// forgerAddr
-	forgerAddr, err := parseQueryEthAddr("forgerAddr", c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// pagination
-	fromItem, order, limit, err := parsePagination(c)
-	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch batches from historyDB
-	batches, pendingItems, err := a.h.GetBatchesAPI(historydb.GetBatchesAPIRequest{
-		MinBatchNum: minBatchNum,
-		MaxBatchNum: maxBatchNum,
-		SlotNum:     slotNum,
-		ForgerAddr:  forgerAddr,
-		FromItem:    fromItem,
-		Limit:       limit,
-		Order:       order,
-	})
+	batches, pendingItems, err := a.h.GetBatchesAPI(filter)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -72,13 +43,13 @@ func (a *API) getBatches(c *gin.Context) {
 
 func (a *API) getBatch(c *gin.Context) {
 	// Get batchNum
-	batchNum, err := parseParamUint("batchNum", nil, 0, maxUint32, c)
+	batchNum, err := parsers.ParseBatchFilter(c)
 	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	if batchNum == nil { // batchNum is required
-		retBadReq(errors.New("Invalid batchNum"), c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch batch from historyDB
@@ -98,13 +69,13 @@ type fullBatch struct {
 
 func (a *API) getFullBatch(c *gin.Context) {
 	// Get batchNum
-	batchNum, err := parseParamUint("batchNum", nil, 0, maxUint32, c)
+	batchNum, err := parsers.ParseBatchFilter(c)
 	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	if batchNum == nil {
-		retBadReq(errors.New("Invalid batchNum"), c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch batch from historyDB

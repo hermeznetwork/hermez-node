@@ -73,7 +73,7 @@ func genTestExits(
 		acc := getAccountByIdx(exit.AccountIdx, accs)
 		allExits = append(allExits, testExit{
 			BatchNum:   exit.BatchNum,
-			AccountIdx: idxToHez(exit.AccountIdx, token.Symbol),
+			AccountIdx: common.IdxToHez(exit.AccountIdx, token.Symbol),
 			BJJ:        apitypes.NewHezBJJ(acc.BJJ),
 			EthAddr:    apitypes.NewHezEthAddr(acc.EthAddr),
 			MerkleProof: testCVP{

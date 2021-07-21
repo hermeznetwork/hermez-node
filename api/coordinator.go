@@ -4,35 +4,23 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 )
 
 func (a *API) getCoordinators(c *gin.Context) {
-	bidderAddr, err := parseQueryEthAddr("bidderAddr", c)
+	filters, err := parsers.ParseCoordinatorsFilters(c)
 	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	forgerAddr, err := parseQueryEthAddr("forgerAddr", c)
-	if err != nil {
-		retBadReq(err, c)
-		return
-	}
-	// Pagination
-	fromItem, order, limit, err := parsePagination(c)
-	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 
 	// Fetch coordinators from historyDB
-	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(historydb.GetCoordinatorsAPIRequest{
-		BidderAddr: bidderAddr,
-		ForgerAddr: forgerAddr,
-		FromItem:   fromItem,
-		Limit:      limit,
-		Order:      order,
-	})
+	coordinators, pendingItems, err := a.h.GetCoordinatorsAPI(filters)
 	if err != nil {
 		retSQLErr(err, c)
 		return

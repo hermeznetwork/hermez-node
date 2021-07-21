@@ -7,9 +7,12 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
@@ -34,6 +37,7 @@ const (
 	modeSync    = "sync"
 	modeCoord   = "coord"
 	nMigrations = "nMigrations"
+	flagAccount = "account"
 )
 
 var (
@@ -45,14 +49,14 @@ var (
 	date = ""
 )
 
-func cmdVersion(c *cli.Context) error {
+func cmdVersion(*cli.Context) error {
 	fmt.Printf("Version = \"%v\"\n", version)
 	fmt.Printf("Build = \"%v\"\n", commit)
 	fmt.Printf("Date = \"%v\"\n", date)
 	return nil
 }
 
-func cmdGenBJJ(c *cli.Context) error {
+func cmdGenBJJ(*cli.Context) error {
 	sk := babyjub.NewRandPrivKey()
 	skBuf := [32]byte(sk)
 	pk := sk.Public()
@@ -284,13 +288,13 @@ func cmdRun(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	node, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
+	innerNode, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
 	}
-	node.Start()
+	innerNode.Start()
 	waitSigInt()
-	node.Stop()
+	innerNode.Stop()
 
 	return nil
 }
@@ -300,7 +304,7 @@ func cmdServeAPI(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version)
+	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version, nil, nil)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting api server: %w", err))
 	}
@@ -308,6 +312,57 @@ func cmdServeAPI(c *cli.Context) error {
 	waitSigInt()
 	srv.Stop()
 
+	return nil
+}
+
+func cmdGetAccountDetails(c *cli.Context) error {
+	addr, bjj, accountIdxs, err := checkAccountParam(c)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	cfg := _cfg.node
+
+	historyDB, err := openDBConexion(cfg)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+
+	obj := historydb.GetAccountsAPIRequest{
+		EthAddr: addr,
+		Bjj:     bjj,
+	}
+	var apiAccounts []historydb.AccountAPI
+	if len(accountIdxs) == 0 {
+		apiAccounts, _, err = historyDB.GetAccountsAPI(obj)
+		if err != nil {
+			return tracerr.Wrap(fmt.Errorf("historyDB.GetAccountsAPI: %w", err))
+		}
+	} else {
+		for i := 0; i < len(accountIdxs); i++ {
+			apiAccount, err := historyDB.GetAccountAPI(accountIdxs[i])
+			if err != nil {
+				log.Debug(fmt.Errorf("historyDB.GetAccountAPI: %w", err))
+			} else {
+				apiAccounts = append(apiAccounts, *apiAccount)
+			}
+		}
+	}
+	log.Infof("Found %d account(s)", len(apiAccounts))
+	for index, account := range apiAccounts {
+		log.Infof("Details for account %d", index)
+		log.Infof(" - Account index: %s", account.Idx)
+		log.Infof(" - Account BJJ  : %s", account.PublicKey)
+		log.Infof(" - Balance      : %s", *account.Balance)
+		log.Infof(" - HEZ Address  : %s", account.EthAddr)
+		log.Infof(" - Token name   : %s", account.TokenName)
+		log.Infof(" - Token symbol : %s", account.TokenSymbol)
+	}
 	return nil
 }
 
@@ -561,6 +616,18 @@ func main() {
 					Required: false,
 				}),
 		},
+		{
+			Name:    "accountInfo",
+			Aliases: []string{},
+			Usage:   "get information about the specified account",
+			Action:  cmdGetAccountDetails,
+			Flags: append(flags,
+				&cli.StringFlag{
+					Name:     flagAccount,
+					Usage:    "account address in hex",
+					Required: true,
+				}),
+		},
 	}
 
 	err := app.Run(os.Args)
@@ -568,4 +635,71 @@ func main() {
 		fmt.Printf("\nError: %v\n", tracerr.Sprint(err))
 		os.Exit(1)
 	}
+}
+
+func checkAccountParam(c *cli.Context) (*ethCommon.Address, *babyjub.PublicKeyComp, []common.Idx, error) {
+	accountParam := c.String(flagAccount)
+	const characters = 42
+	var (
+		addr        *ethCommon.Address
+		accountIdxs []common.Idx
+		bjj         *babyjub.PublicKeyComp
+		err         error
+	)
+	matchIdx, _ := regexp.MatchString("^\\d+$", accountParam)
+	if strings.HasPrefix(accountParam, "0x") { //Check ethereum address
+		addr, err = common.HezStringToEthAddr("hez:"+accountParam, "hezEthereumAddress")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	} else if len(accountParam) > characters { //Check internal hermez account address
+		bjj, err = common.HezStringToBJJ(accountParam, "BJJ")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	} else if matchIdx { //Check tokenID
+		value, _ := strconv.Atoi(accountParam)
+		accountIdxs = append(accountIdxs, (common.Idx)(value))
+	} else {
+		return nil, nil, nil, fmt.Errorf("invalid parameter. Only accepted ethereum address, bjj address or account index")
+	}
+	return addr, bjj, accountIdxs, nil
+}
+
+func openDBConexion(cfg *config.Node) (*historydb.HistoryDB, error) {
+	dbWrite, err := dbUtils.InitSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
+	)
+	if err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+	}
+	var dbRead *sqlx.DB
+	if cfg.PostgreSQL.HostRead == "" {
+		dbRead = dbWrite
+	} else if cfg.PostgreSQL.HostRead == cfg.PostgreSQL.HostWrite {
+		return nil, tracerr.Wrap(fmt.Errorf(
+			"PostgreSQL.HostRead and PostgreSQL.HostWrite must be different",
+		))
+	} else {
+		dbRead, err = dbUtils.InitSQLDB(
+			cfg.PostgreSQL.PortRead,
+			cfg.PostgreSQL.HostRead,
+			cfg.PostgreSQL.UserRead,
+			cfg.PostgreSQL.PasswordRead,
+			cfg.PostgreSQL.NameRead,
+		)
+		if err != nil {
+			return nil, tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+		}
+	}
+	apiConnCon := dbUtils.NewAPIConnectionController(
+		cfg.API.MaxSQLConnections,
+		cfg.API.SQLConnectionTimeout.Duration,
+	)
+	historyDB := historydb.NewHistoryDB(dbRead, dbWrite, apiConnCon)
+	return historyDB, nil
 }

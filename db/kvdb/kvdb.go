@@ -134,7 +134,6 @@ func NewKVDB(cfg Config) (*KVDB, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-
 	var last *Last
 	if !cfg.NoLast {
 		last = &Last{
@@ -435,7 +434,6 @@ func (k *KVDB) MakeCheckpoint() error {
 			return tracerr.Wrap(err)
 		}
 	}
-
 	// execute Checkpoint
 	if err := k.db.Pebble().Checkpoint(checkpointPath); err != nil {
 		return tracerr.Wrap(err)

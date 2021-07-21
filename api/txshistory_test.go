@@ -124,7 +124,7 @@ func genTestTxs(
 			Position:    l1.Position,
 			FromEthAddr: &fromEthAddr,
 			FromBJJ:     &fromBJJ,
-			ToIdx:       idxToHez(l1.ToIdx, token.Symbol),
+			ToIdx:       common.IdxToHez(l1.ToIdx, token.Symbol),
 			Amount:      l1.Amount.String(),
 			BatchNum:    l1.BatchNum,
 			Timestamp:   getTimestamp(l1.EthBlockNum, blocks),
@@ -147,7 +147,7 @@ func genTestTxs(
 			tx.BatchNum = &bn
 		}
 		// If FromIdx is not nil
-		idxStr := idxToHez(l1.EffectiveFromIdx, token.Symbol)
+		idxStr := common.IdxToHez(l1.EffectiveFromIdx, token.Symbol)
 		tx.FromIdx = &idxStr
 		if i == len(l1s)-1 {
 			// Last tx of the L1 set is supposed to be unforged as per the til set.
@@ -155,7 +155,7 @@ func genTestTxs(
 			tx.L1Info.DepositAmountSuccess = false
 			tx.L1Info.AmountSuccess = false
 			tx.BatchNum = nil
-			idxStrUnforged := idxToHez(l1.FromIdx, token.Symbol)
+			idxStrUnforged := common.IdxToHez(l1.FromIdx, token.Symbol)
 			tx.FromIdx = &idxStrUnforged
 		}
 		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
@@ -193,13 +193,13 @@ func genTestTxs(
 	for i := 0; i < len(l2s); i++ {
 		token := getTokenByIdx(l2s[i].FromIdx, tokens, accs)
 		// l1.FromIdx can't be nil
-		fromIdx := idxToHez(l2s[i].FromIdx, token.Symbol)
+		fromIdx := common.IdxToHez(l2s[i].FromIdx, token.Symbol)
 		tx := testTx{
 			IsL1:      "L2",
 			TxID:      l2s[i].TxID,
 			Type:      l2s[i].Type,
 			Position:  l2s[i].Position,
-			ToIdx:     idxToHez(l2s[i].ToIdx, token.Symbol),
+			ToIdx:     common.IdxToHez(l2s[i].ToIdx, token.Symbol),
 			FromIdx:   &fromIdx,
 			Amount:    l2s[i].Amount.String(),
 			BatchNum:  &l2s[i].BatchNum,
@@ -212,7 +212,7 @@ func genTestTxs(
 		}
 		// If FromIdx is not nil
 		if l2s[i].FromIdx != 0 {
-			idxStr := idxToHez(l2s[i].FromIdx, token.Symbol)
+			idxStr := common.IdxToHez(l2s[i].FromIdx, token.Symbol)
 			tx.FromIdx = &idxStr
 		}
 		// Set FromEthAddr and FromBJJ (FromIdx it's always >255)
@@ -347,7 +347,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	fetchedTxs = []testTx{}
 	limit = 4
 	idxStr := tc.txs[0].ToIdx
-	idx, err := stringToIdx(idxStr, "")
+	queryAccount, err := common.StringToIdx(idxStr, "")
 	assert.NoError(t, err)
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&limit=%d",
@@ -360,18 +360,18 @@ func TestGetHistoryTxs(t *testing.T) {
 		if tc.txs[i].BatchNum == nil {
 			continue
 		}
-		var fromIdx *common.Idx
+		var fromQueryAccount common.QueryAccount
 		if tc.txs[i].FromIdx != nil {
-			fromIdx, err = stringToIdx(*tc.txs[i].FromIdx, "")
+			fromQueryAccount, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
 			assert.NoError(t, err)
-			if *fromIdx == *idx {
+			if *fromQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 				idxTxs = append(idxTxs, tc.txs[i])
 				continue
 			}
 		}
-		toIdx, err := stringToIdx((tc.txs[i].ToIdx), "")
+		toQueryAccount, err := common.StringToIdx((tc.txs[i].ToIdx), "")
 		assert.NoError(t, err)
-		if *toIdx == *idx {
+		if *toQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 			idxTxs = append(idxTxs, tc.txs[i])
 		}
 	}
@@ -383,11 +383,11 @@ func TestGetHistoryTxs(t *testing.T) {
 	err = doGoodReqPaginated(path, db.OrderAsc, &testTxsResponse{}, appendIter)
 	assert.NoError(t, err)
 	for i := 0; i < len(tc.txs); i++ {
-		var fromIdx *common.Idx
+		var fromQueryAccount common.QueryAccount
 		if tc.txs[i].FromIdx != nil {
-			fromIdx, err = stringToIdx(*tc.txs[i].FromIdx, "")
+			fromQueryAccount, err = common.StringToIdx(*tc.txs[i].FromIdx, "")
 			assert.NoError(t, err)
-			if *fromIdx == *idx {
+			if *fromQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 				idxTxs = append(idxTxs, tc.txs[i])
 				continue
 			}
@@ -401,9 +401,9 @@ func TestGetHistoryTxs(t *testing.T) {
 	assert.NoError(t, err)
 	idxTxs = []testTx{}
 	for i := 0; i < len(tc.txs); i++ {
-		toIdx, err := stringToIdx(tc.txs[i].ToIdx, "")
+		toQueryAccount, err := common.StringToIdx(tc.txs[i].ToIdx, "")
 		assert.NoError(t, err)
-		if *toIdx == *idx {
+		if *toQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 			idxTxs = append(idxTxs, tc.txs[i])
 		}
 	}
@@ -495,7 +495,7 @@ func TestGetHistoryTxs(t *testing.T) {
 	// 400
 	path = fmt.Sprintf(
 		"%s?accountIndex=%s&hezEthereumAddress=%s",
-		endpoint, idx, account.EthAddr,
+		endpoint, queryAccount.AccountIndex, account.EthAddr,
 	)
 	err = doBadReq("GET", path, nil, 400)
 	assert.NoError(t, err)

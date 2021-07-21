@@ -182,3 +182,51 @@ stop-database-container:
 ## exec: Run given command. e.g; make exec run="go test ./..."
 exec:
 	$(GOENVVARS) $(run)
+
+## install: Install the heznode cli as a service in coord mode
+install:
+	echo "  > Installing heznode as a service"
+	echo "  > Checking requirements"
+ifneq ("$(wildcard $(dist/heznode))","")
+	echo "  - heznode file found!"
+else
+	echo "  - heznode file not found!"
+	echo "  - please, run make build before make install!"
+	test -f ./dist/heznode
+endif
+ifneq ("$(wildcard $(cmd/heznode/cfg.builder.toml))","")
+	echo "  - config template found!"
+else
+	echo "  - config template not found!"
+	echo "  - please, check the !"
+	test -f ./cmd/heznode/cfg.builder.toml
+endif
+	echo "  > Copying hez binary to /usr/local/bin"
+	cp dist/heznode /usr/local/bin/heznode
+	echo "  > Copying config file to /etc/hermez"
+	mkdir -p /etc/hermez
+	cp cmd/heznode/cfg.builder.toml /etc/hermez/config.toml
+	echo "  > Registering as a service"
+	touch /etc/systemd/system/heznode.service
+	echo "[Unit]" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "Description=Hermez Node" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "After=postgresql.service" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "StartLimitBurst=5" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "StartLimitIntervalSec=60" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "[Service]" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "Type=simple" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "Restart=always" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "RestartSec=1" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "ExecStart=/usr/local/bin/heznode run --mode coord --cfg /etc/hermez/config.toml" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "KillMode=process" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "StandardOutput=append:/var/log/hermez-node.log" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "StandardError=append:/var/log/hermez-node.log" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "[Install]" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "WantedBy=multi-user.target" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	echo "" | tee -a /etc/systemd/system/heznode.service > /dev/null
+	systemctl daemon-reload
+	echo "  > Service is ready. Please update the configs at /etc/hermez/config.toml"
+	echo "  > You can use the service with service heznode status|start|stop"
+	echo "  Bye."

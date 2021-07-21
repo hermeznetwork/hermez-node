@@ -46,7 +46,7 @@ func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD)
 		token := getTokenByID(account.TokenID, tokens)
 		tAccount := testAccount{
 			ItemID:    uint64(x + 1),
-			Idx:       apitypes.HezIdx(idxToHez(account.Idx, token.Symbol)),
+			Idx:       apitypes.HezIdx(common.IdxToHez(account.Idx, token.Symbol)),
 			PublicKey: apitypes.NewHezBJJ(account.BJJ),
 			EthAddr:   apitypes.NewHezEthAddr(account.EthAddr),
 			Nonce:     account.Nonce,
@@ -157,6 +157,11 @@ func TestGetAccounts(t *testing.T) {
 	require.NoError(t, doGoodReq("GET", path, nil, &account))
 	account.Token.ItemID = 0
 	assert.Equal(t, fetchedAccounts[2], account)
+
+	// Test invalid token symbol GetAccount
+	path = fmt.Sprintf("%s/%s", endpoint, "hez:UNI:258")
+	account = testAccount{}
+	require.Error(t, doGoodReq("GET", path, nil, &account))
 
 	// 400
 	path = fmt.Sprintf("%s/hez:12345", endpoint)
