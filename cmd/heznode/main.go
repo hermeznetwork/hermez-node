@@ -332,7 +332,7 @@ func cmdGetAccountDetails(c *cli.Context) error {
 		log.Error(err)
 		return nil
 	}
-	
+
 	obj := historydb.GetAccountsAPIRequest{
 		EthAddr: addr,
 		Bjj:     bjj,
@@ -661,7 +661,7 @@ func checkAccountParam(c *cli.Context) (*ethCommon.Address, *babyjub.PublicKeyCo
 		value, _ := strconv.Atoi(accountParam)
 		accountIdxs = append(accountIdxs, (common.Idx)(value))
 	} else {
-		return nil, nil, nil, fmt.Errorf("Invalid parameter. Only accepted ethereum address, bjj address or account index.")
+		return nil, nil, nil, fmt.Errorf("invalid parameter. Only accepted ethereum address, bjj address or account index")
 	}
 	return addr, bjj, accountIdxs, nil
 }
