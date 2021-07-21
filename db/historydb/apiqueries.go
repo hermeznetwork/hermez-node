@@ -1102,7 +1102,9 @@ func (hdb *HistoryDB) GetAccountsAPI(
 	} else {
 		queryStr += " DESC "
 	}
-	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
+	if request.Limit != nil {
+		queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
+	}
 	query, argsQ, err := sqlx.In(queryStr, args...)
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
