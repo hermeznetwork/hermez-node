@@ -316,30 +316,9 @@ func cmdServeAPI(c *cli.Context) error {
 }
 
 func cmdGetAccountDetails(c *cli.Context) error {
-	accountParam := c.String(flagAccount)
-	const characters = 42
-	var (
-		addr        *ethCommon.Address
-		accountIdxs []common.Idx
-		bjj         *babyjub.PublicKeyComp
-		err         error
-	)
-	matchIdx, _ := regexp.MatchString("^\\d+$", accountParam)
-	if strings.HasPrefix(accountParam, "0x") { //Check ethereum address
-		addr, err = common.HezStringToEthAddr("hez:"+accountParam, "hezEthereumAddress")
-		if err != nil {
-			return err
-		}
-	} else if len(accountParam) > characters { //Check internal hermez account address
-		bjj, err = common.HezStringToBJJ(accountParam, "BJJ")
-		if err != nil {
-			return err
-		}
-	} else if matchIdx { //Check tokenID
-		value, _ := strconv.Atoi(accountParam)
-		accountIdxs = append(accountIdxs, (common.Idx)(value))
-	} else {
-		log.Error("Invalid parameter. Only accepted ethereum address, bjj address or account index.")
+	addr, bjj, accountIdxs, err := checkAccountParam(c)
+	if err != nil {
+		log.Error(err)
 		return nil
 	}
 	_cfg, err := parseCli(c)
@@ -348,40 +327,12 @@ func cmdGetAccountDetails(c *cli.Context) error {
 	}
 	cfg := _cfg.node
 
-	dbWrite, err := dbUtils.InitSQLDB(
-		cfg.PostgreSQL.PortWrite,
-		cfg.PostgreSQL.HostWrite,
-		cfg.PostgreSQL.UserWrite,
-		cfg.PostgreSQL.PasswordWrite,
-		cfg.PostgreSQL.NameWrite,
-	)
+	historyDB, err := openDBConexion(cfg)
 	if err != nil {
-		return tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+		log.Error(err)
+		return nil
 	}
-	var dbRead *sqlx.DB
-	if cfg.PostgreSQL.HostRead == "" {
-		dbRead = dbWrite
-	} else if cfg.PostgreSQL.HostRead == cfg.PostgreSQL.HostWrite {
-		return tracerr.Wrap(fmt.Errorf(
-			"PostgreSQL.HostRead and PostgreSQL.HostWrite must be different",
-		))
-	} else {
-		dbRead, err = dbUtils.InitSQLDB(
-			cfg.PostgreSQL.PortRead,
-			cfg.PostgreSQL.HostRead,
-			cfg.PostgreSQL.UserRead,
-			cfg.PostgreSQL.PasswordRead,
-			cfg.PostgreSQL.NameRead,
-		)
-		if err != nil {
-			return tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
-		}
-	}
-	apiConnCon := dbUtils.NewAPIConnectionController(
-		cfg.API.MaxSQLConnections,
-		cfg.API.SQLConnectionTimeout.Duration,
-	)
-	historyDB := historydb.NewHistoryDB(dbRead, dbWrite, apiConnCon)
+	
 	obj := historydb.GetAccountsAPIRequest{
 		EthAddr: addr,
 		Bjj:     bjj,
@@ -684,4 +635,71 @@ func main() {
 		fmt.Printf("\nError: %v\n", tracerr.Sprint(err))
 		os.Exit(1)
 	}
+}
+
+func checkAccountParam(c *cli.Context) (*ethCommon.Address, *babyjub.PublicKeyComp, []common.Idx, error) {
+	accountParam := c.String(flagAccount)
+	const characters = 42
+	var (
+		addr        *ethCommon.Address
+		accountIdxs []common.Idx
+		bjj         *babyjub.PublicKeyComp
+		err         error
+	)
+	matchIdx, _ := regexp.MatchString("^\\d+$", accountParam)
+	if strings.HasPrefix(accountParam, "0x") { //Check ethereum address
+		addr, err = common.HezStringToEthAddr("hez:"+accountParam, "hezEthereumAddress")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	} else if len(accountParam) > characters { //Check internal hermez account address
+		bjj, err = common.HezStringToBJJ(accountParam, "BJJ")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	} else if matchIdx { //Check tokenID
+		value, _ := strconv.Atoi(accountParam)
+		accountIdxs = append(accountIdxs, (common.Idx)(value))
+	} else {
+		return nil, nil, nil, fmt.Errorf("Invalid parameter. Only accepted ethereum address, bjj address or account index.")
+	}
+	return addr, bjj, accountIdxs, nil
+}
+
+func openDBConexion(cfg *config.Node) (*historydb.HistoryDB, error) {
+	dbWrite, err := dbUtils.InitSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
+	)
+	if err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+	}
+	var dbRead *sqlx.DB
+	if cfg.PostgreSQL.HostRead == "" {
+		dbRead = dbWrite
+	} else if cfg.PostgreSQL.HostRead == cfg.PostgreSQL.HostWrite {
+		return nil, tracerr.Wrap(fmt.Errorf(
+			"PostgreSQL.HostRead and PostgreSQL.HostWrite must be different",
+		))
+	} else {
+		dbRead, err = dbUtils.InitSQLDB(
+			cfg.PostgreSQL.PortRead,
+			cfg.PostgreSQL.HostRead,
+			cfg.PostgreSQL.UserRead,
+			cfg.PostgreSQL.PasswordRead,
+			cfg.PostgreSQL.NameRead,
+		)
+		if err != nil {
+			return nil, tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+		}
+	}
+	apiConnCon := dbUtils.NewAPIConnectionController(
+		cfg.API.MaxSQLConnections,
+		cfg.API.SQLConnectionTimeout.Duration,
+	)
+	historyDB := historydb.NewHistoryDB(dbRead, dbWrite, apiConnCon)
+	return historyDB, nil
 }
