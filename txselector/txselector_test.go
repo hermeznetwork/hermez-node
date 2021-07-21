@@ -1817,9 +1817,47 @@ func TestFilterInvalidAtomicGroups(t *testing.T) {
 	agid5 := common.AtomicGroupID([common.AtomicGroupIDLen]byte{5})
 	// Helper to check result
 	assertIds := func(t *testing.T, expected []common.TxID, actual []common.PoolL2Tx) {
+		// Check 1: same amount of expected vs actual
 		require.Equal(t, len(expected), len(actual))
-		for i, id := range expected {
-			assert.Equal(t, id, actual[i].TxID)
+		// Check 2: expected and actual have the same items (but maybe different order)
+		for _, id := range expected {
+			found := false
+			for _, tx := range actual {
+				if id == tx.TxID {
+					found = true
+					break
+				}
+			}
+			assert.True(t, found)
+		}
+		// Check 3: order is preserved within atomic groups
+		// Create atomic groups
+		atomicGroups := make(map[common.AtomicGroupID]common.AtomicGroup)
+		for i := range actual {
+			atomicGroupID := actual[i].AtomicGroupID
+			if atomicGroupID == common.EmptyAtomicGroupID {
+				continue
+			}
+			if atomicGroup, ok := atomicGroups[atomicGroupID]; !ok {
+				atomicGroups[atomicGroupID] = common.AtomicGroup{
+					Txs: []common.PoolL2Tx{actual[i]},
+				}
+			} else {
+				atomicGroup.Txs = append(atomicGroup.Txs, actual[i])
+				atomicGroups[atomicGroupID] = atomicGroup
+			}
+		}
+		for _, atomicGroup := range atomicGroups {
+			var firstPositionInExpected int
+			for j := range expected {
+				if expected[j] == atomicGroup.Txs[0].TxID {
+					firstPositionInExpected = j
+					break
+				}
+			}
+			for i, tx := range atomicGroup.Txs {
+				assert.Equal(t, expected[firstPositionInExpected+i], tx.TxID)
+			}
 		}
 	}
 

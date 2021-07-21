@@ -6,7 +6,7 @@ This constrains can be splitted in two categories:
 Batch constrains (this information is passed to the txselector as `selectionConfig txprocessor.Config`):
 - NLevels: limit the amount of accounts that can be created by NLevels^2 -1.
 Note that this constraint is not properly checked, if this situation is reached the entire selection will fail
-- MaxFeeTx: maximum amount of different coordinator accounts (idx) thah can be used to collect fees.
+- MaxFeeTx: maximum amount of different coordinator accounts (idx) that can be used to collect fees.
 Note that this constraint is not checked right now, if this situation is reached the `txprocessor` will fail later on preparing the `zki`
 - MaxTx: maximum amount of transactions that can fit in a batch, in other words: len(l1UserTxs) + len(l1CoordinatorTxs) + len(l2Txs) <= MaxTx
 - MaxL1Tx: maximum amount of L1 transactions that can fit in a batch, in other words: len(l1UserTxs) + len(l1CoordinatorTxs) <= MaxL1Tx
@@ -15,7 +15,7 @@ Transaction constrains (this takes into consideration the txs fetched from the p
 - Sender account exists: `FromIdx` must exist in the `StateDB`, and `tx.TokenID == account.TokenID` has to be respected
 - Sender account has enough balance: tx.Amount + fee <= account.Balance
 - Sender account has correct nonce: `tx.Nonce == account.Nonce`
-- Receipient account exists or can be created:
+- Recipient account exists or can be created:
 	- In case of transfer to Idx: account MUST already exist on StateDB, and match the `tx.TokenID`
 	- In case of transfer to Ethereum address: if the account doesn't exists, it can be created through a `l1CoordinatorTx` IF there is a valid `AccountCreationAuthorization`
 	- In case of transfer to BJJ: if the account doesn't exists, it can be created through a `l1CoordinatorTx` (no need for `AccountCreationAuthorization`)
@@ -24,7 +24,7 @@ according to the `RqOffset` spec: https://docs.hermez.io/#/developers/protocol/h
 
 Important considerations:
 - It's assumed that signatures are correct, since they're checked before inserting txs to the pool
-- The state is processed sequentialy meaning that each tx that is selected affects the state, in other words:
+- The state is processed sequentially meaning that each tx that is selected affects the state, in other words:
 the order in which txs are selected can make other txs became valid or invalid.
 This specially relevant for the constrains `Sender account has enough balance` and `Sender account has correct nonce`
 - The creation of accounts using `l1CoordinatorTxs` increments the amount of used L1 transactions.
@@ -50,9 +50,9 @@ in a way that all the atomic transactions from the same group preserve the relat
 This is done in this way because it's assumed that transactions from the same `AtomicGroup`
 have the same `AtomicGroupID`, and are ordered with valid `RqOffset` in the pool.
 - If one atomic transaction fails to be processed in the `Selection loop`,
-the group will be marked as invalid and the entire porcess will reboot from the beginning with the only difference being that
+the group will be marked as invalid and the entire process will reboot from the beginning with the only difference being that
 txs belonging to failed atomic groups will be discarded before reaching the `Selection loop`.
-This is done this way because the state is altered sequentialy, so if a transaction belonging to an atomic group is selected,
+This is done this way because the state is altered sequentially, so if a transaction belonging to an atomic group is selected,
 but later on a transaction from the same group can't be selected, the selection will be invalid since there will be a selected tx that depends on a tx that
 doesn't exist in the selection. Right now the mechanism that the StateDB has to revert changes is to go back to a previous checkpoint (checkpoints are created per batch).
 This limitation forces the txselector to restart from the beginning of the batch selection.
@@ -1125,92 +1125,86 @@ func filterFailedAtomicGroups(
 	return txsToProcess, filteredTxs
 }
 
-// filterInvalidAtomicGroups split the txs into the ones that can be porcessed
+// filterInvalidAtomicGroups split the txs into the ones that can be processed
 // and the ones that can't because they belong to an AtomicGroup that is impossible to forge
 // due to missing or bad ordered txs
 func filterInvalidAtomicGroups(
 	txs []common.PoolL2Tx,
 ) (txsToProcess []common.PoolL2Tx, filteredTxs []common.PoolL2Tx) {
-	// validate if an atomic group is valid in terms of requested txs
-	isValid := func(atomicGroup common.AtomicGroup) bool {
-		for i := 0; i < len(atomicGroup.Txs); i++ {
-			// Find requested tx
-			rqRelativePosition, err := api.RequestOffset2RelativePosition(atomicGroup.Txs[i].RqOffset)
-			if err != nil {
-				// TODO: err should be compliant with txSelectorError
-				return false
-			}
-			requestedPosition := i + rqRelativePosition
-			if requestedPosition > len(atomicGroup.Txs)-1 || requestedPosition < 0 {
-				// TODO: err should be compliant with txSelectorError
-				return false
-			}
-			requestedTx := atomicGroup.Txs[requestedPosition]
-			// Check if the requested tx match the Rq fields
-			if atomicGroup.Txs[i].RqFromIdx != requestedTx.FromIdx ||
-				atomicGroup.Txs[i].RqToIdx != requestedTx.ToIdx ||
-				atomicGroup.Txs[i].RqToEthAddr != requestedTx.ToEthAddr ||
-				atomicGroup.Txs[i].RqToBJJ != requestedTx.ToBJJ ||
-				atomicGroup.Txs[i].RqTokenID != requestedTx.TokenID ||
-				atomicGroup.Txs[i].RqFee != requestedTx.Fee ||
-				atomicGroup.Txs[i].RqNonce != requestedTx.Nonce {
-				// TODO: err should be compliant with txSelectorError
-				return false
-			}
-			// Check amount
-			if atomicGroup.Txs[i].RqAmount != nil && requestedTx.Amount != nil {
-				// If both are different to nil
-				if atomicGroup.Txs[i].RqAmount.Cmp(requestedTx.Amount) != 0 {
-					// They must have same value (to be valid)
-					return false
-				}
-			} else if atomicGroup.Txs[i].RqAmount != requestedTx.Amount {
-				// Else they must be both nil (to be valid)
-				return false
-			}
-		}
-		return true
-	}
-	// build atomic groups
+	// Separate txs into atomic groups
+	atomicGroups := make(map[common.AtomicGroupID]common.AtomicGroup)
 	for i := 0; i < len(txs); i++ {
 		atomicGroupID := txs[i].AtomicGroupID
 		if atomicGroupID == common.EmptyAtomicGroupID {
 			// Tx is not atomic, not filtering
 			txsToProcess = append(txsToProcess, txs[i])
 			continue
+		}
+		if atomicGroup, ok := atomicGroups[atomicGroupID]; !ok {
+			atomicGroups[atomicGroupID] = common.AtomicGroup{
+				Txs: []common.PoolL2Tx{txs[i]},
+			}
 		} else {
-			// Tx is atomic
-			// Create atomic group
-			atomicGroup := common.AtomicGroup{}
-			for i < len(txs) && txs[i].AtomicGroupID == atomicGroupID {
-				// Append all consecutive txs with same atomic group ID
-				atomicGroup.Txs = append(atomicGroup.Txs, txs[i])
-				i++
+			atomicGroup.Txs = append(atomicGroup.Txs, txs[i])
+			atomicGroups[atomicGroupID] = atomicGroup
+		}
+	}
+	// Validate atomic groups
+	for _, atomicGroup := range atomicGroups {
+		if !isAtomicGroupValid(atomicGroup) {
+			// Set Info message and add txs of the atomic group to filteredTxs
+			for i := 0; i < len(atomicGroup.Txs); i++ {
+				atomicGroup.Txs[i].Info = ErrInvalidAtomicGroup
+				atomicGroup.Txs[i].ErrorType = ErrInvalidAtomicGroupType
+				atomicGroup.Txs[i].ErrorCode = ErrInvalidAtomicGroupCode
+				filteredTxs = append(filteredTxs, atomicGroup.Txs[i])
 			}
-			// After the previous loop, i will point to the next tx with different atomic group ID,
-			// however before going to the next iteration i will be incremented, therefore it must be decremented
-			// unless the last tx of the array is part of the last atomic group
-			if i < len(txs) {
-				i--
-			}
-			// validate atomic groups
-			if !isValid(atomicGroup) {
-				// Set Info message and add txs of the atomic group to filteredTxs
-				for i := 0; i < len(atomicGroup.Txs); i++ {
-					atomicGroup.Txs[i].Info = ErrInvalidAtomicGroup
-					atomicGroup.Txs[i].ErrorType = ErrInvalidAtomicGroupType
-					atomicGroup.Txs[i].ErrorCode = ErrInvalidAtomicGroupCode
-					filteredTxs = append(filteredTxs, atomicGroup.Txs[i])
-				}
-			} else {
-				// Atomic group is valid, add txs of the atomic group to txsToProcess
-				for i := 0; i < len(atomicGroup.Txs); i++ {
-					txsToProcess = append(txsToProcess, atomicGroup.Txs[i])
-				}
+		} else {
+			// Atomic group is valid, add txs of the atomic group to txsToProcess
+			for i := 0; i < len(atomicGroup.Txs); i++ {
+				txsToProcess = append(txsToProcess, atomicGroup.Txs[i])
 			}
 		}
 	}
 	return txsToProcess, filteredTxs
+}
+
+func isAtomicGroupValid(atomicGroup common.AtomicGroup) bool {
+	for i := 0; i < len(atomicGroup.Txs); i++ {
+		// Find requested tx
+		rqRelativePosition, err := api.RequestOffset2RelativePosition(atomicGroup.Txs[i].RqOffset)
+		if err != nil {
+			return false
+		}
+		requestedPosition := i + rqRelativePosition
+		if requestedPosition > len(atomicGroup.Txs)-1 || requestedPosition < 0 {
+			return false
+		}
+		requestedTx := atomicGroup.Txs[requestedPosition]
+		// Check if the requested tx match the Rq fields
+		if atomicGroup.Txs[i].RqFromIdx != requestedTx.FromIdx ||
+			atomicGroup.Txs[i].RqToIdx != requestedTx.ToIdx ||
+			atomicGroup.Txs[i].RqToEthAddr != requestedTx.ToEthAddr ||
+			atomicGroup.Txs[i].RqToBJJ != requestedTx.ToBJJ ||
+			atomicGroup.Txs[i].RqTokenID != requestedTx.TokenID ||
+			atomicGroup.Txs[i].RqFee != requestedTx.Fee ||
+			atomicGroup.Txs[i].RqNonce != requestedTx.Nonce {
+			// TODO: err should be compliant with txSelectorError
+			return false
+		}
+		// Check amount
+		if atomicGroup.Txs[i].RqAmount != nil && requestedTx.Amount != nil {
+			// If both are different to nil
+			if atomicGroup.Txs[i].RqAmount.Cmp(requestedTx.Amount) != 0 {
+				// They must have same value (to be valid)
+				return false
+			}
+		} else if atomicGroup.Txs[i].RqAmount != requestedTx.Amount {
+			// Else they must be both nil (to be valid)
+			return false
+		}
+	}
+	return true
 }
 
 // calculateAtomicGroupsAverageFee generates a map
