@@ -7,7 +7,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/libp2p/go-libp2p-core/peer"
-
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 

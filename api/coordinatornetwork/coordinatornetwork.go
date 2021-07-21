@@ -10,21 +10,18 @@ package coordinatornetwork
 import (
 	"context"
 	"fmt"
+	mrand "math/rand"
 	"strconv"
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p/p2p/discovery"
-
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-
-	mrand "math/rand"
-
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/p2p/discovery"
 )
 
 const (
@@ -33,11 +30,15 @@ const (
 	discoveryServiceTag = "hermez-coordinator-network"
 )
 
+// CoordinatorNetwork it's a p2p communication layer that enables coordinators to exchange information
+// in benefit of the network and them selfs. The main goal is to share L2 data (common.PoolL2Tx and common.AccountCreationAuth)
 type CoordinatorNetwork struct {
 	txsPool  pubSubTxsPool
 	TxPoolCh chan *common.PoolL2Tx
 }
 
+// NewCoordinatorNetwork connects to coordinators network and return a CoordinatorNetwork
+// to be able to receive and send information from and to other coordinators
 // TODO: port should be constant, but this makes testing easier
 func NewCoordinatorNetwork(port string) (CoordinatorNetwork, error) {
 	ctx := context.Background()
@@ -48,8 +49,8 @@ func NewCoordinatorNetwork(port string) (CoordinatorNetwork, error) {
 		return CoordinatorNetwork{}, err
 	}
 	// TODO: generate ID from coordinator's priv key
-	r := mrand.New(mrand.NewSource(int64(randNum)))
-	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
+	r := mrand.New(mrand.NewSource(int64(randNum)))                       //nolint:gosec
+	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r) //nolint:gomnd
 	if err != nil {
 		return CoordinatorNetwork{}, err
 	}
@@ -82,6 +83,7 @@ func NewCoordinatorNetwork(port string) (CoordinatorNetwork, error) {
 	}, nil
 }
 
+// PublishTx send a L2 transaction to the coordinators network
 func (cn CoordinatorNetwork) PublishTx(tx common.PoolL2Tx) error {
 	return cn.txsPool.publish(tx)
 }
