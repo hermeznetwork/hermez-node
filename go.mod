@@ -21,11 +21,14 @@ require (
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.8.0
+	github.com/libp2p/go-libp2p v0.14.4
+	github.com/libp2p/go-libp2p-core v0.8.6
+	github.com/libp2p/go-libp2p-pubsub v0.5.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20210626002539-518b14aa39c0
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/mapstructure v1.3.0
-	github.com/prometheus/client_golang v1.3.0
+	github.com/prometheus/client_golang v1.10.0
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/russross/meddler v1.0.1
@@ -35,7 +38,7 @@ require (
 	github.com/yourbasic/graph v0.0.0-20210606180040-8ecfec1c2869
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.1
