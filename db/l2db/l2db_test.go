@@ -173,10 +173,18 @@ func TestAddTxTest(t *testing.T) {
 		assert.Equal(t, "UTC", nameZone)
 		assert.Equal(t, 0, offset)
 	}
+
+	// test, that we can update already existing tx
 	tx := &poolL2Txs[1]
+	fetchedTx, err := l2DB.GetTx(tx.TxID)
+	require.NoError(t, err)
+	assert.Equal(t, fetchedTx.TokenID, common.TokenID(2))
+	tx.TokenID = common.TokenID(1)
 	err = l2DBWithACC.AddTxTest(tx)
-	require.Error(t, err)
-	assert.Regexp(t, "duplicate key value", err.Error())
+	require.NoError(t, err)
+	fetchedTx, err = l2DB.GetTx(tx.TxID)
+	require.NoError(t, err)
+	assert.Equal(t, fetchedTx.TokenID, common.TokenID(1))
 }
 
 func TestAddTxAPI(t *testing.T) {
