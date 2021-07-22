@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
-	Hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
+	hermez "github.com/hermeznetwork/hermez-node/eth/contracts/hermez"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -274,7 +274,7 @@ type RollupClient struct {
 	client      *EthereumClient
 	chainID     *big.Int
 	address     ethCommon.Address
-	hermez      *Hermez.Hermez
+	hermez      *hermez.Hermez
 	token       *TokenClient
 	contractAbi abi.ABI
 	opts        *bind.CallOpts
@@ -283,11 +283,11 @@ type RollupClient struct {
 
 // NewRollupClient creates a new RollupClient
 func NewRollupClient(client *EthereumClient, address ethCommon.Address) (*RollupClient, error) {
-	contractAbi, err := abi.JSON(strings.NewReader(string(Hermez.HermezABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(hermez.HermezABI)))
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	hermez, err := Hermez.NewHermez(address, client.Client())
+	hermez, err := hermez.NewHermez(address, client.Client())
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
