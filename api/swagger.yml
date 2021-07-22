@@ -1806,7 +1806,7 @@ components:
         $ref: '#/components/schemas/PoolL2Transaction'
     TransactionId:
       type: string
-      description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](xxxtxid)
+      description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://docs.hermez.io/#/developers/dev-guide?id=transaction-id)
       example: "0x00000000000001e240004700" 
     TransactionIds:
       type: array
