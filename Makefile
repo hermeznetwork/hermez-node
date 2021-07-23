@@ -203,9 +203,16 @@ else
 endif
 	echo "  > Copying hez binary to /usr/local/bin"
 	cp dist/heznode /usr/local/bin/heznode
+ifneq ("$(wildcard $(/etc/hermez/config.toml))","")
 	echo "  > Copying config file to /etc/hermez"
 	mkdir -p /etc/hermez
 	cp cmd/heznode/cfg.builder.toml /etc/hermez/config.toml
+else
+	echo "  > Backing up old config file to to /etc/hermez/config.toml.old"
+	cp /etc/hermez/config.toml /etc/hermez/config.toml.old
+	echo "  > Copying config file to /etc/hermez"
+	cp cmd/heznode/cfg.builder.toml /etc/hermez/config.toml
+endif
 	echo "  > Registering as a service"
 	touch /etc/systemd/system/heznode.service
 	echo "[Unit]" | tee -a /etc/systemd/system/heznode.service > /dev/null
