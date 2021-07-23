@@ -201,8 +201,6 @@ else
 	echo "  - please, check the ./cmd/heznode/cfg.builder.toml!"
 	test -f ./cmd/heznode/cfg.builder.toml
 endif
-	echo "  > Copying hez binary to /usr/local/bin"
-	cp dist/heznode /usr/local/bin/heznode
 ifneq ("$(wildcard /etc/hermez/config.toml)","")
 	echo "  > Config file already exists - ignored."
 else
@@ -210,6 +208,7 @@ else
 	mkdir -p /etc/hermez
 	cp cmd/heznode/cfg.builder.toml /etc/hermez/config.toml
 endif
+ifeq ("$(wildcard /etc/systemd/system/heznode.service)", "")
 	echo "  > Registering as a service"
 	touch /etc/systemd/system/heznode.service
 	echo "[Unit]" | tee -a /etc/systemd/system/heznode.service > /dev/null
@@ -231,6 +230,13 @@ endif
 	echo "WantedBy=multi-user.target" | tee -a /etc/systemd/system/heznode.service > /dev/null
 	echo "" | tee -a /etc/systemd/system/heznode.service > /dev/null
 	systemctl daemon-reload
+else
+	echo "  > Service is already registered. Will be stoped!"
+	service heznode stop
+	rm /usr/local/bin/heznode
+endif
+	echo "  > Copying hez binary to /usr/local/bin"
+	cp dist/heznode /usr/local/bin/heznode
 	echo "  > Service is ready. Please update the configs at /etc/hermez/config.toml"
 	echo "  > You can use the service with service heznode status|start|stop"
 	echo "  Bye."
