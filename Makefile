@@ -187,27 +187,24 @@ exec:
 install:
 	echo "  > Installing heznode as a service"
 	echo "  > Checking requirements"
-ifneq ("$(wildcard $(dist/heznode))","")
+ifneq ("$(wildcard ./dist/heznode)","")
 	echo "  - heznode file found!"
 else
 	echo "  - heznode file not found!"
 	echo "  - please, run make build before make install!"
 	test -f ./dist/heznode
 endif
-ifneq ("$(wildcard $(cmd/heznode/cfg.builder.toml))","")
+ifneq ("$(wildcard ./cmd/heznode/cfg.builder.toml)","")
 	echo "  - config template found!"
 else
 	echo "  - config template not found!"
-	echo "  - please, check the !"
+	echo "  - please, check the ./cmd/heznode/cfg.builder.toml!"
 	test -f ./cmd/heznode/cfg.builder.toml
 endif
 	echo "  > Copying hez binary to /usr/local/bin"
 	cp dist/heznode /usr/local/bin/heznode
-ifneq ("$(wildcard $(/etc/hermez/config.toml))","")
-	echo "  > Backing up old config file to to /etc/hermez/config.toml.old"
-	cp /etc/hermez/config.toml /etc/hermez/config.toml.old
-	echo "  > Copying config file to /etc/hermez"
-	cp cmd/heznode/cfg.builder.toml /etc/hermez/config.toml
+ifneq ("$(wildcard /etc/hermez/config.toml)","")
+	echo "  > Config file already exists - ignored."
 else
 	echo "  > Copying config file to /etc/hermez"
 	mkdir -p /etc/hermez
