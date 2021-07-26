@@ -129,7 +129,20 @@ func (c *EthereumClient) EthAddress() (*ethCommon.Address, error) {
 
 // EthSuggestGasPrice retrieves the currently suggested gas price to allow a
 // timely execution of a transaction.
-func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (*big.Int, error) {
+func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (gasPrice *big.Int, err error) {
+	var head *types.Header
+	head, err =  c.client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		err = fmt.Errorf("[EthSuggestGasPrice]. Error getting head: %s", err.Error())
+		return
+	}
+	var tip *big.Int
+	tip, err = c.client.SuggestGasTipCap(ctx)
+	if err != nil {
+		err = fmt.Errorf("[EthSuggestGasPrice]. Error getting tip: %s\n", err.Error())
+		return
+	}
+	gasPrice = new(big.Int).Add(head.BaseFee, tip)
 	return c.client.SuggestGasTipCap(ctx)
 }
 
