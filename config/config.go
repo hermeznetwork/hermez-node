@@ -421,11 +421,11 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 	}
 	// Get file configuration
 	if err := Load(path, &cfg); err != nil {
-		log.Warn("error loading node configuration file: %w", err)
+		log.Warn("error loading node configuration file: ", err)
 	}
 	// Overwrite file configuration with the env configuration
 	if err := env.Parse(&cfg); err != nil {
-		log.Warn("error getting configuration from env: %w", err)
+		log.Warn("error getting configuration from env: ", err)
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
@@ -443,8 +443,17 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 // LoadAPIServer loads the APIServer configuration from path.
 func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 	var cfg APIServer
+	//Get default configuration
+	if err := LoadDefault(&cfg); err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("error loading default node configuration: %w", err))
+	}
+	// Get file configuration
 	if err := Load(path, &cfg); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("error loading apiServer configuration file: %w", err))
+		log.Warn("error loading apiServer configuration file: ", err)
+	}
+	// Overwrite file configuration with the env configuration
+	if err := env.Parse(&cfg); err != nil {
+		log.Warn("error getting configuration from env: ", err)
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
