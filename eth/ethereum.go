@@ -130,7 +130,7 @@ func (c *EthereumClient) EthAddress() (*ethCommon.Address, error) {
 // EthSuggestGasPrice retrieves the currently suggested gas price to allow a
 // timely execution of a transaction.
 func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return c.client.SuggestGasPrice(ctx)
+	return c.client.SuggestGasTipCap(ctx)
 }
 
 // EthKeyStore returns the keystore in the EthereumClient
