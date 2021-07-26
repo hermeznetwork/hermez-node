@@ -31,8 +31,8 @@ type Updater struct {
 
 // RecommendedFeePolicy describes how the recommended fee is calculated
 type RecommendedFeePolicy struct {
-	PolicyType  RecommendedFeePolicyType `validate:"required"`
-	StaticValue float64
+	PolicyType  RecommendedFeePolicyType `validate:"required" env:"RECOMMENDEDFEEPOLICY_POLICYTYPE"`
+	StaticValue float64                  `env:"RECOMMENDEDFEEPOLICY_STATICVALUE"`
 }
 
 // RecommendedFeePolicyType describes the different available recommended fee strategies

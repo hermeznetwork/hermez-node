@@ -34,22 +34,22 @@ const (
 
 // Fiat definition
 type Fiat struct {
-	APIKey       string
-	URL          string
-	BaseCurrency string
-	Currencies   string
+	APIKey       string `env:"PRICEUPDATER_FIAT_APIKEY"`
+	URL          string `env:"PRICEUPDATER_FIAT_URL"`
+	BaseCurrency string `env:"PRICEUPDATER_FIAT_BASECURRENCY"`
+	Currencies   string `env:"PRICEUPDATER_FIAT_CURRENCIES"`
 }
 
 // Provider definition
 type Provider struct {
-	Provider       string
-	BaseURL        string
-	URL            string
-	URLExtraParams string
+	Provider       string `env:"PRICEUPDATER_PROVIDER_PROVIDER"`
+	BaseURL        string `env:"PRICEUPDATER_PROVIDER_BASEURL"`
+	URL            string `env:"PRICEUPDATER_PROVIDER_URL"`
+	URLExtraParams string `env:"PRICEUPDATER_PROVIDER_URLEXTRAPARAMS"`
 	SymbolsMap     symbolsMap
 	AddressesMap   addressesMap
-	Symbols        string
-	Addresses      string
+	Symbols        string `env:"PRICEUPDATER_PROVIDER_SYMBOLS"`
+	Addresses      string `env:"PRICEUPDATER_PROVIDER_ADDRESSES"`
 }
 
 type staticMap struct {

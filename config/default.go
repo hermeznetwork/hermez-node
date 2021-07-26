@@ -1,3 +1,7 @@
+package config
+
+// DefaultValues is the default fonfigurations for the hermez node
+const DefaultValues = `
 [API]
 Address = "localhost:8086"
 Explorer = true
@@ -7,7 +11,7 @@ MaxSQLConnections = 100
 SQLConnectionTimeout = "2s"
 
 [PriceUpdater]
-Interval = "5s"
+Interval = "60s"
 Priority = "bitfinexV2,CoinGeckoV3"
 Statictokens="3=1.31,4=1.01"  # <tokenId>=<forced_price>,<tokenId>=<forced_price>
 
@@ -22,10 +26,6 @@ Provider = "bitfinexV2"
 BASEURL = "https://api-pub.bitfinex.com/v2/"
 URL = "ticker/t"
 URLExtraParams = "USD"
-# Available update methods:
-# - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
-# - static method is performed writing the price in Statictokens.
-# Example: Symbols = "0=ETH,1=HEZ,2=ignore,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=SUSHI:,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
 Symbols = "0=ETH,2=UST,8=ignore,9=SUSHI:,5=WBT,14=LINK:,12=AAVE:,7=XAUT:,10=COMP:,6=ETH"
 
 [[PriceUpdater.Provider]]
@@ -33,10 +33,6 @@ Provider = "CoinGeckoV3"
 BASEURL = "https://api.coingecko.com/api/v3/"
 URL = "simple/token_price/ethereum?contract_addresses="
 URLExtraParams = "&vs_currencies=usd"
-# Available update methods:
-# - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
-# - static method is performed writing the price in Statictokens.
-# Example: Addresses="0=0x00,1=0x12,2=0x12,4=0x12,5=0x12,6=,7=0x12,8=,9=0x12,10=0x12,11=ignore,12=0x12,13=0x12,14=0x12"
 Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=ignore"
 
 [Debug]
@@ -73,9 +69,6 @@ Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
 
 [Coordinator]
 ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD" # Non-Boot Coordinator
-# ForgerAddressPrivateKey = "0x30f5fddb34cd4166adb2c6003fa6b18f380fd2341376be42cf1c7937004ac7a3"
-# ForgerAddress = "0xb4124ceb3451635dacedd11767f004d8a28c6ee7" # Boot Coordinator
-# ForgerAddressPrivateKey = "0xa8a54b2d8197bc0b19bb8a084031be71835580a01e70a45a13babd16c9bc1563"
 MinimumForgeAddressBalance = "0"
 ConfirmBlocks = 10
 L1BatchTimeoutPerc = 0.6
@@ -93,9 +86,7 @@ IgnoreSlotCommitment = false
 
 [Coordinator.FeeAccount]
 Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"
-# PrivateKey = "0x3a9270c020e169097808da4b02e8d9100be0f8a38cfad3dcfc0b398076381fdd"
 BJJ = "0x130c5c7f294792559f469220274f3d3b2dca6e89f4c5ec88d3a08bf73262171b"
-# BJJPrivateKey = "0xb556862fb60e7cf4c0a8a7f44baf2ab06a4c90ac39decc4eef363b6142d07a34"
 
 [Coordinator.L2DB]
 SafetyPeriod = 10
@@ -154,9 +145,6 @@ URL = "https://api.etherscan.io"
 APIKey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 
 [RecommendedFeePolicy]
-# Strategy used to calculate the recommended fee that the API will expose.
-# Available options:
-# - Static: always return the same value (StaticValue) in USD
-# - AvgLastHour: calculate using the average fee of the forged transactions during the last hour
 PolicyType = "Static"
 StaticValue = 0.99
+`
