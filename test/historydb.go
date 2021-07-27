@@ -8,6 +8,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
@@ -297,7 +298,7 @@ func GenL2Txs(
 			Position:    i - fromIdx,
 			Amount:      amount,
 			Fee:         fee,
-			Nonce:       common.Nonce(i + 1),
+			Nonce:       nonce.Nonce(i + 1),
 			EthBlockNum: blocks[i%len(blocks)].Num,
 			Type:        randomTxType(i),
 		}

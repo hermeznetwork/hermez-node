@@ -13,6 +13,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -48,7 +49,7 @@ func newAccount(t *testing.T, i int) *common.Account {
 	return &common.Account{
 		Idx:     common.Idx(256 + i),
 		TokenID: common.TokenID(i),
-		Nonce:   common.Nonce(i),
+		Nonce:   nonce.Nonce(i),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
 		EthAddr: address,
@@ -523,7 +524,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 			TokenID: 0xFFFFFFFF,
 			BJJ:     bjj0,
 			EthAddr: ethCommon.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-			Nonce:   common.Nonce(0xFFFFFFFFFF),
+			Nonce:   nonce.Nonce(0xFFFFFFFFFF),
 			Balance: bigFromStr("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16),
 		},
 		{
@@ -531,7 +532,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 			TokenID: 0,
 			BJJ:     bjj1,
 			EthAddr: ethCommon.HexToAddress("0x00"),
-			Nonce:   common.Nonce(0),
+			Nonce:   nonce.Nonce(0),
 			Balance: bigFromStr("0", 10),
 		},
 		{
@@ -539,7 +540,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 			TokenID: 3,
 			BJJ:     bjj2,
 			EthAddr: ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
-			Nonce:   common.Nonce(129),
+			Nonce:   nonce.Nonce(129),
 			Balance: bigFromStr("42000000000000000000", 10),
 		},
 		{
@@ -547,7 +548,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 			TokenID: 1000,
 			BJJ:     bjj3,
 			EthAddr: ethCommon.HexToAddress("0x64"),
-			Nonce:   common.Nonce(1900),
+			Nonce:   nonce.Nonce(1900),
 			Balance: bigFromStr("14000000000000000000", 10),
 		},
 	}
