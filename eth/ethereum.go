@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
-	tokenhez "github.com/hermeznetwork/hermez-node/eth/contracts/tokenhez"
+	"github.com/hermeznetwork/hermez-node/eth/contracts/tokenhez"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
@@ -48,7 +48,7 @@ var (
 	// ErrAccountNil is used when the calls can not be made because the account is nil
 	ErrAccountNil = fmt.Errorf("Authorized calls can't be made when the account is nil")
 	// ErrBlockHashMismatchEvent is used when there's a block hash mismatch
-	// beetween different events of the same block
+	// between different events of the same block
 	ErrBlockHashMismatchEvent = fmt.Errorf("block hash mismatch in event log")
 )
 
@@ -129,8 +129,23 @@ func (c *EthereumClient) EthAddress() (*ethCommon.Address, error) {
 
 // EthSuggestGasPrice retrieves the currently suggested gas price to allow a
 // timely execution of a transaction.
-func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return c.client.SuggestGasPrice(ctx)
+func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (gasPrice *big.Int, err error) {
+	var head *types.Header
+	head, err = c.client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		err = fmt.Errorf("[EthSuggestGasPrice]. Error getting head: %s", err.Error())
+		return
+	}
+	var tip *big.Int
+	tip, err = c.client.SuggestGasTipCap(ctx)
+	if err != nil {
+		err = fmt.Errorf("[EthSuggestGasPrice]. Error getting tip: %s", err.Error())
+		return
+	}
+	baseFee := head.BaseFee
+	gasPrice = new(big.Int).Add(baseFee, tip)
+	log.Debugw("Suggested Gas Price:", "tip", tip, "baseFee", baseFee, "gasPrice", gasPrice)
+	return
 }
 
 // EthKeyStore returns the keystore in the EthereumClient
