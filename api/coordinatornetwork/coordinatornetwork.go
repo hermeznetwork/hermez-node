@@ -23,7 +23,6 @@ import (
 	// dht "github.com/libp2p/go-libp2p-kad-dht/dual"
 	"github.com/mr-tron/base58"
 	"github.com/multiformats/go-multihash"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -114,41 +113,29 @@ func (coordnet CoordinatorNetwork) announceConnect() error {
 	if err != nil {
 		return err
 	}
-	logrus.Debug("Generated the Service CID.")
 
 	// Announce that this host can provide the service CID
 	if err := coordnet.dht.Provide(coordnet.ctx, cidvalue, true); err != nil {
 		return err
 	}
-	// Debug log
-	log.Debug("Announced the PeerChat Service.")
-	// Sleep to give time for the advertisment to propogate
+	// Sleep to give time for the advertisement to propagate
 	time.Sleep(time.Second * 5)
 
 	// Find the other providers for the service CID
 	peerchan := coordnet.dht.FindProvidersAsync(coordnet.ctx, cidvalue, 0)
-	// Trace log
-	log.Debug("Discovered PeerChat Service Peers.")
-
 	// Connect to peers as they are discovered
 	go handlePeerDiscovery(coordnet.self, peerchan)
-	// Debug log
-	log.Debug("Started Peer Connection Handler.")
 	return nil
 }
 
 func (coordnet CoordinatorNetwork) advertiseConnect() error {
 	// Advertise the availabilty of the service on this node
-	ttl, err := coordnet.discovery.Advertise(coordnet.ctx, discoveryServiceTag)
+	_, err := coordnet.discovery.Advertise(coordnet.ctx, discoveryServiceTag)
 	if err != nil {
 		return err
 	}
-	// Debug log
-	logrus.Debugln("Advertised the PeerChat Service.")
-	// Sleep to give time for the advertisment to propogate
+	// Sleep to give time for the advertisement to propagate
 	time.Sleep(time.Second * 5)
-	// Debug log
-	log.Debugf("Service Time-to-Live is %s", ttl)
 
 	// Find all peers advertising the same service
 	peerchan, err := coordnet.discovery.FindPeers(coordnet.ctx, discoveryServiceTag)
@@ -156,13 +143,8 @@ func (coordnet CoordinatorNetwork) advertiseConnect() error {
 	if err != nil {
 		return err
 	}
-	// Trace log
-	logrus.Debug("Discovered PeerChat Service Peers.")
-
 	// Connect to peers as they are discovered
 	go handlePeerDiscovery(coordnet.self, peerchan)
-	// Trace log
-	logrus.Info("Started Peer Connection Handler.")
 	return nil
 }
 
@@ -194,12 +176,7 @@ func handlePeerDiscovery(self host.Host, peerchan <-chan peer.AddrInfo) {
 		if peer.ID == self.ID() {
 			continue
 		}
-		log.Debug("New peer found")
 		// Connect to the peer
-		if err := self.Connect(context.Background(), peer); err != nil {
-			log.Warn("Error connecting to discovered peer: ", err)
-		} else {
-			log.Info("Connected to new peer. ", peer.ID)
-		}
+		self.Connect(context.Background(), peer)
 	}
 }

@@ -27,6 +27,7 @@ func TestPubSubFakeServer(t *testing.T) {
 				log.Warn(err)
 			}
 			time.Sleep(10 * time.Second)
+			log.Infof("%d peers connected to the pubsub", len(coordnet.txsPool.topic.ListPeers()))
 		}
 	}()
 
