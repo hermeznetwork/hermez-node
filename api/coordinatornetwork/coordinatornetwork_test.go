@@ -13,6 +13,7 @@ import (
 )
 
 func TestPubSubFakeServer(t *testing.T) {
+	// NOTE THAT THIS IS INTENDED TO RUN MANUALLY USING DIFFERENT MACHINES
 	// Fake server
 	if os.Getenv("FAKE_COORDNET") != "yes" {
 		return

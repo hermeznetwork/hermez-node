@@ -9,20 +9,13 @@ package coordinatornetwork
 
 import (
 	"context"
-	"crypto/sha256"
-	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
-
 	// dht "github.com/libp2p/go-libp2p-kad-dht/dual"
-	"github.com/mr-tron/base58"
-	"github.com/multiformats/go-multihash"
 )
 
 const (
@@ -51,20 +44,11 @@ func NewCoordinatorNetwork(registeredCoords []common.Coordinator) (CoordinatorNe
 	ctx := context.Background()
 
 	// Setup a P2P Host Node
-	self, coordnetDHT, err := setupHost(ctx)
+	self, coordnetDHT, err := setupHost(ctx, registeredCoords)
 	if err != nil {
 		return CoordinatorNetwork{}, err
 	}
 	log.Debug("libp2p ID: ", self.ID().Pretty())
-	// Debug log
-	log.Debug("Created the P2P Host and the Kademlia DHT.")
-
-	// Bootstrap the Kad DHT
-	if err := bootstrapDHT(ctx, self, coordnetDHT); err != nil {
-		return CoordinatorNetwork{}, err
-	}
-	// Debug log
-	log.Debug("Bootstrapped the Kademlia DHT and Connected to Bootstrap Peers")
 
 	// Create a peer discovery service using the Kad DHT
 	routingDiscovery := discovery.NewRoutingDiscovery(coordnetDHT)
@@ -108,78 +92,4 @@ func (coordnet CoordinatorNetwork) FindMorePeers() error {
 		return err
 	}
 	return nil
-}
-
-func (coordnet CoordinatorNetwork) announceConnect() error {
-	// Generate the Service CID
-	cidvalue, err := generateCID(discoveryServiceTag)
-	if err != nil {
-		return err
-	}
-
-	// Announce that this host can provide the service CID
-	if err := coordnet.dht.Provide(coordnet.ctx, cidvalue, true); err != nil {
-		return err
-	}
-	// Sleep to give time for the advertisement to propagate
-	time.Sleep(time.Second * 5)
-
-	// Find the other providers for the service CID
-	peerchan := coordnet.dht.FindProvidersAsync(coordnet.ctx, cidvalue, 0)
-	// Connect to peers as they are discovered
-	go handlePeerDiscovery(coordnet.self, peerchan)
-	return nil
-}
-
-func (coordnet CoordinatorNetwork) advertiseConnect() error {
-	// Advertise the availabilty of the service on this node
-	_, err := coordnet.discovery.Advertise(coordnet.ctx, discoveryServiceTag)
-	if err != nil {
-		return err
-	}
-	// Sleep to give time for the advertisement to propagate
-	time.Sleep(time.Second * 5)
-
-	// Find all peers advertising the same service
-	peerchan, err := coordnet.discovery.FindPeers(coordnet.ctx, discoveryServiceTag)
-	// Handle any potential error
-	if err != nil {
-		return err
-	}
-	// Connect to peers as they are discovered
-	go handlePeerDiscovery(coordnet.self, peerchan)
-	return nil
-}
-
-func generateCID(namestring string) (cid.Cid, error) {
-	// Hash the service content ID with SHA256
-	hash := sha256.Sum256([]byte(namestring))
-	// Append the hash with the hashing codec ID for SHA2-256 (0x12),
-	// the digest size (0x20) and the hash of the service content ID
-	finalhash := append([]byte{0x12, 0x20}, hash[:]...)
-	// Encode the fullhash to Base58
-	b58string := base58.Encode(finalhash)
-
-	// Generate a Multihash from the base58 string
-	mulhash, err := multihash.FromB58String(string(b58string))
-	if err != nil {
-		return cid.Cid{}, err
-	}
-
-	// Generate a CID from the Multihash
-	cidValue := cid.NewCidV1(12, mulhash)
-	// Return the CID
-	return cidValue, nil
-}
-
-func handlePeerDiscovery(self host.Host, peerchan <-chan peer.AddrInfo) {
-	// Iterate over the peer channel
-	for peer := range peerchan {
-		// Ignore if the discovered peer is the host itself
-		if peer.ID == self.ID() {
-			continue
-		}
-		// Connect to the peer
-		self.Connect(context.Background(), peer)
-	}
 }

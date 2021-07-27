@@ -39,7 +39,6 @@ require (
 	github.com/prometheus/client_golang v1.10.0
 	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/russross/meddler v1.0.1
-	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/urfave/cli/v2 v2.3.0

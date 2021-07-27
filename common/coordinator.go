@@ -1,6 +1,8 @@
 package common
 
 import (
+	"errors"
+
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/multiformats/go-multiaddr"
 )
@@ -24,8 +26,14 @@ const CoordinatorsNetworkPort = "3598"
 
 // P2PAddr returns a multi address that allows to connect with the Coordinator using libp2p2
 func (coord Coordinator) P2PAddr() (multiaddr.Multiaddr, error) {
-	// addrString := fmt.Sprintf("/http/ip4/%s/tcp/%s/", coord.URL, CoordinatorsNetworkPort)
-	// return multiaddr.NewMultiaddr(addrString)
-	// return multiaddr.NewMultiaddr("/ip4/18.196.225.34/tcp/3598/p2p/QmW3S7oaYMizmuwiz8eMAXwvAx1cJxQLHfp1eztpJPSD89")
-	return multiaddr.NewMultiaddr("/ip4/35.180.103.142/tcp/3598/p2p/QmW3S7oaYMizmuwiz8eMAXwvAx1cJxQLHfp1eztpJPSD89")
+	/*
+		addr must be one of the following formats:
+		- /dns/<URL>/tcp/3598/p2p/<libp2p ID>
+		- /ip4/<IPv4>/tcp/3598/p2p/<libp2p ID>
+
+		TODO:
+		- parse the coordinator URL and decide to use ip4 or dns
+		- Use API to get libp2p ID OR find a way to derivate it from Ethereum public key
+	*/
+	return nil, errors.New("not implemented yet")
 }
