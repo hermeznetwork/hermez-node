@@ -34,22 +34,22 @@ const (
 
 // Fiat definition
 type Fiat struct {
-	APIKey       string `env:"PRICEUPDATER_FIAT_APIKEY"`
-	URL          string `env:"PRICEUPDATER_FIAT_URL"`
-	BaseCurrency string `env:"PRICEUPDATER_FIAT_BASECURRENCY"`
-	Currencies   string `env:"PRICEUPDATER_FIAT_CURRENCIES"`
+	APIKey       string `env:"HEZNODE_PRICEUPDATER_FIAT_APIKEY"`
+	URL          string `env:"HEZNODE_PRICEUPDATER_FIAT_URL"`
+	BaseCurrency string `env:"HEZNODE_PRICEUPDATER_FIAT_BASECURRENCY"`
+	Currencies   string `env:"HEZNODE_PRICEUPDATER_FIAT_CURRENCIES"`
 }
 
 // Provider definition
 type Provider struct {
-	Provider       string `env:"PRICEUPDATER_PROVIDER_PROVIDER"`
-	BaseURL        string `env:"PRICEUPDATER_PROVIDER_BASEURL"`
-	URL            string `env:"PRICEUPDATER_PROVIDER_URL"`
-	URLExtraParams string `env:"PRICEUPDATER_PROVIDER_URLEXTRAPARAMS"`
+	Provider       string `env:"HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER"`
+	BaseURL        string `env:"HEZNODE_PRICEUPDATER_PROVIDER_BASEURL"`
+	URL            string `env:"HEZNODE_PRICEUPDATER_PROVIDER_URL"`
+	URLExtraParams string `env:"HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS"`
 	SymbolsMap     symbolsMap
 	AddressesMap   addressesMap
-	Symbols        string `env:"PRICEUPDATER_PROVIDER_SYMBOLS"`
-	Addresses      string `env:"PRICEUPDATER_PROVIDER_ADDRESSES"`
+	Symbols        string `env:"HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS"`
+	Addresses      string `env:"HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES"`
 }
 
 type staticMap struct {
