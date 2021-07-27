@@ -33,7 +33,7 @@ func (coord Coordinator) P2PAddr() (multiaddr.Multiaddr, error) {
 
 		TODO:
 		- parse the coordinator URL and decide to use ip4 or dns
-		- Use API to get libp2p ID OR find a way to derivate it from Ethereum public key
+		- Use API to get libp2p ID OR find a way to derive it from Ethereum public key
 	*/
 	return nil, errors.New("not implemented yet")
 }
