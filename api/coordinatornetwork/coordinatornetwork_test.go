@@ -41,7 +41,7 @@ func TestPubSubFakeServer(t *testing.T) {
 		for _, peer := range peers {
 			log.Info(peer.Pretty())
 		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(60 * time.Second)
 		// Send tx
 		txToPublish, err := common.NewPoolL2Tx(&common.PoolL2Tx{
 			FromIdx:     666,
