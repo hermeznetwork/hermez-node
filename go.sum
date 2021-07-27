@@ -415,6 +415,12 @@ github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO
 github.com/hashicorp/mdns v1.0.0/go.mod h1:tL+uN++7HEJ6SQLQ2/p+z2pH24WQKWjBPkE0mNTz8vQ=
 github.com/hashicorp/memberlist v0.1.3/go.mod h1:ajVTdAv/9Im8oMAAj5G31PhhMCZJV2pPBoIllUwCN7I=
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
+github.com/hermeznetwork/config-library v0.0.0-20210727094138-4ac27602c752 h1:hkc67f3LDwUJtO+zxuAMWwOElG7iJMlz0ipgQtlrgVE=
+github.com/hermeznetwork/config-library v0.0.0-20210727094138-4ac27602c752/go.mod h1:Fj3NQVP+/M3AGKFVdUEXGBsarxe9w/+gIXWgRVKmXiY=
+github.com/hermeznetwork/config-library v0.0.0-20210727095600-d8e1134ae6dc h1:0UceZvto5OuOMcKPVkKWKkabULz+4T2+xPwGdCAS0hA=
+github.com/hermeznetwork/config-library v0.0.0-20210727095600-d8e1134ae6dc/go.mod h1:Fj3NQVP+/M3AGKFVdUEXGBsarxe9w/+gIXWgRVKmXiY=
+github.com/hermeznetwork/config-library v0.0.0-20210727102212-21a5122ec505 h1:k0P/GqavM80SQjuFc+7MST70C9LEUD5ARsACBxJewXU=
+github.com/hermeznetwork/config-library v0.0.0-20210727102212-21a5122ec505/go.mod h1:xTrtoI9DQsj03dB+pn0rYiFbt5eFc71B5HvmD73sew4=
 github.com/hermeznetwork/hermez-go-sdk v0.1.1 h1:rXdjnekVOD26hkNTUwU7yr4rlj5hk5i0xoXJOtL3Z9s=
 github.com/hermeznetwork/hermez-go-sdk v0.1.1/go.mod h1:IJUcE8mSHTAX0aucz0CxNwatWglvwmqh77fyvFqnEuw=
 github.com/hermeznetwork/hermez-node v1.1.0/go.mod h1:cq4UzG6AqY+KTzgsIyU2/LggAYhUB/DHI7B+FGvg4nw=

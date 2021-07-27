@@ -2,20 +2,17 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"time"
 
-	"github.com/BurntSushi/toml"
-	"github.com/caarlos0/env/v6"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"gopkg.in/go-playground/validator.v9"
+	configLibrary "github.com/hermeznetwork/config-library"
 )
 
 // Duration is a wrapper type that parses time duration from text.
@@ -399,33 +396,13 @@ type APIServer struct {
 	Debug NodeDebug `validate:"required"`
 }
 
-// Load loads a generic config.
-func Load(path string, cfg interface{}) error {
-	bs, err := ioutil.ReadFile(path) //nolint:gosec
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	cfgToml := string(bs)
-	if _, err := toml.Decode(cfgToml, cfg); err != nil {
-		return tracerr.Wrap(err)
-	}
-	return nil
-}
-
 // LoadNode loads the Node configuration from path.
 func LoadNode(path string, coordinator bool) (*Node, error) {
 	var cfg Node
-	//Get default configuration
-	if err := LoadDefault(&cfg); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("error loading default node configuration: %w", err))
-	}
-	// Get file configuration
-	if err := Load(path, &cfg); err != nil {
-		log.Warn("error loading node configuration file: ", err)
-	}
-	// Overwrite file configuration with the env configuration
-	if err := env.Parse(&cfg); err != nil {
-		log.Warn("error getting configuration from env: ", err)
+	err := configLibrary.LoadConfig(path, DefaultValues, &cfg)
+	if err != nil {
+		//Split errors depending on if there is a file error, a env error or a default error
+		return nil, err
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
@@ -443,17 +420,10 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 // LoadAPIServer loads the APIServer configuration from path.
 func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 	var cfg APIServer
-	//Get default configuration
-	if err := LoadDefault(&cfg); err != nil {
-		return nil, tracerr.Wrap(fmt.Errorf("error loading default node configuration: %w", err))
-	}
-	// Get file configuration
-	if err := Load(path, &cfg); err != nil {
-		log.Warn("error loading apiServer configuration file: ", err)
-	}
-	// Overwrite file configuration with the env configuration
-	if err := env.Parse(&cfg); err != nil {
-		log.Warn("error getting configuration from env: ", err)
+	err := configLibrary.LoadConfig(path, DefaultValues, &cfg)
+	if err != nil {
+		//Split errors depending on if there is a file error, a env error or a default error
+		return nil, err
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
@@ -466,12 +436,4 @@ func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 		}
 	}
 	return &cfg, nil
-}
-
-// LoadDefault loads the default configuration of the hermez node
-func LoadDefault(cfg interface{}) error {
-	if _, err := toml.Decode(DefaultValues, cfg); err != nil {
-		return tracerr.Wrap(err)
-	}
-	return nil
 }
