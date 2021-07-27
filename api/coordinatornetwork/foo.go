@@ -3,7 +3,6 @@ package coordinatornetwork
 import (
 	"context"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -12,11 +11,11 @@ import (
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/routing"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 
 	// dht "github.com/libp2p/go-libp2p-kad-dht/dual"
+
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	yamux "github.com/libp2p/go-libp2p-yamux"
@@ -131,21 +130,21 @@ func bootstrapDHT(ctx context.Context, self host.Host, coordnetDHT *dht.IpfsDHT)
 
 	// TODO: this should be built using coordinator info
 	// Connect to other coordinators to bootstrap the network
-	_addr := os.Getenv("ADDR")
-	addr, err := multiaddr.NewMultiaddr(_addr)
-	if err != nil {
-		return err
-	}
-	peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
-	if err != nil {
-		log.Warn(err)
-	} else {
-		if err := self.Connect(ctx, *peerInfo); err != nil {
-			log.Infof("Failed to connect to coordinator %s: %s", peerInfo.String(), err)
-		} else {
-			log.Infof("Connection established with coordinator: %s", peerInfo.String())
-		}
-	}
+	// _addr := os.Getenv("ADDR")
+	// addr, err := multiaddr.NewMultiaddr(_addr)
+	// if err != nil {
+	// 	return err
+	// }
+	// peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
+	// if err != nil {
+	// 	log.Warn(err)
+	// } else {
+	// 	if err := self.Connect(ctx, *peerInfo); err != nil {
+	// 		log.Infof("Failed to connect to coordinator %s: %s", peerInfo.String(), err)
+	// 	} else {
+	// 		log.Infof("Connection established with coordinator: %s", peerInfo.String())
+	// 	}
+	// }
 	log.Info("Generated DHT Configuration.")
 
 	// Log the number of bootstrap peers connected
