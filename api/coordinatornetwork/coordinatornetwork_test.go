@@ -68,7 +68,21 @@ func TestPubSubFakeServer(t *testing.T) {
 	require.NoError(t, err)
 
 	// find other peers
-	coordnet.AdvertiseConnect()
+	go func() {
+		for {
+			if err := coordnet.AdvertiseConnect(); err != nil {
+				log.Error(err)
+			} else {
+				log.Debug("SUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU")
+			}
+			if err := coordnet.AnnounceConnect(); err != nil {
+				log.Error(err)
+			} else {
+				log.Debug("SUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU")
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}()
 
 	// Receive or send
 	if os.Getenv("PUBLISH") == "yes" {
@@ -81,6 +95,11 @@ func TestPubSubFakeServer(t *testing.T) {
 		})
 		require.NoError(t, err)
 		time.Sleep(30 * time.Second)
+		log.Info("peers on the pubsub: ")
+		peers := coordnet.txsPool.topic.ListPeers()
+		for _, v := range peers {
+			log.Info(v.Pretty())
+		}
 		require.NoError(t, coordnet.PublishTx(*txToPublish))
 		log.Infof("Tx %s published to the network", txToPublish.TxID.String())
 		return
