@@ -3,7 +3,6 @@ package coordinatornetwork
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"math/rand"
 	"os"
 	"time"
@@ -134,7 +133,8 @@ func setupCoordnetDHT(ctx context.Context, self host.Host, registeredCoordinator
 	}
 
 	if len(bootstrapPeers) == 0 {
-		return nil, errors.New("Unable to set any bootstrap peer. Coordinator network will fail to stablish connection")
+		log.Error("Unable to set any bootstrap peer. Coordinator network will fail to stablish connection," +
+			"unless someone connects to this coordinator directly (note that at some point there has to be a first peer in the network)")
 	}
 
 	// Start a Kademlia DHT on the host in server mode using coordinators as bootstrap peers
