@@ -24,7 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func setupHost(ctx context.Context, config *CoordinatorNetworkAdvancedConfig) (host.Host, *dht.IpfsDHT, error) {
+func setupHost(ctx context.Context) (host.Host, *dht.IpfsDHT, error) {
 	// Set up the host identity options
 	// Create ID by generating private key
 	// TODO: generate ID from coordinator's priv key
@@ -46,11 +46,7 @@ func setupHost(ctx context.Context, config *CoordinatorNetworkAdvancedConfig) (h
 	log.Info("Generated P2P Security and Transport Configurations.")
 
 	// Set up host listener address options
-	libp2pPort := common.CoordinatorsNetworkPort
-	if config != nil && config.port != "" {
-		libp2pPort = config.port
-	}
-	muladdr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + libp2pPort)
+	muladdr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + common.CoordinatorsNetworkPort)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -98,8 +94,6 @@ func setupHost(ctx context.Context, config *CoordinatorNetworkAdvancedConfig) (h
 
 func setupCoordnetDHT(ctx context.Context, self host.Host) (*dht.IpfsDHT, error) {
 	// Create DHT server mode option
-	// dhtMode := dht.LanDHTOption()
-	// dhtMode := dht.WanDHTOption()
 	dhtMode := dht.Mode(dht.ModeServer)
 
 	bootstrappeers := dht.GetDefaultBootstrapPeerAddrInfos()
@@ -124,28 +118,6 @@ func bootstrapDHT(ctx context.Context, self host.Host, coordnetDHT *dht.IpfsDHT)
 	if err := coordnetDHT.Bootstrap(ctx); err != nil {
 		return err
 	}
-
-	// Trace log
-	logrus.Info("Set the Kademlia DHT into Bootstrap Mode.")
-
-	// TODO: this should be built using coordinator info
-	// Connect to other coordinators to bootstrap the network
-	// _addr := os.Getenv("ADDR")
-	// addr, err := multiaddr.NewMultiaddr(_addr)
-	// if err != nil {
-	// 	return err
-	// }
-	// peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
-	// if err != nil {
-	// 	log.Warn(err)
-	// } else {
-	// 	if err := self.Connect(ctx, *peerInfo); err != nil {
-	// 		log.Infof("Failed to connect to coordinator %s: %s", peerInfo.String(), err)
-	// 	} else {
-	// 		log.Infof("Connection established with coordinator: %s", peerInfo.String())
-	// 	}
-	// }
-	log.Info("Generated DHT Configuration.")
 
 	// Log the number of bootstrap peers connected
 	return nil
