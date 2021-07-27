@@ -72,7 +72,10 @@ func NewCoordinatorNetwork(registeredCoords []common.Coordinator) (CoordinatorNe
 	log.Debug("Created the Peer Discovery Service.")
 
 	// Create a PubSub handler with the routing discovery
-	pubsubHandler := setupPubSub(ctx, self, routingDiscovery)
+	pubsubHandler, err := setupPubSub(ctx, self, routingDiscovery)
+	if err != nil {
+		return CoordinatorNetwork{}, err
+	}
 
 	// Join transactions pool pubsub network
 	txsPool, err := joinPubSubTxsPool(ctx, pubsubHandler, self.ID())

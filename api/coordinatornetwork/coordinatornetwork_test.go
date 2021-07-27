@@ -54,6 +54,7 @@ func TestPubSubFakeServer(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, coordnet.PublishTx(*txToPublish))
 		log.Infof("Tx %s published to the network", txToPublish.TxID.String())
+		time.Sleep(10 * time.Second)
 		return
 	}
 	log.Warn("Entering endless loop, until a tx is received or ^C is received")

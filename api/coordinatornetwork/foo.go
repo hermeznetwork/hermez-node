@@ -23,7 +23,6 @@ import (
 	yamux "github.com/libp2p/go-libp2p-yamux"
 	"github.com/libp2p/go-tcp-transport"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/sirupsen/logrus"
 )
 
 func setupHost(ctx context.Context) (host.Host, *dht.IpfsDHT, error) {
@@ -98,7 +97,8 @@ func setupCoordnetDHT(ctx context.Context, self host.Host) (*dht.IpfsDHT, error)
 	// Create DHT server mode option
 	dhtMode := dht.Mode(dht.ModeServer)
 
-	bootstrappeers := dht.GetDefaultBootstrapPeerAddrInfos()
+	// bootstrappeers := dht.GetDefaultBootstrapPeerAddrInfos()
+	bootstrappeers := []peer.AddrInfo{}
 	// Create the DHT bootstrap peers option
 	// TODO: replace with coordinators
 	_addr := os.Getenv("ADDR")
@@ -139,17 +139,7 @@ func bootstrapDHT(ctx context.Context, self host.Host, coordnetDHT *dht.IpfsDHT)
 	return nil
 }
 
-func setupPubSub(ctx context.Context, nodehost host.Host, routingdiscovery *discovery.RoutingDiscovery) *pubsub.PubSub {
+func setupPubSub(ctx context.Context, nodehost host.Host, routingdiscovery *discovery.RoutingDiscovery) (*pubsub.PubSub, error) {
 	// Create a new PubSub service which uses a GossipSub router
-	pubsubHandler, err := pubsub.NewGossipSub(ctx, nodehost, pubsub.WithDiscovery(routingdiscovery))
-	// Handle any potential error
-	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"error": err.Error(),
-			"type":  "GossipSub",
-		}).Fatalln("PubSub Handler Creation Failed!")
-	}
-
-	// Return the PubSub handler
-	return pubsubHandler
+	return pubsub.NewGossipSub(ctx, nodehost, pubsub.WithDiscovery(routingdiscovery))
 }

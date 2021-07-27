@@ -84,7 +84,6 @@ func (psTxsPool *pubSubTxsPool) readLoop() {
 			continue
 		}
 		log.Debug(psTxsPool.self.Pretty(), ": received tx from ", msg.ReceivedFrom.Pretty())
-		panic("SUUU")
 		tx := &common.PoolL2Tx{}
 		err = json.Unmarshal(msg.Data, tx)
 		if err != nil {
