@@ -98,7 +98,7 @@ func setupCoordnetDHT(ctx context.Context, self host.Host) (*dht.IpfsDHT, error)
 	// Create DHT server mode option
 	dhtMode := dht.Mode(dht.ModeServer)
 
-	bootstrappeers := []peer.AddrInfo{}
+	bootstrappeers := dht.GetDefaultBootstrapPeerAddrInfos()
 	// Create the DHT bootstrap peers option
 	// TODO: replace with coordinators
 	_addr := os.Getenv("ADDR")
