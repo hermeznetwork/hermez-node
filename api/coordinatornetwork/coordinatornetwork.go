@@ -10,7 +10,6 @@ package coordinatornetwork
 import (
 	"context"
 	"crypto/sha256"
-	"fmt"
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -97,22 +96,6 @@ func NewCoordinatorNetwork(registeredCoords []common.Coordinator) (CoordinatorNe
 // PublishTx send a L2 transaction to the coordinators network
 func (coordnet CoordinatorNetwork) PublishTx(tx common.PoolL2Tx) error {
 	return coordnet.txsPool.publish(tx)
-}
-
-// discoveryNotifee gets notified when we find a new peer via mDNS discovery
-type discoveryNotifee struct {
-	h host.Host
-}
-
-// handlePeerFound connects to peers discovered via mDNS. Once they're connected,
-// the PubSub system will automatically start interacting with them if they also
-// support PubSub.
-func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	fmt.Printf("%s discovered new peer %s\n", n.h.ID().Pretty(), pi.ID.Pretty())
-	err := n.h.Connect(context.Background(), pi)
-	if err != nil {
-		fmt.Printf("error connecting to peer %s: %s\n", pi.ID.Pretty(), err)
-	}
 }
 
 func (coordnet CoordinatorNetwork) FindMorePeers() error {

@@ -3,12 +3,12 @@ package coordinatornetwork
 import (
 	"math/big"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,18 +17,7 @@ func TestPubSubFakeServer(t *testing.T) {
 	if os.Getenv("FAKE_COORDNET") != "yes" {
 		return
 	}
-	peerList := os.Getenv("PEER_LIST")
-	if peerList == "" {
-		panic("Expecting ENV PEER_LIST, containing a coma separated list of URLs")
-	}
-	peers := strings.Split(peerList, ",")
-	registeredCoordinators := []common.Coordinator{}
-	for i := 0; i < len(peers); i++ {
-		log.Info(peers[i])
-		registeredCoordinators = append(registeredCoordinators, common.Coordinator{URL: peers[i]})
-	}
-
-	coordnet, err := NewCoordinatorNetwork(registeredCoordinators)
+	coordnet, err := NewCoordinatorNetwork([]common.Coordinator{})
 	require.NoError(t, err)
 
 	// find other peers
@@ -43,6 +32,17 @@ func TestPubSubFakeServer(t *testing.T) {
 
 	// Receive or send
 	if os.Getenv("PUBLISH") == "yes" {
+		// Wait until some peers have been found
+		peers := []peer.ID{}
+		for len(peers) == 0 {
+			peers = coordnet.txsPool.topic.ListPeers()
+		}
+		log.Info("peers on the pubsub: ")
+		for _, peer := range peers {
+			log.Info(peer.Pretty())
+		}
+		time.Sleep(10 * time.Second)
+		// Send tx
 		txToPublish, err := common.NewPoolL2Tx(&common.PoolL2Tx{
 			FromIdx:     666,
 			ToIdx:       555,
@@ -51,17 +51,11 @@ func TestPubSubFakeServer(t *testing.T) {
 			TokenSymbol: "HEZ",
 		})
 		require.NoError(t, err)
-		time.Sleep(30 * time.Second)
-		log.Info("peers on the pubsub: ")
-		peers := coordnet.txsPool.topic.ListPeers()
-		for _, v := range peers {
-			log.Info(v.Pretty())
-		}
 		require.NoError(t, coordnet.PublishTx(*txToPublish))
 		log.Infof("Tx %s published to the network", txToPublish.TxID.String())
 		return
 	}
-	log.Warn("Entering endless loop, until ^C is received")
+	log.Warn("Entering endless loop, until a tx is received or ^C is received")
 	receivedTx := <-coordnet.TxPoolCh
 	log.Info("Tx received: ", receivedTx.TxID)
 }

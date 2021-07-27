@@ -3,6 +3,7 @@ package coordinatornetwork
 import (
 	"context"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -11,6 +12,7 @@ import (
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/routing"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 
@@ -96,8 +98,22 @@ func setupCoordnetDHT(ctx context.Context, self host.Host) (*dht.IpfsDHT, error)
 	// Create DHT server mode option
 	dhtMode := dht.Mode(dht.ModeServer)
 
-	bootstrappeers := dht.GetDefaultBootstrapPeerAddrInfos()
+	bootstrappeers := []peer.AddrInfo{}
 	// Create the DHT bootstrap peers option
+	// TODO: replace with coordinators
+	_addr := os.Getenv("ADDR")
+	if _addr != "" {
+		addr, err := multiaddr.NewMultiaddr(_addr)
+		if err != nil {
+			return nil, err
+		}
+		peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
+		if err != nil {
+			log.Warn(err)
+		} else {
+			bootstrappeers = append(bootstrappeers, *peerInfo)
+		}
+	}
 	dhtPeers := dht.BootstrapPeers(bootstrappeers...)
 
 	// Start a Kademlia DHT on the host in server mode
