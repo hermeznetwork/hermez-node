@@ -421,6 +421,8 @@ github.com/hermeznetwork/config-library v0.0.0-20210727095600-d8e1134ae6dc h1:0U
 github.com/hermeznetwork/config-library v0.0.0-20210727095600-d8e1134ae6dc/go.mod h1:Fj3NQVP+/M3AGKFVdUEXGBsarxe9w/+gIXWgRVKmXiY=
 github.com/hermeznetwork/config-library v0.0.0-20210727102212-21a5122ec505 h1:k0P/GqavM80SQjuFc+7MST70C9LEUD5ARsACBxJewXU=
 github.com/hermeznetwork/config-library v0.0.0-20210727102212-21a5122ec505/go.mod h1:xTrtoI9DQsj03dB+pn0rYiFbt5eFc71B5HvmD73sew4=
+github.com/hermeznetwork/config-library v0.0.0-20210727104526-80d89af10c73 h1:s0xZKq7ugPnaGC9ZTdx/Pq55tQrj6auwbXDRKLTB4hI=
+github.com/hermeznetwork/config-library v0.0.0-20210727104526-80d89af10c73/go.mod h1:xTrtoI9DQsj03dB+pn0rYiFbt5eFc71B5HvmD73sew4=
 github.com/hermeznetwork/hermez-go-sdk v0.1.1 h1:rXdjnekVOD26hkNTUwU7yr4rlj5hk5i0xoXJOtL3Z9s=
 github.com/hermeznetwork/hermez-go-sdk v0.1.1/go.mod h1:IJUcE8mSHTAX0aucz0CxNwatWglvwmqh77fyvFqnEuw=
 github.com/hermeznetwork/hermez-node v1.1.0/go.mod h1:cq4UzG6AqY+KTzgsIyU2/LggAYhUB/DHI7B+FGvg4nw=

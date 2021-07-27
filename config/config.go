@@ -3,16 +3,18 @@ package config
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	configLibrary "github.com/hermeznetwork/config-library"
 	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"gopkg.in/go-playground/validator.v9"
-	configLibrary "github.com/hermeznetwork/config-library"
 )
 
 // Duration is a wrapper type that parses time duration from text.
@@ -402,7 +404,10 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 	err := configLibrary.LoadConfig(path, DefaultValues, &cfg)
 	if err != nil {
 		//Split errors depending on if there is a file error, a env error or a default error
-		return nil, err
+		if strings.Contains(err.Error(), "default") {
+			return nil, err
+		}
+		log.Warn(err.Error())
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
@@ -423,7 +428,10 @@ func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 	err := configLibrary.LoadConfig(path, DefaultValues, &cfg)
 	if err != nil {
 		//Split errors depending on if there is a file error, a env error or a default error
-		return nil, err
+		if strings.Contains(err.Error(), "default") {
+			return nil, err
+		}
+		log.Warn(err.Error())
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
