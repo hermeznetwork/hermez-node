@@ -17,14 +17,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/routing"
 	discovery "github.com/libp2p/go-libp2p-discovery"
-	"github.com/mr-tron/base58"
-
-	// dht "github.com/libp2p/go-libp2p-kad-dht/dual"
-
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	yamux "github.com/libp2p/go-libp2p-yamux"
 	"github.com/libp2p/go-tcp-transport"
+	"github.com/mr-tron/base58"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/multiformats/go-multihash"
 )
@@ -41,14 +38,8 @@ func setupHost(ctx context.Context, registeredCoordinators []common.Coordinator)
 	}
 	identity := libp2p.Identity(prvkey)
 
-	// Trace log
-	log.Info("Generated P2P Identity Configuration")
-
-	// Set up TLS secured TCP transport and options
+	// Set up TCP transport and options
 	transport := libp2p.Transport(tcp.NewTCPTransport)
-
-	// Trace log
-	log.Info("Generated P2P Security and Transport Configurations.")
 
 	// Set up host listener address options
 	muladdr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + common.CoordinatorsNetworkPort)
@@ -57,22 +48,15 @@ func setupHost(ctx context.Context, registeredCoordinators []common.Coordinator)
 	}
 	listen := libp2p.ListenAddrs(muladdr)
 
-	// Trace log
-	log.Info("Generated P2P Address Listener Configuration.")
-
 	// Set up the stream multiplexer and connection manager options
+	// TODO: investigate and fine tune this. Got no clue on what it does, based on this example:
+	// https://github.com/manishmeganathan/peerchat
 	muxer := libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport)
-	conn := libp2p.ConnectionManager(connmgr.NewConnManager(100, 400, time.Minute))
-
-	// Trace log
-	log.Info("Generated P2P Stream Multiplexer, Connection Manager Configurations.")
+	conn := libp2p.ConnectionManager(connmgr.NewConnManager(100, 400, time.Minute)) //nolint:gomnd
 
 	// Setup NAT traversal and relay options
 	nat := libp2p.NATPortMap()
 	relay := libp2p.EnableAutoRelay()
-
-	// Trace log
-	log.Info("Generated P2P NAT Traversal and Relay Configurations.")
 
 	// Declare a KadDHT
 	var coordnetDHT *dht.IpfsDHT
@@ -82,12 +66,8 @@ func setupHost(ctx context.Context, registeredCoordinators []common.Coordinator)
 		return coordnetDHT, err
 	})
 
-	// Trace log
-	log.Info("Generated P2P Routing Configurations.")
-
-	opts := libp2p.ChainOptions(identity, listen, transport, muxer, conn, nat, routing, relay)
-
 	// Construct a new libP2P host with the created options
+	opts := libp2p.ChainOptions(identity, listen, transport, muxer, conn, nat, routing, relay)
 	libhost, err := libp2p.New(ctx, opts)
 	if err != nil {
 		return nil, nil, err
@@ -165,7 +145,8 @@ func (coordnet CoordinatorNetwork) announceConnect() error {
 		return err
 	}
 	// Sleep to give time for the advertisement to propagate
-	time.Sleep(time.Second * 5)
+	// TODO: fine tune delay value and/or enable users to configure it
+	time.Sleep(time.Second * 5) //nolint:gomnd
 
 	// Find the other providers for the service CID
 	peerchan := coordnet.dht.FindProvidersAsync(coordnet.ctx, cidvalue, 0)
@@ -175,13 +156,14 @@ func (coordnet CoordinatorNetwork) announceConnect() error {
 }
 
 func (coordnet CoordinatorNetwork) advertiseConnect() error {
-	// Advertise the availabilty of the service on this node
+	// Advertise the availability of the service on this node
 	_, err := coordnet.discovery.Advertise(coordnet.ctx, discoveryServiceTag)
 	if err != nil {
 		return err
 	}
 	// Sleep to give time for the advertisement to propagate
-	time.Sleep(time.Second * 5)
+	// TODO: fine tune delay value and/or enable users to configure it
+	time.Sleep(time.Second * 5) //nolint:gomnd
 
 	// Find all peers advertising the same service
 	peerchan, err := coordnet.discovery.FindPeers(coordnet.ctx, discoveryServiceTag)
@@ -210,7 +192,7 @@ func generateCID(namestring string) (cid.Cid, error) {
 	}
 
 	// Generate a CID from the Multihash
-	cidValue := cid.NewCidV1(12, mulhash)
+	cidValue := cid.NewCidV1(12, mulhash) //nolint:gomnd
 	// Return the CID
 	return cidValue, nil
 }

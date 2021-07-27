@@ -15,12 +15,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
-	// dht "github.com/libp2p/go-libp2p-kad-dht/dual"
 )
 
 const (
 	discoveryServiceTag = "coordnet/hermez-coordinator-network" // TODO: should include ChainID
-	RendezvousString    = "coordnet/hermez-coordinator-network-meeting-point"
 )
 
 // CoordinatorNetwork it's a p2p communication layer that enables coordinators to exchange information
@@ -52,15 +50,11 @@ func NewCoordinatorNetwork(registeredCoords []common.Coordinator) (CoordinatorNe
 
 	// Create a peer discovery service using the Kad DHT
 	routingDiscovery := discovery.NewRoutingDiscovery(coordnetDHT)
-	// Debug log
-	log.Debug("Created the Peer Discovery Service.")
-
 	// Create a PubSub handler with the routing discovery
 	pubsubHandler, err := setupPubSub(ctx, self, routingDiscovery)
 	if err != nil {
 		return CoordinatorNetwork{}, err
 	}
-
 	// Join transactions pool pubsub network
 	txsPool, err := joinPubSubTxsPool(ctx, pubsubHandler, self.ID())
 	if err != nil {
@@ -84,6 +78,7 @@ func (coordnet CoordinatorNetwork) PublishTx(tx common.PoolL2Tx) error {
 	return coordnet.txsPool.publish(tx)
 }
 
+// FindMorePeers discover more peers that have already join the coordinators network
 func (coordnet CoordinatorNetwork) FindMorePeers() error {
 	if err := coordnet.advertiseConnect(); err != nil {
 		return err
