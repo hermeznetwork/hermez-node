@@ -144,7 +144,7 @@ func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (gasPrice *big.
 	}
 	baseFee := head.BaseFee
 	gasPrice = new(big.Int).Add(baseFee, tip)
-	log.Debugw("Suggested Gas Price:", "tip: ", tip, ", baseFee: ", baseFee, ", gasPrice: ", gasPrice)
+	log.Debugw("Suggested Gas Price:", "tip", tip, "baseFee", baseFee, "gasPrice", gasPrice)
 	return
 }
 
