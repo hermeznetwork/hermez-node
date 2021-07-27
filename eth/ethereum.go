@@ -143,7 +143,7 @@ func (c *EthereumClient) EthSuggestGasPrice(ctx context.Context) (gasPrice *big.
 		return
 	}
 	gasPrice = new(big.Int).Add(head.BaseFee, tip)
-	return c.client.SuggestGasTipCap(ctx)
+	return
 }
 
 // EthKeyStore returns the keystore in the EthereumClient
