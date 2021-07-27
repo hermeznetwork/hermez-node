@@ -19,7 +19,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
-	dht "github.com/libp2p/go-libp2p-kad-dht/dual"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
+
+	// dht "github.com/libp2p/go-libp2p-kad-dht/dual"
 	"github.com/mr-tron/base58"
 	"github.com/multiformats/go-multihash"
 	"github.com/sirupsen/logrus"
@@ -40,8 +42,9 @@ type CoordinatorNetworkAdvancedConfig struct {
 // CoordinatorNetwork it's a p2p communication layer that enables coordinators to exchange information
 // in benefit of the network and them selfs. The main goal is to share L2 data (common.PoolL2Tx and common.AccountCreationAuth)
 type CoordinatorNetwork struct {
-	self      host.Host
-	dht       *dht.DHT
+	self host.Host
+	dht  *dht.IpfsDHT
+	// dht       *dht.DHT
 	ctx       context.Context
 	discovery *discovery.RoutingDiscovery
 	txsPool   pubSubTxsPool

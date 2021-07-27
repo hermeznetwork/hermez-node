@@ -15,7 +15,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/routing"
 	discovery "github.com/libp2p/go-libp2p-discovery"
-	dht "github.com/libp2p/go-libp2p-kad-dht/dual"
+
+	// dht "github.com/libp2p/go-libp2p-kad-dht/dual"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	yamux "github.com/libp2p/go-libp2p-yamux"
 	"github.com/libp2p/go-tcp-transport"
@@ -23,7 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func setupHost(ctx context.Context, config *CoordinatorNetworkAdvancedConfig) (host.Host, *dht.DHT, error) {
+func setupHost(ctx context.Context, config *CoordinatorNetworkAdvancedConfig) (host.Host, *dht.IpfsDHT, error) {
 	// Set up the host identity options
 	// Create ID by generating private key
 	// TODO: generate ID from coordinator's priv key
@@ -73,7 +75,7 @@ func setupHost(ctx context.Context, config *CoordinatorNetworkAdvancedConfig) (h
 	log.Info("Generated P2P NAT Traversal and Relay Configurations.")
 
 	// Declare a KadDHT
-	var coordnetDHT *dht.DHT
+	var coordnetDHT *dht.IpfsDHT
 	// Setup a routing configuration with the KadDHT
 	routing := libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 		coordnetDHT, err = setupCoordnetDHT(ctx, h)
@@ -95,13 +97,18 @@ func setupHost(ctx context.Context, config *CoordinatorNetworkAdvancedConfig) (h
 	return libhost, coordnetDHT, nil
 }
 
-func setupCoordnetDHT(ctx context.Context, self host.Host) (*dht.DHT, error) {
+func setupCoordnetDHT(ctx context.Context, self host.Host) (*dht.IpfsDHT, error) {
 	// Create DHT server mode option
 	// dhtMode := dht.LanDHTOption()
-	dhtMode := dht.WanDHTOption()
+	// dhtMode := dht.WanDHTOption()
+	dhtMode := dht.Mode(dht.ModeServer)
+
+	bootstrappeers := dht.GetDefaultBootstrapPeerAddrInfos()
+	// Create the DHT bootstrap peers option
+	dhtPeers := dht.BootstrapPeers(bootstrappeers...)
 
 	// Start a Kademlia DHT on the host in server mode
-	coordnetDHT, err := dht.New(ctx, self, dhtMode)
+	coordnetDHT, err := dht.New(ctx, self, dhtMode, dhtPeers)
 	// Handle any potential error
 	if err != nil {
 		return nil, err
@@ -113,7 +120,7 @@ func setupCoordnetDHT(ctx context.Context, self host.Host) (*dht.DHT, error) {
 
 // A function that bootstraps a given Kademlia DHT to satisfy the IPFS router
 // interface and connects to all the bootstrap peers provided by libp2p
-func bootstrapDHT(ctx context.Context, self host.Host, coordnetDHT *dht.DHT) error {
+func bootstrapDHT(ctx context.Context, self host.Host, coordnetDHT *dht.IpfsDHT) error {
 	// Bootstrap the DHT to satisfy the IPFS Router interface
 	if err := coordnetDHT.Bootstrap(ctx); err != nil {
 		return err
