@@ -25,6 +25,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -194,7 +195,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			rqTokenID     *common.TokenID
 			rqAmount      *string
 			rqFee         *common.FeeSelector
-			rqNonce       *common.Nonce
+			rqNonce       *nonce.Nonce
 			rqOffset      *uint8
 			atomicGroupID *common.AtomicGroupID
 			maxNumBatch   *uint32

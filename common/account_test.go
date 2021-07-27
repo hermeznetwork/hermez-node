@@ -10,6 +10,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
@@ -50,28 +51,28 @@ func TestIdxParser(t *testing.T) {
 }
 
 func TestNonceParser(t *testing.T) {
-	n := Nonce(1)
+	n := nonce.Nonce(1)
 	nBytes, err := n.Bytes()
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(nBytes))
 	assert.Equal(t, "0000000001", hex.EncodeToString(nBytes[:]))
-	n2 := NonceFromBytes(nBytes)
+	n2 := nonce.FromBytes(nBytes)
 	assert.Equal(t, n, n2)
 
 	// value before overflow
-	n = Nonce(1099511627775)
+	n = nonce.Nonce(1099511627775)
 	nBytes, err = n.Bytes()
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(nBytes))
 	assert.Equal(t, "ffffffffff", hex.EncodeToString(nBytes[:]))
-	n2 = NonceFromBytes(nBytes)
+	n2 = nonce.FromBytes(nBytes)
 	assert.Equal(t, n, n2)
 
 	// expect value overflow
-	n = Nonce(1099511627776)
+	n = nonce.Nonce(1099511627776)
 	nBytes, err = n.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrNonceOverflow, tracerr.Unwrap(err))
+	assert.Equal(t, nonce.ErrNonceOverflow, tracerr.Unwrap(err))
 }
 
 func TestAccount(t *testing.T) {
@@ -83,7 +84,7 @@ func TestAccount(t *testing.T) {
 
 	account := &Account{
 		TokenID: TokenID(1),
-		Nonce:   Nonce(1234),
+		Nonce:   nonce.Nonce(1234),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
@@ -127,7 +128,7 @@ func TestAccountLoop(t *testing.T) {
 
 		account := &Account{
 			TokenID: TokenID(i),
-			Nonce:   Nonce(i),
+			Nonce:   nonce.Nonce(i),
 			Balance: big.NewInt(1000),
 			BJJ:     pk.Compress(),
 			EthAddr: address,
@@ -164,7 +165,7 @@ func TestAccountLoopRandom(t *testing.T) {
 
 		account := &Account{
 			TokenID: TokenID(i),
-			Nonce:   Nonce(i),
+			Nonce:   nonce.Nonce(i),
 			Balance: big.NewInt(1000),
 			BJJ:     pk.Compress(),
 			EthAddr: address,
@@ -208,7 +209,7 @@ func TestAccountHashValue(t *testing.T) {
 
 	account := &Account{
 		TokenID: TokenID(1),
-		Nonce:   Nonce(1234),
+		Nonce:   nonce.Nonce(1234),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
@@ -234,7 +235,7 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 		TokenID: 0xFFFFFFFF,
 		BJJ:     bjj.Compress(),
 		EthAddr: ethCommon.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-		Nonce:   Nonce(0xFFFFFFFFFF),
+		Nonce:   nonce.Nonce(0xFFFFFFFFFF),
 		Balance: bigFromStr("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16),
 	}
 
@@ -268,7 +269,7 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 		TokenID: 0,
 		BJJ:     bjj.Compress(),
 		EthAddr: ethCommon.HexToAddress("0x00"),
-		Nonce:   Nonce(0),
+		Nonce:   nonce.Nonce(0),
 		Balance: big.NewInt(0),
 	}
 	v, err = account.HashValue()
@@ -286,7 +287,7 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 		TokenID: 3,
 		BJJ:     bjj.Compress(),
 		EthAddr: ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
-		Nonce:   Nonce(129),
+		Nonce:   nonce.Nonce(129),
 		Balance: bigFromStr("42000000000000000000", 10),
 	}
 	e, err = account.BigInts()
@@ -338,7 +339,7 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 	// check limit
 	account := &Account{
 		TokenID: TokenID(1),
-		Nonce:   Nonce(math.Pow(2, 40) - 1),
+		Nonce:   nonce.Nonce(math.Pow(2, 40) - 1),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
@@ -347,7 +348,7 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 	assert.NoError(t, err)
 
 	// force value overflow
-	account.Nonce = Nonce(math.Pow(2, 40))
+	account.Nonce = nonce.Nonce(math.Pow(2, 40))
 	b, err := account.Bytes()
 	assert.NotNil(t, err)
 	assert.Equal(t, fmt.Errorf("%s Nonce", ErrNumOverflow), tracerr.Unwrap(err))
@@ -366,7 +367,7 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 	// check limit
 	account := &Account{
 		TokenID: TokenID(1),
-		Nonce:   Nonce(math.Pow(2, 40) - 1),
+		Nonce:   nonce.Nonce(math.Pow(2, 40) - 1),
 		Balance: new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(192), nil), big.NewInt(1)),
 		BJJ:     pk.Compress(),
 		EthAddr: ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -164,7 +165,7 @@ type Tx struct {
 	// L2
 	Fee    *FeeSelector `meddler:"fee"`
 	FeeUSD *float64     `meddler:"fee_usd"`
-	Nonce  *Nonce       `meddler:"nonce"`
+	Nonce  *nonce.Nonce       `meddler:"nonce"`
 }
 
 func (tx *Tx) String() string {

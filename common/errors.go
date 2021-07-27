@@ -12,9 +12,6 @@ var ErrNotInFF = errors.New("BigInt not inside the Finite Field")
 // ErrNumOverflow is used when a given value overflows the maximum capacity of the parameter
 var ErrNumOverflow = errors.New("Value overflows the type")
 
-// ErrNonceOverflow is used when a given nonce overflows the maximum capacity of the Nonce (2**40-1)
-var ErrNonceOverflow = errors.New("Nonce overflow, max value: 2**40 -1")
-
 // ErrIdxOverflow is used when a given nonce overflows the maximum capacity of the Idx (2**48-1)
 var ErrIdxOverflow = errors.New("Idx overflow, max value: 2**48 -1")
 

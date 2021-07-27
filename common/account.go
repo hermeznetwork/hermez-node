@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -17,9 +18,7 @@ import (
 const (
 	// NLeafElems is the number of elements for a leaf
 	NLeafElems = 4
-	// maxNonceValue is the maximum value that the Account.Nonce can have
-	// (40 bits: maxNonceValue=2**40-1)
-	maxNonceValue = 0xffffffffff
+
 	// maxBalanceBytes is the maximum bytes that can use the
 	// Account.Balance *big.Int
 	maxBalanceBytes = 24
@@ -89,35 +88,6 @@ func IdxFromBigInt(b *big.Int) (Idx, error) {
 	return Idx(uint64(b.Int64())), nil
 }
 
-// Nonce represents the nonce value in a uint64, which has the method Bytes
-// that returns a byte array of length 5 (40 bits).
-type Nonce uint64
-
-// Bytes returns a byte array of length 5 representing the Nonce
-func (n Nonce) Bytes() ([5]byte, error) {
-	if n > maxNonceValue {
-		return [5]byte{}, tracerr.Wrap(ErrNonceOverflow)
-	}
-	var nonceBytes [8]byte
-	binary.BigEndian.PutUint64(nonceBytes[:], uint64(n))
-	var b [5]byte
-	copy(b[:], nonceBytes[3:])
-	return b, nil
-}
-
-// BigInt returns the *big.Int representation of the Nonce value
-func (n Nonce) BigInt() *big.Int {
-	return big.NewInt(int64(n))
-}
-
-// NonceFromBytes returns Nonce from a [5]byte
-func NonceFromBytes(b [5]byte) Nonce {
-	var nonceBytes [8]byte
-	copy(nonceBytes[3:], b[:])
-	nonce := binary.BigEndian.Uint64(nonceBytes[:])
-	return Nonce(nonce)
-}
-
 // Account is a struct that gives information of the holdings of an address and
 // a specific token. Is the data structure that generates the Value stored in
 // the leaf of the MerkleTree
@@ -127,7 +97,7 @@ type Account struct {
 	BatchNum BatchNum              `meddler:"batch_num"`
 	BJJ      babyjub.PublicKeyComp `meddler:"bjj"`
 	EthAddr  ethCommon.Address     `meddler:"eth_addr"`
-	Nonce    Nonce                 `meddler:"-"` // max of 40 bits used
+	Nonce    nonce.Nonce           `meddler:"-"` // max of 40 bits used
 	Balance  *big.Int              `meddler:"-"` // max of 192 bits used
 }
 
@@ -150,7 +120,7 @@ func (a *Account) String() string {
 func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	var b [32 * NLeafElems]byte
 
-	if a.Nonce > maxNonceValue {
+	if a.Nonce > nonce.MaxNonceValue {
 		return b, tracerr.Wrap(fmt.Errorf("%s Nonce", ErrNumOverflow))
 	}
 	if len(a.Balance.Bytes()) > maxBalanceBytes {
@@ -231,7 +201,7 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 	}
 	var nonceBytes5 [5]byte
 	copy(nonceBytes5[:], b[23:28])
-	nonce := NonceFromBytes(nonceBytes5)
+	nonce := nonce.FromBytes(nonceBytes5)
 	sign := b[22] == 1
 
 	balance := new(big.Int).SetBytes(b[40:64])
@@ -262,16 +232,16 @@ func AccountFromBytes(b [32 * NLeafElems]byte) (*Account, error) {
 
 // IdxNonce is a pair of Idx and Nonce representing an account
 type IdxNonce struct {
-	Idx   Idx   `db:"idx"`
-	Nonce Nonce `db:"nonce"`
+	Idx   Idx         `db:"idx"`
+	Nonce nonce.Nonce `db:"nonce"`
 }
 
 // AccountUpdate represents an account balance and/or nonce update after a
 // processed batch
 type AccountUpdate struct {
-	EthBlockNum int64    `meddler:"eth_block_num"`
-	BatchNum    BatchNum `meddler:"batch_num"`
-	Idx         Idx      `meddler:"idx"`
-	Nonce       Nonce    `meddler:"nonce"`
-	Balance     *big.Int `meddler:"balance,bigint"`
+	EthBlockNum int64       `meddler:"eth_block_num"`
+	BatchNum    BatchNum    `meddler:"batch_num"`
+	Idx         Idx         `meddler:"idx"`
+	Nonce       nonce.Nonce `meddler:"nonce"`
+	Balance     *big.Int    `meddler:"balance,bigint"`
 }
