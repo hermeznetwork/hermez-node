@@ -67,6 +67,9 @@ func TestPubSubFakeServer(t *testing.T) {
 	coordnet, err := NewCoordinatorNetwork(registeredCoordinators, nil)
 	require.NoError(t, err)
 
+	// find other peers
+	coordnet.AdvertiseConnect()
+
 	// Receive or send
 	if os.Getenv("PUBLISH") == "yes" {
 		txToPublish, err := common.NewPoolL2Tx(&common.PoolL2Tx{
