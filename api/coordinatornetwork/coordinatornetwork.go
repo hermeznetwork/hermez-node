@@ -23,6 +23,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
+	dhtOpt "github.com/libp2p/go-libp2p-kad-dht"
 	dht "github.com/libp2p/go-libp2p-kad-dht/dual"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
@@ -148,7 +149,9 @@ func setupDiscovery(ctx context.Context, h host.Host, registeredCoordinators []c
 	// DHT, so that the bootstrapping node of the DHT can go down without
 	// inhibiting future peer discovery.
 	// dht.New
-	dht, err := dht.New(ctx, h, dht.WanDHTOption())
+	protocolPrefix := dht.DHTOption(dhtOpt.ProtocolPrefix("coordnet"))
+	dht, err := dht.New(ctx, h, dht.LanDHTOption(), protocolPrefix)
+	// dht, err := dht.New(ctx, h, dht.WanDHTOption())
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +219,9 @@ func setupDiscovery(ctx context.Context, h host.Host, registeredCoordinators []c
 			time.Sleep(10 * time.Second)
 			_, err := disc.Advertise(ctx, RendezvousString)
 			if err != nil {
-				log.Debug("Advertise failed retrying... ", err)
+				log.Warn("Advertise failed retrying... ", err)
+			} else {
+				log.Debug("Advertisement succeed")
 			}
 			// see limit option
 			peerAddrsChan, err := disc.FindPeers(ctx, RendezvousString)
