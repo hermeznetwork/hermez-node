@@ -9,15 +9,14 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth/contracts/tokenhez"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
-
-	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
-	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
 // ERC20Consts are the constants defined in a particular ERC20 Token instance
