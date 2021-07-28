@@ -447,7 +447,6 @@ func (s PoolL2TxState) IsValid() bool {
 	}
 }
 
-
 // MarshalJSON formats a PoolL2Tx in the expected JSON defined by the API,
 // this format is specified in `api/swagger.yml:schemas/PostPoolL2Transaction`
 func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
