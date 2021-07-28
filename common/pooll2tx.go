@@ -41,7 +41,7 @@ type PoolL2Tx struct {
 	TokenID     TokenID               `meddler:"token_id"`
 	Amount      *big.Int              `meddler:"amount,bigint"`
 	Fee         FeeSelector           `meddler:"fee"`
-	Nonce       nonce.Nonce                 `meddler:"nonce"` // effective 40 bits used
+	Nonce       nonce.Nonce           `meddler:"nonce"` // effective 40 bits used
 	State       PoolL2TxState         `meddler:"state"`
 	MaxNumBatch uint32                `meddler:"max_num_batch,zeroisnull"`
 	// Info contains information about the status & State of the
@@ -62,7 +62,7 @@ type PoolL2Tx struct {
 	RqTokenID         TokenID               `meddler:"rq_token_id,zeroisnull"`
 	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"`
 	RqFee             FeeSelector           `meddler:"rq_fee,zeroisnull"`
-	RqNonce           nonce.Nonce                 `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
+	RqNonce           nonce.Nonce           `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
 	AbsoluteFeeUpdate time.Time             `meddler:"usd_update,utctimez"`
 	Type              TxType                `meddler:"tx_type"`
@@ -464,7 +464,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		ToBJJ       *string               `json:"toBjj"`
 		Amount      string                `json:"amount"`
 		Fee         FeeSelector           `json:"fee"`
-		Nonce       nonce.Nonce                 `json:"nonce"`
+		Nonce       nonce.Nonce           `json:"nonce"`
 		MaxNumBatch uint32                `json:"maxNumBatch"`
 		Signature   babyjub.SignatureComp `json:"signature"`
 		RqOffset    *uint8                `json:"requestOffset"`
@@ -515,7 +515,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		ToBJJ       StrHezBJJ             `json:"toBjj"`
 		Amount      *StrBigInt            `json:"amount" binding:"required"`
 		Fee         FeeSelector           `json:"fee"`
-		Nonce       nonce.Nonce                 `json:"nonce"`
+		Nonce       nonce.Nonce           `json:"nonce"`
 		MaxNumBatch uint32                `json:"maxNumBatch"`
 		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
 		State       string                `json:"state"`

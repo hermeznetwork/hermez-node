@@ -2,8 +2,9 @@ package nonce
 
 import (
 	"encoding/binary"
-	"github.com/hermeznetwork/tracerr"
 	"math/big"
+
+	"github.com/hermeznetwork/tracerr"
 )
 
 const (

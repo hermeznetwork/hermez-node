@@ -165,7 +165,7 @@ type Tx struct {
 	// L2
 	Fee    *FeeSelector `meddler:"fee"`
 	FeeUSD *float64     `meddler:"fee_usd"`
-	Nonce  *nonce.Nonce       `meddler:"nonce"`
+	Nonce  *nonce.Nonce `meddler:"nonce"`
 }
 
 func (tx *Tx) String() string {
