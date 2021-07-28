@@ -267,20 +267,22 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 	}
 	// Query begins with the insert statement
 	query := queryInsertPart
+	onConflictQuery := ` ON CONFLICT ON CONSTRAINT tx_id_unique DO UPDATE SET
+			from_idx = excluded.from_idx, to_idx = excluded.to_idx, to_eth_addr = excluded.to_eth_addr, to_bjj = excluded.to_bjj,
+			token_id = excluded.token_id, amount = excluded.amount, fee = excluded.fee, nonce = excluded.nonce, state = excluded.state,
+			info = excluded.info, signature = excluded.signature, rq_from_idx = excluded.rq_from_idx, rq_to_idx = excluded.rq_to_idx,
+			rq_to_bjj = excluded.rq_to_bjj, rq_token_id = excluded.rq_token_id, rq_amount = excluded.rq_amount, rq_fee = excluded.rq_fee, rq_nonce = excluded.rq_nonce,
+			tx_type = excluded.tx_type, amount_f = excluded.amount_f, client_ip = excluded.client_ip,
+			rq_offset = excluded.rq_offset, max_num_batch = excluded.max_num_batch WHERE tx_pool.atomic_group_id IS NULL`
+
 	if checkPoolIsFull {
 		// This query creates a temporary table containing the values to insert
 		// that will only get selected if the pool is not full
 		query += " SELECT * FROM ( VALUES " + queryVarsPart + " ) as tmp " + // Temporary table with the values of the txs
-			" WHERE (SELECT COUNT (*) FROM tx_pool WHERE state = ? AND NOT external_delete) < ?;" // Check if the pool is full
+			" WHERE (SELECT COUNT (*) FROM tx_pool WHERE state = ? AND NOT external_delete) < ?" + onConflictQuery + ";" // Check if the pool is full
 		queryVars = append(queryVars, common.PoolL2TxStatePending, l2db.maxTxs)
 	} else {
-		query += " VALUES " + queryVarsPart + " ON CONFLICT ON CONSTRAINT tx_id_unique DO UPDATE SET " +
-			"from_idx = excluded.from_idx, to_idx = excluded.to_idx, to_eth_addr = excluded.to_eth_addr, to_bjj = excluded.to_bjj," +
-			" token_id = excluded.token_id, amount = excluded.amount, fee = excluded.fee, nonce = excluded.nonce, state = excluded.state," +
-			"info = excluded.info, signature = excluded.signature, rq_from_idx = excluded.rq_from_idx, rq_to_idx = excluded.rq_to_idx, " +
-			"rq_to_bjj = excluded.rq_to_bjj, rq_token_id = excluded.rq_token_id, rq_amount = excluded.rq_amount, rq_fee = excluded.rq_fee, rq_nonce = excluded.rq_nonce," +
-			" tx_type = excluded.tx_type, amount_f = excluded.amount_f, client_ip = excluded.client_ip, " +
-			"rq_offset = excluded.rq_offset, max_num_batch = excluded.max_num_batch WHERE tx_pool.atomic_group_id IS NULL;"
+		query += " VALUES " + queryVarsPart + onConflictQuery + ";"
 	}
 	// Replace "?, ?, ... ?" ==> "$1, $2, ..., $(len(queryVars))"
 	query = l2db.dbRead.Rebind(query)
