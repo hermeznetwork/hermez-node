@@ -7,7 +7,7 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	configLibrary "github.com/hermeznetwork/config-library"
+	configLibrary "github.com/hermeznetwork/go-hermez-config"
 	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
