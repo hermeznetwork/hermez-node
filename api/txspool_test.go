@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -32,7 +33,7 @@ type testPoolTxReceive struct {
 	ToBJJ       *string                `json:"toBjj"`
 	Amount      string                 `json:"amount"`
 	Fee         common.FeeSelector     `json:"fee"`
-	Nonce       common.Nonce           `json:"nonce"`
+	Nonce       nonce.Nonce            `json:"nonce"`
 	State       common.PoolL2TxState   `json:"state"`
 	Signature   babyjub.SignatureComp  `json:"signature"`
 	RqFromIdx   *string                `json:"requestFromAccountIndex"`
@@ -42,7 +43,7 @@ type testPoolTxReceive struct {
 	RqTokenID   *common.TokenID        `json:"requestTokenId"`
 	RqAmount    *string                `json:"requestAmount"`
 	RqFee       *common.FeeSelector    `json:"requestFee"`
-	RqNonce     *common.Nonce          `json:"requestNonce"`
+	RqNonce     *nonce.Nonce           `json:"requestNonce"`
 	BatchNum    *common.BatchNum       `json:"batchNum"`
 	Timestamp   time.Time              `json:"timestamp"`
 	Token       historydb.TokenWithUSD `json:"token"`

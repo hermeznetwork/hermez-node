@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
@@ -151,10 +152,10 @@ func TestIdxsNonce(t *testing.T) {
 		{Idx: 258, Nonce: 5},
 		{Idx: 258, Nonce: 2},
 	}
-	expectedIdxsNonce := map[common.Idx]common.Nonce{
-		common.Idx(256): common.Nonce(2),
-		common.Idx(257): common.Nonce(3),
-		common.Idx(258): common.Nonce(5),
+	expectedIdxsNonce := map[common.Idx]nonce.Nonce{
+		common.Idx(256): nonce.Nonce(2),
+		common.Idx(257): nonce.Nonce(3),
+		common.Idx(258): nonce.Nonce(5),
 	}
 
 	l2txs := make([]common.L2Tx, len(inputIdxsNonce))
@@ -236,10 +237,10 @@ func TestPoolMarkInvalidOldNonces(t *testing.T) {
 	// invalid
 	for name, user := range tc.Users {
 		for _, _acc := range user.Accounts {
-			require.Equal(t, common.Nonce(nonces0[name]), _acc.Nonce) // sanity check
+			require.Equal(t, nonce.Nonce(nonces0[name]), _acc.Nonce) // sanity check
 			acc, err := stateDB.GetAccount(_acc.Idx)
 			require.NoError(t, err)
-			require.Equal(t, common.Nonce(0), acc.Nonce) // sanity check
+			require.Equal(t, nonce.Nonce(0), acc.Nonce) // sanity check
 			acc.Nonce = _acc.Nonce
 			_, err = stateDB.UpdateAccount(acc.Idx, acc)
 			require.NoError(t, err)
@@ -266,10 +267,10 @@ func TestPoolMarkInvalidOldNonces(t *testing.T) {
 
 	for name, user := range tc.Users {
 		for _, _acc := range user.Accounts {
-			require.Equal(t, common.Nonce(nonces1[name]), _acc.Nonce) // sanity check
+			require.Equal(t, nonce.Nonce(nonces1[name]), _acc.Nonce) // sanity check
 			acc, err := stateDB.GetAccount(_acc.Idx)
 			require.NoError(t, err)
-			require.Equal(t, common.Nonce(nonces0[name]), acc.Nonce) // sanity check
+			require.Equal(t, nonce.Nonce(nonces0[name]), acc.Nonce) // sanity check
 		}
 	}
 

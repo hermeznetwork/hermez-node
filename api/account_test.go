@@ -7,6 +7,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/mitchellh/copystructure"
@@ -20,7 +21,7 @@ type testAccount struct {
 	BatchNum  common.BatchNum        `json:"batchNum"`
 	PublicKey apitypes.HezBJJ        `json:"bjj"`
 	EthAddr   apitypes.HezEthAddr    `json:"hezEthereumAddress"`
-	Nonce     common.Nonce           `json:"nonce"`
+	Nonce     nonce.Nonce            `json:"nonce"`
 	Balance   *apitypes.BigIntStr    `json:"balance"`
 	Token     historydb.TokenWithUSD `json:"token"`
 }

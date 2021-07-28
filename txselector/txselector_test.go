@@ -12,6 +12,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -151,7 +152,7 @@ func checkBalanceByIdx(t *testing.T, txsel *TxSelector, idx common.Idx, expected
 // checkSortedByNonce takes as input testAccNonces map, and the array of
 // common.PoolL2Txs, and checks if the nonces correspond to the accumulated
 // values of the map. Also increases the Nonces computed on the map.
-func checkSortedByNonce(t *testing.T, testAccNonces map[common.Idx]common.Nonce,
+func checkSortedByNonce(t *testing.T, testAccNonces map[common.Idx]nonce.Nonce,
 	txs []common.PoolL2Tx) {
 	for _, tx := range txs {
 		assert.True(t, testAccNonces[tx.FromIdx] == tx.Nonce,
@@ -176,7 +177,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
 	tc.RestartNonces()
-	testAccNonces := make(map[common.Idx]common.Nonce)
+	testAccNonces := make(map[common.Idx]nonce.Nonce)
 
 	// add tokens to HistoryDB to avoid breaking FK constrains
 	addTokens(t, tc, txsel.l2db.DB())
@@ -812,9 +813,9 @@ func TestProcessL2Selection(t *testing.T) {
 	// (due the 2nd txs not being accepted)
 	assert.Equal(t, 1, len(oL2Txs))
 	assert.Equal(t, 2, len(discardedL2Txs))
-	assert.Equal(t, common.Nonce(0), oL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(1), discardedL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(2), discardedL2Txs[1].Nonce)
+	assert.Equal(t, nonce.Nonce(0), oL2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(1), discardedL2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(2), discardedL2Txs[1].Nonce)
 	assert.Equal(t, "Tx not selected due to not enough Balance at the sender. "+
 		"Current sender account Balance: 7, Amount+Fee: 11", discardedL2Txs[0].Info)
 	assert.Equal(t, 11, discardedL2Txs[0].ErrorCode)

@@ -13,6 +13,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
@@ -376,7 +377,7 @@ func TestAccounts(t *testing.T) {
 			EthBlockNum: batches[acc.BatchNum-1].EthBlockNum,
 			BatchNum:    acc.BatchNum,
 			Idx:         acc.Idx,
-			Nonce:       common.Nonce(i),
+			Nonce:       nonce.Nonce(i),
 			Balance:     big.NewInt(int64(i)),
 		}
 	}
