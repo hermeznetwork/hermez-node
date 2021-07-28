@@ -637,7 +637,7 @@ paths:
       description: >-
         Get transaction from the pool by its ID. This endpoint is specially useful for tracking the status of a transaction that may not be forged yet.
         Only transactions from the pool will be returned.
-        If you want to find transactions using other filters use the endpoint `GET /transaction-pool`
+        There are other options to filter transactions using query string parameters. Please check more details below.
         Note that the transaction pool is different for each coordinator and therefore only a coordinator that has received a specific transaction
         will be able to provide information about that transaction.
       operationId: getPoolTx
@@ -814,7 +814,7 @@ paths:
         - Explorer
       summary: Get details and status of a specific historical transaction.
       description: >-
-        Get transaction by its ID. If you want to find transactions using other filters use the endpoint `GET /transaction-history`
+        Get transaction by its ID. There are other options to filter transactions using query string parameters. Please check more details below.
         This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
       operationId: getHistoryTx
       parameters:
