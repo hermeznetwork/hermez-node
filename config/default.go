@@ -41,7 +41,7 @@ MeddlerLogs = true
 GinDebugMode = true
 
 [StateDB]
-Path = "/tmp/iden3-test/hermez/statedb"
+Path = "/var/hermez/statedb"
 Keep = 256
 
 [PostgreSQL]
@@ -100,10 +100,10 @@ PurgeBlockDelay = 10
 InvalidateBlockDelay = 20
 
 [Coordinator.TxSelector]
-Path = "/tmp/iden3-test/hermez/txselector"
+Path = "/var/hermez/txselector"
 
 [Coordinator.BatchBuilder]
-Path = "/tmp/iden3-test/hermez/batchbuilder"
+Path = "/var/hermez/batchbuilder"
 
 [[Coordinator.ServerProofs]]
 URL = "http://localhost:3000/api"
@@ -123,7 +123,7 @@ MinGasPrice = 5
 GasPriceIncPerc = 10
 
 [Coordinator.EthClient.Keystore]
-Path = "/tmp/iden3-test/hermez/ethkeystore"
+Path = "/var/hermez/ethkeystore"
 Password = "yourpasswordhere"
 
 [Coordinator.EthClient.ForgeBatchGasCost]
@@ -136,7 +136,7 @@ L2Tx = 250
 Coordinator = true
 
 [Coordinator.Debug]
-BatchPath = "/tmp/iden3-test/hermez/batchesdebug"
+BatchPath = "/var/hermez/batchesdebug"
 LightScrypt = true
 # RollupVerifierIndex = 0
 
