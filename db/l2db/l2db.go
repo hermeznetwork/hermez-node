@@ -267,7 +267,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 	}
 	// Query begins with the insert statement
 	query := queryInsertPart
-	onConflictQuery := ` ON CONFLICT ON CONSTRAINT tx_id_unique DO UPDATE SET
+	const onConflictQuery = ` ON CONFLICT ON CONSTRAINT tx_id_unique DO UPDATE SET
 			from_idx = excluded.from_idx, to_idx = excluded.to_idx, to_eth_addr = excluded.to_eth_addr, to_bjj = excluded.to_bjj,
 			token_id = excluded.token_id, amount = excluded.amount, fee = excluded.fee, nonce = excluded.nonce, state = excluded.state,
 			info = excluded.info, signature = excluded.signature, rq_from_idx = excluded.rq_from_idx, rq_to_idx = excluded.rq_to_idx,
