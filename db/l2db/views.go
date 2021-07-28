@@ -38,64 +38,105 @@ type PoolTxAPI struct {
 	RqFee                *common.FeeSelector   `meddler:"rq_fee"`
 	RqNonce              *common.Nonce         `meddler:"rq_nonce"`
 	Type                 common.TxType         `meddler:"tx_type"`
-	// Extra read fileds
-	BatchNum         *common.BatchNum  `meddler:"batch_num"`
-	Timestamp        time.Time         `meddler:"timestamp,utctime"`
-	TotalItems       uint64            `meddler:"total_items"`
-	TokenID          common.TokenID    `meddler:"token_id"`
-	TokenItemID      uint64            `meddler:"token_item_id"`
-	TokenEthBlockNum int64             `meddler:"eth_block_num"`
-	TokenEthAddr     ethCommon.Address `meddler:"eth_addr"`
-	TokenName        string            `meddler:"name"`
-	TokenSymbol      string            `meddler:"symbol"`
-	TokenDecimals    uint64            `meddler:"decimals"`
-	TokenUSD         *float64          `meddler:"usd"`
-	TokenUSDUpdate   *time.Time        `meddler:"usd_update"`
+	BatchNum             *common.BatchNum      `meddler:"batch_num"`
+	Timestamp            time.Time             `meddler:"timestamp,utctime"`
+	TotalItems           uint64                `meddler:"total_items"`
+	TokenID              common.TokenID        `meddler:"token_id"`
+	TokenItemID          uint64                `meddler:"token_item_id"`
+	TokenEthBlockNum     int64                 `meddler:"eth_block_num"`
+	TokenEthAddr         ethCommon.Address     `meddler:"eth_addr"`
+	TokenName            string                `meddler:"name"`
+	TokenSymbol          string                `meddler:"symbol"`
+	TokenDecimals        uint64                `meddler:"decimals"`
+	TokenUSD             *float64              `meddler:"usd"`
+	TokenUSDUpdate       *time.Time            `meddler:"usd_update"`
 }
 
 // MarshalJSON is used to neast some of the fields of PoolTxAPI
 // without the need of auxiliar structs
 func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"itemId":                      tx.ItemID,
-		"id":                          tx.TxID,
-		"type":                        tx.Type,
-		"fromAccountIndex":            tx.FromIdx,
-		"fromHezEthereumAddress":      tx.EffectiveFromEthAddr,
-		"fromBJJ":                     tx.EffectiveFromBJJ,
-		"toAccountIndex":              tx.ToIdx,
-		"toHezEthereumAddress":        tx.EffectiveToEthAddr,
-		"toBJJ":                       tx.EffectiveToBJJ,
-		"amount":                      tx.Amount,
-		"fee":                         tx.Fee,
-		"nonce":                       tx.Nonce,
-		"state":                       tx.State,
-		"maxNumBatch":                 tx.MaxNumBatch,
-		"info":                        tx.Info,
-		"errorCode":                   tx.ErrorCode,
-		"errorType":                   tx.ErrorType,
-		"signature":                   tx.Signature,
-		"timestamp":                   tx.Timestamp,
-		"requestFromAccountIndex":     tx.RqFromIdx,
-		"requestToAccountIndex":       tx.RqToIdx,
-		"requestToHezEthereumAddress": tx.RqToEthAddr,
-		"requestToBJJ":                tx.RqToBJJ,
-		"requestTokenId":              tx.RqTokenID,
-		"requestAmount":               tx.RqAmount,
-		"requestFee":                  tx.RqFee,
-		"requestNonce":                tx.RqNonce,
-		"token": map[string]interface{}{
-			"id":               tx.TokenID,
-			"itemId":           tx.TokenItemID,
-			"ethereumBlockNum": tx.TokenEthBlockNum,
-			"ethereumAddress":  tx.TokenEthAddr,
-			"name":             tx.TokenName,
-			"symbol":           tx.TokenSymbol,
-			"decimals":         tx.TokenDecimals,
-			"USD":              tx.TokenUSD,
-			"fiatUpdate":       tx.TokenUSDUpdate,
+	type jsonToken struct {
+		TokenID          common.TokenID    `json:"id"`
+		TokenItemID      uint64            `json:"itemId"`
+		TokenEthBlockNum int64             `json:"ethereumBlockNum"`
+		TokenEthAddr     ethCommon.Address `json:"ethereumAddress"`
+		TokenName        string            `json:"name"`
+		TokenSymbol      string            `json:"symbol"`
+		TokenDecimals    uint64            `json:"decimals"`
+		TokenUSD         *float64          `json:"USD"`
+		TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
+	}
+	type jsonFormat struct {
+		ItemID               uint64                `json:"itemId"`
+		TxID                 common.TxID           `json:"id"`
+		Type                 common.TxType         `json:"type"`
+		FromIdx              apitypes.HezIdx       `json:"fromAccountIndex"`
+		EffectiveFromEthAddr *apitypes.HezEthAddr  `json:"fromHezEthereumAddress"`
+		EffectiveFromBJJ     *apitypes.HezBJJ      `json:"fromBJJ"`
+		ToIdx                *apitypes.HezIdx      `json:"toAccountIndex"`
+		EffectiveToEthAddr   *apitypes.HezEthAddr  `json:"toHezEthereumAddress"`
+		EffectiveToBJJ       *apitypes.HezBJJ      `json:"toBJJ"`
+		Amount               apitypes.BigIntStr    `json:"amount"`
+		Fee                  common.FeeSelector    `json:"fee"`
+		Nonce                common.Nonce          `json:"nonce"`
+		State                common.PoolL2TxState  `json:"state"`
+		MaxNumBatch          uint32                `json:"maxNumBatch"`
+		Info                 *string               `json:"info"`
+		ErrorCode            *int                  `json:"errorCode"`
+		ErrorType            *string               `json:"errorType"`
+		Signature            babyjub.SignatureComp `json:"signature"`
+		Timestamp            time.Time             `json:"timestamp"`
+		RqFromIdx            *apitypes.HezIdx      `json:"requestFromAccountIndex"`
+		RqToIdx              *apitypes.HezIdx      `json:"requestToAccountIndex"`
+		RqToEthAddr          *apitypes.HezEthAddr  `json:"requestToHezEthereumAddress"`
+		RqToBJJ              *apitypes.HezBJJ      `json:"requestToBJJ"`
+		RqTokenID            *common.TokenID       `json:"requestTokenId"`
+		RqAmount             *apitypes.BigIntStr   `json:"requestAmount"`
+		RqFee                *common.FeeSelector   `json:"requestFee"`
+		RqNonce              *common.Nonce         `json:"requestNonce"`
+		Token                jsonToken             `json:"token"`
+	}
+	toMarshal := jsonFormat{
+		ItemID:               tx.ItemID,
+		TxID:                 tx.TxID,
+		Type:                 tx.Type,
+		FromIdx:              tx.FromIdx,
+		EffectiveFromEthAddr: tx.EffectiveFromEthAddr,
+		EffectiveFromBJJ:     tx.EffectiveFromBJJ,
+		ToIdx:                tx.ToIdx,
+		EffectiveToEthAddr:   tx.EffectiveToEthAddr,
+		EffectiveToBJJ:       tx.EffectiveToBJJ,
+		Amount:               tx.Amount,
+		Fee:                  tx.Fee,
+		Nonce:                tx.Nonce,
+		State:                tx.State,
+		MaxNumBatch:          tx.MaxNumBatch,
+		Info:                 tx.Info,
+		ErrorCode:            tx.ErrorCode,
+		ErrorType:            tx.ErrorType,
+		Signature:            tx.Signature,
+		Timestamp:            tx.Timestamp,
+		RqFromIdx:            tx.RqFromIdx,
+		RqToIdx:              tx.RqToIdx,
+		RqToEthAddr:          tx.RqToEthAddr,
+		RqToBJJ:              tx.RqToBJJ,
+		RqTokenID:            tx.RqTokenID,
+		RqAmount:             tx.RqAmount,
+		RqFee:                tx.RqFee,
+		RqNonce:              tx.RqNonce,
+		Token: jsonToken{
+			TokenID:          tx.TokenID,
+			TokenItemID:      tx.TokenItemID,
+			TokenEthBlockNum: tx.TokenEthBlockNum,
+			TokenEthAddr:     tx.TokenEthAddr,
+			TokenName:        tx.TokenName,
+			TokenSymbol:      tx.TokenSymbol,
+			TokenDecimals:    tx.TokenDecimals,
+			TokenUSD:         tx.TokenUSD,
+			TokenUSDUpdate:   tx.TokenUSDUpdate,
 		},
-	})
+	}
+	return json.Marshal(toMarshal)
 }
 
 // AccountCreationAuthAPI represents an account creation auth in the expected format by the API
