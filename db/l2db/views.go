@@ -55,21 +55,7 @@ type PoolTxAPIView struct {
 // MarshalJSON is used to neast some of the fields of PoolTxAPIView
 // without the need of auxiliar structs
 func (tx PoolTxAPIView) MarshalJSON() ([]byte, error) {
-	toMarshal := tx.ToAPI()
-	return json.Marshal(toMarshal)
-}
-
-// AccountCreationAuthAPI represents an account creation auth in the expected format by the API
-type AccountCreationAuthAPI struct {
-	EthAddr   apitypes.HezEthAddr   `json:"hezEthereumAddress" meddler:"eth_addr" `
-	BJJ       apitypes.HezBJJ       `json:"bjj"                meddler:"bjj" `
-	Signature apitypes.EthSignature `json:"signature"          meddler:"signature" `
-	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
-}
-
-// ToAPI converts a PoolTxAPIView into PoolL2TxAPI
-func (tx *PoolTxAPIView) ToAPI() common.PoolL2TxAPI {
-	pooll2apilocal := common.PoolL2TxAPI{
+	toMarshal := common.PoolL2TxAPI{
 		ItemID:               tx.ItemID,
 		TxID:                 tx.TxID,
 		Type:                 tx.Type,
@@ -98,15 +84,22 @@ func (tx *PoolTxAPIView) ToAPI() common.PoolL2TxAPI {
 		RqFee:                tx.RqFee,
 		RqNonce:              tx.RqNonce,
 	}
-	pooll2apilocal.Token.TokenID = tx.TokenID
-	pooll2apilocal.Token.TokenItemID = tx.TokenItemID
-	pooll2apilocal.Token.TokenEthBlockNum = tx.TokenEthBlockNum
-	pooll2apilocal.Token.TokenEthAddr = tx.TokenEthAddr
-	pooll2apilocal.Token.TokenName = tx.TokenName
-	pooll2apilocal.Token.TokenSymbol = tx.TokenSymbol
-	pooll2apilocal.Token.TokenDecimals = tx.TokenDecimals
-	pooll2apilocal.Token.TokenUSD = tx.TokenUSD
-	pooll2apilocal.Token.TokenUSDUpdate = tx.TokenUSDUpdate
+	toMarshal.Token.TokenID = tx.TokenID
+	toMarshal.Token.TokenItemID = tx.TokenItemID
+	toMarshal.Token.TokenEthBlockNum = tx.TokenEthBlockNum
+	toMarshal.Token.TokenEthAddr = tx.TokenEthAddr
+	toMarshal.Token.TokenName = tx.TokenName
+	toMarshal.Token.TokenSymbol = tx.TokenSymbol
+	toMarshal.Token.TokenDecimals = tx.TokenDecimals
+	toMarshal.Token.TokenUSD = tx.TokenUSD
+	toMarshal.Token.TokenUSDUpdate = tx.TokenUSDUpdate
+	return json.Marshal(toMarshal)
+}
 
-	return pooll2apilocal
+// AccountCreationAuthAPI represents an account creation auth in the expected format by the API
+type AccountCreationAuthAPI struct {
+	EthAddr   apitypes.HezEthAddr   `json:"hezEthereumAddress" meddler:"eth_addr" `
+	BJJ       apitypes.HezBJJ       `json:"bjj"                meddler:"bjj" `
+	Signature apitypes.EthSignature `json:"signature"          meddler:"signature" `
+	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
 }
