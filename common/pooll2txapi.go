@@ -35,7 +35,7 @@ type PoolL2TxAPI struct {
 	RqToEthAddr          *ethCommon.Address
 	RqToBJJ              *babyjub.PublicKeyComp
 	RqTokenID            *TokenID
-	RqAmount             *big.Int
+	RqAmount             big.Int
 	RqFee                *FeeSelector
 	RqNonce              *Nonce
 	Token                struct {
@@ -89,7 +89,7 @@ func (tx PoolL2TxAPI) MarshalJSON() ([]byte, error) {
 		RqToEthAddr          *ethCommon.Address     `json:"requestToHezEthereumAddress"`
 		RqToBJJ              *babyjub.PublicKeyComp `json:"requestToBJJ"`
 		RqTokenID            *TokenID               `json:"requestTokenId"`
-		RqAmount             *big.Int               `json:"requestAmount"`
+		RqAmount             big.Int                `json:"requestAmount"`
 		RqFee                *FeeSelector           `json:"requestFee"`
 		RqNonce              *Nonce                 `json:"requestNonce"`
 		Token                jsonToken              `json:"token"`
