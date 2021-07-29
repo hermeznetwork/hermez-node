@@ -8,6 +8,18 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+type TokenAPI struct {
+	TokenID          TokenID           `json:"id"`
+	TokenItemID      uint64            `json:"itemId"`
+	TokenEthBlockNum int64             `json:"ethereumBlockNum"`
+	TokenEthAddr     ethCommon.Address `json:"ethereumAddress"`
+	TokenName        string            `json:"name"`
+	TokenSymbol      string            `json:"symbol"`
+	TokenDecimals    uint64            `json:"decimals"`
+	TokenUSD         *float64          `json:"USD"`
+	TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
+}
+
 // PoolL2TxAPI represents a L2 Tx pool with extra metadata used by the API
 type PoolL2TxAPI struct {
 	ItemID               uint64                `json:"itemId"`
@@ -37,17 +49,7 @@ type PoolL2TxAPI struct {
 	RqAmount             *string               `json:"requestAmount"`
 	RqFee                *FeeSelector          `json:"requestFee"`
 	RqNonce              *Nonce                `json:"requestNonce"`
-	Token                struct {
-		TokenID          TokenID           `json:"id"`
-		TokenItemID      uint64            `json:"itemId"`
-		TokenEthBlockNum int64             `json:"ethereumBlockNum"`
-		TokenEthAddr     ethCommon.Address `json:"ethereumAddress"`
-		TokenName        string            `json:"name"`
-		TokenSymbol      string            `json:"symbol"`
-		TokenDecimals    uint64            `json:"decimals"`
-		TokenUSD         *float64          `json:"USD"`
-		TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
-	} `json:"token"`
+	Token                TokenAPI              `json:"token"`
 }
 
 // MarshalJSON is used to convert PoolL2TxAPI in JSON
