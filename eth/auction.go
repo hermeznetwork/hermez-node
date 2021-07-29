@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"strings"
@@ -12,11 +13,13 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
 	HermezAuctionProtocol "github.com/hermeznetwork/hermez-node/eth/contracts/auction"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/multiformats/go-multiaddr"
 )
 
 // SlotState is the state of a slot
@@ -989,4 +992,56 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 		}
 	}
 	return &auctionEvents, nil
+}
+
+// GetCoordinatorsLibP2PAddrs return the libp2p addr associated to each coordinator
+// that has been registered so far
+func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, error) {
+	// Get events
+	query := ethereum.FilterQuery{
+		Addresses: []ethCommon.Address{
+			c.address,
+		},
+		Topics: [][]ethCommon.Hash{{logAuctionSetCoordinator}},
+	}
+
+	logs, err := c.client.client.FilterLogs(context.TODO(), query)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	p2pAddrs := []multiaddr.Multiaddr{}
+	for _, eventLog := range logs {
+		// Get coordinator URL
+		// TODO: read event to find coordinator URL
+		var url string
+		// Get coordinator public key
+		tx, isPending, err := c.client.client.TransactionByHash(context.TODO(), eventLog.TxHash)
+		if err != nil {
+			return nil, err
+		}
+		if isPending {
+			continue
+		}
+		sig := make([]byte, 65)
+		// v, r, s := tx.RawSignatureValues()
+		// rBytes, sBytes := r.Bytes(), s.Bytes()
+		// copy(sig[32-len(rBytes):32], r)
+		// copy(sig[64-len(sBytes):64], s)
+		// sig[64] = v.Sub(v, big.NewInt(27)).Bytes()
+
+		pubKey, err := ethCrypto.SigToPub(tx.Hash().Bytes(), sig)
+		if err != nil {
+			continue
+		}
+		if addr, err := NewCoordinatorLibP2PAddr(url, pubKey); err == nil {
+			p2pAddrs = append(p2pAddrs, addr)
+		}
+
+	}
+	return p2pAddrs, nil
+}
+
+func NewCoordinatorLibP2PAddr(url string, pubKey *ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
+	// TODO
+	return nil, nil
 }
