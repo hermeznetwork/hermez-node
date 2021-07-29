@@ -2,6 +2,8 @@ package l2db
 
 import (
 	"encoding/json"
+	"math/big"
+	"strconv"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -69,34 +71,44 @@ type AccountCreationAuthAPI struct {
 
 // ToAPI converts a PoolTxAPIView into PoolL2TxAPI
 func (tx *PoolTxAPIView) ToAPI() common.PoolL2TxAPI {
+	innerFromIdx, _ := strconv.Atoi(string(tx.FromIdx))
+	//innerToIdx, _ := strconv.Atoi(string(*tx.ToIdx))
+	//innerRqFromIdx, _ := strconv.Atoi(string(*tx.RqFromIdx))
+	//innerRqToIdx, _ := strconv.Atoi(string(*tx.RqToIdx))
+
+	innerAmount := new(big.Int)
+	innerAmount, _ = innerAmount.SetString(string(tx.Amount), 0)
+	innerRqAmount := new(big.Int)
+	innerRqAmount, _ = innerRqAmount.SetString(string(*tx.RqAmount), 0)
+
 	pooll2apilocal := common.PoolL2TxAPI{
-		ItemID:               tx.ItemID,
-		TxID:                 tx.TxID,
-		Type:                 tx.Type,
-		FromIdx:              string(tx.FromIdx),
-		EffectiveFromEthAddr: (*string)(tx.EffectiveFromEthAddr),
-		EffectiveFromBJJ:     (*string)(tx.EffectiveFromBJJ),
-		ToIdx:                (*string)(tx.ToIdx),
-		EffectiveToEthAddr:   (*string)(tx.EffectiveToEthAddr),
-		EffectiveToBJJ:       (*string)(tx.EffectiveToBJJ),
-		Amount:               string(tx.Amount),
-		Fee:                  tx.Fee,
-		Nonce:                tx.Nonce,
-		State:                tx.State,
-		MaxNumBatch:          tx.MaxNumBatch,
-		Info:                 tx.Info,
-		ErrorCode:            tx.ErrorCode,
-		ErrorType:            tx.ErrorType,
-		Signature:            tx.Signature,
-		Timestamp:            tx.Timestamp,
-		RqFromIdx:            (*string)(tx.RqFromIdx),
-		RqToIdx:              (*string)(tx.RqToIdx),
-		RqToEthAddr:          (*string)(tx.RqToEthAddr),
-		RqToBJJ:              (*string)(tx.RqToBJJ),
-		RqTokenID:            tx.RqTokenID,
-		RqAmount:             (*string)(tx.RqAmount),
-		RqFee:                tx.RqFee,
-		RqNonce:              tx.RqNonce,
+		ItemID:  tx.ItemID,
+		TxID:    tx.TxID,
+		Type:    tx.Type,
+		FromIdx: common.Idx(innerFromIdx),
+		//EffectiveFromEthAddr: tx.EffectiveFromEthAddr,
+		//EffectiveFromBJJ:     tx.EffectiveFromBJJ,
+		//ToIdx:                common.Idx(innerToIdx),
+		//EffectiveToEthAddr:   tx.EffectiveToEthAddr,
+		//EffectiveToBJJ:       tx.EffectiveToBJJ,
+		Amount:      *innerAmount,
+		Fee:         tx.Fee,
+		Nonce:       tx.Nonce,
+		State:       tx.State,
+		MaxNumBatch: tx.MaxNumBatch,
+		Info:        tx.Info,
+		ErrorCode:   tx.ErrorCode,
+		ErrorType:   tx.ErrorType,
+		Signature:   tx.Signature,
+		Timestamp:   tx.Timestamp,
+		//RqFromIdx:            common.Idx(innerRqFromIdx),
+		//RqToIdx:              common.Idx(innerRqToIdx),
+		//RqToEthAddr:          tx.RqToEthAddr,
+		//RqToBJJ:              tx.RqToBJJ,
+		RqTokenID: tx.RqTokenID,
+		RqAmount:  innerRqAmount,
+		RqFee:     tx.RqFee,
+		RqNonce:   tx.RqNonce,
 	}
 	pooll2apilocal.Token.TokenID = tx.TokenID
 	pooll2apilocal.Token.TokenItemID = tx.TokenItemID
