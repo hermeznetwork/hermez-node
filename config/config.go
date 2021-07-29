@@ -3,9 +3,9 @@ package config
 import (
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"time"
-	"os"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	configLibrary "github.com/hermeznetwork/go-hermez-config"
@@ -413,7 +413,7 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 	//Get env arrays
 	//Proof Servers
 	if os.Getenv("HEZNODE_SERVERPROOF_URL") != "" {
-		prover := ServerProof {
+		prover := ServerProof{
 			URL: os.Getenv("HEZNODE_SERVERPROOF_URL"),
 		}
 		var provers []ServerProof
@@ -422,7 +422,7 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 	}
 	//Price Updater
 	if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER") != "" {
-		provider := priceupdater.Provider {
+		provider := priceupdater.Provider{
 			Provider: os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER"),
 		}
 		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_BASEURL") != "" {
@@ -443,7 +443,6 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 		var providers []priceupdater.Provider
 		providers = append(providers, provider)
 		cfg.PriceUpdater.Provider = providers
-
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
