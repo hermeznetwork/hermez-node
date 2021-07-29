@@ -8,6 +8,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+// TokenAPI represents a Token item
 type TokenAPI struct {
 	TokenID          TokenID           `json:"id"`
 	TokenItemID      uint64            `json:"itemId"`
