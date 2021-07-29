@@ -13,7 +13,7 @@ SQLConnectionTimeout = "2s"
 [PriceUpdater]
 Interval = "60s"
 Priority = "bitfinexV2,CoinGeckoV3"
-Statictokens="3=1.31,4=1.01"  # <tokenId>=<forced_price>,<tokenId>=<forced_price>
+Statictokens=""  # <tokenId>=<forced_price>,<tokenId>=<forced_price>
 
 [PriceUpdater.Fiat]
 APIKey=""
