@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"os"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	configLibrary "github.com/hermeznetwork/go-hermez-config"
@@ -408,6 +409,41 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 			return nil, err
 		}
 		log.Warn(err.Error())
+	}
+	//Get env arrays
+	//Proof Servers
+	if os.Getenv("HEZNODE_SERVERPROOF_URL") != "" {
+		prover := ServerProof {
+			URL: os.Getenv("HEZNODE_SERVERPROOF_URL"),
+		}
+		var provers []ServerProof
+		provers = append(provers, prover)
+		cfg.Coordinator.ServerProofs = provers
+	}
+	//Price Updater
+	if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER") != "" {
+		provider := priceupdater.Provider {
+			Provider: os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER"),
+		}
+		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_BASEURL") != "" {
+			provider.BaseURL = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_BASEURL")
+		}
+		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URL") != "" {
+			provider.URL = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URL")
+		}
+		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS") != "" {
+			provider.URLExtraParams = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS")
+		}
+		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS") != "" {
+			provider.Symbols = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS")
+		}
+		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES") != "" {
+			provider.Addresses = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES")
+		}
+		var providers []priceupdater.Provider
+		providers = append(providers, provider)
+		cfg.PriceUpdater.Provider = providers
+
 	}
 	validate := validator.New()
 	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
