@@ -170,15 +170,15 @@ token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name,
 count(*) OVER() AS total_items 
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
-// GetTxAPI return the specified Tx in PoolTxAPI format
-func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
+// GetTxAPI return the specified Tx in PoolTxAPIView format
+func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPIView, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	defer l2db.apiConnCon.Release()
-	tx := new(PoolTxAPI)
+	tx := new(PoolTxAPIView)
 	return tx, tracerr.Wrap(meddler.QueryRow(
 		l2db.dbRead, tx,
 		selectPoolTxAPI+"WHERE tx_id = $1;",
@@ -207,7 +207,7 @@ type GetPoolTxsAPIRequest struct {
 }
 
 // GetPoolTxsAPI return Txs from the pool
-func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint64, error) {
+func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPIView, uint64, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -359,14 +359,14 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 
 	query := l2db.dbRead.Rebind(queryStr)
-	txsPtrs := []*PoolTxAPI{}
+	txsPtrs := []*PoolTxAPIView{}
 	if err = meddler.QueryAll(
 		l2db.dbRead, &txsPtrs,
 		query,
 		args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
+	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPIView)
 	if len(txs) == 0 {
 		return txs, 0, nil
 	}
@@ -374,7 +374,7 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 }
 
 // GetPoolTxsByAtomicGroupIDAPI return Txs from the pool that belong to the given atomicGroupID
-func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]PoolTxAPI, error) {
+func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]PoolTxAPIView, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -382,7 +382,7 @@ func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupI
 	}
 	defer l2db.apiConnCon.Release()
 
-	txsPtrs := []*PoolTxAPI{}
+	txsPtrs := []*PoolTxAPIView{}
 	if err := meddler.QueryAll(
 		l2db.dbRead, &txsPtrs,
 		selectPoolTxsAPI+" WHERE atomic_group_id = $1;",
@@ -390,7 +390,7 @@ func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupI
 	); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
+	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPIView)
 	if len(txs) == 0 {
 		return txs, nil
 	}
