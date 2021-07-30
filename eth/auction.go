@@ -1036,6 +1036,7 @@ func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, erro
 		if addr, err := NewCoordinatorLibP2PAddr(url, pubKey); err == nil {
 			p2pAddrs = append(p2pAddrs, addr)
 		}
+		ecdsa.Recover
 
 	}
 	return p2pAddrs, nil
