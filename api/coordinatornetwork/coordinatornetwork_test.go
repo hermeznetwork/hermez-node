@@ -1,37 +1,64 @@
 package coordinatornetwork
 
 import (
-	"encoding/json"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/stretchr/testify/assert"
+	"github.com/hermeznetwork/hermez-node/log"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/require"
 )
 
-func TestPubSubTxsPool(t *testing.T) {
-	net1, err := NewCoordinatorNetwork("4321")
-	require.NoError(t, err)
-	net2, err := NewCoordinatorNetwork("1234")
+func TestPubSubFakeServer(t *testing.T) {
+	// NOTE THAT THIS IS INTENDED TO RUN MANUALLY USING DIFFERENT MACHINES
+	// Fake server
+	if os.Getenv("FAKE_COORDNET") != "yes" {
+		return
+	}
+	coordnet, err := NewCoordinatorNetwork([]common.Coordinator{})
 	require.NoError(t, err)
 
-	txToSend := common.PoolL2Tx{
-		FromIdx:     234,
-		ToIdx:       432,
-		TokenID:     4,
-		TokenSymbol: "FOO",
-		Amount:      big.NewInt(7),
+	// find other peers
+	go func() {
+		for {
+			if err := coordnet.FindMorePeers(); err != nil {
+				log.Warn(err)
+			}
+			time.Sleep(10 * time.Second)
+			log.Infof("%d peers connected to the pubsub", len(coordnet.txsPool.topic.ListPeers()))
+		}
+	}()
+
+	// Receive or send
+	if os.Getenv("PUBLISH") == "yes" {
+		// Wait until some peers have been found
+		peers := []peer.ID{}
+		for len(peers) == 0 {
+			peers = coordnet.txsPool.topic.ListPeers()
+		}
+		log.Info("peers on the pubsub: ")
+		for _, peer := range peers {
+			log.Info(peer.Pretty())
+		}
+		time.Sleep(60 * time.Second)
+		// Send tx
+		txToPublish, err := common.NewPoolL2Tx(&common.PoolL2Tx{
+			FromIdx:     666,
+			ToIdx:       555,
+			Amount:      big.NewInt(555555),
+			TokenID:     1,
+			TokenSymbol: "HEZ",
+		})
+		require.NoError(t, err)
+		require.NoError(t, coordnet.PublishTx(*txToPublish))
+		log.Infof("Tx %s published to the network", txToPublish.TxID.String())
+		time.Sleep(10 * time.Second)
+		return
 	}
-	// TODO: better way to way until libp2p is ready
-	time.Sleep(10 * time.Second)
-	require.NoError(t, net2.PublishTx(txToSend))
-	receivedTx := <-net1.TxPoolCh
-	// TODO: Cleaner test, this marshaling/unmarshaling it's ugly
-	expectedTxBytes, err := json.Marshal(txToSend)
-	require.NoError(t, err)
-	expectedTx := common.PoolL2Tx{}
-	require.NoError(t, json.Unmarshal(expectedTxBytes, &expectedTx))
-	assert.Equal(t, expectedTx, *receivedTx)
+	log.Warn("Entering endless loop, until a tx is received or ^C is received")
+	receivedTx := <-coordnet.TxPoolCh
+	log.Info("Tx received: ", receivedTx.TxID)
 }
