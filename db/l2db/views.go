@@ -2,7 +2,6 @@ package l2db
 
 import (
 	"encoding/json"
-	"math/big"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -13,64 +12,91 @@ import (
 
 // PoolTxAPIView represents a L2 Tx pool with extra metadata used by the API
 type PoolTxAPIView struct {
-	ItemID               uint64                 `meddler:"item_id"`
-	TxID                 common.TxID            `meddler:"tx_id"`
-	FromIdx              common.Idx             `meddler:"from_idx"`
-	EffectiveFromEthAddr *ethCommon.Address     `meddler:"effective_from_eth_addr"`
-	EffectiveFromBJJ     *babyjub.PublicKeyComp `meddler:"effective_from_bjj"`
-	ToIdx                *common.Idx            `meddler:"to_idx"`
-	EffectiveToEthAddr   *ethCommon.Address     `meddler:"effective_to_eth_addr"`
-	EffectiveToBJJ       *babyjub.PublicKeyComp `meddler:"effective_to_bjj"`
-	Amount               big.Int                `meddler:"amount"`
-	Fee                  common.FeeSelector     `meddler:"fee"`
-	Nonce                common.Nonce           `meddler:"nonce"`
-	State                common.PoolL2TxState   `meddler:"state"`
-	MaxNumBatch          uint32                 `meddler:"max_num_batch,zeroisnull"`
-	Info                 *string                `meddler:"info"`
-	ErrorCode            *int                   `meddler:"error_code"`
-	ErrorType            *string                `meddler:"error_type"`
-	Signature            babyjub.SignatureComp  `meddler:"signature"`
-	RqFromIdx            *common.Idx            `meddler:"rq_from_idx"`
-	RqToIdx              *common.Idx            `meddler:"rq_to_idx"`
-	RqToEthAddr          *ethCommon.Address     `meddler:"rq_to_eth_addr"`
-	RqToBJJ              *babyjub.PublicKeyComp `meddler:"rq_to_bjj"`
-	RqTokenID            *common.TokenID        `meddler:"rq_token_id"`
-	RqAmount             big.Int                `meddler:"rq_amount"`
-	RqFee                *common.FeeSelector    `meddler:"rq_fee"`
-	RqNonce              *common.Nonce          `meddler:"rq_nonce"`
-	Type                 common.TxType          `meddler:"tx_type"`
-	BatchNum             *common.BatchNum       `meddler:"batch_num"`
-	Timestamp            time.Time              `meddler:"timestamp,utctime"`
-	TotalItems           uint64                 `meddler:"total_items"`
-	TokenID              common.TokenID         `meddler:"token_id"`
-	TokenItemID          uint64                 `meddler:"token_item_id"`
-	TokenEthBlockNum     int64                  `meddler:"eth_block_num"`
-	TokenEthAddr         ethCommon.Address      `meddler:"eth_addr"`
-	TokenName            string                 `meddler:"name"`
-	TokenSymbol          string                 `meddler:"symbol"`
-	TokenDecimals        uint64                 `meddler:"decimals"`
-	TokenUSD             *float64               `meddler:"usd"`
-	TokenUSDUpdate       *time.Time             `meddler:"usd_update"`
+	ItemID               uint64                `meddler:"item_id"`
+	TxID                 common.TxID           `meddler:"tx_id"`
+	FromIdx              apitypes.HezIdx       `meddler:"from_idx"`
+	EffectiveFromEthAddr *apitypes.HezEthAddr  `meddler:"effective_from_eth_addr"`
+	EffectiveFromBJJ     *apitypes.HezBJJ      `meddler:"effective_from_bjj"`
+	ToIdx                *apitypes.HezIdx      `meddler:"to_idx"`
+	EffectiveToEthAddr   *apitypes.HezEthAddr  `meddler:"effective_to_eth_addr"`
+	EffectiveToBJJ       *apitypes.HezBJJ      `meddler:"effective_to_bjj"`
+	Amount               apitypes.BigIntStr    `meddler:"amount"`
+	Fee                  common.FeeSelector    `meddler:"fee"`
+	Nonce                common.Nonce          `meddler:"nonce"`
+	State                common.PoolL2TxState  `meddler:"state"`
+	MaxNumBatch          uint32                `meddler:"max_num_batch,zeroisnull"`
+	Info                 *string               `meddler:"info"`
+	ErrorCode            *int                  `meddler:"error_code"`
+	ErrorType            *string               `meddler:"error_type"`
+	Signature            babyjub.SignatureComp `meddler:"signature"`
+	RqFromIdx            *apitypes.HezIdx      `meddler:"rq_from_idx"`
+	RqToIdx              *apitypes.HezIdx      `meddler:"rq_to_idx"`
+	RqToEthAddr          *apitypes.HezEthAddr  `meddler:"rq_to_eth_addr"`
+	RqToBJJ              *apitypes.HezBJJ      `meddler:"rq_to_bjj"`
+	RqTokenID            *common.TokenID       `meddler:"rq_token_id"`
+	RqAmount             *apitypes.BigIntStr   `meddler:"rq_amount"`
+	RqFee                *common.FeeSelector   `meddler:"rq_fee"`
+	RqNonce              *common.Nonce         `meddler:"rq_nonce"`
+	Type                 common.TxType         `meddler:"tx_type"`
+	BatchNum             *common.BatchNum      `meddler:"batch_num"`
+	Timestamp            time.Time             `meddler:"timestamp,utctime"`
+	TotalItems           uint64                `meddler:"total_items"`
+	TokenID              common.TokenID        `meddler:"token_id"`
+	TokenItemID          uint64                `meddler:"token_item_id"`
+	TokenEthBlockNum     int64                 `meddler:"eth_block_num"`
+	TokenEthAddr         ethCommon.Address     `meddler:"eth_addr"`
+	TokenName            string                `meddler:"name"`
+	TokenSymbol          string                `meddler:"symbol"`
+	TokenDecimals        uint64                `meddler:"decimals"`
+	TokenUSD             *float64              `meddler:"usd"`
+	TokenUSDUpdate       *time.Time            `meddler:"usd_update"`
 }
 
 // MarshalJSON is used to neast some of the fields of PoolTxAPIView
 // without the need of auxiliar structs
 func (tx PoolTxAPIView) MarshalJSON() ([]byte, error) {
-	toMarshal := tx.ToAPI()
-	return json.Marshal(toMarshal)
-}
-
-// AccountCreationAuthAPI represents an account creation auth in the expected format by the API
-type AccountCreationAuthAPI struct {
-	EthAddr   ethCommon.Address     `json:"hezEthereumAddress" meddler:"eth_addr" `
-	BJJ       babyjub.PublicKeyComp `json:"bjj"                meddler:"bjj" `
-	Signature apitypes.EthSignature `json:"signature"          meddler:"signature" `
-	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
-}
-
-// ToAPI converts a PoolTxAPIView into PoolL2TxAPI
-func (tx *PoolTxAPIView) ToAPI() common.PoolL2TxAPI {
-	pooll2apilocal := common.PoolL2TxAPI{
+	type jsonToken struct {
+		TokenID          common.TokenID    `json:"id"`
+		TokenItemID      uint64            `json:"itemId"`
+		TokenEthBlockNum int64             `json:"ethereumBlockNum"`
+		TokenEthAddr     ethCommon.Address `json:"ethereumAddress"`
+		TokenName        string            `json:"name"`
+		TokenSymbol      string            `json:"symbol"`
+		TokenDecimals    uint64            `json:"decimals"`
+		TokenUSD         *float64          `json:"USD"`
+		TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
+	}
+	type jsonFormat struct {
+		ItemID               uint64                `json:"itemId"`
+		TxID                 common.TxID           `json:"id"`
+		Type                 common.TxType         `json:"type"`
+		FromIdx              apitypes.HezIdx       `json:"fromAccountIndex"`
+		EffectiveFromEthAddr *apitypes.HezEthAddr  `json:"fromHezEthereumAddress"`
+		EffectiveFromBJJ     *apitypes.HezBJJ      `json:"fromBJJ"`
+		ToIdx                *apitypes.HezIdx      `json:"toAccountIndex"`
+		EffectiveToEthAddr   *apitypes.HezEthAddr  `json:"toHezEthereumAddress"`
+		EffectiveToBJJ       *apitypes.HezBJJ      `json:"toBJJ"`
+		Amount               apitypes.BigIntStr    `json:"amount"`
+		Fee                  common.FeeSelector    `json:"fee"`
+		Nonce                common.Nonce          `json:"nonce"`
+		State                common.PoolL2TxState  `json:"state"`
+		MaxNumBatch          uint32                `json:"maxNumBatch"`
+		Info                 *string               `json:"info"`
+		ErrorCode            *int                  `json:"errorCode"`
+		ErrorType            *string               `json:"errorType"`
+		Signature            babyjub.SignatureComp `json:"signature"`
+		Timestamp            time.Time             `json:"timestamp"`
+		RqFromIdx            *apitypes.HezIdx      `json:"requestFromAccountIndex"`
+		RqToIdx              *apitypes.HezIdx      `json:"requestToAccountIndex"`
+		RqToEthAddr          *apitypes.HezEthAddr  `json:"requestToHezEthereumAddress"`
+		RqToBJJ              *apitypes.HezBJJ      `json:"requestToBJJ"`
+		RqTokenID            *common.TokenID       `json:"requestTokenId"`
+		RqAmount             *apitypes.BigIntStr   `json:"requestAmount"`
+		RqFee                *common.FeeSelector   `json:"requestFee"`
+		RqNonce              *common.Nonce         `json:"requestNonce"`
+		Token                jsonToken             `json:"token"`
+	}
+	toMarshal := jsonFormat{
 		ItemID:               tx.ItemID,
 		TxID:                 tx.TxID,
 		Type:                 tx.Type,
@@ -98,16 +124,25 @@ func (tx *PoolTxAPIView) ToAPI() common.PoolL2TxAPI {
 		RqAmount:             tx.RqAmount,
 		RqFee:                tx.RqFee,
 		RqNonce:              tx.RqNonce,
+		Token: jsonToken{
+			TokenID:          tx.TokenID,
+			TokenItemID:      tx.TokenItemID,
+			TokenEthBlockNum: tx.TokenEthBlockNum,
+			TokenEthAddr:     tx.TokenEthAddr,
+			TokenName:        tx.TokenName,
+			TokenSymbol:      tx.TokenSymbol,
+			TokenDecimals:    tx.TokenDecimals,
+			TokenUSD:         tx.TokenUSD,
+			TokenUSDUpdate:   tx.TokenUSDUpdate,
+		},
 	}
-	pooll2apilocal.Token.TokenID = tx.TokenID
-	pooll2apilocal.Token.TokenItemID = tx.TokenItemID
-	pooll2apilocal.Token.TokenEthBlockNum = tx.TokenEthBlockNum
-	pooll2apilocal.Token.TokenEthAddr = tx.TokenEthAddr
-	pooll2apilocal.Token.TokenName = tx.TokenName
-	pooll2apilocal.Token.TokenSymbol = tx.TokenSymbol
-	pooll2apilocal.Token.TokenDecimals = tx.TokenDecimals
-	pooll2apilocal.Token.TokenUSD = tx.TokenUSD
-	pooll2apilocal.Token.TokenUSDUpdate = tx.TokenUSDUpdate
+	return json.Marshal(toMarshal)
+}
 
-	return pooll2apilocal
+// AccountCreationAuthAPI represents an account creation auth in the expected format by the API
+type AccountCreationAuthAPI struct {
+	EthAddr   apitypes.HezEthAddr   `json:"hezEthereumAddress" meddler:"eth_addr" `
+	BJJ       apitypes.HezBJJ       `json:"bjj"                meddler:"bjj" `
+	Signature apitypes.EthSignature `json:"signature"          meddler:"signature" `
+	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
 }
