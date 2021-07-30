@@ -3,6 +3,8 @@ package eth
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -1017,32 +1019,63 @@ func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, erro
 		// Get coordinator public key
 		tx, isPending, err := c.client.client.TransactionByHash(context.TODO(), eventLog.TxHash)
 		if err != nil {
-			return nil, err
+			log.Warn(err)
+			continue
 		}
 		if isPending {
 			continue
 		}
-		sig := make([]byte, 65)
-		// v, r, s := tx.RawSignatureValues()
-		// rBytes, sBytes := r.Bytes(), s.Bytes()
-		// copy(sig[32-len(rBytes):32], r)
-		// copy(sig[64-len(sBytes):64], s)
-		// sig[64] = v.Sub(v, big.NewInt(27)).Bytes()
-
-		pubKey, err := ethCrypto.SigToPub(tx.Hash().Bytes(), sig)
+		pubKey, err := pubKeyFromTx(tx)
 		if err != nil {
+			log.Warn(err)
 			continue
 		}
-		if addr, err := NewCoordinatorLibP2PAddr(url, pubKey); err == nil {
+		if addr, err := NewCoordinatorLibP2PAddr(url, *pubKey); err == nil {
 			p2pAddrs = append(p2pAddrs, addr)
+		} else {
+			log.Warn(err)
 		}
-		ecdsa.Recover
 
 	}
 	return p2pAddrs, nil
 }
 
-func NewCoordinatorLibP2PAddr(url string, pubKey *ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
+func pubKeyFromTx(tx *types.Transaction) (*ecdsa.PublicKey, error) {
+	// Get signature from V, R, S
+	signer := types.NewLondonSigner(tx.ChainId())
+	sig := make([]byte, 65)
+	V, r, s := tx.RawSignatureValues()
+	rBytes, sBytes := r.Bytes(), s.Bytes()
+	copy(sig[32-len(rBytes):32], rBytes)
+	copy(sig[64-len(sBytes):64], sBytes)
+	/*
+		V expected values:
+		- mainnet: 37
+		- goerli: 45
+	*/
+
+	// recover the public key from the signature
+	hash := signer.Hash(tx).Bytes()
+	if len(hash) == 0 {
+		return nil, errors.New("Tx hash is empty")
+	}
+	log.Error("v: ", V.Int64())
+	log.Error("Signature: ", hex.EncodeToString(sig))
+	log.Error("Hash: ", hex.EncodeToString(hash))
+	// if V.Int64() != 45 {
+
+	// 	// sig[64] = byte(V.Uint64() - 27)
+	// 	// sig[64] = byte(0)
+	// }
+	// pub, err := crypto.Ecrecover(hash, sig)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return ethCrypto.UnmarshalPubkey(pub)
+	return ethCrypto.SigToPub(hash, sig)
+}
+
+func NewCoordinatorLibP2PAddr(url string, pubKey ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
 	// TODO
 	return nil, nil
 }

@@ -1,9 +1,15 @@
 package eth
 
 import (
+	"context"
 	"math/big"
+	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/core/types"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -401,4 +407,24 @@ func TestAuctionForge(t *testing.T) {
 	assert.Equal(t, currentBlockNum, blockNum)
 	_, err = auctionClientTestHermez.AuctionForge(governanceAddressConst)
 	require.Nil(t, err)
+}
+
+func TestPubKeyFromTx(t *testing.T) {
+	web3URL := os.Getenv("ETHCLIENT_DIAL_URL")
+	ethClient, err := ethclient.Dial(web3URL)
+	require.NoError(t, err)
+	ctx := context.Background()
+	block, err := ethClient.BlockByNumber(ctx, nil)
+	require.NoError(t, err)
+	txs := block.Transactions()
+	for i := 0; i < txs.Len(); i++ {
+		tx, err := ethClient.TransactionInBlock(ctx, block.Hash(), uint(i))
+		require.NoError(t, err)
+		log.Errorf("Testing tx %d. Type %d", i, tx.Type())
+		pubKey, err := pubKeyFromTx(tx)
+		require.NoError(t, err)
+		from, err := types.Sender(types.NewLondonSigner(tx.ChainId()), tx)
+		require.NoError(t, err)
+		require.Equal(t, from, ethCrypto.PubkeyToAddress(*pubKey))
+	}
 }

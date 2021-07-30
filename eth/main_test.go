@@ -2,7 +2,6 @@ package eth
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -130,84 +129,85 @@ func getEnvVariables() {
 func TestMain(m *testing.M) {
 	exitVal := 0
 
-	if os.Getenv("INTEGRATION") != "" {
-		getEnvVariables()
-		dir, err := ioutil.TempDir("", "tmpks")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				log.Fatal(err)
-			}
-		}()
-		ks = keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	// if os.Getenv("INTEGRATION") != "" {
+	// 	getEnvVariables()
+	// 	dir, err := ioutil.TempDir("", "tmpks")
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	defer func() {
+	// 		if err := os.RemoveAll(dir); err != nil {
+	// 			log.Fatal(err)
+	// 		}
+	// 	}()
+	// 	ks = keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-		w, err := hdwallet.NewFromMnemonic(mnemonic)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// 	w, err := hdwallet.NewFromMnemonic(mnemonic)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
 
-		// Create ethereum accounts from mnemonic and load private keys
-		// into the keystore
-		bootCoordinatorAccount, bootCoordinatorAddressConst = genAcc(w, ks, 0)
-		governanceAccount, governanceAddressConst = genAcc(w, ks, 1)
-		emergencyCouncilAccount, emergencyCouncilAddressConst = genAcc(w, ks, 2)
-		donationAccount, donationAddressConst = genAcc(w, ks, 3)
-		hermezRollupTestAccount, hermezRollupTestAddressConst = genAcc(w, ks, 4)
-		auxAccount, auxAddressConst = genAcc(w, ks, 5)
-		aux2Account, aux2AddressConst = genAcc(w, ks, 6)
+	// 	// Create ethereum accounts from mnemonic and load private keys
+	// 	// into the keystore
+	// 	bootCoordinatorAccount, bootCoordinatorAddressConst = genAcc(w, ks, 0)
+	// 	governanceAccount, governanceAddressConst = genAcc(w, ks, 1)
+	// 	emergencyCouncilAccount, emergencyCouncilAddressConst = genAcc(w, ks, 2)
+	// 	donationAccount, donationAddressConst = genAcc(w, ks, 3)
+	// 	hermezRollupTestAccount, hermezRollupTestAddressConst = genAcc(w, ks, 4)
+	// 	auxAccount, auxAddressConst = genAcc(w, ks, 5)
+	// 	aux2Account, aux2AddressConst = genAcc(w, ks, 6)
 
-		ethClient, err = ethclient.Dial(ethClientDialURL)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// 	ethClient, err = ethclient.Dial(ethClientDialURL)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
 
-		// Controllable Governance Address
-		ethereumClientGov, err := NewEthereumClient(ethClient, governanceAccount, ks, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHEZ)
-		if err != nil {
-			log.Fatal(err)
-		}
-		auctionClientTest, err = NewAuctionClient(ethereumClientGov, auctionTestAddressConst, tokenHEZ)
-		if err != nil {
-			log.Fatal(err)
-		}
-		rollupClient, err = NewRollupClient(ethereumClientGov, hermezRollupAddressConst)
-		if err != nil {
-			log.Fatal(err)
-		}
-		wdelayerClient, err = NewWDelayerClient(ethereumClientGov, wdelayerAddressConst)
-		if err != nil {
-			log.Fatal(err)
-		}
-		wdelayerClientTest, err = NewWDelayerClient(ethereumClientGov, wdelayerTestAddressConst)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// 	// Controllable Governance Address
+	// 	ethereumClientGov, err := NewEthereumClient(ethClient, governanceAccount, ks, nil)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	auctionClient, err = NewAuctionClient(ethereumClientGov, auctionAddressConst, tokenHEZ)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	auctionClientTest, err = NewAuctionClient(ethereumClientGov, auctionTestAddressConst, tokenHEZ)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	rollupClient, err = NewRollupClient(ethereumClientGov, hermezRollupAddressConst)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	wdelayerClient, err = NewWDelayerClient(ethereumClientGov, wdelayerAddressConst)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	wdelayerClientTest, err = NewWDelayerClient(ethereumClientGov, wdelayerTestAddressConst)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
 
-		ethereumClientEmergencyCouncil, err = NewEthereumClient(ethClient,
-			emergencyCouncilAccount, ks, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ethereumClientAux, err = NewEthereumClient(ethClient, auxAccount, ks, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ethereumClientAux2, err = NewEthereumClient(ethClient, aux2Account, ks, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ethereumClientHermez, err = NewEthereumClient(ethClient, hermezRollupTestAccount, ks, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// 	ethereumClientEmergencyCouncil, err = NewEthereumClient(ethClient,
+	// 		emergencyCouncilAccount, ks, nil)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	ethereumClientAux, err = NewEthereumClient(ethClient, auxAccount, ks, nil)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	ethereumClientAux2, err = NewEthereumClient(ethClient, aux2Account, ks, nil)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	ethereumClientHermez, err = NewEthereumClient(ethClient, hermezRollupTestAccount, ks, nil)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
 
-		exitVal = m.Run()
-	}
+	// 	exitVal = m.Run()
+	// }
+	exitVal = m.Run()
 	os.Exit(exitVal)
 }
