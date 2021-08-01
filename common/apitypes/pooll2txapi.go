@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -41,7 +42,7 @@ type PoolL2TxAPI struct {
 		TokenID          common.TokenID
 		TokenItemID      uint64
 		TokenEthBlockNum int64
-		TokenEthAddr     HezEthAddr
+		TokenEthAddr     ethCommon.Address
 		TokenName        string
 		TokenSymbol      string
 		TokenDecimals    uint64
@@ -53,15 +54,15 @@ type PoolL2TxAPI struct {
 // MarshalJSON is used to convert PoolL2TxAPI in JSON
 func (tx PoolL2TxAPI) MarshalJSON() ([]byte, error) {
 	type jsonToken struct {
-		TokenID          common.TokenID `json:"id"`
-		TokenItemID      uint64         `json:"itemId"`
-		TokenEthBlockNum int64          `json:"ethereumBlockNum"`
-		TokenEthAddr     HezEthAddr     `json:"ethereumAddress"`
-		TokenName        string         `json:"name"`
-		TokenSymbol      string         `json:"symbol"`
-		TokenDecimals    uint64         `json:"decimals"`
-		TokenUSD         *float64       `json:"USD"`
-		TokenUSDUpdate   *time.Time     `json:"fiatUpdate"`
+		TokenID          common.TokenID    `json:"id"`
+		TokenItemID      uint64            `json:"itemId"`
+		TokenEthBlockNum int64             `json:"ethereumBlockNum"`
+		TokenEthAddr     ethCommon.Address `json:"ethereumAddress"`
+		TokenName        string            `json:"name"`
+		TokenSymbol      string            `json:"symbol"`
+		TokenDecimals    uint64            `json:"decimals"`
+		TokenUSD         *float64          `json:"USD"`
+		TokenUSDUpdate   *time.Time        `json:"fiatUpdate"`
 	}
 	type jsonFormat struct {
 		ItemID               uint64                `json:"itemId"`

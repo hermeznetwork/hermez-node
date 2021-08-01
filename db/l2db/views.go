@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -43,7 +44,7 @@ type PoolTxAPIView struct {
 	TokenID              common.TokenID        `meddler:"token_id"`
 	TokenItemID          uint64                `meddler:"token_item_id"`
 	TokenEthBlockNum     int64                 `meddler:"eth_block_num"`
-	TokenEthAddr         apitypes.HezEthAddr   `meddler:"eth_addr"`
+	TokenEthAddr         ethCommon.Address     `meddler:"eth_addr"`
 	TokenName            string                `meddler:"name"`
 	TokenSymbol          string                `meddler:"symbol"`
 	TokenDecimals        uint64                `meddler:"decimals"`
