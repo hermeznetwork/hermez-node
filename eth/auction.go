@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"net"
+	"net/url"
 	"strings"
 
 	"github.com/arnaubennassar/eth2libp2p"
@@ -1000,6 +1002,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 // that has been registered so far
 func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, error) {
 	// Get events
+	log.Debug("Reading SC: ", c.address.Hex())
 	query := ethereum.FilterQuery{
 		Addresses: []ethCommon.Address{
 			c.address,
@@ -1011,7 +1014,9 @@ func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, erro
 		return nil, tracerr.Wrap(err)
 	}
 	libp2pAddrs := []multiaddr.Multiaddr{}
+	log.Debugf("%d events found", len(logs))
 	for _, eventLog := range logs {
+		log.Debug("Reading event")
 		// Get coordinator URL
 		var setCoordinator AuctionEventSetCoordinator
 		if err := c.contractAbi.UnpackIntoInterface(&setCoordinator,
@@ -1019,7 +1024,7 @@ func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, erro
 			return nil, tracerr.Wrap(err)
 		}
 		url := setCoordinator.CoordinatorURL
-
+		log.Debug("Coordinator URL: ", url)
 		// Get coordinator public key
 		tx, isPending, err := c.client.client.TransactionByHash(context.TODO(), eventLog.TxHash)
 		if err != nil {
@@ -1029,11 +1034,13 @@ func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, erro
 		if isPending {
 			continue
 		}
+		log.Debug("Geting pub key")
 		pubKey, err := pubKeyFromTx(tx)
 		if err != nil {
 			log.Warn(err)
 			continue
 		}
+		log.Debug("Pub key: ", pubKey)
 
 		// Generate libp2p address from URL and public key
 		if addr, err := NewCoordinatorLibP2PAddr(url, pubKey); err == nil {
@@ -1090,7 +1097,7 @@ func pubKeyFromTx(tx *types.Transaction) (*ecdsa.PublicKey, error) {
 	return ethCrypto.SigToPub(hash.Bytes(), signature)
 }
 
-func NewCoordinatorLibP2PAddr(url string, pubKey *ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
+func NewCoordinatorLibP2PAddr(URL string, pubKey *ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
 	// Generate libp2p ID from Ethereum public key
 	libp2pIDRaw, err := eth2libp2p.P2PIDFromEthPubKey(pubKey)
 	if err != nil {
@@ -1098,22 +1105,31 @@ func NewCoordinatorLibP2PAddr(url string, pubKey *ecdsa.PublicKey) (multiaddr.Mu
 	}
 	libp2pID := libp2pIDRaw.Pretty()
 
-	// DNS case
-	if ok := govalidator.IsURL(url); ok {
-		// Get rid of http(s)://
-		url = strings.TrimPrefix(url, "https://")
-		url = strings.TrimPrefix(url, "http://")
-		addr := fmt.Sprintf("/dns/%s/tcp/%s/p2p/%s", url, common.CoordinatorsNetworkPort, libp2pID)
-		return multiaddr.NewMultiaddr(addr)
+	// Get rid of port
+	log.Debug("Parsing url: ", URL)
+	u, _ := url.Parse(URL)
+	host, _, err := net.SplitHostPort(u.Host)
+	if err != nil && !strings.Contains(err.Error(), "missing port in address") {
+		return nil, tracerr.Wrap(err)
+	} else if err == nil {
+		URL = host
 	}
 	// IP4 case
-	if ok := govalidator.IsIPv4(url); ok {
-		addr := fmt.Sprintf("/ip4/%s/tcp/%s/p2p/%s", url, common.CoordinatorsNetworkPort, libp2pID)
+	if ok := govalidator.IsIPv4(URL); ok {
+		addr := fmt.Sprintf("/ip4/%s/tcp/%s/p2p/%s", URL, common.CoordinatorsNetworkPort, libp2pID)
 		return multiaddr.NewMultiaddr(addr)
 	}
 	// IP6 case
-	if ok := govalidator.IsIPv6(url); ok {
-		addr := fmt.Sprintf("/ip6/%s/tcp/%s/p2p/%s", url, common.CoordinatorsNetworkPort, libp2pID)
+	if ok := govalidator.IsIPv6(URL); ok {
+		addr := fmt.Sprintf("/ip6/%s/tcp/%s/p2p/%s", URL, common.CoordinatorsNetworkPort, libp2pID)
+		return multiaddr.NewMultiaddr(addr)
+	}
+	// DNS case
+	if ok := govalidator.IsURL(URL); ok {
+		// Get rid of http(s)://
+		URL = strings.TrimPrefix(URL, "https://")
+		URL = strings.TrimPrefix(URL, "http://")
+		addr := fmt.Sprintf("/dns/%s/tcp/%s/p2p/%s", URL, common.CoordinatorsNetworkPort, libp2pID)
 		return multiaddr.NewMultiaddr(addr)
 	}
 

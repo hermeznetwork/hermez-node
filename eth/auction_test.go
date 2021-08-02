@@ -409,6 +409,17 @@ func TestAuctionForge(t *testing.T) {
 	require.Nil(t, err)
 }
 
+func TestGetCoordinatorsLibP2PAddrs(t *testing.T) {
+	auctionClient, err := NewAuctionClient(ethereumClientHermez,
+		auctionTestAddressConst, tokenHEZ)
+	require.NoError(t, err)
+	addrs, err := auctionClient.GetCoordinatorsLibP2PAddrs()
+	require.NoError(t, err)
+	for _, addr := range addrs {
+		log.Debug(addr.String())
+	}
+}
+
 func TestPubKeyFromTx(t *testing.T) {
 	web3URL := os.Getenv("ETHCLIENT_DIAL_URL")
 	ethClient, err := ethclient.Dial(web3URL)
