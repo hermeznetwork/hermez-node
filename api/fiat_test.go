@@ -13,7 +13,10 @@ import (
 )
 
 func genFiatPrices(db *historydb.HistoryDB) error {
-	err := db.CreateFiatPrice("EUR", "USD", 0.82)
+	_, err := db.DB().Exec(
+		"INSERT INTO fiat(currency, base_currency, price) VALUES ($1, $2, $3);",
+		"EUR", "USD", 0.82,
+	)
 	if err != nil {
 		return err
 	}

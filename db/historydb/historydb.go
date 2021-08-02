@@ -489,26 +489,6 @@ func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID uint, value float64) err
 	return tracerr.Wrap(err)
 }
 
-// UpdateFiatPrice updates the USD value per currency
-func (hdb *HistoryDB) UpdateFiatPrice(currency string, baseCurrency string, price float64) error {
-	// last_update field is gonna be updated automatically by the trigger trigger_fiat_price_update
-	_, err := hdb.dbWrite.Exec(
-		"UPDATE fiat SET price = $1 WHERE currency = $2 AND base_currency = $3;",
-		price, currency, baseCurrency,
-	)
-	return tracerr.Wrap(err)
-}
-
-// CreateFiatPrice creates a new entry for a new currency or pair currency/baseCurrency
-func (hdb *HistoryDB) CreateFiatPrice(currency string, baseCurrency string, price float64) error {
-	// last_update field is gonna be filled automatically by the trigger trigger_fiat_price_update
-	_, err := hdb.dbWrite.Exec(
-		"INSERT INTO fiat(currency, base_currency, price) VALUES ($1, $2, $3);",
-		currency, baseCurrency, price,
-	)
-	return tracerr.Wrap(err)
-}
-
 // GetFiatPrice recover the price for a currency
 func (hdb *HistoryDB) GetFiatPrice(currency, baseCurrency string) (FiatCurrency, error) {
 	var currencyPrice = &FiatCurrency{}

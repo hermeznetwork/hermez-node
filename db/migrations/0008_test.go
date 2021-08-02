@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// This migration creates the fiat table
+// This migration updates the tx_pool table
 
 type migrationTest0008 struct{}
 
@@ -86,7 +86,7 @@ func (m migrationTest0008) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 }
 
 func (m migrationTest0008) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
-	// check that the fiat table is not created and I can't insert data
+	// check that the new fields can't be inserted in tx_pool table
 	const queryInsert = `INSERT INTO tx_pool (tx_id,
 		from_idx,
 		effective_from_eth_addr,
