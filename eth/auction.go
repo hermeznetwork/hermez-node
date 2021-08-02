@@ -3,12 +3,12 @@ package eth
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 
+	"github.com/arnaubennassar/eth2libp2p"
+	"github.com/asaskevich/govalidator"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -1006,16 +1006,20 @@ func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, erro
 		},
 		Topics: [][]ethCommon.Hash{{logAuctionSetCoordinator}},
 	}
-
 	logs, err := c.client.client.FilterLogs(context.TODO(), query)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	p2pAddrs := []multiaddr.Multiaddr{}
+	libp2pAddrs := []multiaddr.Multiaddr{}
 	for _, eventLog := range logs {
 		// Get coordinator URL
-		// TODO: read event to find coordinator URL
-		var url string
+		var setCoordinator AuctionEventSetCoordinator
+		if err := c.contractAbi.UnpackIntoInterface(&setCoordinator,
+			"SetCoordinator", eventLog.Data); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		url := setCoordinator.CoordinatorURL
+
 		// Get coordinator public key
 		tx, isPending, err := c.client.client.TransactionByHash(context.TODO(), eventLog.TxHash)
 		if err != nil {
@@ -1030,52 +1034,88 @@ func (c AuctionClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, erro
 			log.Warn(err)
 			continue
 		}
-		if addr, err := NewCoordinatorLibP2PAddr(url, *pubKey); err == nil {
-			p2pAddrs = append(p2pAddrs, addr)
+
+		// Generate libp2p address from URL and public key
+		if addr, err := NewCoordinatorLibP2PAddr(url, pubKey); err == nil {
+			libp2pAddrs = append(libp2pAddrs, addr)
 		} else {
 			log.Warn(err)
 		}
-
 	}
-	return p2pAddrs, nil
+	if len(libp2pAddrs) == 0 {
+		return nil, tracerr.New("Unable to generate any valid libp2p address for registered coordinators")
+	}
+	return libp2pAddrs, nil
 }
 
 func pubKeyFromTx(tx *types.Transaction) (*ecdsa.PublicKey, error) {
-	// Get signature from V, R, S
-	signer := types.NewLondonSigner(tx.ChainId())
-	sig := make([]byte, 65)
-	V, r, s := tx.RawSignatureValues()
-	rBytes, sBytes := r.Bytes(), s.Bytes()
-	copy(sig[32-len(rBytes):32], rBytes)
-	copy(sig[64-len(sBytes):64], sBytes)
-	/*
-		V expected values:
-		- mainnet: 37
-		- goerli: 45
-	*/
-
-	// recover the public key from the signature
-	hash := signer.Hash(tx).Bytes()
-	if len(hash) == 0 {
-		return nil, errors.New("Tx hash is empty")
+	// Get hash
+	var hash ethCommon.Hash
+	v, r, s := tx.RawSignatureValues()
+	switch tx.Type() {
+	case types.DynamicFeeTxType:
+		signer := types.NewLondonSigner(tx.ChainId())
+		hash = signer.Hash(tx)
+	case types.LegacyTxType:
+		if tx.Protected() {
+			signer := types.NewEIP2930Signer(tx.ChainId())
+			hash = signer.Hash(tx)
+			// Special signature case
+			v = new(big.Int).Sub(
+				v,
+				new(big.Int).Mul(tx.ChainId(), big.NewInt(2)),
+			)
+			v = new(big.Int).Sub(v, big.NewInt(35))
+		} else {
+			signer := types.HomesteadSigner{}
+			hash = signer.Hash(tx)
+			// Special signature case
+			v = new(big.Int).Sub(v, big.NewInt(27))
+		}
+	case types.AccessListTxType:
+		signer := types.NewEIP2930Signer(tx.ChainId())
+		hash = signer.Hash(tx)
+	default:
+		return nil, tracerr.New("Unexpected tx type")
 	}
-	log.Error("v: ", V.Int64())
-	log.Error("Signature: ", hex.EncodeToString(sig))
-	log.Error("Hash: ", hex.EncodeToString(hash))
-	// if V.Int64() != 45 {
 
-	// 	// sig[64] = byte(V.Uint64() - 27)
-	// 	// sig[64] = byte(0)
-	// }
-	// pub, err := crypto.Ecrecover(hash, sig)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// return ethCrypto.UnmarshalPubkey(pub)
-	return ethCrypto.SigToPub(hash, sig)
+	// Get signature from V, R, S
+	signature := make([]byte, 65)
+	rBytes, sBytes := r.Bytes(), s.Bytes()
+	copy(signature[32-len(rBytes):32], rBytes)
+	copy(signature[64-len(sBytes):64], sBytes)
+	signature[64] = byte(v.Uint64())
+
+	// Generate public key from signature and hash to be signed
+	return ethCrypto.SigToPub(hash.Bytes(), signature)
 }
 
-func NewCoordinatorLibP2PAddr(url string, pubKey ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
-	// TODO
-	return nil, nil
+func NewCoordinatorLibP2PAddr(url string, pubKey *ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
+	// Generate libp2p ID from Ethereum public key
+	libp2pIDRaw, err := eth2libp2p.P2PIDFromEthPubKey(pubKey)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	libp2pID := libp2pIDRaw.Pretty()
+
+	// DNS case
+	if ok := govalidator.IsURL(url); ok {
+		// Get rid of http(s)://
+		url = strings.TrimPrefix(url, "https://")
+		url = strings.TrimPrefix(url, "http://")
+		addr := fmt.Sprintf("/dns/%s/tcp/%s/p2p/%s", url, common.CoordinatorsNetworkPort, libp2pID)
+		return multiaddr.NewMultiaddr(addr)
+	}
+	// IP4 case
+	if ok := govalidator.IsIPv4(url); ok {
+		addr := fmt.Sprintf("/ip4/%s/tcp/%s/p2p/%s", url, common.CoordinatorsNetworkPort, libp2pID)
+		return multiaddr.NewMultiaddr(addr)
+	}
+	// IP6 case
+	if ok := govalidator.IsIPv6(url); ok {
+		addr := fmt.Sprintf("/ip6/%s/tcp/%s/p2p/%s", url, common.CoordinatorsNetworkPort, libp2pID)
+		return multiaddr.NewMultiaddr(addr)
+	}
+
+	return nil, tracerr.New("Unexpected url format")
 }

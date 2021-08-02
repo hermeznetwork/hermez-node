@@ -4,10 +4,12 @@ go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1
+	github.com/arnaubennassar/eth2libp2p v0.0.0-20210729150027-477efe523548 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/dghubble/sling v1.3.0
 	github.com/dimiro1/health v0.0.0-20191019130555-c5cbb4d46ffc
-	github.com/ethereum/go-ethereum v1.10.4
+	github.com/ethereum/go-ethereum v1.10.6
 	github.com/getkin/kin-openapi v0.22.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.5.0

@@ -420,7 +420,7 @@ func TestPubKeyFromTx(t *testing.T) {
 	for i := 0; i < txs.Len(); i++ {
 		tx, err := ethClient.TransactionInBlock(ctx, block.Hash(), uint(i))
 		require.NoError(t, err)
-		log.Errorf("Testing tx %d. Type %d", i, tx.Type())
+		log.Debugf("Testing tx %d. ChainID: %d Type %d", i, tx.ChainId(), tx.Type())
 		pubKey, err := pubKeyFromTx(tx)
 		require.NoError(t, err)
 		from, err := types.Sender(types.NewLondonSigner(tx.ChainId()), tx)
