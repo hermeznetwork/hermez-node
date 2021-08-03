@@ -15,7 +15,7 @@ coordinator/            @mfcastellani @marioidival
 node/                   @Mikelle @ARR552
 eth/                    @ARR552 @arnaubennassar
 cmd/                    @mfcastellani
-txprocessor/            @mfcastellani @tclemos
+txprocessor/            @mfcastellani @tclemos @arnaubennassar
 health/                 @Mikelle @ARR552
 log/                    @mfcastellani
 metric/                 @mfcastellani
