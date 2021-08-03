@@ -324,6 +324,11 @@ func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
 		queryVars = append(queryVars, tx.ToBJJ)
 	}
 
+	if tx.MaxNumBatch != 0 {
+		queryUpdate += "max_num_batch = ?, "
+		queryVars = append(queryVars, tx.MaxNumBatch)
+	}
+
 	if queryUpdate == "" {
 		return tracerr.Wrap(errors.New("nothing to update"))
 	}
@@ -331,8 +336,11 @@ func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
 	queryUpdate += "signature = ?, "
 	queryVars = append(queryVars, tx.Signature)
 
-	queryUpdate += "client_ip = ? "
+	queryUpdate += "client_ip = ?, "
 	queryVars = append(queryVars, tx.ClientIP)
+
+	queryUpdate += "tx_type = ? "
+	queryVars = append(queryVars, tx.Type)
 
 	queryUpdate += "WHERE tx_id = ? AND tx_pool.atomic_group_id IS NULL;"
 	queryVars = append(queryVars, tx.TxID)

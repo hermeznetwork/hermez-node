@@ -153,18 +153,21 @@ func TestAtomicPool(t *testing.T) {
 	// Check txs in the DB
 	assertTxs(txsToReceive, atomicGroup.ID)
 
-	// test item already exist
+	// test that we can't update atomic tx
+	// this test is checking, that this request will return error
+	// bcs of bad signature. Bad signature returned, bcs Rq* fields
+	// are part of the signature, but they are not part of json, which was sent
+	// we need to keep this test in case Rq* fields will be part of the PoolL2Tx json
 	txRepeated1 := atomicGroup.Txs[1]
 	jsonTxBytes, err = json.Marshal(txRepeated1)
 	require.NoError(t, err)
 	fmt.Println(string(jsonTxBytes))
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	fetchedTxID := common.TxID{}
-	require.NoError(t, doGoodReq(
+	require.Error(t, doGoodReq(
 		"PUT",
 		apiURL+"transactions-pool/"+txRepeated1.TxID.String(),
 		jsonTxReader, &fetchedTxID))
-	assert.Equal(t, txRepeated1.TxID, fetchedTxID)
 
 	// Test only one tx with fee
 	// Generate txs
