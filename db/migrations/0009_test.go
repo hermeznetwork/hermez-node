@@ -84,12 +84,14 @@ func (m migrationTest0009) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 	assert.Equal(t, 1, result)
 	const queryUpdate = `UPDATE tx_pool SET to_eth_addr = 'hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf' WHERE tx_id = decode('03A193BC53932580F2EF91B5DA038AF611D9F1D896D518CDD65B1D766CBD835E30','hex')`
 	_, err = db.Exec(queryUpdate)
+	assert.NoError(t, err)
 	const getQuery = `SELECT COUNT(*) FROM tx_pool WHERE effective_to_eth_addr = 'hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf'`
 	row = db.QueryRow(getQuery)
 	assert.NoError(t, row.Scan(&result))
 	assert.Equal(t, 1, result)
 	const queryDelete = `DELETE FROM tx_pool WHERE tx_id = decode('03A193BC53932580F2EF91B5DA038AF611D9F1D896D518CDD65B1D766CBD835E30','hex')`
 	_, err = db.Exec(queryDelete)
+	assert.NoError(t, err)
 	row = db.QueryRow(getQuery)
 	assert.NoError(t, row.Scan(&result))
 	assert.Equal(t, 0, result)
@@ -166,6 +168,7 @@ func (m migrationTest0009) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 	assert.Equal(t, 1, result)
 	const queryUpdate = `UPDATE tx_pool SET to_eth_addr = 'hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf' WHERE tx_id = decode('03A193BC53932580F2EF91B5DA038AF611D9F1D896D518CDD65B1D766CBD835E30','hex')`
 	_, err = db.Exec(queryUpdate)
+	assert.NoError(t, err)
 	const getQuery = `SELECT COUNT(*) FROM tx_pool WHERE effective_to_eth_addr = 'hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf'`
 	row = db.QueryRow(getQuery)
 	assert.NoError(t, row.Scan(&result))

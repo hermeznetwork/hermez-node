@@ -291,6 +291,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 	return tracerr.Wrap(err)
 }
 
+// UpdateTxAPI Update PoolL2Tx regular transactions in the pool.
 func (l2db *L2DB) UpdateTxAPI(tx *common.PoolL2Tx) error {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
@@ -303,7 +304,6 @@ func (l2db *L2DB) UpdateTxAPI(tx *common.PoolL2Tx) error {
 
 // Update PoolL2Tx transaction in the pool
 func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
-
 	const queryUpdatePart = `UPDATE tx_pool SET `
 
 	var queryUpdate string
