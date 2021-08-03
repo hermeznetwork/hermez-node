@@ -153,6 +153,19 @@ func TestAtomicPool(t *testing.T) {
 	// Check txs in the DB
 	assertTxs(txsToReceive, atomicGroup.ID)
 
+	// test item already exist
+	txRepeated1 := atomicGroup.Txs[1]
+	jsonTxBytes, err = json.Marshal(txRepeated1)
+	require.NoError(t, err)
+	fmt.Println(string(jsonTxBytes))
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	fetchedTxID := common.TxID{}
+	require.NoError(t, doGoodReq(
+		"PUT",
+		apiURL+"transactions-pool/"+txRepeated1.TxID.String(),
+		jsonTxReader, &fetchedTxID))
+	assert.Equal(t, txRepeated1.TxID, fetchedTxID)
+
 	// Test only one tx with fee
 	// Generate txs
 	txs = []common.PoolL2Tx{}

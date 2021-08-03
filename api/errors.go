@@ -147,6 +147,11 @@ const (
 	// ErrFeeTooBigType type for fee too big error
 	ErrFeeTooBigType apiErrorType = "ErrFeeTooBig"
 
+	// ErrNothingToUpdateCode code for nothing to update error
+	ErrNothingToUpdateCode apiErrorCode = 25
+	// ErrNothingToUpdateType type for nothing to update type
+	ErrNothingToUpdateType apiErrorType = "ErrNothingToUpdate"
+
 	// ErrUnsupportedMaxNumBatch error message returned when tx.MaxNumBatch != 0 until the feature is fully implemented
 	ErrUnsupportedMaxNumBatch = "currently only supported value for maxNumBatch is 0, this will change soon when the feature is fully implemented"
 

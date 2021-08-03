@@ -149,6 +149,57 @@ func genTestPoolTxs(
 	return poolTxsToSend, poolTxsToReceive
 }
 
+func TestPoolTxUpdate(t *testing.T) {
+	// POST
+	endpoint := apiURL + "transactions-pool"
+	fetchedTxID := common.TxID{}
+	txToReceive := tc.poolTxsToReceive[1]
+	tx := tc.poolTxsToSend[1]
+	jsonTxBytes, err := json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader := bytes.NewReader(jsonTxBytes)
+	require.NoError(t, doGoodReq(
+		"POST",
+		endpoint,
+		jsonTxReader, &fetchedTxID))
+	assert.Equal(t, tx.TxID, fetchedTxID)
+
+	fetchedTx := testPoolTxReceive{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+"/"+tx.TxID.String(),
+		nil, &fetchedTx))
+	assertPoolTx(t, txToReceive, fetchedTx)
+
+	tx.Type = common.TxTypeTransferToEthAddr
+	tx.ToIdx = common.Idx(0)
+	tx.ToBJJ = common.EmptyBJJComp
+	ethAddrStr := "hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf"
+	ethAddr, err := common.HezStringToEthAddr(ethAddrStr, "ethAddr")
+	require.NoError(t, err)
+	tx.ToEthAddr = *ethAddr
+	signStr := "5a4627d4bfc9414cee1454c7788b03101a938e880328dcd8ecaf4ed97c530a1f9a7a4cc593216280033639d1b110b0e7fea7bcd9b59b8a6c7945ce3f00879a01"
+	sign := babyjub.SignatureComp{}
+	err = sign.UnmarshalText([]byte(signStr))
+	require.NoError(t, err)
+	tx.Signature = sign
+	jsonTxBytes, err = json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	require.NoError(t, doGoodReq(
+		"PUT",
+		endpoint+"/"+tx.TxID.String(),
+		jsonTxReader, &fetchedTxID))
+
+	assert.Equal(t, tx.TxID, fetchedTxID)
+	fetchedTx = testPoolTxReceive{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+"/"+tx.TxID.String(),
+		nil, &fetchedTx))
+	assert.Equal(t, ethAddrStr, *fetchedTx.ToEthAddr)
+}
+
 func TestPoolTxs(t *testing.T) {
 	// POST
 	endpoint := apiURL + "transactions-pool"

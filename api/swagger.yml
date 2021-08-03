@@ -32,9 +32,10 @@ info:
 
     ### Signatures
 
-    There are two endpoints that require signatures:
+    There are three endpoints that require signatures:
     * POST /account-creation-authorization: signed using an Ethereum key.
     * POST /transactions-pool: signed using BJJ key.
+    * PUT /transactions-pool: signed using BJJ key.
 
     It's recommended to use the official SDKs for [Go](https://github.com/hermeznetwork/hermez-go-sdk), [JS](https://github.com/hermeznetwork/hermezjs) and [Flutter](https://github.com/hermeznetwork/hermez_flutter_sdk).
     If for some reason the previous options doesn't suit your usecase, you can implement the signatures following the spec for [account creation authorizations](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=regular-rollup-account) and [L2 transactions](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2)
@@ -630,6 +631,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error500'
   '/transactions-pool/{id}':
+    put:
+      tags:
+        - Coordinator
+      summary: Update an L2 transaction in the coordinator's pool.
+      description: >-
+        Update L2 transaction
+      operationId: putTx
+      parameters:
+        - name: id
+          in: path
+          description: Transaction identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+      requestBody:
+        description: Signed transaction
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPoolL2Transaction'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionId'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
     get:
       tags:
         - Coordinator
@@ -1438,6 +1479,85 @@ components:
     ItemId:
       type: integer
       description: Position of the item in the DB. This is useful for pagination, but has  nothing to do with the protocol.
+    PutPoolL2Transaction:
+      type: object
+      description: L2 transaction to be updated
+      properties:
+        type:
+          $ref: '#/components/schemas/TransactionTypeL2'
+        tokenId:
+          $ref: '#/components/schemas/TokenId'
+        fromAccountIndex:
+          $ref: '#/components/schemas/AccountIndex'
+        toAccountIndex:
+          type: string
+          description: >-
+            Identifier of the destination account. It references the position where the account is inside the state Merkle tree.
+            The identifier is built using: `hez:` + `token symbol:` + `index`. If this is provided, toHezEthereumAddress and toBjj
+            must be null. To perform an exit the value hez:EXIT:1 must be used.
+          example: null
+          nullable: true
+        toHezEthereumAddress:
+          type: string
+          description: "Address of an Ethereum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
+          pattern: "^hez:0x[a-fA-F0-9]{40}$"
+          example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
+          nullable: true
+        toBjj:
+          type: string
+          description: >-
+            BabyJubJub compressed public key, encoded as base64 URL (RFC 4648), which result in 33 bytes. The padding byte is replaced by a sum of the encoded bytes.
+            If this is provided, toAccountIndex must be null and toHezEthereumAddress must be hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.
+          pattern: "^hez:[A-Za-z0-9_-]{44}$"
+          example: null
+          nullable: true
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/BigInt'
+            - description: Amount of tokens to be sent.
+              example: "6300000000000000000"
+        fee:
+          $ref: '#/components/schemas/FeeSelector'
+        nonce:
+          $ref: '#/components/schemas/Nonce'
+        signature:
+          allOf:
+            - $ref: '#/components/schemas/BJJSignature'
+            - description: Signature of the transaction. More info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2).
+            - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+        maxNumBatch:
+          type: integer
+          description: Batch until the transaction can be forged. If the transaction isn't forged before batch `maxNumBatch`, it will never be forged. 0 means no restriction.
+          example: 0
+        requestOffset:
+          type: integer
+          description: |
+            Identifier of the relative index of the transaction that would be linked. 0 means no linked transaction.
+            More info on how the identifiers are built [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier)
+          example: 0
+          nullable: true
+      example:
+        type: Transfer
+        tokenId: 6
+        fromAccountIndex: hez:DAI:256
+        toAccountIndex: hez:DAI:257
+        toHezEthereumAddress:
+        toBjj:
+        amount: '100000000000000'
+        fee: 0
+        nonce: 6
+        signature: 1a79dd5e661d58266901a0de8afb046b466c4c1af937100f627a421771f2911fa3fde8ea2e272b4802a8b1f1229689292acd6f7e8ab4cadc4ab37b6b9e13a101
+        maxNumBatch: 0
+        requestOffset: 0
+      additionalProperties: false
+      required:
+        - type
+        - tokenId
+        - fromAccountIndex
+        - amount
+        - fee
+        - nonce
+        - signature
     PostPoolL2Transaction:
       type: object
       description: L2 transaction to be posted.
