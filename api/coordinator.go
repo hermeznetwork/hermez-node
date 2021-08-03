@@ -11,7 +11,11 @@ import (
 func (a *API) getCoordinators(c *gin.Context) {
 	filters, err := parsers.ParseCoordinatorsFilters(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 

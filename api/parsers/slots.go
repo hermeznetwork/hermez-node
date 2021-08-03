@@ -5,6 +5,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 // SlotFilter struct to get slot filter uri param from /slots/:slotNum request
@@ -31,11 +32,35 @@ type SlotsFilters struct {
 	Pagination
 }
 
+// SlotsFiltersStructValidation func validating filters struct
+func SlotsFiltersStructValidation(sl validator.StructLevel) {
+	ef := sl.Current().Interface().(SlotsFilters)
+
+	if ef.MaxSlotNum == nil && ef.FinishedAuction == nil {
+		sl.ReportError(ef.MaxSlotNum, "maxSlotNum", "MaxSlotNum", "maxslotnumrequired", "")
+		sl.ReportError(ef.FinishedAuction, "finishedAuction", "FinishedAuction", "maxslotnumrequired", "")
+	} else if ef.FinishedAuction != nil {
+		if ef.MaxSlotNum == nil && !*ef.FinishedAuction {
+			sl.ReportError(ef.MaxSlotNum, "maxSlotNum", "MaxSlotNum", "maxslotnumrequired", "")
+			sl.ReportError(ef.FinishedAuction, "finishedAuction", "FinishedAuction", "maxslotnumrequired", "")
+		}
+	} else if ef.MaxSlotNum != nil && ef.MinSlotNum != nil {
+		if *ef.MinSlotNum > *ef.MaxSlotNum {
+			sl.ReportError(ef.MaxSlotNum, "maxSlotNum", "MaxSlotNum", "maxslotlessthanminslot", "")
+			sl.ReportError(ef.MinSlotNum, "minSlotNum", "MinSlotNum", "maxslotlessthanminslot", "")
+		}
+	}
+}
+
 // ParseSlotsFilters func for parsing slots filters to the GetBestBidsAPIRequest
-func ParseSlotsFilters(c *gin.Context) (historydb.GetBestBidsAPIRequest, error) {
+func ParseSlotsFilters(c *gin.Context, v *validator.Validate) (historydb.GetBestBidsAPIRequest, error) {
 	var slotsFilters SlotsFilters
 	if err := c.ShouldBindQuery(&slotsFilters); err != nil {
 		return historydb.GetBestBidsAPIRequest{}, err
+	}
+
+	if err := v.Struct(slotsFilters); err != nil {
+		return historydb.GetBestBidsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	wonByEthereumAddress, err := common.StringToEthAddr(slotsFilters.WonByEthereumAddress)

@@ -11,7 +11,11 @@ import (
 func (a *API) getHistoryTxs(c *gin.Context) {
 	txFilters, err := parsers.ParseHistoryTxsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch txs from historyDB
@@ -36,7 +40,11 @@ func (a *API) getHistoryTx(c *gin.Context) {
 	// Get TxID
 	txID, err := parsers.ParseHistoryTxFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch tx from historyDB

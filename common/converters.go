@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -47,21 +48,26 @@ func StringToL2TxState(txState string) (*PoolL2TxState, error) {
 	}
 }
 
+// QueryAccount is a representation of an account with accountIndex and its token symbol
+type QueryAccount struct {
+	AccountIndex *Idx
+	Symbol       string
+}
+
 // StringToIdx converts string to account index
-func StringToIdx(idxStr, name string) (*Idx, error) {
+func StringToIdx(idxStr, name string) (QueryAccount, error) {
 	if idxStr == "" {
-		return nil, nil
+		return QueryAccount{}, nil
 	}
 	splitted := strings.Split(idxStr, ":")
 	const expectedLen = 3
 	if len(splitted) != expectedLen || splitted[0] != "hez" {
-		return nil, tracerr.Wrap(fmt.Errorf(
+		return QueryAccount{}, tracerr.Wrap(fmt.Errorf(
 			"invalid %s, must follow this: hez:<tokenSymbol>:index", name))
 	}
-	// TODO: check that the tokenSymbol match the token related to the account index
 	idxInt, err := strconv.Atoi(splitted[2])
 	idx := Idx(idxInt)
-	return &idx, tracerr.Wrap(err)
+	return QueryAccount{AccountIndex: &idx, Symbol: splitted[1]}, tracerr.Wrap(err)
 }
 
 // HezStringToEthAddr converts hez ethereum address to ethereum address
@@ -145,4 +151,77 @@ func EthAddrToHez(addr ethCommon.Address) string {
 // IdxToHez converts account index to hez account index with token symbol
 func IdxToHez(idx Idx, tokenSymbol string) string {
 	return "hez:" + tokenSymbol + ":" + strconv.Itoa(int(idx))
+}
+
+// StrHezIdx is used to unmarshal HezIdx directly into an alias of Idx
+type StrHezIdx struct {
+	Idx         Idx
+	TokenSymbol string
+}
+
+// UnmarshalText unmarshals a StrHezIdx
+func (s *StrHezIdx) UnmarshalText(text []byte) error {
+	withoutHez := strings.TrimPrefix(string(text), "hez:")
+	splitted := strings.Split(withoutHez, ":")
+	const expectedLen = 2
+	if len(splitted) != expectedLen {
+		return tracerr.Wrap(fmt.Errorf("can not unmarshal %s into StrHezIdx", text))
+	}
+	idxInt, err := strconv.Atoi(splitted[1])
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	*s = StrHezIdx{
+		Idx:         Idx(idxInt),
+		TokenSymbol: splitted[0],
+	}
+	return nil
+}
+
+// StrHezEthAddr is used to unmarshal HezEthAddr directly into an alias of ethCommon.Address
+type StrHezEthAddr ethCommon.Address
+
+// UnmarshalText unmarshals a StrHezEthAddr
+func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		*s = StrHezEthAddr(EmptyAddr)
+		return nil
+	}
+	withoutHez := strings.TrimPrefix(string(text), "hez:")
+	var addr ethCommon.Address
+	if err := addr.UnmarshalText([]byte(withoutHez)); err != nil {
+		return tracerr.Wrap(err)
+	}
+	*s = StrHezEthAddr(addr)
+	return nil
+}
+
+// StrHezBJJ is used to unmarshal HezBJJ directly into an alias of babyjub.PublicKeyComp
+type StrHezBJJ babyjub.PublicKeyComp
+
+// UnmarshalText unmarshalls a StrHezBJJ
+func (s *StrHezBJJ) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		*s = StrHezBJJ(EmptyBJJComp)
+		return nil
+	}
+	bjj, err := HezStringToBJJ(string(text), "")
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	*s = StrHezBJJ(*bjj)
+	return nil
+}
+
+// StrBigInt is used to unmarshal BigIntStr directly into an alias of big.Int
+type StrBigInt big.Int
+
+// UnmarshalText unmarshals a StrBigInt
+func (s *StrBigInt) UnmarshalText(text []byte) error {
+	bi, ok := (*big.Int)(s).SetString(string(text), 10)
+	if !ok {
+		return tracerr.Wrap(fmt.Errorf("could not unmarshal %s into a StrBigInt", text))
+	}
+	*s = StrBigInt(*bi)
+	return nil
 }

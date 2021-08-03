@@ -2,8 +2,6 @@ package api
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -71,124 +68,82 @@ func (t testPoolTxsResponse) Len() int {
 
 func (t testPoolTxsResponse) New() Pendinger { return &testPoolTxsResponse{} }
 
-// testPoolTxSend is a struct to be used as a JSON body
-// when testing POST /transactions-pool
-type testPoolTxSend struct {
-	TxID        common.TxID           `json:"id" binding:"required"`
-	Type        common.TxType         `json:"type" binding:"required"`
-	TokenID     common.TokenID        `json:"tokenId"`
-	FromIdx     string                `json:"fromAccountIndex" binding:"required"`
-	ToIdx       *string               `json:"toAccountIndex"`
-	ToEthAddr   *string               `json:"toHezEthereumAddress"`
-	ToBJJ       *string               `json:"toBjj"`
-	Amount      string                `json:"amount" binding:"required"`
-	Fee         common.FeeSelector    `json:"fee"`
-	Nonce       common.Nonce          `json:"nonce"`
-	Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
-	RqFromIdx   *string               `json:"requestFromAccountIndex"`
-	RqToIdx     *string               `json:"requestToAccountIndex"`
-	RqToEthAddr *string               `json:"requestToHezEthereumAddress"`
-	RqToBJJ     *string               `json:"requestToBjj"`
-	RqTokenID   *common.TokenID       `json:"requestTokenId"`
-	RqAmount    *string               `json:"requestAmount"`
-	RqFee       *common.FeeSelector   `json:"requestFee"`
-	RqNonce     *common.Nonce         `json:"requestNonce"`
-}
-
 func genTestPoolTxs(
 	poolTxs []common.PoolL2Tx,
 	tokens []historydb.TokenWithUSD,
 	accs []common.Account,
-) (poolTxsToSend []testPoolTxSend, poolTxsToReceive []testPoolTxReceive) {
-	poolTxsToSend = []testPoolTxSend{}
+) (poolTxsToSend []common.PoolL2Tx, poolTxsToReceive []testPoolTxReceive) {
+	poolTxsToSend = []common.PoolL2Tx{}
 	poolTxsToReceive = []testPoolTxReceive{}
-	for _, poolTx := range poolTxs {
-		// common.PoolL2Tx ==> testPoolTxSend
-		token := getTokenByID(poolTx.TokenID, tokens)
-		genSendTx := testPoolTxSend{
-			TxID:      poolTx.TxID,
-			Type:      poolTx.Type,
-			TokenID:   poolTx.TokenID,
-			FromIdx:   common.IdxToHez(poolTx.FromIdx, token.Symbol),
-			Amount:    poolTx.Amount.String(),
-			Fee:       poolTx.Fee,
-			Nonce:     poolTx.Nonce,
-			Signature: poolTx.Signature,
-			RqFee:     &poolTx.RqFee,
-			RqNonce:   &poolTx.RqNonce,
+	for i := range poolTxs {
+		// common.PoolL2Tx ==> poolTxsToSend (add token symbols for proper marshaling)
+		token := getTokenByID(poolTxs[i].TokenID, tokens)
+		txToSend := poolTxs[i]
+		txToSend.TokenSymbol = token.Symbol
+		var rqToken historydb.TokenWithUSD
+		if poolTxs[i].RqToIdx != 0 {
+			rqToken = getTokenByID(poolTxs[i].RqTokenID, tokens)
 		}
+		poolTxsToSend = append(poolTxsToSend, txToSend)
 		// common.PoolL2Tx ==> testPoolTxReceive
 		genReceiveTx := testPoolTxReceive{
-			TxID:      poolTx.TxID,
-			Type:      poolTx.Type,
-			FromIdx:   common.IdxToHez(poolTx.FromIdx, token.Symbol),
-			Amount:    poolTx.Amount.String(),
-			Fee:       poolTx.Fee,
-			Nonce:     poolTx.Nonce,
-			State:     poolTx.State,
-			Signature: poolTx.Signature,
-			Timestamp: poolTx.Timestamp,
-			// BatchNum:    poolTx.BatchNum,
-			RqFee:   &poolTx.RqFee,
-			RqNonce: &poolTx.RqNonce,
-			Token:   token,
+			TxID:      poolTxs[i].TxID,
+			Type:      poolTxs[i].Type,
+			FromIdx:   common.IdxToHez(poolTxs[i].FromIdx, token.Symbol),
+			Amount:    poolTxs[i].Amount.String(),
+			Fee:       poolTxs[i].Fee,
+			Nonce:     poolTxs[i].Nonce,
+			State:     poolTxs[i].State,
+			Signature: poolTxs[i].Signature,
+			Timestamp: poolTxs[i].Timestamp,
+			Token:     token,
 		}
-		fromAcc := getAccountByIdx(poolTx.FromIdx, accs)
+		fromAcc := getAccountByIdx(poolTxs[i].FromIdx, accs)
 		fromAddr := common.EthAddrToHez(fromAcc.EthAddr)
 		genReceiveTx.FromEthAddr = &fromAddr
 		fromBjj := common.BjjToString(fromAcc.BJJ)
 		genReceiveTx.FromBJJ = &fromBjj
-		if poolTx.ToIdx != 0 {
-			toIdx := common.IdxToHez(poolTx.ToIdx, token.Symbol)
-			genSendTx.ToIdx = &toIdx
-			genReceiveTx.ToIdx = &toIdx
-		}
-		if poolTx.ToEthAddr != common.EmptyAddr {
-			toEth := common.EthAddrToHez(poolTx.ToEthAddr)
-			genSendTx.ToEthAddr = &toEth
+		toIdx := common.IdxToHez(poolTxs[i].ToIdx, token.Symbol)
+		genReceiveTx.ToIdx = &toIdx
+		if poolTxs[i].ToEthAddr != common.EmptyAddr {
+			toEth := common.EthAddrToHez(poolTxs[i].ToEthAddr)
 			genReceiveTx.ToEthAddr = &toEth
-		} else if poolTx.ToIdx > 255 {
-			acc := getAccountByIdx(poolTx.ToIdx, accs)
+		} else if poolTxs[i].ToIdx > 255 {
+			acc := getAccountByIdx(poolTxs[i].ToIdx, accs)
 			addr := common.EthAddrToHez(acc.EthAddr)
 			genReceiveTx.ToEthAddr = &addr
 		}
-		if poolTx.ToBJJ != common.EmptyBJJComp {
-			toBJJ := common.BjjToString(poolTx.ToBJJ)
-			genSendTx.ToBJJ = &toBJJ
+		if poolTxs[i].ToBJJ != common.EmptyBJJComp {
+			toBJJ := common.BjjToString(poolTxs[i].ToBJJ)
 			genReceiveTx.ToBJJ = &toBJJ
-		} else if poolTx.ToIdx > 255 {
-			acc := getAccountByIdx(poolTx.ToIdx, accs)
+		} else if poolTxs[i].ToIdx > 255 {
+			acc := getAccountByIdx(poolTxs[i].ToIdx, accs)
 			bjj := common.BjjToString(acc.BJJ)
 			genReceiveTx.ToBJJ = &bjj
 		}
-		if poolTx.RqFromIdx != 0 {
-			rqFromIdx := common.IdxToHez(poolTx.RqFromIdx, token.Symbol)
-			genSendTx.RqFromIdx = &rqFromIdx
+		if poolTxs[i].RqFromIdx != 0 {
+			rqFromIdx := common.IdxToHez(poolTxs[i].RqFromIdx, rqToken.Symbol)
 			genReceiveTx.RqFromIdx = &rqFromIdx
-			genSendTx.RqTokenID = &token.TokenID
-			genReceiveTx.RqTokenID = &token.TokenID
-			rqAmount := poolTx.RqAmount.String()
-			genSendTx.RqAmount = &rqAmount
+			genReceiveTx.RqTokenID = &rqToken.TokenID
+			rqAmount := poolTxs[i].RqAmount.String()
 			genReceiveTx.RqAmount = &rqAmount
+			genReceiveTx.RqFee = &poolTxs[i].RqFee
+			genReceiveTx.RqNonce = &poolTxs[i].RqNonce
 
-			if poolTx.RqToIdx != 0 {
-				rqToIdx := common.IdxToHez(poolTx.RqToIdx, token.Symbol)
-				genSendTx.RqToIdx = &rqToIdx
+			if poolTxs[i].RqToIdx != 0 {
+				rqToIdx := common.IdxToHez(poolTxs[i].RqToIdx, rqToken.Symbol)
 				genReceiveTx.RqToIdx = &rqToIdx
 			}
-			if poolTx.RqToEthAddr != common.EmptyAddr {
-				rqToEth := common.EthAddrToHez(poolTx.RqToEthAddr)
-				genSendTx.RqToEthAddr = &rqToEth
+			if poolTxs[i].RqToEthAddr != common.EmptyAddr {
+				rqToEth := common.EthAddrToHez(poolTxs[i].RqToEthAddr)
 				genReceiveTx.RqToEthAddr = &rqToEth
 			}
-			if poolTx.RqToBJJ != common.EmptyBJJComp {
-				rqToBJJ := common.BjjToString(poolTx.RqToBJJ)
-				genSendTx.RqToBJJ = &rqToBJJ
+			if poolTxs[i].RqToBJJ != common.EmptyBJJComp {
+				rqToBJJ := common.BjjToString(poolTxs[i].RqToBJJ)
 				genReceiveTx.RqToBJJ = &rqToBJJ
 			}
 		}
 
-		poolTxsToSend = append(poolTxsToSend, genSendTx)
 		poolTxsToReceive = append(poolTxsToReceive, genReceiveTx)
 	}
 	return poolTxsToSend, poolTxsToReceive
@@ -214,7 +169,7 @@ func TestPoolTxs(t *testing.T) {
 	// 400
 	// Wrong fee
 	badTx := tc.poolTxsToSend[0]
-	badTx.Amount = "99950000000000000"
+	badTx.Amount = big.NewInt(99950000000000000)
 	badTx.Fee = 255
 	jsonTxBytes, err := json.Marshal(badTx)
 	require.NoError(t, err)
@@ -223,7 +178,7 @@ func TestPoolTxs(t *testing.T) {
 	require.NoError(t, err)
 	// Wrong signature
 	badTx = tc.poolTxsToSend[0]
-	badTx.FromIdx = "hez:foo:1000"
+	badTx.FromIdx = 1000
 	jsonTxBytes, err = json.Marshal(badTx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
@@ -231,9 +186,8 @@ func TestPoolTxs(t *testing.T) {
 	require.NoError(t, err)
 	// Wrong to
 	badTx = tc.poolTxsToSend[0]
-	ethAddr := "hez:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-	badTx.ToEthAddr = &ethAddr
-	badTx.ToIdx = nil
+	badTx.ToEthAddr = common.FFAddr
+	badTx.ToIdx = 0
 	jsonTxBytes, err = json.Marshal(badTx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
@@ -241,8 +195,15 @@ func TestPoolTxs(t *testing.T) {
 	require.NoError(t, err)
 	// Wrong rq
 	badTx = tc.poolTxsToSend[0]
-	rqFromIdx := "hez:foo:30"
-	badTx.RqFromIdx = &rqFromIdx
+	badTx.RqFromIdx = 30
+	jsonTxBytes, err = json.Marshal(badTx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	err = doBadReq("POST", endpoint, jsonTxReader, 409)
+	require.NoError(t, err)
+	// Wrong maxNumBatch
+	badTx = tc.poolTxsToSend[0]
+	badTx.MaxNumBatch = 30
 	jsonTxBytes, err = json.Marshal(badTx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
@@ -488,20 +449,12 @@ func assertPoolTx(t *testing.T, expected, actual testPoolTxReceive) {
 
 // TestAllTosNull test that the API doesn't accept txs with all the TOs set to null (to eth, to bjj, to idx)
 func TestAllTosNull(t *testing.T) {
+	// Generate keys
+	addr, sk := generateKeys(4444)
 	// Generate account:
-	// Ethereum private key
-	var key ecdsa.PrivateKey
-	key.D = big.NewInt(int64(4444)) // only for testing
-	key.PublicKey.X, key.PublicKey.Y = ethCrypto.S256().ScalarBaseMult(key.D.Bytes())
-	key.Curve = ethCrypto.S256()
-	addr := ethCrypto.PubkeyToAddress(key.PublicKey)
-	// BJJ private key
-	var sk babyjub.PrivateKey
-	var iBytes [8]byte
-	binary.LittleEndian.PutUint64(iBytes[:], 4444)
-	copy(sk[:], iBytes[:]) // only for testing
+	var testIdx common.Idx = 333
 	account := common.Account{
-		Idx:      4444,
+		Idx:      testIdx,
 		TokenID:  0,
 		BatchNum: 1,
 		BJJ:      sk.Public().Compress(),
@@ -534,24 +487,17 @@ func TestAllTosNull(t *testing.T) {
 	assert.NoError(t, err)
 	sig := sk.SignPoseidon(toSign)
 	tx.Signature = sig.Compress()
-	// Transform common.PoolL2Tx ==> testPoolTxSend
-	txToSend := testPoolTxSend{
-		TxID:      tx.TxID,
-		Type:      tx.Type,
-		TokenID:   tx.TokenID,
-		FromIdx:   common.IdxToHez(tx.FromIdx, "ETH"),
-		Amount:    tx.Amount.String(),
-		Fee:       tx.Fee,
-		Nonce:     tx.Nonce,
-		Signature: tx.Signature,
-	}
+	// Add token symbol for mashaling
+	tx.TokenSymbol = "ETH"
 	// Send tx to the API
-	jsonTxBytes, err := json.Marshal(txToSend)
+	jsonTxBytes, err := json.Marshal(tx)
 	require.NoError(t, err)
 	jsonTxReader := bytes.NewReader(jsonTxBytes)
 	err = doBadReq("POST", apiURL+"transactions-pool", jsonTxReader, 400)
 	require.NoError(t, err)
 	// Clean historyDB: the added account shouldn't be there for other tests
-	_, err = api.h.DB().DB.Exec("delete from account where idx = 4444")
+	_, err = api.h.DB().DB.Exec(
+		fmt.Sprintf("delete from account where idx = %d", testIdx),
+	)
 	assert.NoError(t, err)
 }

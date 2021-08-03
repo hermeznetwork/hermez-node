@@ -158,6 +158,11 @@ func TestGetAccounts(t *testing.T) {
 	account.Token.ItemID = 0
 	assert.Equal(t, fetchedAccounts[2], account)
 
+	// Test invalid token symbol GetAccount
+	path = fmt.Sprintf("%s/%s", endpoint, "hez:UNI:258")
+	account = testAccount{}
+	require.Error(t, doGoodReq("GET", path, nil, &account))
+
 	// 400
 	path = fmt.Sprintf("%s/hez:12345", endpoint)
 	err = doBadReq("GET", path, nil, 400)

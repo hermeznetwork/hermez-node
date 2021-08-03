@@ -24,6 +24,10 @@ func (a *API) healthRoute(version string, ethClient *ethclient.Client, forgerAdd
 		historyDBChecker := checkers.NewCheckerWithDB(a.h.DB().DB)
 		healthHandler.AddChecker("historyDB", historyDBChecker)
 	}
+	if a.stateDB != nil {
+		stateDBChecker := checkers.NewStateDBChecker(a.stateDB)
+		healthHandler.AddChecker("stateDB", stateDBChecker)
+	}
 	healthHandler.AddInfo("version", version)
 	t := time.Now().UTC()
 	healthHandler.AddInfo("timestamp", t)

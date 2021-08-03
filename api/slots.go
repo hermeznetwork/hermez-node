@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -96,7 +95,11 @@ func (a *API) addEmptySlot(slots []SlotAPI, slotNum int64, currentBlockNum int64
 func (a *API) getSlot(c *gin.Context) {
 	slotNumUint, err := parsers.ParseSlotFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	currentBlock, err := a.h.GetLastBlockAPI()
@@ -189,54 +192,41 @@ func (a *API) getSlots(c *gin.Context) {
 	minSlotNumDflt := int64(0)
 
 	// Get filters
-	filters, err := parsers.ParseSlotsFilters(c)
+	filters, err := parsers.ParseSlotsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 
 	currentBlock, err := a.h.GetLastBlockAPI()
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrFailedToGetCurrentBlockCode,
+			Type: ErrFailedToGetCurrentBlockType,
+		}, c)
 		return
 	}
 	auctionVars, err := a.h.GetAuctionVarsAPI()
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrFailedToGetAuctionVarsCode,
+			Type: ErrFailedToGetAuctionVarsType,
+		}, c)
 		return
 	}
 
 	// Check filters
-	if filters.MaxSlotNum == nil && filters.FinishedAuction == nil {
-		retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
-		return
-	} else if filters.FinishedAuction != nil {
-		if filters.MaxSlotNum == nil && !*filters.FinishedAuction {
-			retBadReq(errors.New("It is necessary to add maxSlotNum filter"), c)
-			return
-		} else if *filters.FinishedAuction {
-			currentBlock, err := a.h.GetLastBlockAPI()
-			if err != nil {
-				retBadReq(err, c)
-				return
-			}
-			currentSlot := a.getCurrentSlot(currentBlock.Num)
-			auctionVars, err := a.h.GetAuctionVarsAPI()
-			if err != nil {
-				retBadReq(err, c)
-				return
-			}
-			closedAuctionSlots := currentSlot + int64(auctionVars.ClosedAuctionSlots)
-			if filters.MaxSlotNum == nil {
-				filters.MaxSlotNum = &closedAuctionSlots
-			} else if closedAuctionSlots < *filters.MaxSlotNum {
-				filters.MaxSlotNum = &closedAuctionSlots
-			}
-		}
-	} else if filters.MaxSlotNum != nil && filters.MinSlotNum != nil {
-		if *filters.MinSlotNum > *filters.MaxSlotNum {
-			retBadReq(errors.New("It is necessary to add valid filter (minSlotNum <= maxSlotNum)"), c)
-			return
+	if filters.FinishedAuction != nil && *filters.FinishedAuction {
+		currentSlot := a.getCurrentSlot(currentBlock.Num)
+		closedAuctionSlots := currentSlot + int64(auctionVars.ClosedAuctionSlots)
+		if filters.MaxSlotNum == nil || closedAuctionSlots < *filters.MaxSlotNum {
+			filters.MaxSlotNum = &closedAuctionSlots
 		}
 	}
 	if filters.MinSlotNum == nil {
@@ -280,10 +270,6 @@ func (a *API) getSlots(c *gin.Context) {
 	var slotsBids []SlotAPI
 	if len(bids) > 0 {
 		slotsBids = a.newSlotsAPIFromWinnerBids(filters.FromItem, filters.Order, bids, currentBlock.Num, auctionVars)
-		if err != nil {
-			retBadReq(err, c)
-			return
-		}
 	}
 
 	// Build the other slots
@@ -309,7 +295,11 @@ func (a *API) getSlots(c *gin.Context) {
 			if !found {
 				slots, err = a.addEmptySlot(slots, i, currentBlock.Num, auctionVars, filters.FromItem, filters.Order)
 				if err != nil {
-					retBadReq(err, c)
+					retBadReq(&apiError{
+						Err:  err,
+						Code: ErrFailedToAddEmptySlotCode,
+						Type: ErrFailedToAddEmptySlotType,
+					}, c)
 					return
 				}
 			}

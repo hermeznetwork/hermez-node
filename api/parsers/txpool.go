@@ -82,11 +82,11 @@ func PoolTxsTxsFiltersStructValidation(sl validator.StructLevel) {
 func ParsePoolTxsFilters(c *gin.Context, v *validator.Validate) (l2db.GetPoolTxsAPIRequest, error) {
 	var poolTxsFilter PoolTxsFilters
 	if err := c.BindQuery(&poolTxsFilter); err != nil {
-		return l2db.GetPoolTxsAPIRequest{}, err
+		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	if err := v.Struct(poolTxsFilter); err != nil {
-		return l2db.GetPoolTxsAPIRequest{}, err
+		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	// TokenID
@@ -127,17 +127,17 @@ func ParsePoolTxsFilters(c *gin.Context, v *validator.Validate) (l2db.GetPoolTxs
 	}
 
 	// Idx
-	idx, err := common.StringToIdx(poolTxsFilter.AccountIndex, "accountIndex")
+	queryAccount, err := common.StringToIdx(poolTxsFilter.AccountIndex, "accountIndex")
 	if err != nil {
 		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromIdx, err := common.StringToIdx(poolTxsFilter.FromAccountIndex, "fromAccountIndex")
+	fromQueryAccount, err := common.StringToIdx(poolTxsFilter.FromAccountIndex, "fromAccountIndex")
 	if err != nil {
 		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	toIdx, err := common.StringToIdx(poolTxsFilter.ToAccountIndex, "toAccountIndex")
+	toQueryAccount, err := common.StringToIdx(poolTxsFilter.ToAccountIndex, "toAccountIndex")
 	if err != nil {
 		return l2db.GetPoolTxsAPIRequest{}, tracerr.Wrap(err)
 	}
@@ -161,9 +161,9 @@ func ParsePoolTxsFilters(c *gin.Context, v *validator.Validate) (l2db.GetPoolTxs
 		ToBjj:       toBjj,
 		TxType:      txType,
 		TokenID:     tokenID,
-		Idx:         idx,
-		FromIdx:     fromIdx,
-		ToIdx:       toIdx,
+		Idx:         queryAccount.AccountIndex,
+		FromIdx:     fromQueryAccount.AccountIndex,
+		ToIdx:       toQueryAccount.AccountIndex,
 		State:       txState,
 
 		FromItem: poolTxsFilter.FromItem,

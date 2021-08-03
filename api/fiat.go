@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +12,11 @@ func (a *API) getFiatCurrency(c *gin.Context) {
 	// Get symbol
 	symbol, err := parsers.ParseCurrencyFilter(c)
 	if err != nil {
-		retBadReq(errors.New(ErrInvalidSymbol), c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch currency from historyDB
@@ -34,7 +37,11 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 	// Currency filters
 	symbols, err := parsers.ParseCurrenciesFilters(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 

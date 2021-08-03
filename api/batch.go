@@ -16,7 +16,11 @@ func (a *API) getBatches(c *gin.Context) {
 	// Get query parameters
 	filter, err := parsers.ParseBatchesFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch batches from historyDB
@@ -41,7 +45,11 @@ func (a *API) getBatch(c *gin.Context) {
 	// Get batchNum
 	batchNum, err := parsers.ParseBatchFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch batch from historyDB
@@ -63,7 +71,11 @@ func (a *API) getFullBatch(c *gin.Context) {
 	// Get batchNum
 	batchNum, err := parsers.ParseBatchFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch batch from historyDB

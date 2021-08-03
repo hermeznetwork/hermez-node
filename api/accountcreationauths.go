@@ -17,13 +17,21 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 	// Parse body
 	var apiAuth receivedAuth
 	if err := c.ShouldBindJSON(&apiAuth); err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType}, c)
 		return
 	}
 	// API to common + verify signature
 	commonAuth := accountCreationAuthAPIToCommon(&apiAuth)
-	if !commonAuth.VerifySignature(a.cg.ChainID, a.hermezAddress) {
-		retBadReq(errors.New("invalid signature"), c)
+	isValid, err := commonAuth.VerifySignature(a.cg.ChainID, a.hermezAddress)
+	if !isValid && err != nil {
+		retBadReq(&apiError{
+			Err:  errors.New("invalid signature: " + err.Error()),
+			Code: ErrInvalidSignatureCode,
+			Type: ErrInvalidSignatureType,
+		}, c)
 		return
 	}
 	// Insert to DB
@@ -44,7 +52,11 @@ func (a *API) getAccountCreationAuth(c *gin.Context) {
 	// Get hezEthereumAddress
 	addr, err := parsers.ParseGetAccountCreationAuthFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 	// Fetch auth from l2DB

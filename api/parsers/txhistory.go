@@ -19,11 +19,11 @@ type HistoryTxFilter struct {
 func ParseHistoryTxFilter(c *gin.Context) (common.TxID, error) {
 	var historyTxFilter HistoryTxFilter
 	if err := c.ShouldBindUri(&historyTxFilter); err != nil {
-		return common.TxID{}, err
+		return common.TxID{}, tracerr.Wrap(err)
 	}
 	txID, err := common.NewTxIDFromString(historyTxFilter.TxID)
 	if err != nil {
-		return common.TxID{}, tracerr.Wrap(fmt.Errorf("invalid %s", err))
+		return common.TxID{}, tracerr.Wrap(fmt.Errorf("invalid txID"))
 	}
 	return txID, nil
 }
@@ -82,7 +82,7 @@ func HistoryTxsFiltersStructValidation(sl validator.StructLevel) {
 func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.GetTxsAPIRequest, error) {
 	var historyTxsFilters HistoryTxsFilters
 	if err := c.ShouldBindQuery(&historyTxsFilters); err != nil {
-		return historydb.GetTxsAPIRequest{}, err
+		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
 	if err := v.Struct(historyTxsFilters); err != nil {
@@ -126,17 +126,17 @@ func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.Ge
 	}
 
 	// Idx
-	idx, err := common.StringToIdx(historyTxsFilters.AccountIndex, "accountIndex")
+	queryAccount, err := common.StringToIdx(historyTxsFilters.AccountIndex, "accountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	fromIdx, err := common.StringToIdx(historyTxsFilters.FromAccountIndex, "fromAccountIndex")
+	fromQueryAccount, err := common.StringToIdx(historyTxsFilters.FromAccountIndex, "fromAccountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
 
-	toIdx, err := common.StringToIdx(historyTxsFilters.ToAccountIndex, "toAccountIndex")
+	toQueryAccount, err := common.StringToIdx(historyTxsFilters.ToAccountIndex, "toAccountIndex")
 	if err != nil {
 		return historydb.GetTxsAPIRequest{}, tracerr.Wrap(err)
 	}
@@ -154,9 +154,9 @@ func ParseHistoryTxsFilters(c *gin.Context, v *validator.Validate) (historydb.Ge
 		FromBjj:           fromBjj,
 		ToBjj:             toBjj,
 		TokenID:           tokenID,
-		Idx:               idx,
-		FromIdx:           fromIdx,
-		ToIdx:             toIdx,
+		Idx:               queryAccount.AccountIndex,
+		FromIdx:           fromQueryAccount.AccountIndex,
+		ToIdx:             toQueryAccount.AccountIndex,
 		BatchNum:          historyTxsFilters.BatchNum,
 		TxType:            txType,
 		IncludePendingL1s: historyTxsFilters.IncludePendingTxs,

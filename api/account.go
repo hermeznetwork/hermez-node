@@ -11,17 +11,29 @@ import (
 
 func (a *API) getAccount(c *gin.Context) {
 	// Get Addr
-	idx, err := parsers.ParseAccountFilter(c)
+	account, err := parsers.ParseAccountFilter(c)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
-	apiAccount, err := a.h.GetAccountAPI(*idx)
+	apiAccount, err := a.h.GetAccountAPI(*account.AccountIndex)
 	if err != nil {
 		retSQLErr(err, c)
 		return
 	}
-
+	//Check if symbol is correct
+	if apiAccount.TokenSymbol != account.Symbol {
+		retBadReq(&apiError{
+			Err:  fmt.Errorf("invalid token symbol"),
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
 	c.JSON(http.StatusOK, apiAccount)
 }
 
@@ -29,14 +41,22 @@ func (a *API) getAccounts(c *gin.Context) {
 	for id := range c.Request.URL.Query() {
 		if id != "tokenIds" && id != "hezEthereumAddress" && id != "BJJ" &&
 			id != "fromItem" && id != "order" && id != "limit" {
-			retBadReq(fmt.Errorf("invalid Param: %s", id), c)
+			retBadReq(&apiError{
+				Err:  fmt.Errorf("invalid Param: %s", id),
+				Code: ErrParamValidationFailedCode,
+				Type: ErrParamValidationFailedType,
+			}, c)
 			return
 		}
 	}
 
 	accountsFilter, err := parsers.ParseAccountsFilters(c, a.validate)
 	if err != nil {
-		retBadReq(err, c)
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
 		return
 	}
 

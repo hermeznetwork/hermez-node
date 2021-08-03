@@ -36,6 +36,9 @@ info:
     * POST /account-creation-authorization: signed using an Ethereum key.
     * POST /transactions-pool: signed using BJJ key.
 
+    It's recommended to use the official SDKs for [Go](https://github.com/hermeznetwork/hermez-go-sdk), [JS](https://github.com/hermeznetwork/hermezjs) and [Flutter](https://github.com/hermeznetwork/hermez_flutter_sdk).
+    If for some reason the previous options doesn't suit your usecase, you can implement the signatures following the spec for [account creation authorizations](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=regular-rollup-account) and [L2 transactions](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2)
+
     More details on how to sign will be provided soon.
 
     ### Contact
@@ -46,12 +49,9 @@ info:
     * [Discord](https://bit.ly/3nohULM)
     * Email: hello@hermez.network 
     * [Twitter](https://twitter.com/hermez_network)
-# TODO: add further documentation on how to sign auths and txs
 
   version: "0.0.1"
   title: Hermez Network API
-# TODO: update with support email
-#  termsOfService: 'http://swagger.io/terms/'
   license:
     name: license AGPLv3
     url: 'https://www.gnu.org/licenses/agpl-3.0.html'
@@ -387,6 +387,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+  '/atomic-pool':
+    post:
+      tags:
+        - Coordinator
+      summary: Add a collection of L2 transactions to the coordinator's pool.
+      description: >-
+        Send L2 transactions. The transactions will be stored in the transaction pool of the coordinator and eventually forged.
+        The main goal of sending transactions in groups is to use the atomic feature, where transactions are binded by the `request` fields,
+        and forced to be forged together. Transactions will be rejected unless all of them conform a single atomic group, in other words, they only
+        will be accepted if it's mandatory to forge all of them in a single batch.
+      operationId: postTx
+      requestBody:
+        description: Signed transactions.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPoolL2Transactions'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionIds'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/atomic-pool/{id}':
+    get:
+      tags:
+        - Coordinator
+      summary: Get details and status of transactions that conform an atomic group and are on the coordinators pool.
+      description: >-
+        Get transactions from the pool by its atomic group ID. This endpoint is specially useful for tracking the status of atomic transactions that may not be forged yet.
+        Only transactions from the pool will be returned.
+        Note that the transaction pool is different for each coordinator and therefore only a coordinator that has received a specific atomic group
+        will be able to provide information about that set of transactions.
+      operationId: getAtomicPool
+      parameters:
+        - name: id
+          in: path
+          description: Atomic group identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/AtomicGroupID'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AtomicGroup'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  
   '/transactions-pool':
     post:
       tags:
@@ -1183,22 +1264,30 @@ paths:
           description: Include only specific tokens by their Hermez identifiers.
           schema:
             type: string
-            description: Comma separated list of token identifiers
-            example: "2,44,689"
+            description: Pipeline "|" separated list of token identifiers
+            example: "2|44|689"
         - name: symbols
           in: query
           required: false
           description: Include only specific tokens by their symbols.
           schema:
             type: string
-            description: Comma separated list of token symbols.
-            example: "DAI,NEC,UMA"
+            description: Pipeline "|" separated list of token symbols.
+            example: "DAI|NEC|UMA"
         - name: name
           in: query
           required: false
           description: Include token(s) by their names (or a substring of the name).
           schema:
             type: string
+        - name: addresses
+          in: query
+          required: false
+          description: Include only specific tokens by their SC addresses.
+          schema:
+            type: string
+            description: Pipeline "|" separated list of token identifiers
+            example: "0xdac17f959d2ee523a2206207994597c13d831ec8|0xdac17f958e2ee523a2207206994597c12d831ec7|0xfac17f058d2ee527a2206206994597d13d831ec7"
         - name: fromItem
           in: query
           required: false
@@ -1371,7 +1460,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
+          description: "Address of an Ethereum account linked to the Hermez Network. If this is provided, toAccountIndex and toBjj must be null."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1395,49 +1484,18 @@ components:
         signature:
           allOf:
             - $ref: '#/components/schemas/BJJSignature'
-            - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
+            - description: Signature of the transaction. More info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
-        requestFromAccountIndex:
-          type: string
-          description: References the `fromAccountIndex` of the requested transaction.
-          example: null
-          nullable: true
-        requestToAccountIndex:
-          type: string
-          description: References the `toAccountIndex` of the requested transaction.
-          example: null
-          nullable: true
-        requestToHezEthereumAddress:
-          type: string
-          description: References the `toHezEthereumAddress` of the requested transaction.
-          pattern: "^hez:0x[a-fA-F0-9]{40}$"
-          example: null
-          nullable: true
-        requestToBjj:
-          type: string
-          description: References the `toBjj` of the requested transaction.
-          pattern: "^hez:[A-Za-z0-9_-]{44}$"
-          example: null
-          nullable: true
-        requestTokenId:
+        maxNumBatch:
           type: integer
-          description: References the `tokenId` of the requested transaction.
-          example: null
-          nullable: true
-        requestAmount:
-          type: string
-          description: References the `amount` of the requested transaction.
-          example: null
-          nullable: true
-        requestFee:
+          description: Batch until the transaction can be forged. If the transaction isn't forged before batch `maxNumBatch`, it will never be forged. 0 means no restriction.
+          example: 0  
+        requestOffset:
           type: integer
-          description: References the `fee` of the requested transaction.
-          example: null
-          nullable: true
-        requestNonce:
-          type: integer
-          description: References the `nonce` of the requested transaction.
-          example: null
+          description: |
+            Identifier of the relative index of the transaction that would be linked. 0 means no linked transaction.
+            More info on how the identifiers are built [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier)
+          example: 0
           nullable: true
       example:
         id: '0x020000000001000000000006'
@@ -1451,6 +1509,8 @@ components:
         fee: 0
         nonce: 6
         signature: 1a79dd5e661d58266901a0de8afb046b466c4c1af937100f627a421771f2911fa3fde8ea2e272b4802a8b1f1229689292acd6f7e8ab4cadc4ab37b6b9e13a101
+        maxNumBatch: 0
+        requestOffset: 0
       additionalProperties: false
       required:
       - id
@@ -1461,18 +1521,95 @@ components:
       - fee
       - nonce
       - signature
+    AtomicGroupID:
+      type: string
+      description: |
+        Identifier for atomic groups (set of transactions that have to be forged in the same batch, constrained by the request fields of the transactions on the group).
+        This identifier is calculated by hashing the concatenation of the transaction id bytes that conform the group).
+      example:  '0x02b0c3d2fe18df3cd192d862804641190f99b79df3f1d6449b65fe246412120af0'
+    PostPoolL2Transactions:
+      type: object
+      properties:
+        atomicGroupId:
+          $ref: '#/components/schemas/AtomicGroupID'
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostPoolL2Transaction'
+      required:
+        - atomicGroupId
+        - transactions
+      additionalProperties: false
+      example:
+        atomicGroupId: '0x0cd3d5c747145f70055156c565446441b60b8ca0dd7c8ddbb913529ed39773a7'
+        transactions:
+        - id: '0x02d4cbab2c32a7afb59c923cbf54a5f82d6ea1b1c553599a8a301c7109ea1eff17'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5000
+          toAccountIndex: hez:ETH:5001
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: dd4c93adedd4ee678819c89f45150fa098265d38a81042d72d5d8040ce64a500b40f2f7acb190620eb537bd22ec26310b660b76bba0697276173e2331e62b204
+          requestOffset: 1
+        - id: '0x0200d87a0e641fb84bb76a013cc3db1b423203f7dfc3f07afdbe3e7b78b6a527de'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5001
+          toAccountIndex: hez:ETH:5002
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: f20a2b83227e10b5e46b215c3b27f2bf1b39fb05ce3bb70bb1504ca9e700e49a99b023e15ddfbdc262be3996dbea255445c850f366f954ee352b665c0b648403
+          requestOffset: 1
+        - id: '0x0219ffcb5d99b25614ca81f94fd3947095b07aaf5bf4ba7d1078aa85d06c8a0fc2'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5002
+          toAccountIndex: hez:ETH:5003
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: d39134d192a63d0529d0575b5d7c0e1f3e9115c53186194b27e1c29c701442848206ee52e8b477a9804fb5cbff91f5e99ee04e4f1e22909bb6962df8464c0900
+          requestOffset: 1
+        - id: '0x02814c29cf2bbdaa024920fdd71c6d976a0bed2de6d91c61c38daee74bf6a08cba'
+          type: Transfer
+          tokenId: 0
+          fromAccountIndex: hez:ETH:5003
+          toAccountIndex: hez:ETH:5000
+          toHezEthereumAddress:
+          toBjj:
+          amount: '10000000000'
+          fee: 200
+          nonce: 0
+          maxNumBatch: 0
+          signature: 7b9e3e4e8148ccf22532148576118f1212ba2a9ed8ee50022d65bb5c2af5df0307894e739af9fdbc2ebb8a1accd2396144a4937c735bc38658fcf6a1caf4eb03
+          requestOffset: 5
+
     PoolL2Transaction:
       type: object
       properties:
         id:
           $ref: '#/components/schemas/TransactionId'
+        itemId:
+          $ref: '#/components/schemas/ItemId'
         type:
           $ref: '#/components/schemas/TransactionTypeL2'
         fromAccountIndex:
           $ref: '#/components/schemas/AccountIndex'
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1491,7 +1628,7 @@ components:
           nullable: true
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: null
           nullable: true
@@ -1512,6 +1649,10 @@ components:
           $ref: '#/components/schemas/Nonce'
         state:
           $ref: '#/components/schemas/PoolL2TransactionState'
+        maxNumBatch:
+          type: integer
+          description: Batch until the transaction can be forged. If the transaction isn't forged before batch `maxNumBatch`, it will never be forged. 0 means no restriction.
+          example: 0 
         info:
           type: string
           description: "Info contains information about the status & State of the transaction. As for example, if the Tx has not been selected in the last batch due not enough Balance at the Sender account, this reason would appear at this parameter."
@@ -1521,8 +1662,14 @@ components:
         signature:
           allOf:
             - $ref: '#/components/schemas/BJJSignature'
-            - description: Signature of the transaction. More info [here](https://idocs.hermez.io/#/spec/zkrollup/README?id=l2a-idl2).
+            - description: Signature of the transaction. More info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2).
             - example: "72024a43f546b0e1d9d5d7c4c30c259102a9726363adcc4ec7b6aea686bcb5116f485c5542d27c4092ae0ceaf38e3bb44417639bd2070a58ba1aa1aab9d92c03"
+        errorType:
+          type: string
+          nullable: true
+        errorCode:
+          type: integer
+          nullable: true
         timestamp:
           type: string
           description: Moment in which the transaction was added to the pool.
@@ -1543,7 +1690,7 @@ components:
           example: null
         requestToHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           nullable: true
           example: null
@@ -1565,7 +1712,7 @@ components:
           example: null
         requestFee:
           type: integer
-          description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
+          description: Index of the fee type to select, more info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=user).
           minimum: 0
           maximum: 256
           nullable: true
@@ -1601,6 +1748,7 @@ components:
         toAccountIndex: hez:SCC:257
         toBJJ: hez:r_trOasVEk0zNaalOoS9aLedu6mO7jI5XTIPu_zGXoyn
         toHezEthereumAddress: hez:0x00000000000000000000000000000000004Ab84F
+        maxNumBatch: 0
         token:
           USD: 23.74
           decimals: 7
@@ -1637,6 +1785,7 @@ components:
         - requestFee
         - requestNonce
         - token
+      additionalProperties: false
     PoolL2Transactions:
       type: object
       properties:
@@ -1651,18 +1800,26 @@ components:
         - transactions
         - pendingItems
       additionalProperties: false
+    AtomicGroup:
+      type: array
+      items:
+        $ref: '#/components/schemas/PoolL2Transaction'
     TransactionId:
       type: string
-      description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://idocs.hermez.io/#/spec/architecture/db/README?id=txid)
+      description: Identifier for transactions. Used for any kind of transaction (both L1 and L2). More info on how the identifiers are built [here](https://docs.hermez.io/#/developers/dev-guide?id=transaction-id)
       example: "0x00000000000001e240004700" 
+    TransactionIds:
+      type: array
+      items:
+          $ref: '#/components/schemas/TransactionId'
     EthereumAddress:
       type: string
-      description: "Address of an Etherum account."
+      description: "Address of an Ethereum account."
       pattern: "^0x[a-fA-F0-9]{40}$"
       example: "0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     HezEthereumAddress:
       type: string
-      description: "Address of an Etherum account linked to the Hermez Network."
+      description: "Address of an Ethereum account linked to the Hermez Network."
       pattern: "^hez:0x[a-fA-F0-9]{40}$"
       example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a" 
     BJJ:
@@ -1711,7 +1868,7 @@ components:
       pattern: "^\\d+$"
     FeeSelector:
       type: integer
-      description: Index of the fee type to select, more info [here](https://idocs.hermez.io/#/spec/zkrollup/fee-table?id=transaction-fee-table).
+      description: Index of the fee type to select, more info [here](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=user).
       minimum: 0
       maximum: 256
       example: 36
@@ -1826,7 +1983,7 @@ components:
           nullable: true
         fromHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -1842,7 +1999,7 @@ components:
             - example: "hez:DAI:672"
         toHezEthereumAddress:
           type: string
-          description: "Address of an Etherum account linked to the Hermez Network."
+          description: "Address of an Ethereum account linked to the Hermez Network."
           pattern: "^hez:0x[a-fA-F0-9]{40}$"
           example: "hez:0xaa942cfcd25ad4d90a62358b0dd84f33b398262a"
           nullable: true
@@ -2751,7 +2908,7 @@ components:
           items: 
             allOf:
                 - $ref: '#/components/schemas/Slot'
-                - description: Last synchronized Etherum block.
+                - description: Last synchronized Ethereum block.
         pendingItems:
           $ref: '#/components/schemas/PendingItems'
       additionalProperties: false
@@ -2850,12 +3007,12 @@ components:
         lastEthereumBlock:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Current Etherum block. Note that this is the actual last block of Ethereum, not the last synchronized block by the node.
+            - description: Current Ethereum block. Note that this is the actual last block of Ethereum, not the last synchronized block by the node.
             - example: 3457437
         lastSynchedBlock:
           allOf:
             - $ref: '#/components/schemas/EthBlockNum'
-            - description: Last synchronized Etherum block. Compare with lastEthereumBlock to check the synchronization status of the node.
+            - description: Last synchronized Ethereum block. Compare with lastEthereumBlock to check the synchronization status of the node.
             - example: 3457437
         lastBatch:
           $ref: '#/components/schemas/Batch'
@@ -3333,6 +3490,22 @@ components:
             - status
             - version
           additionalProperties: false
+        statedb:
+          type: object
+          description: state db connection status
+          properties:
+            status:
+              type: string
+              description: Status of the connection. Possible responses - UP or DOWN
+              example: UP
+            batchNum:
+              type: integer
+              description: current batch num in last checkpoint of the state db
+              example: 24025
+            root:
+              type: integer
+              description: root of the underlying Merkle Tree in the last checkpoint of the state db
+              example: 20723800499378797360494097450413598946834655273323161758167114779532027183222
         status:
           type: string
           description: Status of the hermez node. Possible responses - UP or DOWN
@@ -3347,7 +3520,7 @@ components:
           example: v1.2.0
         coordinatorForgerBalance:
           type: string
-          description: Coordinator balance in ether. Returned with 18 decimals.
+          description: Coordinator balance in ether. Returned with 18 decimals. Not returned if node not in coord mode
           example: 48901270356066543960
       required:
         - historyDB
@@ -3362,11 +3535,88 @@ components:
       properties:
         message:
           type: string
+        code:
+          type: integer
+          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+          description: >
+            Error codes:
+              * `1` - ErrParamValidationFailed error
+              * `2` - ErrDuplicatedKey error
+              * `3` - ErrSQLTimeout error
+              * `4` - ErrSQLNoRows error
+              * `5` - ErrExitAmount0 error
+              * `6` - ErrInvalidTxTypeOrTxID error
+              * `7` - ErrFeeOverflow error
+              * `8` - ErrGettingSenderAccount error
+              * `9` - ErrGettingSenderAccount error
+              * `10` - ErrInvalidNonce error
+              * `11` - ErrInvalidSignature error
+              * `12` - ErrGettingReceiverAccount error
+              * `13` - ErrCantSendToEthAddr error
+              * `14` - ErrNotAtomicTxsInPostPoolTx error
+              * `15` - ErrFailedToGetCurrentBlock error
+              * `16` - ErrFailedToGetAuctionVars error
+              * `17` - ErrFailedToAddEmptySlot error
+              * `18` - ErrTxsNotAtomic error
+              * `19` - ErrSingleTxInAtomicEndpoint error
+              * `20` - ErrRqOffsetOutOfBounds error
+              * `21` - ErrInvalidAtomicGroupID error
+              * `22` - ErrFailedToFindOffsetToRelativePositionCode error
+        type:
+          type: string
+          enum:
+            - ErrParamValidationFailed
+            - ErrDuplicatedKey
+            - ErrSQLTimeout
+            - ErrSQLNoRows
+            - ErrExitAmount0
+            - ErrInvalidTxTypeOrTxID
+            - ErrFeeOverflow
+            - ErrGettingSenderAccount
+            - ErrAccountTokenNotEqualTxToken
+            - ErrInvalidNonce
+            - ErrInvalidSignature
+            - ErrGettingReceiverAccount
+            - ErrCantSendToEthAddr
+            - ErrNotAtomicTxsInPostPoolTx
+            - ErrFailedToGetCurrentBlock
+            - ErrFailedToGetAuctionVars
+            - ErrFailedToAddEmptySlot
+            - ErrTxsNotAtomic
+            - ErrSingleTxInAtomicEndpoint
+            - ErrInvalidAtomicGroupID
+            - ErrFailedToFindOffsetToRelativePosition
+          description: >
+            Error types:
+              * `ErrParamValidationFailed` - this error appears when user sends wrong info in query|uri|form params
+              * `ErrDuplicatedKey` - record already exists in db
+              * `ErrSQLTimeout` - node is under heavy pressure and sql connection timeout happened
+              * `ErrSQLNoRows` - there is no such item in database
+              * `ErrExitAmount0` - receiving (and rejecting) a tx of type exit with amount 0 in /transactions-pool request
+              * `ErrInvalidTxTypeOrTxID` - tx with invalid type or txID was sent in /transactions-pool request
+              * `ErrFeeOverflow` - tx with fee amount that doesn't fit in 128 bits was sent in /transactions-pool request
+              * `ErrGettingSenderAccount` - sender account for tx was not found in /transactions-pool request
+              * `ErrAccountTokenNotEqualTxToken` - account token is not equal to tx token in /transactions-pool request
+              * `ErrInvalidNonce` - invalid nonce was sent in /transactions-pool request
+              * `ErrInvalidSignature` - invalid signature was sent in /transactions-pool or /account-creation-authorization requests
+              * `ErrGettingReceiverAccount` - receiver account for tx was not fount in /transactions-pool request
+              * `ErrCantSendToEthAddr` - it's not possible to send to Eth address when there is no account index associated to this Eth address and token, or the coordinator hasn't got an authorization to create an account
+              * `ErrNotAtomicTxsInPostPoolTx` - user sending atomic tx to /transactions-pool request
+              * `ErrFailedToGetCurrentBlock` - can't get current block in /slots request
+              * `ErrFailedToGetAuctionVars` - can't get auction vars in /slots request
+              * `ErrFailedToAddEmptySlot` - can't add empty slot in /slots request
+              * `ErrTxsNotAtomic` - there is at least one transaction in the payload that could be forged without the others
+              * `ErrSingleTxInAtomicEndpoint` - to use the atomic-pool endpoint at least two transactions are required
+              * `ErrRqOffsetOutOfBounds` - one of the transactions requested another one outside the bounds of the provided array
+              * `ErrInvalidAtomicGroupID` - invalid atomicGroupId
+              * `ErrFailedToFindOffsetToRelativePosition` - can't find offset to relative position
     Error400:
       allOf:
         - $ref: '#/components/schemas/Error'
         - example:
             message: Invalid signature.
+            code: 4
+            type: ErrInvalidSignature
     Error404:
       allOf:
         - $ref: '#/components/schemas/Error'
