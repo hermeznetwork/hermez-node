@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -779,33 +778,33 @@ func (c *AuctionClient) AuctionVariables() (auctionVariables *common.AuctionVari
 }
 
 var (
-	logAuctionNewBid = crypto.Keccak256Hash([]byte(
+	logAuctionNewBid = ethCrypto.Keccak256Hash([]byte(
 		"NewBid(uint128,uint128,address)"))
-	logAuctionNewSlotDeadline = crypto.Keccak256Hash([]byte(
+	logAuctionNewSlotDeadline = ethCrypto.Keccak256Hash([]byte(
 		"NewSlotDeadline(uint8)"))
-	logAuctionNewClosedAuctionSlots = crypto.Keccak256Hash([]byte(
+	logAuctionNewClosedAuctionSlots = ethCrypto.Keccak256Hash([]byte(
 		"NewClosedAuctionSlots(uint16)"))
-	logAuctionNewOutbidding = crypto.Keccak256Hash([]byte(
+	logAuctionNewOutbidding = ethCrypto.Keccak256Hash([]byte(
 		"NewOutbidding(uint16)"))
-	logAuctionNewDonationAddress = crypto.Keccak256Hash([]byte(
+	logAuctionNewDonationAddress = ethCrypto.Keccak256Hash([]byte(
 		"NewDonationAddress(address)"))
-	logAuctionNewBootCoordinator = crypto.Keccak256Hash([]byte(
+	logAuctionNewBootCoordinator = ethCrypto.Keccak256Hash([]byte(
 		"NewBootCoordinator(address,string)"))
-	logAuctionNewOpenAuctionSlots = crypto.Keccak256Hash([]byte(
+	logAuctionNewOpenAuctionSlots = ethCrypto.Keccak256Hash([]byte(
 		"NewOpenAuctionSlots(uint16)"))
-	logAuctionNewAllocationRatio = crypto.Keccak256Hash([]byte(
+	logAuctionNewAllocationRatio = ethCrypto.Keccak256Hash([]byte(
 		"NewAllocationRatio(uint16[3])"))
-	logAuctionSetCoordinator = crypto.Keccak256Hash([]byte(
+	logAuctionSetCoordinator = ethCrypto.Keccak256Hash([]byte(
 		"SetCoordinator(address,address,string)"))
-	logAuctionNewForgeAllocated = crypto.Keccak256Hash([]byte(
+	logAuctionNewForgeAllocated = ethCrypto.Keccak256Hash([]byte(
 		"NewForgeAllocated(address,address,uint128,uint128,uint128,uint128)"))
-	logAuctionNewDefaultSlotSetBid = crypto.Keccak256Hash([]byte(
+	logAuctionNewDefaultSlotSetBid = ethCrypto.Keccak256Hash([]byte(
 		"NewDefaultSlotSetBid(uint128,uint128)"))
-	logAuctionNewForge = crypto.Keccak256Hash([]byte(
+	logAuctionNewForge = ethCrypto.Keccak256Hash([]byte(
 		"NewForge(address,uint128)"))
-	logAuctionHEZClaimed = crypto.Keccak256Hash([]byte(
+	logAuctionHEZClaimed = ethCrypto.Keccak256Hash([]byte(
 		"HEZClaimed(address,uint128)"))
-	logAuctionInitialize = crypto.Keccak256Hash([]byte(
+	logAuctionInitialize = ethCrypto.Keccak256Hash([]byte(
 		"InitializeHermezAuctionProtocolEvent(address,address,string," +
 			"uint16,uint8,uint16,uint16,uint16[3])"))
 )
