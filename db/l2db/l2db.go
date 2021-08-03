@@ -304,48 +304,16 @@ func (l2db *L2DB) UpdateTxAPI(tx *common.PoolL2Tx) error {
 
 // Update PoolL2Tx transaction in the pool
 func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
-	const queryUpdatePart = `UPDATE tx_pool SET `
+	const queryUpdate = `UPDATE tx_pool SET to_idx = ?, to_eth_addr = ?, to_bjj = ?, max_num_batch = ?, 
+	signature = ?, client_ip = ?, tx_type = ? WHERE tx_id = ? AND tx_pool.atomic_group_id IS NULL;`
 
-	var queryUpdate string
-	var queryVars []interface{}
-
-	if tx.ToIdx != 0 {
-		queryUpdate += "to_idx = ?, "
-		queryVars = append(queryVars, tx.ToIdx)
-	}
-
-	if tx.ToEthAddr != common.EmptyAddr {
-		queryUpdate += "to_eth_addr = ?, "
-		queryVars = append(queryVars, tx.ToEthAddr)
-	}
-
-	if tx.ToBJJ != common.EmptyBJJComp {
-		queryUpdate += "to_bjj = ?, "
-		queryVars = append(queryVars, tx.ToBJJ)
-	}
-
-	if tx.MaxNumBatch != 0 {
-		queryUpdate += "max_num_batch = ?, "
-		queryVars = append(queryVars, tx.MaxNumBatch)
-	}
-
-	if queryUpdate == "" {
+	if tx.ToIdx == 0 && tx.ToEthAddr == common.EmptyAddr && tx.ToBJJ == common.EmptyBJJComp && tx.MaxNumBatch == 0 {
 		return tracerr.Wrap(errors.New("nothing to update"))
 	}
 
-	queryUpdate += "signature = ?, "
-	queryVars = append(queryVars, tx.Signature)
+	queryVars := []interface{}{tx.ToIdx, tx.ToEthAddr, tx.ToBJJ, tx.MaxNumBatch, tx.Signature, tx.ClientIP, tx.Type, tx.TxID}
 
-	queryUpdate += "client_ip = ?, "
-	queryVars = append(queryVars, tx.ClientIP)
-
-	queryUpdate += "tx_type = ? "
-	queryVars = append(queryVars, tx.Type)
-
-	queryUpdate += "WHERE tx_id = ? AND tx_pool.atomic_group_id IS NULL;"
-	queryVars = append(queryVars, tx.TxID)
-
-	query, args, err := sqlx.In(queryUpdatePart+queryUpdate, queryVars...)
+	query, args, err := sqlx.In(queryUpdate, queryVars...)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
