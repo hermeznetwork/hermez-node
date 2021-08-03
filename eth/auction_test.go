@@ -3,13 +3,10 @@ package eth
 import (
 	"context"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -413,25 +410,21 @@ func TestGetCoordinatorsLibP2PAddrs(t *testing.T) {
 	auctionClient, err := NewAuctionClient(ethereumClientHermez,
 		auctionTestAddressConst, tokenHEZ)
 	require.NoError(t, err)
-	addrs, err := auctionClient.GetCoordinatorsLibP2PAddrs()
+	_, err = auctionClient.GetCoordinatorsLibP2PAddrs()
 	require.NoError(t, err)
-	for _, addr := range addrs {
-		log.Debug(addr.String())
-	}
 }
 
 func TestPubKeyFromTx(t *testing.T) {
-	web3URL := os.Getenv("ETHCLIENT_DIAL_URL")
-	ethClient, err := ethclient.Dial(web3URL)
+	auctionClient, err := NewAuctionClient(ethereumClientHermez,
+		auctionTestAddressConst, tokenHEZ)
 	require.NoError(t, err)
 	ctx := context.Background()
-	block, err := ethClient.BlockByNumber(ctx, nil)
+	block, err := auctionClient.client.client.BlockByNumber(ctx, nil)
 	require.NoError(t, err)
 	txs := block.Transactions()
 	for i := 0; i < txs.Len(); i++ {
-		tx, err := ethClient.TransactionInBlock(ctx, block.Hash(), uint(i))
+		tx, err := auctionClient.client.client.TransactionInBlock(ctx, block.Hash(), uint(i))
 		require.NoError(t, err)
-		log.Debugf("Testing tx %d. ChainID: %d Type %d", i, tx.ChainId(), tx.Type())
 		pubKey, err := pubKeyFromTx(tx)
 		require.NoError(t, err)
 		from, err := types.Sender(types.NewLondonSigner(tx.ChainId()), tx)

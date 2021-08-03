@@ -208,8 +208,6 @@ func TestMain(m *testing.M) {
 		}
 
 		exitVal = m.Run()
-	} else {
-		exitVal = m.Run()
 	}
 	os.Exit(exitVal)
 }
