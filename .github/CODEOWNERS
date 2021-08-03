@@ -1,4 +1,4 @@
-*.md                    @jeffprestes
+*.md                    @jeffprestes @arnaubennassar
 api/                    @Mikelle @ARR552
 db/*.go                 @Mikelle @tclemos
 db/historydb            @Mikelle @tclemos
