@@ -9,8 +9,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// PoolL2TxAPI represents a L2 Tx pool with extra metadata used by the API
-type PoolL2TxAPI struct {
+// TxL2 represents a L2 Tx pool with extra metadata used by the API
+type TxL2 struct {
 	ItemID               uint64                `json:"itemId"`
 	TxID                 common.TxID           `json:"id"`
 	Type                 common.TxType         `json:"type"`
@@ -24,6 +24,7 @@ type PoolL2TxAPI struct {
 	Fee                  common.FeeSelector    `json:"fee"`
 	Nonce                common.Nonce          `json:"nonce"`
 	State                common.PoolL2TxState  `json:"state"`
+	BatchNum             *common.BatchNum      `json:"batchNum"`
 	MaxNumBatch          uint32                `json:"maxNumBatch"`
 	Info                 *string               `json:"info"`
 	ErrorCode            *int                  `json:"errorCode"`
@@ -51,8 +52,8 @@ type PoolL2TxAPI struct {
 	} `json:"token"`
 }
 
-// MarshalJSON is used to convert PoolL2TxAPI in JSON
-func (tx PoolL2TxAPI) MarshalJSON() ([]byte, error) {
+// MarshalJSON is used to convert TxL2 in JSON
+func (tx TxL2) MarshalJSON() ([]byte, error) {
 	type jsonToken struct {
 		TokenID          common.TokenID    `json:"id"`
 		TokenItemID      uint64            `json:"itemId"`
@@ -78,6 +79,7 @@ func (tx PoolL2TxAPI) MarshalJSON() ([]byte, error) {
 		Fee                  common.FeeSelector    `json:"fee"`
 		Nonce                common.Nonce          `json:"nonce"`
 		State                common.PoolL2TxState  `json:"state"`
+		BatchNum             *common.BatchNum      `json:"batchNum"`
 		MaxNumBatch          uint32                `json:"maxNumBatch"`
 		Info                 *string               `json:"info"`
 		ErrorCode            *int                  `json:"errorCode"`
@@ -137,8 +139,8 @@ func (tx PoolL2TxAPI) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toMarshal)
 }
 
-// UnmarshalJSON is used to create a PoolL2TxAPI from JSON data
-func (tx *PoolL2TxAPI) UnmarshalJSON(data []byte) error {
+// UnmarshalJSON is used to create a TxL2 from JSON data
+func (tx *TxL2) UnmarshalJSON(data []byte) error {
 	err := json.Unmarshal(data, tx)
 	if err != nil {
 		return err

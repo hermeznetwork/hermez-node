@@ -171,20 +171,21 @@ token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name,
 count(*) OVER() AS total_items 
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
-// GetTxAPI return the specified Tx in poolTxAPIView format
-func (l2db *L2DB) GetTxAPI(txID common.TxID) (*poolTxAPIView, error) {
+// GetTxAPI return the specified Tx in TxL2 format
+func (l2db *L2DB) GetTxAPI(txID common.TxID) (apitypes.TxL2, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
+	tx := new(poolTxAPIView)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return tx.ToAPI(), tracerr.Wrap(err)
 	}
 	defer l2db.apiConnCon.Release()
-	tx := new(poolTxAPIView)
-	return tx, tracerr.Wrap(meddler.QueryRow(
+	err = tracerr.Wrap(meddler.QueryRow(
 		l2db.dbRead, tx,
 		selectPoolTxAPI+"WHERE tx_id = $1;",
 		txID,
 	))
+	return tx.ToAPI(), err
 }
 
 // GetPoolTxsAPIRequest is an API request struct for getting txs from the pool
@@ -208,7 +209,7 @@ type GetPoolTxsAPIRequest struct {
 }
 
 // GetPoolTxsAPI return Txs from the pool
-func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]apitypes.PoolL2TxAPI, uint64, error) {
+func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]apitypes.TxL2, uint64, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -368,7 +369,7 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]apitypes.PoolL2
 		return nil, 0, tracerr.Wrap(err)
 	}
 	txs := db.SlicePtrsToSlice(txsPtrs).([]poolTxAPIView)
-	retTxs := []apitypes.PoolL2TxAPI{}
+	retTxs := []apitypes.TxL2{}
 	for _, currentTx := range txs {
 		retTxs = append(retTxs, currentTx.ToAPI())
 	}
@@ -379,7 +380,7 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]apitypes.PoolL2
 }
 
 // GetPoolTxsByAtomicGroupIDAPI return Txs from the pool that belong to the given atomicGroupID
-func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]poolTxAPIView, error) {
+func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]apitypes.TxL2, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -396,8 +397,12 @@ func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupI
 		return nil, tracerr.Wrap(err)
 	}
 	txs := db.SlicePtrsToSlice(txsPtrs).([]poolTxAPIView)
-	if len(txs) == 0 {
-		return txs, nil
+	retTxs := []apitypes.TxL2{}
+	for _, currentTx := range txs {
+		retTxs = append(retTxs, currentTx.ToAPI())
 	}
-	return txs, nil
+	if len(txs) == 0 {
+		return retTxs, nil
+	}
+	return retTxs, nil
 }

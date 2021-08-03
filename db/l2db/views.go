@@ -59,9 +59,9 @@ type AccountCreationAuthAPI struct {
 	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
 }
 
-// ToAPI converts a poolTxAPIView into PoolL2TxAPI
-func (tx *poolTxAPIView) ToAPI() apitypes.PoolL2TxAPI {
-	pooll2apilocal := apitypes.PoolL2TxAPI{
+// ToAPI converts a poolTxAPIView into TxL2
+func (tx *poolTxAPIView) ToAPI() apitypes.TxL2 {
+	pooll2apilocal := apitypes.TxL2{
 		ItemID:               tx.ItemID,
 		TxID:                 tx.TxID,
 		Type:                 tx.Type,
@@ -76,6 +76,7 @@ func (tx *poolTxAPIView) ToAPI() apitypes.PoolL2TxAPI {
 		Nonce:                tx.Nonce,
 		State:                tx.State,
 		MaxNumBatch:          tx.MaxNumBatch,
+		BatchNum:             tx.BatchNum,
 		Info:                 tx.Info,
 		ErrorCode:            tx.ErrorCode,
 		ErrorType:            tx.ErrorType,

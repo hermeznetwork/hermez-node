@@ -108,8 +108,8 @@ func (a *API) getPoolTxs(c *gin.Context) {
 
 	// Build successful response
 	type txsResponse struct {
-		Txs          []apitypes.PoolL2TxAPI `json:"transactions"`
-		PendingItems uint64                 `json:"pendingItems"`
+		Txs          []apitypes.TxL2 `json:"transactions"`
+		PendingItems uint64          `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &txsResponse{
 		Txs:          txs,
