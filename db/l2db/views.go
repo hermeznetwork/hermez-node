@@ -1,7 +1,6 @@
 package l2db
 
 import (
-	"encoding/json"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -10,8 +9,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// PoolTxAPIView represents a L2 Tx pool with extra metadata used by the API
-type PoolTxAPIView struct {
+// poolTxAPIView represents a L2 Tx pool with extra metadata used by the API
+type poolTxAPIView struct {
 	ItemID               uint64                `meddler:"item_id"`
 	TxID                 common.TxID           `meddler:"tx_id"`
 	FromIdx              apitypes.HezIdx       `meddler:"from_idx"`
@@ -52,13 +51,6 @@ type PoolTxAPIView struct {
 	TokenUSDUpdate       *time.Time            `meddler:"usd_update"`
 }
 
-// MarshalJSON is used to neast some of the fields of PoolTxAPIView
-// without the need of auxiliar structs
-func (tx PoolTxAPIView) MarshalJSON() ([]byte, error) {
-	toMarshal := tx.ToAPI()
-	return json.Marshal(toMarshal)
-}
-
 // AccountCreationAuthAPI represents an account creation auth in the expected format by the API
 type AccountCreationAuthAPI struct {
 	EthAddr   apitypes.HezEthAddr   `json:"hezEthereumAddress" meddler:"eth_addr" `
@@ -67,8 +59,8 @@ type AccountCreationAuthAPI struct {
 	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
 }
 
-// ToAPI converts a PoolTxAPIView into PoolL2TxAPI
-func (tx *PoolTxAPIView) ToAPI() apitypes.PoolL2TxAPI {
+// ToAPI converts a poolTxAPIView into PoolL2TxAPI
+func (tx *poolTxAPIView) ToAPI() apitypes.PoolL2TxAPI {
 	pooll2apilocal := apitypes.PoolL2TxAPI{
 		ItemID:               tx.ItemID,
 		TxID:                 tx.TxID,
