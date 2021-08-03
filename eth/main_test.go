@@ -20,7 +20,7 @@ import (
 var errEnvVar = fmt.Errorf("Some environment variable is missing")
 
 var (
-	ethClientDialURL = "https://geth.bennode.duckdns.org"
+	ethClientDialURL = "http://localhost:8545"
 	password         = "pass"
 	deadline, _      = new(big.Int).SetString("ffffffffffffffffffffffffffffffff", 16)
 	mnemonic         = "explain tackle mirror kit van hammer degree position ginger unfair soup bonus"
