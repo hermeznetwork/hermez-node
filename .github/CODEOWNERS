@@ -6,7 +6,7 @@ db/migrations           @Mikelle @arnaubennassar
 db/l2db                 @Mikelle @marioidival
 db/kvdb                 @Mikelle @marioidival
 db/statedb              @Mikelle @marioidival
-txselector/             @mfcastellani @tclemos
+txselector/             @mfcastellani @tclemos @arnaubennassar
 etherscan/              @ARR552
 priceupdater/           @marioidival @ARR552
 common/                 @Mikelle @mfcastellani
