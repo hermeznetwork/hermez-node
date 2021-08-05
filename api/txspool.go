@@ -179,7 +179,7 @@ func (a *API) getPoolTxs(c *gin.Context) {
 	})
 }
 
-func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
+func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) *apiError {
 	// Check type and id
 	_, err := common.NewPoolL2Tx(&tx)
 	if err != nil {

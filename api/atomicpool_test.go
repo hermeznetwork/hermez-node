@@ -161,7 +161,6 @@ func TestAtomicPool(t *testing.T) {
 	txRepeated1 := atomicGroup.Txs[1]
 	jsonTxBytes, err = json.Marshal(txRepeated1)
 	require.NoError(t, err)
-	fmt.Println(string(jsonTxBytes))
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
 	fetchedTxID := common.TxID{}
 	require.Error(t, doGoodReq(
