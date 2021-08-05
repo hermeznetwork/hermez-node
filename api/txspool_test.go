@@ -413,6 +413,7 @@ func TestPoolTxs(t *testing.T) {
 		assertPoolTx(t, tx, fetchedTx)
 	}
 	// PUT
+	// Change toEthAddr
 	tx := tc.poolTxsToSend[1]
 	txToReceive := tc.poolTxsToReceive[1]
 	fetchedTx := testPoolTxReceive{}
@@ -422,7 +423,6 @@ func TestPoolTxs(t *testing.T) {
 		nil, &fetchedTx))
 	assertPoolTx(t, txToReceive, fetchedTx)
 
-	tx.Type = common.TxTypeTransferToEthAddr
 	tx.ToIdx = common.Idx(0)
 	tx.ToBJJ = common.EmptyBJJComp
 	ethAddrStr := "hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf"
@@ -449,6 +449,77 @@ func TestPoolTxs(t *testing.T) {
 		endpoint+tx.TxID.String(),
 		nil, &fetchedTx))
 	assert.Equal(t, ethAddrStr, *fetchedTx.ToEthAddr)
+
+	// change type from transfer to transferToEthAddr
+	tx = tc.poolTxsToSend[0]
+	txToReceive = tc.poolTxsToReceive[0]
+	fetchedTx = testPoolTxReceive{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+tx.TxID.String(),
+		nil, &fetchedTx))
+	assertPoolTx(t, txToReceive, fetchedTx)
+
+	tx.Type = common.TxTypeTransferToEthAddr
+	tx.ToIdx = common.Idx(0)
+	ethAddrStr = "hez:0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"
+	ethAddr, err = common.HezStringToEthAddr(ethAddrStr, "ethAddr")
+	require.NoError(t, err)
+	tx.ToEthAddr = *ethAddr
+	signStr = "ea16b8d0ebe1680700faad197f30232fe3d13b57b9d96e2037c0fb3e8597d7afd99ea7b6171c6b1dab6707b714845d20661b23b4a401efb866646e4e36370401"
+	sign = babyjub.SignatureComp{}
+	err = sign.UnmarshalText([]byte(signStr))
+	require.NoError(t, err)
+	tx.Signature = sign
+	jsonTxBytes, err = json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	require.NoError(t, doGoodReq(
+		"PUT",
+		endpoint+tx.TxID.String(),
+		jsonTxReader, &fetchedTxID))
+	assert.Equal(t, tx.TxID, fetchedTxID)
+	fetchedTx = testPoolTxReceive{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+tx.TxID.String(),
+		nil, &fetchedTx))
+	assert.Equal(t, ethAddrStr, *fetchedTx.ToEthAddr)
+	assert.Equal(t, "hez:ETH:0", *fetchedTx.ToIdx)
+
+	// change type from transferToEthAddr to transfer back
+	tx = tc.poolTxsToSend[0]
+	fetchedTx = testPoolTxReceive{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+tx.TxID.String(),
+		nil, &fetchedTx))
+
+	tx.Type = common.TxTypeTransfer
+	tx.ToIdx = common.Idx(262)
+	tx.ToEthAddr = common.EmptyAddr
+	signStr = "9f76205e4c69776f8174db8e0961aa94d37ceb5c1de06a95cca80821ee093d885812c3f7cfad61e00027ee56de0d3f573ff6cc88a13780abd12e5f61a622f103"
+	sign = babyjub.SignatureComp{}
+	err = sign.UnmarshalText([]byte(signStr))
+	require.NoError(t, err)
+	tx.Signature = sign
+	jsonTxBytes, err = json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	require.NoError(t, doGoodReq(
+		"PUT",
+		endpoint+tx.TxID.String(),
+		jsonTxReader, &fetchedTxID))
+
+	assert.Equal(t, tx.TxID, fetchedTxID)
+	fetchedTx = testPoolTxReceive{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+tx.TxID.String(),
+		nil, &fetchedTx))
+	assert.Equal(t, "hez:0x0000000000000000000000000000000000000000", *fetchedTx.ToEthAddr)
+	assert.Equal(t, "hez:ETH:262", *fetchedTx.ToIdx)
+
 	// 400, due invalid TxID
 	err = doBadReq("GET", endpoint+"0xG2241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 400)
 	require.NoError(t, err)
