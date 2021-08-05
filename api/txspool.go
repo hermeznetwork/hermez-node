@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db/l2db"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -104,8 +104,8 @@ func (a *API) getPoolTxs(c *gin.Context) {
 
 	// Build successful response
 	type txsResponse struct {
-		Txs          []l2db.PoolTxAPI `json:"transactions"`
-		PendingItems uint64           `json:"pendingItems"`
+		Txs          []apitypes.TxL2 `json:"transactions"`
+		PendingItems uint64          `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &txsResponse{
 		Txs:          txs,
