@@ -634,7 +634,7 @@ paths:
     put:
       tags:
         - Coordinator
-      summary: Update an L2 transaction in the coordinator's pool.
+      summary: Update an L2 transaction in the coordinator's pool. Only regular transactions can be updated. Fields, that can be updated - toAccountIndex, toHezEthereumAddress, toBjj, maxNumBatch, signature, type
       description: >-
         Update L2 transaction
       operationId: putTx
