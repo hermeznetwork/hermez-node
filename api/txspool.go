@@ -35,11 +35,7 @@ func (a *API) postPoolTx(c *gin.Context) {
 	}
 	// Check that tx is valid
 	if err := a.verifyPoolL2Tx(receivedTx); err != nil {
-		retBadReq(&apiError{
-			Err:  err,
-			Code: ErrParamValidationFailedCode,
-			Type: ErrParamValidationFailedType,
-		}, c)
+		retBadReq(err, c)
 		return
 	}
 	receivedTx.ClientIP = c.ClientIP()
@@ -117,7 +113,7 @@ func (a *API) getPoolTxs(c *gin.Context) {
 	})
 }
 
-func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
+func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) *apiError {
 	// Check type and id
 	_, err := common.NewPoolL2Tx(&tx)
 	if err != nil {
