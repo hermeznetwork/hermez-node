@@ -178,7 +178,7 @@ type Coordinator struct {
 	ServerProofs struct {
 		URL []string `validate:"required"`
 	} `validate:"required"`
-	Circuit      struct {
+	Circuit struct {
 		// MaxTx is the maximum number of txs supported by the circuit
 		MaxTx int64 `validate:"required,gte=0"`
 		// NLevels is the maximum number of merkle tree levels
