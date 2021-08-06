@@ -76,6 +76,17 @@ func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 	)
 }
 
+// UpdateTxAPI Update PoolL2Tx regular transactions in the pool.
+func (l2db *L2DB) UpdateTxAPI(tx *common.PoolL2Tx) error {
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+	return tracerr.Wrap(l2db.updateTx(*tx))
+}
+
 // AddAtomicTxsAPI inserts transactions into the pool
 // if minFeeUSD <= total fee in USD <= maxFeeUSD.
 // It's assumed that the given txs conform a single atomic group
