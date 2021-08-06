@@ -116,8 +116,8 @@ Path = "/tmp/iden3-test/hermez/txselector"
 [Coordinator.BatchBuilder]
 Path = "/tmp/iden3-test/hermez/batchbuilder"
 
-[[Coordinator.ServerProofs]]
-URL = "http://localhost:3000/api"
+[Coordinator.ServerProofs]
+URL = ["http://localhost:3000/api"]
 
 [Coordinator.Circuit]
 MaxTx = 512
