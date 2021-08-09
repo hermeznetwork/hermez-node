@@ -21,7 +21,7 @@ const minBidStr = "10000000000000000000"
 const URL = "http://localhost:3000"
 
 var allocationRatioConst [3]uint16 = [3]uint16{4000, 4000, 2000}
-var auctionClientTest *AuctionClient
+var auctionClientTest *AuctionEthClient
 
 func TestAuctionGetCurrentSlotNumber(t *testing.T) {
 	currentSlot, err := auctionClientTest.AuctionGetCurrentSlotNumber()
