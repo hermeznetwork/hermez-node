@@ -2,21 +2,27 @@ package eth
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"net"
+	"net/url"
 	"strings"
 
+	"github.com/arnaubennassar/eth2libp2p"
+	"github.com/asaskevich/govalidator"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
 	auction "github.com/hermeznetwork/hermez-node/eth/contracts/auction"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/multiformats/go-multiaddr"
 )
 
 // SlotState is the state of a slot
@@ -266,8 +272,8 @@ type AuctionInterface interface {
 // Implementation
 //
 
-// AuctionClient is the implementation of the interface to the Auction Smart Contract in ethereum.
-type AuctionClient struct {
+// AuctionEthClient is the implementation of the interface to the Auction Smart Contract in ethereum.
+type AuctionEthClient struct {
 	client      *EthereumClient
 	chainID     *big.Int
 	address     ethCommon.Address
@@ -278,7 +284,7 @@ type AuctionClient struct {
 }
 
 // NewAuctionClient creates a new AuctionClient.  `tokenAddress` is the address of the HEZ tokens.
-func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Address) (*AuctionClient, error) {
+func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Address) (*AuctionEthClient, error) {
 	contractAbi, err :=
 		abi.JSON(strings.NewReader(string(auction.AuctionABI)))
 	if err != nil {
@@ -296,7 +302,7 @@ func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Ad
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	return &AuctionClient{
+	return &AuctionEthClient{
 		client:      client,
 		chainID:     chainID,
 		address:     address,
@@ -308,7 +314,7 @@ func NewAuctionClient(client *EthereumClient, address, tokenAddress ethCommon.Ad
 }
 
 // AuctionSetSlotDeadline is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transaction, error) {
+func (c *AuctionEthClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	if tx, err = c.client.CallAuth(
@@ -323,7 +329,7 @@ func (c *AuctionClient) AuctionSetSlotDeadline(newDeadline uint8) (*types.Transa
 }
 
 // AuctionGetSlotDeadline is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetSlotDeadline() (slotDeadline uint8, err error) {
+func (c *AuctionEthClient) AuctionGetSlotDeadline() (slotDeadline uint8, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotDeadline, err = c.auction.GetSlotDeadline(c.opts)
 		return tracerr.Wrap(err)
@@ -334,7 +340,7 @@ func (c *AuctionClient) AuctionGetSlotDeadline() (slotDeadline uint8, err error)
 }
 
 // AuctionSetOpenAuctionSlots is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetOpenAuctionSlots(
+func (c *AuctionEthClient) AuctionSetOpenAuctionSlots(
 	newOpenAuctionSlots uint16) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -348,7 +354,7 @@ func (c *AuctionClient) AuctionSetOpenAuctionSlots(
 }
 
 // AuctionGetOpenAuctionSlots is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetOpenAuctionSlots() (openAuctionSlots uint16, err error) {
+func (c *AuctionEthClient) AuctionGetOpenAuctionSlots() (openAuctionSlots uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		openAuctionSlots, err = c.auction.GetOpenAuctionSlots(c.opts)
 		return tracerr.Wrap(err)
@@ -359,7 +365,7 @@ func (c *AuctionClient) AuctionGetOpenAuctionSlots() (openAuctionSlots uint16, e
 }
 
 // AuctionSetClosedAuctionSlots is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetClosedAuctionSlots(
+func (c *AuctionEthClient) AuctionSetClosedAuctionSlots(
 	newClosedAuctionSlots uint16) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -373,7 +379,7 @@ func (c *AuctionClient) AuctionSetClosedAuctionSlots(
 }
 
 // AuctionGetClosedAuctionSlots is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetClosedAuctionSlots() (closedAuctionSlots uint16, err error) {
+func (c *AuctionEthClient) AuctionGetClosedAuctionSlots() (closedAuctionSlots uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		closedAuctionSlots, err = c.auction.GetClosedAuctionSlots(c.opts)
 		return tracerr.Wrap(err)
@@ -384,7 +390,7 @@ func (c *AuctionClient) AuctionGetClosedAuctionSlots() (closedAuctionSlots uint1
 }
 
 // AuctionSetOutbidding is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Transaction,
+func (c *AuctionEthClient) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Transaction,
 	err error) {
 	if tx, err = c.client.CallAuth(
 		12500000, //nolint:gomnd
@@ -398,7 +404,7 @@ func (c *AuctionClient) AuctionSetOutbidding(newOutbidding uint16) (tx *types.Tr
 }
 
 // AuctionGetOutbidding is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetOutbidding() (outbidding uint16, err error) {
+func (c *AuctionEthClient) AuctionGetOutbidding() (outbidding uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		outbidding, err = c.auction.GetOutbidding(c.opts)
 		return tracerr.Wrap(err)
@@ -409,7 +415,7 @@ func (c *AuctionClient) AuctionGetOutbidding() (outbidding uint16, err error) {
 }
 
 // AuctionSetAllocationRatio is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetAllocationRatio(
+func (c *AuctionEthClient) AuctionSetAllocationRatio(
 	newAllocationRatio [3]uint16) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -423,7 +429,7 @@ func (c *AuctionClient) AuctionSetAllocationRatio(
 }
 
 // AuctionGetAllocationRatio is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetAllocationRatio() (allocationRation [3]uint16, err error) {
+func (c *AuctionEthClient) AuctionGetAllocationRatio() (allocationRation [3]uint16, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		allocationRation, err = c.auction.GetAllocationRatio(c.opts)
 		return tracerr.Wrap(err)
@@ -434,7 +440,7 @@ func (c *AuctionClient) AuctionGetAllocationRatio() (allocationRation [3]uint16,
 }
 
 // AuctionSetDonationAddress is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetDonationAddress(
+func (c *AuctionEthClient) AuctionSetDonationAddress(
 	newDonationAddress ethCommon.Address) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -448,7 +454,7 @@ func (c *AuctionClient) AuctionSetDonationAddress(
 }
 
 // AuctionGetDonationAddress is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetDonationAddress() (donationAddress *ethCommon.Address,
+func (c *AuctionEthClient) AuctionGetDonationAddress() (donationAddress *ethCommon.Address,
 	err error) {
 	var _donationAddress ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
@@ -461,7 +467,7 @@ func (c *AuctionClient) AuctionGetDonationAddress() (donationAddress *ethCommon.
 }
 
 // AuctionSetBootCoordinator is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address,
+func (c *AuctionEthClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.Address,
 	newBootCoordinatorURL string) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -476,7 +482,7 @@ func (c *AuctionClient) AuctionSetBootCoordinator(newBootCoordinator ethCommon.A
 }
 
 // AuctionGetBootCoordinator is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetBootCoordinator() (bootCoordinator *ethCommon.Address,
+func (c *AuctionEthClient) AuctionGetBootCoordinator() (bootCoordinator *ethCommon.Address,
 	err error) {
 	var _bootCoordinator ethCommon.Address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
@@ -489,7 +495,7 @@ func (c *AuctionClient) AuctionGetBootCoordinator() (bootCoordinator *ethCommon.
 }
 
 // AuctionChangeDefaultSlotSetBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64,
+func (c *AuctionEthClient) AuctionChangeDefaultSlotSetBid(slotSet int64,
 	newInitialMinBid *big.Int) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -504,7 +510,7 @@ func (c *AuctionClient) AuctionChangeDefaultSlotSetBid(slotSet int64,
 }
 
 // AuctionGetClaimableHEZ is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetClaimableHEZ(
+func (c *AuctionEthClient) AuctionGetClaimableHEZ(
 	claimAddress ethCommon.Address) (claimableHEZ *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		claimableHEZ, err = c.auction.GetClaimableHEZ(c.opts, claimAddress)
@@ -516,7 +522,7 @@ func (c *AuctionClient) AuctionGetClaimableHEZ(
 }
 
 // AuctionSetCoordinator is the interface to call the smart contract function
-func (c *AuctionClient) AuctionSetCoordinator(forger ethCommon.Address,
+func (c *AuctionEthClient) AuctionSetCoordinator(forger ethCommon.Address,
 	coordinatorURL string) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -530,7 +536,7 @@ func (c *AuctionClient) AuctionSetCoordinator(forger ethCommon.Address,
 }
 
 // AuctionGetCurrentSlotNumber is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetCurrentSlotNumber() (currentSlotNumber int64, err error) {
+func (c *AuctionEthClient) AuctionGetCurrentSlotNumber() (currentSlotNumber int64, err error) {
 	var _currentSlotNumber *big.Int
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_currentSlotNumber, err = c.auction.GetCurrentSlotNumber(c.opts)
@@ -542,7 +548,7 @@ func (c *AuctionClient) AuctionGetCurrentSlotNumber() (currentSlotNumber int64, 
 }
 
 // AuctionGetMinBidBySlot is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetMinBidBySlot(slot int64) (minBid *big.Int, err error) {
+func (c *AuctionEthClient) AuctionGetMinBidBySlot(slot int64) (minBid *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotToSend := big.NewInt(slot)
 		minBid, err = c.auction.GetMinBidBySlot(c.opts, slotToSend)
@@ -554,7 +560,7 @@ func (c *AuctionClient) AuctionGetMinBidBySlot(slot int64) (minBid *big.Int, err
 }
 
 // AuctionGetSlotSet is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetSlotSet(slot int64) (slotSet *big.Int, err error) {
+func (c *AuctionEthClient) AuctionGetSlotSet(slot int64) (slotSet *big.Int, err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		slotToSend := big.NewInt(slot)
 		slotSet, err = c.auction.GetSlotSet(c.opts, slotToSend)
@@ -566,7 +572,7 @@ func (c *AuctionClient) AuctionGetSlotSet(slot int64) (slotSet *big.Int, err err
 }
 
 // AuctionGetDefaultSlotSetBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (minBidSlotSet *big.Int,
+func (c *AuctionEthClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (minBidSlotSet *big.Int,
 	err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		minBidSlotSet, err = c.auction.GetDefaultSlotSetBid(c.opts, slotSet)
@@ -578,7 +584,7 @@ func (c *AuctionClient) AuctionGetDefaultSlotSetBid(slotSet uint8) (minBidSlotSe
 }
 
 // AuctionGetSlotNumber is the interface to call the smart contract function
-func (c *AuctionClient) AuctionGetSlotNumber(blockNum int64) (slot int64, err error) {
+func (c *AuctionEthClient) AuctionGetSlotNumber(blockNum int64) (slot int64, err error) {
 	var _slot *big.Int
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		_slot, err = c.auction.GetSlotNumber(c.opts, big.NewInt(blockNum))
@@ -590,7 +596,7 @@ func (c *AuctionClient) AuctionGetSlotNumber(blockNum int64) (slot int64, err er
 }
 
 // AuctionBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.Int,
+func (c *AuctionEthClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.Int,
 	deadline *big.Int) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
@@ -617,7 +623,7 @@ func (c *AuctionClient) AuctionBid(amount *big.Int, slot int64, bidAmount *big.I
 }
 
 // AuctionMultiBid is the interface to call the smart contract function
-func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlot int64,
+func (c *AuctionEthClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlot int64,
 	slotSets [6]bool, maxBid, minBid, deadline *big.Int) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		1000000, //nolint:gomnd
@@ -646,7 +652,7 @@ func (c *AuctionClient) AuctionMultiBid(amount *big.Int, startingSlot, endingSlo
 }
 
 // AuctionCanForge is the interface to call the smart contract function
-func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNum int64) (canForge bool,
+func (c *AuctionEthClient) AuctionCanForge(forger ethCommon.Address, blockNum int64) (canForge bool,
 	err error) {
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		canForge, err = c.auction.CanForge(c.opts, forger, big.NewInt(blockNum))
@@ -658,7 +664,7 @@ func (c *AuctionClient) AuctionCanForge(forger ethCommon.Address, blockNum int64
 }
 
 // AuctionClaimHEZ is the interface to call the smart contract function
-func (c *AuctionClient) AuctionClaimHEZ() (tx *types.Transaction, err error) {
+func (c *AuctionEthClient) AuctionClaimHEZ() (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -671,7 +677,7 @@ func (c *AuctionClient) AuctionClaimHEZ() (tx *types.Transaction, err error) {
 }
 
 // AuctionForge is the interface to call the smart contract function
-func (c *AuctionClient) AuctionForge(forger ethCommon.Address) (tx *types.Transaction, err error) {
+func (c *AuctionEthClient) AuctionForge(forger ethCommon.Address) (tx *types.Transaction, err error) {
 	if tx, err = c.client.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -684,7 +690,7 @@ func (c *AuctionClient) AuctionForge(forger ethCommon.Address) (tx *types.Transa
 }
 
 // AuctionConstants returns the Constants of the Auction Smart Contract
-func (c *AuctionClient) AuctionConstants() (auctionConstants *common.AuctionConstants, err error) {
+func (c *AuctionEthClient) AuctionConstants() (auctionConstants *common.AuctionConstants, err error) {
 	auctionConstants = new(common.AuctionConstants)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auctionConstants.BlocksPerSlot, err = c.auction.BLOCKSPERSLOT(c.opts)
@@ -721,7 +727,7 @@ func (c *AuctionClient) AuctionConstants() (auctionConstants *common.AuctionCons
 }
 
 // AuctionVariables returns the variables of the Auction Smart Contract
-func (c *AuctionClient) AuctionVariables() (auctionVariables *common.AuctionVariables, err error) {
+func (c *AuctionEthClient) AuctionVariables() (auctionVariables *common.AuctionVariables, err error) {
 	auctionVariables = new(common.AuctionVariables)
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		auctionVariables.AllocationRatio, err = c.AuctionGetAllocationRatio()
@@ -772,39 +778,39 @@ func (c *AuctionClient) AuctionVariables() (auctionVariables *common.AuctionVari
 }
 
 var (
-	logAuctionNewBid = crypto.Keccak256Hash([]byte(
+	logAuctionNewBid = ethCrypto.Keccak256Hash([]byte(
 		"NewBid(uint128,uint128,address)"))
-	logAuctionNewSlotDeadline = crypto.Keccak256Hash([]byte(
+	logAuctionNewSlotDeadline = ethCrypto.Keccak256Hash([]byte(
 		"NewSlotDeadline(uint8)"))
-	logAuctionNewClosedAuctionSlots = crypto.Keccak256Hash([]byte(
+	logAuctionNewClosedAuctionSlots = ethCrypto.Keccak256Hash([]byte(
 		"NewClosedAuctionSlots(uint16)"))
-	logAuctionNewOutbidding = crypto.Keccak256Hash([]byte(
+	logAuctionNewOutbidding = ethCrypto.Keccak256Hash([]byte(
 		"NewOutbidding(uint16)"))
-	logAuctionNewDonationAddress = crypto.Keccak256Hash([]byte(
+	logAuctionNewDonationAddress = ethCrypto.Keccak256Hash([]byte(
 		"NewDonationAddress(address)"))
-	logAuctionNewBootCoordinator = crypto.Keccak256Hash([]byte(
+	logAuctionNewBootCoordinator = ethCrypto.Keccak256Hash([]byte(
 		"NewBootCoordinator(address,string)"))
-	logAuctionNewOpenAuctionSlots = crypto.Keccak256Hash([]byte(
+	logAuctionNewOpenAuctionSlots = ethCrypto.Keccak256Hash([]byte(
 		"NewOpenAuctionSlots(uint16)"))
-	logAuctionNewAllocationRatio = crypto.Keccak256Hash([]byte(
+	logAuctionNewAllocationRatio = ethCrypto.Keccak256Hash([]byte(
 		"NewAllocationRatio(uint16[3])"))
-	logAuctionSetCoordinator = crypto.Keccak256Hash([]byte(
+	logAuctionSetCoordinator = ethCrypto.Keccak256Hash([]byte(
 		"SetCoordinator(address,address,string)"))
-	logAuctionNewForgeAllocated = crypto.Keccak256Hash([]byte(
+	logAuctionNewForgeAllocated = ethCrypto.Keccak256Hash([]byte(
 		"NewForgeAllocated(address,address,uint128,uint128,uint128,uint128)"))
-	logAuctionNewDefaultSlotSetBid = crypto.Keccak256Hash([]byte(
+	logAuctionNewDefaultSlotSetBid = ethCrypto.Keccak256Hash([]byte(
 		"NewDefaultSlotSetBid(uint128,uint128)"))
-	logAuctionNewForge = crypto.Keccak256Hash([]byte(
+	logAuctionNewForge = ethCrypto.Keccak256Hash([]byte(
 		"NewForge(address,uint128)"))
-	logAuctionHEZClaimed = crypto.Keccak256Hash([]byte(
+	logAuctionHEZClaimed = ethCrypto.Keccak256Hash([]byte(
 		"HEZClaimed(address,uint128)"))
-	logAuctionInitialize = crypto.Keccak256Hash([]byte(
+	logAuctionInitialize = ethCrypto.Keccak256Hash([]byte(
 		"InitializeHermezAuctionProtocolEvent(address,address,string," +
 			"uint16,uint8,uint16,uint16,uint16[3])"))
 )
 
 // AuctionEventInit returns the initialize event with its corresponding block number
-func (c *AuctionClient) AuctionEventInit(genesisBlockNum int64) (*AuctionEventInitialize, int64, error) {
+func (c *AuctionEthClient) AuctionEventInit(genesisBlockNum int64) (*AuctionEventInitialize, int64, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []ethCommon.Address{
 			c.address,
@@ -839,7 +845,7 @@ func (c *AuctionClient) AuctionEventInit(genesisBlockNum int64) (*AuctionEventIn
 // To query by blockNum, set blockNum >= 0 and blockHash == nil.
 // To query by blockHash set blockHash != nil, and blockNum will be ignored.
 // If there are no events in that block the result is nil.
-func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
+func (c *AuctionEthClient) AuctionEventsByBlock(blockNum int64,
 	blockHash *ethCommon.Hash) (*AuctionEvents, error) {
 	var auctionEvents AuctionEvents
 
@@ -989,4 +995,136 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 		}
 	}
 	return &auctionEvents, nil
+}
+
+// GetCoordinatorsLibP2PAddrs return the libp2p addr associated to each coordinator
+// that has been registered so far
+func (c AuctionEthClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, error) {
+	// Get events
+	query := ethereum.FilterQuery{
+		Addresses: []ethCommon.Address{
+			c.address,
+		},
+		Topics: [][]ethCommon.Hash{{logAuctionSetCoordinator}},
+	}
+	logs, err := c.client.client.FilterLogs(context.TODO(), query)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	libp2pAddrs := []multiaddr.Multiaddr{}
+	for _, eventLog := range logs {
+		// Get coordinator URL
+		var setCoordinator AuctionEventSetCoordinator
+		if err := c.contractAbi.UnpackIntoInterface(&setCoordinator,
+			"SetCoordinator", eventLog.Data); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		url := setCoordinator.CoordinatorURL
+		// Get coordinator public key
+		tx, isPending, err := c.client.client.TransactionByHash(context.TODO(), eventLog.TxHash)
+		if err != nil {
+			log.Warn(err)
+			continue
+		}
+		if isPending {
+			continue
+		}
+		pubKey, err := pubKeyFromTx(tx)
+		if err != nil {
+			log.Warn(err)
+			continue
+		}
+
+		// Generate libp2p address from URL and public key
+		if addr, err := NewCoordinatorLibP2PAddr(url, pubKey); err == nil {
+			libp2pAddrs = append(libp2pAddrs, addr)
+		} else {
+			log.Warn(err)
+		}
+	}
+	if len(libp2pAddrs) == 0 {
+		return nil, tracerr.New("Unable to generate any valid libp2p address for registered coordinators")
+	}
+	return libp2pAddrs, nil
+}
+
+func pubKeyFromTx(tx *types.Transaction) (*ecdsa.PublicKey, error) {
+	// Get hash
+	var hash ethCommon.Hash
+	v, r, s := tx.RawSignatureValues()
+	switch tx.Type() {
+	case types.DynamicFeeTxType:
+		signer := types.NewLondonSigner(tx.ChainId())
+		hash = signer.Hash(tx)
+	case types.LegacyTxType:
+		if tx.Protected() {
+			signer := types.NewEIP2930Signer(tx.ChainId())
+			hash = signer.Hash(tx)
+			// Special signature case
+			v = new(big.Int).Sub(
+				v,
+				new(big.Int).Mul(tx.ChainId(), big.NewInt(2)), //nolint:gomnd
+			)
+			v = new(big.Int).Sub(v, big.NewInt(35)) //nolint:gomnd
+		} else {
+			signer := types.HomesteadSigner{}
+			hash = signer.Hash(tx)
+			// Special signature case
+			v = new(big.Int).Sub(v, big.NewInt(27)) //nolint:gomnd
+		}
+	case types.AccessListTxType:
+		signer := types.NewEIP2930Signer(tx.ChainId())
+		hash = signer.Hash(tx)
+	default:
+		return nil, tracerr.New("Unexpected tx type")
+	}
+
+	// Get signature from V, R, S
+	signature := make([]byte, 65) //nolint:gomnd
+	rBytes, sBytes := r.Bytes(), s.Bytes()
+	copy(signature[32-len(rBytes):32], rBytes)
+	copy(signature[64-len(sBytes):64], sBytes)
+	signature[64] = byte(v.Uint64())
+
+	// Generate public key from signature and hash to be signed
+	return ethCrypto.SigToPub(hash.Bytes(), signature)
+}
+
+// NewCoordinatorLibP2PAddr returns the libp2p address associated to a coordinator
+func NewCoordinatorLibP2PAddr(URL string, pubKey *ecdsa.PublicKey) (multiaddr.Multiaddr, error) {
+	// Generate libp2p ID from Ethereum public key
+	libp2pIDRaw, err := eth2libp2p.P2PIDFromEthPubKey(pubKey)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	libp2pID := libp2pIDRaw.Pretty()
+
+	// Get rid of port
+	u, _ := url.Parse(URL)
+	host, _, err := net.SplitHostPort(u.Host)
+	if err != nil && !strings.Contains(err.Error(), "missing port in address") {
+		return nil, tracerr.Wrap(err)
+	} else if err == nil {
+		URL = host
+	}
+	// IP4 case
+	if ok := govalidator.IsIPv4(URL); ok {
+		addr := fmt.Sprintf("/ip4/%s/tcp/%s/p2p/%s", URL, common.CoordinatorsNetworkPort, libp2pID)
+		return multiaddr.NewMultiaddr(addr)
+	}
+	// IP6 case
+	if ok := govalidator.IsIPv6(URL); ok {
+		addr := fmt.Sprintf("/ip6/%s/tcp/%s/p2p/%s", URL, common.CoordinatorsNetworkPort, libp2pID)
+		return multiaddr.NewMultiaddr(addr)
+	}
+	// DNS case
+	if ok := govalidator.IsURL(URL); ok {
+		// Get rid of http(s)://
+		URL = strings.TrimPrefix(URL, "https://")
+		URL = strings.TrimPrefix(URL, "http://")
+		addr := fmt.Sprintf("/dns/%s/tcp/%s/p2p/%s", URL, common.CoordinatorsNetworkPort, libp2pID)
+		return multiaddr.NewMultiaddr(addr)
+	}
+
+	return nil, tracerr.New("Unexpected url format: " + URL)
 }
