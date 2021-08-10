@@ -32,6 +32,7 @@ func (d *Duration) UnmarshalText(data []byte) error {
 	d.Duration = duration
 	return nil
 }
+
 // ForgeBatchGasCost is the costs associated to a ForgeBatch transaction, split
 // into different parts to be used in a formula.
 type ForgeBatchGasCost struct {
