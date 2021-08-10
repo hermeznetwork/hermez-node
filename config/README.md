@@ -101,8 +101,8 @@ Path = HEZNODE_TXSELECTOR_PATH
 [Coordinator.BatchBuilder]
 Path = HEZNODE_BATCHBUILDER_PATH
 
-[[Coordinator.ServerProofs]]
-URL = HEZNODE_SERVERPROOF_URL
+[Coordinator.ServerProofs]
+URLs = HEZNODE_SERVERPROOF_URLS
 
 [Coordinator.Circuit]
 MaxTx = HEZNODE_CIRCUIT_MAXTX
@@ -217,7 +217,7 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator.L2DB|InvalidateBlockDelay|HEZNODE_L2DB_INVALIDATEBLOCKDELAY|Optional|20|Delay between blocks to mark invalid transactions due to nonce lower than the account nonce
 |Coordinator.TxSelector|Path|HEZNODE_TXSELECTOR_PATH|Optional|"/var/hermez/txselector"|Path where the TxSelector StateDB is stored
 |Coordinator.BatchBuilder|Path|HEZNODE_BATCHBUILDER_PATH|Optional|"/var/hermez/batchbuilder"|Path where the BatchBuilder StateDB is stored
-|Coordinator.ServerProofs|URL|HEZNODE_SERVERPROOF_URL|**Required**|"http://localhost:3000"|Server proof API URL
+|Coordinator.ServerProofs|URLs|HEZNODE_SERVERPROOF_URLS (comma separator ",")|**Required**|`["http://localhost:3000"]`|Server proof API URL
 |Coordinator.Circuit|MaxTx|HEZNODE_CIRCUIT_MAXTX|**Required**|2048|Maximum number of txs supported by the circuit
 |Coordinator.Circuit|NLevels|HEZNODE_CIRCUIT_NLEVELS|**Required**|32|Maximum number of merkle tree levels supported by the circuit
 |Coordinator.EthClient|CheckLoopInterval|HEZNODE_ETHCLIENT_CHECKLOOPINTERVAL|Optional|"500ms"|Interval between receipt checks of ethereum transactions in the TxManager

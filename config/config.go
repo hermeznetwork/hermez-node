@@ -177,7 +177,7 @@ type Coordinator struct {
 		Path string `validate:"required" env:"HEZNODE_BATCHBUILDER_PATH"`
 	} `validate:"required"`
 	ServerProofs struct {
-		URL []string `validate:"required"`
+		URLs []string `validate:"required" env:"HEZNODE_SERVERPROOF_URLS" envSeparator:","`
 	} `validate:"required"`
 	Circuit struct {
 		// MaxTx is the maximum number of txs supported by the circuit
@@ -406,15 +406,6 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 		log.Warn(err.Error())
 	}
 	//Get env arrays
-	//Proof Servers
-	if os.Getenv("HEZNODE_SERVERPROOF_URL") != "" {
-		prover := ServerProof{
-			URL: os.Getenv("HEZNODE_SERVERPROOF_URL"),
-		}
-		var provers []ServerProof
-		provers = append(provers, prover)
-		cfg.Coordinator.ServerProofs = provers
-	}
 	//Price Updater
 	if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER") != "" {
 		provider := priceupdater.Provider{

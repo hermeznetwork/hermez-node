@@ -106,8 +106,8 @@ Path = "/var/hermez/txselector"
 [Coordinator.BatchBuilder]
 Path = "/var/hermez/batchbuilder"
 
-[[Coordinator.ServerProofs]]
-URL = "http://localhost:3000"
+[Coordinator.ServerProofs]
+URLs = ["http://localhost:3000"]
 
 [Coordinator.Circuit]
 MaxTx = 2048
