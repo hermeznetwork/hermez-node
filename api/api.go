@@ -106,10 +106,12 @@ func NewAPI(
 		v1.GET("/account-creation-authorization/:hezEthereumAddress", a.getAccountCreationAuth)
 		// Transaction
 		v1.POST("/transactions-pool", a.postPoolTx)
+		v1.PUT("/transactions-pool/:id", a.putPoolTx)
 		v1.PUT("/transactions-pool/accounts/:accountIndex/nonces/:nonce", a.putPoolTxByIdxAndNonce)
 		v1.POST("/atomic-pool", a.postAtomicPool)
 		v1.GET("/transactions-pool/:id", a.getPoolTx)
 		v1.GET("/transactions-pool", a.getPoolTxs)
+		v1.POST("/atomic-pool", a.postAtomicPool)
 		v1.GET("/atomic-pool/:id", a.getAtomicGroup)
 	}
 

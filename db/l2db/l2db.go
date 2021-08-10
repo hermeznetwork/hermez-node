@@ -276,13 +276,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			" WHERE (SELECT COUNT (*) FROM tx_pool WHERE state = ? AND NOT external_delete) < ?;" // Check if the pool is full
 		queryVars = append(queryVars, common.PoolL2TxStatePending, l2db.maxTxs)
 	} else {
-		query += " VALUES " + queryVarsPart + " ON CONFLICT ON CONSTRAINT tx_id_unique DO UPDATE SET " +
-			"from_idx = excluded.from_idx, to_idx = excluded.to_idx, to_eth_addr = excluded.to_eth_addr, to_bjj = excluded.to_bjj," +
-			" token_id = excluded.token_id, amount = excluded.amount, fee = excluded.fee, nonce = excluded.nonce, state = excluded.state," +
-			"info = excluded.info, signature = excluded.signature, rq_from_idx = excluded.rq_from_idx, rq_to_idx = excluded.rq_to_idx, " +
-			"rq_to_bjj = excluded.rq_to_bjj, rq_token_id = excluded.rq_token_id, rq_amount = excluded.rq_amount, rq_fee = excluded.rq_fee, rq_nonce = excluded.rq_nonce," +
-			" tx_type = excluded.tx_type, amount_f = excluded.amount_f, client_ip = excluded.client_ip, " +
-			"rq_offset = excluded.rq_offset, max_num_batch = excluded.max_num_batch WHERE tx_pool.atomic_group_id IS NULL;"
+		query += " VALUES " + queryVarsPart + ";"
 	}
 	// Replace "?, ?, ... ?" ==> "$1, $2, ..., $(len(queryVars))"
 	query = l2db.dbRead.Rebind(query)
@@ -295,6 +289,27 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			return tracerr.Wrap(errPoolFull)
 		}
 	}
+	return tracerr.Wrap(err)
+}
+
+// Update PoolL2Tx transaction in the pool
+func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
+	const queryUpdate = `UPDATE tx_pool SET to_idx = ?, to_eth_addr = ?, to_bjj = ?, max_num_batch = ?, 
+	signature = ?, client_ip = ?, tx_type = ? WHERE tx_id = ? AND tx_pool.atomic_group_id IS NULL;`
+
+	if tx.ToIdx == 0 && tx.ToEthAddr == common.EmptyAddr && tx.ToBJJ == common.EmptyBJJComp && tx.MaxNumBatch == 0 {
+		return tracerr.Wrap(errors.New("nothing to update"))
+	}
+
+	queryVars := []interface{}{tx.ToIdx, tx.ToEthAddr, tx.ToBJJ, tx.MaxNumBatch, tx.Signature, tx.ClientIP, tx.Type, tx.TxID}
+
+	query, args, err := sqlx.In(queryUpdate, queryVars...)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	query = l2db.dbWrite.Rebind(query)
+	_, err = l2db.dbWrite.Exec(query, args...)
 	return tracerr.Wrap(err)
 }
 
