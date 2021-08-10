@@ -18,6 +18,8 @@ In some cases, some of the structs defined in this file also include custom Mars
 package l2db
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -294,6 +296,81 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		}
 	}
 	return tracerr.Wrap(err)
+}
+
+func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce common.Nonce, tx *common.PoolL2Tx) error {
+	txn, err := l2db.dbWrite.Beginx()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	defer func() {
+		if err != nil {
+			db.Rollback(txn)
+		}
+	}()
+	var (
+		res          sql.Result
+		queryVars    []interface{}
+		rowsAffected int64
+	)
+
+	const queryDelete = `DELETE FROM tx_pool WHERE from_idx = $1 AND nonce = $2 AND state = $3 AND atomic_group_id IS NULL AND NOT external_delete;`
+	if res, err = txn.Exec(queryDelete, idx, nonce, common.PoolL2TxStatePending); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	if rowsAffected, err = res.RowsAffected(); err != nil || rowsAffected == 0 {
+		return tracerr.Wrap(sql.ErrNoRows)
+	}
+
+	const queryInsertPart = `INSERT INTO tx_pool (
+		tx_id, from_idx, to_idx, to_eth_addr, to_bjj, token_id,
+		amount, fee, nonce, state, info, signature, 
+		tx_type, amount_f, client_ip, max_num_batch
+	)`
+
+	var (
+		toEthAddr   *ethCommon.Address
+		toBJJ       *babyjub.PublicKeyComp
+		info        *string
+		maxNumBatch *uint32
+	)
+
+	// AmountFloat
+	f := new(big.Float).SetInt(tx.Amount)
+	amountF, _ := f.Float64()
+	// ToEthAddr
+	if tx.ToEthAddr != common.EmptyAddr {
+		toEthAddr = &tx.ToEthAddr
+	}
+	// ToBJJ
+	if tx.ToBJJ != common.EmptyBJJComp {
+		toBJJ = &tx.ToBJJ
+	}
+	// MAxNumBatch
+	if tx.MaxNumBatch != 0 {
+		maxNumBatch = &tx.MaxNumBatch
+	}
+
+	queryVarsPart := `(?::BYTEA, ?::BIGINT, ?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT,
+	?::NUMERIC, ?::SMALLINT, ?::BIGINT, ?::CHAR(4), ?::VARCHAR, ?::BYTEA,
+	?::VARCHAR(40), ?::NUMERIC, ?::VARCHAR, ?::BIGINT)`
+
+	queryVars = append(queryVars,
+		tx.TxID, tx.FromIdx, tx.ToIdx, toEthAddr, toBJJ, tx.TokenID,
+		tx.Amount.String(), tx.Fee, tx.Nonce, tx.State, info, tx.Signature,
+		tx.Type, amountF, tx.ClientIP, maxNumBatch)
+
+	query := queryInsertPart + " VALUES " + queryVarsPart + ";"
+	query = txn.Rebind(query)
+	res, err = txn.Exec(query, queryVars...)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if rowsAffected, err := res.RowsAffected(); err != nil || rowsAffected == 0 {
+		return tracerr.Wrap(errors.New("no rows affected"))
+	}
+	return tracerr.Wrap(txn.Commit())
 }
 
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx

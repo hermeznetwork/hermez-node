@@ -420,6 +420,90 @@ func TestPoolTxs(t *testing.T) {
 		)
 		assertPoolTx(t, tx, fetchedTx)
 	}
+
+	// test positive case
+	tx := tc.poolTxsToSend[0]
+	txToReceive := tc.poolTxsToReceive[0]
+	fetchedTx := testPoolTxReceive{}
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+tx.TxID.String(),
+		nil, &fetchedTx))
+	assertPoolTx(t, txToReceive, fetchedTx)
+	prevTxID := tx.TxID
+	tx.TxID, err = common.NewTxIDFromString("0x0270c069af9f5ae54b837ee12a404d026b583bcfa4b2380d48c7156c3bb5a8b30a")
+	assert.NoError(t, err)
+	signStr := "a0ddfec6c15c657f06e99a41d7a0bae0fc31f73799028a615a69214889c0831bb304ac547ca1e5a1b5ac1c7b45bbd95bbe4a17b10a46e069ed8c5ac154434a00"
+	sign := babyjub.SignatureComp{}
+	err = sign.UnmarshalText([]byte(signStr))
+	require.NoError(t, err)
+	tx.Signature = sign
+	tx.Amount = big.NewInt(110)
+	jsonTxBytes, err = json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	require.NoError(t, doGoodReq(
+		"PUT",
+		endpoint+"accounts/"+idx+"/nonces/"+tx.Nonce.BigInt().String(),
+		jsonTxReader, &fetchedTxID))
+	assert.Equal(t, tx.TxID, fetchedTxID)
+	require.NoError(t, doGoodReq(
+		"GET",
+		endpoint+tx.TxID.String(),
+		nil, &fetchedTx))
+	assert.Equal(t, tx.Amount.String(), fetchedTx.Amount)
+	err = doBadReq("GET", endpoint+prevTxID.String(), nil, 404)
+	require.NoError(t, err)
+
+	// test not existing tx
+	oldTx := tx
+	oldIdx := idx
+	idx = "hez:ETH:265"
+	tx.FromIdx = common.Idx(265)
+	tx.Nonce = common.Nonce(0)
+	tx.TxID, err = common.NewTxIDFromString("0x0293ed7291a26bc0ccd01b696f95c8618690d04d028d2af04087831f874235b217")
+	require.NoError(t, err)
+	signStr = "e14165987818b09194dc0eb348bf0d30250bac6005d8a4c3d43f8021c6bee3937781ea69ced553cbbdacd09992f88f6a41bf8e17e0341aa2e53d0bfa80d03b05"
+	sign = babyjub.SignatureComp{}
+	err = sign.UnmarshalText([]byte(signStr))
+	require.NoError(t, err)
+	tx.Signature = sign
+	jsonTxBytes, err = json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	require.NoError(t, doBadReq(
+		"PUT",
+		endpoint+"accounts/"+idx+"/nonces/"+tx.Nonce.BigInt().String(),
+		jsonTxReader, 404))
+	tx = oldTx
+	idx = oldIdx
+
+	// test wrong nonce
+	oldNonce := tx.Nonce
+	tx.Nonce = common.Nonce(5)
+	jsonTxBytes, err = json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+
+	require.NoError(t, doBadReq(
+		"PUT",
+		endpoint+"accounts/"+idx+"/nonces/"+oldNonce.BigInt().String(),
+		jsonTxReader, 400))
+	tx.Nonce = oldNonce
+
+	// test wrong account idx
+	oldAccountIdx := tx.FromIdx
+	tx.FromIdx = common.Idx(250)
+	jsonTxBytes, err = json.Marshal(tx)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+
+	require.NoError(t, doBadReq(
+		"PUT",
+		endpoint+"accounts/"+idx+"/nonces/"+oldNonce.BigInt().String(),
+		jsonTxReader, 400))
+	tx.FromIdx = oldAccountIdx
+
 	// 400, due invalid TxID
 	err = doBadReq("GET", endpoint+"0xG2241b6f2b1dd772dba391f4a1a3407c7c21f598d86e2585a14e616fb4a255f823", nil, 400)
 	require.NoError(t, err)

@@ -54,6 +54,16 @@ func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 	}
 	defer l2db.apiConnCon.Release()
 	// Check fee is in range
+	if err = l2db.checkFeeIsInRange(tx); err != nil {
+		return tracerr.Wrap(err)
+	}
+	// Add tx if pool is not full
+	return tracerr.Wrap(
+		l2db.addTxs([]common.PoolL2Tx{*tx}, true),
+	)
+}
+
+func (l2db *L2DB) checkFeeIsInRange(tx *common.PoolL2Tx) error {
 	row := l2db.dbRead.QueryRow(`SELECT
 		($1::NUMERIC * COALESCE(token.usd, 0) * fee_percentage($2::NUMERIC)) /
 			(10.0 ^ token.decimals::NUMERIC)
@@ -64,17 +74,27 @@ func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 		return tracerr.Wrap(err)
 	}
 	if feeUSD < l2db.minFeeUSD {
-		return tracerr.Wrap(fmt.Errorf("tx.feeUSD (%v) < minFeeUSD (%v)",
-			feeUSD, l2db.minFeeUSD))
+		return fmt.Errorf("tx.feeUSD (%v) < minFeeUSD (%v)",
+			feeUSD, l2db.minFeeUSD)
 	}
 	if feeUSD > l2db.maxFeeUSD {
-		return tracerr.Wrap(fmt.Errorf("tx.feeUSD (%v) > maxFeeUSD (%v)",
-			feeUSD, l2db.maxFeeUSD))
+		return fmt.Errorf("tx.feeUSD (%v) > maxFeeUSD (%v)",
+			feeUSD, l2db.maxFeeUSD)
 	}
-	// Add tx if pool is not full
-	return tracerr.Wrap(
-		l2db.addTxs([]common.PoolL2Tx{*tx}, true),
-	)
+	return nil
+}
+
+func (l2db *L2DB) UpdateTxByIdxAndNonceAPI(idx common.Idx, nonce common.Nonce, tx *common.PoolL2Tx) error {
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+	if err = l2db.checkFeeIsInRange(tx); err != nil {
+		return tracerr.Wrap(err)
+	}
+	return tracerr.Wrap(l2db.updateTxByIdxAndNonce(idx, nonce, tx))
 }
 
 // AddAtomicTxsAPI inserts transactions into the pool
