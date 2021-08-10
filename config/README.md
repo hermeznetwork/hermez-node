@@ -238,7 +238,7 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator.Debug|BatchPath|HEZNODE_COORDINATORDEBUG_BATCHPATH|Optional|""|If this parameter is set, specifies the path where batchInfo is stored in JSON in every step/update of the pipeline
 |Coordinator.Debug|LightScrypt|HEZNODE_COORDINATORDEBUG_LIGHTSCRYPT|Optional|false|If lightScrypt is set, uses light parameters for the ethereum keystore encryption algorithm
 |Coordinator.Debug|RollupVerifierIndex|HEZNODE_COORDINATORDEBUG_ROLLUPVERIFIERINDEX|Optional|0|RollupVerifierIndex is the index of the verifier to use in the Rollup smart contract. The verifier chosen by index must match with the Circuit parameters
-|Coordinator.Etherscan|URL|HEZNODE_ETHERSCAN_URL|Optional|"https://api.etherscan.io"|If this parameter is set, specifies the etherscan endpoint to get the gas estimations for that momment
-|Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"|This parameter allow access to etherscan services
+|Coordinator.Etherscan|URL|HEZNODE_ETHERSCAN_URL|Optional|""|If this parameter is set, specifies the etherscan endpoint to get the gas estimations for that momment
+|Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|""|This parameter allow access to etherscan services
 |RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static" or "AvgLastHour"
 |RecommendedFeePolicy|StaticValue|HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE|Optional|0.10|If PolicyType is "static" defines the recommended fee value
