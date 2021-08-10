@@ -7,9 +7,9 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 

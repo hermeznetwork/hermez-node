@@ -23,7 +23,7 @@ var EmptyBJJComp = babyjub.PublicKeyComp([32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the
 // coordinator that is waiting to be forged
 type PoolL2Tx struct {
-	// Stored in DB: mandatory fileds
+	// Stored in DB: mandatory fields
 
 	// TxID (12 bytes) for L2Tx is:
 	// bytes:  |  1   |    6    |   5   |
@@ -52,7 +52,7 @@ type PoolL2Tx struct {
 	ErrorType string                `meddler:"error_type,zeroisnull"`
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
-	// Stored in DB: optional fileds, may be uninitialized
+	// Stored in DB: optional fields, may be uninitialized
 	AtomicGroupID     AtomicGroupID         `meddler:"atomic_group_id,zeroisnull"`
 	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
 	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
@@ -500,9 +500,10 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toMarshal)
 }
 
-// UnmarshalJSON unmarshals a PoolL2Tx that has been formated in json as specified in `api/swagger.yml:schemas/PostPoolL2Transaction`.
+// UnmarshalJSON unmarshal a PoolL2Tx that has been formatted in json as specified
+// in `api/swagger.yml:schemas/PostPoolL2Transaction`.
 // Note that ClientIP is not included as part of the json and will be set to "".
-// If State is not setted (State == ""), it will be set to PoolL2TxStatePending.
+// If State is not defined (State == ""), it will be set to PoolL2TxStatePending.
 func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	receivedJSON := struct {
 		TxID        TxID                  `json:"id" binding:"required"`
