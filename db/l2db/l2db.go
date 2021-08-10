@@ -382,8 +382,8 @@ func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce common.Nonce, tx *
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	if rowsAffected, err := res.RowsAffected(); err != nil || rowsAffected == 0 {
-		return tracerr.Wrap(errors.New("no rows affected"))
+	if rowsAffected, err = res.RowsAffected(); err != nil || rowsAffected == 0 {
+		return tracerr.Wrap(sql.ErrNoRows)
 	}
 	return tracerr.Wrap(txn.Commit())
 }

@@ -84,6 +84,7 @@ func (l2db *L2DB) checkFeeIsInRange(tx *common.PoolL2Tx) error {
 	return nil
 }
 
+// UpdateTxByIdxAndNonceAPI upadte PoolL2Tx regular transaction in the pool by account idx and nonce
 func (l2db *L2DB) UpdateTxByIdxAndNonceAPI(idx common.Idx, nonce common.Nonce, tx *common.PoolL2Tx) error {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()

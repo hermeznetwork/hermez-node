@@ -520,21 +520,18 @@ func TestPoolTxs(t *testing.T) {
 	assert.Equal(t, "hez:0x0000000000000000000000000000000000000000", *fetchedTx.ToEthAddr)
 	assert.Equal(t, "hez:ETH:262", *fetchedTx.ToIdx)
 
-
 	// test positive case
-	tx := tc.poolTxsToSend[0]
-	txToReceive := tc.poolTxsToReceive[0]
-	fetchedTx := testPoolTxReceive{}
+	tx = tc.poolTxsToSend[0]
+	fetchedTx = testPoolTxReceive{}
 	require.NoError(t, doGoodReq(
 		"GET",
 		endpoint+tx.TxID.String(),
 		nil, &fetchedTx))
-	assertPoolTx(t, txToReceive, fetchedTx)
 	prevTxID := tx.TxID
 	tx.TxID, err = common.NewTxIDFromString("0x0270c069af9f5ae54b837ee12a404d026b583bcfa4b2380d48c7156c3bb5a8b30a")
 	assert.NoError(t, err)
-	signStr := "a0ddfec6c15c657f06e99a41d7a0bae0fc31f73799028a615a69214889c0831bb304ac547ca1e5a1b5ac1c7b45bbd95bbe4a17b10a46e069ed8c5ac154434a00"
-	sign := babyjub.SignatureComp{}
+	signStr = "a0ddfec6c15c657f06e99a41d7a0bae0fc31f73799028a615a69214889c0831bb304ac547ca1e5a1b5ac1c7b45bbd95bbe4a17b10a46e069ed8c5ac154434a00"
+	sign = babyjub.SignatureComp{}
 	err = sign.UnmarshalText([]byte(signStr))
 	require.NoError(t, err)
 	tx.Signature = sign
