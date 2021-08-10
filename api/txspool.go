@@ -130,7 +130,7 @@ func (a *API) putPoolTx(c *gin.Context) {
 	receivedTx.ClientIP = c.ClientIP()
 	receivedTx.Info = ""
 
-	if err := a.l2.UpdateTxAPI(&receivedTx); err != nil {
+	if err := a.l2DB.UpdateTxAPI(&receivedTx); err != nil {
 		if strings.Contains(err.Error(), "< minFeeUSD") {
 			retBadReq(&apiError{
 				Err:  err,
