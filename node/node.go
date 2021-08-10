@@ -447,22 +447,47 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			gin.SetMode(gin.ReleaseMode)
 		}
 		server := gin.Default()
+		server.Use(cors.Default())
 		coord := false
+		var coordnetConfig *api.CoordinatorNetworkConfig
 		if mode == ModeCoordinator {
 			coord = cfg.Coordinator.API.Coordinator
+			if cfg.API.CoordinatorNetwork {
+				// Setup coordinators network configuration
+				// Get libp2p addressess of the registered coordinators
+				// to be used as bootstrap nodes for the p2p network
+				bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				// Get Ethereum private key of the coordinator
+				keyJSON, err := keyStore.Export(*account, cfg.Coordinator.EthClient.Keystore.Password, cfg.Coordinator.EthClient.Keystore.Password)
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				key, err := ethKeystore.DecryptKey(keyJSON, cfg.Coordinator.EthClient.Keystore.Password)
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				coordnetConfig = &api.CoordinatorNetworkConfig{
+					BootstrapPeers: bootstrapAddrs,
+					EthPrivKey:     key.PrivateKey,
+				}
+			}
 		}
 		var err error
-		nodeAPI, err = NewNodeAPI(
-			version,
-			cfg.API.Address,
-			coord, cfg.API.Explorer,
-			server,
-			historyDB,
-			l2DB,
-			stateDB,
-			ethClient,
-			&cfg.Coordinator.ForgerAddress,
-		)
+		nodeAPI, err = NewNodeAPI(cfg.API.Address, api.SetupConfig{
+			Version:                  version,
+			ExplorerEndpoints:        cfg.API.Explorer,
+			CoordinatorEndpoints:     coord,
+			Server:                   server,
+			HistoryDB:                historyDB,
+			L2DB:                     l2DB,
+			StateDB:                  stateDB,
+			EthClient:                ethClient,
+			ForgerAddress:            &cfg.Coordinator.ForgerAddress,
+			CoordinatorNetworkConfig: coordnetConfig,
+		})
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -563,21 +588,83 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 		gin.SetMode(gin.ReleaseMode)
 	}
 	server := gin.Default()
+	server.Use(cors.Default())
 	coord := false
+	var coordnetConfig *api.CoordinatorNetworkConfig
 	if mode == ModeCoordinator {
 		coord = cfg.Coordinator.API.Coordinator
+		if cfg.API.CoordinatorNetwork {
+			// Prepare keystore
+			scryptN := ethKeystore.StandardScryptN
+			scryptP := ethKeystore.StandardScryptP
+			if cfg.Coordinator.Keystore.LightScrypt {
+				scryptN = ethKeystore.LightScryptN
+				scryptP = ethKeystore.LightScryptP
+			}
+			keyStore := ethKeystore.NewKeyStore(cfg.Coordinator.Keystore.Path,
+				scryptN, scryptP)
+			// Unlock Coordinator ForgerAddr in the keystore to make calls
+			// to ForgeBatch in the smart contract
+			if forgerAddress == nil {
+				return nil, errors.New("forgerAddress must be different than nil when using coordinators network")
+			}
+			if !keyStore.HasAddress(*forgerAddress) {
+				return nil, tracerr.Wrap(fmt.Errorf(
+					"ethereum keystore doesn't have the key for address %v",
+					*forgerAddress),
+				)
+			}
+			pass := cfg.Coordinator.Keystore.Password
+			account := accounts.Account{
+				Address: *forgerAddress,
+			}
+			if err := keyStore.Unlock(account, pass); err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			// Setup eth client to read data from the blockchain
+			client, err := eth.NewClient(ethClient, &account, keyStore, &eth.ClientConfig{
+				Ethereum: eth.EthereumConfig{},
+				Rollup: eth.RollupConfig{
+					Address: cfg.Coordinator.Rollup,
+				},
+			})
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			// Setup coordinators network configuration
+			// Get libp2p addressess of the registered coordinators
+			// to be used as bootstrap nodes for the p2p network
+			bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			// Get Ethereum private key of the coordinator
+			keyJSON, err := keyStore.Export(account, pass, pass)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			key, err := ethKeystore.DecryptKey(keyJSON, pass)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			coordnetConfig = &api.CoordinatorNetworkConfig{
+				BootstrapPeers: bootstrapAddrs,
+				EthPrivKey:     key.PrivateKey,
+			}
+		}
 	}
-	nodeAPI, err := NewNodeAPI(
-		version,
-		cfg.API.Address,
-		coord, cfg.API.Explorer,
-		server,
-		historyDB,
-		l2DB,
-		nil,
-		ethClient,
-		forgerAddress,
-	)
+	nodeAPI, err := NewNodeAPI(cfg.API.Address, api.SetupConfig{
+		Version:                  version,
+		ExplorerEndpoints:        cfg.API.Explorer,
+		CoordinatorEndpoints:     coord,
+		Server:                   server,
+		HistoryDB:                historyDB,
+		L2DB:                     l2DB,
+		StateDB:                  nil,
+		EthClient:                ethClient,
+		ForgerAddress:            forgerAddress,
+		CoordinatorNetworkConfig: coordnetConfig,
+	})
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -624,36 +711,15 @@ type NodeAPI struct { //nolint:golint
 }
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
-func NewNodeAPI(
-	version,
-	addr string,
-	coordinatorEndpoints, explorerEndpoints bool,
-	server *gin.Engine,
-	hdb *historydb.HistoryDB,
-	l2db *l2db.L2DB,
-	stateDB *statedb.StateDB,
-	ethClient *ethclient.Client,
-	forgerAddress *ethCommon.Address,
-) (*NodeAPI, error) {
-	engine := gin.Default()
-	engine.Use(cors.Default())
-	_api, err := api.NewAPI(
-		version,
-		coordinatorEndpoints, explorerEndpoints,
-		engine,
-		hdb,
-		l2db,
-		stateDB,
-		ethClient,
-		forgerAddress,
-	)
+func NewNodeAPI(addr string, apiConfig api.SetupConfig) (*NodeAPI, error) {
+	_api, err := api.NewAPI(apiConfig)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	return &NodeAPI{
 		addr:   addr,
 		api:    _api,
-		engine: engine,
+		engine: apiConfig.Server,
 	}, nil
 }
 

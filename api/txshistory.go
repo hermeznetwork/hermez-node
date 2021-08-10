@@ -19,7 +19,7 @@ func (a *API) getHistoryTxs(c *gin.Context) {
 		return
 	}
 	// Fetch txs from historyDB
-	txs, pendingItems, err := a.h.GetTxsAPI(txFilters)
+	txs, pendingItems, err := a.historyDB.GetTxsAPI(txFilters)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -48,7 +48,7 @@ func (a *API) getHistoryTx(c *gin.Context) {
 		return
 	}
 	// Fetch tx from historyDB
-	tx, err := a.h.GetTxAPI(txID)
+	tx, err := a.historyDB.GetTxAPI(txID)
 	if err != nil {
 		retSQLErr(err, c)
 		return

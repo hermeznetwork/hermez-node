@@ -337,6 +337,10 @@ type Node struct {
 		Address string
 		// Explorer enables the Explorer API endpoints
 		Explorer bool
+		// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
+		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
+		// KeyStore must be configured with the Ethereum private key of the coordinator
+		CoordinatorNetwork bool
 		// UpdateMetricsInterval is the interval between updates of the
 		// API metrics
 		UpdateMetricsInterval Duration `validate:"required"`
@@ -367,6 +371,10 @@ type APIServer struct {
 		// SQLConnectionTimeout is the maximum amount of time that an API request
 		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
+		// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
+		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
+		// KeyStore must be configured with the Ethereum private key of the coordinator
+		CoordinatorNetwork bool
 	} `validate:"required"`
 	PostgreSQL  PostgreSQL `validate:"required"`
 	Coordinator struct {
@@ -389,6 +397,20 @@ type APIServer struct {
 			// maximum fee will be rejected at the API level.
 			MaxFeeUSD float64 `validate:"required,gte=0"`
 		} `validate:"required"`
+		// Keystore is the ethereum keystore where private keys are kept.
+		// Required if API.CoordinatorNetwork == true
+		Keystore struct {
+			// Path to the keystore
+			Path string
+			// Password used to decrypt the keys in the keystore
+			Password string
+			// LightScrypt if set, uses light parameters for the ethereum
+			// keystore encryption algorithm.
+			LightScrypt bool
+		}
+		// Rollup is the address of the Hermez.sol smart contract.
+		// Required if API.CoordinatorNetwork == true
+		Rollup ethCommon.Address
 	}
 	Debug NodeDebug `validate:"required"`
 }

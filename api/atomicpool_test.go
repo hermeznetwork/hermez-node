@@ -48,9 +48,9 @@ func TestAtomicPool(t *testing.T) {
 		privateKeys[idx] = &privKey
 	}
 	// Add accounts to HistoryDB
-	err := api.h.AddAccounts(accounts)
+	err := api.historyDB.AddAccounts(accounts)
 	assert.NoError(t, err)
-	err = api.h.AddAccountUpdates(accountUpdates)
+	err = api.historyDB.AddAccountUpdates(accountUpdates)
 	assert.NoError(t, err)
 
 	txsToClean := []common.TxID{}
@@ -318,14 +318,14 @@ func TestAtomicPool(t *testing.T) {
 
 	// Clean historyDB: the added account shouldn't be there for other tests
 	for _, account := range accounts {
-		_, err := api.h.DB().DB.Exec(
+		_, err := api.historyDB.DB().DB.Exec(
 			fmt.Sprintf("delete from account where idx = %d;", account.Idx),
 		)
 		assert.NoError(t, err)
 	}
 	// clean l2DB: the added txs shouldn't be there for other tests
 	for _, txID := range txsToClean {
-		_, err := api.h.DB().DB.Exec("delete from tx_pool where tx_id = $1;", txID)
+		_, err := api.historyDB.DB().DB.Exec("delete from tx_pool where tx_id = $1;", txID)
 		assert.NoError(t, err)
 	}
 }

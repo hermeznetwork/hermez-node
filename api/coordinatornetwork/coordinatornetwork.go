@@ -3,18 +3,21 @@ Package coordinatornetwork implements a comunication layer among coordinators
 in order to share information such as transactions in the pool and create account authorizations.
 
 To do so the pubsub gossip protocol is used.
-This code is currently eavily based on this example: https://github.com/libp2p/go-libp2p/blob/master/examples/pubsub
+This code is currently heavily based on this example: https://github.com/libp2p/go-libp2p/blob/master/examples/pubsub
 */
 package coordinatornetwork
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/libp2p/go-libp2p-core/host"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/multiformats/go-multiaddr"
 )
 
 const (
@@ -24,25 +27,25 @@ const (
 // CoordinatorNetwork it's a p2p communication layer that enables coordinators to exchange information
 // in benefit of the network and them selfs. The main goal is to share L2 data (common.PoolL2Tx and common.AccountCreationAuth)
 type CoordinatorNetwork struct {
-	self host.Host
-	dht  *dht.IpfsDHT
-	// dht       *dht.DHT
+	self      host.Host
+	dht       *dht.IpfsDHT
 	ctx       context.Context
 	discovery *discovery.RoutingDiscovery
 	txsPool   pubSubTxsPool
-	TxPoolCh  chan *common.PoolL2Tx
 }
 
 // NewCoordinatorNetwork connects to coordinators network and return a CoordinatorNetwork
 // to be able to receive and send information from and to other coordinators.
-// For default config set config to nil
-// TODO: port should be constant, but this makes testing easier
-func NewCoordinatorNetwork(registeredCoords []common.Coordinator) (CoordinatorNetwork, error) {
+func NewCoordinatorNetwork(
+	ethPrivKey *ecdsa.PrivateKey,
+	bootstrapPeers []multiaddr.Multiaddr,
+	newPoolTxHandler func(common.PoolL2Tx) error,
+) (CoordinatorNetwork, error) {
 	// Setup a background context
 	ctx := context.Background()
 
 	// Setup a P2P Host Node
-	self, coordnetDHT, err := setupHost(ctx, registeredCoords)
+	self, coordnetDHT, err := setupHost(ctx, ethPrivKey, bootstrapPeers)
 	if err != nil {
 		return CoordinatorNetwork{}, err
 	}
@@ -56,21 +59,33 @@ func NewCoordinatorNetwork(registeredCoords []common.Coordinator) (CoordinatorNe
 		return CoordinatorNetwork{}, err
 	}
 	// Join transactions pool pubsub network
-	txsPool, err := joinPubSubTxsPool(ctx, pubsubHandler, self.ID())
+	txsPool, err := joinPubSubTxsPool(ctx, pubsubHandler, self.ID(), newPoolTxHandler)
 	if err != nil {
 		return CoordinatorNetwork{}, err
 	}
 	log.Info("Joined to tx pool pubsub network")
 	// TODO: add support for atomic txs and account creation auths
 
-	return CoordinatorNetwork{
+	// <--- Remove this !
+	coordnet := CoordinatorNetwork{
 		self:      self,
 		dht:       coordnetDHT,
 		ctx:       ctx,
 		discovery: routingDiscovery,
 		txsPool:   txsPool,
-		TxPoolCh:  txsPool.Txs,
-	}, nil
+	}
+	go func() {
+		for {
+			if err := coordnet.FindMorePeers(); err != nil {
+				log.Warn(err)
+			}
+			time.Sleep(10 * time.Second)
+			log.Infof("%d peers connected to the pubsub", len(coordnet.txsPool.topic.ListPeers()))
+		}
+	}()
+	// --->
+
+	return coordnet, nil
 }
 
 // PublishTx send a L2 transaction to the coordinators network
