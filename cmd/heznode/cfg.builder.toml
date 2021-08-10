@@ -182,9 +182,9 @@ BJJ = "0x130c5c7f294792559f469220274f3d3b2dca6e89f4c5ec88d3a08bf73262171b"
 ### Path where the BatchBuilder StateDB is stored
 #Path = "/var/hermez/batchbuilder"
 
-[[Coordinator.ServerProofs]]
-## Server proof API URL
-URL = "http://localhost:3000"
+[Coordinator.ServerProofs]
+## Server proof API URLs
+URL = ["http://localhost:3000"]
 
 [Coordinator.Circuit]
 ## Maximum number of txs supported by the circuit
