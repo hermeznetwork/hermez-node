@@ -134,7 +134,6 @@ Coordinator = HEZNODE_COORDINATORAPI_COORDINATOR
 [Coordinator.Debug]
 BatchPath = HEZNODE_COORDINATORDEBUG_BATCHPATH
 LightScrypt = HEZNODE_COORDINATORDEBUG_LIGHTSCRYPT
-RollupVerifierIndex = HEZNODE_COORDINATORDEBUG_ROLLUPVERIFIERINDEX
 
 [Coordinator.Etherscan]
 URL = HEZNODE_ETHERSCAN_URL
@@ -237,7 +236,7 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator.API|Coordinator|HEZNODE_COORDINATORAPI_COORDINATOR|Optional|true|Enables coordinator API endpoints
 |Coordinator.Debug|BatchPath|HEZNODE_COORDINATORDEBUG_BATCHPATH|Optional|""|If this parameter is set, specifies the path where batchInfo is stored in JSON in every step/update of the pipeline
 |Coordinator.Debug|LightScrypt|HEZNODE_COORDINATORDEBUG_LIGHTSCRYPT|Optional|false|If lightScrypt is set, uses light parameters for the ethereum keystore encryption algorithm
-|Coordinator.Debug|RollupVerifierIndex|HEZNODE_COORDINATORDEBUG_ROLLUPVERIFIERINDEX|Optional|0|RollupVerifierIndex is the index of the verifier to use in the Rollup smart contract. The verifier chosen by index must match with the Circuit parameters
+|Coordinator.Debug|RollupVerifierIndex||Optional|nil|RollupVerifierIndex is the index of the verifier to use in the Rollup smart contract. The verifier chosen by index must match with the Circuit parameters. Only for debug purposes. It can't be used as env variable
 |Coordinator.Etherscan|URL|HEZNODE_ETHERSCAN_URL|Optional|""|If this parameter is set, specifies the etherscan endpoint to get the gas estimations for that momment
 |Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|""|This parameter allow access to etherscan services
 |RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static" or "AvgLastHour"

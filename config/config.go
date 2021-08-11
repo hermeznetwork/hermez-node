@@ -235,7 +235,7 @@ type Coordinator struct {
 		// RollupVerifierIndex is the index of the verifier to use in
 		// the Rollup smart contract.  The verifier chosen by index
 		// must match with the Circuit parameters.
-		RollupVerifierIndex *int `env:"HEZNODE_COORDINATORDEBUG_ROLLUPVERIFIERINDEX"`
+		RollupVerifierIndex *int
 	}
 	Etherscan struct {
 		// URL if set, specifies the etherscan endpoint to get
