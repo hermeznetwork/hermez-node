@@ -487,7 +487,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			EthClient:                ethClient,
 			ForgerAddress:            &cfg.Coordinator.ForgerAddress,
 			CoordinatorNetworkConfig: coordnetConfig,
-		})
+		}, cfg.API.CoordinatorNetwork, cfg.API.FindPeersCoordinatorNetworkInterval.Duration)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -664,7 +664,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 		EthClient:                ethClient,
 		ForgerAddress:            forgerAddress,
 		CoordinatorNetworkConfig: coordnetConfig,
-	})
+	}, cfg.API.CoordinatorNetwork, cfg.API.FindPeersCoordinatorNetworkInterval.Duration)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -705,21 +705,30 @@ func (s *APIServer) Stop() {
 
 // NodeAPI holds the node http API
 type NodeAPI struct { //nolint:golint
-	api    *api.API
-	engine *gin.Engine
-	addr   string
+	api                                     *api.API
+	engine                                  *gin.Engine
+	addr                                    string
+	coordinatorNetwork                      bool
+	coordinatorNetworkFindMorePeersInterval time.Duration
 }
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
-func NewNodeAPI(addr string, apiConfig api.SetupConfig) (*NodeAPI, error) {
+func NewNodeAPI(
+	addr string,
+	apiConfig api.SetupConfig,
+	coordinatorNetwork bool,
+	coordinatorNetworkFindMorePeersInterval time.Duration,
+) (*NodeAPI, error) {
 	_api, err := api.NewAPI(apiConfig)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	return &NodeAPI{
-		addr:   addr,
-		api:    _api,
-		engine: apiConfig.Server,
+		addr:                                    addr,
+		api:                                     _api,
+		engine:                                  apiConfig.Server,
+		coordinatorNetwork:                      coordinatorNetwork,
+		coordinatorNetworkFindMorePeersInterval: coordinatorNetworkFindMorePeersInterval,
 	}, nil
 }
 
@@ -744,6 +753,27 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 			log.Fatalf("Listen: %s\n", err)
 		}
 	}()
+
+	// Find more peers for coordinator network here
+	if a.coordinatorNetwork && a.coordinatorNetworkFindMorePeersInterval > 0 {
+		go func() {
+			// Do an initial discovery on start up
+			if err := a.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+				log.Info("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+			}
+			for {
+				select {
+				case <-ctx.Done():
+					log.Info("API.FindMorePeersForCoordinatorsNetwork loop done")
+					return
+				case <-time.After(a.coordinatorNetworkFindMorePeersInterval):
+					if err := a.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+						log.Warnw("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+					}
+				}
+			}
+		}()
+	}
 
 	<-ctx.Done()
 	log.Info("Stopping NodeAPI...")
@@ -963,6 +993,28 @@ func (n *Node) StartNodeAPI() {
 			}
 		}
 	}()
+
+	if n.cfg.API.CoordinatorNetwork && n.cfg.API.FindPeersCoordinatorNetworkInterval.Duration > 0 {
+		n.wg.Add(1)
+		go func() {
+			// Do an initial discovery on start up
+			if err := n.nodeAPI.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+				log.Errorw("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+			}
+			for {
+				select {
+				case <-n.ctx.Done():
+					log.Info("API.FindMorePeersForCoordinatorsNetwork loop done")
+					n.wg.Done()
+					return
+				case <-time.After(n.cfg.API.FindPeersCoordinatorNetworkInterval.Duration):
+					if err := n.nodeAPI.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+						log.Warnw("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+					}
+				}
+			}
+		}()
+	}
 
 	n.wg.Add(1)
 	go func() {

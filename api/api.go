@@ -198,3 +198,11 @@ func newValidate() *validator.Validate {
 
 	return validate
 }
+
+// FindMorePeersForCoordinatorsNetwork
+func (a API) FindMorePeersForCoordinatorsNetwork() error {
+	if a.coordnet == nil {
+		return errors.New("Coordinator network must be initialized in order to find more peers")
+	}
+	return a.coordnet.FindMorePeers()
+}

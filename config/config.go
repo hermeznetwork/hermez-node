@@ -341,6 +341,8 @@ type Node struct {
 		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
 		// KeyStore must be configured with the Ethereum private key of the coordinator
 		CoordinatorNetwork bool
+		// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
+		FindPeersCoordinatorNetworkInterval Duration
 		// UpdateMetricsInterval is the interval between updates of the
 		// API metrics
 		UpdateMetricsInterval Duration `validate:"required"`
@@ -375,10 +377,14 @@ type APIServer struct {
 		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
 		// KeyStore must be configured with the Ethereum private key of the coordinator
 		CoordinatorNetwork bool
+		// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
+		FindPeersCoordinatorNetworkInterval Duration
 	} `validate:"required"`
 	PostgreSQL  PostgreSQL `validate:"required"`
 	Coordinator struct {
-		API struct {
+		// ForgerAddress is the address under which this coordinator is forging
+		ForgerAddress ethCommon.Address `validate:"required"`
+		API           struct {
 			// Coordinator enables the coordinator API endpoints
 			Coordinator bool
 		} `validate:"required"`
@@ -411,6 +417,11 @@ type APIServer struct {
 		// Rollup is the address of the Hermez.sol smart contract.
 		// Required if API.CoordinatorNetwork == true
 		Rollup ethCommon.Address
+	}
+	Web3 struct {
+		// URL is the URL of the web3 ethereum-node RPC server.  Only
+		// geth is officially supported.
+		URL string `validate:"required,url"`
 	}
 	Debug NodeDebug `validate:"required"`
 }

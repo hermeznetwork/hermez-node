@@ -10,7 +10,6 @@ package coordinatornetwork
 import (
 	"context"
 	"crypto/ecdsa"
-	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -66,26 +65,13 @@ func NewCoordinatorNetwork(
 	log.Info("Joined to tx pool pubsub network")
 	// TODO: add support for atomic txs and account creation auths
 
-	// <--- Remove this !
-	coordnet := CoordinatorNetwork{
+	return CoordinatorNetwork{
 		self:      self,
 		dht:       coordnetDHT,
 		ctx:       ctx,
 		discovery: routingDiscovery,
 		txsPool:   txsPool,
-	}
-	go func() {
-		for {
-			if err := coordnet.FindMorePeers(); err != nil {
-				log.Warn(err)
-			}
-			time.Sleep(10 * time.Second)
-			log.Infof("%d peers connected to the pubsub", len(coordnet.txsPool.topic.ListPeers()))
-		}
-	}()
-	// --->
-
-	return coordnet, nil
+	}, nil
 }
 
 // PublishTx send a L2 transaction to the coordinators network
@@ -95,11 +81,13 @@ func (coordnet CoordinatorNetwork) PublishTx(tx common.PoolL2Tx) error {
 
 // FindMorePeers discover more peers that have already join the coordinators network
 func (coordnet CoordinatorNetwork) FindMorePeers() error {
+	log.Debug("Trying to find more peers")
 	if err := coordnet.advertiseConnect(); err != nil {
 		return err
 	}
 	if err := coordnet.announceConnect(); err != nil {
 		return err
 	}
+	log.Infof("%d peers connected to the coordinator network", len(coordnet.txsPool.topic.ListPeers()))
 	return nil
 }

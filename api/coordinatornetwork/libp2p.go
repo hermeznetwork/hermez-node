@@ -124,7 +124,7 @@ func (coordnet CoordinatorNetwork) announceConnect() error {
 	// Find the other providers for the service CID
 	peerchan := coordnet.dht.FindProvidersAsync(coordnet.ctx, cidvalue, 0)
 	// Connect to peers as they are discovered
-	go handlePeerDiscovery(coordnet.self, peerchan)
+	handlePeerDiscovery(coordnet.self, peerchan)
 	return nil
 }
 
@@ -145,7 +145,7 @@ func (coordnet CoordinatorNetwork) advertiseConnect() error {
 		return err
 	}
 	// Connect to peers as they are discovered
-	go handlePeerDiscovery(coordnet.self, peerchan)
+	handlePeerDiscovery(coordnet.self, peerchan)
 	return nil
 }
 
