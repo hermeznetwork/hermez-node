@@ -1367,7 +1367,6 @@ func TestFailingAtomicTx(t *testing.T) {
 	log.Debug("block:1 batch:4")
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
 		txsel.GetL1L2TxSelection(tpc, nil, nil)
-	// log.Debugf("%+v\n", discardedL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
