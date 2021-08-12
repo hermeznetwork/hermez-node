@@ -55,11 +55,13 @@ type API struct {
 	coordnet      *coordinatornetwork.CoordinatorNetwork
 }
 
+// CoordinatorNetworkConfig wraps the parameters needed to start the coordinator network
 type CoordinatorNetworkConfig struct {
 	BootstrapPeers []multiaddr.Multiaddr
 	EthPrivKey     *ecdsa.PrivateKey
 }
 
+// SetupConfig wraps the parameters needed to start the API
 type SetupConfig struct {
 	Version                  string
 	CoordinatorEndpoints     bool
@@ -199,7 +201,7 @@ func newValidate() *validator.Validate {
 	return validate
 }
 
-// FindMorePeersForCoordinatorsNetwork
+// FindMorePeersForCoordinatorsNetwork will advertise the node and look for other peers in the network
 func (a API) FindMorePeersForCoordinatorsNetwork() error {
 	if a.coordnet == nil {
 		return errors.New("Coordinator network must be initialized in order to find more peers")

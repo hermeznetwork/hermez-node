@@ -454,7 +454,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			coord = cfg.Coordinator.API.Coordinator
 			if cfg.API.CoordinatorNetwork {
 				// Setup coordinators network configuration
-				// Get libp2p addressess of the registered coordinators
+				// Get libp2p addresses of the registered coordinators
 				// to be used as bootstrap nodes for the p2p network
 				bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
 				if err != nil {
@@ -632,7 +632,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 				return nil, tracerr.Wrap(err)
 			}
 			// Setup coordinators network configuration
-			// Get libp2p addressess of the registered coordinators
+			// Get libp2p addresses of the registered coordinators
 			// to be used as bootstrap nodes for the p2p network
 			bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
 			if err != nil {
