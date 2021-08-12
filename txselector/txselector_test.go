@@ -1375,9 +1375,9 @@ func TestFailingAtomicTx(t *testing.T) {
 
 	for _, tx := range discardedL2Txs {
 		if tx1.TxID == tx.TxID {
-			assert.Equal(t, ErrNoCurrentNonceType, tx.ErrorType) // this should be error to tx1
+			assert.Equal(t, ErrNoCurrentNonceType, tx.ErrorType)
 		} else if tx2.TxID == tx.TxID {
-			assert.Equal(t, ErrInvalidAtomicGroupType, tx.ErrorType) // this should be error to tx1
+			assert.Equal(t, ErrInvalidAtomicGroupType, tx.ErrorType)
 		} else {
 			assert.Fail(t, "unexpected transaction")
 		}
