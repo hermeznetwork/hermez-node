@@ -1300,7 +1300,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		TokenID:       0,
 		Amount:        big.NewInt(50), // Ok
 		Fee:           0,
-		Nonce:         0,
+		Nonce:         1,
 		RqOffset:      1, // Request tx bellow (position +1)
 		AtomicGroupID: agid,
 		RqFromIdx:     258, // account B
@@ -1333,7 +1333,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		RqTokenID:     0,
 		RqAmount:      big.NewInt(50), // OK
 		RqFee:         0,
-		RqNonce:       0,
+		RqNonce:       1,
 		State:         common.PoolL2TxStatePending,
 	}
 	// Tx2 signature
@@ -1367,11 +1367,23 @@ func TestFailingAtomicTx(t *testing.T) {
 	log.Debug("block:1 batch:4")
 	_, _, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
 		txsel.GetL1L2TxSelection(tpc, nil, nil)
+	// log.Debugf("%+v\n", discardedL2Txs)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 1, len(oL2Txs))
 	assert.Equal(t, 2, len(discardedL2Txs))
+
+	for _, tx := range discardedL2Txs {
+		if tx1.TxID == tx.TxID {
+			assert.Equal(t, ErrNoCurrentNonceType, tx.ErrorType) // this should be error to tx1
+		} else if tx2.TxID == tx.TxID {
+			assert.Equal(t, ErrInvalidAtomicGroupType, tx.ErrorType) // this should be error to tx1
+		} else {
+			assert.Fail(t, "unexpected transaction")
+		}
+	}
+
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
 	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1010") // 1000 + 10
