@@ -1249,7 +1249,7 @@ func setInfoForFailedAtomicTx(
 		}
 		return obj
 	}
-	obj := common.TxSelectorError{
+	return common.TxSelectorError{
 		Message: fmt.Sprintf("unselectable atomic group"+" %s, tx %s failed due to: %s",
 			failedAtomicGroupID,
 			failedTxID,
@@ -1258,5 +1258,4 @@ func setInfoForFailedAtomicTx(
 		Code: ErrInvalidAtomicGroupCode,
 		Type: ErrInvalidAtomicGroupType,
 	}
-	return obj
 }
