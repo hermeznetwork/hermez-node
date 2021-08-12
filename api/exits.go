@@ -21,7 +21,7 @@ func (a *API) getExits(c *gin.Context) {
 	}
 
 	// Fetch exits from historyDB
-	exits, pendingItems, err := a.h.GetExitsAPI(exitsFilters)
+	exits, pendingItems, err := a.historyDB.GetExitsAPI(exitsFilters)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -50,7 +50,7 @@ func (a *API) getExit(c *gin.Context) {
 		return
 	}
 	// Fetch tx from historyDB
-	exit, err := a.h.GetExitAPI(batchNum, idx)
+	exit, err := a.historyDB.GetExitAPI(batchNum, idx)
 	if err != nil {
 		retSQLErr(err, c)
 		return

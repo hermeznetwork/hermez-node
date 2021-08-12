@@ -259,13 +259,13 @@ type AuctionInterface interface {
 	AuctionClaimHEZ() (*types.Transaction, error)
 	AuctionGetClaimableHEZ(bidder ethCommon.Address) (*big.Int, error)
 
-	//
 	// Smart Contract Status
-	//
-
 	AuctionConstants() (*common.AuctionConstants, error)
 	AuctionEventsByBlock(blockNum int64, blockHash *ethCommon.Hash) (*AuctionEvents, error)
 	AuctionEventInit(genesisBlockNum int64) (*AuctionEventInitialize, int64, error)
+
+	// Coordinators network
+	GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, error)
 }
 
 //

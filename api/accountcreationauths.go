@@ -25,7 +25,7 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 	}
 	// API to common + verify signature
 	commonAuth := accountCreationAuthAPIToCommon(&apiAuth)
-	isValid, err := commonAuth.VerifySignature(a.cg.ChainID, a.hermezAddress)
+	isValid, err := commonAuth.VerifySignature(a.config.ChainID, a.hermezAddress)
 	if !isValid && err != nil {
 		retBadReq(&apiError{
 			Err:  errors.New("invalid signature: " + err.Error()),
@@ -35,7 +35,7 @@ func (a *API) postAccountCreationAuth(c *gin.Context) {
 		return
 	}
 	// Insert to DB
-	if err := a.l2.AddAccountCreationAuthAPI(commonAuth); err != nil {
+	if err := a.l2DB.AddAccountCreationAuthAPI(commonAuth); err != nil {
 		retSQLErr(err, c)
 		return
 	}
@@ -60,7 +60,7 @@ func (a *API) getAccountCreationAuth(c *gin.Context) {
 		return
 	}
 	// Fetch auth from l2DB
-	auth, err := a.l2.GetAccountCreationAuthAPI(*addr)
+	auth, err := a.l2DB.GetAccountCreationAuthAPI(*addr)
 	if err != nil {
 		retSQLErr(err, c)
 		return

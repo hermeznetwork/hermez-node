@@ -178,13 +178,13 @@ func TestAddTxTest(t *testing.T) {
 	tx := &poolL2Txs[1]
 	fetchedTx, err := l2DB.GetTx(tx.TxID)
 	require.NoError(t, err)
-	assert.Equal(t, fetchedTx.TokenID, common.TokenID(2))
-	tx.TokenID = common.TokenID(1)
-	err = l2DBWithACC.AddTxTest(tx)
+	assert.Equal(t, fetchedTx.ToIdx, tx.ToIdx)
+	tx.ToIdx = common.Idx(1)
+	err = l2DBWithACC.UpdateTxAPI(tx)
 	require.NoError(t, err)
 	fetchedTx, err = l2DB.GetTx(tx.TxID)
 	require.NoError(t, err)
-	assert.Equal(t, fetchedTx.TokenID, common.TokenID(1))
+	assert.Equal(t, fetchedTx.ToIdx, common.Idx(1))
 }
 
 func TestAddTxAPI(t *testing.T) {

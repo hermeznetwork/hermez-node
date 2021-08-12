@@ -24,7 +24,7 @@ func (a *API) getBatches(c *gin.Context) {
 		return
 	}
 	// Fetch batches from historyDB
-	batches, pendingItems, err := a.h.GetBatchesAPI(filter)
+	batches, pendingItems, err := a.historyDB.GetBatchesAPI(filter)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -53,7 +53,7 @@ func (a *API) getBatch(c *gin.Context) {
 		return
 	}
 	// Fetch batch from historyDB
-	batch, err := a.h.GetBatchAPI(common.BatchNum(*batchNum))
+	batch, err := a.historyDB.GetBatchAPI(common.BatchNum(*batchNum))
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -79,7 +79,7 @@ func (a *API) getFullBatch(c *gin.Context) {
 		return
 	}
 	// Fetch batch from historyDB
-	batch, err := a.h.GetBatchAPI(common.BatchNum(*batchNum))
+	batch, err := a.historyDB.GetBatchAPI(common.BatchNum(*batchNum))
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -87,7 +87,7 @@ func (a *API) getFullBatch(c *gin.Context) {
 
 	// Fetch txs forged in the batch from historyDB
 	maxTxsPerBatch := uint(2048) //nolint:gomnd
-	txs, _, err := a.h.GetTxsAPI(historydb.GetTxsAPIRequest{
+	txs, _, err := a.historyDB.GetTxsAPI(historydb.GetTxsAPIRequest{
 		BatchNum: batchNum,
 		Limit:    &maxTxsPerBatch,
 		Order:    db.OrderAsc,

@@ -48,9 +48,9 @@ func TestAtomicPool(t *testing.T) {
 		privateKeys[idx] = &privKey
 	}
 	// Add accounts to HistoryDB
-	err := api.h.AddAccounts(accounts)
+	err := api.historyDB.AddAccounts(accounts)
 	assert.NoError(t, err)
-	err = api.h.AddAccountUpdates(accountUpdates)
+	err = api.historyDB.AddAccountUpdates(accountUpdates)
 	assert.NoError(t, err)
 
 	txsToClean := []common.TxID{}
@@ -152,6 +152,21 @@ func TestAtomicPool(t *testing.T) {
 	assert.Equal(t, expectedTxIDs, fetchedTxIDs)
 	// Check txs in the DB
 	assertTxs(txsToReceive, atomicGroup.ID)
+
+	// test that we can't update atomic tx
+	// this test is checking, that this request will return error
+	// bcs of bad signature. Bad signature returned, bcs Rq* fields
+	// are part of the signature, but they are not part of json, which was sent
+	// we need to keep this test in case Rq* fields will be part of the PoolL2Tx json
+	txRepeated1 := atomicGroup.Txs[1]
+	jsonTxBytes, err = json.Marshal(txRepeated1)
+	require.NoError(t, err)
+	jsonTxReader = bytes.NewReader(jsonTxBytes)
+	fetchedTxID := common.TxID{}
+	require.Error(t, doGoodReq(
+		"PUT",
+		apiURL+"transactions-pool/"+txRepeated1.TxID.String(),
+		jsonTxReader, &fetchedTxID))
 
 	// Test only one tx with fee
 	// Generate txs
@@ -303,14 +318,14 @@ func TestAtomicPool(t *testing.T) {
 
 	// Clean historyDB: the added account shouldn't be there for other tests
 	for _, account := range accounts {
-		_, err := api.h.DB().DB.Exec(
+		_, err := api.historyDB.DB().DB.Exec(
 			fmt.Sprintf("delete from account where idx = %d;", account.Idx),
 		)
 		assert.NoError(t, err)
 	}
 	// clean l2DB: the added txs shouldn't be there for other tests
 	for _, txID := range txsToClean {
-		_, err := api.h.DB().DB.Exec("delete from tx_pool where tx_id = $1;", txID)
+		_, err := api.historyDB.DB().DB.Exec("delete from tx_pool where tx_id = $1;", txID)
 		assert.NoError(t, err)
 	}
 }

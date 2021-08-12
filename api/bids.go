@@ -19,7 +19,7 @@ func (a *API) getBids(c *gin.Context) {
 		return
 	}
 
-	bids, pendingItems, err := a.h.GetBidsAPI(historydb.GetBidsAPIRequest{
+	bids, pendingItems, err := a.historyDB.GetBidsAPI(historydb.GetBidsAPIRequest{
 		SlotNum:    filters.SlotNum,
 		BidderAddr: filters.BidderAddr,
 		FromItem:   filters.FromItem,

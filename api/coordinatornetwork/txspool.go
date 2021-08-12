@@ -11,9 +11,6 @@ import (
 )
 
 const (
-	// txsPoolPubSubBufSize is the number of incoming messages to buffer for each topic.
-	txsPoolPubSubBufSize = 128
-
 	txsPoolTopicName = "hermez-coordinator-network-txs-pool"
 )
 
@@ -21,20 +18,22 @@ const (
 // can be published to the topic with pubSubTxsPool.Publish, and received
 // messages are pushed to the Messages channel.
 type pubSubTxsPool struct {
-	// Messages is a channel of messages received from other peers in the chat room
-	Txs chan *common.PoolL2Tx
-
-	ctx   context.Context
-	ps    *pubsub.PubSub
-	topic *pubsub.Topic
-	sub   *pubsub.Subscription
-
-	self peer.ID
+	ctx     context.Context
+	ps      *pubsub.PubSub
+	topic   *pubsub.Topic
+	sub     *pubsub.Subscription
+	self    peer.ID
+	handler func(common.PoolL2Tx) error
 }
 
 // joinPubSubTxsPool tries to subscribe to the PubSub topic for the room name, returning
 // a pubSubTxsPool on success.
-func joinPubSubTxsPool(ctx context.Context, ps *pubsub.PubSub, selfID peer.ID) (pubSubTxsPool, error) {
+func joinPubSubTxsPool(
+	ctx context.Context,
+	ps *pubsub.PubSub,
+	selfID peer.ID,
+	handler func(common.PoolL2Tx) error,
+) (pubSubTxsPool, error) {
 	// join the pubsub topic
 	topic, err := ps.Join(txsPoolTopicName)
 	if err != nil {
@@ -48,12 +47,12 @@ func joinPubSubTxsPool(ctx context.Context, ps *pubsub.PubSub, selfID peer.ID) (
 	}
 
 	psTxsPool := pubSubTxsPool{
-		ctx:   ctx,
-		ps:    ps,
-		topic: topic,
-		sub:   sub,
-		self:  selfID,
-		Txs:   make(chan *common.PoolL2Tx, txsPoolPubSubBufSize),
+		ctx:     ctx,
+		ps:      ps,
+		topic:   topic,
+		sub:     sub,
+		self:    selfID,
+		handler: handler,
 	}
 
 	// start reading messages from the subscription in a loop
@@ -73,25 +72,29 @@ func (psTxsPool *pubSubTxsPool) publish(tx common.PoolL2Tx) error {
 
 // readLoop pulls messages from the pubsub topic and pushes them onto the Messages channel.
 func (psTxsPool *pubSubTxsPool) readLoop() {
+	handler := func(tx common.PoolL2Tx) {
+		if err := psTxsPool.handler(tx); err != nil {
+			log.Warn(err.Error())
+		}
+	}
 	for {
 		msg, err := psTxsPool.sub.Next(psTxsPool.ctx)
 		if err != nil {
-			close(psTxsPool.Txs)
 			return
 		}
-		// only forward messages delivered by others
+		// Only forward messages delivered by others
 		if msg.ReceivedFrom == psTxsPool.self {
 			continue
 		}
-		log.Debug(psTxsPool.self.Pretty(), ": received tx from ", msg.ReceivedFrom.Pretty())
+		log.Debug("Received tx from ", msg.ReceivedFrom.Pretty())
 		tx := &common.PoolL2Tx{}
 		err = json.Unmarshal(msg.Data, tx)
 		if err != nil {
 			log.Warn(err)
 			continue
 		}
-		log.Info("tx received: ", string(msg.Data))
-		// send valid messages onto the Messages channel
-		psTxsPool.Txs <- tx
+		log.Infof("Received tx from %s: %s", msg.ReceivedFrom.Pretty(), tx.TxID.String())
+		// Handle tx
+		go handler(*tx)
 	}
 }

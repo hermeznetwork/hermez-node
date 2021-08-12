@@ -32,9 +32,10 @@ info:
 
     ### Signatures
 
-    There are two endpoints that require signatures:
+    There are three endpoints that require signatures:
     * POST /account-creation-authorization: signed using an Ethereum key.
     * POST /transactions-pool: signed using BJJ key.
+    * PUT /transactions-pool: signed using BJJ key.
 
     It's recommended to use the official SDKs for [Go](https://github.com/hermeznetwork/hermez-go-sdk), [JS](https://github.com/hermeznetwork/hermezjs) and [Flutter](https://github.com/hermeznetwork/hermez_flutter_sdk).
     If for some reason the previous options doesn't suit your usecase, you can implement the signatures following the spec for [account creation authorizations](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=regular-rollup-account) and [L2 transactions](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2)
@@ -630,6 +631,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error500'
   '/transactions-pool/{id}':
+    put:
+      tags:
+        - Coordinator
+      summary: Update an L2 transaction in the coordinator's pool. Only regular transactions can be updated. Fields, that can be updated - toAccountIndex, toHezEthereumAddress, toBjj, maxNumBatch, signature, type
+      description: >-
+        Update L2 transaction
+      operationId: putTx
+      parameters:
+        - name: id
+          in: path
+          description: Transaction identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+      requestBody:
+        description: Signed transaction
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPoolL2Transaction'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionId'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
     get:
       tags:
         - Coordinator

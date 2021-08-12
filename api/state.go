@@ -7,7 +7,7 @@ import (
 )
 
 func (a *API) getState(c *gin.Context) {
-	stateAPI, err := a.h.GetStateAPI()
+	stateAPI, err := a.historyDB.GetStateAPI()
 	if err != nil {
 		retSQLErr(err, c)
 		return

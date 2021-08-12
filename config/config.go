@@ -31,12 +31,6 @@ func (d *Duration) UnmarshalText(data []byte) error {
 	return nil
 }
 
-// ServerProof is the server proof configuration data.
-type ServerProof struct {
-	// URL is the server proof API URL
-	URL string `validate:"required,url"`
-}
-
 // ForgeBatchGasCost is the costs associated to a ForgeBatch transaction, split
 // into different parts to be used in a formula.
 type ForgeBatchGasCost struct {
@@ -181,8 +175,10 @@ type Coordinator struct {
 		// Path where the BatchBuilder StateDB is stored
 		Path string `validate:"required"`
 	} `validate:"required"`
-	ServerProofs []ServerProof `validate:"required"`
-	Circuit      struct {
+	ServerProofs struct {
+		URL []string `validate:"required"`
+	} `validate:"required"`
+	Circuit struct {
 		// MaxTx is the maximum number of txs supported by the circuit
 		MaxTx int64 `validate:"required,gte=0"`
 		// NLevels is the maximum number of merkle tree levels
@@ -341,6 +337,12 @@ type Node struct {
 		Address string
 		// Explorer enables the Explorer API endpoints
 		Explorer bool
+		// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
+		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
+		// KeyStore must be configured with the Ethereum private key of the coordinator
+		CoordinatorNetwork bool
+		// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
+		FindPeersCoordinatorNetworkInterval Duration
 		// UpdateMetricsInterval is the interval between updates of the
 		// API metrics
 		UpdateMetricsInterval Duration `validate:"required"`
@@ -371,10 +373,18 @@ type APIServer struct {
 		// SQLConnectionTimeout is the maximum amount of time that an API request
 		// can wait to establish a SQL connection
 		SQLConnectionTimeout Duration
+		// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
+		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
+		// KeyStore must be configured with the Ethereum private key of the coordinator
+		CoordinatorNetwork bool
+		// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
+		FindPeersCoordinatorNetworkInterval Duration
 	} `validate:"required"`
 	PostgreSQL  PostgreSQL `validate:"required"`
 	Coordinator struct {
-		API struct {
+		// ForgerAddress is the address under which this coordinator is forging
+		ForgerAddress ethCommon.Address `validate:"required"`
+		API           struct {
 			// Coordinator enables the coordinator API endpoints
 			Coordinator bool
 		} `validate:"required"`
@@ -393,6 +403,25 @@ type APIServer struct {
 			// maximum fee will be rejected at the API level.
 			MaxFeeUSD float64 `validate:"required,gte=0"`
 		} `validate:"required"`
+		// Keystore is the ethereum keystore where private keys are kept.
+		// Required if API.CoordinatorNetwork == true
+		Keystore struct {
+			// Path to the keystore
+			Path string
+			// Password used to decrypt the keys in the keystore
+			Password string
+			// LightScrypt if set, uses light parameters for the ethereum
+			// keystore encryption algorithm.
+			LightScrypt bool
+		}
+		// Rollup is the address of the Hermez.sol smart contract.
+		// Required if API.CoordinatorNetwork == true
+		Rollup ethCommon.Address
+	}
+	Web3 struct {
+		// URL is the URL of the web3 ethereum-node RPC server.  Only
+		// geth is officially supported.
+		URL string `validate:"required,url"`
 	}
 	Debug NodeDebug `validate:"required"`
 }

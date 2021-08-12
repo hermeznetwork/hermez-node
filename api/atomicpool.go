@@ -96,7 +96,7 @@ func (a *API) postAtomicPool(c *gin.Context) {
 		return
 	}
 	// Insert to DB
-	if err := a.l2.AddAtomicTxsAPI(receivedAtomicGroup.Txs); err != nil {
+	if err := a.l2DB.AddAtomicTxsAPI(receivedAtomicGroup.Txs); err != nil {
 		retSQLErr(err, c)
 		return
 	}
@@ -182,7 +182,7 @@ func (a *API) getAtomicGroup(c *gin.Context) {
 		return
 	}
 	// Fetch tx from l2DB
-	txs, err := a.l2.GetPoolTxsByAtomicGroupIDAPI(atomicGroupID)
+	txs, err := a.l2DB.GetPoolTxsByAtomicGroupIDAPI(atomicGroupID)
 	if err != nil {
 		retSQLErr(err, c)
 		return

@@ -31,7 +31,7 @@ type testNetwork struct {
 func TestSetRollupVariables(t *testing.T) {
 	stateAPIUpdater.SetSCVars(&common.SCVariablesPtr{Rollup: &tc.rollupVars})
 	require.NoError(t, stateAPIUpdater.Store())
-	ni, err := api.h.GetNodeInfoAPI()
+	ni, err := api.historyDB.GetNodeInfoAPI()
 	require.NoError(t, err)
 	assertEqualRollupVariables(t, tc.rollupVars, ni.StateAPI.Rollup, true)
 }
@@ -56,7 +56,7 @@ func assertEqualRollupVariables(t *testing.T, rollupVariables common.RollupVaria
 func TestSetWDelayerVariables(t *testing.T) {
 	stateAPIUpdater.SetSCVars(&common.SCVariablesPtr{WDelayer: &tc.wdelayerVars})
 	require.NoError(t, stateAPIUpdater.Store())
-	ni, err := api.h.GetNodeInfoAPI()
+	ni, err := api.historyDB.GetNodeInfoAPI()
 	require.NoError(t, err)
 	assert.Equal(t, tc.wdelayerVars, ni.StateAPI.WithdrawalDelayer)
 }
@@ -64,7 +64,7 @@ func TestSetWDelayerVariables(t *testing.T) {
 func TestSetAuctionVariables(t *testing.T) {
 	stateAPIUpdater.SetSCVars(&common.SCVariablesPtr{Auction: &tc.auctionVars})
 	require.NoError(t, stateAPIUpdater.Store())
-	ni, err := api.h.GetNodeInfoAPI()
+	ni, err := api.historyDB.GetNodeInfoAPI()
 	require.NoError(t, err)
 	assertEqualAuctionVariables(t, tc.auctionVars, ni.StateAPI.Auction)
 }
@@ -115,13 +115,13 @@ func TestUpdateNetworkInfo(t *testing.T) {
 			Withdrawals: big.NewInt(43),
 		},
 	}
-	err := api.h.AddBucketUpdatesTest(api.h.DB(), bucketUpdates)
+	err := api.historyDB.AddBucketUpdatesTest(api.historyDB.DB(), bucketUpdates)
 	require.NoError(t, err)
 
 	err = stateAPIUpdater.UpdateNetworkInfo(lastBlock, lastBlock, lastBatchNum, currentSlotNum)
 	require.NoError(t, err)
 	require.NoError(t, stateAPIUpdater.Store())
-	ni, err := api.h.GetNodeInfoAPI()
+	ni, err := api.historyDB.GetNodeInfoAPI()
 	require.NoError(t, err)
 	assert.Equal(t, lastBlock.Num, ni.StateAPI.Network.LastSyncBlock)
 	assert.Equal(t, lastBatchNum, ni.StateAPI.Network.LastBatch.BatchNum)
@@ -142,7 +142,7 @@ func TestUpdateMetrics(t *testing.T) {
 	err = stateAPIUpdater.UpdateMetrics()
 	require.NoError(t, err)
 	require.NoError(t, stateAPIUpdater.Store())
-	ni, err := api.h.GetNodeInfoAPI()
+	ni, err := api.historyDB.GetNodeInfoAPI()
 	require.NoError(t, err)
 	assert.Greater(t, ni.StateAPI.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, ni.StateAPI.Metrics.BatchFrequency, float64(0))
@@ -157,10 +157,10 @@ func TestUpdateRecommendedFee(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, stateAPIUpdater.Store())
 	var minFeeUSD float64
-	if api.l2 != nil {
-		minFeeUSD = api.l2.MinFeeUSD()
+	if api.l2DB != nil {
+		minFeeUSD = api.l2DB.MinFeeUSD()
 	}
-	ni, err := api.h.GetNodeInfoAPI()
+	ni, err := api.historyDB.GetNodeInfoAPI()
 	require.NoError(t, err)
 	assert.Greater(t, ni.StateAPI.RecommendedFee.ExistingAccount, minFeeUSD)
 	assert.Equal(t, ni.StateAPI.RecommendedFee.CreatesAccount,
