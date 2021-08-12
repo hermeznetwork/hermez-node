@@ -30,12 +30,6 @@ func (d *Duration) UnmarshalText(data []byte) error {
 	return nil
 }
 
-// ServerProof is the server proof configuration data.
-type ServerProof struct {
-	// URL is the server proof API URL
-	URL string `validate:"required,url"`
-}
-
 // ForgeBatchGasCost is the costs associated to a ForgeBatch transaction, split
 // into different parts to be used in a formula.
 type ForgeBatchGasCost struct {
@@ -180,8 +174,10 @@ type Coordinator struct {
 		// Path where the BatchBuilder StateDB is stored
 		Path string `validate:"required"`
 	} `validate:"required"`
-	ServerProofs []ServerProof `validate:"required"`
-	Circuit      struct {
+	ServerProofs struct {
+		URL []string `validate:"required"`
+	} `validate:"required"`
+	Circuit struct {
 		// MaxTx is the maximum number of txs supported by the circuit
 		MaxTx int64 `validate:"required,gte=0"`
 		// NLevels is the maximum number of merkle tree levels

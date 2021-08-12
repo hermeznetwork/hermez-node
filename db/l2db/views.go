@@ -1,17 +1,16 @@
 package l2db
 
 import (
-	"encoding/json"
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// PoolTxAPI represents a L2 Tx pool with extra metadata used by the API
-type PoolTxAPI struct {
+// poolTxAPIView represents a L2 Tx pool with extra metadata used by the API
+type poolTxAPIView struct {
 	ItemID               uint64                `meddler:"item_id"`
 	TxID                 common.TxID           `meddler:"tx_id"`
 	FromIdx              apitypes.HezIdx       `meddler:"from_idx"`
@@ -38,64 +37,18 @@ type PoolTxAPI struct {
 	RqFee                *common.FeeSelector   `meddler:"rq_fee"`
 	RqNonce              *common.Nonce         `meddler:"rq_nonce"`
 	Type                 common.TxType         `meddler:"tx_type"`
-	// Extra read fileds
-	BatchNum         *common.BatchNum  `meddler:"batch_num"`
-	Timestamp        time.Time         `meddler:"timestamp,utctime"`
-	TotalItems       uint64            `meddler:"total_items"`
-	TokenID          common.TokenID    `meddler:"token_id"`
-	TokenItemID      uint64            `meddler:"token_item_id"`
-	TokenEthBlockNum int64             `meddler:"eth_block_num"`
-	TokenEthAddr     ethCommon.Address `meddler:"eth_addr"`
-	TokenName        string            `meddler:"name"`
-	TokenSymbol      string            `meddler:"symbol"`
-	TokenDecimals    uint64            `meddler:"decimals"`
-	TokenUSD         *float64          `meddler:"usd"`
-	TokenUSDUpdate   *time.Time        `meddler:"usd_update"`
-}
-
-// MarshalJSON is used to neast some of the fields of PoolTxAPI
-// without the need of auxiliar structs
-func (tx PoolTxAPI) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"itemId":                      tx.ItemID,
-		"id":                          tx.TxID,
-		"type":                        tx.Type,
-		"fromAccountIndex":            tx.FromIdx,
-		"fromHezEthereumAddress":      tx.EffectiveFromEthAddr,
-		"fromBJJ":                     tx.EffectiveFromBJJ,
-		"toAccountIndex":              tx.ToIdx,
-		"toHezEthereumAddress":        tx.EffectiveToEthAddr,
-		"toBJJ":                       tx.EffectiveToBJJ,
-		"amount":                      tx.Amount,
-		"fee":                         tx.Fee,
-		"nonce":                       tx.Nonce,
-		"state":                       tx.State,
-		"maxNumBatch":                 tx.MaxNumBatch,
-		"info":                        tx.Info,
-		"errorCode":                   tx.ErrorCode,
-		"errorType":                   tx.ErrorType,
-		"signature":                   tx.Signature,
-		"timestamp":                   tx.Timestamp,
-		"requestFromAccountIndex":     tx.RqFromIdx,
-		"requestToAccountIndex":       tx.RqToIdx,
-		"requestToHezEthereumAddress": tx.RqToEthAddr,
-		"requestToBJJ":                tx.RqToBJJ,
-		"requestTokenId":              tx.RqTokenID,
-		"requestAmount":               tx.RqAmount,
-		"requestFee":                  tx.RqFee,
-		"requestNonce":                tx.RqNonce,
-		"token": map[string]interface{}{
-			"id":               tx.TokenID,
-			"itemId":           tx.TokenItemID,
-			"ethereumBlockNum": tx.TokenEthBlockNum,
-			"ethereumAddress":  tx.TokenEthAddr,
-			"name":             tx.TokenName,
-			"symbol":           tx.TokenSymbol,
-			"decimals":         tx.TokenDecimals,
-			"USD":              tx.TokenUSD,
-			"fiatUpdate":       tx.TokenUSDUpdate,
-		},
-	})
+	BatchNum             *common.BatchNum      `meddler:"batch_num"`
+	Timestamp            time.Time             `meddler:"timestamp,utctime"`
+	TotalItems           uint64                `meddler:"total_items"`
+	TokenID              common.TokenID        `meddler:"token_id"`
+	TokenItemID          uint64                `meddler:"token_item_id"`
+	TokenEthBlockNum     int64                 `meddler:"eth_block_num"`
+	TokenEthAddr         ethCommon.Address     `meddler:"eth_addr"`
+	TokenName            string                `meddler:"name"`
+	TokenSymbol          string                `meddler:"symbol"`
+	TokenDecimals        uint64                `meddler:"decimals"`
+	TokenUSD             *float64              `meddler:"usd"`
+	TokenUSDUpdate       *time.Time            `meddler:"usd_update"`
 }
 
 // AccountCreationAuthAPI represents an account creation auth in the expected format by the API
@@ -104,4 +57,49 @@ type AccountCreationAuthAPI struct {
 	BJJ       apitypes.HezBJJ       `json:"bjj"                meddler:"bjj" `
 	Signature apitypes.EthSignature `json:"signature"          meddler:"signature" `
 	Timestamp time.Time             `json:"timestamp"          meddler:"timestamp,utctime"`
+}
+
+// ToAPI converts a poolTxAPIView into TxL2
+func (tx *poolTxAPIView) ToAPI() apitypes.TxL2 {
+	pooll2apilocal := apitypes.TxL2{
+		ItemID:               tx.ItemID,
+		TxID:                 tx.TxID,
+		Type:                 tx.Type,
+		FromIdx:              tx.FromIdx,
+		EffectiveFromEthAddr: tx.EffectiveFromEthAddr,
+		EffectiveFromBJJ:     tx.EffectiveFromBJJ,
+		ToIdx:                tx.ToIdx,
+		EffectiveToEthAddr:   tx.EffectiveToEthAddr,
+		EffectiveToBJJ:       tx.EffectiveToBJJ,
+		Amount:               tx.Amount,
+		Fee:                  tx.Fee,
+		Nonce:                tx.Nonce,
+		State:                tx.State,
+		MaxNumBatch:          tx.MaxNumBatch,
+		BatchNum:             tx.BatchNum,
+		Info:                 tx.Info,
+		ErrorCode:            tx.ErrorCode,
+		ErrorType:            tx.ErrorType,
+		Signature:            tx.Signature,
+		Timestamp:            tx.Timestamp,
+		RqFromIdx:            tx.RqFromIdx,
+		RqToIdx:              tx.RqToIdx,
+		RqToEthAddr:          tx.RqToEthAddr,
+		RqToBJJ:              tx.RqToBJJ,
+		RqTokenID:            tx.RqTokenID,
+		RqAmount:             tx.RqAmount,
+		RqFee:                tx.RqFee,
+		RqNonce:              tx.RqNonce,
+	}
+	pooll2apilocal.Token.TokenID = tx.TokenID
+	pooll2apilocal.Token.TokenItemID = tx.TokenItemID
+	pooll2apilocal.Token.TokenEthBlockNum = tx.TokenEthBlockNum
+	pooll2apilocal.Token.TokenEthAddr = tx.TokenEthAddr
+	pooll2apilocal.Token.TokenName = tx.TokenName
+	pooll2apilocal.Token.TokenSymbol = tx.TokenSymbol
+	pooll2apilocal.Token.TokenDecimals = tx.TokenDecimals
+	pooll2apilocal.Token.TokenUSD = tx.TokenUSD
+	pooll2apilocal.Token.TokenUSDUpdate = tx.TokenUSDUpdate
+
+	return pooll2apilocal
 }

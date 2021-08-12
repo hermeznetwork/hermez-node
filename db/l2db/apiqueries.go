@@ -6,6 +6,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -74,6 +75,17 @@ func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 	return tracerr.Wrap(
 		l2db.addTxs([]common.PoolL2Tx{*tx}, true),
 	)
+}
+
+// UpdateTxAPI Update PoolL2Tx regular transactions in the pool.
+func (l2db *L2DB) UpdateTxAPI(tx *common.PoolL2Tx) error {
+	cancel, err := l2db.apiConnCon.Acquire()
+	defer cancel()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	defer l2db.apiConnCon.Release()
+	return tracerr.Wrap(l2db.updateTx(*tx))
 }
 
 // AddAtomicTxsAPI inserts transactions into the pool
@@ -170,20 +182,21 @@ token.item_id AS token_item_id, token.eth_block_num, token.eth_addr, token.name,
 count(*) OVER() AS total_items 
 FROM tx_pool INNER JOIN token ON tx_pool.token_id = token.token_id `
 
-// GetTxAPI return the specified Tx in PoolTxAPI format
-func (l2db *L2DB) GetTxAPI(txID common.TxID) (*PoolTxAPI, error) {
+// GetTxAPI return the specified Tx in TxL2 format
+func (l2db *L2DB) GetTxAPI(txID common.TxID) (apitypes.TxL2, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
+	tx := new(poolTxAPIView)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return tx.ToAPI(), tracerr.Wrap(err)
 	}
 	defer l2db.apiConnCon.Release()
-	tx := new(PoolTxAPI)
-	return tx, tracerr.Wrap(meddler.QueryRow(
+	err = tracerr.Wrap(meddler.QueryRow(
 		l2db.dbRead, tx,
 		selectPoolTxAPI+"WHERE tx_id = $1;",
 		txID,
 	))
+	return tx.ToAPI(), err
 }
 
 // GetPoolTxsAPIRequest is an API request struct for getting txs from the pool
@@ -207,7 +220,7 @@ type GetPoolTxsAPIRequest struct {
 }
 
 // GetPoolTxsAPI return Txs from the pool
-func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint64, error) {
+func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]apitypes.TxL2, uint64, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -359,22 +372,26 @@ func (l2db *L2DB) GetPoolTxsAPI(request GetPoolTxsAPIRequest) ([]PoolTxAPI, uint
 	queryStr += fmt.Sprintf("LIMIT %d;", *request.Limit)
 
 	query := l2db.dbRead.Rebind(queryStr)
-	txsPtrs := []*PoolTxAPI{}
+	txsPtrs := []*poolTxAPIView{}
 	if err = meddler.QueryAll(
 		l2db.dbRead, &txsPtrs,
 		query,
 		args...); err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
-	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
-	if len(txs) == 0 {
-		return txs, 0, nil
+	txs := db.SlicePtrsToSlice(txsPtrs).([]poolTxAPIView)
+	retTxs := []apitypes.TxL2{}
+	for _, currentTx := range txs {
+		retTxs = append(retTxs, currentTx.ToAPI())
 	}
-	return txs, txs[0].TotalItems - uint64(len(txs)), tracerr.Wrap(err)
+	if len(retTxs) == 0 {
+		return retTxs, 0, nil
+	}
+	return retTxs, txs[0].TotalItems - uint64(len(txs)), tracerr.Wrap(err)
 }
 
 // GetPoolTxsByAtomicGroupIDAPI return Txs from the pool that belong to the given atomicGroupID
-func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]PoolTxAPI, error) {
+func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupID) ([]apitypes.TxL2, error) {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -382,7 +399,7 @@ func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupI
 	}
 	defer l2db.apiConnCon.Release()
 
-	txsPtrs := []*PoolTxAPI{}
+	txsPtrs := []*poolTxAPIView{}
 	if err := meddler.QueryAll(
 		l2db.dbRead, &txsPtrs,
 		selectPoolTxsAPI+" WHERE atomic_group_id = $1;",
@@ -390,9 +407,13 @@ func (l2db *L2DB) GetPoolTxsByAtomicGroupIDAPI(atomicGroupID common.AtomicGroupI
 	); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	txs := db.SlicePtrsToSlice(txsPtrs).([]PoolTxAPI)
-	if len(txs) == 0 {
-		return txs, nil
+	txs := db.SlicePtrsToSlice(txsPtrs).([]poolTxAPIView)
+	retTxs := []apitypes.TxL2{}
+	for _, currentTx := range txs {
+		retTxs = append(retTxs, currentTx.ToAPI())
 	}
-	return txs, nil
+	if len(txs) == 0 {
+		return retTxs, nil
+	}
+	return retTxs, nil
 }
