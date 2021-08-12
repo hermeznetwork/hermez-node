@@ -34,7 +34,6 @@ func init() {
 
 // WDelayerBlock stores all the data related to the WDelayer SC from an ethereum block
 type WDelayerBlock struct {
-	// State     eth.WDelayerState // TODO
 	Vars      common.WDelayerVariables
 	Events    eth.WDelayerEvents
 	Txs       map[ethCommon.Hash]*types.Transaction
@@ -1098,24 +1097,6 @@ func (c *Client) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Tra
 	log.Error("TODO")
 	return nil, tracerr.Wrap(errTODO)
 }
-
-// RollupUpdateTokensHEZ is the interface to call the smart contract function
-// func (c *Client) RollupUpdateTokensHEZ(newTokenHEZ ethCommon.Address) (tx *types.Transaction,
-// 	err error) {
-// 	c.rw.Lock()
-// 	defer c.rw.Unlock()
-// 	cpy := c.nextBlock().copy()
-// 	defer func() { c.revertIfErr(err, cpy) }()
-//
-// 	log.Error("TODO")
-// 	return nil, errTODO
-// }
-
-// RollupUpdateGovernance is the interface to call the smart contract function
-// func (c *Client) RollupUpdateGovernance() (*types.Transaction, error) {
-// 	// TODO (Not defined in Hermez.sol)
-// 	return nil, errTODO
-// }
 
 // RollupConstants returns the Constants of the Rollup Smart Contract
 func (c *Client) RollupConstants() (*common.RollupConstants, error) {
