@@ -348,8 +348,8 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			log.Info("EtherScan method not configured in config file")
 			etherScanService = nil
 		}
-		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs.URL))
-		for i, serverProofCfg := range cfg.Coordinator.ServerProofs.URL {
+		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs.URLs))
+		for i, serverProofCfg := range cfg.Coordinator.ServerProofs.URLs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg,
 				cfg.Coordinator.ProofServerPollInterval.Duration)
 		}

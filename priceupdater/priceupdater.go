@@ -34,22 +34,22 @@ const (
 
 // Fiat definition
 type Fiat struct {
-	APIKey       string
-	URL          string
-	BaseCurrency string
-	Currencies   string
+	APIKey       string `env:"HEZNODE_PRICEUPDATER_FIAT_APIKEY"`
+	URL          string `env:"HEZNODE_PRICEUPDATER_FIAT_URL"`
+	BaseCurrency string `env:"HEZNODE_PRICEUPDATER_FIAT_BASECURRENCY"`
+	Currencies   string `env:"HEZNODE_PRICEUPDATER_FIAT_CURRENCIES"`
 }
 
 // Provider definition
 type Provider struct {
-	Provider       string
-	BaseURL        string
-	URL            string
-	URLExtraParams string
+	Provider       string `env:"HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER"`
+	BaseURL        string `env:"HEZNODE_PRICEUPDATER_PROVIDER_BASEURL"`
+	URL            string `env:"HEZNODE_PRICEUPDATER_PROVIDER_URL"`
+	URLExtraParams string `env:"HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS"`
 	SymbolsMap     symbolsMap
 	AddressesMap   addressesMap
-	Symbols        string
-	Addresses      string
+	Symbols        string `env:"HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS"`
+	Addresses      string `env:"HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES"`
 }
 
 type staticMap struct {

@@ -530,7 +530,7 @@ func main() {
 		&cli.StringFlag{
 			Name:     flagCfg,
 			Usage:    "Node configuration `FILE`",
-			Required: true,
+			Required: false,
 		},
 	}
 
