@@ -329,8 +329,8 @@ func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce common.Nonce, tx *
 		rowsAffected int64
 	)
 
-	const queryDelete = `DELETE FROM tx_pool WHERE from_idx = $1 AND nonce = $2 AND state = $3 AND atomic_group_id IS NULL AND NOT external_delete;`
-	if res, err = txn.Exec(queryDelete, idx, nonce, common.PoolL2TxStatePending); err != nil {
+	const queryDelete = `DELETE FROM tx_pool WHERE from_idx = $1 AND nonce = $2 AND (state = $3 OR state = $4) AND atomic_group_id IS NULL AND NOT external_delete;`
+	if res, err = txn.Exec(queryDelete, idx, nonce, common.PoolL2TxStatePending, common.PoolL2TxStateInvalid); err != nil {
 		return tracerr.Wrap(err)
 	}
 

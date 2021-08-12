@@ -94,7 +94,7 @@ func (a *API) putPoolTxByIdxAndNonce(c *gin.Context) {
 	}
 	if receivedTx.State != common.PoolL2TxStatePending || receivedTx.FromIdx != idx || receivedTx.Nonce != nonce {
 		retBadReq(&apiError{
-			Err:  errors.New("tx state is not pend or fromIdx or nonce in request body not equal request uri params"),
+			Err:  errors.New("tx state is not pend or invl or fromIdx or nonce in request body not equal request uri params"),
 			Code: ErrParamValidationFailedCode,
 			Type: ErrParamValidationFailedType,
 		}, c)
