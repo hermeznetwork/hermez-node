@@ -37,8 +37,6 @@ import (
 	"github.com/russross/meddler"
 )
 
-// TODO(Edu): Document here how HistoryDB is kept consistent
-
 // HistoryDB persist the historic of the rollup
 type HistoryDB struct {
 	dbRead     *sqlx.DB
@@ -288,7 +286,6 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	if len(bids) == 0 {
 		return nil
 	}
-	// TODO: check the coordinator info
 	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO bid (slot_num, bid_value, eth_block_num, bidder_addr) VALUES %s;",
@@ -843,8 +840,6 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxsCount() (int, error) {
 	var count int
 	return count, tracerr.Wrap(row.Scan(&count))
 }
-
-// TODO: Think about chaning all the queries that return a last value, to queries that return the next valid value.
 
 // GetLastTxsPosition for a given to_forge_l1_txs_num
 func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {

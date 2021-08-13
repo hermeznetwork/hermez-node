@@ -1037,8 +1037,6 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 	numFeeIdxCoordinator := len(aux.FeeIdxCoordinator) / lenFeeIdxCoordinatorBytes
 	for i := 0; i < numFeeIdxCoordinator; i++ {
 		var paddedFeeIdx [6]byte
-		// TODO: This check is not necessary: the first case will always work.  Test it
-		// before removing the if.
 		if lenFeeIdxCoordinatorBytes < common.IdxBytesLen {
 			copy(paddedFeeIdx[6-lenFeeIdxCoordinatorBytes:],
 				aux.FeeIdxCoordinator[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])

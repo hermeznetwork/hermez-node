@@ -424,9 +424,6 @@ func (t *TxManager) handleReceipt(ctx context.Context, batchInfo *BatchInfo) (*i
 	return nil, nil
 }
 
-// TODO:
-// - After sending a message: CancelPipeline, stop all consecutive pending Batches (transactions)
-
 // Queue of BatchInfos
 type Queue struct {
 	list []*BatchInfo

@@ -668,9 +668,6 @@ func (txProcessor *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx 
 			log.Error(err)
 			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
-		// TODO applyCreateAccount will return the created account,
-		// which in the case type==TypeSynchronizer will be added to an
-		// array of created accounts that will be returned
 	case common.TxTypeDeposit:
 		txProcessor.computeEffectiveAmounts(tx)
 

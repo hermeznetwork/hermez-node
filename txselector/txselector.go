@@ -442,8 +442,6 @@ func (txsel *TxSelector) processL2Txs(
 ) {
 	const failedGroupErrMsg = "Failed forging atomic tx from Group %s." +
 		" Restarting selection process without txs from this group"
-	// TODO: differentiate between nonSelectedL2Txs and unforjableL2Txs
-	// (right now all fall into nonSelectedL2Txs, which is safe but non optimal)
 	positionL1 := nAlreadyProcessedL1Txs
 	nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
 	// Iterate over l2Txs

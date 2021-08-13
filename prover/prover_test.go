@@ -74,7 +74,6 @@ func testCancel(t *testing.T) {
 	zkInputs := common.NewZKInputs(0, 100, 24, 512, 32, big.NewInt(1))
 	err := proofServerClient.CalculateProof(context.Background(), zkInputs)
 	require.NoError(t, err)
-	// TODO: remove sleep when the server has been reviewed
 	time.Sleep(time.Second / 4)
 	err = proofServerClient.Cancel(context.Background())
 	require.NoError(t, err)

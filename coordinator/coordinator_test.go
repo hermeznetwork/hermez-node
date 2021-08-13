@@ -590,9 +590,3 @@ func TestCoordinatorStress(t *testing.T) {
 
 	closeTestModules(t, modules)
 }
-
-// TODO: Test Reorg
-// TODO: Test TxMonitor
-// TODO: Test forgeBatch
-// TODO: Test waitServerProof
-// TODO: Test handleReorg
