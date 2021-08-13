@@ -730,7 +730,7 @@ func (txsel *TxSelector) processL2Txs(
 				nAlreadyProcessedL1Txs++
 			}
 			if validL2Tx == nil {
-				// TODO: Missing info on why this tx is not selected? Check l2Txs.Info at this point!
+				// Missing info on why this tx is not selected? Check l2Txs.Info at this point!
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 					obj := common.TxSelectorError{
@@ -1199,7 +1199,6 @@ func isAtomicGroupValid(atomicGroup common.AtomicGroup) bool {
 			atomicGroup.Txs[i].RqTokenID != requestedTx.TokenID ||
 			atomicGroup.Txs[i].RqFee != requestedTx.Fee ||
 			atomicGroup.Txs[i].RqNonce != requestedTx.Nonce {
-			// TODO: err should be compliant with txSelectorError
 			return false
 		}
 		// Check amount
