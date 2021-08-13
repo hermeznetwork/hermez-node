@@ -469,14 +469,27 @@ func cmdMakeBackup(c *cli.Context) error {
 	go makeStateDBDump(&wg, cfg, backupPath)
 
 	wg.Wait()
+	log.Info("finished with making state db dump")
 	log.Info("finished with dumps. started to make zip file...")
-	err = exec.Command("zip", "-r", path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)), zipPath).Run()
-	log.Info("finished with backup command")
+	err = exec.Command("zip", "-r", path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)), backupPath).Run()
+	if err != nil {
+		log.Errorf("failed to zip %s directory, err: %v", backupPath, err)
+		return err
+	}
+	err = exec.Command("rm", "-rf", backupPath).Run()
+	if err != nil {
+		log.Errorf("failed to delete tmp folder %s", backupPath)
+		return err
+	}
+	log.Infof("backup finished! You could find zip file there: %s", zipPath)
 	return nil
 }
 
 func copyDirectory(wg *sync.WaitGroup, basePath, destPath string) {
-	defer wg.Done()
+	defer func() {
+		log.Infof("made a copy of %s directory of the state db", basePath)
+		wg.Done()
+	}()
 
 	err := exec.Command("cp", "-r", basePath, destPath).Run()
 	if err != nil {
@@ -485,10 +498,7 @@ func copyDirectory(wg *sync.WaitGroup, basePath, destPath string) {
 }
 
 func makeStateDBDump(wg *sync.WaitGroup, cfg *config.Node, destPath string) {
-	defer func() {
-		log.Info("finished with making state db dump")
-		wg.Done()
-	}()
+	defer wg.Done()
 	log.Infof("started to make state db db dump...")
 
 	dbWrite, err := dbUtils.InitSQLDB(
