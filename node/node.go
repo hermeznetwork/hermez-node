@@ -44,7 +44,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test/debugapi"
@@ -76,7 +75,6 @@ type Node struct {
 	nodeAPI         *NodeAPI
 	stateAPIUpdater *stateapiupdater.Updater
 	debugAPI        *debugapi.DebugAPI
-	priceUpdater    *priceupdater.PriceUpdater
 	// Coordinator
 	coord *coordinator.Coordinator
 
@@ -471,22 +469,11 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	if cfg.Debug.APIAddress != "" {
 		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB, sync)
 	}
-	priceUpdater, err := priceupdater.NewPriceUpdater(
-		cfg.PriceUpdater.Priority,
-		cfg.PriceUpdater.Provider,
-		cfg.PriceUpdater.Statictokens,
-		cfg.PriceUpdater.Fiat,
-		historyDB,
-	)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{
 		stateAPIUpdater: stateAPIUpdater,
 		nodeAPI:         nodeAPI,
 		debugAPI:        debugAPI,
-		priceUpdater:    priceUpdater,
 		coord:           coord,
 		sync:            sync,
 		cfg:             cfg,
@@ -808,26 +795,6 @@ func (n *Node) StartSynchronizer() {
 						log.Errorw("Synchronizer.Sync", "err", err)
 					}
 				}
-			}
-		}
-	}()
-
-	n.wg.Add(1)
-	go func() {
-		for {
-			select {
-			case <-n.ctx.Done():
-				log.Info("PriceUpdater done")
-				n.wg.Done()
-				return
-			case <-time.After(n.cfg.PriceUpdater.Interval.Duration):
-				if err := n.priceUpdater.UpdateFiatPrices(n.ctx); err != nil {
-					log.Errorw("PriceUpdater.UpdateFiatPrices()", "err", err)
-				}
-				if err := n.priceUpdater.UpdateTokenList(); err != nil {
-					log.Errorw("PriceUpdater.UpdateTokenList()", "err", err)
-				}
-				n.priceUpdater.UpdatePrices(n.ctx)
 			}
 		}
 	}()

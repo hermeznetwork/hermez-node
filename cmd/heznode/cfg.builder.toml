@@ -12,56 +12,6 @@
 ### Maximum amount of time that an API request can wait to establish a SQL connection
 #SQLConnectionTimeout = "2s"
 
-#[PriceUpdater]
-### Interval between price updater calls
-#Interval = "60s"
-### Priority order to use the different providers
-#Priority = "bitfinexV2,CoinGeckoV3"
-### Static price for tokens
-#Statictokens=""  # <tokenId>=<forced_price>,<tokenId>=<forced_price>
-
-#[PriceUpdater.Fiat]
-### This parameter allow access to the external service
-#APIKey=""
-### Url of the external service
-#URL="https://api.exchangeratesapi.io/v1/"
-### Base currency used to get prices
-#BaseCurrency="USD"
-### Currencies that the hermez node is going to store
-#Currencies="CNY,EUR,JPY,GBP"
-
-#[[PriceUpdater.Provider]]
-### Provider name used in "Priority" field
-#Provider = "bitfinexV2"
-### Provider api base url
-#BASEURL = "https://api-pub.bitfinex.com/v2/"
-### Provider url
-#URL = "ticker/t"
-### Second part of the url
-#URLExtraParams = "USD"
-### Available update methods:
-### - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
-### - static method is performed writing the price in Statictokens.
-### Example: Symbols = "0=ETH,1=HEZ,2=ignore,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=SUSHI:,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
-### Symbols that the price updater should use in order to get the prices successfully
-#Symbols = "0=ETH,2=UST,8=ignore,9=SUSHI:,5=WBT,14=LINK:,12=AAVE:,7=XAUT:,10=COMP:,6=ETH"
-
-#[[PriceUpdater.Provider]]
-### Provider name used in "Priority" field
-#Provider = "CoinGeckoV3"
-### Provider api base url
-#BASEURL = "https://api.coingecko.com/api/v3/"
-### Provider url
-#URL = "simple/token_price/ethereum?contract_addresses="
-### Second part of the url
-#URLExtraParams = "&vs_currencies=usd"
-### Available update methods:
-### - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
-### - static method is performed writing the price in Statictokens.
-### Example: Addresses="0=0x00,1=0x12,2=0x12,4=0x12,5=0x12,6=,7=0x12,8=,9=0x12,10=0x12,11=ignore,12=0x12,13=0x12,14=0x12"
-### Addresses that the price updater should use in order to get the prices successfully
-#Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=ignore"
-
 #[Debug]
 ### If it is set, the debug api will listen in this address and port
 #APIAddress = "0.0.0.0:12345"

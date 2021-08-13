@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"math/big"
-	"os"
 	"strings"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"gopkg.in/go-playground/validator.v9"
@@ -287,18 +285,6 @@ type NodeDebug struct {
 
 // Node is the hermez node configuration.
 type Node struct {
-	PriceUpdater struct {
-		// Interval between price updater calls
-		Interval Duration `validate:"required" env:"HEZNODE_PRICEUPDATER_INTERVAL"`
-		// Priority option defines the priority provider
-		Priority string `validate:"required" env:"HEZNODE_PRICEUPDATER_PRIORITY"`
-		// TokensConfig to specify how each token get it's price updated
-		Provider []priceupdater.Provider
-		// Statictokens defines the static prices for tokens
-		Statictokens string `env:"HEZNODE_PRICEUPDATER_STATICTOKENS"`
-		// Fiat defines the prices for fiat currencies
-		Fiat priceupdater.Fiat
-	} `validate:"required"`
 	StateDB struct {
 		// Path where the synchronizer StateDB is stored
 		Path string `validate:"required" env:"HEZNODE_STATEDB_PATH"`
@@ -406,33 +392,7 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 		}
 		log.Warn(err.Error())
 	}
-	//Get env arrays
-	//Price Updater
-	if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER") != "" {
-		provider := priceupdater.Provider{
-			Provider: os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER"),
-		}
-		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_BASEURL") != "" {
-			provider.BaseURL = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_BASEURL")
-		}
-		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URL") != "" {
-			provider.URL = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URL")
-		}
-		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS") != "" {
-			provider.URLExtraParams = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS")
-		}
-		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS") != "" {
-			provider.Symbols = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS")
-		}
-		if os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES") != "" {
-			provider.Addresses = os.Getenv("HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES")
-		}
-		var providers []priceupdater.Provider
-		providers = append(providers, provider)
-		cfg.PriceUpdater.Provider = providers
-	}
 	validate := validator.New()
-	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
@@ -456,7 +416,6 @@ func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 		log.Warn(err.Error())
 	}
 	validate := validator.New()
-	validate.RegisterStructValidation(priceupdater.ProviderValidation, priceupdater.Provider{})
 	if err := validate.Struct(cfg); err != nil {
 		return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 	}
