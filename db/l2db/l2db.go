@@ -27,6 +27,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -196,7 +197,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			rqTokenID     *common.TokenID
 			rqAmount      *string
 			rqFee         *common.FeeSelector
-			rqNonce       *common.Nonce
+			rqNonce       *nonce.Nonce
 			rqOffset      *uint8
 			atomicGroupID *common.AtomicGroupID
 			maxNumBatch   *uint32
@@ -313,7 +314,7 @@ func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
 	return tracerr.Wrap(err)
 }
 
-func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce common.Nonce, tx *common.PoolL2Tx) error {
+func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce nonce.Nonce, tx *common.PoolL2Tx) error {
 	txn, err := l2db.dbWrite.Beginx()
 	if err != nil {
 		return tracerr.Wrap(err)

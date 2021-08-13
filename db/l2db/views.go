@@ -6,6 +6,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -21,7 +22,7 @@ type poolTxAPIView struct {
 	EffectiveToBJJ       *apitypes.HezBJJ      `meddler:"effective_to_bjj"`
 	Amount               apitypes.BigIntStr    `meddler:"amount"`
 	Fee                  common.FeeSelector    `meddler:"fee"`
-	Nonce                common.Nonce          `meddler:"nonce"`
+	Nonce                nonce.Nonce           `meddler:"nonce"`
 	State                common.PoolL2TxState  `meddler:"state"`
 	MaxNumBatch          uint32                `meddler:"max_num_batch,zeroisnull"`
 	Info                 *string               `meddler:"info"`
@@ -35,7 +36,7 @@ type poolTxAPIView struct {
 	RqTokenID            *common.TokenID       `meddler:"rq_token_id"`
 	RqAmount             *apitypes.BigIntStr   `meddler:"rq_amount"`
 	RqFee                *common.FeeSelector   `meddler:"rq_fee"`
-	RqNonce              *common.Nonce         `meddler:"rq_nonce"`
+	RqNonce              *nonce.Nonce          `meddler:"rq_nonce"`
 	Type                 common.TxType         `meddler:"tx_type"`
 	BatchNum             *common.BatchNum      `meddler:"batch_num"`
 	Timestamp            time.Time             `meddler:"timestamp,utctime"`

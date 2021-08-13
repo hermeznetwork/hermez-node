@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -21,8 +22,8 @@ type L2Tx struct {
 	Amount  *big.Int    `meddler:"amount,bigint"`
 	Fee     FeeSelector `meddler:"fee"`
 	// Nonce is filled by the TxProcessor
-	Nonce Nonce  `meddler:"nonce"`
-	Type  TxType `meddler:"type"`
+	Nonce nonce.Nonce `meddler:"nonce"`
+	Type  TxType      `meddler:"type"`
 	// EthBlockNum in which this L2Tx was added to the queue
 	EthBlockNum int64 `meddler:"eth_block_num"`
 }
@@ -122,7 +123,7 @@ func (tx *L2Tx) Tx() *Tx {
 	*batchNum = tx.BatchNum
 	fee := new(FeeSelector)
 	*fee = tx.Fee
-	nonce := new(Nonce)
+	nonce := new(nonce.Nonce)
 	*nonce = tx.Nonce
 	return &Tx{
 		IsL1:        false,

@@ -10,6 +10,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -1137,7 +1138,7 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 		BatchNum common.BatchNum       `meddler:"batch_num"`
 		BJJ      babyjub.PublicKeyComp `meddler:"bjj"`
 		EthAddr  ethCommon.Address     `meddler:"eth_addr"`
-		Nonce    common.Nonce          `meddler:"nonce"`
+		Nonce    nonce.Nonce           `meddler:"nonce"`
 		Balance  *big.Int              `meddler:"balance,bigint"` // max of 192 bits used
 	}
 	account := &fullAccount{}

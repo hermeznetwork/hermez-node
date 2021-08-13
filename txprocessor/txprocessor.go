@@ -87,6 +87,7 @@ import (
 	"os"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
@@ -1323,7 +1324,7 @@ func (txProcessor *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common
 		// exitAmount (exitAmount=tx.Amount)
 		exitAccount := &common.Account{
 			TokenID: acc.TokenID,
-			Nonce:   common.Nonce(0),
+			Nonce:   nonce.Nonce(0),
 			// as is a common.Tx, the tx.Amount is already an
 			// EffectiveAmount
 			Balance: tx.Amount,

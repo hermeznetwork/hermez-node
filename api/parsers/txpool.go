@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/tracerr"
 	"gopkg.in/go-playground/validator.v9"
@@ -35,7 +36,7 @@ type PoolTxUpdateByIdxAndNonceFilter struct {
 }
 
 // ParsePoolTxUpdateByIdxAndNonceFilter func for parsing pool tx update by idx and nonce filter to the account index and nonce
-func ParsePoolTxUpdateByIdxAndNonceFilter(c *gin.Context) (common.Idx, common.Nonce, error) {
+func ParsePoolTxUpdateByIdxAndNonceFilter(c *gin.Context) (common.Idx, nonce.Nonce, error) {
 	var poolTxUpdateByIdxAndNonceFilter PoolTxUpdateByIdxAndNonceFilter
 	if err := c.ShouldBindUri(&poolTxUpdateByIdxAndNonceFilter); err != nil {
 		return common.Idx(0), 0, tracerr.Wrap(err)
@@ -45,7 +46,7 @@ func ParsePoolTxUpdateByIdxAndNonceFilter(c *gin.Context) (common.Idx, common.No
 		return common.Idx(0), 0, tracerr.Wrap(err)
 	}
 
-	queryNonce := common.Nonce(*poolTxUpdateByIdxAndNonceFilter.Nonce)
+	queryNonce := nonce.Nonce(*poolTxUpdateByIdxAndNonceFilter.Nonce)
 	return *queryAccount.AccountIndex, queryNonce, nil
 }
 

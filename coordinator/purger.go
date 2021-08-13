@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -93,7 +94,7 @@ func (p *Purger) InvalidateMaybe(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 
 //nolint:unused,deadcode
 func idxsNonceFromL2Txs(txs []common.L2Tx) []common.IdxNonce {
-	idxNonceMap := map[common.Idx]common.Nonce{}
+	idxNonceMap := map[common.Idx]nonce.Nonce{}
 	for _, tx := range txs {
 		if nonce, ok := idxNonceMap[tx.FromIdx]; !ok {
 			idxNonceMap[tx.FromIdx] = tx.Nonce
@@ -109,7 +110,7 @@ func idxsNonceFromL2Txs(txs []common.L2Tx) []common.IdxNonce {
 }
 
 func idxsNonceFromPoolL2Txs(txs []common.PoolL2Tx) []common.IdxNonce {
-	idxNonceMap := map[common.Idx]common.Nonce{}
+	idxNonceMap := map[common.Idx]nonce.Nonce{}
 	for _, tx := range txs {
 		if nonce, ok := idxNonceMap[tx.FromIdx]; !ok {
 			idxNonceMap[tx.FromIdx] = tx.Nonce

@@ -6,6 +6,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -22,7 +23,7 @@ type TxL2 struct {
 	EffectiveToBJJ       *HezBJJ               `json:"toBJJ"`
 	Amount               BigIntStr             `json:"amount"`
 	Fee                  common.FeeSelector    `json:"fee"`
-	Nonce                common.Nonce          `json:"nonce"`
+	Nonce                nonce.Nonce           `json:"nonce"`
 	State                common.PoolL2TxState  `json:"state"`
 	BatchNum             *common.BatchNum      `json:"batchNum"`
 	MaxNumBatch          uint32                `json:"maxNumBatch"`
@@ -38,7 +39,7 @@ type TxL2 struct {
 	RqTokenID            *common.TokenID       `json:"requestTokenId"`
 	RqAmount             *BigIntStr            `json:"requestAmount"`
 	RqFee                *common.FeeSelector   `json:"requestFee"`
-	RqNonce              *common.Nonce         `json:"requestNonce"`
+	RqNonce              *nonce.Nonce          `json:"requestNonce"`
 	Token                struct {
 		TokenID          common.TokenID    `json:"id"`
 		TokenItemID      uint64            `json:"itemId"`
@@ -77,7 +78,7 @@ func (tx TxL2) MarshalJSON() ([]byte, error) {
 		EffectiveToBJJ       *HezBJJ               `json:"toBJJ"`
 		Amount               BigIntStr             `json:"amount"`
 		Fee                  common.FeeSelector    `json:"fee"`
-		Nonce                common.Nonce          `json:"nonce"`
+		Nonce                nonce.Nonce           `json:"nonce"`
 		State                common.PoolL2TxState  `json:"state"`
 		BatchNum             *common.BatchNum      `json:"batchNum"`
 		MaxNumBatch          uint32                `json:"maxNumBatch"`
@@ -93,7 +94,7 @@ func (tx TxL2) MarshalJSON() ([]byte, error) {
 		RqTokenID            *common.TokenID       `json:"requestTokenId"`
 		RqAmount             *BigIntStr            `json:"requestAmount"`
 		RqFee                *common.FeeSelector   `json:"requestFee"`
-		RqNonce              *common.Nonce         `json:"requestNonce"`
+		RqNonce              *nonce.Nonce          `json:"requestNonce"`
 		Token                jsonToken             `json:"token"`
 	}
 	toMarshal := jsonFormat{

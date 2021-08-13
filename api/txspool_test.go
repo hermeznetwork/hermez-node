@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -32,7 +33,7 @@ type testPoolTxReceive struct {
 	ToBJJ       *string                `json:"toBjj"`
 	Amount      string                 `json:"amount"`
 	Fee         common.FeeSelector     `json:"fee"`
-	Nonce       common.Nonce           `json:"nonce"`
+	Nonce       nonce.Nonce            `json:"nonce"`
 	State       common.PoolL2TxState   `json:"state"`
 	Signature   babyjub.SignatureComp  `json:"signature"`
 	RqFromIdx   *string                `json:"requestFromAccountIndex"`
@@ -42,7 +43,7 @@ type testPoolTxReceive struct {
 	RqTokenID   *common.TokenID        `json:"requestTokenId"`
 	RqAmount    *string                `json:"requestAmount"`
 	RqFee       *common.FeeSelector    `json:"requestFee"`
-	RqNonce     *common.Nonce          `json:"requestNonce"`
+	RqNonce     *nonce.Nonce           `json:"requestNonce"`
 	BatchNum    *common.BatchNum       `json:"batchNum"`
 	Timestamp   time.Time              `json:"timestamp"`
 	Token       historydb.TokenWithUSD `json:"token"`
@@ -557,7 +558,7 @@ func TestPoolTxs(t *testing.T) {
 	oldIdx := idx
 	idx = "hez:ETH:265"
 	tx.FromIdx = common.Idx(265)
-	tx.Nonce = common.Nonce(0)
+	tx.Nonce = nonce.Nonce(0)
 	tx.TxID, err = common.NewTxIDFromString("0x0293ed7291a26bc0ccd01b696f95c8618690d04d028d2af04087831f874235b217")
 	require.NoError(t, err)
 	signStr = "e14165987818b09194dc0eb348bf0d30250bac6005d8a4c3d43f8021c6bee3937781ea69ced553cbbdacd09992f88f6a41bf8e17e0341aa2e53d0bfa80d03b05"
@@ -577,7 +578,7 @@ func TestPoolTxs(t *testing.T) {
 
 	// test wrong nonce
 	oldNonce := tx.Nonce
-	tx.Nonce = common.Nonce(5)
+	tx.Nonce = nonce.Nonce(5)
 	jsonTxBytes, err = json.Marshal(tx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)

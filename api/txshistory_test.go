@@ -10,6 +10,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/test"
@@ -31,7 +32,7 @@ type testL1Info struct {
 type testL2Info struct {
 	Fee            common.FeeSelector `json:"fee"`
 	HistoricFeeUSD *float64           `json:"historicFeeUSD"`
-	Nonce          common.Nonce       `json:"nonce"`
+	Nonce          nonce.Nonce        `json:"nonce"`
 }
 
 type testTx struct {
@@ -369,7 +370,7 @@ func TestGetHistoryTxs(t *testing.T) {
 				continue
 			}
 		}
-		toQueryAccount, err := common.StringToIdx((tc.txs[i].ToIdx), "")
+		toQueryAccount, err := common.StringToIdx(tc.txs[i].ToIdx, "")
 		assert.NoError(t, err)
 		if *toQueryAccount.AccountIndex == *queryAccount.AccountIndex {
 			idxTxs = append(idxTxs, tc.txs[i])

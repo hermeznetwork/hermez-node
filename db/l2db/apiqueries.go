@@ -7,6 +7,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -85,7 +86,7 @@ func (l2db *L2DB) checkFeeIsInRange(tx *common.PoolL2Tx) error {
 }
 
 // UpdateTxByIdxAndNonceAPI upadte PoolL2Tx regular transaction in the pool by account idx and nonce
-func (l2db *L2DB) UpdateTxByIdxAndNonceAPI(idx common.Idx, nonce common.Nonce, tx *common.PoolL2Tx) error {
+func (l2db *L2DB) UpdateTxByIdxAndNonceAPI(idx common.Idx, nonce nonce.Nonce, tx *common.PoolL2Tx) error {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {

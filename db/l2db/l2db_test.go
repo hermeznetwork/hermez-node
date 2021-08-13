@@ -10,6 +10,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -482,11 +483,11 @@ func TestInvalidateOldNonces(t *testing.T) {
 	require.NoError(t, err)
 	// Update Accounts currentNonce
 	var updateAccounts []common.IdxNonce
-	var currentNonce = common.Nonce(1)
+	var currentNonce = nonce.Nonce(1)
 	for i := range accs {
 		updateAccounts = append(updateAccounts, common.IdxNonce{
 			Idx:   accs[i].Idx,
-			Nonce: common.Nonce(currentNonce),
+			Nonce: nonce.Nonce(currentNonce),
 		})
 	}
 	// Add txs to DB

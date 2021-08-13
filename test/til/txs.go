@@ -11,6 +11,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -43,7 +44,7 @@ func newBlock(blockNum int64) common.BlockData {
 type contextExtra struct {
 	openToForge     int64
 	toForgeL1TxsNum int64
-	nonces          map[common.Idx]common.Nonce
+	nonces          map[common.Idx]nonce.Nonce
 	idx             int
 	idxByTxID       map[common.TxID]common.Idx
 }
@@ -106,7 +107,7 @@ func NewContext(chainID uint16, rollupConstMaxL1UserTx int) *Context {
 		extra: contextExtra{
 			openToForge:     0,
 			toForgeL1TxsNum: 0,
-			nonces:          make(map[common.Idx]common.Nonce),
+			nonces:          make(map[common.Idx]nonce.Nonce),
 			idx:             common.UserThreshold,
 			idxByTxID:       make(map[common.TxID]common.Idx),
 		},
@@ -117,7 +118,7 @@ func NewContext(chainID uint16, rollupConstMaxL1UserTx int) *Context {
 type Account struct {
 	Idx      common.Idx
 	TokenID  common.TokenID
-	Nonce    common.Nonce
+	Nonce    nonce.Nonce
 	BatchNum int
 }
 
@@ -434,7 +435,7 @@ func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error
 			tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] = &Account{
 				Idx:      common.Idx(tc.idx),
 				TokenID:  tx.L1Tx.TokenID,
-				Nonce:    common.Nonce(0),
+				Nonce:    nonce.Nonce(0),
 				BatchNum: tc.currBatchNum,
 			}
 			tc.l1CreatedAccounts[idxTokenIDToString(tx.fromIdxName, tx.L1Tx.TokenID)] =
@@ -707,7 +708,7 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 func (tc *Context) RestartNonces() {
 	for name, user := range tc.Users {
 		for tokenID := range user.Accounts {
-			tc.Users[name].Accounts[tokenID].Nonce = common.Nonce(0)
+			tc.Users[name].Accounts[tokenID].Nonce = nonce.Nonce(0)
 		}
 	}
 }

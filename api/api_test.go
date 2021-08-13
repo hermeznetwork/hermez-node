@@ -21,6 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -361,7 +362,7 @@ func TestMain(m *testing.M) {
 		for _, batch := range block.Rollup.Batches {
 			commonL2Txs = append(commonL2Txs, batch.L2Txs...)
 			for i := range batch.CreatedAccounts {
-				batch.CreatedAccounts[i].Nonce = common.Nonce(i)
+				batch.CreatedAccounts[i].Nonce = nonce.Nonce(i)
 				commonAccounts = append(commonAccounts, batch.CreatedAccounts[i])
 			}
 			commonBatches = append(commonBatches, batch.Batch)

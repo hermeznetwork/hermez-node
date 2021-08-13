@@ -40,7 +40,7 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 				TokenID:   token.TokenID,
 				Amount:    big.NewInt(int64(i)),
 				Fee:       fee,
-				Nonce:     common.Nonce(i),
+				Nonce:     nonce.Nonce(i),
 				State:     state,
 				Signature: privK.SignPoseidon(big.NewInt(int64(i))).Compress(),
 			}
@@ -57,7 +57,7 @@ func GenPoolTxs(n int, tokens []common.Token) []*common.PoolL2Tx {
 				tx.RqTokenID = common.TokenID(i)
 				tx.RqAmount = big.NewInt(int64(i))
 				tx.RqFee = common.FeeSelector(i)
-				tx.RqNonce = common.Nonce(i)
+				tx.RqNonce = nonce.Nonce(i)
 			}
 			txs = append(txs, tx)
 		}
