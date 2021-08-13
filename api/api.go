@@ -107,6 +107,7 @@ func NewAPI(
 		// Transaction
 		v1.POST("/transactions-pool", a.postPoolTx)
 		v1.PUT("/transactions-pool/:id", a.putPoolTx)
+		v1.PUT("/transactions-pool/accounts/:accountIndex/nonces/:nonce", a.putPoolTxByIdxAndNonce)
 		v1.GET("/transactions-pool/:id", a.getPoolTx)
 		v1.GET("/transactions-pool", a.getPoolTxs)
 		v1.POST("/atomic-pool", a.postAtomicPool)

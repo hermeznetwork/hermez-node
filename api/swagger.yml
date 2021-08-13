@@ -714,6 +714,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error500'
+  '/transactions-pool/accounts/{idx}/nonces/{nonce}':
+    put:
+      tags:
+        - Coordinator
+      summary: Update transaction by from account idx and nonce.
+      description: >-
+        Updates regular transactions by account idx and nonce. This endpoint is useful, when user want to update fee or amount, that was sent in the transaction,
+        but user can't use regular update transaction request, bcs transaction id is also changing. Delete previous transaction and inserts new one
+      operationId: updateTxByIdxAndNonce
+      parameters:
+        - name: idx
+          in: path
+          description: From account idx
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: nonce
+          in: path
+          description: trasnaction nonce
+          required: true
+          schema:
+            $ref: '#/components/schemas/Nonce'
+      requestBody:
+        description: Signed transaction
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPoolL2Transaction'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionId'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
   '/transactions-history':
     get:
       tags:

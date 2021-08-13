@@ -28,6 +28,27 @@ func ParsePoolTxFilter(c *gin.Context) (common.TxID, error) {
 	return txID, nil
 }
 
+// PoolTxUpdateByIdxAndNonceFilter struct to get uri param from /transactions-pool/accounts/:accountIndex/nonces/:nonce request
+type PoolTxUpdateByIdxAndNonceFilter struct {
+	AccountIndex string `uri:"accountIndex" binding:"required"`
+	Nonce        *uint  `uri:"nonce" binding:"required"`
+}
+
+// ParsePoolTxUpdateByIdxAndNonceFilter func for parsing pool tx update by idx and nonce filter to the account index and nonce
+func ParsePoolTxUpdateByIdxAndNonceFilter(c *gin.Context) (common.Idx, common.Nonce, error) {
+	var poolTxUpdateByIdxAndNonceFilter PoolTxUpdateByIdxAndNonceFilter
+	if err := c.ShouldBindUri(&poolTxUpdateByIdxAndNonceFilter); err != nil {
+		return common.Idx(0), 0, tracerr.Wrap(err)
+	}
+	queryAccount, err := common.StringToIdx(poolTxUpdateByIdxAndNonceFilter.AccountIndex, "accountIndex")
+	if err != nil {
+		return common.Idx(0), 0, tracerr.Wrap(err)
+	}
+
+	queryNonce := common.Nonce(*poolTxUpdateByIdxAndNonceFilter.Nonce)
+	return *queryAccount.AccountIndex, queryNonce, nil
+}
+
 // PoolTxsFilters struct for holding query params from /transactions-pool request
 type PoolTxsFilters struct {
 	TokenID             *uint  `form:"tokenId"`
