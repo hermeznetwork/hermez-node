@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -38,6 +41,7 @@ const (
 	modeCoord   = "coord"
 	nMigrations = "nMigrations"
 	flagAccount = "account"
+	flagPath    = "path"
 )
 
 var (
@@ -433,6 +437,120 @@ func cmdDiscard(c *cli.Context) error {
 	return nil
 }
 
+func cmdMakeBackup(c *cli.Context) error {
+	log.Info("starting to make a hermez-node backup...")
+	var wg sync.WaitGroup
+	// two goroutines for state db and postgres db
+	wg.Add(2)
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	cfg := _cfg.node
+	zipPath := c.String(flagPath)
+	if _, err = os.Stat(zipPath); os.IsNotExist(err) {
+		log.Infof("creating directory %s for the backup", zipPath)
+		err = os.MkdirAll(zipPath, os.ModePerm)
+		if err != nil {
+			log.Errorf("failed to create %s directory, err: %v", zipPath, err)
+			return err
+		}
+	}
+
+	backupPath := path.Join(zipPath, "backup")
+	err = os.MkdirAll(backupPath, os.ModePerm)
+	if err != nil {
+		log.Errorf("failed to create %s directory, err: %v", backupPath, err)
+		return err
+	}
+
+	today := time.Now().Format("20060102150405")
+	go makeDBDump(&wg, cfg, backupPath, today)
+	go makeStateDBDump(&wg, cfg, backupPath)
+
+	wg.Wait()
+	log.Info("finished with dumps. started to make zip file...")
+	err = exec.Command("zip", "-r", path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)), zipPath).Run()
+	log.Info("finished with backup command")
+	return nil
+}
+
+func copyDirectory(wg *sync.WaitGroup, basePath, destPath string) {
+	defer wg.Done()
+
+	err := exec.Command("cp", "-r", basePath, destPath).Run()
+	if err != nil {
+		log.Errorf("failed to copy folder %s, err: %v", basePath, err)
+	}
+}
+
+func makeStateDBDump(wg *sync.WaitGroup, cfg *config.Node, destPath string) {
+	defer func() {
+		log.Info("finished with making state db dump")
+		wg.Done()
+	}()
+	log.Infof("started to make state db db dump...")
+
+	dbWrite, err := dbUtils.InitSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
+	)
+	if err != nil {
+		log.Errorf("failed to connect to historydb, err: %v", err)
+		return
+	}
+
+	historyDB := historydb.NewHistoryDB(dbWrite, dbWrite, nil)
+	batchNum, err := historyDB.GetLastBatchNum()
+	if err != nil {
+		log.Errorf("failed to get last batch num from historydb, err: %v", err)
+		return
+	}
+
+	dbPath := cfg.StateDB.Path
+	statedbBackupPath := path.Join(destPath, "statedb")
+	err = os.MkdirAll(statedbBackupPath, os.ModePerm)
+	if err != nil {
+		log.Errorf("failed to create %s directory, err: %v", statedbBackupPath, err)
+		return
+	}
+	var paths []string
+	paths = append(paths, path.Join(dbPath, kvdb.PathCurrent), path.Join(dbPath, kvdb.PathLast))
+	for i := 0; i < 10; i++ {
+		paths = append(paths, path.Join(dbPath, fmt.Sprintf("%s%d", kvdb.PathBatchNum, int(batchNum)-i)))
+	}
+	wg.Add(len(paths))
+	for _, p := range paths {
+		go copyDirectory(wg, p, statedbBackupPath)
+	}
+}
+
+func makeDBDump(wg *sync.WaitGroup, cfg *config.Node, destPath, today string) {
+	defer func() {
+		log.Infof("finished with making postgres db dump")
+		wg.Done()
+	}()
+	log.Infof("started to make postgres db dump...")
+	outfile, err := os.Create(path.Join(destPath, fmt.Sprintf("hermezdb-dump-%s.sql", today)))
+	if err != nil {
+		log.Errorf("failed to create sql dump file, err: %v", err)
+		return
+	}
+	// nolint
+	defer outfile.Close()
+
+	cmd := exec.Command("pg_dump", "--dbname",
+		fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
+			cfg.PostgreSQL.UserWrite, cfg.PostgreSQL.PasswordWrite, cfg.PostgreSQL.HostWrite, cfg.PostgreSQL.PortWrite, cfg.PostgreSQL.NameWrite))
+	cmd.Stdout = outfile
+	if err = cmd.Run(); err != nil {
+		log.Errorf("failed to run pg_dump command, err: %v", err)
+	}
+}
+
 // Config is the configuration of the hermez node execution
 type Config struct {
 	mode node.Mode
@@ -625,6 +743,18 @@ func main() {
 				&cli.StringFlag{
 					Name:     flagAccount,
 					Usage:    "account address in hex",
+					Required: true,
+				}),
+		},
+		{
+			Name:    "backup",
+			Aliases: []string{},
+			Usage:   "Make the backup for postgres and statedb",
+			Action:  cmdMakeBackup,
+			Flags: append(flags,
+				&cli.StringFlag{
+					Name:     flagPath,
+					Usage:    "path for saving backup",
 					Required: true,
 				}),
 		},
