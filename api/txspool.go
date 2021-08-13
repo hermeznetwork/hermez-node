@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db/l2db"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -34,12 +34,8 @@ func (a *API) postPoolTx(c *gin.Context) {
 		return
 	}
 	// Check that tx is valid
-	if err := a.verifyPoolL2Tx(receivedTx); err != nil {
-		retBadReq(&apiError{
-			Err:  err,
-			Code: ErrParamValidationFailedCode,
-			Type: ErrParamValidationFailedType,
-		}, c)
+	if apiErr := a.verifyPoolL2Tx(receivedTx); apiErr != nil {
+		retBadReq(apiErr, c)
 		return
 	}
 	receivedTx.ClientIP = c.ClientIP()
@@ -60,6 +56,140 @@ func (a *API) postPoolTx(c *gin.Context) {
 				Type: ErrFeeTooBigType,
 			}, c)
 			return
+		}
+		retSQLErr(err, c)
+		return
+	}
+	// Return TxID
+	c.JSON(http.StatusOK, receivedTx.TxID.String())
+}
+
+func (a *API) putPoolTxByIdxAndNonce(c *gin.Context) {
+	idx, nonce, err := parsers.ParsePoolTxUpdateByIdxAndNonceFilter(c)
+	if err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+	var receivedTx common.PoolL2Tx
+	if err = c.ShouldBindJSON(&receivedTx); err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+
+	if isAtomic(receivedTx) {
+		retBadReq(&apiError{
+			Err:  errors.New(ErrNotAtomicTxsInPostPoolTx),
+			Code: ErrNotAtomicTxsInPostPoolTxCode,
+			Type: ErrNotAtomicTxsInPostPoolTxType,
+		}, c)
+		return
+	}
+	if receivedTx.State != common.PoolL2TxStatePending || receivedTx.FromIdx != idx || receivedTx.Nonce != nonce {
+		retBadReq(&apiError{
+			Err:  errors.New("tx state is not pend or invl or fromIdx or nonce in request body not equal request uri params"),
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+
+	if apiErr := a.verifyPoolL2Tx(receivedTx); apiErr != nil {
+		retBadReq(apiErr, c)
+		return
+	}
+
+	receivedTx.ClientIP = c.ClientIP()
+	receivedTx.Info = ""
+
+	if err := a.l2.UpdateTxByIdxAndNonceAPI(idx, nonce, &receivedTx); err != nil {
+		if strings.Contains(err.Error(), "< minFeeUSD") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrFeeTooLowCode,
+				Type: ErrFeeTooLowType,
+			}, c)
+			return
+		} else if strings.Contains(err.Error(), "> maxFeeUSD") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrFeeTooBigCode,
+				Type: ErrFeeTooBigType,
+			}, c)
+			return
+		}
+		retSQLErr(err, c)
+		return
+	}
+
+	c.JSON(http.StatusOK, receivedTx.TxID.String())
+}
+
+func (a *API) putPoolTx(c *gin.Context) {
+	txID, err := parsers.ParsePoolTxFilter(c)
+	if err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+	var receivedTx common.PoolL2Tx
+	if err := c.ShouldBindJSON(&receivedTx); err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+
+	receivedTx.TxID = txID
+
+	if isAtomic(receivedTx) {
+		retBadReq(&apiError{
+			Err:  errors.New(ErrNotAtomicTxsInPostPoolTx),
+			Code: ErrNotAtomicTxsInPostPoolTxCode,
+			Type: ErrNotAtomicTxsInPostPoolTxType,
+		}, c)
+		return
+	}
+	if apiErr := a.verifyPoolL2Tx(receivedTx); apiErr != nil {
+		retBadReq(apiErr, c)
+		return
+	}
+	receivedTx.ClientIP = c.ClientIP()
+	receivedTx.Info = ""
+
+	if err := a.l2.UpdateTxAPI(&receivedTx); err != nil {
+		if strings.Contains(err.Error(), "< minFeeUSD") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrFeeTooLowCode,
+				Type: ErrFeeTooLowType,
+			}, c)
+			return
+		} else if strings.Contains(err.Error(), "> maxFeeUSD") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrFeeTooBigCode,
+				Type: ErrFeeTooBigType,
+			}, c)
+			return
+		} else if strings.Contains(err.Error(), "nothing to update") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrNothingToUpdateCode,
+				Type: ErrNothingToUpdateType,
+			}, c)
 		}
 		retSQLErr(err, c)
 		return
@@ -108,8 +238,8 @@ func (a *API) getPoolTxs(c *gin.Context) {
 
 	// Build successful response
 	type txsResponse struct {
-		Txs          []l2db.PoolTxAPI `json:"transactions"`
-		PendingItems uint64           `json:"pendingItems"`
+		Txs          []apitypes.TxL2 `json:"transactions"`
+		PendingItems uint64          `json:"pendingItems"`
 	}
 	c.JSON(http.StatusOK, &txsResponse{
 		Txs:          txs,
@@ -117,7 +247,7 @@ func (a *API) getPoolTxs(c *gin.Context) {
 	})
 }
 
-func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) error {
+func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) *apiError {
 	// Check type and id
 	_, err := common.NewPoolL2Tx(&tx)
 	if err != nil {

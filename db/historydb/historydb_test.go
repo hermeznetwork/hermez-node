@@ -11,8 +11,8 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -548,7 +548,7 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, common.TokenID(2), dbL1Txs[9].TokenID)
 
 	// Batch Number
-	var bn common.BatchNum = common.BatchNum(2)
+	var bn = common.BatchNum(2)
 
 	assert.Equal(t, &bn, dbL1Txs[0].BatchNum)
 	assert.Equal(t, &bn, dbL1Txs[1].BatchNum)
@@ -1247,7 +1247,7 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 	err = tc.FillBlocksExtra(blocks, &tilCfgExtra)
 	require.NoError(t, err)
 
-	const numBatches int = 2 + numBlocks
+	const numBatches = 2 + numBlocks
 	const blockNum = 4 + numBlocks
 
 	// Sanity check
@@ -1255,7 +1255,7 @@ func TestGetMetricsAPIMoreThan24Hours(t *testing.T) {
 
 	// Adding one batch per block
 	// batch frequency can be chosen
-	const blockTime time.Duration = 3600 * time.Second
+	const blockTime = 3600 * time.Second
 	now := time.Now()
 	require.NoError(t, err)
 
@@ -1490,7 +1490,7 @@ func TestNodeInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test parameters
-	var f64 float64 = 1.2
+	var f64 = 1.2
 	var i64 int64 = 8888
 	addr := ethCommon.HexToAddress("0x1234")
 	hash := ethCommon.HexToHash("0x5678")

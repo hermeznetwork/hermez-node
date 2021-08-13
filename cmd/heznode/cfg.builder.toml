@@ -1,164 +1,255 @@
-[API]
-Address = "localhost:8086"
-Explorer = true
-UpdateMetricsInterval = "10s"
-UpdateRecommendedFeeInterval = "10s"
-MaxSQLConnections = 100
-SQLConnectionTimeout = "2s"
+#[API]
+### Url and port where the API will listen
+#Address = "0.0.0.0:8086"
+### Enables the Explorer API endpoints
+#Explorer = true
+### Interval between updates of the API metrics
+#UpdateMetricsInterval = "10s"
+### Interval between updates of the recommended fees
+#UpdateRecommendedFeeInterval = "10s"
+### Maximum concurrent connections allowed between API and SQL
+#MaxSQLConnections = 100
+### Maximum amount of time that an API request can wait to establish a SQL connection
+#SQLConnectionTimeout = "2s"
 
-[PriceUpdater]
-Interval = "5s"
-Priority = "bitfinexV2,CoinGeckoV3"
-Statictokens="3=1.31,4=1.01"  # <tokenId>=<forced_price>,<tokenId>=<forced_price>
+#[PriceUpdater]
+### Interval between price updater calls
+#Interval = "60s"
+### Priority order to use the different providers
+#Priority = "bitfinexV2,CoinGeckoV3"
+### Static price for tokens
+#Statictokens=""  # <tokenId>=<forced_price>,<tokenId>=<forced_price>
 
-[PriceUpdater.Fiat]
-APIKey=""
-URL="https://api.exchangeratesapi.io/v1/"
-BaseCurrency="USD"
-Currencies="CNY,EUR,JPY,GBP"
+#[PriceUpdater.Fiat]
+### This parameter allow access to the external service
+#APIKey=""
+### Url of the external service
+#URL="https://api.exchangeratesapi.io/v1/"
+### Base currency used to get prices
+#BaseCurrency="USD"
+### Currencies that the hermez node is going to store
+#Currencies="CNY,EUR,JPY,GBP"
 
-[[PriceUpdater.Provider]]
-Provider = "bitfinexV2"
-BASEURL = "https://api-pub.bitfinex.com/v2/"
-URL = "ticker/t"
-URLExtraParams = "USD"
-# token order ETH,HEZ,USDT,USDC,DAI,WBTC,WETH,XAUt,UNI,SUSHI,COMP,BAL,AAVE,YFI,LINK. Order based in tokenId.
-# Available update methods:
-# - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
-# - static method is performed writting the price in Statictokens.
-# Example: Symbols = "0=ETH,1=HEZ,2=ignore,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=SUSHI:,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
-Symbols = "0=ETH,2=UST,8=ignore,9=SUSHI:,5=WBT,14=LINK:,12=AAVE:,7=XAUT:,10=COMP:,6=ETH"
+#[[PriceUpdater.Provider]]
+### Provider name used in "Priority" field
+#Provider = "bitfinexV2"
+### Provider api base url
+#BASEURL = "https://api-pub.bitfinex.com/v2/"
+### Provider url
+#URL = "ticker/t"
+### Second part of the url
+#URLExtraParams = "USD"
+### Available update methods:
+### - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
+### - static method is performed writing the price in Statictokens.
+### Example: Symbols = "0=ETH,1=HEZ,2=ignore,4=DAI,5=WBT,6=static,7=XAUT:,8=UNI,9=SUSHI:,10=COMP:,11=,12=AAVE:,13=YFI,14=LINK:"
+### Symbols that the price updater should use in order to get the prices successfully
+#Symbols = "0=ETH,2=UST,8=ignore,9=SUSHI:,5=WBT,14=LINK:,12=AAVE:,7=XAUT:,10=COMP:,6=ETH"
 
-[[PriceUpdater.Provider]]
-Provider = "CoinGeckoV3"
-BASEURL = "https://api.coingecko.com/api/v3/"
-URL = "simple/token_price/ethereum?contract_addresses="
-URLExtraParams = "&vs_currencies=usd"
-# token order ETH,HEZ,USDT,USDC,DAI,WBTC,WETH,XAUt,UNI,SUSHI,COMP,BAL,AAVE,YFI,LINK. Order based in tokenId.
-# Available update methods:
-# - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
-# - static method is performed writting the price in Statictokens.
-# Example: Addresses="0=0x00,1=0x12,2=0x12,4=0x12,5=0x12,6=,7=0x12,8=,9=0x12,10=0x12,11=ignore,12=0x12,13=0x12,14=0x12"
-Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=ignore"
+#[[PriceUpdater.Provider]]
+### Provider name used in "Priority" field
+#Provider = "CoinGeckoV3"
+### Provider api base url
+#BASEURL = "https://api.coingecko.com/api/v3/"
+### Provider url
+#URL = "simple/token_price/ethereum?contract_addresses="
+### Second part of the url
+#URLExtraParams = "&vs_currencies=usd"
+### Available update methods:
+### - ignore method don't update the price leave it as it is on the DB. Type ignore or leave the field empty
+### - static method is performed writing the price in Statictokens.
+### Example: Addresses="0=0x00,1=0x12,2=0x12,4=0x12,5=0x12,6=,7=0x12,8=,9=0x12,10=0x12,11=ignore,12=0x12,13=0x12,14=0x12"
+### Addresses that the price updater should use in order to get the prices successfully
+#Addresses="0=0x0000000000000000000000000000000000000000,2=0xdac17f958d2ee523a2206206994597c13d831ec7,8=ignore"
 
-[Debug]
-APIAddress = "0.0.0.0:12345"
-MeddlerLogs = true
-GinDebugMode = true
+#[Debug]
+### If it is set, the debug api will listen in this address and port
+#APIAddress = "0.0.0.0:12345"
+### Enables meddler debug mode, where unused columns and struct fields will be logged
+#MeddlerLogs = true
+### Sets the web framework Gin-Gonic to run in debug mode
+#GinDebugMode = false
 
-[StateDB]
-Path = "/tmp/iden3-test/hermez/statedb"
-Keep = 256
+#[StateDB]
+### Path where the synchronizer StateDB is stored
+#Path = "/var/hermez/statedb"
+### Number of checkpoints to keep
+#Keep = 256
 
 [PostgreSQL]
+## Port of the PostgreSQL write server
 PortWrite     = 5432
+## Host of the PostgreSQL write server
 HostWrite     = "localhost"
+## User of the PostgreSQL write server
 UserWrite     = "hermez"
+## Password of the PostgreSQL write server
 PasswordWrite = "yourpasswordhere"
+## Name of the PostgreSQL write server database
 NameWrite     = "hermez"
+## Port of the PostgreSQL read server. If it is not set, the hermez node will use the postgresql write server configuration
 # PortRead     = 5432
+## Host of the PostgreSQL read server. If it is not set, the hermez node will use the postgresql write server configuration
 # HostRead     = "localhost"
+## User of the PostgreSQL read server. If it is not set, the hermez node will use the postgresql write server configuration
 # UserRead     = "hermez"
+## Password of the PostgreSQL read server. If it is not set, the hermez node will use the postgresql write server configuration
 # PasswordRead = "yourpasswordhere"
+## Name of the PostgreSQL read server database. If it is not set, the hermez node will use the postgresql write server configuration
 # NameRead     = "hermez"
 
 [Web3]
+## Url of the web3 ethereum-node RPC server. Only geth is officially supported
 URL = "http://localhost:8545"
 
-[Synchronizer]
-SyncLoopInterval = "1s"
-StatsUpdateBlockNumDiffThreshold = 100
-StatsUpdateFrequencyDivider = 100
+#[Synchronizer]
+### Interval between attempts to synchronize a new block from an ethereum node
+#SyncLoopInterval = "1s"
+### Threshold of a number of Ethereum blocks left to synchronize, such that if there are more blocks to sync than the defined value synchronizer can aggressively skip calling UpdateEth to save network bandwidth and time. After reaching the threshold UpdateEth is called on each block. This value only affects the reported % of synchronization of blocks and batches, nothing else.
+#StatsUpdateBlockNumDiffThreshold = 100
+### While having more blocks to sync than updateEthBlockNumThreshold, UpdateEth will be called once in a defined number of blocks. This value only affects the reported % of synchronization of blocks and batches, nothing else
+#StatsUpdateFrequencyDivider = 100
 
 [SmartContracts]
-Rollup   = "0x8EEaea23686c319133a7cC110b840d1591d9AeE0"
+## Smart contract address of the rollup Hermez.sol
+Rollup   = "0xA68D85dF56E733A06443306A095646317B5Fa633"
 
 [Coordinator]
-ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD" # Non-Boot Coordinator
-# ForgerAddressPrivateKey = "0x30f5fddb34cd4166adb2c6003fa6b18f380fd2341376be42cf1c7937004ac7a3"
-# ForgerAddress = "0xb4124ceb3451635dacedd11767f004d8a28c6ee7" # Boot Coordinator
-# ForgerAddressPrivateKey = "0xa8a54b2d8197bc0b19bb8a084031be71835580a01e70a45a13babd16c9bc1563"
-MinimumForgeAddressBalance = "0"
-ConfirmBlocks = 10
-L1BatchTimeoutPerc = 0.6
-StartSlotBlocksDelay = 2
-ScheduleBatchBlocksAheadCheck = 3
-SendBatchBlocksMarginCheck = 1
-ProofServerPollInterval = "1s"
-ForgeRetryInterval = "500ms"
-SyncRetryInterval = "1s"
-ForgeDelay = "10s"
-ForgeNoTxsDelay = "0s"
-PurgeByExtDelInterval = "1m"
-MustForgeAtSlotDeadline = true
-IgnoreSlotCommitment = false
+## Ethereum address that the coordinator is using to forge batches
+ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD"
+### Minimum balance the forger address needs to start the coordinator in wei. If It is set to 0, the coordinator will not check the balance
+#MinimumForgeAddressBalance = "0"
+### Number of confirmation blocks to be sure that the tx has been mined correctly
+#ConfirmBlocks = 5
+### Portion of the range before the L1Batch timeout that will trigger a schedule to forge an L1Batch
+#L1BatchTimeoutPerc = 0.00001
+### Number of delay blocks to wait before starting the pipeline when a slot in which the coordinator can forge is reached
+#StartSlotBlocksDelay = 0
+### Number of blocks ahead used to decide when to stop scheduling new batches
+#ScheduleBatchBlocksAheadCheck = 0
+### Number of marging blocks used to decide when to stop sending batches to the smart contract
+#SendBatchBlocksMarginCheck = 0
+### Interval between calls to the ProofServer to check the status
+#ProofServerPollInterval = "1s"
+### Interval between forge retries after an error
+#ForgeRetryInterval = "10s"
+### Interval between calls to the main handler of a synced block after an error
+#SyncRetryInterval = "1s"
+#Delay after which a batch is forged if the slot is already committed.  If It is set to "0s", the coordinator will continuously forge at the maximum rate
+#ForgeDelay = "600s"
+### Delay after a forged batch if there are no txs to forge. If It is set to 0s, the coordinator will continuously forge even if the batches are empty
+#ForgeNoTxsDelay = "86400s"
+### Interval between calls to the PurgeByExternalDelete function of the l2db which deletes pending txs externally marked by the column `external_delete`
+#PurgeByExtDelInterval = "1m"
+### Enables the coordinator to forge in slots if the empty slots reach the slot deadline
+#MustForgeAtSlotDeadline = true
+### It will make the coordinator forge at most one batch per slot, only if there are included txs in that batch, or pending l1UserTxs in the smart contract.  Setting this parameter overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline` and `IgnoreSlotCommitment`.
+#IgnoreSlotCommitment = true
+### This parameter will make the coordinator forge at most one batch per slot, only if there are included txs in that batch, or pending l1UserTxs in the smart contract.  Setting this parameter overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline` and `IgnoreSlotCommitment`.
+#ForgeOncePerSlotIfTxs = false
 
 [Coordinator.FeeAccount]
+## Ethereum address of the account that will receive the fees
 Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"
-# PrivateKey = "0x3a9270c020e169097808da4b02e8d9100be0f8a38cfad3dcfc0b398076381fdd"
+## BJJ is the baby jub jub public key of the account that will receive the fees
 BJJ = "0x130c5c7f294792559f469220274f3d3b2dca6e89f4c5ec88d3a08bf73262171b"
-# BJJPrivateKey = "0xb556862fb60e7cf4c0a8a7f44baf2ab06a4c90ac39decc4eef363b6142d07a34"
 
-[Coordinator.L2DB]
-SafetyPeriod = 10
-MaxTxs       = 512
-MinFeeUSD    = 0.0
-MaxFeeUSD    = 50.0
-TTL          = "24h"
-PurgeBatchDelay = 10
-InvalidateBatchDelay = 20
-PurgeBlockDelay = 10
-InvalidateBlockDelay = 20
+#[Coordinator.L2DB]
+### Number of batches after which non-pending L2Txs are deleted from the pool
+#SafetyPeriod = 10
+### Maximum number of pending L2Txs that can be stored in the pool
+#MaxTxs       = 1000000
+### Minimum fee in USD that a tx must pay in order to be accepted into the pool
+#MinFeeUSD    = 0.10
+### Maximum fee in USD that a tx must pay in order to be accepted into the pool
+#MaxFeeUSD    = 10.00
+### Time To Live for L2Txs in the pool. L2Txs older than TTL will be deleted.
+#TTL          = "24h"
+### Delay between batches to purge outdated transactions. Outdated L2Txs are those that have been forged or marked as invalid for longer than the SafetyPeriod and pending L2Txs that have been in the pool for longer than TTL once there are MaxTxs
+#PurgeBatchDelay = 10
+### Delay between batches to mark invalid transactions due to nonce lower than the account nonce
+#InvalidateBatchDelay = 20
+### Delay between blocks to purge outdated transactions. Outdated L2Txs are those that have been forged or marked as invalid for longer than the SafetyPeriod and pending L2Txs that have been in the pool for longer than TTL once there are MaxTxs.
+#PurgeBlockDelay = 10
+### Delay between blocks to mark invalid transactions due to nonce lower than the account nonce
+#InvalidateBlockDelay = 20
 
-[Coordinator.TxSelector]
-Path = "/tmp/iden3-test/hermez/txselector"
+#[Coordinator.TxSelector]
+### Path where the TxSelector StateDB is stored
+#Path = "/var/hermez/txselector"
 
-[Coordinator.BatchBuilder]
-Path = "/tmp/iden3-test/hermez/batchbuilder"
+#[Coordinator.BatchBuilder]
+### Path where the BatchBuilder StateDB is stored
+#Path = "/var/hermez/batchbuilder"
 
-[[Coordinator.ServerProofs]]
-URL = "http://localhost:3000/api"
+[Coordinator.ServerProofs]
+## Server proof API URLs
+URLs = ["http://localhost:3000"]
 
 [Coordinator.Circuit]
-MaxTx = 512
+## Maximum number of txs supported by the circuit
+MaxTx = 2048
+## Maximum number of merkle tree levels supported by the circuit
 NLevels = 32
 
-[Coordinator.EthClient]
-CheckLoopInterval = "500ms"
-Attempts = 4
-AttemptsDelay = "500ms"
-TxResendTimeout = "2m"
-NoReuseNonce = false
-MaxGasPrice = 2000
-MinGasPrice = 5
-GasPriceIncPerc = 10
+#[Coordinator.EthClient]
+### Interval between receipt checks of ethereum transactions in the TxManager
+#CheckLoopInterval = "500ms"
+### Number of attempts to do an eth client RPC call before giving up
+#Attempts = 4
+### Delay between attempts do do an eth client RPC call
+#AttemptsDelay = "500ms"
+### Timeout after which a non-mined ethereum transaction will be resent (reusing the nonce) with a newly calculated gas price
+#TxResendTimeout = "2m"
+### Disables reusing nonces of pending transactions for new replacement transactions
+#NoReuseNonce = false
+### Maximum gas price allowed for ethereum transactions in gwei
+#MaxGasPrice = 500
+### Minimum gas price allowed for ethereum transactions in gwei
+#MinGasPrice = 5
+### Percentage increased of gas price set in an ethereum transaction from the suggested gas price by the ethereum node
+#GasPriceIncPerc = 5
 
 [Coordinator.EthClient.Keystore]
-Path = "/tmp/iden3-test/hermez/ethkeystore"
+### Path where the keystore is stored
+#Path = "/var/hermez/ethkeystore"
+## Password used to decrypt the keys in the keystore
 Password = "yourpasswordhere"
 
-[Coordinator.EthClient.ForgeBatchGasCost]
-Fixed = 600000
-L1UserTx = 15000
-L1CoordTx = 8000
-L2Tx = 250
+#[Coordinator.EthClient.ForgeBatchGasCost]
+### Gas needed to forge an empty batch
+#Fixed = 900000
+### Gas needed per L1 tx
+#L1UserTx = 15000
+### Gas needed for a coordinator L1 tx
+#L1CoordTx = 7000
+### Gas needed for an L2 tx
+#L2Tx = 600
 
-[Coordinator.API]
-Coordinator = true
+#[Coordinator.API]
+### Enables coordinator API endpoints
+#Coordinator = true
 
-[Coordinator.Debug]
-BatchPath = "/tmp/iden3-test/hermez/batchesdebug"
-LightScrypt = true
-# RollupVerifierIndex = 0
+#[Coordinator.Debug]
+### If this parameter is set, specifies the path where batchInfo is stored in JSON in every step/update of the pipeline
+#BatchPath = "/var/hermez/batchesdebug"
+### If lightScrypt is set, uses light parameters for the ethereum keystore encryption algorithm
+#LightScrypt = false
+### RollupVerifierIndex is the index of the verifier to use in the Rollup smart contract. The verifier chosen by index must match with the Circuit parameters
+#RollupVerifierIndex = 0
 
-[Coordinator.Etherscan]
-URL = "https://api.etherscan.io"
-APIKey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+#[Coordinator.Etherscan]
+### If this parameter is set, specifies the etherscan endpoint to get the gas estimations for that momment
+#URL = "https://api.etherscan.io"
+### APIKey parameter allows access to etherscan services
+#APIKey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 
-[RecommendedFeePolicy]
-# Strategy used to calculate the recommended fee that the API will expose.
-# Available options:
-# - Static: always return the same value (StaticValue) in USD
-# - AvgLastHour: calculate using the average fee of the forged transactions during the last hour
-PolicyType = "Static"
-StaticValue = 0.99
+#[RecommendedFeePolicy]
+### Strategy used to calculate the recommended fee that the API will expose.
+### Available options:
+### - Static: always return the same value (StaticValue) in USD
+### - AvgLastHour: calculate using the average fee of the forged transactions during the last hour
+### Selects the mode. "Static" or "AvgLastHour"
+#PolicyType = "Static"
+### If PolicyType is "static" defines the recommended fee value
+#StaticValue = 0.10

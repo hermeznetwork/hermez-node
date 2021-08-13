@@ -1301,7 +1301,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		TokenID:       0,
 		Amount:        big.NewInt(50), // Ok
 		Fee:           0,
-		Nonce:         0,
+		Nonce:         1,
 		RqOffset:      1, // Request tx bellow (position +1)
 		AtomicGroupID: agid,
 		RqFromIdx:     258, // account B
@@ -1334,7 +1334,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		RqTokenID:     0,
 		RqAmount:      big.NewInt(50), // OK
 		RqFee:         0,
-		RqNonce:       0,
+		RqNonce:       1,
 		State:         common.PoolL2TxStatePending,
 	}
 	// Tx2 signature
@@ -1373,6 +1373,17 @@ func TestFailingAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 1, len(oL2Txs))
 	assert.Equal(t, 2, len(discardedL2Txs))
+
+	for _, tx := range discardedL2Txs {
+		if tx1.TxID == tx.TxID {
+			assert.Equal(t, ErrNoCurrentNonceType, tx.ErrorType)
+		} else if tx2.TxID == tx.TxID {
+			assert.Equal(t, ErrInvalidAtomicGroupType, tx.ErrorType)
+		} else {
+			assert.Fail(t, "unexpected transaction")
+		}
+	}
+
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
 	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1010") // 1000 + 10
@@ -1680,6 +1691,15 @@ func TestSortL2Txs(t *testing.T) {
 			assert.Equal(t, expected[i], a.TxID)
 		}
 	}
+
+	//Idxs
+	idx1 := common.Idx(256)
+	idx2 := common.Idx(257)
+	idx3 := common.Idx(258)
+	idx4 := common.Idx(259)
+	idx5 := common.Idx(260)
+	idx6 := common.Idx(261)
+
 	// TxIDs
 	id1 := common.TxID([common.TxIDLen]byte{1})
 	id2 := common.TxID([common.TxIDLen]byte{2})
@@ -1696,18 +1716,21 @@ func TestSortL2Txs(t *testing.T) {
 	txs := []common.PoolL2Tx{
 		{
 			TxID:          id1,
+			FromIdx:       idx1,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   3,
 			Nonce:         2,
 		},
 		{
 			TxID:          id2,
+			FromIdx:       idx1,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   3,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
+			FromIdx:       idx2,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   7,
 			Nonce:         2,
@@ -1715,29 +1738,33 @@ func TestSortL2Txs(t *testing.T) {
 	}
 	fees := calculateAtomicGroupsAverageFee(txs)
 	actual := sortL2Txs(txs, fees)
-	assertResult(t, []common.TxID{id2, id3, id1}, actual)
+	assertResult(t, []common.TxID{id3, id2, id1}, actual)
 	// Case only atomic
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
+			FromIdx:       idx1,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   3,
 			Nonce:         2220,
 		},
 		{
 			TxID:          id2,
+			FromIdx:       idx2,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   3,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
+			FromIdx:       idx3,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   7,
 			Nonce:         300,
 		},
 		{
 			TxID:          id4,
+			FromIdx:       idx2,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   700,
 			Nonce:         2,
@@ -1750,42 +1777,49 @@ func TestSortL2Txs(t *testing.T) {
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
+			FromIdx:       idx1,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   20,
 			Nonce:         2220,
 		},
 		{
 			TxID:          id2,
+			FromIdx:       idx2,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   20,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
+			FromIdx:       idx3,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   30,
 			Nonce:         300,
 		},
 		{
 			TxID:          id4,
+			FromIdx:       idx2,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   30,
 			Nonce:         2,
 		},
 		{
 			TxID:          id5,
+			FromIdx:       idx4,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   25,
 			Nonce:         2,
 		},
 		{
 			TxID:          id6,
+			FromIdx:       idx5,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   10,
 			Nonce:         2,
 		},
 		{
 			TxID:          id7,
+			FromIdx:       idx6,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   35,
 			Nonce:         2,
