@@ -963,18 +963,11 @@ func (c *Client) RollupForgeBatch(args *eth.RollupForgeBatchArgs,
 		return nil, tracerr.Wrap(fmt.Errorf(common.AuctionErrMsgCannotForge))
 	}
 
-	// TODO: Verify proof
-
 	// Auction
 	err = a.forge(*c.addr)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-
-	// TODO: If successful, store the tx in a successful array.
-	// TODO: If failed, store the tx in a failed array.
-	// TODO: Add method to move the tx to another block, reapply it there, and possibly go from
-	// successful to failed.
 
 	return c.addBatch(args)
 }

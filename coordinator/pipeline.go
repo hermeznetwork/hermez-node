@@ -22,7 +22,6 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-// TODO: add this timeout to config file?
 const proverWaitReadyTimeout = 20 * time.Second
 
 type statsVars struct {

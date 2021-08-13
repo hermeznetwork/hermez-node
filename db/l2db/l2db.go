@@ -38,8 +38,6 @@ import (
 	"github.com/russross/meddler"
 )
 
-// TODO(Edu): Check DB consistency while there's concurrent use from Coordinator/TxSelector & API
-
 // L2DB stores L2 txs and authorization registers received by the coordinator and keeps them until they are no longer relevant
 // due to them being forged or invalid after a safety period
 type L2DB struct {

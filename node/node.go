@@ -661,8 +661,7 @@ func NewNodeAPI(
 // with cancellation.
 func (a *NodeAPI) Run(ctx context.Context) error {
 	server := &http.Server{
-		Handler: a.engine,
-		// TODO: Figure out best parameters for production
+		Handler:        a.engine,
 		ReadTimeout:    30 * time.Second, //nolint:gomnd
 		WriteTimeout:   30 * time.Second, //nolint:gomnd
 		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
@@ -737,8 +736,6 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 	return nil
 }
 
-// TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
-// don't have to pass it around.
 func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
 	time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)

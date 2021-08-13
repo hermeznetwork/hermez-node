@@ -906,18 +906,6 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 		txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
 
-	// batch 3. The A-B txs have lower fee, but are the only ones possible
-	// with the current Accounts Balances, as the B-A tx of amount 40 will
-	// not be included as will be processed first when there is not enough
-	// balance at B (processed first as the TxSelector sorts by Fee and then
-	// by Nonce).
-	// TODO: The explanation of the test just above is outdated, as the new itereation of txselector
-	// is capable of detecting more complicated situations. Before merging to develop the explanation
-	// should be updated. Leaving like this to remember that we have altered the original test, since the
-	// code is not stable yet, is good to remember of this test modification. The correctness of the result
-	// has been checked by forging more batches in the original code, and ensuring that the order of the L2Tx
-	// is the same, but contained in less batches. Also the limits in terms of MaxTxs and MaxL1Tx can be checked by
-	// comparing the configuration and the asserts
 	batchPoolL2 := `
 	Type: PoolL2
 	PoolTransfer(0) B-A: 40 (130) // B-A txs are only possible once A-B txs are processed
