@@ -11,25 +11,6 @@ UpdateRecommendedFeeInterval = HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL
 MaxSQLConnections = HEZNODE_API_MAXSQLCONNECTIONS
 SQLConnectionTimeout = HEZNODE_API_SQLCONNECTIONTIMEOUT
 
-[PriceUpdater]
-Interval = HEZNODE_PRICEUPDATER_INTERVAL
-Priority = HEZNODE_PRICEUPDATER_PRIORITY
-Statictokens = HEZNODE_PRICEUPDATER_STATICTOKENS
-
-[PriceUpdater.Fiat]
-APIKey = HEZNODE_PRICEUPDATER_FIAT_APIKEY
-URL = HEZNODE_PRICEUPDATER_FIAT_URL
-BaseCurrency = HEZNODE_PRICEUPDATER_FIAT_BASECURRENCY
-Currencies = HEZNODE_PRICEUPDATER_FIAT_CURRENCIES
-
-[[PriceUpdater.Provider]]
-Provider = HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER
-BASEURL = HEZNODE_PRICEUPDATER_PROVIDER_BASEURL
-URL = HEZNODE_PRICEUPDATER_PROVIDER_URL
-URLExtraParams = HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS
-Symbols = HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS
-Addresses = HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES
-
 [Debug]
 APIAddress = HEZNODE_DEBUG_APIADDRESS
 MeddlerLogs = HEZNODE_DEBUG_MEDDLERLOGS
@@ -154,19 +135,6 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |API|UpdateRecommendedFeeInterval|HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL|Optional|"10s"|Interval between updates of the recommended fees
 |API|MaxSQLConnections|HEZNODE_API_MAXSQLCONNECTIONS|Optional|100|Maximum concurrent connections allowed between API and SQL
 |API|SQLConnectionTimeout|HEZNODE_API_SQLCONNECTIONTIMEOUT|Optional|"2s"|Maximum amount of time that an API request can wait to establish a SQL connection
-|PriceUpdater|Interval|HEZNODE_PRICEUPDATER_INTERVAL|Optional|"60s"|Interval between price updater calls
-|PriceUpdater|Priority|HEZNODE_PRICEUPDATER_PRIORITY|Optional|"bitfinexV2,CoinGeckoV3"|Priority order to use the different providers
-|PriceUpdater|Statictokens|HEZNODE_PRICEUPDATER_STATICTOKENS|Optional|""|Static price for tokens
-|PriceUpdater.Fiat|APIKey|HEZNODE_PRICEUPDATER_FIAT_APIKEY|Optional|""|This parameter allow access to the external service
-|PriceUpdater.Fiat|URL|HEZNODE_PRICEUPDATER_FIAT_URL|Optional|"https://api.exchangeratesapi.io/v1/"|Url of the external service
-|PriceUpdater.Fiat|BaseCurrency|HEZNODE_PRICEUPDATER_FIAT_BASECURRENCY|Optional|"USD"|Base currency used to get prices
-|PriceUpdater.Fiat|Currencies|HEZNODE_PRICEUPDATER_FIAT_CURRENCIES|Optional|"CNY,EUR,JPY,GBP"|Currencies that the hermez node is going to store
-|PriceUpdater.Provider|Provider|HEZNODE_PRICEUPDATER_PROVIDER_PROVIDER|Optional|"bitfinexV2"|Provider name used in "Priority" field
-|PriceUpdater.Provider|BASEURL|HEZNODE_PRICEUPDATER_PROVIDER_BASEURL|Optional|"https://api-pub.bitfinex.com/v2/"|Provider api base url
-|PriceUpdater.Provider|URL|HEZNODE_PRICEUPDATER_PROVIDER_URL|Optional|"ticker/t"| Provider url
-|PriceUpdater.Provider|URLExtraParams|HEZNODE_PRICEUPDATER_PROVIDER_URLEXTRAPARAMS|Optional|"USD"|Second part of the url
-|PriceUpdater.Provider|Symbols|HEZNODE_PRICEUPDATER_PROVIDER_SYMBOLS|Optional|"2=UST,3=UDC,5=WBT,7=XAUT:,9=SUSHI:,10=COMP:,12=AAVE:,14=LINK:,24=GNT,27=ignore,28=ignore,29=ignore,30=ignore,31=ignore,32=ignore"|Symbols that the price updater should use in order to get the prices successfully
-|PriceUpdater.Provider|Addresses|HEZNODE_PRICEUPDATER_PROVIDER_ADDRESSES|Optional|Addresses="6=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2,17=0xde30da39c46104798bb5aa3fe8b9e0e1f348163f,18=0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0,21=0xc944e90c64b2c07662a292be6244bdf05cda44a7,26=0xD533a949740bb3306d119CC777fa900bA034cd52,27=ignore,28=ignore,29=ignore,30=ignore,31=ignore,32=ignore"|Addresses that the price updater should use in order to get the prices successfully
 |Debug|APIAddress|HEZNODE_DEBUG_APIADDRESS|Optional|"0.0.0.0:12345"|If it is set, the debug api will listen in this address and port
 |Debug|MeddlerLogs|HEZNODE_DEBUG_MEDDLERLOGS|Optional|true|Enables meddler debug mode, where unused columns and struct fields will be logged
 |Debug|GinDebugMode|HEZNODE_DEBUG_GINDEBUGMODE|Optional|false|Sets the web framework Gin-Gonic to run in debug mode

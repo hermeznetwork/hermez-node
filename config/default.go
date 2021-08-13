@@ -10,36 +10,6 @@ UpdateRecommendedFeeInterval = "10s"
 MaxSQLConnections = 100
 SQLConnectionTimeout = "2s"
 
-[PriceUpdater]
-Interval = "60s"
-Priority = "bitfinexV2,CoinGeckoV3"
-Statictokens=""  # <tokenId>=<forced_price>,<tokenId>=<forced_price>
-
-[PriceUpdater.Fiat]
-APIKey=""
-URL="https://api.exchangeratesapi.io/v1/"
-BaseCurrency="USD"
-Currencies="CNY,EUR,JPY,GBP"
-
-[[PriceUpdater.Provider]]
-Provider = "bitfinexV2"
-BASEURL = "https://api-pub.bitfinex.com/v2/"
-URL = "ticker/t"
-URLExtraParams = "USD"
-Symbols = "2=UST,3=UDC,5=WBT,7=XAUT:,9=SUSHI:,10=COMP:,12=AAVE:,14=LINK:,24=GNT,27=ignore,28=ignore,29=ignore,30=ignore,31=ignore,32=ignore"
-
-[[PriceUpdater.Provider]]
-Provider = "CoinGeckoV3"
-BASEURL = "https://api.coingecko.com/api/v3/"
-URL = "simple/token_price/ethereum?contract_addresses="
-URLExtraParams = "&vs_currencies=usd"
-Addresses="6=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2,17=0xde30da39c46104798bb5aa3fe8b9e0e1f348163f,18=0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0,21=0xc944e90c64b2c07662a292be6244bdf05cda44a7,26=0xD533a949740bb3306d119CC777fa900bA034cd52,27=ignore,28=ignore,29=ignore,30=ignore,31=ignore,32=ignore"
-
-[Debug]
-APIAddress = "0.0.0.0:12345"
-MeddlerLogs = true
-GinDebugMode = false
-
 [StateDB]
 Path = "/var/hermez/statedb"
 Keep = 256
