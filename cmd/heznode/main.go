@@ -441,7 +441,8 @@ func cmdMakeBackup(c *cli.Context) error {
 	log.Info("starting to make a hermez-node backup...")
 	var wg sync.WaitGroup
 	// two goroutines for state db and postgres db
-	wg.Add(2)
+	goroutinesAmount := 2
+	wg.Add(goroutinesAmount)
 	_cfg, err := parseCli(c)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
@@ -471,12 +472,15 @@ func cmdMakeBackup(c *cli.Context) error {
 	wg.Wait()
 	log.Info("finished with making state db dump")
 	log.Info("finished with dumps. started to make zip file...")
-	err = exec.Command("zip", "-r", path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)), backupPath).Run()
+	cmdZip := "zip"
+	args := []string{"-r", path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)), backupPath}
+	err = exec.Command(cmdZip, args...).Run() // #nosec G204
 	if err != nil {
 		log.Errorf("failed to zip %s directory, err: %v", backupPath, err)
 		return err
 	}
-	err = exec.Command("rm", "-rf", backupPath).Run()
+
+	err = os.RemoveAll(backupPath)
 	if err != nil {
 		log.Errorf("failed to delete tmp folder %s", backupPath)
 		return err
@@ -490,8 +494,9 @@ func copyDirectory(wg *sync.WaitGroup, basePath, destPath string) {
 		log.Infof("made a copy of %s directory of the state db", basePath)
 		wg.Done()
 	}()
-
-	err := exec.Command("cp", "-r", basePath, destPath).Run()
+	cmdCp := "cp"
+	args := []string{"-r", basePath, destPath}
+	err := exec.Command(cmdCp, args...).Run() // #nosec G204
 	if err != nil {
 		log.Errorf("failed to copy folder %s, err: %v", basePath, err)
 	}
@@ -551,10 +556,13 @@ func makeDBDump(wg *sync.WaitGroup, cfg *config.Node, destPath, today string) {
 	}
 	// nolint
 	defer outfile.Close()
-
-	cmd := exec.Command("pg_dump", "--dbname",
+	cmdPgDump := "pg_dump"
+	args := []string{
+		"--dbname",
 		fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
-			cfg.PostgreSQL.UserWrite, cfg.PostgreSQL.PasswordWrite, cfg.PostgreSQL.HostWrite, cfg.PostgreSQL.PortWrite, cfg.PostgreSQL.NameWrite))
+			cfg.PostgreSQL.UserWrite, cfg.PostgreSQL.PasswordWrite, cfg.PostgreSQL.HostWrite, cfg.PostgreSQL.PortWrite, cfg.PostgreSQL.NameWrite),
+	}
+	cmd := exec.Command(cmdPgDump, args...) // #nosec G204
 	cmd.Stdout = outfile
 	if err = cmd.Run(); err != nil {
 		log.Errorf("failed to run pg_dump command, err: %v", err)
