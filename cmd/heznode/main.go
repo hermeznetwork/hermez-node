@@ -514,8 +514,7 @@ func createZip(pathToZip, destPath string) error {
 		if err != nil {
 			return err
 		}
-		filePath = filepath.Clean(filePath)
-		fsFile, err := os.Open(filePath)
+		fsFile, err := os.Open(filepath.Clean(filePath))
 		if err != nil {
 			return err
 		}
