@@ -43,7 +43,6 @@ package coordinator
 import (
 	"context"
 	"fmt"
-	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"math/big"
 	"os"
 	"sync"
@@ -53,6 +52,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"

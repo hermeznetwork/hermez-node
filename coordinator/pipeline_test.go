@@ -3,7 +3,6 @@ package coordinator
 import (
 	"context"
 	"fmt"
-	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"

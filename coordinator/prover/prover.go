@@ -147,8 +147,8 @@ func (status StatusCode) IsInitialized() bool {
 
 // Status is the return struct for the status API endpoint
 type Status struct {
-	Status StatusCode `json:"status"`
-	Proof  string     `json:"proof"`
+	Status  StatusCode `json:"status"`
+	Proof   string     `json:"proof"`
 	PubData string     `json:"pubData"`
 }
 
