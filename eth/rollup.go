@@ -814,6 +814,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			L1Tx.ToForgeL1TxsNum = &toForgeL1TxsNum
 			L1Tx.Position = int(new(big.Int).SetBytes(vLog.Topics[2][:]).Int64())
 			L1Tx.UserOrigin = true
+			L1Tx.EthTxHash = vLog.TxHash
 			L1UserTx.L1UserTx = *L1Tx
 			rollupEvents.L1UserTx = append(rollupEvents.L1UserTx, L1UserTx)
 		case logHermezAddToken:
