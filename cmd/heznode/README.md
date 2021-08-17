@@ -28,6 +28,7 @@ COMMANDS:
    serveapi        Serve the API only
    discard         Discard blocks up to a specified block number
    accountInfo     get information about the specified account
+   backup          creates postgres dump and statedb last 10 batches and zip them
    help, h         Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
@@ -168,4 +169,10 @@ fixes in the code).
 Read information about an account:
 ```shell
 ./dist/heznode accountInfo --ethNodeUrl https://geth.marcelonode.xyz --auctContractAddrHex 0x1D5c3Dd2003118743D596D7DB7EA07de6C90fB20 --accountAddrHex 0x715ea08DAE7dCD40E98379D11af237b587BC2f77
+```
+
+Make backup of hermez-node dbs:
+```shell
+./dist/heznode backup --mode coord --cfg cmd/heznode/cfg.builder.toml --path /home/ubuntu/hez-backup
+
 ```

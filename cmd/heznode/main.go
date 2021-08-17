@@ -1,15 +1,21 @@
 package main
 
 import (
+	"archive/zip"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -38,6 +44,7 @@ const (
 	modeCoord   = "coord"
 	nMigrations = "nMigrations"
 	flagAccount = "account"
+	flagPath    = "path"
 )
 
 var (
@@ -433,6 +440,174 @@ func cmdDiscard(c *cli.Context) error {
 	return nil
 }
 
+func cmdMakeBackup(c *cli.Context) error {
+	log.Info("starting to make a hermez-node backup...")
+	var wg sync.WaitGroup
+	// two goroutines for state db and postgres db
+	goroutinesAmount := 2
+	wg.Add(goroutinesAmount)
+	_cfg, err := parseCli(c)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
+	}
+	cfg := _cfg.node
+	zipPath := c.String(flagPath)
+	if _, err = os.Stat(zipPath); os.IsNotExist(err) {
+		log.Infof("creating directory %s for the backup", zipPath)
+		err = os.MkdirAll(zipPath, os.ModePerm)
+		if err != nil {
+			log.Errorf("failed to create %s directory, err: %v", zipPath, err)
+			return err
+		}
+	}
+
+	backupPath := path.Join(zipPath, "backup")
+	err = os.MkdirAll(backupPath, os.ModePerm)
+	if err != nil {
+		log.Errorf("failed to create %s directory, err: %v", backupPath, err)
+		return err
+	}
+
+	today := time.Now().Format("20060102150405")
+	go makeDBDump(&wg, cfg, backupPath, today)
+	go makeStateDBDump(&wg, cfg, backupPath)
+
+	wg.Wait()
+	log.Info("finished with making state db dump")
+	log.Info("finished with dumps. started to make zip file...")
+	err = createZip(backupPath, path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)))
+	if err != nil {
+		log.Errorf("failed to zip %s directory, err: %v", backupPath, err)
+		return err
+	}
+	err = os.RemoveAll(backupPath)
+	if err != nil {
+		log.Errorf("failed to delete tmp folder %s", backupPath)
+		return err
+	}
+	log.Infof("backup finished! You could find zip file there: %s", zipPath)
+	return nil
+}
+
+func createZip(pathToZip, destPath string) error {
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	// nolint
+	defer destFile.Close()
+
+	w := zip.NewWriter(destFile)
+	// nolint
+	defer w.Close()
+
+	return filepath.Walk(pathToZip, func(filePath string, info os.FileInfo, err error) error {
+		log.Infof("crawling: %#v", filePath)
+		if info.IsDir() {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		relPath := strings.TrimPrefix(filePath, filepath.Dir(pathToZip))
+		zipFile, err := w.Create(relPath)
+		if err != nil {
+			return err
+		}
+		fsFile, err := os.Open(filepath.Clean(filePath))
+		if err != nil {
+			return err
+		}
+		// nolint
+		defer fsFile.Close()
+		_, err = io.Copy(zipFile, fsFile)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func copyDirectory(wg *sync.WaitGroup, basePath, destPath string) {
+	defer func() {
+		log.Infof("made a copy of %s directory of the state db", basePath)
+		wg.Done()
+	}()
+	cmdCp := "cp"
+	args := []string{"-r", basePath, destPath}
+	err := exec.Command(cmdCp, args...).Run() // #nosec G204
+	if err != nil {
+		log.Errorf("failed to copy folder %s, err: %v", basePath, err)
+	}
+}
+
+func makeStateDBDump(wg *sync.WaitGroup, cfg *config.Node, destPath string) {
+	defer wg.Done()
+	log.Infof("started to make state db db dump...")
+
+	dbWrite, err := dbUtils.InitSQLDB(
+		cfg.PostgreSQL.PortWrite,
+		cfg.PostgreSQL.HostWrite,
+		cfg.PostgreSQL.UserWrite,
+		cfg.PostgreSQL.PasswordWrite,
+		cfg.PostgreSQL.NameWrite,
+	)
+	if err != nil {
+		log.Errorf("failed to connect to historydb, err: %v", err)
+		return
+	}
+
+	historyDB := historydb.NewHistoryDB(dbWrite, dbWrite, nil)
+	batchNum, err := historyDB.GetLastBatchNum()
+	if err != nil {
+		log.Errorf("failed to get last batch num from historydb, err: %v", err)
+		return
+	}
+
+	dbPath := cfg.StateDB.Path
+	statedbBackupPath := path.Join(destPath, "statedb")
+	err = os.MkdirAll(statedbBackupPath, os.ModePerm)
+	if err != nil {
+		log.Errorf("failed to create %s directory, err: %v", statedbBackupPath, err)
+		return
+	}
+	var paths []string
+	paths = append(paths, path.Join(dbPath, kvdb.PathCurrent), path.Join(dbPath, kvdb.PathLast))
+	for i := 0; i < 10; i++ {
+		paths = append(paths, path.Join(dbPath, fmt.Sprintf("%s%d", kvdb.PathBatchNum, int(batchNum)-i)))
+	}
+	wg.Add(len(paths))
+	for _, p := range paths {
+		go copyDirectory(wg, p, statedbBackupPath)
+	}
+}
+
+func makeDBDump(wg *sync.WaitGroup, cfg *config.Node, destPath, today string) {
+	defer func() {
+		log.Infof("finished with making postgres db dump")
+		wg.Done()
+	}()
+	log.Infof("started to make postgres db dump...")
+	outfile, err := os.Create(path.Join(destPath, fmt.Sprintf("hermezdb-dump-%s.sql", today)))
+	if err != nil {
+		log.Errorf("failed to create sql dump file, err: %v", err)
+		return
+	}
+	// nolint
+	defer outfile.Close()
+	cmdPgDump := "pg_dump"
+	args := []string{
+		"--dbname",
+		fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
+			cfg.PostgreSQL.UserWrite, cfg.PostgreSQL.PasswordWrite, cfg.PostgreSQL.HostWrite, cfg.PostgreSQL.PortWrite, cfg.PostgreSQL.NameWrite),
+	}
+	cmd := exec.Command(cmdPgDump, args...) // #nosec G204
+	cmd.Stdout = outfile
+	if err = cmd.Run(); err != nil {
+		log.Errorf("failed to run pg_dump command, err: %v", err)
+	}
+}
+
 // Config is the configuration of the hermez node execution
 type Config struct {
 	mode node.Mode
@@ -625,6 +800,18 @@ func main() {
 				&cli.StringFlag{
 					Name:     flagAccount,
 					Usage:    "account address in hex",
+					Required: true,
+				}),
+		},
+		{
+			Name:    "backup",
+			Aliases: []string{},
+			Usage:   "Make the backup for postgres and statedb",
+			Action:  cmdMakeBackup,
+			Flags: append(flags,
+				&cli.StringFlag{
+					Name:     flagPath,
+					Usage:    "path for saving backup",
 					Required: true,
 				}),
 		},
