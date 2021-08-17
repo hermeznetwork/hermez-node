@@ -1,13 +1,16 @@
 package main
 
 import (
+	"archive/zip"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -472,14 +475,11 @@ func cmdMakeBackup(c *cli.Context) error {
 	wg.Wait()
 	log.Info("finished with making state db dump")
 	log.Info("finished with dumps. started to make zip file...")
-	cmdZip := "zip"
-	args := []string{"-r", path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)), backupPath}
-	err = exec.Command(cmdZip, args...).Run() // #nosec G204
+	err = createZip(backupPath, path.Join(zipPath, fmt.Sprintf("hermez-%s.zip", today)))
 	if err != nil {
 		log.Errorf("failed to zip %s directory, err: %v", backupPath, err)
 		return err
 	}
-
 	err = os.RemoveAll(backupPath)
 	if err != nil {
 		log.Errorf("failed to delete tmp folder %s", backupPath)
@@ -487,6 +487,46 @@ func cmdMakeBackup(c *cli.Context) error {
 	}
 	log.Infof("backup finished! You could find zip file there: %s", zipPath)
 	return nil
+}
+
+func createZip(pathToZip, destPath string) error {
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	// nolint
+	defer destFile.Close()
+
+	w := zip.NewWriter(destFile)
+	// nolint
+	defer w.Close()
+
+	return filepath.Walk(pathToZip, func(filePath string, info os.FileInfo, err error) error {
+		log.Infof("crawling: %#v", filePath)
+		if info.IsDir() {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		relPath := strings.TrimPrefix(filePath, filepath.Dir(pathToZip))
+		zipFile, err := w.Create(relPath)
+		if err != nil {
+			return err
+		}
+		filePath = filepath.Clean(filePath)
+		fsFile, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		// nolint
+		defer fsFile.Close()
+		_, err = io.Copy(zipFile, fsFile)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func copyDirectory(wg *sync.WaitGroup, basePath, destPath string) {
