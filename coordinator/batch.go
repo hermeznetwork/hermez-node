@@ -3,6 +3,7 @@ package coordinator
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"io/ioutil"
 	"math/big"
 	"path"
@@ -12,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/eth"
-	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -78,12 +78,12 @@ type Debug struct {
 // BatchInfo contans the Batch information
 type BatchInfo struct {
 	PipelineNum           int
-	BatchNum              common.BatchNum
-	ServerProof           prover.Client
-	ProofStart            time.Time
-	ZKInputs              *common.ZKInputs
-	Proof                 *prover.Proof
-	PublicInputs          []*big.Int
+	BatchNum     common.BatchNum
+	ServerProof  prover.Client
+	ProofStart   time.Time
+	ZKInputs     *common.ZKInputs
+	Proof        *prover.Proof
+	PublicInputs []*big.Int
 	L1Batch               bool
 	VerifierIdx           uint8
 	L1UserTxs             []common.L1Tx

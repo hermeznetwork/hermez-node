@@ -3,6 +3,7 @@ package proofserver
 import (
 	"context"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/tracerr"
 )
 

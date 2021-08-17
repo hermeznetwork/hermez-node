@@ -10,7 +10,7 @@ The Coordinator begins with the pipeline stopped.  The main Coordinator
 goroutine keeps listening for synchronizer events sent by the node package,
 which allow the coordinator to determine if the configured forger address is
 allowed to forge at the current block or not.  When the forger address becomes
-allowed to forge, the pipeline is started, and when it terminates being allowed
+allowed forging, the pipeline is started, and when it terminates being allowed
 to forge, the pipeline is stopped.
 
 The Pipeline consists of two goroutines.  The first one is in charge of
@@ -19,7 +19,7 @@ and calculating the ZKInputs for the batch proof, and sending these ZKInputs to
 an idle proof server.  This goroutine will keep preparing batches while there
 are idle proof servers, if the forging policy determines that a batch should be
 forged in the current state.  The second goroutine is in charge of waiting for
-the proof server to finish computing the proof, retreiving it, prepare the
+the proof server to finish computing the proof, retrieving it, prepare the
 arguments for the `forgeBatch` Rollup transaction, and sending the result to
 the TxManager.  All the batch information moves between functions and
 goroutines via the BatchInfo struct.
@@ -43,6 +43,7 @@ package coordinator
 import (
 	"context"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"math/big"
 	"os"
 	"sync"
@@ -57,7 +58,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
 	"github.com/hermeznetwork/hermez-node/txselector"
