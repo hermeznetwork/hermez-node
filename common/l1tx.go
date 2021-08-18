@@ -47,6 +47,7 @@ type L1Tx struct {
 	// Ethereum Block Number in which this L1Tx was added to the queue
 	EthBlockNum int64          `meddler:"eth_block_num"`
 	EthTxHash   ethCommon.Hash `meddler:"eth_tx_hash,zeroisnull"`
+	L1Fee       *big.Int       `meddler:"l1_fee,bigintnull"`
 	Type        TxType         `meddler:"type"`
 	BatchNum    *BatchNum      `meddler:"batch_num"`
 }

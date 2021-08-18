@@ -815,6 +815,13 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			L1Tx.Position = int(new(big.Int).SetBytes(vLog.Topics[2][:]).Int64())
 			L1Tx.UserOrigin = true
 			L1Tx.EthTxHash = vLog.TxHash
+			//Get l1Fee in eth wei spent in the l1 tx
+			tx, _, err := c.client.client.TransactionByHash(context.Background(), vLog.TxHash)
+			if err != nil {
+				return nil, tracerr.Wrap(fmt.Errorf("TransactionByHash: %w", err))
+			}
+			l1Fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()))
+			L1Tx.L1Fee = l1Fee
 			L1UserTx.L1UserTx = *L1Tx
 			rollupEvents.L1UserTx = append(rollupEvents.L1UserTx, L1UserTx)
 		case logHermezAddToken:

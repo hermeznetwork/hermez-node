@@ -89,6 +89,7 @@ type L1infoJSON struct {
 	HistoricDepositAmountUSD *float64            `json:"historicDepositAmountUSD"`
 	EthereumBlockNum         int64               `json:"ethereumBlockNum"`
 	EthereumTxHash           *ethCommon.Hash     `json:"ethereumTxHash"`
+	L1Fee                    *apitypes.BigIntStr `json:"l1Fee"`
 }
 
 // L2infoJSON is a representation of the JSON structure returned
@@ -126,6 +127,7 @@ type TxAPI struct {
 	AmountSuccess            bool                `meddler:"amount_success"`
 	DepositAmountSuccess     bool                `meddler:"deposit_amount_success"`
 	EthereumTxHash           ethCommon.Hash      `meddler:"eth_tx_hash,zeroisnull"`
+	L1Fee                    *apitypes.BigIntStr `meddler:"l1_fee"`
 	// L2
 	Fee            *common.FeeSelector `meddler:"fee"`
 	HistoricFeeUSD *float64            `meddler:"fee_usd"`
@@ -196,6 +198,7 @@ func (tx TxAPI) MarshalJSON() ([]byte, error) {
 			HistoricDepositAmountUSD: tx.HistoricDepositAmountUSD,
 			EthereumBlockNum:         tx.EthBlockNum,
 			EthereumTxHash:           &tx.EthereumTxHash,
+			L1Fee:                    tx.L1Fee,
 		}
 	} else {
 		txa.L1orL2 = "L2"
@@ -233,6 +236,7 @@ type txWrite struct {
 	DepositAmount      *big.Int               `meddler:"deposit_amount,bigintnull"`
 	DepositAmountFloat *float64               `meddler:"deposit_amount_f"`
 	EthTxHash          *ethCommon.Hash        `meddler:"eth_tx_hash"`
+	L1Fee              *big.Int               `meddler:"l1_fee,bigintnull"`
 	// L2
 	Fee   *common.FeeSelector `meddler:"fee"`
 	Nonce *nonce.Nonce        `meddler:"nonce"`
