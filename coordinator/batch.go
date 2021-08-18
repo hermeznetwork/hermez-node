@@ -11,8 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"github.com/hermeznetwork/hermez-node/eth"
-	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/tracerr"
 )
 

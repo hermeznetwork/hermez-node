@@ -11,12 +11,12 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/metric"
-	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/txselector"
 	"github.com/hermeznetwork/tracerr"

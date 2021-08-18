@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/coordinator/prover"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/tracerr"
 )
 
