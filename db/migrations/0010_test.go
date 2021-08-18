@@ -55,8 +55,8 @@ func (m migrationTest0010) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 	assert.Equal(t, 1, result)
 
 	insert := `INSERT INTO tx
-	(item_id, is_l1, id, "type", "position", from_idx, effective_from_idx, from_eth_addr, from_bjj, to_idx, to_eth_addr, to_bjj, amount, amount_success, amount_f, token_id, amount_usd, batch_num, eth_block_num, to_forge_l1_txs_num, user_origin, deposit_amount, deposit_amount_success, deposit_amount_f, deposit_amount_usd, fee, fee_usd, nonce, eth_tx_hash)
-	VALUES(4, true, decode('00B55F0882C5229D1BE3D9D3C1A076290F249CD0BAE5AE6E609234606BEFB91233','hex'), 'CreateAccountDeposit', 1, 0, 257, decode('9766D2E7FFDE358AD0A40BB87C4B88D9FAC3F4DD','hex'), decode('4D05C307400C65795F02DB96B1B81C60386FD53E947D9D3F749F3D99B1853909','hex'), 0, NULL, NULL, 0, true, 0, 11, NULL, 7, 191, 6, true, 1000000000000000000, true, 1000000000000000000, NULL, NULL, NULL, NULL, DECODE('6b9cb28230289dcfb748859531f17ebb305c638a970c5c84377fc680fddfcf80', 'hex'));`
+	(item_id, is_l1, id, "type", "position", from_idx, effective_from_idx, from_eth_addr, from_bjj, to_idx, to_eth_addr, to_bjj, amount, amount_success, amount_f, token_id, amount_usd, batch_num, eth_block_num, to_forge_l1_txs_num, user_origin, deposit_amount, deposit_amount_success, deposit_amount_f, deposit_amount_usd, fee, fee_usd, nonce, eth_tx_hash, l1_fee)
+	VALUES(4, true, decode('00B55F0882C5229D1BE3D9D3C1A076290F249CD0BAE5AE6E609234606BEFB91233','hex'), 'CreateAccountDeposit', 1, 0, 257, decode('9766D2E7FFDE358AD0A40BB87C4B88D9FAC3F4DD','hex'), decode('4D05C307400C65795F02DB96B1B81C60386FD53E947D9D3F749F3D99B1853909','hex'), 0, NULL, NULL, 0, true, 0, 11, NULL, 7, 191, 6, true, 1000000000000000000, true, 1000000000000000000, NULL, NULL, NULL, NULL, DECODE('6b9cb28230289dcfb748859531f17ebb305c638a970c5c84377fc680fddfcf80', 'hex'), 3007800000);`
 	_, err := db.Exec(insert)
 	assert.NoError(t, err)
 }
@@ -70,10 +70,13 @@ func (m migrationTest0010) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 	assert.NoError(t, row.Scan(&result))
 	assert.Equal(t, 1, result)
 
-	// check that eth_tx_hash field doesn't exist anymore
-	const queryCheckItemID = `SELECT COUNT(*) FROM tx WHERE eth_tx_hash IS NULL;`
-	row = db.QueryRow(queryCheckItemID)
+	// check that eth_tx_hash and l1_fee fields don't exist anymore
+	const queryCheckEthTxHash = `SELECT COUNT(*) FROM tx WHERE eth_tx_hash IS NULL;`
+	row = db.QueryRow(queryCheckEthTxHash)
 	assert.Equal(t, `pq: column "eth_tx_hash" does not exist`, row.Scan(&result).Error())
+	const queryCheckFee = `SELECT COUNT(*) FROM tx WHERE l1_fee IS NULL;`
+	row = db.QueryRow(queryCheckFee)
+	assert.Equal(t, `pq: column "l1_fee" does not exist`, row.Scan(&result).Error())
 }
 
 func TestMigration0010(t *testing.T) {
