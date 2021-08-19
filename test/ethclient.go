@@ -1889,3 +1889,22 @@ func (c *Client) CtlAddBlocks(blocks []common.BlockData) (err error) {
 	}
 	return nil
 }
+
+// EthTransaction returns the transaction  of the given txHash
+func (c *Client) EthTransaction(ctx context.Context,
+	txHash ethCommon.Hash) (*types.Transaction, bool, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	for i := int64(0); i < c.blockNum; i++ {
+		b := c.blocks[i]
+		_, ok := b.Rollup.Txs[txHash]
+		if !ok {
+			_, ok = b.Auction.Txs[txHash]
+		}
+		if ok {
+			return &types.Transaction{}, true, nil
+		}
+	}
+	return nil, false, nil
+}

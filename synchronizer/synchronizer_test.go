@@ -161,6 +161,9 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block,
 		for j := range syncBatch.L1CoordinatorTxs {
 			assert.NotEqual(t, 0, syncBatch.L1CoordinatorTxs[j].EffectiveFromIdx)
 		}
+		for i := range batch.L1CoordinatorTxs {
+			batch.L1CoordinatorTxs[i].EthTxHash = ethCommon.HexToHash("0xef98421250239de255750811293f167abb9325152520acb62e40de72746d4d5e")
+		}
 		assert.Equal(t, batch.L1CoordinatorTxs, syncBatch.L1CoordinatorTxs)
 		assert.Equal(t, batch.L2Txs, syncBatch.L2Txs)
 		// In exit tree, we only check AccountIdx and Balance, because
@@ -210,6 +213,7 @@ func checkSyncBlock(t *testing.T, s *Synchronizer, blockNum int, block,
 					break
 				}
 			}
+			dbTx.EthTxHash = ethCommon.HexToHash("0xef98421250239de255750811293f167abb9325152520acb62e40de72746d4d5e")
 			assert.Equal(t, &tx, dbTx) //nolint:gosec
 		}
 
