@@ -82,6 +82,8 @@ type EthereumClient struct {
 	ks      *ethKeystore.KeyStore
 	config  *EthereumConfig
 	opts    *bind.CallOpts
+
+	tmpEvents map[int64][]types.Log
 }
 
 // NewEthereumClient creates a EthereumClient instance.  The account is not mandatory (it can
@@ -371,6 +373,13 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 	from := fromBlock
 	to := from + blocksPerCycle
 
+	for bn := from; bn <= to; bn++ {
+		if _, ok := c.tmpEvents[bn]; ok {
+			delete(c.tmpEvents, bn)
+			return bn, nil
+		}
+	}
+
 	for {
 		q := ethereum.FilterQuery{
 			FromBlock: big.NewInt(from),
@@ -388,6 +397,10 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 		}
 
 		if len(logs) > 0 {
+			for _, log := range logs {
+				c.tmpEvents[int64(log.BlockNumber)] = append(c.tmpEvents[int64(log.BlockNumber)], log)
+			}
+
 			// when we have logs, we sort the logs by block ascending and get the first one
 			sort.Slice(logs, func(i, j int) bool {
 				return logs[i].BlockNumber < logs[j].BlockNumber
