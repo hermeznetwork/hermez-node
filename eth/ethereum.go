@@ -42,7 +42,6 @@ type EthereumInterface interface {
 	EthSuggestGasPrice(ctx context.Context) (*big.Int, error)
 	EthKeyStore() *ethKeystore.KeyStore
 	EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error)
-	EthTransaction(ctx context.Context, txHash ethCommon.Hash) (tx *types.Transaction, isPending bool, err error)
 }
 
 var (
@@ -349,10 +348,4 @@ func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
 	}
 	result, err := c.client.CallContract(ctx, msg, blockNum)
 	return result, tracerr.Wrap(err)
-}
-
-// EthTransaction returns the transaction information of the given txHash
-func (c *EthereumClient) EthTransaction(ctx context.Context,
-	txHash ethCommon.Hash) (tx *types.Transaction, isPending bool, err error) {
-	return c.client.TransactionByHash(ctx, txHash)
 }
