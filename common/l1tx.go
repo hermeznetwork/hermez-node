@@ -45,9 +45,11 @@ type L1Tx struct {
 	// EffectiveDepositAmount only applies to L1UserTx.
 	EffectiveDepositAmount *big.Int `meddler:"effective_deposit_amount,bigintnull"`
 	// Ethereum Block Number in which this L1Tx was added to the queue
-	EthBlockNum int64     `meddler:"eth_block_num"`
-	Type        TxType    `meddler:"type"`
-	BatchNum    *BatchNum `meddler:"batch_num"`
+	EthBlockNum int64          `meddler:"eth_block_num"`
+	EthTxHash   ethCommon.Hash `meddler:"eth_tx_hash,zeroisnull"`
+	L1Fee       *big.Int       `meddler:"l1_fee,bigintnull"`
+	Type        TxType         `meddler:"type"`
+	BatchNum    *BatchNum      `meddler:"batch_num"`
 }
 
 // NewL1Tx returns the given L1Tx with the TxId & Type parameters calculated

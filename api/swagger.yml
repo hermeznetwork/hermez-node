@@ -2169,6 +2169,15 @@ components:
                 - $ref: '#/components/schemas/EthBlockNum'
                 - description: Ethereum block in which the transaction was added to the smart contract forge queue.
                 - example: 258723049
+            ethereumTxHash:
+              type: string
+              description: hash of the Ethereum transaction in which the tx was mined
+              example: "0xae98c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
+            l1Fee:
+              type: string
+              description: fee spent by the user
+              example: "50000000"
+              nullable: true
           required:
             - toForgeL1TransactionsNum
             - userOrigin
@@ -2177,6 +2186,8 @@ components:
             - depositAmountSuccess
             - historicDepositAmountUSD
             - ethereumBlockNum
+            - ethereumTxHash
+            - l1Fee
           additionalProperties: false
         L2Info:
           type: object
@@ -2205,6 +2216,8 @@ components:
           depositAmount: '261'
           toForgeL1TransactionsNum: 10
           userOrigin: true
+          ethereumTxHash: "0xae98c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
+          l1Fee: "5000000"
         L1orL2: L1
         L2Info: 
         amount: '261'
@@ -2269,6 +2282,8 @@ components:
               depositAmount: '0'
               toForgeL1TransactionsNum: 7
               userOrigin: true
+              ethereumTxHash: "0xae98c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
+              l1Fee: "5000000"
             L1orL2: L1
             L2Info: 
             amount: '88888800000000000'
@@ -2361,6 +2376,8 @@ components:
               depositAmount: '33333333300000000000'
               toForgeL1TransactionsNum: 2
               userOrigin: true
+              ethereumTxHash: "0xae98c94d860f01a17f961bf4bdfb6e0c6cd10d3fda5cc861e805ca1240c58553"
+              l1Fee: "5000000"
             L1orL2: L1
             L2Info: 
             amount: '0'

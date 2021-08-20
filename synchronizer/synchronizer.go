@@ -906,6 +906,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			l1CoordinatorTx.UserOrigin = false
 			l1CoordinatorTx.EthBlockNum = blockNum
 			l1CoordinatorTx.BatchNum = &batchNum
+			l1CoordinatorTx.EthTxHash = ethTxHash
 			l1Tx, err := common.NewL1Tx(&l1CoordinatorTx)
 			if err != nil {
 				return nil, tracerr.Wrap(err)

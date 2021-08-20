@@ -649,6 +649,8 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 			FromBJJ:            &l1txs[i].FromBJJ,
 			DepositAmount:      l1txs[i].DepositAmount,
 			DepositAmountFloat: &depositAmountFloat,
+			EthTxHash:          &l1txs[i].EthTxHash,
+			L1Fee:              l1txs[i].L1Fee,
 		})
 	}
 	return tracerr.Wrap(hdb.addTxs(d, txs))
@@ -712,6 +714,8 @@ func (hdb *HistoryDB) addTxs(d meddler.DB, txs []txWrite) error {
 			from_bjj,
 			deposit_amount,
 			deposit_amount_f,
+			eth_tx_hash,
+			l1_fee,
 			fee,
 			nonce
 		) VALUES %s;`,
