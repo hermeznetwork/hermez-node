@@ -723,21 +723,20 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 	return nil
 }
 
-func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
-	time.Duration, error) {
-	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
+func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
+	blockData, discarded, err := n.sync.Sync(ctx)
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
-		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
+		return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
 	} else if discarded != nil {
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
 		vars := n.sync.SCVars()
 		if err := n.handleReorg(ctx, stats, vars); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
+			return time.Duration(0), tracerr.Wrap(err)
 		}
-		return nil, time.Duration(0), nil
+		return time.Duration(0), nil
 	} else if blockData != nil {
 		// case: new block
 		vars := common.SCVariablesPtr{
@@ -746,12 +745,12 @@ func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common
 			WDelayer: blockData.WDelayer.Vars,
 		}
 		if err := n.handleNewBlock(ctx, stats, &vars, blockData.Rollup.Batches); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
+			return time.Duration(0), tracerr.Wrap(err)
 		}
-		return &blockData.Block, time.Duration(0), nil
+		return time.Duration(0), nil
 	} else {
 		// case: no block
-		return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
+		return n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 	}
 }
 
@@ -773,7 +772,6 @@ func (n *Node) StartSynchronizer() {
 	n.wg.Add(1)
 	go func() {
 		var err error
-		var lastBlock *common.Block
 		waitDuration := time.Duration(0)
 		for {
 			select {
@@ -782,14 +780,13 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(waitDuration):
-				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx,
-					lastBlock); err != nil {
+				if waitDuration, err = n.syncLoopFn(n.ctx); err != nil {
 					if n.ctx.Err() != nil {
 						continue
 					}
-					if errors.Is(err, eth.ErrBlockHashMismatchEvent) {
-						log.Warnw("Synchronizer.Sync", "err", err)
-					} else if errors.Is(err, synchronizer.ErrUnknownBlock) {
+					if errors.Is(err, eth.ErrBlockHashMismatchEvent) ||
+						errors.Is(err, synchronizer.ErrUnknownBlock) ||
+						errors.Is(err, synchronizer.ErrNoBlockToSync) {
 						log.Warnw("Synchronizer.Sync", "err", err)
 					} else {
 						log.Errorw("Synchronizer.Sync", "err", err)

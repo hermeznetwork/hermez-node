@@ -374,7 +374,7 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, false, stats.Synced())
 
 	// Test Sync for rollup genesis block
-	syncBlock, discards, err := s.Sync(ctx, nil)
+	syncBlock, discards, err := s.Sync(ctx)
 	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
@@ -397,7 +397,7 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, int64(1), dbBlocks[1].Num)
 
 	// Sync again and expect no new blocks
-	syncBlock, discards, err = s.Sync(ctx, nil)
+	syncBlock, discards, err = s.Sync(ctx)
 	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.Nil(t, syncBlock)
@@ -494,7 +494,7 @@ func TestSyncGeneral(t *testing.T) {
 
 	// Block 2
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
+	syncBlock, discards, err = s.Sync(ctx)
 	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
@@ -514,7 +514,7 @@ func TestSyncGeneral(t *testing.T) {
 
 	// Block 3
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
+	syncBlock, discards, err = s.Sync(ctx)
 	assert.NoError(t, err)
 	require.NoError(t, err)
 	require.Nil(t, discards)
@@ -543,7 +543,7 @@ func TestSyncGeneral(t *testing.T) {
 	require.NoError(t, err)
 	client.CtlMineBlock()
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
+	syncBlock, discards, err = s.Sync(ctx)
 	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
@@ -594,7 +594,7 @@ func TestSyncGeneral(t *testing.T) {
 
 	client.CtlMineBlock()
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
+	syncBlock, discards, err = s.Sync(ctx)
 	require.NoError(t, err)
 	require.Nil(t, discards)
 	require.NotNil(t, syncBlock)
@@ -679,7 +679,7 @@ func TestSyncGeneral(t *testing.T) {
 	require.NoError(t, err)
 
 	// First sync detects the reorg and discards 4 blocks
-	syncBlock, discards, err = s.Sync(ctx, nil)
+	syncBlock, discards, err = s.Sync(ctx)
 	require.NoError(t, err)
 	expetedDiscards := int64(4)
 	require.Equal(t, &expetedDiscards, discards)
@@ -707,7 +707,7 @@ func TestSyncGeneral(t *testing.T) {
 
 	// Sync blocks 2-6
 	for i := 0; i < 5; i++ {
-		syncBlock, discards, err = s.Sync(ctx, nil)
+		syncBlock, discards, err = s.Sync(ctx)
 		require.NoError(t, err)
 		require.Nil(t, discards)
 		require.NotNil(t, syncBlock)
@@ -833,7 +833,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 
 	// be in sync
 	for {
-		syncBlock, discards, err := s.Sync(ctx, nil)
+		syncBlock, discards, err := s.Sync(ctx)
 		require.NoError(t, err)
 		require.Nil(t, discards)
 		if syncBlock == nil {
@@ -852,7 +852,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 		err = client.CtlAddBlocks([]common.BlockData{block})
 		require.NoError(t, err)
 
-		syncBlock, discards, err := s.Sync(ctx, nil)
+		syncBlock, discards, err := s.Sync(ctx)
 		require.NoError(t, err)
 		require.Nil(t, discards)
 		if syncBlock == nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -42,6 +43,8 @@ type EthereumInterface interface {
 	EthSuggestGasPrice(ctx context.Context) (*big.Int, error)
 	EthKeyStore() *ethKeystore.KeyStore
 	EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error)
+
+	EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error)
 }
 
 var (
@@ -50,6 +53,12 @@ var (
 	// ErrBlockHashMismatchEvent is used when there's a block hash mismatch
 	// between different events of the same block
 	ErrBlockHashMismatchEvent = fmt.Errorf("block hash mismatch in event log")
+
+	// ErrNoNextBlockWithSCEvents is used when the method EthNextBlockWithSCEvents can't
+	// find a block that contains events in any of the provided SC addresses between the
+	// provided fromBlock parameter and the last block in the chain at the moment of the
+	// call
+	ErrNoNextBlockWithSCEvents = fmt.Errorf("there is no block in the chain with events for the provided smart contract addresses at this moment")
 )
 
 const (
@@ -348,4 +357,54 @@ func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
 	}
 	result, err := c.client.CallContract(ctx, msg, blockNum)
 	return result, tracerr.Wrap(err)
+}
+
+// EthNextBlockWithSCEvents returns the next block with events in the provided SC addresses
+func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
+	const blocksPerCycle = int64(10000)
+
+	lastBlock, err := c.EthLastBlock()
+	if err != nil {
+		return 0, nil
+	}
+
+	from := fromBlock
+	to := from + blocksPerCycle
+
+	for {
+		q := ethereum.FilterQuery{
+			FromBlock: big.NewInt(from),
+			ToBlock:   big.NewInt(to),
+			Addresses: addresses,
+		}
+
+		// query logs with filter
+		logs, err := c.client.FilterLogs(ctx, q)
+		if err != nil {
+			return 0, err
+		}
+
+		if len(logs) > 0 {
+			// when we have logs, we sort the logs by block ascending and get the first one
+			sort.Slice(logs, func(i, j int) bool {
+				return logs[i].BlockNumber < logs[j].BlockNumber
+			})
+
+			return int64(logs[0].BlockNumber), nil
+		}
+
+		// move to the next range until the end of the chain
+		// if "to" is equal lastBlock then stop searching
+		if to == lastBlock {
+			return 0, ErrNoNextBlockWithSCEvents
+		}
+
+		from = to
+		to += blocksPerCycle
+		// if the "to" is greater than lastBlock, we set "to" as the lastBlock in order
+		// to be execute the last try to find a block with events
+		if to > lastBlock {
+			to = lastBlock
+		}
+	}
 }
