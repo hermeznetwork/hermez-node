@@ -90,3 +90,10 @@ type BlockData struct {
 	Auction  AuctionData
 	WDelayer WDelayerData
 }
+
+// SyncBlockResult contains the information for a synchronized block
+type SyncBlockResult struct {
+	Discarded *int64
+	Data      *BlockData
+	Error     error
+}

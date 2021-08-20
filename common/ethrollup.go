@@ -113,6 +113,7 @@ type RollupConstants struct {
 	HermezAuctionContract       ethCommon.Address      `json:"hermezAuctionContract"`
 	HermezGovernanceAddress     ethCommon.Address      `json:"hermezGovernanceAddress"`
 	WithdrawDelayerContract     ethCommon.Address      `json:"withdrawDelayerContract"`
+	HermezRollupContract        ethCommon.Address      `json:"HermezRollupContract"`
 }
 
 // FindVerifierIdx tries to find a matching verifier in the RollupConstants and

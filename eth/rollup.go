@@ -665,6 +665,7 @@ func (c *RollupClient) RollupInstantWithdrawalViewer(tokenAddress ethCommon.Addr
 // RollupConstants returns the Constants of the Rollup Smart Contract
 func (c *RollupClient) RollupConstants() (rollupConstants *common.RollupConstants, err error) {
 	rollupConstants = new(common.RollupConstants)
+	rollupConstants.HermezRollupContract = c.address
 	if err := c.client.Call(func(ec *ethclient.Client) error {
 		absoluteMaxL1L2BatchTimeout, err := c.hermez.ABSOLUTEMAXL1L2BATCHTIMEOUT(c.opts)
 		if err != nil {

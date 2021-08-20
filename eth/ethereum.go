@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -42,6 +43,8 @@ type EthereumInterface interface {
 	EthSuggestGasPrice(ctx context.Context) (*big.Int, error)
 	EthKeyStore() *ethKeystore.KeyStore
 	EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error)
+
+	EthBlocksWithEvents(context.Context, int64, int64, []ethCommon.Address) ([]int64, error)
 }
 
 var (
@@ -272,6 +275,38 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 		Hash:       header.Hash(),
 	}
 	return b, nil
+}
+
+// EthBlocksWithEvents return blocks that contains events from the contracts with the addresses provided
+func (c *EthereumClient) EthBlocksWithEvents(ctx context.Context, from, to int64, addresses []ethCommon.Address) ([]int64, error) {
+	q := ethereum.FilterQuery{
+		FromBlock: big.NewInt(from),
+		ToBlock:   big.NewInt(to),
+		Addresses: addresses,
+	}
+
+	logs, err := c.client.FilterLogs(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	blockNumbersHashMap := map[int64]bool{}
+
+	for _, log := range logs {
+		blockNumbersHashMap[int64(log.BlockNumber)] = true
+	}
+
+	blockNumbers := make([]int64, 0, len(blockNumbersHashMap))
+
+	for k := range blockNumbersHashMap {
+		blockNumbers = append(blockNumbers, k)
+	}
+
+	sort.Slice(blockNumbers, func(i, j int) bool {
+		return blockNumbers[i] < blockNumbers[j]
+	})
+
+	return blockNumbers, nil
 }
 
 // EthERC20Consts returns the constants defined for a particular ERC20 Token instance.

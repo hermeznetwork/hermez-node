@@ -723,36 +723,42 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 	return nil
 }
 
-func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
-	time.Duration, error) {
-	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
-	stats := n.sync.Stats()
-	if err != nil {
-		// case: error
-		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
-	} else if discarded != nil {
-		// case: reorg
-		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
-		vars := n.sync.SCVars()
-		if err := n.handleReorg(ctx, stats, vars); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
+func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block, time.Duration, error) {
+	syncResults, err := n.sync.Sync(ctx, lastBlock)
+
+	var lastSr common.SyncBlockResult
+
+	for _, sr := range syncResults {
+		stats := n.sync.Stats()
+		if err != nil {
+			// case: error
+			return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
+		} else if sr.Discarded != nil {
+			// case: reorg
+			log.Infow("Synchronizer.Sync reorg", "discarded", *sr.Discarded)
+			vars := n.sync.SCVars()
+			if err := n.handleReorg(ctx, stats, vars); err != nil {
+				return nil, time.Duration(0), tracerr.Wrap(err)
+			}
+			return nil, time.Duration(0), nil
+		} else if sr.Data != nil {
+			// case: new block
+			vars := common.SCVariablesPtr{
+				Rollup:   sr.Data.Rollup.Vars,
+				Auction:  sr.Data.Auction.Vars,
+				WDelayer: sr.Data.WDelayer.Vars,
+			}
+			if err := n.handleNewBlock(ctx, stats, &vars, sr.Data.Rollup.Batches); err != nil {
+				return nil, time.Duration(0), tracerr.Wrap(err)
+			}
+			lastSr = sr
+		} else {
+			// case: no block
+			return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 		}
-		return nil, time.Duration(0), nil
-	} else if blockData != nil {
-		// case: new block
-		vars := common.SCVariablesPtr{
-			Rollup:   blockData.Rollup.Vars,
-			Auction:  blockData.Auction.Vars,
-			WDelayer: blockData.WDelayer.Vars,
-		}
-		if err := n.handleNewBlock(ctx, stats, &vars, blockData.Rollup.Batches); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
-		}
-		return &blockData.Block, time.Duration(0), nil
-	} else {
-		// case: no block
-		return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 	}
+
+	return &lastSr.Data.Block, time.Duration(0), nil
 }
 
 // StartSynchronizer starts the synchronizer
@@ -782,8 +788,7 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(waitDuration):
-				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx,
-					lastBlock); err != nil {
+				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx, lastBlock); err != nil {
 					if n.ctx.Err() != nil {
 						continue
 					}

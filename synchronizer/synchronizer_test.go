@@ -370,33 +370,37 @@ func TestSyncGeneral(t *testing.T) {
 	assert.Equal(t, false, stats.Synced())
 
 	// Test Sync for rollup genesis block
-	syncBlock, discards, err := s.Sync(ctx, nil)
-	require.NoError(t, err)
-	require.Nil(t, discards)
-	require.NotNil(t, syncBlock)
-	require.Nil(t, syncBlock.Rollup.Vars)
-	require.Nil(t, syncBlock.Auction.Vars)
-	require.Nil(t, syncBlock.WDelayer.Vars)
-	assert.Equal(t, int64(1), syncBlock.Block.Num)
-	stats = s.Stats()
-	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
-	assert.Equal(t, int64(1), stats.Eth.LastBlock.Num)
-	assert.Equal(t, int64(1), stats.Sync.LastBlock.Num)
-	vars := s.SCVars()
-	assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
-	assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
-	assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
+	syncResults, err := s.Sync(ctx, nil)
+	for _, sr := range syncResults {
+		require.NoError(t, err)
+		require.Nil(t, sr.Discarded)
+		require.NotNil(t, sr.Data)
+		require.Nil(t, sr.Data.Rollup.Vars)
+		require.Nil(t, sr.Data.Auction.Vars)
+		require.Nil(t, sr.Data.WDelayer.Vars)
+		assert.Equal(t, int64(1), sr.Data.Block.Num)
+		stats = s.Stats()
+		assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
+		assert.Equal(t, int64(1), stats.Eth.LastBlock.Num)
+		assert.Equal(t, int64(1), stats.Sync.LastBlock.Num)
+		vars := s.SCVars()
+		assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
+		assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
+		assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
 
-	dbBlocks, err := s.historyDB.GetAllBlocks()
-	require.NoError(t, err)
-	assert.Equal(t, 2, len(dbBlocks))
-	assert.Equal(t, int64(1), dbBlocks[1].Num)
+		dbBlocks, err := s.historyDB.GetAllBlocks()
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(dbBlocks))
+		assert.Equal(t, int64(1), dbBlocks[1].Num)
+	}
 
 	// Sync again and expect no new blocks
-	syncBlock, discards, err = s.Sync(ctx, nil)
-	require.NoError(t, err)
-	require.Nil(t, discards)
-	require.Nil(t, syncBlock)
+	syncResults, _ = s.Sync(ctx, nil)
+	for _, sr := range syncResults {
+		require.NoError(t, sr.Error)
+		require.Nil(t, sr.Discarded)
+		require.Nil(t, sr.Data)
+	}
 
 	//
 	// Generate blockchain and smart contract data, and fill the test smart contracts
@@ -490,44 +494,48 @@ func TestSyncGeneral(t *testing.T) {
 
 	// Block 2
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
-	require.NoError(t, err)
-	require.Nil(t, discards)
-	require.NotNil(t, syncBlock)
-	assert.Nil(t, syncBlock.Rollup.Vars)
-	assert.Nil(t, syncBlock.Auction.Vars)
-	assert.Nil(t, syncBlock.WDelayer.Vars)
-	assert.Equal(t, int64(2), syncBlock.Block.Num)
-	stats = s.Stats()
-	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
-	assert.Equal(t, int64(3), stats.Eth.LastBlock.Num)
-	assert.Equal(t, int64(2), stats.Sync.LastBlock.Num)
-	// Set ethereum transaction hash (til doesn't set it)
-	blocks[0].Rollup.Batches[0].Batch.EthTxHash = syncBlock.Rollup.Batches[0].Batch.EthTxHash
-	blocks[0].Rollup.Batches[1].Batch.EthTxHash = syncBlock.Rollup.Batches[1].Batch.EthTxHash
+	syncResults, err = s.Sync(ctx, nil)
+	for _, sr := range syncResults {
+		require.NoError(t, err)
+		require.Nil(t, sr.Discarded)
+		require.NotNil(t, sr.Data)
+		assert.Nil(t, sr.Data.Rollup.Vars)
+		assert.Nil(t, sr.Data.Auction.Vars)
+		assert.Nil(t, sr.Data.WDelayer.Vars)
+		assert.Equal(t, int64(2), sr.Data.Block.Num)
+		stats = s.Stats()
+		assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
+		assert.Equal(t, int64(3), stats.Eth.LastBlock.Num)
+		assert.Equal(t, int64(2), stats.Sync.LastBlock.Num)
+		// Set ethereum transaction hash (til doesn't set it)
+		blocks[0].Rollup.Batches[0].Batch.EthTxHash = sr.Data.Rollup.Batches[0].Batch.EthTxHash
+		blocks[0].Rollup.Batches[1].Batch.EthTxHash = sr.Data.Rollup.Batches[1].Batch.EthTxHash
 
-	checkSyncBlock(t, s, 2, &blocks[0], syncBlock)
+		checkSyncBlock(t, s, 2, &blocks[0], sr.Data)
+	}
 
 	// Block 3
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
-	assert.NoError(t, err)
-	require.NoError(t, err)
-	require.Nil(t, discards)
-	require.NotNil(t, syncBlock)
-	assert.Nil(t, syncBlock.Rollup.Vars)
-	assert.Nil(t, syncBlock.Auction.Vars)
-	assert.Nil(t, syncBlock.WDelayer.Vars)
-	assert.Equal(t, int64(3), syncBlock.Block.Num)
-	stats = s.Stats()
-	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
-	assert.Equal(t, int64(3), stats.Eth.LastBlock.Num)
-	assert.Equal(t, int64(3), stats.Sync.LastBlock.Num)
-	// Set ethereum transaction hash (til doesn't set it)
-	blocks[1].Rollup.Batches[0].Batch.EthTxHash = syncBlock.Rollup.Batches[0].Batch.EthTxHash
-	blocks[1].Rollup.Batches[1].Batch.EthTxHash = syncBlock.Rollup.Batches[1].Batch.EthTxHash
+	syncResults, err = s.Sync(ctx, nil)
+	for _, sr := range syncResults {
+		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.Nil(t, sr.Discarded)
+		require.NotNil(t, sr.Data)
+		assert.Nil(t, sr.Data.Rollup.Vars)
+		assert.Nil(t, sr.Data.Auction.Vars)
+		assert.Nil(t, sr.Data.WDelayer.Vars)
+		assert.Equal(t, int64(3), sr.Data.Block.Num)
+		stats = s.Stats()
+		assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
+		assert.Equal(t, int64(3), stats.Eth.LastBlock.Num)
+		assert.Equal(t, int64(3), stats.Sync.LastBlock.Num)
+		// Set ethereum transaction hash (til doesn't set it)
+		blocks[1].Rollup.Batches[0].Batch.EthTxHash = sr.Data.Rollup.Batches[0].Batch.EthTxHash
+		blocks[1].Rollup.Batches[1].Batch.EthTxHash = sr.Data.Rollup.Batches[1].Batch.EthTxHash
 
-	checkSyncBlock(t, s, 3, &blocks[1], syncBlock)
+		checkSyncBlock(t, s, 3, &blocks[1], sr.Data)
+	}
 
 	// Block 4
 	// Generate 2 withdraws manually
@@ -539,19 +547,21 @@ func TestSyncGeneral(t *testing.T) {
 	require.NoError(t, err)
 	client.CtlMineBlock()
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
-	require.NoError(t, err)
-	require.Nil(t, discards)
-	require.NotNil(t, syncBlock)
-	assert.Nil(t, syncBlock.Rollup.Vars)
-	assert.Nil(t, syncBlock.Auction.Vars)
-	assert.Nil(t, syncBlock.WDelayer.Vars)
-	assert.Equal(t, int64(4), syncBlock.Block.Num)
-	stats = s.Stats()
-	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
-	assert.Equal(t, int64(4), stats.Eth.LastBlock.Num)
-	assert.Equal(t, int64(4), stats.Sync.LastBlock.Num)
-	vars = s.SCVars()
+	syncResults, err = s.Sync(ctx, nil)
+	for _, sr := range syncResults {
+		require.NoError(t, err)
+		require.Nil(t, sr.Discarded)
+		require.NotNil(t, sr.Data)
+		assert.Nil(t, sr.Data.Rollup.Vars)
+		assert.Nil(t, sr.Data.Auction.Vars)
+		assert.Nil(t, sr.Data.WDelayer.Vars)
+		assert.Equal(t, int64(4), sr.Data.Block.Num)
+		stats = s.Stats()
+		assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
+		assert.Equal(t, int64(4), stats.Eth.LastBlock.Num)
+		assert.Equal(t, int64(4), stats.Sync.LastBlock.Num)
+	}
+	vars := s.SCVars()
 	assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
 	assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
 	assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
@@ -590,33 +600,34 @@ func TestSyncGeneral(t *testing.T) {
 
 	client.CtlMineBlock()
 
-	syncBlock, discards, err = s.Sync(ctx, nil)
-	require.NoError(t, err)
-	require.Nil(t, discards)
-	require.NotNil(t, syncBlock)
-	assert.NotNil(t, syncBlock.Rollup.Vars)
-	assert.NotNil(t, syncBlock.Auction.Vars)
-	assert.NotNil(t, syncBlock.WDelayer.Vars)
-	assert.Equal(t, int64(5), syncBlock.Block.Num)
-	stats = s.Stats()
-	assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
-	assert.Equal(t, int64(5), stats.Eth.LastBlock.Num)
-	assert.Equal(t, int64(5), stats.Sync.LastBlock.Num)
-	vars = s.SCVars()
-	assert.NotEqual(t, clientSetup.RollupVariables, vars.Rollup)
-	assert.NotEqual(t, clientSetup.AuctionVariables, vars.Auction)
-	assert.NotEqual(t, clientSetup.WDelayerVariables, vars.WDelayer)
+	syncResults, err = s.Sync(ctx, nil)
+	for _, sr := range syncResults {
+		require.NoError(t, err)
+		require.Nil(t, sr.Discarded)
+		require.NotNil(t, sr.Data)
+		assert.NotNil(t, sr.Data.Rollup.Vars)
+		assert.NotNil(t, sr.Data.Auction.Vars)
+		assert.NotNil(t, sr.Data.WDelayer.Vars)
+		assert.Equal(t, int64(5), sr.Data.Block.Num)
+		stats = s.Stats()
+		assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
+		assert.Equal(t, int64(5), stats.Eth.LastBlock.Num)
+		assert.Equal(t, int64(5), stats.Sync.LastBlock.Num)
+		vars = s.SCVars()
+		assert.NotEqual(t, clientSetup.RollupVariables, vars.Rollup)
+		assert.NotEqual(t, clientSetup.AuctionVariables, vars.Auction)
+		assert.NotEqual(t, clientSetup.WDelayerVariables, vars.WDelayer)
 
-	dbRollupVars, dbAuctionVars, dbWDelayerVars, err := s.historyDB.GetSCVars()
-	require.NoError(t, err)
-	// Set EthBlockNum for Vars to the blockNum in which they were updated (should be 5)
-	rollupVars.EthBlockNum = syncBlock.Block.Num
-	auctionVars.EthBlockNum = syncBlock.Block.Num
-	wDelayerVars.EthBlockNum = syncBlock.Block.Num
-	assert.Equal(t, rollupVars, dbRollupVars)
-	assert.Equal(t, auctionVars, dbAuctionVars)
-	assert.Equal(t, wDelayerVars, dbWDelayerVars)
-
+		dbRollupVars, dbAuctionVars, dbWDelayerVars, err := s.historyDB.GetSCVars()
+		require.NoError(t, err)
+		// Set EthBlockNum for Vars to the blockNum in which they were updated (should be 5)
+		rollupVars.EthBlockNum = sr.Data.Block.Num
+		auctionVars.EthBlockNum = sr.Data.Block.Num
+		wDelayerVars.EthBlockNum = sr.Data.Block.Num
+		assert.Equal(t, rollupVars, dbRollupVars)
+		assert.Equal(t, auctionVars, dbAuctionVars)
+		assert.Equal(t, wDelayerVars, dbWDelayerVars)
+	}
 	//
 	// Reorg test
 	//
@@ -675,67 +686,71 @@ func TestSyncGeneral(t *testing.T) {
 	require.NoError(t, err)
 
 	// First sync detects the reorg and discards 4 blocks
-	syncBlock, discards, err = s.Sync(ctx, nil)
-	require.NoError(t, err)
-	expetedDiscards := int64(4)
-	require.Equal(t, &expetedDiscards, discards)
-	require.Nil(t, syncBlock)
-	stats = s.Stats()
-	assert.Equal(t, false, stats.Synced())
-	assert.Equal(t, int64(6), stats.Eth.LastBlock.Num)
-	vars = s.SCVars()
-	assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
-	assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
-	assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
-
-	// At this point, the DB only has data up to block 1
-	dbBlock, err := s.historyDB.GetLastBlock()
-	require.NoError(t, err)
-	assert.Equal(t, int64(1), dbBlock.Num)
-
-	// Accounts in HistoryDB and StateDB must be empty
-	dbAccounts, err := s.historyDB.GetAllAccounts()
-	require.NoError(t, err)
-	sdbAccounts, err := s.stateDB.TestGetAccounts()
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(dbAccounts))
-	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
-
-	// Sync blocks 2-6
-	for i := 0; i < 5; i++ {
-		syncBlock, discards, err = s.Sync(ctx, nil)
+	syncResults, err = s.Sync(ctx, nil)
+	for _, sr := range syncResults {
 		require.NoError(t, err)
-		require.Nil(t, discards)
-		require.NotNil(t, syncBlock)
-		assert.Nil(t, syncBlock.Rollup.Vars)
-		assert.Nil(t, syncBlock.Auction.Vars)
-		assert.Nil(t, syncBlock.WDelayer.Vars)
-		assert.Equal(t, int64(2+i), syncBlock.Block.Num)
-
+		expetedDiscards := int64(4)
+		require.Equal(t, &expetedDiscards, sr.Discarded)
+		require.Nil(t, sr.Data)
 		stats = s.Stats()
-		assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
+		assert.Equal(t, false, stats.Synced())
 		assert.Equal(t, int64(6), stats.Eth.LastBlock.Num)
-		assert.Equal(t, int64(2+i), stats.Sync.LastBlock.Num)
-		if i == 4 {
-			assert.Equal(t, true, stats.Synced())
-		} else {
-			assert.Equal(t, false, stats.Synced())
-		}
-
 		vars = s.SCVars()
 		assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
 		assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
 		assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
+
+		// At this point, the DB only has data up to block 1
+		dbBlock, err := s.historyDB.GetLastBlock()
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), dbBlock.Num)
+
+		// Accounts in HistoryDB and StateDB must be empty
+		dbAccounts, err := s.historyDB.GetAllAccounts()
+		require.NoError(t, err)
+		sdbAccounts, err := s.stateDB.TestGetAccounts()
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(dbAccounts))
+		assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
 	}
 
-	dbBlock, err = s.historyDB.GetLastBlock()
+	// Sync blocks 2-6
+	for i := 0; i < 5; i++ {
+		syncResults, err = s.Sync(ctx, nil)
+		for _, sr := range syncResults {
+			require.NoError(t, err)
+			require.Nil(t, sr.Discarded)
+			require.NotNil(t, sr.Data)
+			assert.Nil(t, sr.Data.Rollup.Vars)
+			assert.Nil(t, sr.Data.Auction.Vars)
+			assert.Nil(t, sr.Data.WDelayer.Vars)
+			assert.Equal(t, int64(2+i), sr.Data.Block.Num)
+
+			stats = s.Stats()
+			assert.Equal(t, int64(1), stats.Eth.FirstBlockNum)
+			assert.Equal(t, int64(6), stats.Eth.LastBlock.Num)
+			assert.Equal(t, int64(2+i), stats.Sync.LastBlock.Num)
+			if i == 4 {
+				assert.Equal(t, true, stats.Synced())
+			} else {
+				assert.Equal(t, false, stats.Synced())
+			}
+
+			vars = s.SCVars()
+			assert.Equal(t, *clientSetup.RollupVariables, vars.Rollup)
+			assert.Equal(t, *clientSetup.AuctionVariables, vars.Auction)
+			assert.Equal(t, *clientSetup.WDelayerVariables, vars.WDelayer)
+		}
+	}
+
+	dbBlock, err := s.historyDB.GetLastBlock()
 	require.NoError(t, err)
 	assert.Equal(t, int64(6), dbBlock.Num)
 
 	// Accounts in HistoryDB and StateDB is only 2 entries
-	dbAccounts, err = s.historyDB.GetAllAccounts()
+	dbAccounts, err := s.historyDB.GetAllAccounts()
 	require.NoError(t, err)
-	sdbAccounts, err = s.stateDB.TestGetAccounts()
+	sdbAccounts, err := s.stateDB.TestGetAccounts()
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(dbAccounts))
 	assertEqualAccountsHistoryDBStateDB(t, dbAccounts, sdbAccounts)
@@ -828,11 +843,18 @@ func TestSyncForgerCommitment(t *testing.T) {
 	// }
 
 	// be in sync
+	b := false
 	for {
-		syncBlock, discards, err := s.Sync(ctx, nil)
-		require.NoError(t, err)
-		require.Nil(t, discards)
-		if syncBlock == nil {
+		syncResults, err := s.Sync(ctx, nil)
+		for _, sr := range syncResults {
+			require.NoError(t, err)
+			require.Nil(t, sr.Discarded)
+			if sr.Data == nil {
+				b = true
+				break
+			}
+		}
+		if b {
 			break
 		}
 	}
@@ -848,24 +870,26 @@ func TestSyncForgerCommitment(t *testing.T) {
 		err = client.CtlAddBlocks([]common.BlockData{block})
 		require.NoError(t, err)
 
-		syncBlock, discards, err := s.Sync(ctx, nil)
-		require.NoError(t, err)
-		require.Nil(t, discards)
-		if syncBlock == nil {
-			break
-		}
-		stats := s.Stats()
-		require.True(t, stats.Synced())
-		syncCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
+		syncResults, err := s.Sync(ctx, nil)
+		for _, sr := range syncResults {
+			require.NoError(t, err)
+			require.Nil(t, sr.Discarded)
+			if sr.Data == nil {
+				break
+			}
+			stats := s.Stats()
+			require.True(t, stats.Synced())
+			syncCommitment[sr.Data.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
 
-		s2, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
-			StatsUpdateBlockNumDiffThreshold: 100,
-			StatsUpdateFrequencyDivider:      100,
-		})
-		require.NoError(t, err)
-		stats = s2.Stats()
-		require.True(t, stats.Synced())
-		syncRestartedCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
+			s2, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
+				StatsUpdateBlockNumDiffThreshold: 100,
+				StatsUpdateFrequencyDivider:      100,
+			})
+			require.NoError(t, err)
+			stats = s2.Stats()
+			require.True(t, stats.Synced())
+			syncRestartedCommitment[sr.Data.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
+		}
 	}
 	assert.Equal(t, commitment, syncCommitment)
 	assert.Equal(t, commitment, syncRestartedCommitment)

@@ -153,11 +153,18 @@ func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchr
 	require.NoError(t, err)
 
 	ctx := context.Background()
+	b := false
 	for {
-		syncBlock, discards, err := sync.Sync(ctx, nil)
-		require.NoError(t, err)
-		require.Nil(t, discards)
-		if syncBlock == nil {
+		syncResults, err := sync.Sync(ctx, nil)
+		for _, sr := range syncResults {
+			require.NoError(t, err)
+			require.Nil(t, sr.Discarded)
+			if sr.Data == nil {
+				b = true
+				break
+			}
+		}
+		if b {
 			break
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"sort"
 	"sync"
 	"time"
 
@@ -725,6 +726,23 @@ func (c *Client) EthBlockByNumber(ctx context.Context, blockNum int64) (*common.
 		Hash:       block.Eth.Hash,
 		ParentHash: block.Eth.ParentHash,
 	}, nil
+}
+
+// EthBlocksWithEvents return blocks that contains events from the contracts with the addresses provided
+func (c *Client) EthBlocksWithEvents(ctx context.Context, from, to int64, addresses []ethCommon.Address) ([]int64, error) {
+	blockNumbers := []int64{}
+
+	for k := range c.blocks {
+		if k >= from && k <= to {
+			blockNumbers = append(blockNumbers, k)
+		}
+	}
+
+	sort.Slice(blockNumbers, func(i, j int) bool {
+		return blockNumbers[i] < blockNumbers[j]
+	})
+
+	return blockNumbers, nil
 }
 
 // EthAddress returns the ethereum address of the account loaded into the Client

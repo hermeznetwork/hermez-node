@@ -545,25 +545,27 @@ func TestCoordinatorStress(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for {
-			blockData, _, err := syn.Sync(ctx, nil)
-			if ctx.Err() != nil {
-				wg.Done()
-				return
-			}
-			require.NoError(t, err)
-			if blockData != nil {
-				stats := syn.Stats()
-				coord.SendMsg(ctx, MsgSyncBlock{
-					Stats:   *stats,
-					Batches: blockData.Rollup.Batches,
-					Vars: common.SCVariablesPtr{
-						Rollup:   blockData.Rollup.Vars,
-						Auction:  blockData.Auction.Vars,
-						WDelayer: blockData.WDelayer.Vars,
-					},
-				})
-			} else {
-				time.Sleep(100 * time.Millisecond)
+			syncResults, err := syn.Sync(ctx, nil)
+			for _, sr := range syncResults {
+				if ctx.Err() != nil {
+					wg.Done()
+					return
+				}
+				require.NoError(t, err)
+				if sr.Data != nil {
+					stats := syn.Stats()
+					coord.SendMsg(ctx, MsgSyncBlock{
+						Stats:   *stats,
+						Batches: sr.Data.Rollup.Batches,
+						Vars: common.SCVariablesPtr{
+							Rollup:   sr.Data.Rollup.Vars,
+							Auction:  sr.Data.Auction.Vars,
+							WDelayer: sr.Data.WDelayer.Vars,
+						},
+					})
+				} else {
+					time.Sleep(100 * time.Millisecond)
+				}
 			}
 		}
 	}()
