@@ -378,8 +378,11 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 			Addresses: addresses,
 		}
 
+		fmt.Printf("Filtering logs fromBlock: %v toBlock: %v adresses: %v", from, to, addresses)
+
 		// query logs with filter
 		logs, err := c.client.FilterLogs(ctx, q)
+		fmt.Printf("%v Logs found", len(logs))
 		if err != nil {
 			return 0, err
 		}
