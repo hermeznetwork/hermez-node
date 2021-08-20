@@ -528,7 +528,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	// last eth block, initially we set the from block as the startBlock
 	fromBlock := s.startBlockNum
 	// If we have any stored block, we must search the next block after this block
-	if lastSavedBlock != nil && lastSavedBlock.Num > s.startBlockNum {
+	if lastSavedBlock != nil {
 		fromBlock = lastSavedBlock.Num + 1
 	}
 
