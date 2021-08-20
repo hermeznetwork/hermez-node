@@ -108,6 +108,7 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account,
 		return nil, tracerr.Wrap(err)
 	}
 	c.chainID = chainID
+	c.tmpEvents = make(map[int64][]types.Log)
 	return c, nil
 }
 
