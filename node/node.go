@@ -688,6 +688,7 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 	}
 	n.stateAPIUpdater.SetSCVars(vars)
 	if stats.Synced() {
+		log.Debugw("handleNewBlock", "SYNCED")
 		if err := n.stateAPIUpdater.UpdateNetworkInfo(
 			stats.Eth.LastBlock, stats.Sync.LastBlock,
 			common.BatchNum(stats.Eth.LastBatchNum),
@@ -696,6 +697,7 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 			log.Errorw("ApiStateUpdater.UpdateNetworkInfo", "err", err)
 		}
 	} else {
+		log.Debugw("handleNewBlock", "NOT SYNCED")
 		n.stateAPIUpdater.UpdateNetworkInfoBlock(
 			stats.Eth.LastBlock, stats.Sync.LastBlock,
 		)
