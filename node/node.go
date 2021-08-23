@@ -733,9 +733,17 @@ func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
+		log.Debugw("syncLoopFn", "err", err)
+		if errors.Is(err, synchronizer.ErrNoBlockToSync) {
+			vars := n.sync.SCVars()
+			if err := n.handleNewBlock(n.ctx, stats, vars.AsPtr(), []common.BatchData{}); err != nil {
+				return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
+			}
+		}
 		return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
 	} else if discarded != nil {
 		// case: reorg
+		log.Debugw("syncLoopFn", "discarded", discarded)
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
 		vars := n.sync.SCVars()
 		if err := n.handleReorg(ctx, stats, vars); err != nil {
@@ -744,6 +752,7 @@ func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
 		return time.Duration(0), nil
 	} else if blockData != nil {
 		// case: new block
+		log.Debugw("syncLoopFn", "blockData", blockData)
 		vars := common.SCVariablesPtr{
 			Rollup:   blockData.Rollup.Vars,
 			Auction:  blockData.Auction.Vars,
@@ -755,10 +764,7 @@ func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
 		return time.Duration(0), nil
 	} else {
 		// case: no block
-		vars := n.sync.SCVars()
-		if err := n.handleNewBlock(n.ctx, stats, vars.AsPtr(), []common.BatchData{}); err != nil {
-			return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
-		}
+		log.Debugw("syncLoopFn", "else")
 		return n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 	}
 }
