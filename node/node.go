@@ -678,7 +678,7 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 
 func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 	vars *common.SCVariablesPtr, batches []common.BatchData) error {
-	log.Debugw("handleNewBlock", "START")
+	log.Debug("handleNewBlock", "START")
 	if n.mode == ModeCoordinator {
 		n.coord.SendMsg(ctx, coordinator.MsgSyncBlock{
 			Stats:   *stats,
@@ -688,7 +688,7 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 	}
 	n.stateAPIUpdater.SetSCVars(vars)
 	if stats.Synced() {
-		log.Debugw("handleNewBlock", "SYNCED")
+		log.Debug("handleNewBlock", "SYNCED")
 		if err := n.stateAPIUpdater.UpdateNetworkInfo(
 			stats.Eth.LastBlock, stats.Sync.LastBlock,
 			common.BatchNum(stats.Eth.LastBatchNum),
@@ -697,7 +697,7 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 			log.Errorw("ApiStateUpdater.UpdateNetworkInfo", "err", err)
 		}
 	} else {
-		log.Debugw("handleNewBlock", "NOT SYNCED")
+		log.Debugw("handleNewBlock", "stats.Eth.LastBlock", stats.Eth.LastBlock, "stats.Sync.LastBlock", stats.Sync.LastBlock)
 		n.stateAPIUpdater.UpdateNetworkInfoBlock(
 			stats.Eth.LastBlock, stats.Sync.LastBlock,
 		)
@@ -706,7 +706,7 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 		log.Debugw("handleNewBlock", "stateAPIUpdater.Store", "err", err)
 		return tracerr.Wrap(err)
 	}
-	log.Debugw("handleNewBlock", "END")
+	log.Debug("handleNewBlock", "END")
 	return nil
 }
 
