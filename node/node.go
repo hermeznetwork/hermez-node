@@ -678,6 +678,7 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 
 func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 	vars *common.SCVariablesPtr, batches []common.BatchData) error {
+	log.Debugw("handleNewBlock", "START")
 	if n.mode == ModeCoordinator {
 		n.coord.SendMsg(ctx, coordinator.MsgSyncBlock{
 			Stats:   *stats,
@@ -700,8 +701,10 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 		)
 	}
 	if err := n.stateAPIUpdater.Store(); err != nil {
+		log.Debugw("handleNewBlock", "stateAPIUpdater.Store", "err", err)
 		return tracerr.Wrap(err)
 	}
+	log.Debugw("handleNewBlock", "END")
 	return nil
 }
 
