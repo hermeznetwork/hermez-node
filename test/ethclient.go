@@ -729,7 +729,7 @@ func (c *Client) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, 
 		}
 	}
 
-	return 0, eth.ErrNoNextBlockWithSCEvents
+	return 0, nil
 }
 
 // CtlAddERC20 adds an ERC20 token to the blockchain.

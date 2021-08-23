@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -14,25 +13,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/coordinator/prover"
-	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test"
-	"github.com/hermeznetwork/hermez-node/test/til"
 	"github.com/iden3/go-merkletree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func newBigInt(s string) *big.Int {
-	v, ok := new(big.Int).SetString(s, 10)
-	if !ok {
-		panic(fmt.Errorf("Can't set big.Int from %s", s))
-	}
-	return v
-}
 
 func TestPipelineShouldL1L2Batch(t *testing.T) {
 	ethClientSetup := test.NewClientSetupExample()
@@ -101,144 +89,6 @@ func TestPipelineShouldL1L2Batch(t *testing.T) {
 	stats.Sync.LastBlock = stats.Eth.LastBlock
 	pipeline.stats = stats
 	assert.Equal(t, true, pipeline.shouldL1L2Batch(&batchInfo))
-
-	closeTestModules(t, modules)
-}
-
-const (
-	testTokensLen = 3
-	testUsersLen  = 4
-)
-
-func preloadSync(t *testing.T, ethClient *test.Client, sync *synchronizer.Synchronizer,
-	historyDB *historydb.HistoryDB, stateDB *statedb.StateDB) *til.Context {
-	// Create a set with `testTokensLen` tokens and for each token
-	// `testUsersLen` accounts.
-	var set []til.Instruction
-	// set = append(set, til.Instruction{Typ: "Blockchain"})
-	for tokenID := 1; tokenID < testTokensLen; tokenID++ {
-		set = append(set, til.Instruction{
-			Typ:     til.TypeAddToken,
-			TokenID: common.TokenID(tokenID),
-		})
-	}
-	depositAmount, ok := new(big.Int).SetString("10225000000000000000000000000000000", 10)
-	require.True(t, ok)
-	for tokenID := 0; tokenID < testTokensLen; tokenID++ {
-		for user := 0; user < testUsersLen; user++ {
-			set = append(set, til.Instruction{
-				Typ:           common.TxTypeCreateAccountDeposit,
-				TokenID:       common.TokenID(tokenID),
-				DepositAmount: depositAmount,
-				From:          fmt.Sprintf("User%d", user),
-			})
-		}
-	}
-	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
-	set = append(set, til.Instruction{Typ: til.TypeNewBatchL1})
-	set = append(set, til.Instruction{Typ: til.TypeNewBlock})
-
-	tc := til.NewContext(chainID, common.RollupConstMaxL1UserTx)
-	blocks, err := tc.GenerateBlocksFromInstructions(set)
-	require.NoError(t, err)
-	require.NotNil(t, blocks)
-	// Set StateRoots for batches manually (til doesn't set it)
-	blocks[0].Rollup.Batches[0].Batch.StateRoot =
-		newBigInt("0")
-	blocks[0].Rollup.Batches[1].Batch.StateRoot =
-		newBigInt("6860514559199319426609623120853503165917774887908204288119245630904770452486")
-
-	ethAddTokens(blocks, ethClient)
-	err = ethClient.CtlAddBlocks(blocks)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	for {
-		syncBlock, discards, err := sync.Sync(ctx)
-		require.NoError(t, err)
-		require.Nil(t, discards)
-		if syncBlock == nil {
-			break
-		}
-	}
-	dbTokens, err := historyDB.GetAllTokens()
-	require.Nil(t, err)
-	require.Equal(t, testTokensLen, len(dbTokens))
-
-	dbAccounts, err := historyDB.GetAllAccounts()
-	require.Nil(t, err)
-	require.Equal(t, testTokensLen*testUsersLen, len(dbAccounts))
-
-	sdbAccounts, err := stateDB.TestGetAccounts()
-	require.Nil(t, err)
-	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
-
-	return tc
-}
-
-func TestPipelineForgeBatchWithTxs(t *testing.T) {
-	ethClientSetup := test.NewClientSetupExample()
-	ethClientSetup.ChainID = big.NewInt(int64(chainID))
-
-	var timer timer
-	ctx := context.Background()
-	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
-	etherScanService, _ := etherscan.NewEtherscanService("", "")
-	modules := newTestModules(t)
-	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
-	sync := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
-
-	// preload the synchronier (via the test ethClient) some tokens and
-	// users with positive balances
-	tilCtx := preloadSync(t, ethClient, sync, modules.historyDB, modules.stateDB)
-	syncStats := sync.Stats()
-	batchNum := syncStats.Sync.LastBatch.BatchNum
-	syncSCVars := sync.SCVars()
-
-	pipeline, err := coord.newPipeline(ctx)
-	require.NoError(t, err)
-
-	// Insert some l2txs in the Pool
-	setPool := `
-Type: PoolL2
-
-PoolTransfer(0) User0-User1: 100 (126)
-PoolTransfer(0) User1-User2: 200 (126)
-PoolTransfer(0) User2-User3: 300 (126)
-	`
-	l2txs, err := tilCtx.GeneratePoolL2Txs(setPool)
-	require.NoError(t, err)
-	for _, tx := range l2txs {
-		err := modules.l2DB.AddTxTest(&tx) //nolint:gosec
-		require.NoError(t, err)
-	}
-
-	err = pipeline.reset(batchNum, syncStats, syncSCVars)
-	require.NoError(t, err)
-	// Sanity check
-	sdbAccounts, err := pipeline.txSelector.LocalAccountsDB().TestGetAccounts()
-	require.Nil(t, err)
-	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
-
-	// Sanity check
-	sdbAccounts, err = pipeline.batchBuilder.LocalStateDB().TestGetAccounts()
-	require.Nil(t, err)
-	require.Equal(t, testTokensLen*testUsersLen, len(sdbAccounts))
-
-	// Sanity check
-	require.Equal(t, modules.stateDB.MT.Root(),
-		pipeline.batchBuilder.LocalStateDB().MT.Root())
-
-	batchNum++
-
-	batchInfo, _, err := pipeline.forgeBatch(batchNum)
-	require.NoError(t, err)
-	assert.Equal(t, 3, len(batchInfo.L2Txs))
-
-	batchNum++
-	batchInfo, _, err = pipeline.forgeBatch(batchNum)
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(batchInfo.L2Txs))
 
 	closeTestModules(t, modules)
 }
