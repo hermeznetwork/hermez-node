@@ -541,6 +541,9 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	if err != nil {
 		return nil, nil, err
 	}
+	if nextBlockNum == lastSavedBlock.Num {
+		return nil, nil, nil
+	}
 
 	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in
 	// UpdateFrequencyDivider blocks
