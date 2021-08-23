@@ -54,11 +54,11 @@ var (
 	// between different events of the same block
 	ErrBlockHashMismatchEvent = fmt.Errorf("block hash mismatch in event log")
 
-	// ErrNoNextBlockWithSCEvents is used when the method EthNextBlockWithSCEvents can't
-	// find a block that contains events in any of the provided SC addresses between the
-	// provided fromBlock parameter and the last block in the chain at the moment of the
-	// call
-	ErrNoNextBlockWithSCEvents = fmt.Errorf("there is no block in the chain with events for the provided smart contract addresses at this moment")
+	// // ErrNoNextBlockWithSCEvents is used when the method EthNextBlockWithSCEvents can't
+	// // find a block that contains events in any of the provided SC addresses between the
+	// // provided fromBlock parameter and the last block in the chain at the moment of the
+	// // call
+	// ErrNoNextBlockWithSCEvents = fmt.Errorf("there is no block in the chain with events for the provided smart contract addresses at this moment")
 )
 
 const (
@@ -413,7 +413,8 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 		// move to the next range until the end of the chain
 		// if "to" is equal lastBlock then stop searching
 		if to == lastBlock {
-			return 0, ErrNoNextBlockWithSCEvents
+			// return 0, ErrNoNextBlockWithSCEvents
+			return lastBlock, nil
 		}
 
 		from = to

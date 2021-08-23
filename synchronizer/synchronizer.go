@@ -65,11 +65,11 @@ var (
 	// to it being discarded from a reorg.
 	ErrUnknownBlock = fmt.Errorf("unknown block")
 
-	// ErrNoBlockToSync is the error returned by the Synchronizer when the
-	// Sync method is calling and the method can't find a next block to be
-	// synchronized at this time, for example, there is no block in the chain
-	// at this time with hermez SC events since the last block synchronized
-	ErrNoBlockToSync = fmt.Errorf("there is no block to sync at this time")
+	// // ErrNoBlockToSync is the error returned by the Synchronizer when the
+	// // Sync method is calling and the method can't find a next block to be
+	// // synchronized at this time, for example, there is no block in the chain
+	// // at this time with hermez SC events since the last block synchronized
+	// ErrNoBlockToSync = fmt.Errorf("there is no block to sync at this time")
 )
 
 // Stats of the synchronizer
@@ -538,8 +538,8 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		s.consts.Rollup.HermezAuctionContract,
 		s.consts.Rollup.WithdrawDelayerContract,
 	})
-	if err == eth.ErrNoNextBlockWithSCEvents {
-		return nil, nil, ErrNoBlockToSync
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in

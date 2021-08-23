@@ -697,7 +697,7 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 			log.Errorw("ApiStateUpdater.UpdateNetworkInfo", "err", err)
 		}
 	} else {
-		log.Debugw("handleNewBlock", "stats.Eth.LastBlock", stats.Eth.LastBlock, "stats.Sync.LastBlock", stats.Sync.LastBlock)
+		log.Debugw("handleNewBlock NOT SYNCED", "stats.Eth.LastBlock", stats.Eth.LastBlock, "stats.Sync.LastBlock", stats.Sync.LastBlock)
 		n.stateAPIUpdater.UpdateNetworkInfoBlock(
 			stats.Eth.LastBlock, stats.Sync.LastBlock,
 		)
@@ -734,12 +734,6 @@ func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
 	if err != nil {
 		// case: error
 		log.Debugw("syncLoopFn", "err", err)
-		if errors.Is(err, synchronizer.ErrNoBlockToSync) {
-			vars := n.sync.SCVars()
-			if err := n.handleNewBlock(n.ctx, stats, vars.AsPtr(), []common.BatchData{}); err != nil {
-				return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
-			}
-		}
 		return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
 	} else if discarded != nil {
 		// case: reorg
@@ -800,8 +794,7 @@ func (n *Node) StartSynchronizer() {
 						continue
 					}
 					if errors.Is(err, eth.ErrBlockHashMismatchEvent) ||
-						errors.Is(err, synchronizer.ErrUnknownBlock) ||
-						errors.Is(err, synchronizer.ErrNoBlockToSync) {
+						errors.Is(err, synchronizer.ErrUnknownBlock) {
 						log.Warnw("Synchronizer.Sync", "err", err)
 					} else {
 						log.Errorw("Synchronizer.Sync", "err", err)
