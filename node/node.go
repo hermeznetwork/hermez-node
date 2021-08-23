@@ -750,6 +750,10 @@ func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
 		return time.Duration(0), nil
 	} else {
 		// case: no block
+		vars := n.sync.SCVars()
+		if err := n.handleNewBlock(n.ctx, stats, vars.AsPtr(), []common.BatchData{}); err != nil {
+			return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
+		}
 		return n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 	}
 }
