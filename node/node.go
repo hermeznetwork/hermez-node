@@ -758,7 +758,7 @@ func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
 		return time.Duration(0), nil
 	} else {
 		// case: no block
-		log.Debugw("syncLoopFn", "else")
+		log.Debug("syncLoopFn", "else")
 		return n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 	}
 }
