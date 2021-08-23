@@ -615,7 +615,7 @@ type NodeAPI struct { //nolint:golint
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
 	version string,
-	cfgApi config.APIConfigParameters,
+	cfgAPI config.APIConfigParameters,
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
@@ -640,11 +640,11 @@ func NewNodeAPI(
 		return nil, tracerr.Wrap(err)
 	}
 	return &NodeAPI{
-		addr:         cfgApi.Address,
+		addr:         cfgAPI.Address,
 		api:          _api,
 		engine:       engine,
-		readtimeout:  cfgApi.Readtimeout.Duration,
-		writetimeout: cfgApi.Writetimeout.Duration,
+		readtimeout:  cfgAPI.Readtimeout.Duration,
+		writetimeout: cfgAPI.Writetimeout.Duration,
 	}, nil
 }
 

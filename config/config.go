@@ -325,7 +325,7 @@ type Node struct {
 	Coordinator          Coordinator                          `validate:"-"`
 }
 
-// API specifies the configuration parameters of the API
+// APIConfigParameters specifies the configuration parameters of the API
 type APIConfigParameters struct {
 	// Address where the API will listen if set
 	Address string `env:"HEZNODE_API_ADDRESS"`
