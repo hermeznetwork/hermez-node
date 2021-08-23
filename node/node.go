@@ -452,7 +452,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		var err error
 		nodeAPI, err = NewNodeAPI(
 			version,
-			cfg.API.Address,
+			cfg.API,
 			coord, cfg.API.Explorer,
 			server,
 			historyDB,
@@ -556,7 +556,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 	}
 	nodeAPI, err := NewNodeAPI(
 		version,
-		cfg.API.Address,
+		cfg.API,
 		coord, cfg.API.Explorer,
 		server,
 		historyDB,
@@ -612,8 +612,8 @@ type NodeAPI struct { //nolint:golint
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
-	version,
-	addr string,
+	version string,
+	cfgApi config.APIConfigParameters,
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
