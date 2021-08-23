@@ -9,6 +9,8 @@ UpdateMetricsInterval = "10s"
 UpdateRecommendedFeeInterval = "10s"
 MaxSQLConnections = 100
 SQLConnectionTimeout = "2s"
+ReadTimeout = "30s"
+WriteTimeout = "30s"
 
 [StateDB]
 Path = "/var/hermez/statedb"
