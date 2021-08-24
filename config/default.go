@@ -54,6 +54,7 @@ PurgeByExtDelInterval = "1m"
 MustForgeAtSlotDeadline = true
 IgnoreSlotCommitment = true
 ForgeOncePerSlotIfTxs = false
+ProverWaitReadTimeout = "20s"
 
 [Coordinator.FeeAccount]
 Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"

@@ -22,8 +22,6 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-const proverWaitReadyTimeout = 20 * time.Second
-
 type statsVars struct {
 	Stats synchronizer.Stats
 	Vars  common.SCVariablesPtr
@@ -99,7 +97,7 @@ func NewPipeline(ctx context.Context,
 	proversPool := NewProversPool(len(provers))
 	proversPoolSize := 0
 	for _, prover := range provers {
-		ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, proverWaitReadyTimeout)
+		ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, cfg.ProverReadTimeout)
 		defer ctxTimeoutCancel()
 		if err := prover.WaitReady(ctxTimeout); err != nil {
 			log.Errorw("prover.WaitReady", "err", err)
