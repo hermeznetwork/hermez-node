@@ -813,7 +813,7 @@ func (c *AuctionClient) AuctionEventInit(genesisBlockNum int64) (*AuctionEventIn
 		ToBlock:   big.NewInt(genesisBlockNum),
 		Topics:    [][]ethCommon.Hash{{logAuctionInitialize}},
 	}
-	logs, err := c.client.client.FilterLogs(context.Background(), query)
+	logs, err := c.ethereumClient.FilterLogs(context.Background(), query)
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
@@ -857,7 +857,7 @@ func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 		Topics: [][]ethCommon.Hash{},
 	}
 
-	logs, err := c.client.client.FilterLogs(context.TODO(), query)
+	logs, err := c.ethereumClient.FilterLogs(context.TODO(), query)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

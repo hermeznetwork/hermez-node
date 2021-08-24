@@ -424,7 +424,7 @@ func (c *WDelayerClient) WDelayerEventInit(genesisBlockNum int64) (*WDelayerEven
 		ToBlock:   big.NewInt(genesisBlockNum),
 		Topics:    [][]ethCommon.Hash{{logWDelayerInitialize}},
 	}
-	logs, err := c.client.client.FilterLogs(context.Background(), query)
+	logs, err := c.ethereumClient.FilterLogs(context.Background(), query)
 	if err != nil {
 		return nil, 0, tracerr.Wrap(err)
 	}
@@ -467,7 +467,7 @@ func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64,
 		Topics: [][]ethCommon.Hash{},
 	}
 
-	logs, err := c.client.client.FilterLogs(context.Background(), query)
+	logs, err := c.ethereumClient.FilterLogs(context.Background(), query)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
