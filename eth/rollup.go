@@ -271,14 +271,14 @@ type RollupInterface interface {
 
 // RollupClient is the implementation of the interface to the Rollup Smart Contract in ethereum.
 type RollupClient struct {
-	client      *EthereumClient
-	chainID     *big.Int
-	address     ethCommon.Address
-	hermez      *hermez.Hermez
-	token       *TokenClient
-	contractAbi abi.ABI
-	opts        *bind.CallOpts
-	consts      *common.RollupConstants
+	ethereumClient *EthereumClient
+	chainID        *big.Int
+	address        ethCommon.Address
+	hermez         *hermez.Hermez
+	token          *TokenClient
+	contractAbi    abi.ABI
+	opts           *bind.CallOpts
+	consts         *common.RollupConstants
 }
 
 // NewRollupClient creates a new RollupClient
@@ -296,12 +296,12 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address) (*Rollup
 		return nil, tracerr.Wrap(err)
 	}
 	c := &RollupClient{
-		client:      client,
-		chainID:     chainID,
-		address:     address,
-		hermez:      hermez,
-		contractAbi: contractAbi,
-		opts:        newCallOpts(),
+		ethereumClient: client,
+		chainID:        chainID,
+		address:        address,
+		hermez:         hermez,
+		contractAbi:    contractAbi,
+		opts:           newCallOpts(),
 	}
 	consts, err := c.RollupConstants()
 	if err != nil {
@@ -318,7 +318,7 @@ func NewRollupClient(client *EthereumClient, address ethCommon.Address) (*Rollup
 // RollupForgeBatch is the interface to call the smart contract function
 func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs, auth *bind.TransactOpts) (tx *types.Transaction, err error) {
 	if auth == nil {
-		auth, err = c.client.NewAuth()
+		auth, err = c.ethereumClient.NewAuth()
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -395,10 +395,10 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs, auth *bind.T
 // token.  `feeAddToken` must match the public value of the smart contract.
 func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToken,
 	deadline *big.Int) (tx *types.Transaction, err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			owner := c.client.account.Address
+			owner := c.ethereumClient.account.Address
 			spender := c.address
 			nonce, err := c.token.hez.Nonces(c.opts, owner)
 			if err != nil {
@@ -408,7 +408,7 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToke
 			tokenAddr := c.token.address
 			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID,
 				feeAddToken, nonce, deadline, tokenName)
-			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
+			signature, _ := c.ethereumClient.ks.SignHash(*c.ethereumClient.account, digest)
 			permit := createPermit(owner, spender, feeAddToken, deadline, digest,
 				signature)
 
@@ -424,7 +424,7 @@ func (c *RollupClient) RollupAddToken(tokenAddress ethCommon.Address, feeAddToke
 func (c *RollupClient) RollupWithdrawMerkleProof(fromBJJ babyjub.PublicKeyComp, tokenID uint32,
 	numExitRoot, idx int64, amount *big.Int, siblings []*big.Int,
 	instantWithdraw bool) (tx *types.Transaction, err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			pkCompB := common.SwapEndianness(fromBJJ[:])
@@ -452,7 +452,7 @@ func (c *RollupClient) RollupWithdrawCircuit(proofA, proofC [2]*big.Int, proofB 
 func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ babyjub.PublicKeyComp, fromIdx int64,
 	depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64) (tx *types.Transaction,
 	err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			var babyPubKey *big.Int
@@ -489,7 +489,7 @@ func (c *RollupClient) RollupL1UserTxERC20ETH(fromBJJ babyjub.PublicKeyComp, fro
 func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, fromIdx int64,
 	depositAmount *big.Int, amount *big.Int, tokenID uint32, toIdx int64,
 	deadline *big.Int) (tx *types.Transaction, err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			var babyPubKey *big.Int
@@ -512,7 +512,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, 
 			if tokenID == 0 {
 				auth.Value = depositAmount
 			}
-			owner := c.client.account.Address
+			owner := c.ethereumClient.account.Address
 			spender := c.address
 			nonce, err := c.token.hez.Nonces(c.opts, owner)
 			if err != nil {
@@ -522,7 +522,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, 
 			tokenAddr := c.token.address
 			digest, _ := createPermitDigest(tokenAddr, owner, spender, c.chainID,
 				amount, nonce, deadline, tokenName)
-			signature, _ := c.client.ks.SignHash(*c.client.account, digest)
+			signature, _ := c.ethereumClient.ks.SignHash(*c.ethereumClient.account, digest)
 			permit := createPermit(owner, spender, amount, deadline, digest, signature)
 			return c.hermez.AddL1Transaction(auth, babyPubKey, fromIdxBig,
 				big.NewInt(int64(depositAmountF)), big.NewInt(int64(amountF)), tokenID, toIdxBig, permit)
@@ -535,7 +535,7 @@ func (c *RollupClient) RollupL1UserTxERC20Permit(fromBJJ babyjub.PublicKeyComp, 
 
 // RollupRegisterTokensCount is the interface to call the smart contract function
 func (c *RollupClient) RollupRegisterTokensCount() (registerTokensCount *big.Int, err error) {
-	if err := c.client.Call(func(ec *ethclient.Client) error {
+	if err := c.ethereumClient.Call(func(ec *ethclient.Client) error {
 		registerTokensCount, err = c.hermez.RegisterTokensCount(c.opts)
 		return tracerr.Wrap(err)
 	}); err != nil {
@@ -546,7 +546,7 @@ func (c *RollupClient) RollupRegisterTokensCount() (registerTokensCount *big.Int
 
 // RollupLastForgedBatch is the interface to call the smart contract function
 func (c *RollupClient) RollupLastForgedBatch() (lastForgedBatch int64, err error) {
-	if err := c.client.Call(func(ec *ethclient.Client) error {
+	if err := c.ethereumClient.Call(func(ec *ethclient.Client) error {
 		_lastForgedBatch, err := c.hermez.LastForgedBatch(c.opts)
 		lastForgedBatch = int64(_lastForgedBatch)
 		return tracerr.Wrap(err)
@@ -559,7 +559,7 @@ func (c *RollupClient) RollupLastForgedBatch() (lastForgedBatch int64, err error
 // RollupUpdateForgeL1L2BatchTimeout is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateForgeL1L2BatchTimeout(
 	newForgeL1L2BatchTimeout int64) (tx *types.Transaction, err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			return c.hermez.UpdateForgeL1L2BatchTimeout(auth,
@@ -574,7 +574,7 @@ func (c *RollupClient) RollupUpdateForgeL1L2BatchTimeout(
 // RollupUpdateFeeAddToken is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *types.Transaction,
 	err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			return c.hermez.UpdateFeeAddToken(auth, newFeeAddToken)
@@ -589,7 +589,7 @@ func (c *RollupClient) RollupUpdateFeeAddToken(newFeeAddToken *big.Int) (tx *typ
 func (c *RollupClient) RollupUpdateBucketsParameters(
 	arrayBuckets []RollupUpdateBucketsParameters,
 ) (tx *types.Transaction, err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		12500000, //nolint:gomnd
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			params := make([]*big.Int, len(arrayBuckets))
@@ -612,7 +612,7 @@ func (c *RollupClient) RollupUpdateBucketsParameters(
 // RollupUpdateTokenExchange is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateTokenExchange(addressArray []ethCommon.Address,
 	valueArray []uint64) (tx *types.Transaction, err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			return c.hermez.UpdateTokenExchange(auth, addressArray, valueArray)
@@ -626,7 +626,7 @@ func (c *RollupClient) RollupUpdateTokenExchange(addressArray []ethCommon.Addres
 // RollupUpdateWithdrawalDelay is the interface to call the smart contract function
 func (c *RollupClient) RollupUpdateWithdrawalDelay(newWithdrawalDelay int64) (tx *types.Transaction,
 	err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			return c.hermez.UpdateWithdrawalDelay(auth, uint64(newWithdrawalDelay))
@@ -639,7 +639,7 @@ func (c *RollupClient) RollupUpdateWithdrawalDelay(newWithdrawalDelay int64) (tx
 
 // RollupSafeMode is the interface to call the smart contract function
 func (c *RollupClient) RollupSafeMode() (tx *types.Transaction, err error) {
-	if tx, err = c.client.CallAuth(
+	if tx, err = c.ethereumClient.CallAuth(
 		0,
 		func(ec *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			return c.hermez.SafeMode(auth)
@@ -653,7 +653,7 @@ func (c *RollupClient) RollupSafeMode() (tx *types.Transaction, err error) {
 // RollupInstantWithdrawalViewer is the interface to call the smart contract function
 func (c *RollupClient) RollupInstantWithdrawalViewer(tokenAddress ethCommon.Address,
 	amount *big.Int) (instantAllowed bool, err error) {
-	if err := c.client.Call(func(ec *ethclient.Client) error {
+	if err := c.ethereumClient.Call(func(ec *ethclient.Client) error {
 		instantAllowed, err = c.hermez.InstantWithdrawalViewer(c.opts, tokenAddress, amount)
 		return tracerr.Wrap(err)
 	}); err != nil {
@@ -665,7 +665,7 @@ func (c *RollupClient) RollupInstantWithdrawalViewer(tokenAddress ethCommon.Addr
 // RollupConstants returns the Constants of the Rollup Smart Contract
 func (c *RollupClient) RollupConstants() (rollupConstants *common.RollupConstants, err error) {
 	rollupConstants = new(common.RollupConstants)
-	if err := c.client.Call(func(ec *ethclient.Client) error {
+	if err := c.ethereumClient.Call(func(ec *ethclient.Client) error {
 		absoluteMaxL1L2BatchTimeout, err := c.hermez.ABSOLUTEMAXL1L2BATCHTIMEOUT(c.opts)
 		if err != nil {
 			return tracerr.Wrap(err)
@@ -816,7 +816,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			L1Tx.UserOrigin = true
 			L1Tx.EthTxHash = vLog.TxHash
 			//Get l1Fee in eth wei spent in the l1 tx
-			tx, _, err := c.client.client.TransactionByHash(context.Background(), vLog.TxHash)
+			tx, _, err := c.ethereumClient.client.TransactionByHash(context.Background(), vLog.TxHash)
 			if err != nil {
 				return nil, tracerr.Wrap(fmt.Errorf("failed to get TransactionByHash, hash: %s, err: %w", vLog.TxHash.String(), err))
 			}
@@ -951,7 +951,7 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 // Rollup Smart Contract in the given transaction, and the sender address.
 func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 	l1UserTxsLen uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error) {
-	tx, _, err := c.client.client.TransactionByHash(context.Background(), ethTxHash)
+	tx, _, err := c.ethereumClient.client.TransactionByHash(context.Background(), ethTxHash)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("TransactionByHash: %w", err))
 	}
@@ -961,11 +961,11 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
-	receipt, err := c.client.client.TransactionReceipt(context.Background(), ethTxHash)
+	receipt, err := c.ethereumClient.client.TransactionReceipt(context.Background(), ethTxHash)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
-	sender, err := c.client.client.TransactionSender(context.Background(), tx,
+	sender, err := c.ethereumClient.client.TransactionSender(context.Background(), tx,
 		receipt.Logs[0].BlockHash, receipt.Logs[0].Index)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
