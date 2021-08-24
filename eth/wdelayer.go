@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -452,12 +451,6 @@ func (c *WDelayerClient) WDelayerEventInit(genesisBlockNum int64) (*WDelayerEven
 // If there are no events in that block the result is nil.
 func (c *WDelayerClient) WDelayerEventsByBlock(blockNum int64,
 	blockHash *ethCommon.Hash) (*WDelayerEvents, error) {
-
-	start := time.Now()
-	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: WDelayerEventsByBlock: %vms", time.Since(t).Milliseconds())
-	}(start)
-
 	var wdelayerEvents WDelayerEvents
 
 	var blockNumBigInt *big.Int

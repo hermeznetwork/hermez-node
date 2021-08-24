@@ -85,7 +85,6 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
@@ -193,12 +192,6 @@ func (txProcessor *TxProcessor) resetZKInputs() {
 // created accounts.
 func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx,
 	l2txs []common.PoolL2Tx) (ptOut *ProcessTxOutput, err error) {
-
-	start := time.Now()
-	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: ProcessTxs: %vms", time.Since(t).Milliseconds())
-	}(start)
-
 	defer func() {
 		if err == nil {
 			err = txProcessor.state.MakeCheckpoint()

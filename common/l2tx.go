@@ -3,11 +3,9 @@ package common
 import (
 	"fmt"
 	"math/big"
-	"time"
 
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -161,12 +159,6 @@ func (tx L2Tx) PoolL2Tx() *PoolL2Tx {
 // L2TxsToPoolL2Txs returns an array of []*PoolL2Tx from an array of []*L2Tx,
 // where the PoolL2Tx only have the parameters of a L2Tx filled.
 func L2TxsToPoolL2Txs(txs []L2Tx) []PoolL2Tx {
-	
-	start := time.Now()
-	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: L2TxsToPoolL2Txs: %vms", time.Since(t).Milliseconds())
-	}(start)
-
 	var r []PoolL2Tx
 	for _, tx := range txs {
 		r = append(r, *tx.PoolL2Tx())

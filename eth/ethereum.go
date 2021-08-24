@@ -269,12 +269,6 @@ func (c *EthereumClient) EthLastBlock() (int64, error) {
 // *common.Block.  If number == -1, the latests known block is returned.
 func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*common.Block,
 	error) {
-
-	start := time.Now()
-	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: EthBlockByNumber: %vms", time.Since(t).Milliseconds())
-	}(start)
-
 	blockNum := big.NewInt(number)
 	if number == -1 {
 		blockNum = nil
@@ -294,12 +288,6 @@ func (c *EthereumClient) EthBlockByNumber(ctx context.Context, number int64) (*c
 
 // EthERC20Consts returns the constants defined for a particular ERC20 Token instance.
 func (c *EthereumClient) EthERC20Consts(tokenAddress ethCommon.Address) (*ERC20Consts, error) {
-
-	start := time.Now()
-	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: EthERC20Consts: %vms", time.Since(t).Milliseconds())
-	}(start)
-
 	// We use the HEZ token smart contract interfacehere because it's an
 	// ERC20, which allows us to access the standard ERC20 constants.
 	instance, err := tokenhez.NewTokenhez(tokenAddress, c.client)
