@@ -64,12 +64,6 @@ var (
 	// block is queried by hash but the ethereum node doesn't find it due
 	// to it being discarded from a reorg.
 	ErrUnknownBlock = fmt.Errorf("unknown block")
-
-	// // ErrNoBlockToSync is the error returned by the Synchronizer when the
-	// // Sync method is calling and the method can't find a next block to be
-	// // synchronized at this time, for example, there is no block in the chain
-	// // at this time with hermez SC events since the last block synchronized
-	// ErrNoBlockToSync = fmt.Errorf("there is no block to sync at this time")
 )
 
 // Stats of the synchronizer
@@ -510,7 +504,6 @@ func (s *Synchronizer) resetIntermediateState() error {
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
 func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, discarded *int64, err error) {
-	log.Debugf("Sync: start")
 	if s.resetStateFailed {
 		if err := s.resetIntermediateState(); err != nil {
 			return nil, nil, tracerr.Wrap(err)
@@ -519,7 +512,6 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 
 	// Get lastSavedBlock from History DB
 	lastSavedBlock, err := s.historyDB.GetLastBlock()
-	log.Debugf("lastSavedBlock: %v, err: %v", lastSavedBlock, err)
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		return nil, nil, tracerr.Wrap(err)
 	}
@@ -686,8 +678,6 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		"syncBlocksPerc", s.stats.blocksPerc(),
 		"ethLastBlockNum", s.stats.Eth.LastBlock.Num,
 	)
-
-	log.Debugw("Sync: end")
 
 	return blockData, nil, nil
 }

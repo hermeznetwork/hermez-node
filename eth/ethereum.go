@@ -53,12 +53,6 @@ var (
 	// ErrBlockHashMismatchEvent is used when there's a block hash mismatch
 	// between different events of the same block
 	ErrBlockHashMismatchEvent = fmt.Errorf("block hash mismatch in event log")
-
-	// // ErrNoNextBlockWithSCEvents is used when the method EthNextBlockWithSCEvents can't
-	// // find a block that contains events in any of the provided SC addresses between the
-	// // provided fromBlock parameter and the last block in the chain at the moment of the
-	// // call
-	// ErrNoNextBlockWithSCEvents = fmt.Errorf("there is no block in the chain with events for the provided smart contract addresses at this moment")
 )
 
 const (
@@ -83,7 +77,7 @@ type EthereumClient struct {
 	config  *EthereumConfig
 	opts    *bind.CallOpts
 
-	tmpEvents map[int64][]types.Log
+	events map[int64][]types.Log
 }
 
 // NewEthereumClient creates a EthereumClient instance.  The account is not mandatory (it can
@@ -108,7 +102,7 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account,
 		return nil, tracerr.Wrap(err)
 	}
 	c.chainID = chainID
-	c.tmpEvents = make(map[int64][]types.Log)
+	c.events = make(map[int64][]types.Log)
 	return c, nil
 }
 
@@ -375,8 +369,8 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 	to := from + blocksPerCycle
 
 	for bn := from; bn <= to; bn++ {
-		if _, ok := c.tmpEvents[bn]; ok {
-			delete(c.tmpEvents, bn)
+		if _, ok := c.events[bn]; ok {
+			delete(c.events, bn)
 			return bn, nil
 		}
 	}
@@ -388,18 +382,15 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 			Addresses: addresses,
 		}
 
-		log.Debugf("Filtering logs fromBlock: %v toBlock: %v addresses: %v", from, to, addresses)
-
 		// query logs with filter
 		logs, err := c.client.FilterLogs(ctx, q)
-		log.Debugf("%v Logs found", len(logs))
 		if err != nil {
 			return 0, err
 		}
 
 		if len(logs) > 0 {
 			for _, log := range logs {
-				c.tmpEvents[int64(log.BlockNumber)] = append(c.tmpEvents[int64(log.BlockNumber)], log)
+				c.events[int64(log.BlockNumber)] = append(c.events[int64(log.BlockNumber)], log)
 			}
 
 			// when we have logs, we sort the logs by block ascending and get the first one
@@ -413,7 +404,6 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 		// move to the next range until the end of the chain
 		// if "to" is equal lastBlock then stop searching
 		if to == lastBlock {
-			// return 0, ErrNoNextBlockWithSCEvents
 			return lastBlock, nil
 		}
 
