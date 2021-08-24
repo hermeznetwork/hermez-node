@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -841,6 +842,12 @@ func (c *AuctionClient) AuctionEventInit(genesisBlockNum int64) (*AuctionEventIn
 // If there are no events in that block the result is nil.
 func (c *AuctionClient) AuctionEventsByBlock(blockNum int64,
 	blockHash *ethCommon.Hash) (*AuctionEvents, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: AuctionEventsByBlock: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	var auctionEvents AuctionEvents
 
 	var blockNumBigInt *big.Int

@@ -129,6 +129,12 @@ func (s *StatsHolder) UpdateCurrentNextSlot(current *common.Slot, next *common.S
 // UpdateSync updates the synchronizer stats
 func (s *StatsHolder) UpdateSync(lastBlock *common.Block, lastBatch *common.Batch,
 	lastL1BatchBlock *int64, lastForgeL1TxsNum *int64) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: UpdateSync: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	now := time.Now()
 	s.rw.Lock()
 	s.Sync.LastBlock = *lastBlock
@@ -435,6 +441,11 @@ func (s *Synchronizer) updateNextSlot(slot *common.Slot) error {
 // about forger address that is allowed to forge is only updated if we are
 // Synced.
 func (s *Synchronizer) updateCurrentNextSlotIfSync(reset bool, hasBatch bool) error {
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: updateCurrentNextSlotIfSync: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	current := s.stats.Sync.Auction.CurrentSlot
 	next := s.stats.Sync.Auction.NextSlot
 	if err := s.updateCurrentSlot(&current, reset, hasBatch); err != nil {
@@ -832,6 +843,12 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 // rollupSync retrieves all the Rollup Smart Contract Data that happened at
 // ethBlock.blockNum with ethBlock.Hash.
 func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: rollupSync: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	blockNum := ethBlock.Num
 	var rollupData = common.NewRollupData()
 	// var forgeL1TxsNum int64
@@ -1187,6 +1204,12 @@ func cutStringMax(s string, max int) string {
 
 // auctionSync gets information from the Auction Contract
 func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: auctionSync: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	blockNum := ethBlock.Num
 	var auctionData = common.NewAuctionData()
 
@@ -1288,6 +1311,12 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 
 // wdelayerSync gets information from the Withdrawal Delayer Contract
 func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerData, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: wdelayerSync: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	blockNum := ethBlock.Num
 	wDelayerData := common.NewWDelayerData()
 
@@ -1364,6 +1393,12 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 }
 
 func getL1UserTx(eventsL1UserTx []eth.RollupEventL1UserTx, blockNum int64) ([]common.L1Tx, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	l1Txs := make([]common.L1Tx, len(eventsL1UserTx))
 	for i := range eventsL1UserTx {
 		eventsL1UserTx[i].L1UserTx.EthBlockNum = blockNum

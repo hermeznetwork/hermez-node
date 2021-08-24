@@ -25,10 +25,12 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
 
@@ -262,6 +264,11 @@ func (hdb *HistoryDB) GetLastL1BatchBlockNum() (int64, error) {
 // GetLastL1TxsNum returns the greatest ForgeL1TxsNum in the DB from forged
 // batches.  If there's no batch in the DB (nil, nil) is returned.
 func (hdb *HistoryDB) GetLastL1TxsNum() (*int64, error) {
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: GetLastL1TxsNum: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	row := hdb.dbRead.QueryRow("SELECT MAX(forge_l1_txs_num) FROM batch;")
 	lastL1TxsNum := new(int64)
 	return lastL1TxsNum, tracerr.Wrap(row.Scan(&lastL1TxsNum))
@@ -782,6 +789,12 @@ func (hdb *HistoryDB) GetAllL2Txs() ([]common.L2Tx, error) {
 
 // GetUnforgedL1UserTxs gets L1 User Txs to be forged in the L1Batch with toForgeL1TxsNum.
 func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	var txs []*common.L1Tx
 	err := meddler.QueryAll(
 		hdb.dbRead, &txs, // only L1 user txs can have batch_num set to null
@@ -1057,6 +1070,11 @@ func (hdb *HistoryDB) setExtraInfoForgedL1UserTxs(d sqlx.Ext, txs []common.L1Tx)
 // the pagination system of the API/DB depends on this.  Within blocks, all
 // items should also be in the correct order (Accounts, Tokens, Txs, etc.)
 func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: AddBlockSCData: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	txn, err := hdb.dbWrite.Beginx()
 	if err != nil {
 		return tracerr.Wrap(err)

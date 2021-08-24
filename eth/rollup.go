@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -770,6 +771,12 @@ func (c *RollupClient) RollupEventInit(genesisBlockNum int64) (*RollupEventIniti
 // If there are no events in that block the result is nil.
 func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 	blockHash *ethCommon.Hash) (*RollupEvents, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	var rollupEvents RollupEvents
 
 	var blockNumBigInt *big.Int
@@ -951,6 +958,12 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 // Rollup Smart Contract in the given transaction, and the sender address.
 func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 	l1UserTxsLen uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error) {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	tx, _, err := c.client.client.TransactionByHash(context.Background(), ethTxHash)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("TransactionByHash: %w", err))

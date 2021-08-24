@@ -29,6 +29,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
@@ -100,6 +101,12 @@ func (l2db *L2DB) AddAccountCreationAuth(auth *common.AccountCreationAuth) error
 // AddManyAccountCreationAuth inserts a batch of accounts creation authorization
 // if not exist into the DB
 func (l2db *L2DB) AddManyAccountCreationAuth(auths []common.AccountCreationAuth) error {
+
+	start := time.Now()
+	defer func(t time.Time) {
+		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+	}(start)
+
 	_, err := sqlx.NamedExec(l2db.dbWrite,
 		`INSERT INTO account_creation_auth (eth_addr, bjj, signature)
 				VALUES (:ethaddr, :bjj, :signature) 
