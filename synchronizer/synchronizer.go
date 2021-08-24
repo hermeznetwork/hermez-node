@@ -1396,7 +1396,7 @@ func getL1UserTx(eventsL1UserTx []eth.RollupEventL1UserTx, blockNum int64) ([]co
 
 	start := time.Now()
 	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+		log.Debugf("BENCHMARK: getL1UserTx: %vms", time.Since(t).Milliseconds())
 	}(start)
 
 	l1Txs := make([]common.L1Tx, len(eventsL1UserTx))

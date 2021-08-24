@@ -104,7 +104,7 @@ func (l2db *L2DB) AddManyAccountCreationAuth(auths []common.AccountCreationAuth)
 
 	start := time.Now()
 	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+		log.Debugf("BENCHMARK: AddManyAccountCreationAuth: %vms", time.Since(t).Milliseconds())
 	}(start)
 
 	_, err := sqlx.NamedExec(l2db.dbWrite,

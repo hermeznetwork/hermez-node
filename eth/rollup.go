@@ -961,7 +961,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 
 	start := time.Now()
 	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+		log.Debugf("BENCHMARK: RollupForgeBatchArgs: %vms", time.Since(t).Milliseconds())
 	}(start)
 
 	tx, _, err := c.client.client.TransactionByHash(context.Background(), ethTxHash)

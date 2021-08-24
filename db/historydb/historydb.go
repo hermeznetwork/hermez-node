@@ -792,7 +792,7 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxs(toForgeL1TxsNum int64) ([]common.L1Tx
 
 	start := time.Now()
 	defer func(t time.Time) {
-		log.Debugf("BENCHMARK: RollupEventsByBlock: %vms", time.Since(t).Milliseconds())
+		log.Debugf("BENCHMARK: GetUnforgedL1UserTxs: %vms", time.Since(t).Milliseconds())
 	}(start)
 
 	var txs []*common.L1Tx
