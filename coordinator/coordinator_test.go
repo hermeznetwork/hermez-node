@@ -173,6 +173,7 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		SyncRetryInterval:       400 * time.Microsecond,
 		EthClientAttemptsDelay:  100 * time.Millisecond,
 		TxManagerCheckInterval:  300 * time.Millisecond,
+		ProverReadTimeout:       20 * time.Second,
 		DebugBatchPath:          debugBatchPath,
 		MustForgeAtSlotDeadline: true,
 		Purger: PurgerCfg{

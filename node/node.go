@@ -422,6 +422,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 				ForgeBatchGasCost: cfg.Coordinator.EthClient.ForgeBatchGasCost,
 				VerifierIdx:       uint8(verifierIdx),
 				TxProcessorConfig: txProcessorCfg,
+				ProverReadTimeout: cfg.Coordinator.ProverWaitReadTimeout.Duration,
 			},
 			historyDB,
 			l2DB,

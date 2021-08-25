@@ -177,6 +177,7 @@ type Config struct {
 	// ForgeBatch transaction.
 	ForgeBatchGasCost config.ForgeBatchGasCost
 	TxProcessorConfig txprocessor.Config
+	ProverReadTimeout time.Duration
 }
 
 func (c *Config) debugBatchStore(batchInfo *BatchInfo) {

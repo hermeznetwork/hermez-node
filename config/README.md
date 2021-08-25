@@ -59,6 +59,7 @@ ForgeNoTxsDelay = HEZNODE_COORDINATOR_FORGENOTXSDELAY
 PurgeByExtDelInterval = HEZNODE_COORDINATOR_PURGEBYEXTDELINTERVAL
 MustForgeAtSlotDeadline = HEZNODE_COORDINATOR_MUSTFORGEATSLOTDEADLINE
 IgnoreSlotCommitment = HEZNODE_COORDINATOR_IGNORESLOTCOMMITMENT
+ProverWaitReadTimeout = HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT
 
 [Coordinator.FeeAccount]
 Address = HEZNODE_FEEACCOUNT_ADDRESS
@@ -171,6 +172,7 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator|MustForgeAtSlotDeadline|HEZNODE_COORDINATOR_MUSTFORGEATSLOTDEADLINE|Optional|true|Enables the coordinator to forge in slots if the empty slots reach the slot deadline.
 |Coordinator|IgnoreSlotCommitment|HEZNODE_COORDINATOR_IGNORESLOTCOMMITMENT|Optional|true|It will make the coordinator forge at most one batch per slot, only if there are included txs in that batch, or pending l1UserTxs in the smart contract.  Setting this parameter overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline` and `IgnoreSlotCommitment`.
 |Coordinator|ForgeOncePerSlotIfTxs|HEZNODE_COORDINATOR_FORGEONCEPERSLOTIFTXS|Optional|false|This parameter will make the coordinator forge at most one batch per slot, only if there are included txs in that batch, or pending l1UserTxs in the smart contract.  Setting this parameter overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline` and `IgnoreSlotCommitment`.
+|Coordinator|ProverWaitReadTimeout|HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT|Optional|"20s"|`ProverWaitReadTimeout` just set the timeout to prover waiting.
 |Coordinator.FeeAccount|Address|HEZNODE_FEEACCOUNT_ADDRESS|**Required**|"0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"|Ethereum address of the account that will receive the fees
 |Coordinator.FeeAccount|BJJ|HEZNODE_FEEACCOUNT_BJJ|**Required**|"0x130c5c7f294792559f469220274f3d3b2dca6e89f4c5ec88d3a08bf73262171b"|BJJ is the baby jub jub public key of the account that will receive the fees
 |Coordinator.L2DB|SafetyPeriod|HEZNODE_L2DB_SAFETYPERIOD|Optional|10|Number of batches after which non-pending L2Txs are deleted from the pool
