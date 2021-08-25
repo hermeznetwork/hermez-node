@@ -10,6 +10,8 @@ UpdateMetricsInterval = HEZNODE_API_UPDATEMETRICSINTERVAL
 UpdateRecommendedFeeInterval = HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL
 MaxSQLConnections = HEZNODE_API_MAXSQLCONNECTIONS
 SQLConnectionTimeout = HEZNODE_API_SQLCONNECTIONTIMEOUT
+ReadTimeout = HEZNODE_API_READTIMEOUT
+WriteTimeout = HEZNODE_API_WRITETIMEOUT
 
 [Debug]
 APIAddress = HEZNODE_DEBUG_APIADDRESS
@@ -135,6 +137,8 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |API|UpdateRecommendedFeeInterval|HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL|Optional|"10s"|Interval between updates of the recommended fees
 |API|MaxSQLConnections|HEZNODE_API_MAXSQLCONNECTIONS|Optional|100|Maximum concurrent connections allowed between API and SQL
 |API|SQLConnectionTimeout|HEZNODE_API_SQLCONNECTIONTIMEOUT|Optional|"2s"|Maximum amount of time that an API request can wait to establish a SQL connection
+|API|ReadTimeout|HEZNODE_API_READTIMEOUT|Optional|"30s"|ReadTimeout is the maximum duration for reading the entire request, including the body.
+|API|WriteTimeout|HEZNODE_API_WRITETIMEOUT|Optional|"30s"|WriteTimeout is the maximum duration before timing out writes of the response.
 |Debug|APIAddress|HEZNODE_DEBUG_APIADDRESS|Optional|"0.0.0.0:12345"|If it is set, the debug api will listen in this address and port
 |Debug|MeddlerLogs|HEZNODE_DEBUG_MEDDLERLOGS|Optional|true|Enables meddler debug mode, where unused columns and struct fields will be logged
 |Debug|GinDebugMode|HEZNODE_DEBUG_GINDEBUGMODE|Optional|false|Sets the web framework Gin-Gonic to run in debug mode
