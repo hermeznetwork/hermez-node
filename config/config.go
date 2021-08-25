@@ -321,44 +321,40 @@ type Node struct {
 		// Rollup is the address of the Hermez.sol smart contract
 		Rollup ethCommon.Address `validate:"required" env:"HEZNODE_SMARTCONTRACTS_ROLLUP"`
 	} `validate:"required"`
-	// API specifies the configuration parameters of the API
-	API struct {
-		// Address where the API will listen if set
-		Address string `env:"HEZNODE_API_ADDRESS"`
-		// Explorer enables the Explorer API endpoints
-		Explorer bool `env:"HEZNODE_API_EXPLORER"`
-		// UpdateMetricsInterval is the interval between updates of the
-		// API metrics
-		UpdateMetricsInterval Duration `validate:"required" env:"HEZNODE_API_UPDATEMETRICSINTERVAL"`
-		// UpdateRecommendedFeeInterval is the interval between updates of the
-		// recommended fees
-		UpdateRecommendedFeeInterval Duration `validate:"required" env:"HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL"`
-		// Maximum concurrent connections allowed between API and SQL
-		MaxSQLConnections int `validate:"required,gte=1" env:"HEZNODE_API_MAXSQLCONNECTIONS"`
-		// SQLConnectionTimeout is the maximum amount of time that an API request
-		// can wait to establish a SQL connection
-		SQLConnectionTimeout Duration `env:"HEZNODE_API_SQLCONNECTIONTIMEOUT"`
-	} `validate:"required"`
+	API                  APIConfigParameters                  `validate:"required"`
 	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
 	Debug                NodeDebug                            `validate:"required"`
 	Coordinator          Coordinator                          `validate:"-"`
 }
 
+// APIConfigParameters specifies the configuration parameters of the API
+type APIConfigParameters struct {
+	// Address where the API will listen if set
+	Address string `env:"HEZNODE_API_ADDRESS"`
+	// Explorer enables the Explorer API endpoints
+	Explorer bool `env:"HEZNODE_API_EXPLORER"`
+	// ReadTimeout is the maximum duration for reading the entire
+	// request, including the body.
+	Readtimeout Duration `env:"HEZNODE_API_READTIMEOUT"`
+	// WriteTimeout is the maximum duration before timing out
+	// writes of the response.
+	Writetimeout Duration `env:"HEZNODE_API_WRITETIMEOUT"`
+	// Maximum concurrent connections allowed between API and SQL
+	MaxSQLConnections int `validate:"required,gte=1" env:"HEZNODE_API_MAXSQLCONNECTIONS"`
+	// SQLConnectionTimeout is the maximum amount of time that an API request
+	// can wait to establish a SQL connection
+	SQLConnectionTimeout Duration `env:"HEZNODE_API_SQLCONNECTIONTIMEOUT"`
+	// UpdateMetricsInterval is the interval between updates of the metrics
+	UpdateMetricsInterval Duration `validate:"required" env:"HEZNODE_API_UPDATEMETRICSINTERVAL"`
+	// UpdateRecommendedFeeInterval is the interval between updates of the recommended fees
+	UpdateRecommendedFeeInterval Duration `validate:"required" env:"HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL"`
+}
+
 // APIServer is the api server configuration parameters
 type APIServer struct {
 	// NodeAPI specifies the configuration parameters of the API
-	API struct {
-		// Address where the API will listen if set
-		Address string `validate:"required" env:"HEZNODE_API_ADDRESS"`
-		// Explorer enables the Explorer API endpoints
-		Explorer bool `env:"HEZNODE_API_EXPLORER"`
-		// Maximum concurrent connections allowed between API and SQL
-		MaxSQLConnections int `validate:"required,gte=1" env:"HEZNODE_API_MAXSQLCONNECTIONS"`
-		// SQLConnectionTimeout is the maximum amount of time that an API request
-		// can wait to establish a SQL connection
-		SQLConnectionTimeout Duration `env:"HEZNODE_API_SQLCONNECTIONTIMEOUT"`
-	} `validate:"required"`
-	PostgreSQL  PostgreSQL `validate:"required"`
+	API         APIConfigParameters `validate:"required"`
+	PostgreSQL  PostgreSQL          `validate:"required"`
 	Coordinator struct {
 		API struct {
 			// Coordinator enables the coordinator API endpoints

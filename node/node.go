@@ -453,7 +453,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		var err error
 		nodeAPI, err = NewNodeAPI(
 			version,
-			cfg.API.Address,
+			cfg.API,
 			coord, cfg.API.Explorer,
 			server,
 			historyDB,
@@ -557,7 +557,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 	}
 	nodeAPI, err := NewNodeAPI(
 		version,
-		cfg.API.Address,
+		cfg.API,
 		coord, cfg.API.Explorer,
 		server,
 		historyDB,
@@ -606,15 +606,17 @@ func (s *APIServer) Stop() {
 
 // NodeAPI holds the node http API
 type NodeAPI struct { //nolint:golint
-	api    *api.API
-	engine *gin.Engine
-	addr   string
+	api          *api.API
+	engine       *gin.Engine
+	addr         string
+	readtimeout  time.Duration
+	writetimeout time.Duration
 }
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
-	version,
-	addr string,
+	version string,
+	cfgAPI config.APIConfigParameters,
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
@@ -639,9 +641,11 @@ func NewNodeAPI(
 		return nil, tracerr.Wrap(err)
 	}
 	return &NodeAPI{
-		addr:   addr,
-		api:    _api,
-		engine: engine,
+		addr:         cfgAPI.Address,
+		api:          _api,
+		engine:       engine,
+		readtimeout:  cfgAPI.Readtimeout.Duration,
+		writetimeout: cfgAPI.Writetimeout.Duration,
 	}, nil
 }
 
@@ -650,9 +654,9 @@ func NewNodeAPI(
 func (a *NodeAPI) Run(ctx context.Context) error {
 	server := &http.Server{
 		Handler:        a.engine,
-		ReadTimeout:    30 * time.Second, //nolint:gomnd
-		WriteTimeout:   30 * time.Second, //nolint:gomnd
-		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
+		ReadTimeout:    a.readtimeout,
+		WriteTimeout:   a.writetimeout,
+		MaxHeaderBytes: 1 << 20, //nolint:gomnd
 	}
 	listener, err := net.Listen("tcp", a.addr)
 	if err != nil {
