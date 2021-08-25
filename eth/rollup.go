@@ -787,7 +787,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 	}
 	logs, err := c.client.client.FilterLogs(context.Background(), query)
 	if err != nil {
-		log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 		return nil, tracerr.Wrap(err)
 	}
 	if len(logs) == 0 {
@@ -805,12 +804,10 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			var L1UserTx RollupEventL1UserTx
 			err := c.contractAbi.UnpackIntoInterface(&L1UserTxAux, "L1UserTxEvent", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			L1Tx, err := common.L1UserTxFromBytes(L1UserTxAux.L1UserTx)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			toForgeL1TxsNum := new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
@@ -821,7 +818,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			//Get l1Fee in eth wei spent in the l1 tx
 			tx, _, err := c.client.client.TransactionByHash(context.Background(), vLog.TxHash)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(fmt.Errorf("failed to get TransactionByHash, hash: %s, err: %w", vLog.TxHash.String(), err))
 			}
 			l1Fee := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()))
@@ -832,7 +828,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			var addToken RollupEventAddToken
 			err := c.contractAbi.UnpackIntoInterface(&addToken, "AddToken", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			addToken.TokenAddress = ethCommon.BytesToAddress(vLog.Topics[1].Bytes())
@@ -841,7 +836,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			var forgeBatch RollupEventForgeBatch
 			err := c.contractAbi.UnpackIntoInterface(&forgeBatch, "ForgeBatch", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			forgeBatch.BatchNum = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
@@ -855,7 +849,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			err := c.contractAbi.UnpackIntoInterface(&updateForgeL1L2BatchTimeout,
 				"UpdateForgeL1L2BatchTimeout", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			rollupEvents.UpdateForgeL1L2BatchTimeout = append(rollupEvents.UpdateForgeL1L2BatchTimeout,
@@ -866,7 +859,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			var updateFeeAddToken RollupEventUpdateFeeAddToken
 			err := c.contractAbi.UnpackIntoInterface(&updateFeeAddToken, "UpdateFeeAddToken", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			rollupEvents.UpdateFeeAddToken = append(rollupEvents.UpdateFeeAddToken, updateFeeAddToken)
@@ -886,7 +878,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			err := c.contractAbi.UnpackIntoInterface(&updateBucketWithdrawAux,
 				"UpdateBucketWithdraw", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			updateBucketWithdraw.Withdrawals = updateBucketWithdrawAux.Withdrawals
@@ -899,7 +890,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			var withdrawalDelay RollupEventUpdateWithdrawalDelay
 			err := c.contractAbi.UnpackIntoInterface(&withdrawalDelay, "UpdateWithdrawalDelay", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			rollupEvents.UpdateWithdrawalDelay = append(rollupEvents.UpdateWithdrawalDelay, withdrawalDelay)
@@ -909,14 +899,12 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			err := c.contractAbi.UnpackIntoInterface(&bucketsParametersAux,
 				"UpdateBucketsParameters", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			bucketsParameters.ArrayBuckets = make([]RollupUpdateBucketsParameters, len(bucketsParametersAux.ArrayBuckets))
 			for i, bucket := range bucketsParametersAux.ArrayBuckets {
 				bucket, err := c.hermez.UnpackBucket(c.opts, bucket)
 				if err != nil {
-					log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 					return nil, tracerr.Wrap(err)
 				}
 				bucketsParameters.ArrayBuckets[i].CeilUSD = bucket.CeilUSD
@@ -932,7 +920,6 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			var tokensExchange RollupEventUpdateTokenExchange
 			err := c.contractAbi.UnpackIntoInterface(&tokensExchange, "UpdateTokenExchange", vLog.Data)
 			if err != nil {
-				log.Debugf("Geth v1.10.8", "RollupEventsByBlock", "err", err)
 				return nil, tracerr.Wrap(err)
 			}
 			rollupEvents.UpdateTokenExchange = append(rollupEvents.UpdateTokenExchange, tokensExchange)
