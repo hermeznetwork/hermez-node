@@ -40,7 +40,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -547,9 +546,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	}
 
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
-	if tracerr.Unwrap(err) == ethereum.NotFound {
-		return nil, nil, nil
-	} else if err != nil {
+	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
 	}
 	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v", ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
