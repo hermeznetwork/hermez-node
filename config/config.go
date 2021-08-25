@@ -126,7 +126,7 @@ type Coordinator struct {
 	// pending txs externally marked by the column `external_delete`
 	PurgeByExtDelInterval Duration `validate:"required" env:"HEZNODE_COORDINATOR_PURGEBYEXTDELINTERVAL"`
 	// ProverWaitReadTimeout
-	ProverWaitReadTimeout Duration `validate:"required" env:"HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT"`
+	ProverWaitReadTimeout Duration `env:"HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT"`
 	// L2DB is the DB that holds the pool of L2Txs
 	L2DB struct {
 		// SafetyPeriod is the number of batches after which
