@@ -265,6 +265,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 
 	// Process L1UserTxs
 	for i := 0; i < len(l1usertxs); i++ {
+		// TODO: make concurrently
 		// assumption: l1usertx are sorted by L1Tx.Position
 		exitIdx, exitAccount, newExit, createdAccount, err := txProcessor.ProcessL1Tx(exitTree,
 			&l1usertxs[i])
@@ -315,6 +316,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 
 	// Process L1CoordinatorTxs
 	for i := 0; i < len(l1coordinatortxs); i++ {
+		// TODO: make concurrently
 		exitIdx, _, _, createdAccount, err := txProcessor.ProcessL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
 			return nil, tracerr.Wrap(err)
@@ -401,6 +403,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 
 	// Process L2Txs
 	for i := 0; i < len(l2txs); i++ {
+		// TODO: make concurrently
 		exitIdx, exitAccount, newExit, err := txProcessor.ProcessL2Tx(coordIdxsMap, collectedFees,
 			exitTree, &l2txs[i])
 		if err != nil {
