@@ -18,7 +18,7 @@ import (
 
 // Duration is a wrapper type that parses time duration from text.
 type Duration struct {
-	time.Duration `validate:"required"`
+	time.Duration `validate:"-"`
 }
 
 // UnmarshalText unmarshalls time duration from text.
@@ -34,10 +34,10 @@ func (d *Duration) UnmarshalText(data []byte) error {
 // ForgeBatchGasCost is the costs associated to a ForgeBatch transaction, split
 // into different parts to be used in a formula.
 type ForgeBatchGasCost struct {
-	Fixed     uint64 `validate:"required" env:"HEZNODE_FORGEBATCHGASCOST_FIXED"`
-	L1UserTx  uint64 `validate:"required" env:"HEZNODE_FORGEBATCHGASCOST_L1USERTX"`
-	L1CoordTx uint64 `validate:"required" env:"HEZNODE_FORGEBATCHGASCOST_L1COORDTX"`
-	L2Tx      uint64 `validate:"required" env:"HEZNODE_FORGEBATCHGASCOST_L2TX"`
+	Fixed     uint64 `validate:"-" env:"HEZNODE_FORGEBATCHGASCOST_FIXED"`
+	L1UserTx  uint64 `validate:"-" env:"HEZNODE_FORGEBATCHGASCOST_L1USERTX"`
+	L1CoordTx uint64 `validate:"-" env:"HEZNODE_FORGEBATCHGASCOST_L1COORDTX"`
+	L2Tx      uint64 `validate:"-" env:"HEZNODE_FORGEBATCHGASCOST_L2TX"`
 }
 
 // CoordinatorAPI specifies the configuration parameters of the API in mode
@@ -50,7 +50,7 @@ type CoordinatorAPI struct {
 // Coordinator is the coordinator specific configuration.
 type Coordinator struct {
 	// ForgerAddress is the address under which this coordinator is forging
-	ForgerAddress ethCommon.Address `validate:"required" env:"HEZNODE_COORDINATOR_FORGERADDRESS"`
+	ForgerAddress ethCommon.Address `validate:"-" env:"HEZNODE_COORDINATOR_FORGERADDRESS"`
 	// MinimumForgeAddressBalance is the minimum balance the forger address
 	// needs to start the coordinator in wei. Of set to 0, the coordinator
 	// will not check the balance before starting.
@@ -58,16 +58,16 @@ type Coordinator struct {
 	// FeeAccount is the Hermez account that the coordinator uses to receive fees
 	FeeAccount struct {
 		// Address is the ethereum address of the account to receive fees
-		Address ethCommon.Address `validate:"required" env:"HEZNODE_FEEACCOUNT_ADDRESS"`
+		Address ethCommon.Address `validate:"-" env:"HEZNODE_FEEACCOUNT_ADDRESS"`
 		// BJJ is the baby jub jub public key of the account to receive fees
-		BJJ babyjub.PublicKeyComp `validate:"required" env:"HEZNODE_FEEACCOUNT_BJJ"`
-	} `validate:"required"`
+		BJJ babyjub.PublicKeyComp `validate:"-" env:"HEZNODE_FEEACCOUNT_BJJ"`
+	} `validate:"-"`
 	// ConfirmBlocks is the number of confirmation blocks to wait for sent
 	// ethereum transactions before forgetting about them
-	ConfirmBlocks int64 `validate:"required,gte=0" env:"HEZNODE_COORDINATOR_CONFIRMBLOCKS"`
+	ConfirmBlocks int64 `validate:"gte=0" env:"HEZNODE_COORDINATOR_CONFIRMBLOCKS"`
 	// L1BatchTimeoutPerc is the portion of the range before the L1Batch
 	// timeout that will trigger a schedule to forge an L1Batch
-	L1BatchTimeoutPerc float64 `validate:"required,lte=1.0,gte=0.0" env:"HEZNODE_COORDINATOR_L1BATCHTIMEOUTPERC"`
+	L1BatchTimeoutPerc float64 `validate:"lte=1.0,gte=0.0" env:"HEZNODE_COORDINATOR_L1BATCHTIMEOUTPERC"`
 	// StartSlotBlocksDelay is the number of blocks of delay to wait before
 	// starting the pipeline when we reach a slot in which we can forge.
 	StartSlotBlocksDelay int64 `validate:"gte=0" env:"HEZNODE_COORDINATOR_STARTSLOTBLOCKSDELAY"`
@@ -91,10 +91,10 @@ type Coordinator struct {
 	SendBatchBlocksMarginCheck int64 `validate:"gte=0" env:"HEZNODE_COORDINATOR_SENDBATCHBLOCKSMARGINCHECK"`
 	// ProofServerPollInterval is the waiting interval between polling the
 	// ProofServer while waiting for a particular status
-	ProofServerPollInterval Duration `validate:"required" env:"HEZNODE_COORDINATOR_PROOFSERVERPOLLINTERVAL"`
+	ProofServerPollInterval Duration `validate:"-" env:"HEZNODE_COORDINATOR_PROOFSERVERPOLLINTERVAL"`
 	// ForgeRetryInterval is the waiting interval between calls forge a
 	// batch after an error
-	ForgeRetryInterval Duration `validate:"required" env:"HEZNODE_COORDINATOR_FORGERETRYINTERVAL"`
+	ForgeRetryInterval Duration `validate:"-" env:"HEZNODE_COORDINATOR_FORGERETRYINTERVAL"`
 	// ForgeDelay is the delay after which a batch is forged if the slot is
 	// already committed.  If set to 0s, the coordinator will continuously
 	// forge at the maximum rate.
@@ -120,23 +120,23 @@ type Coordinator struct {
 	ForgeOncePerSlotIfTxs bool `env:"HEZNODE_COORDINATOR_FORGEONCEPERSLOTIFTXS"`
 	// SyncRetryInterval is the waiting interval between calls to the main
 	// handler of a synced block after an error
-	SyncRetryInterval Duration `validate:"required" env:"HEZNODE_COORDINATOR_SYNCRETRYINTERVAL"`
+	SyncRetryInterval Duration `validate:"-" env:"HEZNODE_COORDINATOR_SYNCRETRYINTERVAL"`
 	// PurgeByExtDelInterval is the waiting interval between calls
 	// to the PurgeByExternalDelete function of the l2db which deletes
 	// pending txs externally marked by the column `external_delete`
-	PurgeByExtDelInterval Duration `validate:"required" env:"HEZNODE_COORDINATOR_PURGEBYEXTDELINTERVAL"`
+	PurgeByExtDelInterval Duration `validate:"-" env:"HEZNODE_COORDINATOR_PURGEBYEXTDELINTERVAL"`
 	// ProverWaitReadTimeout
 	ProverWaitReadTimeout Duration `env:"HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT"`
 	// L2DB is the DB that holds the pool of L2Txs
 	L2DB struct {
 		// SafetyPeriod is the number of batches after which
 		// non-pending L2Txs are deleted from the pool
-		SafetyPeriod common.BatchNum `validate:"required" env:"HEZNODE_L2DB_SAFETYPERIOD"`
+		SafetyPeriod common.BatchNum `validate:"-" env:"HEZNODE_L2DB_SAFETYPERIOD"`
 		// MaxTxs is the maximum number of pending L2Txs that can be
 		// stored in the pool.  Once this number of pending L2Txs is
 		// reached, inserts to the pool will be denied until some of
 		// the pending txs are forged.
-		MaxTxs uint32 `validate:"required" env:"HEZNODE_L2DB_MAXTXS"`
+		MaxTxs uint32 `validate:"-" env:"HEZNODE_L2DB_MAXTXS"`
 		// MinFeeUSD is the minimum fee in USD that a tx must pay in
 		// order to be accepted into the pool.  Txs with lower than
 		// minimum fee will be rejected at the API level.
@@ -144,87 +144,87 @@ type Coordinator struct {
 		// MaxFeeUSD is the maximum fee in USD that a tx must pay in
 		// order to be accepted into the pool.  Txs with greater than
 		// maximum fee will be rejected at the API level.
-		MaxFeeUSD float64 `validate:"required,gte=0" env:"HEZNODE_L2DB_MAXFEEUSD"`
+		MaxFeeUSD float64 `validate:"gte=0" env:"HEZNODE_L2DB_MAXFEEUSD"`
 		// TTL is the Time To Live for L2Txs in the pool. L2Txs older
 		// than TTL will be deleted.
-		TTL Duration `validate:"required" env:"HEZNODE_L2DB_TTL"`
+		TTL Duration `validate:"-" env:"HEZNODE_L2DB_TTL"`
 		// PurgeBatchDelay is the delay between batches to purge
 		// outdated transactions. Outdated L2Txs are those that have
 		// been forged or marked as invalid for longer than the
 		// SafetyPeriod and pending L2Txs that have been in the pool
 		// for longer than TTL once there are MaxTxs.
-		PurgeBatchDelay int64 `validate:"required,gte=0" env:"HEZNODE_L2DB_PURGEBATCHDELAY"`
+		PurgeBatchDelay int64 `validate:"gte=0" env:"HEZNODE_L2DB_PURGEBATCHDELAY"`
 		// InvalidateBatchDelay is the delay between batches to mark
 		// invalid transactions due to nonce lower than the account
 		// nonce.
-		InvalidateBatchDelay int64 `validate:"required" env:"HEZNODE_L2DB_INVALIDATEBATCHDELAY"`
+		InvalidateBatchDelay int64 `validate:"-" env:"HEZNODE_L2DB_INVALIDATEBATCHDELAY"`
 		// PurgeBlockDelay is the delay between blocks to purge
 		// outdated transactions. Outdated L2Txs are those that have
 		// been forged or marked as invalid for longer than the
 		// SafetyPeriod and pending L2Txs that have been in the pool
 		// for longer than TTL once there are MaxTxs.
-		PurgeBlockDelay int64 `validate:"required,gte=0" env:"HEZNODE_L2DB_PURGEBLOCKDELAY"`
+		PurgeBlockDelay int64 `validate:"gte=0" env:"HEZNODE_L2DB_PURGEBLOCKDELAY"`
 		// InvalidateBlockDelay is the delay between blocks to mark
 		// invalid transactions due to nonce lower than the account
 		// nonce.
-		InvalidateBlockDelay int64 `validate:"required,gte=0" env:"HEZNODE_L2DB_INVALIDATEBLOCKDELAY"`
-	} `validate:"required"`
+		InvalidateBlockDelay int64 `validate:"gte=0" env:"HEZNODE_L2DB_INVALIDATEBLOCKDELAY"`
+	} `validate:"-"`
 	TxSelector struct {
 		// Path where the TxSelector StateDB is stored
-		Path string `validate:"required" env:"HEZNODE_TXSELECTOR_PATH"`
-	} `validate:"required"`
+		Path string `validate:"-" env:"HEZNODE_TXSELECTOR_PATH"`
+	} `validate:"-"`
 	BatchBuilder struct {
 		// Path where the BatchBuilder StateDB is stored
-		Path string `validate:"required" env:"HEZNODE_BATCHBUILDER_PATH"`
-	} `validate:"required"`
+		Path string `validate:"-" env:"HEZNODE_BATCHBUILDER_PATH"`
+	} `validate:"-"`
 	ServerProofs struct {
-		URLs []string `validate:"required" env:"HEZNODE_SERVERPROOF_URLS" envSeparator:","`
-	} `validate:"required"`
+		URLs []string `validate:"-" env:"HEZNODE_SERVERPROOF_URLS" envSeparator:","`
+	} `validate:"-"`
 	Circuit struct {
 		// MaxTx is the maximum number of txs supported by the circuit
-		MaxTx int64 `validate:"required,gte=0" env:"HEZNODE_CIRCUIT_MAXTX"`
+		MaxTx int64 `validate:"gte=0" env:"HEZNODE_CIRCUIT_MAXTX"`
 		// NLevels is the maximum number of merkle tree levels
 		// supported by the circuit
-		NLevels int64 `validate:"required,gte=0" env:"HEZNODE_CIRCUIT_NLEVELS"`
-	} `validate:"required"`
+		NLevels int64 `validate:"gte=0" env:"HEZNODE_CIRCUIT_NLEVELS"`
+	} `validate:"-"`
 	EthClient struct {
 		// MaxGasPrice is the maximum gas price allowed for ethereum
 		// transactions
-		MaxGasPrice int64 `validate:"required" env:"HEZNODE_ETHCLIENT_MAXGASPRICE"`
+		MaxGasPrice int64 `validate:"-" env:"HEZNODE_ETHCLIENT_MAXGASPRICE"`
 		// MinGasPrice is the minimum gas price in gwei allowed for ethereum
-		MinGasPrice int64 `validate:"required" env:"HEZNODE_ETHCLIENT_MINGASPRICE"`
+		MinGasPrice int64 `validate:"-" env:"HEZNODE_ETHCLIENT_MINGASPRICE"`
 		// GasPriceIncPerc is the percentage increase of gas price set
 		// in an ethereum transaction from the suggested gas price by
 		// the ethereum node
 		GasPriceIncPerc int64 `validate:"gte=0" env:"HEZNODE_ETHCLIENT_GASPRICEINCPERC"`
 		// CheckLoopInterval is the waiting interval between receipt
 		// checks of ethereum transactions in the TxManager
-		CheckLoopInterval Duration `validate:"required" env:"HEZNODE_ETHCLIENT_CHECKLOOPINTERVAL"`
+		CheckLoopInterval Duration `validate:"-" env:"HEZNODE_ETHCLIENT_CHECKLOOPINTERVAL"`
 		// Attempts is the number of attempts to do an eth client RPC
 		// call before giving up
-		Attempts int `validate:"required,gte=1" env:"HEZNODE_ETHCLIENT_ATTEMPTS"`
+		Attempts int `validate:"gte=1" env:"HEZNODE_ETHCLIENT_ATTEMPTS"`
 		// AttemptsDelay is delay between attempts do do an eth client
 		// RPC call
-		AttemptsDelay Duration `validate:"required" env:"HEZNODE_ETHCLIENT_ATTEMPTSDELAY"`
+		AttemptsDelay Duration `validate:"-" env:"HEZNODE_ETHCLIENT_ATTEMPTSDELAY"`
 		// TxResendTimeout is the timeout after which a non-mined
 		// ethereum transaction will be resent (reusing the nonce) with
 		// a newly calculated gas price
-		TxResendTimeout Duration `validate:"required" env:"HEZNODE_ETHCLIENT_TXRESENDTIMEOUT"`
+		TxResendTimeout Duration `validate:"-" env:"HEZNODE_ETHCLIENT_TXRESENDTIMEOUT"`
 		// NoReuseNonce disables reusing nonces of pending transactions for
 		// new replacement transactions
 		NoReuseNonce bool `env:"HEZNODE_ETHCLIENT_NOREUSENONCE"`
 		// Keystore is the ethereum keystore where private keys are kept
 		Keystore struct {
 			// Path to the keystore
-			Path string `validate:"required" env:"HEZNODE_KEYSTORE_PATH"`
+			Path string `validate:"-" env:"HEZNODE_KEYSTORE_PATH"`
 			// Password used to decrypt the keys in the keystore
-			Password string `validate:"required" env:"HEZNODE_KEYSTORE_PASSWORD"`
-		} `validate:"required"`
+			Password string `validate:"-" env:"HEZNODE_KEYSTORE_PASSWORD"`
+		} `validate:"-"`
 		// ForgeBatchGasCost contains the cost of each action in the
 		// ForgeBatch transaction.
-		ForgeBatchGasCost ForgeBatchGasCost `validate:"required"`
-	} `validate:"required"`
-	API   CoordinatorAPI `validate:"required"`
+		ForgeBatchGasCost ForgeBatchGasCost `validate:"-"`
+	} `validate:"-"`
+	API   CoordinatorAPI `validate:"-"`
 	Debug struct {
 		// BatchPath if set, specifies the path where batchInfo is stored
 		// in JSON in every step/update of the pipeline
@@ -251,15 +251,15 @@ type Coordinator struct {
 // not provided, the write one it's going to be used for both reads and writes
 type PostgreSQL struct {
 	// Port of the PostgreSQL write server
-	PortWrite int `validate:"required" env:"HEZNODE_POSTGRESQL_PORTWRITE"`
+	PortWrite int `validate:"-" env:"HEZNODE_POSTGRESQL_PORTWRITE"`
 	// Host of the PostgreSQL write server
-	HostWrite string `validate:"required" env:"HEZNODE_POSTGRESQL_HOSTWRITE"`
+	HostWrite string `validate:"-" env:"HEZNODE_POSTGRESQL_HOSTWRITE"`
 	// User of the PostgreSQL write server
-	UserWrite string `validate:"required" env:"HEZNODE_POSTGRESQL_USERWRITE"`
+	UserWrite string `validate:"-" env:"HEZNODE_POSTGRESQL_USERWRITE"`
 	// Password of the PostgreSQL write server
-	PasswordWrite string `validate:"required" env:"HEZNODE_POSTGRESQL_PASSWORDWRITE"`
+	PasswordWrite string `validate:"-" env:"HEZNODE_POSTGRESQL_PASSWORDWRITE"`
 	// Name of the PostgreSQL write server database
-	NameWrite string `validate:"required" env:"HEZNODE_POSTGRESQL_NAMEWRITE"`
+	NameWrite string `validate:"-" env:"HEZNODE_POSTGRESQL_NAMEWRITE"`
 	// Port of the PostgreSQL read server
 	PortRead int `env:"HEZNODE_POSTGRESQL_PORTREAD"`
 	// Host of the PostgreSQL read server
@@ -289,20 +289,20 @@ type NodeDebug struct {
 type Node struct {
 	StateDB struct {
 		// Path where the synchronizer StateDB is stored
-		Path string `validate:"required" env:"HEZNODE_STATEDB_PATH"`
+		Path string `validate:"-" env:"HEZNODE_STATEDB_PATH"`
 		// Keep is the number of checkpoints to keep
-		Keep int `validate:"required,gte=128" env:"HEZNODE_STATEDB_KEEP"`
-	} `validate:"required"`
-	PostgreSQL PostgreSQL `validate:"required"`
+		Keep int `validate:"gte=128" env:"HEZNODE_STATEDB_KEEP"`
+	} `validate:"-"`
+	PostgreSQL PostgreSQL `validate:"-"`
 	Web3       struct {
 		// URL is the URL of the web3 ethereum-node RPC server.  Only
 		// geth is officially supported.
-		URL string `validate:"required,url" env:"HEZNODE_WEB3_URL"`
-	} `validate:"required"`
+		URL string `validate:"url" env:"HEZNODE_WEB3_URL"`
+	} `validate:"-"`
 	Synchronizer struct {
 		// SyncLoopInterval is the interval between attempts to
 		// synchronize a new block from an ethereum node
-		SyncLoopInterval Duration `validate:"required" env:"HEZNODE_SYNCHRONIZER_SYNCLOOPINTERVAL"`
+		SyncLoopInterval Duration `validate:"-" env:"HEZNODE_SYNCHRONIZER_SYNCLOOPINTERVAL"`
 		// StatsUpdateBlockNumDiffThreshold is a threshold of a number of
 		// Ethereum blocks left to synchronize, such that if there are more
 		// blocks to sync than the defined value synchronizer can aggressively
@@ -310,20 +310,20 @@ type Node struct {
 		// After reaching the threshold UpdateEth is called on each block.
 		// This value only affects the reported % of synchronization of
 		// blocks and batches, nothing else.
-		StatsUpdateBlockNumDiffThreshold uint16 `validate:"required,gt=32" env:"HEZNODE_SYNCHRONIZER_STATSUPDATEBLOCKSNUMDIFFTHRESHOLD"`
+		StatsUpdateBlockNumDiffThreshold uint16 `validate:"gt=32" env:"HEZNODE_SYNCHRONIZER_STATSUPDATEBLOCKSNUMDIFFTHRESHOLD"`
 		// StatsUpdateFrequencyDivider - While having more blocks to sync than
 		// updateEthBlockNumThreshold, UpdateEth will be called once in a
 		// defined number of blocks. This value only affects the reported % of
 		// synchronization of blocks and batches, nothing else.
-		StatsUpdateFrequencyDivider uint16 `validate:"required,gt=1" env:"HEZNODE_SYNCHRONIZER_STATSUPDATEFREQUENCYDIVIDER"`
-	} `validate:"required"`
+		StatsUpdateFrequencyDivider uint16 `validate:"gt=1" env:"HEZNODE_SYNCHRONIZER_STATSUPDATEFREQUENCYDIVIDER"`
+	} `validate:"-"`
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
-		Rollup ethCommon.Address `validate:"required" env:"HEZNODE_SMARTCONTRACTS_ROLLUP"`
-	} `validate:"required"`
-	API                  APIConfigParameters                  `validate:"required"`
-	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
-	Debug                NodeDebug                            `validate:"required"`
+		Rollup ethCommon.Address `validate:"-" env:"HEZNODE_SMARTCONTRACTS_ROLLUP"`
+	} `validate:"-"`
+	API                  APIConfigParameters                  `validate:"-"`
+	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"-"`
+	Debug                NodeDebug                            `validate:"-"`
 	Coordinator          Coordinator                          `validate:"-"`
 }
 
@@ -340,32 +340,32 @@ type APIConfigParameters struct {
 	// writes of the response.
 	Writetimeout Duration `env:"HEZNODE_API_WRITETIMEOUT"`
 	// Maximum concurrent connections allowed between API and SQL
-	MaxSQLConnections int `validate:"required,gte=1" env:"HEZNODE_API_MAXSQLCONNECTIONS"`
+	MaxSQLConnections int `validate:"gte=1" env:"HEZNODE_API_MAXSQLCONNECTIONS"`
 	// SQLConnectionTimeout is the maximum amount of time that an API request
 	// can wait to establish a SQL connection
 	SQLConnectionTimeout Duration `env:"HEZNODE_API_SQLCONNECTIONTIMEOUT"`
 	// UpdateMetricsInterval is the interval between updates of the metrics
-	UpdateMetricsInterval Duration `validate:"required" env:"HEZNODE_API_UPDATEMETRICSINTERVAL"`
+	UpdateMetricsInterval Duration `validate:"-" env:"HEZNODE_API_UPDATEMETRICSINTERVAL"`
 	// UpdateRecommendedFeeInterval is the interval between updates of the recommended fees
-	UpdateRecommendedFeeInterval Duration `validate:"required" env:"HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL"`
+	UpdateRecommendedFeeInterval Duration `validate:"-" env:"HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL"`
 }
 
 // APIServer is the api server configuration parameters
 type APIServer struct {
 	// NodeAPI specifies the configuration parameters of the API
-	API         APIConfigParameters `validate:"required"`
-	PostgreSQL  PostgreSQL          `validate:"required"`
+	API         APIConfigParameters `validate:"-"`
+	PostgreSQL  PostgreSQL          `validate:"-"`
 	Coordinator struct {
 		API struct {
 			// Coordinator enables the coordinator API endpoints
 			Coordinator bool `env:"HEZNODE_COORDINATORAPI_COORDINATOR"`
-		} `validate:"required"`
+		} `validate:"-"`
 		L2DB struct {
 			// MaxTxs is the maximum number of pending L2Txs that can be
 			// stored in the pool.  Once this number of pending L2Txs is
 			// reached, inserts to the pool will be denied until some of
 			// the pending txs are forged.
-			MaxTxs uint32 `validate:"required" env:"HEZNODE_L2DB_MAXTXS"`
+			MaxTxs uint32 `validate:"-" env:"HEZNODE_L2DB_MAXTXS"`
 			// MinFeeUSD is the minimum fee in USD that a tx must pay in
 			// order to be accepted into the pool.  Txs with lower than
 			// minimum fee will be rejected at the API level.
@@ -373,10 +373,10 @@ type APIServer struct {
 			// MaxFeeUSD is the maximum fee in USD that a tx must pay in
 			// order to be accepted into the pool.  Txs with greater than
 			// maximum fee will be rejected at the API level.
-			MaxFeeUSD float64 `validate:"required,gte=0" env:"HEZNODE_L2DB_MAXFEEUSD"`
-		} `validate:"required"`
+			MaxFeeUSD float64 `validate:"gte=0" env:"HEZNODE_L2DB_MAXFEEUSD"`
+		} `validate:"-"`
 	}
-	Debug NodeDebug `validate:"required"`
+	Debug NodeDebug `validate:"-"`
 }
 
 // LoadNode loads the Node configuration from path.
