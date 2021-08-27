@@ -685,24 +685,27 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 // corresponding batches in StateBD are discarded.  Returns the last valid
 // blockNum from the HistoryDB.
 func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
-	blockNum := uncleBlock.Num
 
 	var block *common.Block
-	for blockNum >= s.startBlockNum {
+
+	for blockNum := uncleBlock.Num; blockNum >= s.startBlockNum; blockNum-- {
+		block, err := s.historyDB.GetBlock(blockNum)
+		if err == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return 0, tracerr.Wrap(fmt.Errorf("historyDB.GetBlock: %w", err))
+		}
+
 		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), blockNum)
 		if err != nil {
 			return 0, tracerr.Wrap(fmt.Errorf("ethClient.EthBlockByNumber: %w", err))
 		}
 
-		block, err = s.historyDB.GetBlock(blockNum)
-		if err != nil {
-			return 0, tracerr.Wrap(fmt.Errorf("historyDB.GetBlock: %w", err))
-		}
 		if block.Hash == ethBlock.Hash {
 			log.Debugf("Found valid block: %v", blockNum)
 			break
 		}
-		blockNum--
 	}
 	total := uncleBlock.Num - block.Num
 	log.Debugw("Discarding blocks", "total", total, "from", uncleBlock.Num, "to", block.Num+1)
