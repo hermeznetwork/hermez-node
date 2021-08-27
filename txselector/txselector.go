@@ -441,10 +441,6 @@ func (txsel *TxSelector) processL2Txs(
 	failedAG failedAtomicGroup,
 	err error,
 ) {
-	const failedGroupErrMsg = "Failed forging atomic tx from Group %s." +
-		" Restarting selection process without txs from this group"
-	//positionL1 := nAlreadyProcessedL1Txs
-	//nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
 	// Iterate over l2Txs
 	// - check Nonces
 	// - check enough Balance for the Amount+Fee
@@ -477,259 +473,6 @@ func (txsel *TxSelector) processL2Txs(
 	}
 
 	return accAuths, l1CoordinatorTxs, selectedL2Txs, nonSelectedL2Txs, unforjableL2Txs, failedAG, nil
-
-	//for i := 0; i < len(l2Txs); i++ {
-	//	// TODO: make concurrently
-	//	// Check if there is space for more L2Txs in the selection
-	//	var isTxCorrect bool
-	//	isTxCorrect, nonSelectedL2Txs, failedAG = isEnoughSpace(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, i, selectionConfig, l2Txs[i], l2Txs, nonSelectedL2Txs)
-	//	if failedAG.id != common.EmptyAtomicGroupID {
-	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//			failedGroupErrMsg,
-	//			l2Txs[i].AtomicGroupID.String(),
-	//		))
-	//	}
-	//	if !isTxCorrect {
-	//		break
-	//	}
-	//
-	//	// Reject tx if the batch that is being selected is greater than MaxNumBatch
-	//	isTxCorrect, unforjableL2Txs, failedAG = isBatchGreaterThanMaxNumBatch(l2Txs[i], nextBatchNum, unforjableL2Txs)
-	//	if failedAG.id != common.EmptyAtomicGroupID {
-	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//			failedGroupErrMsg,
-	//			l2Txs[i].AtomicGroupID.String(),
-	//		))
-	//	}
-	//	if !isTxCorrect {
-	//		continue
-	//	}
-	//
-	//	// Discard exits with amount 0
-	//	isTxCorrect, unforjableL2Txs, failedAG = isExitWithZeroAmount(l2Txs[i], unforjableL2Txs)
-	//	if failedAG.id != common.EmptyAtomicGroupID {
-	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//			failedGroupErrMsg,
-	//			l2Txs[i].AtomicGroupID.String(),
-	//		))
-	//	}
-	//	if !isTxCorrect {
-	//		continue
-	//	}
-	//
-	//	// get Nonce & TokenID from the Account by l2Tx.FromIdx
-	//	accSender, err := tp.StateDB().GetAccount(l2Txs[i].FromIdx)
-	//	if err != nil {
-	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
-	//	}
-	//	l2Txs[i].TokenID = accSender.TokenID
-	//
-	//	// Check enough Balance on sender
-	//	isTxCorrect, nonSelectedL2Txs, failedAG = isEnoughBalanceOnSender(l2Txs[i], tp, nonSelectedL2Txs)
-	//	if failedAG.id != common.EmptyAtomicGroupID {
-	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//			failedGroupErrMsg,
-	//			l2Txs[i].AtomicGroupID.String(),
-	//		))
-	//	}
-	//	if !isTxCorrect {
-	//		continue
-	//	}
-	//
-	//	// Check if Nonce is correct
-	//	isTxCorrect, nonSelectedL2Txs, failedAG = isNonceCorrect(l2Txs[i], accSender, nonSelectedL2Txs)
-	//	if failedAG.id != common.EmptyAtomicGroupID {
-	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//			failedGroupErrMsg,
-	//			l2Txs[i].AtomicGroupID.String(),
-	//		))
-	//	}
-	//	if !isTxCorrect {
-	//		continue
-	//	}
-	//
-	//	// if TokenID does not exist yet, create new L1CoordinatorTx to
-	//	// create the CoordinatorAccount for that TokenID, to receive
-	//	// the fees. Only in the case that there does not exist yet a
-	//	// pending L1CoordinatorTx to create the account for the
-	//	// Coordinator for that TokenID
-	//	var newL1CoordTx *common.L1Tx
-	//	newL1CoordTx, positionL1, err = txsel.coordAccountForTokenID(accSender.TokenID, positionL1)
-	//	if err != nil {
-	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
-	//	}
-	//	if newL1CoordTx != nil {
-	//		// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
-	//		// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
-	//		isTxCorrect, nonSelectedL2Txs, failedAG = isEnoughSpaceForL1CoordTx(l2Txs[i], nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig, nonSelectedL2Txs)
-	//		if failedAG.id != common.EmptyAtomicGroupID {
-	//			return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//				failedGroupErrMsg,
-	//				l2Txs[i].AtomicGroupID.String(),
-	//			))
-	//		}
-	//		if !isTxCorrect {
-	//			continue
-	//		}
-	//
-	//		// increase positionL1
-	//		positionL1++
-	//		l1CoordinatorTxs = append(l1CoordinatorTxs, *newL1CoordTx)
-	//		accAuths = append(accAuths, txsel.coordAccount.AccountCreationAuth)
-	//
-	//		// TODO: PROCESS TX
-	//		// process the L1CoordTx
-	//		txsL1ToBeProcessed = append(txsL1ToBeProcessed, newL1CoordTx)
-	//		//_, _, _, _, err := tp.ProcessL1Tx(nil, newL1CoordTx)
-	//		//if err != nil {
-	//		//	return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
-	//		//}
-	//		nAlreadyProcessedL1Txs++
-	//	}
-	//
-	//	// If tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB,
-	//	// if so, tx is used.  If tx.ToIdx==0, for an L2Tx will be the
-	//	// case of TxToEthAddr or TxToBJJ, check if
-	//	// tx.ToEthAddr/tx.ToBJJ exist in localAccountsDB, if yes tx is
-	//	// used; if not, check if tx.ToEthAddr is in
-	//	// AccountCreationAuthDB, if so, tx is used and L1CoordinatorTx
-	//	// of CreateAccountAndDeposit is created. If tx.ToIdx==1, is a
-	//	// Exit type and is used.
-	//	if l2Txs[i].ToIdx == 0 { // ToEthAddr/ToBJJ case
-	//		var (
-	//			validL2Tx *common.PoolL2Tx
-	//			l1CoordinatorTx *common.L1Tx
-	//			accAuth *common.AccountCreationAuth
-	//		)
-	//		validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect, nonSelectedL2Txs, failedAG = verifyAndBuildForTxToEthAddrBJJ(
-	//			l2Txs[i], txsel, selectionConfig, l1UserFutureTxs, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1, nonSelectedL2Txs)
-	//		if failedAG.id != common.EmptyAtomicGroupID {
-	//			return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//				failedGroupErrMsg,
-	//				l2Txs[i].AtomicGroupID.String(),
-	//			))
-	//		}
-	//		if !isTxCorrect {
-	//			continue
-	//		}
-	//
-	//		if l1CoordinatorTx != nil && validL2Tx != nil {
-	//			// If ToEthAddr == 0xff.. this means that we
-	//			// are handling a TransferToBJJ, which doesn't
-	//			// require an authorization because it doesn't
-	//			// contain a valid ethereum address.
-	//			// Otherwise only create the account if we have
-	//			// the corresponding authorization
-	//			if validL2Tx.ToEthAddr == common.FFAddr {
-	//				accAuths = append(accAuths, common.EmptyEthSignature)
-	//				l1CoordinatorTxs = append(l1CoordinatorTxs, *l1CoordinatorTx)
-	//				positionL1++
-	//			} else if accAuth != nil {
-	//				accAuths = append(accAuths, accAuth.Signature)
-	//				l1CoordinatorTxs = append(l1CoordinatorTxs, *l1CoordinatorTx)
-	//				positionL1++
-	//			}
-	//			// TODO: PROCESS TX
-	//			// process the L1CoordTx
-	//			txsL1ToBeProcessed = append(txsL1ToBeProcessed, l1CoordinatorTx)
-	//			//_, _, _, _, err := tp.ProcessL1Tx(nil, l1CoordinatorTx)
-	//			//if err != nil {
-	//			//	return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
-	//			//}
-	//			nAlreadyProcessedL1Txs++
-	//		}
-	//		if validL2Tx == nil {
-	//			// Missing info on why this tx is not selected? Check l2Txs.Info at this point!
-	//			// If tx is atomic, restart process without txs from the atomic group
-	//			if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-	//				obj := common.TxSelectorError{
-	//					Message: l2Txs[i].Info,
-	//					Code:    l2Txs[i].ErrorCode,
-	//					Type:    l2Txs[i].ErrorType,
-	//				}
-	//				failedAG = failedAtomicGroup{
-	//					id:         l2Txs[i].AtomicGroupID,
-	//					failedTxID: l2Txs[i].TxID,
-	//					reason:     obj,
-	//				}
-	//				return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//					failedGroupErrMsg,
-	//					l2Txs[i].AtomicGroupID.String(),
-	//				))
-	//			}
-	//			nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
-	//			continue
-	//		}
-	//	} else if l2Txs[i].ToIdx >= common.IdxUserThreshold {
-	//		isTxCorrect, nonSelectedL2Txs, failedAG = isToIdxExists(l2Txs[i], txsel, nonSelectedL2Txs)
-	//		if failedAG.id != common.EmptyAtomicGroupID {
-	//			return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//				failedGroupErrMsg,
-	//				l2Txs[i].AtomicGroupID.String(),
-	//			))
-	//		}
-	//		if !isTxCorrect {
-	//			continue
-	//		}
-	//	}
-	//
-	//	// get CoordIdxsMap for the TokenID of the current l2Txs[i]
-	//	// get TokenID from tx.Sender account
-	//	tokenID := accSender.TokenID
-	//	_, err = txsel.getCoordIdx(tokenID)
-	//	if err != nil {
-	//		// if err is db.ErrNotFound, should not happen, as all
-	//		// the selectedTxs.TokenID should have a CoordinatorIdx
-	//		// created in the DB at this point
-	//		return nil, nil, nil, nil, nil, failedAG,
-	//			tracerr.Wrap(fmt.Errorf("could not get CoordIdx for TokenID=%d, "+
-	//				"due: %s", tokenID, err))
-	//	}
-	//	// prepare temp coordIdxsMap & AccumulatedFees for the call to
-	//	// ProcessL2Tx
-	//	//coordIdxsMap := map[common.TokenID]common.Idx{tokenID: coordIdx}
-	//	//// tp.AccumulatedFees = make(map[common.Idx]*big.Int)
-	//	//if _, ok := tp.AccumulatedFees[coordIdx]; !ok {
-	//	//	tp.AccumulatedFees[coordIdx] = big.NewInt(0)
-	//	//}
-	//	//
-	//	//// TODO: PROCESS TX
-	//	//_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
-	//	//if err != nil {
-	//	//	obj := common.TxSelectorError{
-	//	//		Message: fmt.Sprintf(ErrTxDiscartedInProcessL2Tx+" due to %s", err.Error()),
-	//	//		Code:    ErrTxDiscartedInProcessL2TxCode,
-	//	//		Type:    ErrTxDiscartedInProcessL2TxType,
-	//	//	}
-	//	//	log.Debugw("txselector.getL1L2TxSelection at ProcessL2Tx", "err", err)
-	//	//	// If tx is atomic, restart process without txs from the atomic group
-	//	//	if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-	//	//		failedAG = failedAtomicGroup{
-	//	//			id:         l2Txs[i].AtomicGroupID,
-	//	//			failedTxID: l2Txs[i].TxID,
-	//	//			reason:     obj,
-	//	//		}
-	//	//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-	//	//			failedGroupErrMsg,
-	//	//			l2Txs[i].AtomicGroupID.String(),
-	//	//		))
-	//	//	}
-	//	//	// Discard L2Tx, and update Info parameter of the tx,
-	//	//	// and add it to the discardedTxs array
-	//	//	l2Txs[i].Info = obj.Message
-	//	//	l2Txs[i].ErrorCode = obj.Code
-	//	//	l2Txs[i].ErrorType = obj.Type
-	//	//	nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
-	//	//	continue
-	//	//}
-	//	txsL2ToBeProcessed = append(txsL2ToBeProcessed, l2Txs[i])
-	//	// TODO: fix this possible case, when transaction failed, but it's calculated as already processed
-	//	nAlreadyProcessedL2Txs++
-	//
-	//	//selectedL2Txs = append(selectedL2Txs, l2Txs[i])
-	//} // after this loop, no checks to discard txs should be done
-	//
-	//return accAuths, l1CoordinatorTxs, selectedL2Txs, nonSelectedL2Txs, unforjableL2Txs, failedAG, nil
 }
 
 func (txsel *TxSelector) verifyTxs(l2Txs []common.PoolL2Tx, nonSelectedL2Txs, unforjableL2Txs []common.PoolL2Tx, l1UserFutureTxs []common.L1Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
@@ -842,13 +585,8 @@ func (txsel *TxSelector) verifyTxs(l2Txs []common.PoolL2Tx, nonSelectedL2Txs, un
 			l1CoordinatorTxs = append(l1CoordinatorTxs, *newL1CoordTx)
 			accAuths = append(accAuths, txsel.coordAccount.AccountCreationAuth)
 
-			// TODO: PROCESS TX
 			// process the L1CoordTx
 			txsL1ToBeProcessed = append(txsL1ToBeProcessed, newL1CoordTx)
-			//_, _, _, _, err := tp.ProcessL1Tx(nil, newL1CoordTx)
-			//if err != nil {
-			//	return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
-			//}
 			nAlreadyProcessedL1Txs++
 		}
 
@@ -897,10 +635,6 @@ func (txsel *TxSelector) verifyTxs(l2Txs []common.PoolL2Tx, nonSelectedL2Txs, un
 				// TODO: PROCESS TX
 				// process the L1CoordTx
 				txsL1ToBeProcessed = append(txsL1ToBeProcessed, l1CoordinatorTx)
-				//_, _, _, _, err := tp.ProcessL1Tx(nil, l1CoordinatorTx)
-				//if err != nil {
-				//	return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(err)
-				//}
 				nAlreadyProcessedL1Txs++
 			}
 			if validL2Tx == nil {
@@ -938,59 +672,9 @@ func (txsel *TxSelector) verifyTxs(l2Txs []common.PoolL2Tx, nonSelectedL2Txs, un
 			}
 		}
 
-		// get CoordIdxsMap for the TokenID of the current l2Txs[i]
-		// get TokenID from tx.Sender account
-		tokenID := accSender.TokenID
-		_, err = txsel.getCoordIdx(tokenID)
-		if err != nil {
-			// if err is db.ErrNotFound, should not happen, as all
-			// the selectedTxs.TokenID should have a CoordinatorIdx
-			// created in the DB at this point
-			return nil, nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf("could not get CoordIdx for TokenID=%d, "+
-				"due: %s", tokenID, err))
-		}
-		// prepare temp coordIdxsMap & AccumulatedFees for the call to
-		// ProcessL2Tx
-		//coordIdxsMap := map[common.TokenID]common.Idx{tokenID: coordIdx}
-		//// tp.AccumulatedFees = make(map[common.Idx]*big.Int)
-		//if _, ok := tp.AccumulatedFees[coordIdx]; !ok {
-		//	tp.AccumulatedFees[coordIdx] = big.NewInt(0)
-		//}
-		//
-		//// TODO: PROCESS TX
-		//_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2Txs[i])
-		//if err != nil {
-		//	obj := common.TxSelectorError{
-		//		Message: fmt.Sprintf(ErrTxDiscartedInProcessL2Tx+" due to %s", err.Error()),
-		//		Code:    ErrTxDiscartedInProcessL2TxCode,
-		//		Type:    ErrTxDiscartedInProcessL2TxType,
-		//	}
-		//	log.Debugw("txselector.getL1L2TxSelection at ProcessL2Tx", "err", err)
-		//	// If tx is atomic, restart process without txs from the atomic group
-		//	if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
-		//		failedAG = failedAtomicGroup{
-		//			id:         l2Txs[i].AtomicGroupID,
-		//			failedTxID: l2Txs[i].TxID,
-		//			reason:     obj,
-		//		}
-		//		return nil, nil, nil, nil, nil, failedAG, tracerr.Wrap(fmt.Errorf(
-		//			failedGroupErrMsg,
-		//			l2Txs[i].AtomicGroupID.String(),
-		//		))
-		//	}
-		//	// Discard L2Tx, and update Info parameter of the tx,
-		//	// and add it to the discardedTxs array
-		//	l2Txs[i].Info = obj.Message
-		//	l2Txs[i].ErrorCode = obj.Code
-		//	l2Txs[i].ErrorType = obj.Type
-		//	nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
-		//	continue
-		//}
 		txsL2ToBeProcessed = append(txsL2ToBeProcessed, l2Txs[i])
 		// TODO: fix this possible case, when transaction failed, but it's calculated as already processed
 		nAlreadyProcessedL2Txs++
-
-		//selectedL2Txs = append(selectedL2Txs, l2Txs[i])
 	} // after this loop, no checks to discard txs should be done
 	return txsL1ToBeProcessed, txsL2ToBeProcessed, nonSelectedL2Txs, unforjableL2Txs, accAuths, l1CoordinatorTxs, failedAG, nil
 }
