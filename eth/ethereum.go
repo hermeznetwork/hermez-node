@@ -358,7 +358,7 @@ func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
 
 // EthNextBlockWithSCEvents returns the next block with events in the provided SC addresses
 func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
-	const blocksPerCycle = int64(10000)
+	const blocksPerCycle int64 = 10000
 
 	lastBlock, err := c.EthLastBlock()
 	if err != nil {
