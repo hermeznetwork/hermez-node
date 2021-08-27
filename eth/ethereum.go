@@ -308,6 +308,11 @@ func (c *EthereumClient) Client() *ethclient.Client {
 	return c.client
 }
 
+// FilterLogs execute a FilterQuery
+func (c *EthereumClient) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
+	return c.client.FilterLogs(ctx, query)
+}
+
 // newCallOpts returns a CallOpts to be used in ethereum calls with a non-zero
 // From address.  This is a workaround for a bug in ethereumjs-vm that shows up
 // in ganache: https://github.com/hermeznetwork/hermez-node/issues/317

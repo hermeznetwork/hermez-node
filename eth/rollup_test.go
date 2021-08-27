@@ -89,7 +89,7 @@ func TestRollupAddToken(t *testing.T) {
 	require.NoError(t, err)
 	_, err = rollupClient.RollupAddToken(tokenHEZAddressConst, feeAddToken, deadline)
 	require.NoError(t, err)
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestRollupAddToken(t *testing.T) {
 }
 
 func TestRollupForgeBatch(t *testing.T) {
-	chainid, _ := auctionClient.client.Client().ChainID(context.Background())
+	chainid, _ := auctionClient.ethereumClient.Client().ChainID(context.Background())
 	// Register Coordinator
 	forgerAddress := governanceAddressConst
 	_, err := auctionClient.AuctionSetCoordinator(forgerAddress, URL)
@@ -122,7 +122,7 @@ func TestRollupForgeBatch(t *testing.T) {
 
 	// Add Blocks
 	blockNum := int64(int(blocksPerSlot)*int(currentSlot+4) + int(genesisBlock))
-	currentBlockNum, err := auctionClient.client.EthLastBlock()
+	currentBlockNum, err := auctionClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	blocksToAdd := blockNum - currentBlockNum
 	addBlocks(blocksToAdd, ethClientDialURL)
@@ -182,7 +182,7 @@ func TestRollupForgeBatch(t *testing.T) {
 	_, err = rollupClient.RollupForgeBatch(argsForge, nil)
 	require.NoError(t, err)
 
-	currentBlockNum, err = rollupClient.client.EthLastBlock()
+	currentBlockNum, err = rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestRollupForgeBatch(t *testing.T) {
 func TestRollupForgeBatchArgs(t *testing.T) {
 	args, sender, err := rollupClient.RollupForgeBatchArgs(ethHashForge, uint16(len(L1UserTxs)))
 	require.NoError(t, err)
-	assert.Equal(t, *sender, rollupClient.client.account.Address)
+	assert.Equal(t, *sender, rollupClient.ethereumClient.account.Address)
 	assert.Equal(t, argsForge.FeeIdxCoordinator, args.FeeIdxCoordinator)
 	assert.Equal(t, argsForge.L1Batch, args.L1Batch)
 	assert.Equal(t, argsForge.L1CoordinatorTxs, args.L1CoordinatorTxs)
@@ -211,7 +211,7 @@ func TestRollupUpdateForgeL1L2BatchTimeout(t *testing.T) {
 	_, err := rollupClient.RollupUpdateForgeL1L2BatchTimeout(newForgeL1L2BatchTimeout)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestRollupUpdateFeeAddToken(t *testing.T) {
 	_, err := rollupClient.RollupUpdateFeeAddToken(newFeeAddToken)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -246,7 +246,7 @@ func TestRollupUpdateBucketsParameters(t *testing.T) {
 	}
 	_, err := rollupClient.RollupUpdateBucketsParameters(bucketsParameters)
 	require.NoError(t, err)
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	blockStampBucket = currentBlockNum
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
@@ -265,7 +265,7 @@ func TestRollupUpdateWithdrawalDelay(t *testing.T) {
 	newWithdrawalDelay := int64(100000)
 	_, err := rollupClient.RollupUpdateWithdrawalDelay(newWithdrawalDelay)
 	require.NoError(t, err)
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -283,7 +283,7 @@ func TestRollupUpdateTokenExchange(t *testing.T) {
 	require.NoError(t, err)
 	_, err = rollupClient.RollupUpdateTokenExchange(addressArray, valueArray)
 	require.NoError(t, err)
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -313,7 +313,7 @@ func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -322,7 +322,7 @@ func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -347,7 +347,7 @@ func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -356,7 +356,7 @@ func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux2.client.account.Address,
+	assert.Equal(t, rollupClientAux2.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -381,7 +381,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -390,7 +390,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -415,7 +415,7 @@ func TestRollupL1UserTxETHDeposit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -423,7 +423,7 @@ func TestRollupL1UserTxETHDeposit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -447,7 +447,7 @@ func TestRollupL1UserTxERC20Deposit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -455,7 +455,7 @@ func TestRollupL1UserTxERC20Deposit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux2.client.account.Address,
+	assert.Equal(t, rollupClientAux2.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -478,7 +478,7 @@ func TestRollupL1UserTxERC20PermitDeposit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -486,7 +486,7 @@ func TestRollupL1UserTxERC20PermitDeposit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -511,7 +511,7 @@ func TestRollupL1UserTxETHDepositTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -519,7 +519,7 @@ func TestRollupL1UserTxETHDepositTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -543,7 +543,7 @@ func TestRollupL1UserTxERC20DepositTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -551,7 +551,7 @@ func TestRollupL1UserTxERC20DepositTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux2.client.account.Address,
+	assert.Equal(t, rollupClientAux2.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -575,7 +575,7 @@ func TestRollupL1UserTxERC20PermitDepositTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -583,7 +583,7 @@ func TestRollupL1UserTxERC20PermitDepositTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -608,7 +608,7 @@ func TestRollupL1UserTxETHCreateAccountDepositTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -616,7 +616,7 @@ func TestRollupL1UserTxETHCreateAccountDepositTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -640,7 +640,7 @@ func TestRollupL1UserTxERC20CreateAccountDepositTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -648,7 +648,7 @@ func TestRollupL1UserTxERC20CreateAccountDepositTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux2.client.account.Address,
+	assert.Equal(t, rollupClientAux2.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -672,7 +672,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDepositTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -680,7 +680,7 @@ func TestRollupL1UserTxERC20PermitCreateAccountDepositTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -704,7 +704,7 @@ func TestRollupL1UserTxETHForceTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -712,7 +712,7 @@ func TestRollupL1UserTxETHForceTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -735,7 +735,7 @@ func TestRollupL1UserTxERC20ForceTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -743,7 +743,7 @@ func TestRollupL1UserTxERC20ForceTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux2.client.account.Address,
+	assert.Equal(t, rollupClientAux2.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -766,7 +766,7 @@ func TestRollupL1UserTxERC20PermitForceTransfer(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -774,7 +774,7 @@ func TestRollupL1UserTxERC20PermitForceTransfer(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -798,7 +798,7 @@ func TestRollupL1UserTxETHForceExit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDUint32, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -806,7 +806,7 @@ func TestRollupL1UserTxETHForceExit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -829,7 +829,7 @@ func TestRollupL1UserTxERC20ForceExit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenHEZID, toIdxInt64)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -837,7 +837,7 @@ func TestRollupL1UserTxERC20ForceExit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux2.client.account.Address,
+	assert.Equal(t, rollupClientAux2.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -862,7 +862,7 @@ func TestRollupL1UserTxERC20PermitForceExit(t *testing.T) {
 		l1Tx.DepositAmount, l1Tx.Amount, tokenIDERC777, toIdxInt64, deadline)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -870,7 +870,7 @@ func TestRollupL1UserTxERC20PermitForceExit(t *testing.T) {
 	assert.Equal(t, l1Tx.DepositAmount, rollupEvents.L1UserTx[0].L1UserTx.DepositAmount)
 	assert.Equal(t, l1Tx.TokenID, rollupEvents.L1UserTx[0].L1UserTx.TokenID)
 	assert.Equal(t, l1Tx.Amount, rollupEvents.L1UserTx[0].L1UserTx.Amount)
-	assert.Equal(t, rollupClientAux.client.account.Address,
+	assert.Equal(t, rollupClientAux.ethereumClient.account.Address,
 		rollupEvents.L1UserTx[0].L1UserTx.FromEthAddr)
 }
 
@@ -878,7 +878,7 @@ func TestRollupForgeBatch2(t *testing.T) {
 	// Forge Batch 2
 	_, err := rollupClient.RollupForgeBatch(argsForge, nil)
 	require.NoError(t, err)
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -938,7 +938,7 @@ func TestRollupForgeBatch2(t *testing.T) {
 	_, err = rollupClient.RollupForgeBatch(argsForge, nil)
 	require.NoError(t, err)
 
-	currentBlockNum, err = rollupClient.client.EthLastBlock()
+	currentBlockNum, err = rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err = rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -951,7 +951,7 @@ func TestRollupForgeBatch2(t *testing.T) {
 func TestRollupForgeBatchArgs2(t *testing.T) {
 	args, sender, err := rollupClient.RollupForgeBatchArgs(ethHashForge, uint16(len(L1UserTxs)))
 	require.NoError(t, err)
-	assert.Equal(t, *sender, rollupClient.client.account.Address)
+	assert.Equal(t, *sender, rollupClient.ethereumClient.account.Address)
 	assert.Equal(t, argsForge.FeeIdxCoordinator, args.FeeIdxCoordinator)
 	assert.Equal(t, argsForge.L1Batch, args.L1Batch)
 	assert.Equal(t, argsForge.L1UserTxs, args.L1UserTxs)
@@ -995,7 +995,7 @@ func TestRollupWithdrawMerkleProof(t *testing.T) {
 		amount, siblings, instantWithdraw)
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
@@ -1018,7 +1018,7 @@ func TestRollupSafeMode(t *testing.T) {
 	_, err := rollupClient.RollupSafeMode()
 	require.NoError(t, err)
 
-	currentBlockNum, err := rollupClient.client.EthLastBlock()
+	currentBlockNum, err := rollupClient.ethereumClient.EthLastBlock()
 	require.NoError(t, err)
 	rollupEvents, err := rollupClient.RollupEventsByBlock(currentBlockNum, nil)
 	require.NoError(t, err)
