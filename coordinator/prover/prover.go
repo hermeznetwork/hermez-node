@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net/http"
+	pathLib "path"
 	"strings"
 	"time"
 
@@ -198,6 +200,20 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	case GET:
 		req, err = p.client.New().Get(path).Request()
 	case POST:
+
+		if path == "/input" {
+			bJson, err := json.MarshalIndent(body, "", "  ")
+			if err != nil {
+				return tracerr.Wrap(err)
+			}
+
+			n := time.Now()
+			filename := fmt.Sprintf("zk-inputs-debug-%v.%03d.json", n.Unix(), n.Nanosecond()/1_000_000)
+			if err := ioutil.WriteFile(pathLib.Join("/tmp/", filename), bJson, 0640); err != nil {
+				return tracerr.Wrap(err)
+			}
+		}
+
 		req, err = p.client.New().Post(path).BodyJSON(body).Request()
 	default:
 		return tracerr.Wrap(fmt.Errorf("invalid http method: %v", method))
