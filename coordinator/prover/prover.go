@@ -201,21 +201,20 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 		req, err = p.client.New().Get(path).Request()
 	case POST:
 		if path == "input" {
-			fmt.Println("DEBUG ZK-INPUT")
+			fmt.Println("DEBUG ZK-INPUT: collecting zk-inputs")
 			bJson, err := json.MarshalIndent(body, "", "  ")
 			if err != nil {
 				return tracerr.Wrap(err)
 			}
-			fmt.Println("DEBUG ZK-INPUT: JSON OK", bJson)
-
 			n := time.Now()
 			filename := fmt.Sprintf("zk-inputs-debug-%v.%03d.json", n.Unix(), n.Nanosecond()/1_000_000)
 
 			p := pathLib.Join("/tmp/", filename)
-			fmt.Println("DEBUG ZK-INPUT PATH:", p)
+			fmt.Println("DEBUG ZK-INPUT: saving zk-inputs json file", p)
 			if err := ioutil.WriteFile(p, bJson, 0640); err != nil {
 				return tracerr.Wrap(err)
 			}
+			fmt.Println("DEBUG ZK-INPUT: sending request to proof server")
 		}
 
 		req, err = p.client.New().Post(path).BodyJSON(body).Request()
