@@ -200,7 +200,7 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	case GET:
 		req, err = p.client.New().Get(path).Request()
 	case POST:
-		if path == "/input" {
+		if path == "input" {
 			fmt.Println("DEBUG ZK-INPUT")
 			bJson, err := json.MarshalIndent(body, "", "  ")
 			if err != nil {
