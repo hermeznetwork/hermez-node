@@ -202,16 +202,21 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	case POST:
 		if path == "input" {
 			fmt.Println("DEBUG ZK-INPUT: collecting zk-inputs")
-			bJson, err := json.MarshalIndent(body, "", "  ")
+			bJSON, err := json.MarshalIndent(body, "", "  ")
 			if err != nil {
 				return tracerr.Wrap(err)
 			}
 			n := time.Now()
+			// nolint reason: hardcoded 1_000_000 is the number of nanoseconds in a
+			// millisecond
+			//nolint:gomnd
 			filename := fmt.Sprintf("zk-inputs-debug-%v.%03d.json", n.Unix(), n.Nanosecond()/1_000_000)
 
 			p := pathLib.Join("/tmp/", filename)
 			fmt.Println("DEBUG ZK-INPUT: saving zk-inputs json file", p)
-			if err := ioutil.WriteFile(p, bJson, 0640); err != nil {
+			// nolint reason: 0640 allows rw to owner and r to group
+			//nolint:gosec
+			if err = ioutil.WriteFile(p, bJSON, 0640); err != nil {
 				return tracerr.Wrap(err)
 			}
 			fmt.Println("DEBUG ZK-INPUT: sending request to proof server")

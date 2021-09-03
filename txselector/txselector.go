@@ -699,7 +699,7 @@ func (txsel *TxSelector) processL2Txs(
 				l2Txs[i].Info = obj.Message
 				l2Txs[i].ErrorCode = obj.Code
 				l2Txs[i].ErrorType = obj.Type
-				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
+				unforjableL2Txs = append(unforjableL2Txs, l2Txs[i])
 				continue
 			}
 
