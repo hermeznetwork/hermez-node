@@ -80,9 +80,8 @@ func setupCoordnetDHT(ctx context.Context, self host.Host, bootstrapPeers []mult
 		if err != nil {
 			log.Warn(err)
 			continue
-		} else {
-			bootstrapPeersInfo = append(bootstrapPeersInfo, *peerInfo)
 		}
+		bootstrapPeersInfo = append(bootstrapPeersInfo, *peerInfo)
 	}
 
 	if len(bootstrapPeers) == 0 {

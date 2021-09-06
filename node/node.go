@@ -759,7 +759,7 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 		go func() {
 			// Do an initial discovery on start up
 			if err := a.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
-				log.Info("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+				log.Info("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
 			}
 			for {
 				select {
@@ -768,7 +768,7 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 					return
 				case <-time.After(a.coordinatorNetworkFindMorePeersInterval):
 					if err := a.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
-						log.Warnw("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+						log.Warnw("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
 					}
 				}
 			}
@@ -999,7 +999,7 @@ func (n *Node) StartNodeAPI() {
 		go func() {
 			// Do an initial discovery on start up
 			if err := n.nodeAPI.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
-				log.Errorw("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+				log.Errorw("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
 			}
 			for {
 				select {
@@ -1009,7 +1009,7 @@ func (n *Node) StartNodeAPI() {
 					return
 				case <-time.After(n.cfg.API.FindPeersCoordinatorNetworkInterval.Duration):
 					if err := n.nodeAPI.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
-						log.Warnw("API.FindMorePeersForCoordinatorsNetwork", "err", err)
+						log.Warnw("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
 					}
 				}
 			}
