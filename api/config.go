@@ -46,8 +46,8 @@ func newRollupConstants(publicConstants common.RollupConstants) *rollupConstants
 	}
 }
 
-// Config of the API
-type Config struct {
+// NetworkConfig of the API
+type NetworkConfig struct {
 	RollupConstants   common.RollupConstants
 	AuctionConstants  common.AuctionConstants
 	WDelayerConstants common.WDelayerConstants

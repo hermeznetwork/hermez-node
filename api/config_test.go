@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getConfigTest(chainID uint16) Config {
-	var config Config
+func getConfigTest(chainID uint16) NetworkConfig {
+	var config NetworkConfig
 
 	var rollupPublicConstants common.RollupConstants
 	rollupPublicConstants.AbsoluteMaxL1L2BatchTimeout = 240
