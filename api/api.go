@@ -61,8 +61,8 @@ type CoordinatorNetworkConfig struct {
 	EthPrivKey     *ecdsa.PrivateKey
 }
 
-// SetupConfig wraps the parameters needed to start the API
-type SetupConfig struct {
+// Config wraps the parameters needed to start the API
+type Config struct {
 	Version                  string
 	CoordinatorEndpoints     bool
 	ExplorerEndpoints        bool
@@ -76,7 +76,7 @@ type SetupConfig struct {
 }
 
 // NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
-func NewAPI(setup SetupConfig) (*API, error) {
+func NewAPI(setup Config) (*API, error) {
 	// Check input
 	if setup.CoordinatorEndpoints && setup.L2DB == nil {
 		return nil, tracerr.Wrap(errors.New("cannot serve Coordinator endpoints without L2DB"))

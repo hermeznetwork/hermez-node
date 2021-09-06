@@ -475,7 +475,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			}
 		}
 		var err error
-		nodeAPI, err = NewNodeAPI(cfg.API.Address, api.SetupConfig{
+		nodeAPI, err = NewNodeAPI(cfg.API.Address, cfg.API, api.Config{
 			Version:                  version,
 			ExplorerEndpoints:        cfg.API.Explorer,
 			CoordinatorEndpoints:     coord,
@@ -641,7 +641,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 			}
 		}
 	}
-	nodeAPI, err := NewNodeAPI(cfg.API.Address, api.SetupConfig{
+	nodeAPI, err := NewNodeAPI(cfg.API.Address, cfg.API, api.Config{
 		Version:                  version,
 		ExplorerEndpoints:        cfg.API.Explorer,
 		CoordinatorEndpoints:     coord,
@@ -698,12 +698,15 @@ type NodeAPI struct { //nolint:golint
 	addr                                    string
 	coordinatorNetwork                      bool
 	coordinatorNetworkFindMorePeersInterval time.Duration
+	readtimeout                             time.Duration
+	writetimeout                            time.Duration
 }
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
 	addr string,
-	apiConfig api.SetupConfig,
+	cfgAPI config.APIConfigParameters,
+	apiConfig api.Config,
 	coordinatorNetwork bool,
 	coordinatorNetworkFindMorePeersInterval time.Duration,
 ) (*NodeAPI, error) {
@@ -717,6 +720,8 @@ func NewNodeAPI(
 		engine:                                  apiConfig.Server,
 		coordinatorNetwork:                      coordinatorNetwork,
 		coordinatorNetworkFindMorePeersInterval: coordinatorNetworkFindMorePeersInterval,
+		readtimeout:                             cfgAPI.Readtimeout.Duration,
+		writetimeout:                            cfgAPI.Writetimeout.Duration,
 	}, nil
 }
 

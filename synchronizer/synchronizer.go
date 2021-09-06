@@ -384,7 +384,7 @@ func (s *Synchronizer) updateCurrentSlot(slot *common.Slot, reset bool, hasBatch
 			return tracerr.Wrap(err)
 		}
 
-		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, blockNum)
+		canForge, err := s.EthClient.AuctionCanForge(slot.Forger, blockNum)
 		if err != nil {
 			return tracerr.Wrap(fmt.Errorf("AuctionCanForge: %w", err))
 		}
@@ -412,7 +412,7 @@ func (s *Synchronizer) updateNextSlot(slot *common.Slot) error {
 			return tracerr.Wrap(err)
 		}
 
-		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, slot.StartBlock)
+		canForge, err := s.EthClient.AuctionCanForge(slot.Forger, slot.StartBlock)
 		if err != nil {
 			return tracerr.Wrap(fmt.Errorf("AuctionCanForge: %w", err))
 		}
@@ -524,7 +524,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	}
 
 	// next block number to sync
-	nextBlockNum, err := s.ethClient.EthNextBlockWithSCEvents(ctx, fromBlock, []ethCommon.Address{
+	nextBlockNum, err := s.EthClient.EthNextBlockWithSCEvents(ctx, fromBlock, []ethCommon.Address{
 		s.consts.Auction.HermezRollup,
 		s.consts.Rollup.HermezAuctionContract,
 		s.consts.Rollup.WithdrawDelayerContract,
@@ -545,7 +545,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		}
 	}
 
-	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
+	ethBlock, err := s.EthClient.EthBlockByNumber(ctx, nextBlockNum)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
 	}
@@ -698,7 +698,7 @@ func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
 		}
 
 		var ethBlock *common.Block
-		ethBlock, err = s.ethClient.EthBlockByNumber(context.Background(), blockNum)
+		ethBlock, err = s.EthClient.EthBlockByNumber(context.Background(), blockNum)
 		if err != nil {
 			return 0, tracerr.Wrap(fmt.Errorf("ethClient.EthBlockByNumber: %w", err))
 		}

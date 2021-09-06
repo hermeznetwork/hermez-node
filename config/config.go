@@ -321,30 +321,6 @@ type Node struct {
 		// Rollup is the address of the Hermez.sol smart contract
 		Rollup ethCommon.Address `validate:"required"`
 	} `validate:"required"`
-	// API specifies the configuration parameters of the API
-	API struct {
-		// Address where the API will listen if set
-		Address string
-		// Explorer enables the Explorer API endpoints
-		Explorer bool
-		// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
-		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
-		// KeyStore must be configured with the Ethereum private key of the coordinator
-		CoordinatorNetwork bool
-		// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
-		FindPeersCoordinatorNetworkInterval Duration
-		// UpdateMetricsInterval is the interval between updates of the
-		// API metrics
-		UpdateMetricsInterval Duration `validate:"required"`
-		// UpdateRecommendedFeeInterval is the interval between updates of the
-		// recommended fees
-		UpdateRecommendedFeeInterval Duration `validate:"required"`
-		// Maximum concurrent connections allowed between API and SQL
-		MaxSQLConnections int `validate:"required,gte=1"`
-		// SQLConnectionTimeout is the maximum amount of time that an API request
-		// can wait to establish a SQL connection
-		SQLConnectionTimeout Duration
-	} `validate:"required"`
 	API                  APIConfigParameters                  `validate:"required"`
 	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
 	Debug                NodeDebug                            `validate:"required"`
@@ -376,9 +352,9 @@ type APIConfigParameters struct {
 	// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
 	// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
 	// KeyStore must be configured with the Ethereum private key of the coordinator
-	CoordinatorNetwork bool
+	CoordinatorNetwork bool `env:"HEZNODE_API_COORDINATORNETWORK"`
 	// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
-	FindPeersCoordinatorNetworkInterval Duration
+	FindPeersCoordinatorNetworkInterval Duration `env:"HEZNODE_API_COORDINATORNETWORK_FINDPEERSINTERVAL"`
 }
 
 // APIServer is the api server configuration parameters

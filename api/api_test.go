@@ -251,7 +251,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	api, err = NewAPI(SetupConfig{
+	api, err = NewAPI(Config{
 		Version:                  "test",
 		ExplorerEndpoints:        true,
 		CoordinatorEndpoints:     true,
@@ -662,7 +662,7 @@ func TestTimeout(t *testing.T) {
 			require.NoError(t, err)
 		}
 	}()
-	_, err = NewAPI(SetupConfig{
+	_, err = NewAPI(Config{
 		Version:                  "test",
 		ExplorerEndpoints:        true,
 		CoordinatorEndpoints:     true,
