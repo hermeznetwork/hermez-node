@@ -4,8 +4,8 @@ go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/arnaubennassar/eth2libp2p v0.0.0-20210729150027-477efe523548 // indirect
-	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
+	github.com/arnaubennassar/eth2libp2p v0.0.0-20210729150027-477efe523548
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/caarlos0/env/v6 v6.6.2
 	github.com/dghubble/sling v1.3.0

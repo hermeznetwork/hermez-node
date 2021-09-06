@@ -20,6 +20,7 @@ import (
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
@@ -311,7 +312,17 @@ func cmdServeAPI(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
-	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version, nil, nil)
+	var ethClient *ethclient.Client
+	if cfg.server.API.CoordinatorNetwork {
+		if cfg.server.Web3.URL == "" {
+			return tracerr.New("Web3.URL required when using CoordinatorNetwork")
+		}
+		ethClient, err = ethclient.Dial(cfg.server.Web3.URL)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+	}
+	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version, ethClient, &cfg.server.Coordinator.ForgerAddress)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting api server: %w", err))
 	}

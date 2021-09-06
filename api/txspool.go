@@ -11,8 +11,11 @@ import (
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
+
+const sqlError = "500 - sql error"
 
 func (a *API) postPoolTx(c *gin.Context) {
 	// Parse body
@@ -25,6 +28,93 @@ func (a *API) postPoolTx(c *gin.Context) {
 		}, c)
 		return
 	}
+	receivedTx.ClientIP = c.ClientIP()
+	receivedTx.Info = ""
+	if err := a.validateAndStorePoolTx(receivedTx); err != nil {
+		if err.Type == sqlError {
+			retSQLErr(err.Err, c)
+			return
+		}
+		retBadReq(err, c)
+		return
+	}
+	// Return TxID
+	c.JSON(http.StatusOK, receivedTx.TxID.String())
+	// Publish tx on coordinator network
+	if a.coordnet != nil {
+		if err := a.coordnet.PublishTx(receivedTx); err != nil {
+			log.Warn(err)
+		}
+	}
+}
+
+func (a *API) coordnetPoolTxHandler(tx common.PoolL2Tx) error {
+	if err := a.validateAndStorePoolTx(tx); err != nil {
+		return err.Err
+	}
+	return nil
+}
+
+func (a *API) validateAndStorePoolTx(tx common.PoolL2Tx) *apiError {
+	// Check if tx is atomic (has any non 0ed Rq* field)
+	if isAtomic(tx) {
+		return &apiError{
+			Err:  errors.New(ErrNotAtomicTxsInPostPoolTx),
+			Code: ErrNotAtomicTxsInPostPoolTxCode,
+			Type: ErrNotAtomicTxsInPostPoolTxType,
+		}
+	}
+	// Check that tx is valid
+	if err := a.verifyPoolL2Tx(tx); err != nil {
+		return err
+	}
+	// Insert to DB
+	if err := a.l2DB.AddTxAPI(&tx); err != nil {
+		if strings.Contains(err.Error(), "< minFeeUSD") {
+			return &apiError{
+				Err:  err,
+				Code: ErrFeeTooLowCode,
+				Type: ErrFeeTooLowType,
+			}
+		} else if strings.Contains(err.Error(), "> maxFeeUSD") {
+			return &apiError{
+				Err:  err,
+				Code: ErrFeeTooBigCode,
+				Type: ErrFeeTooBigType,
+			}
+		}
+		// SQL error
+		return &apiError{
+			Err:  err,
+			Type: sqlError,
+		}
+	}
+	// Tx inserted
+	return nil
+}
+
+func (a *API) putPoolTx(c *gin.Context) {
+	txID, err := parsers.ParsePoolTxFilter(c)
+	if err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+	var receivedTx common.PoolL2Tx
+	if err := c.ShouldBindJSON(&receivedTx); err != nil {
+		retBadReq(&apiError{
+			Err:  err,
+			Code: ErrParamValidationFailedCode,
+			Type: ErrParamValidationFailedType,
+		}, c)
+		return
+	}
+
+	receivedTx.TxID = txID
+
 	if isAtomic(receivedTx) {
 		retBadReq(&apiError{
 			Err:  errors.New(ErrNotAtomicTxsInPostPoolTx),
@@ -40,8 +130,8 @@ func (a *API) postPoolTx(c *gin.Context) {
 	}
 	receivedTx.ClientIP = c.ClientIP()
 	receivedTx.Info = ""
-	// Insert to DB
-	if err := a.l2.AddTxAPI(&receivedTx); err != nil {
+
+	if err := a.l2DB.UpdateTxAPI(&receivedTx); err != nil {
 		if strings.Contains(err.Error(), "< minFeeUSD") {
 			retBadReq(&apiError{
 				Err:  err,
@@ -56,6 +146,12 @@ func (a *API) postPoolTx(c *gin.Context) {
 				Type: ErrFeeTooBigType,
 			}, c)
 			return
+		} else if strings.Contains(err.Error(), "nothing to update") {
+			retBadReq(&apiError{
+				Err:  err,
+				Code: ErrNothingToUpdateCode,
+				Type: ErrNothingToUpdateType,
+			}, c)
 		}
 		retSQLErr(err, c)
 		return
@@ -210,7 +306,7 @@ func (a *API) getPoolTx(c *gin.Context) {
 		return
 	}
 	// Fetch tx from l2DB
-	tx, err := a.l2.GetTxAPI(txID)
+	tx, err := a.l2DB.GetTxAPI(txID)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -230,7 +326,7 @@ func (a *API) getPoolTxs(c *gin.Context) {
 		return
 	}
 	// Fetch txs from l2DB
-	txs, pendingItems, err := a.l2.GetPoolTxsAPI(txAPIRequest)
+	txs, pendingItems, err := a.l2DB.GetPoolTxsAPI(txAPIRequest)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -267,7 +363,7 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) *apiError {
 		}
 	}
 	// Get sender account information
-	account, err := a.h.GetCommonAccountAPI(tx.FromIdx)
+	account, err := a.historyDB.GetCommonAccountAPI(tx.FromIdx)
 	if err != nil {
 		return &apiError{
 			Err:  tracerr.Wrap(fmt.Errorf("error getting sender account, idx %s, error: %w", tx.FromIdx, err)),
@@ -295,7 +391,7 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) *apiError {
 		}
 	}
 	// Check signature
-	if !tx.VerifySignature(a.cg.ChainID, account.BJJ) {
+	if !tx.VerifySignature(a.config.ChainID, account.BJJ) {
 		return &apiError{
 			Err:  tracerr.Wrap(errors.New("wrong signature")),
 			Code: ErrInvalidSignatureCode,
@@ -307,7 +403,7 @@ func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) *apiError {
 	// will always be valid in terms of destination (they use special ToIdx by protocol)
 	case common.TxTypeTransfer:
 		// ToIdx exists and match token
-		toAccount, err := a.h.GetCommonAccountAPI(tx.ToIdx)
+		toAccount, err := a.historyDB.GetCommonAccountAPI(tx.ToIdx)
 		if err != nil {
 			return &apiError{
 				Err:  tracerr.Wrap(fmt.Errorf("error getting receiver account, idx %s, err: %w", tx.ToIdx, err)),

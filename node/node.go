@@ -446,22 +446,47 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			gin.SetMode(gin.ReleaseMode)
 		}
 		server := gin.Default()
+		server.Use(cors.Default())
 		coord := false
+		var coordnetConfig *api.CoordinatorNetworkConfig
 		if mode == ModeCoordinator {
 			coord = cfg.Coordinator.API.Coordinator
+			if cfg.API.CoordinatorNetwork {
+				// Setup coordinators network configuration
+				// Get libp2p addresses of the registered coordinators
+				// to be used as bootstrap nodes for the p2p network
+				bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				// Get Ethereum private key of the coordinator
+				keyJSON, err := keyStore.Export(*account, cfg.Coordinator.EthClient.Keystore.Password, cfg.Coordinator.EthClient.Keystore.Password)
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				key, err := ethKeystore.DecryptKey(keyJSON, cfg.Coordinator.EthClient.Keystore.Password)
+				if err != nil {
+					return nil, tracerr.Wrap(err)
+				}
+				coordnetConfig = &api.CoordinatorNetworkConfig{
+					BootstrapPeers: bootstrapAddrs,
+					EthPrivKey:     key.PrivateKey,
+				}
+			}
 		}
 		var err error
-		nodeAPI, err = NewNodeAPI(
-			version,
-			cfg.API,
-			coord, cfg.API.Explorer,
-			server,
-			historyDB,
-			l2DB,
-			stateDB,
-			ethClient,
-			&cfg.Coordinator.ForgerAddress,
-		)
+		nodeAPI, err = NewNodeAPI(cfg.API.Address, api.SetupConfig{
+			Version:                  version,
+			ExplorerEndpoints:        cfg.API.Explorer,
+			CoordinatorEndpoints:     coord,
+			Server:                   server,
+			HistoryDB:                historyDB,
+			L2DB:                     l2DB,
+			StateDB:                  stateDB,
+			EthClient:                ethClient,
+			ForgerAddress:            &cfg.Coordinator.ForgerAddress,
+			CoordinatorNetworkConfig: coordnetConfig,
+		}, cfg.API.CoordinatorNetwork, cfg.API.FindPeersCoordinatorNetworkInterval.Duration)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -551,21 +576,83 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 		gin.SetMode(gin.ReleaseMode)
 	}
 	server := gin.Default()
+	server.Use(cors.Default())
 	coord := false
+	var coordnetConfig *api.CoordinatorNetworkConfig
 	if mode == ModeCoordinator {
 		coord = cfg.Coordinator.API.Coordinator
+		if cfg.API.CoordinatorNetwork {
+			// Prepare keystore
+			scryptN := ethKeystore.StandardScryptN
+			scryptP := ethKeystore.StandardScryptP
+			if cfg.Coordinator.Keystore.LightScrypt {
+				scryptN = ethKeystore.LightScryptN
+				scryptP = ethKeystore.LightScryptP
+			}
+			keyStore := ethKeystore.NewKeyStore(cfg.Coordinator.Keystore.Path,
+				scryptN, scryptP)
+			// Unlock Coordinator ForgerAddr in the keystore to make calls
+			// to ForgeBatch in the smart contract
+			if forgerAddress == nil {
+				return nil, errors.New("forgerAddress must be different than nil when using coordinators network")
+			}
+			if !keyStore.HasAddress(*forgerAddress) {
+				return nil, tracerr.Wrap(fmt.Errorf(
+					"ethereum keystore doesn't have the key for address %v",
+					*forgerAddress),
+				)
+			}
+			pass := cfg.Coordinator.Keystore.Password
+			account := accounts.Account{
+				Address: *forgerAddress,
+			}
+			if err := keyStore.Unlock(account, pass); err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			// Setup eth client to read data from the blockchain
+			client, err := eth.NewClient(ethClient, &account, keyStore, &eth.ClientConfig{
+				Ethereum: eth.EthereumConfig{},
+				Rollup: eth.RollupConfig{
+					Address: cfg.Coordinator.Rollup,
+				},
+			})
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			// Setup coordinators network configuration
+			// Get libp2p addresses of the registered coordinators
+			// to be used as bootstrap nodes for the p2p network
+			bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			// Get Ethereum private key of the coordinator
+			keyJSON, err := keyStore.Export(account, pass, pass)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			key, err := ethKeystore.DecryptKey(keyJSON, pass)
+			if err != nil {
+				return nil, tracerr.Wrap(err)
+			}
+			coordnetConfig = &api.CoordinatorNetworkConfig{
+				BootstrapPeers: bootstrapAddrs,
+				EthPrivKey:     key.PrivateKey,
+			}
+		}
 	}
-	nodeAPI, err := NewNodeAPI(
-		version,
-		cfg.API,
-		coord, cfg.API.Explorer,
-		server,
-		historyDB,
-		l2DB,
-		nil,
-		ethClient,
-		forgerAddress,
-	)
+	nodeAPI, err := NewNodeAPI(cfg.API.Address, api.SetupConfig{
+		Version:                  version,
+		ExplorerEndpoints:        cfg.API.Explorer,
+		CoordinatorEndpoints:     coord,
+		Server:                   server,
+		HistoryDB:                historyDB,
+		L2DB:                     l2DB,
+		StateDB:                  nil,
+		EthClient:                ethClient,
+		ForgerAddress:            forgerAddress,
+		CoordinatorNetworkConfig: coordnetConfig,
+	}, cfg.API.CoordinatorNetwork, cfg.API.FindPeersCoordinatorNetworkInterval.Duration)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -606,46 +693,30 @@ func (s *APIServer) Stop() {
 
 // NodeAPI holds the node http API
 type NodeAPI struct { //nolint:golint
-	api          *api.API
-	engine       *gin.Engine
-	addr         string
-	readtimeout  time.Duration
-	writetimeout time.Duration
+	api                                     *api.API
+	engine                                  *gin.Engine
+	addr                                    string
+	coordinatorNetwork                      bool
+	coordinatorNetworkFindMorePeersInterval time.Duration
 }
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
-	version string,
-	cfgAPI config.APIConfigParameters,
-	coordinatorEndpoints, explorerEndpoints bool,
-	server *gin.Engine,
-	hdb *historydb.HistoryDB,
-	l2db *l2db.L2DB,
-	stateDB *statedb.StateDB,
-	ethClient *ethclient.Client,
-	forgerAddress *ethCommon.Address,
+	addr string,
+	apiConfig api.SetupConfig,
+	coordinatorNetwork bool,
+	coordinatorNetworkFindMorePeersInterval time.Duration,
 ) (*NodeAPI, error) {
-	engine := gin.Default()
-	engine.Use(cors.Default())
-	_api, err := api.NewAPI(
-		version,
-		coordinatorEndpoints, explorerEndpoints,
-		engine,
-		hdb,
-		l2db,
-		stateDB,
-		ethClient,
-		forgerAddress,
-	)
+	_api, err := api.NewAPI(apiConfig)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	return &NodeAPI{
-		addr:         cfgAPI.Address,
-		api:          _api,
-		engine:       engine,
-		readtimeout:  cfgAPI.Readtimeout.Duration,
-		writetimeout: cfgAPI.Writetimeout.Duration,
+		addr:                                    addr,
+		api:                                     _api,
+		engine:                                  apiConfig.Server,
+		coordinatorNetwork:                      coordinatorNetwork,
+		coordinatorNetworkFindMorePeersInterval: coordinatorNetworkFindMorePeersInterval,
 	}, nil
 }
 
@@ -669,6 +740,27 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 			log.Fatalf("Listen: %s\n", err)
 		}
 	}()
+
+	// Find more peers for coordinator network here
+	if a.coordinatorNetwork && a.coordinatorNetworkFindMorePeersInterval > 0 {
+		go func() {
+			// Do an initial discovery on start up
+			if err := a.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+				log.Info("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
+			}
+			for {
+				select {
+				case <-ctx.Done():
+					log.Info("API.FindMorePeersForCoordinatorsNetwork loop done")
+					return
+				case <-time.After(a.coordinatorNetworkFindMorePeersInterval):
+					if err := a.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+						log.Warnw("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
+					}
+				}
+			}
+		}()
+	}
 
 	<-ctx.Done()
 	log.Info("Stopping NodeAPI...")
@@ -863,6 +955,28 @@ func (n *Node) StartNodeAPI() {
 			}
 		}
 	}()
+
+	if n.cfg.API.CoordinatorNetwork && n.cfg.API.FindPeersCoordinatorNetworkInterval.Duration > 0 {
+		n.wg.Add(1)
+		go func() {
+			// Do an initial discovery on start up
+			if err := n.nodeAPI.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+				log.Errorw("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
+			}
+			for {
+				select {
+				case <-n.ctx.Done():
+					log.Info("API.FindMorePeersForCoordinatorsNetwork loop done")
+					n.wg.Done()
+					return
+				case <-time.After(n.cfg.API.FindPeersCoordinatorNetworkInterval.Duration):
+					if err := n.nodeAPI.api.FindMorePeersForCoordinatorsNetwork(); err != nil {
+						log.Warnw("API.FindMorePeersForCoordinatorsNetwork. ", "err", err)
+					}
+				}
+			}
+		}()
+	}
 
 	n.wg.Add(1)
 	go func() {
