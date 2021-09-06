@@ -63,5 +63,5 @@ type configAPI struct {
 }
 
 func (a *API) getConfig(c *gin.Context) {
-	c.JSON(http.StatusOK, a.cg)
+	c.JSON(http.StatusOK, a.config)
 }

@@ -212,7 +212,7 @@ type Config struct {
 
 // Synchronizer implements the Synchronizer type
 type Synchronizer struct {
-	ethClient        eth.ClientInterface
+	EthClient        eth.ClientInterface
 	consts           common.SCConsts
 	historyDB        *historydb.HistoryDB
 	l2DB             *l2db.L2DB
@@ -269,7 +269,7 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 	}
 	stats := NewStatsHolder(startBlockNum, cfg.StatsUpdateBlockNumDiffThreshold, cfg.StatsUpdateFrequencyDivider)
 	s := &Synchronizer{
-		ethClient:     ethClient,
+		EthClient:     ethClient,
 		consts:        consts,
 		historyDB:     historyDB,
 		l2DB:          l2DB,
@@ -443,7 +443,7 @@ func (s *Synchronizer) updateCurrentNextSlotIfSync(reset bool, hasBatch bool) er
 func (s *Synchronizer) init() error {
 	// Update stats parameters so that they have valid values before the
 	// first Sync call
-	if err := s.stats.UpdateEth(s.ethClient); err != nil {
+	if err := s.stats.UpdateEth(s.EthClient); err != nil {
 		return tracerr.Wrap(err)
 	}
 	lastBlock := &common.Block{}
@@ -540,7 +540,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	// UpdateFrequencyDivider blocks
 	if nextBlockNum+int64(s.stats.Eth.UpdateBlockNumDiffThreshold) >= s.stats.Eth.LastBlock.Num ||
 		nextBlockNum%int64(s.stats.Eth.UpdateFrequencyDivider) == 0 {
-		if err := s.stats.UpdateEth(s.ethClient); err != nil {
+		if err := s.stats.UpdateEth(s.EthClient); err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
 	}
@@ -829,7 +829,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 	// Get rollup events in the block, and make sure the block hash matches
 	// the expected one.
-	rollupEvents, err := s.ethClient.RollupEventsByBlock(blockNum, &ethBlock.Hash)
+	rollupEvents, err := s.EthClient.RollupEventsByBlock(blockNum, &ethBlock.Hash)
 	if err != nil && err.Error() == errStrUnknownBlock {
 		return nil, tracerr.Wrap(ErrUnknownBlock)
 	} else if err != nil {
@@ -863,7 +863,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		position := 0
 
 		// Get the input for each Tx
-		forgeBatchArgs, sender, err := s.ethClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash,
+		forgeBatchArgs, sender, err := s.EthClient.RollupForgeBatchArgs(evtForgeBatch.EthTxHash,
 			evtForgeBatch.L1UserTxsLen)
 		if err != nil {
 			return nil, tracerr.Wrap(fmt.Errorf("RollupForgeBatchArgs: %w", err))
@@ -1077,7 +1077,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		token.EthAddr = evtAddToken.TokenAddress
 		token.EthBlockNum = blockNum
 
-		if consts, err := s.ethClient.EthERC20Consts(evtAddToken.TokenAddress); err != nil {
+		if consts, err := s.EthClient.EthERC20Consts(evtAddToken.TokenAddress); err != nil {
 			log.Warnw("Error retrieving ERC20 token constants", "addr", evtAddToken.TokenAddress)
 			token.Name = "ERC20_ETH_ERROR"
 			token.Symbol = "ERROR"
@@ -1186,7 +1186,7 @@ func (s *Synchronizer) auctionSync(ethBlock *common.Block) (*common.AuctionData,
 	var auctionData = common.NewAuctionData()
 
 	// Get auction events in the block
-	auctionEvents, err := s.ethClient.AuctionEventsByBlock(blockNum, &ethBlock.Hash)
+	auctionEvents, err := s.EthClient.AuctionEventsByBlock(blockNum, &ethBlock.Hash)
 	if err != nil && err.Error() == errStrUnknownBlock {
 		return nil, tracerr.Wrap(ErrUnknownBlock)
 	} else if err != nil {
@@ -1287,7 +1287,7 @@ func (s *Synchronizer) wdelayerSync(ethBlock *common.Block) (*common.WDelayerDat
 	wDelayerData := common.NewWDelayerData()
 
 	// Get wDelayer events in the block
-	wDelayerEvents, err := s.ethClient.WDelayerEventsByBlock(blockNum, &ethBlock.Hash)
+	wDelayerEvents, err := s.EthClient.WDelayerEventsByBlock(blockNum, &ethBlock.Hash)
 	if err != nil && err.Error() == errStrUnknownBlock {
 		return nil, tracerr.Wrap(ErrUnknownBlock)
 	} else if err != nil {

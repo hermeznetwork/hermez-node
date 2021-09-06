@@ -319,7 +319,31 @@ type Node struct {
 	} `validate:"required"`
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
-		Rollup ethCommon.Address `validate:"required" env:"HEZNODE_SMARTCONTRACTS_ROLLUP"`
+		Rollup ethCommon.Address `validate:"required"`
+	} `validate:"required"`
+	// API specifies the configuration parameters of the API
+	API struct {
+		// Address where the API will listen if set
+		Address string
+		// Explorer enables the Explorer API endpoints
+		Explorer bool
+		// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
+		// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
+		// KeyStore must be configured with the Ethereum private key of the coordinator
+		CoordinatorNetwork bool
+		// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
+		FindPeersCoordinatorNetworkInterval Duration
+		// UpdateMetricsInterval is the interval between updates of the
+		// API metrics
+		UpdateMetricsInterval Duration `validate:"required"`
+		// UpdateRecommendedFeeInterval is the interval between updates of the
+		// recommended fees
+		UpdateRecommendedFeeInterval Duration `validate:"required"`
+		// Maximum concurrent connections allowed between API and SQL
+		MaxSQLConnections int `validate:"required,gte=1"`
+		// SQLConnectionTimeout is the maximum amount of time that an API request
+		// can wait to establish a SQL connection
+		SQLConnectionTimeout Duration
 	} `validate:"required"`
 	API                  APIConfigParameters                  `validate:"required"`
 	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
@@ -349,6 +373,12 @@ type APIConfigParameters struct {
 	UpdateMetricsInterval Duration `validate:"required" env:"HEZNODE_API_UPDATEMETRICSINTERVAL"`
 	// UpdateRecommendedFeeInterval is the interval between updates of the recommended fees
 	UpdateRecommendedFeeInterval Duration `validate:"required" env:"HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL"`
+	// CoordinatorNetwork enables a pubsub p2p network to share L2 related information among coordinators.
+	// Only used when running in coordinator mode, as the L2DB is required. Port 3598 will be used and must be open.
+	// KeyStore must be configured with the Ethereum private key of the coordinator
+	CoordinatorNetwork bool
+	// FindPeersCoordinatorNetworkInterval time elapsed between peer discovery process for the coordinators p2p network
+	FindPeersCoordinatorNetworkInterval Duration
 }
 
 // APIServer is the api server configuration parameters
@@ -358,7 +388,9 @@ type APIServer struct {
 	API         APIConfigParameters `validate:"required"`
 	PostgreSQL  PostgreSQL          `validate:"required"`
 	Coordinator struct {
-		API struct {
+		// ForgerAddress is the address under which this coordinator is forging
+		ForgerAddress ethCommon.Address `validate:"required"`
+		API           struct {
 			// Coordinator enables the coordinator API endpoints
 			Coordinator bool `env:"HEZNODE_COORDINATORAPI_COORDINATOR"`
 		} `validate:"required"`
@@ -377,6 +409,25 @@ type APIServer struct {
 			// maximum fee will be rejected at the API level.
 			MaxFeeUSD float64 `validate:"required,gte=0" env:"HEZNODE_L2DB_MAXFEEUSD"`
 		} `validate:"required"`
+		// Keystore is the ethereum keystore where private keys are kept.
+		// Required if API.CoordinatorNetwork == true
+		Keystore struct {
+			// Path to the keystore
+			Path string
+			// Password used to decrypt the keys in the keystore
+			Password string
+			// LightScrypt if set, uses light parameters for the ethereum
+			// keystore encryption algorithm.
+			LightScrypt bool
+		}
+		// Rollup is the address of the Hermez.sol smart contract.
+		// Required if API.CoordinatorNetwork == true
+		Rollup ethCommon.Address
+	}
+	Web3 struct {
+		// URL is the URL of the web3 ethereum-node RPC server.  Only
+		// geth is officially supported.
+		URL string `validate:"required,url"`
 	}
 	Debug NodeDebug `validate:"required"`
 }

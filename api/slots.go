@@ -23,16 +23,16 @@ type SlotAPI struct {
 }
 
 func (a *API) getFirstLastBlock(slotNum int64) (int64, int64) {
-	genesisBlock := a.cg.AuctionConstants.GenesisBlockNum
-	blocksPerSlot := int64(a.cg.AuctionConstants.BlocksPerSlot)
+	genesisBlock := a.config.AuctionConstants.GenesisBlockNum
+	blocksPerSlot := int64(a.config.AuctionConstants.BlocksPerSlot)
 	firstBlock := slotNum*blocksPerSlot + genesisBlock
 	lastBlock := (slotNum+1)*blocksPerSlot + genesisBlock - 1
 	return firstBlock, lastBlock
 }
 
 func (a *API) getCurrentSlot(currentBlock int64) int64 {
-	genesisBlock := a.cg.AuctionConstants.GenesisBlockNum
-	blocksPerSlot := int64(a.cg.AuctionConstants.BlocksPerSlot)
+	genesisBlock := a.config.AuctionConstants.GenesisBlockNum
+	blocksPerSlot := int64(a.config.AuctionConstants.BlocksPerSlot)
 	currentSlot := (currentBlock - genesisBlock) / blocksPerSlot
 	return currentSlot
 }
@@ -102,19 +102,19 @@ func (a *API) getSlot(c *gin.Context) {
 		}, c)
 		return
 	}
-	currentBlock, err := a.h.GetLastBlockAPI()
+	currentBlock, err := a.historyDB.GetLastBlockAPI()
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
-	auctionVars, err := a.h.GetAuctionVarsAPI()
+	auctionVars, err := a.historyDB.GetAuctionVarsAPI()
 	if err != nil {
 		retBadReq(err, c)
 		return
 	}
 
 	slotNum := int64(*slotNumUint)
-	bid, err := a.h.GetBestBidAPI(&slotNum)
+	bid, err := a.historyDB.GetBestBidAPI(&slotNum)
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
 		retSQLErr(err, c)
 		return
@@ -202,7 +202,7 @@ func (a *API) getSlots(c *gin.Context) {
 		return
 	}
 
-	currentBlock, err := a.h.GetLastBlockAPI()
+	currentBlock, err := a.historyDB.GetLastBlockAPI()
 	if err != nil {
 		retBadReq(&apiError{
 			Err:  err,
@@ -211,7 +211,7 @@ func (a *API) getSlots(c *gin.Context) {
 		}, c)
 		return
 	}
-	auctionVars, err := a.h.GetAuctionVarsAPI()
+	auctionVars, err := a.historyDB.GetAuctionVarsAPI()
 	if err != nil {
 		retBadReq(&apiError{
 			Err:  err,
@@ -240,7 +240,7 @@ func (a *API) getSlots(c *gin.Context) {
 	if filters.BidderAddr == nil {
 		slotMinLim, slotMaxLim, pendingItems = getLimits(*filters.MinSlotNum, *filters.MaxSlotNum, filters.FromItem, filters.Limit, filters.Order)
 		// Get best bids in range maxSlotNum - minSlotNum
-		bids, _, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
+		bids, _, err = a.historyDB.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
 			BidderAddr: filters.BidderAddr,
@@ -253,7 +253,7 @@ func (a *API) getSlots(c *gin.Context) {
 		}
 	} else {
 		slotMinLim, slotMaxLim = getLimitsWithAddr(filters.MinSlotNum, filters.MaxSlotNum, filters.FromItem, filters.Limit, filters.Order)
-		bids, pendingItems, err = a.h.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
+		bids, pendingItems, err = a.historyDB.GetBestBidsAPI(historydb.GetBestBidsAPIRequest{
 			MinSlotNum: &slotMinLim,
 			MaxSlotNum: &slotMaxLim,
 			BidderAddr: filters.BidderAddr,

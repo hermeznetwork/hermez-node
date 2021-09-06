@@ -645,7 +645,7 @@ func TestAllTosNull(t *testing.T) {
 		Balance:  big.NewInt(1000000),
 	}
 	// Add account to history DB (required to verify signature)
-	err := api.h.AddAccounts([]common.Account{account})
+	err := api.historyDB.AddAccounts([]common.Account{account})
 	assert.NoError(t, err)
 	// Genrate tx with all tos set to nil (to eth, to bjj, to idx)
 	tx := common.PoolL2Tx{
@@ -678,7 +678,7 @@ func TestAllTosNull(t *testing.T) {
 	err = doBadReq("POST", apiURL+"transactions-pool", jsonTxReader, 400)
 	require.NoError(t, err)
 	// Clean historyDB: the added account shouldn't be there for other tests
-	_, err = api.h.DB().DB.Exec(
+	_, err = api.historyDB.DB().DB.Exec(
 		fmt.Sprintf("delete from account where idx = %d", testIdx),
 	)
 	assert.NoError(t, err)
