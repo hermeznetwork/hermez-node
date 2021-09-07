@@ -325,6 +325,7 @@ type Node struct {
 	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
 	Debug                NodeDebug                            `validate:"required"`
 	Coordinator          Coordinator                          `validate:"-"`
+	Log                  LogConf                              `validate:"-"`
 }
 
 // APIConfigParameters specifies the configuration parameters of the API
@@ -353,6 +354,7 @@ type APIConfigParameters struct {
 // APIServer is the api server configuration parameters
 type APIServer struct {
 	// NodeAPI specifies the configuration parameters of the API
+	Log         LogConf             `validate:"-"`
 	API         APIConfigParameters `validate:"required"`
 	PostgreSQL  PostgreSQL          `validate:"required"`
 	Coordinator struct {
@@ -377,6 +379,12 @@ type APIServer struct {
 		} `validate:"required"`
 	}
 	Debug NodeDebug `validate:"required"`
+}
+
+// LogConf specifies the log configuration parameters
+type LogConf struct {
+	Level string   `env:"HEZNODE_LOG_LEVEL"`
+	Out   []string `env:"HEZNODE_LOG_OUT" envSeparator:","`
 }
 
 // LoadNode loads the Node configuration from path.

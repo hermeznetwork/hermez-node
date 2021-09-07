@@ -1,3 +1,9 @@
+#[Log]
+### Levels: info, debug, warn, error, fatal
+#Level = "info"
+### Out where logs are going to be stored or showed: ["stdout", "filepath.log"]
+#Out = ["stdout"]
+
 #[API]
 ### Url and port where the API will listen
 #Address = "0.0.0.0:8086"
