@@ -13,6 +13,7 @@ import (
 
 	"github.com/dghubble/sling"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -200,8 +201,11 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	case GET:
 		req, err = p.client.New().Get(path).Request()
 	case POST:
+		// this debug condition filters only the path "inputs" in order
+		// to save the zk-inputs as pure as possible before sending
+		// it to the prover
 		if path == "input" {
-			fmt.Println("DEBUG ZK-INPUT: collecting zk-inputs")
+			log.Debug("ZK-INPUT: collecting zk-inputs")
 			bJSON, err := json.MarshalIndent(body, "", "  ")
 			if err != nil {
 				return tracerr.Wrap(err)
@@ -210,16 +214,18 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 			// nolint reason: hardcoded 1_000_000 is the number of nanoseconds in a
 			// millisecond
 			//nolint:gomnd
-			filename := fmt.Sprintf("zk-inputs-debug-%v.%03d.json", n.Unix(), n.Nanosecond()/1_000_000)
+			filename := fmt.Sprintf("zk-inputs-debug-request-%v.%03d.json", n.Unix(), n.Nanosecond()/1_000_000)
 
+			// tmp directory is used here because we do not have easy access to
+			// the configuration at this moment, the idea in the future is to make
+			// this optional and configurable.
 			p := pathLib.Join("/tmp/", filename)
-			fmt.Println("DEBUG ZK-INPUT: saving zk-inputs json file", p)
+			log.Debugf("ZK-INPUT: saving zk-inputs json file: %s", p)
 			// nolint reason: 0640 allows rw to owner and r to group
 			//nolint:gosec
 			if err = ioutil.WriteFile(p, bJSON, 0640); err != nil {
 				return tracerr.Wrap(err)
 			}
-			fmt.Println("DEBUG ZK-INPUT: sending request to proof server")
 		}
 
 		req, err = p.client.New().Post(path).BodyJSON(body).Request()
@@ -229,6 +235,7 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	log.Debug("ZK-INPUT: sending request to proof server")
 	res, err := p.client.Do(req.WithContext(ctx), ret, &errSrv)
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -237,6 +244,7 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	if !(200 <= res.StatusCode && res.StatusCode < 300) {
 		return tracerr.Wrap(errSrv)
 	}
+	log.Debug("ZK-INPUT: request sent successfully")
 	return nil
 }
 
