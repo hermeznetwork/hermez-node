@@ -10,6 +10,7 @@ package coordinatornetwork
 import (
 	"context"
 	"crypto/ecdsa"
+	"strconv"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -20,17 +21,18 @@ import (
 )
 
 const (
-	discoveryServiceTag = "coordnet/hermez-coordinator-network" // TODO: should include ChainID
+	discoveryServiceTagBase = "coordnet/hermez-coordinator-network-"
 )
 
 // CoordinatorNetwork it's a p2p communication layer that enables coordinators to exchange information
 // in benefit of the network and them selfs. The main goal is to share L2 data (common.PoolL2Tx and common.AccountCreationAuth)
 type CoordinatorNetwork struct {
-	self      host.Host
-	dht       *dht.IpfsDHT
-	ctx       context.Context
-	discovery *discovery.RoutingDiscovery
-	txsPool   pubSubTxsPool
+	self                host.Host
+	dht                 *dht.IpfsDHT
+	ctx                 context.Context
+	discovery           *discovery.RoutingDiscovery
+	txsPool             pubSubTxsPool
+	discoveryServiceTag string
 }
 
 // NewCoordinatorNetwork connects to coordinators network and return a CoordinatorNetwork
@@ -38,6 +40,7 @@ type CoordinatorNetwork struct {
 func NewCoordinatorNetwork(
 	ethPrivKey *ecdsa.PrivateKey,
 	bootstrapPeers []multiaddr.Multiaddr,
+	chainID uint16,
 	newPoolTxHandler func(common.PoolL2Tx) error,
 ) (CoordinatorNetwork, error) {
 	// Setup a background context
@@ -66,11 +69,12 @@ func NewCoordinatorNetwork(
 	// TODO: add support for atomic txs and account creation auths
 
 	return CoordinatorNetwork{
-		self:      self,
-		dht:       coordnetDHT,
-		ctx:       ctx,
-		discovery: routingDiscovery,
-		txsPool:   txsPool,
+		self:                self,
+		dht:                 coordnetDHT,
+		ctx:                 ctx,
+		discovery:           routingDiscovery,
+		txsPool:             txsPool,
+		discoveryServiceTag: discoveryServiceTagBase + strconv.Itoa(int(chainID)),
 	}, nil
 }
 

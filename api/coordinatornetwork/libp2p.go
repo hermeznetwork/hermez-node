@@ -107,7 +107,7 @@ func setupPubSub(ctx context.Context, nodehost host.Host, routingdiscovery *disc
 
 func (coordnet CoordinatorNetwork) announceConnect() error {
 	// Generate the Service CID
-	cidvalue, err := generateCID(discoveryServiceTag)
+	cidvalue, err := generateCID(coordnet.discoveryServiceTag)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (coordnet CoordinatorNetwork) announceConnect() error {
 
 func (coordnet CoordinatorNetwork) advertiseConnect() error {
 	// Advertise the availability of the service on this node
-	_, err := coordnet.discovery.Advertise(coordnet.ctx, discoveryServiceTag)
+	_, err := coordnet.discovery.Advertise(coordnet.ctx, coordnet.discoveryServiceTag)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (coordnet CoordinatorNetwork) advertiseConnect() error {
 	time.Sleep(time.Second * 5) //nolint:gomnd
 
 	// Find all peers advertising the same service
-	peerchan, err := coordnet.discovery.FindPeers(coordnet.ctx, discoveryServiceTag)
+	peerchan, err := coordnet.discovery.FindPeers(coordnet.ctx, coordnet.discoveryServiceTag)
 	// Handle any potential error
 	if err != nil {
 		return err

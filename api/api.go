@@ -111,6 +111,7 @@ func NewAPI(setup Config) (*API, error) {
 		coordnet, err := coordinatornetwork.NewCoordinatorNetwork(
 			setup.CoordinatorNetworkConfig.EthPrivKey,
 			setup.CoordinatorNetworkConfig.BootstrapPeers,
+			consts.ChainID,
 			a.coordnetPoolTxHandler,
 		)
 		if err != nil {
