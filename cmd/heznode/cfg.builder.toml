@@ -205,7 +205,8 @@ Password = "yourpasswordhere"
 ### Available options:
 ### - Static: always return the same value (StaticValue) in USD
 ### - AvgLastHour: calculate using the average fee of the forged transactions during the last hour
-### Selects the mode. "Static" or "AvgLastHour"
+### - AvgLastHourResizable: calculate using the average fee of the forged transactions during the last hour and takes in account the gas price o of the last ten ethereum blocks
+### Selects the mode. "Static", "AvgLastHour" or "AvgLastHourResizable"
 #PolicyType = "Static"
 ### If PolicyType is "static" defines the recommended fee value
 #StaticValue = 0.10

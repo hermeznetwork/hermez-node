@@ -282,6 +282,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		initSCVars,
 		&hdbConsts,
 		&cfg.RecommendedFeePolicy,
+		client,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)

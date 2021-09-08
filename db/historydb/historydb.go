@@ -29,6 +29,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
 
@@ -1243,7 +1244,7 @@ const (
 )
 
 // GetRecommendedFee returns the RecommendedFee information
-func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64) (*common.RecommendedFee, error) {
+func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64, gasPriceAvg *big.Float) (*common.RecommendedFee, error) {
 	var recommendedFee common.RecommendedFee
 	// Get total txs and the batch of the first selected tx of the last hour
 	type totalTxsSinceBatchNum struct {
@@ -1279,11 +1280,23 @@ func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64) (*common.R
 	} else {
 		avgTransactionFee = 0
 	}
+
+	var gasP float64 = 1
+	if gasPriceAvg != nil {
+		//Divide the gasPriceAvg by 100 GWei (used as threshold)
+		gasPrice := new(big.Float).Quo(gasPriceAvg, big.NewFloat(100000000000)) //Divide by 100 Gwei
+		if gasPrice.Cmp(big.NewFloat(1)) == -1 {
+			gasPrice = big.NewFloat(1)
+		}
+		gasP, _ = gasPrice.Float64()
+		log.Debug("factor used for recommended fees: ", gasP)
+	}
+
 	recommendedFee.ExistingAccount = math.Min(maxFeeUSD,
-		math.Max(avgTransactionFee, minFeeUSD))
+		math.Max(avgTransactionFee, minFeeUSD) * gasP)
 	recommendedFee.CreatesAccount = math.Min(maxFeeUSD,
-		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD))
+		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD) * gasP)
 	recommendedFee.CreatesAccountInternal = math.Min(maxFeeUSD,
-		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD))
+		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD) * gasP)
 	return &recommendedFee, nil
 }

@@ -8,25 +8,29 @@ of using this package.
 package stateapiupdater
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
+	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
 // Updater is an utility object to facilitate updating the StateAPI
 type Updater struct {
-	hdb    *historydb.HistoryDB
-	state  historydb.StateAPI
-	config historydb.NodeConfig
-	vars   common.SCVariablesPtr
-	consts historydb.Constants
-	rw     sync.RWMutex
-	rfp    *RecommendedFeePolicy
+	hdb       *historydb.HistoryDB
+	state     historydb.StateAPI
+	config    historydb.NodeConfig
+	vars      common.SCVariablesPtr
+	consts    historydb.Constants
+	rw        sync.RWMutex
+	rfp       *RecommendedFeePolicy
+	ethClient eth.ClientInterface
 }
 
 // RecommendedFeePolicy describes how the recommended fee is calculated
@@ -43,7 +47,12 @@ const (
 	RecommendedFeePolicyTypeStatic RecommendedFeePolicyType = "Static"
 	// RecommendedFeePolicyTypeAvgLastHour set the recommended fee using the average fee of the last hour
 	RecommendedFeePolicyTypeAvgLastHour RecommendedFeePolicyType = "AvgLastHour"
+	// RecommendedFeePolicyTypeAvgLastHourResizable set the recommended fee using the average fee of the last hour and
+	// taking in account the avg gas of the last ten ethereum blocks
+	RecommendedFeePolicyTypeAvgLastHourResizable RecommendedFeePolicyType = "AvgLastHourResizable"
 )
+
+var gasPriceHistory []*big.Int
 
 func (rfp *RecommendedFeePolicy) valid() bool {
 	switch rfp.PolicyType {
@@ -54,6 +63,8 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 		return true
 	case RecommendedFeePolicyTypeAvgLastHour:
 		return true
+	case RecommendedFeePolicyTypeAvgLastHourResizable:
+		return true
 	default:
 		return false
 	}
@@ -61,7 +72,7 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 
 // NewUpdater creates a new Updater
 func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *common.SCVariables,
-	consts *historydb.Constants, rfp *RecommendedFeePolicy) (*Updater, error) {
+	consts *historydb.Constants, rfp *RecommendedFeePolicy, ethClient eth.ClientInterface) (*Updater, error) {
 	if ok := rfp.valid(); !ok {
 		return nil, tracerr.Wrap(fmt.Errorf("Invalid recommended fee policy: %v", rfp.PolicyType))
 	}
@@ -75,6 +86,7 @@ func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *co
 			},
 		},
 		rfp: rfp,
+		ethClient: ethClient,
 	}
 	u.SetSCVars(vars.AsPtr())
 	return &u, nil
@@ -119,7 +131,42 @@ func (u *Updater) UpdateRecommendedFee() error {
 		}
 		u.rw.Unlock()
 	case RecommendedFeePolicyTypeAvgLastHour:
-		recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD)
+		recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD, nil)
+		if err != nil {
+			return tracerr.Wrap(err)
+		}
+		u.rw.Lock()
+		u.state.RecommendedFee = *recommendedFee
+		u.rw.Unlock()
+	case RecommendedFeePolicyTypeAvgLastHourResizable:
+		//First get the average gas price used from history array
+		//Every time this function is executed, checks the gasPrice and stores it in the gasPriceHistory array. If gasPriceHistory has less than 10 elements include a new one
+		//If gasPriceHistory has more than ten elements, then remove the position 0 without loosing the order and include the current one.
+		ctx := context.Background() 
+		gas, err := u.ethClient.EthSuggestGasPrice(ctx)
+		if err != nil { //If err, gasPriceHistory is not modified to avoid deviations
+			log.Error("error getting gas price for recommended fee: ", err)
+		} else {
+			log.Debug("gas Price History arr: ", gasPriceHistory)
+			if len(gasPriceHistory) < 10 {
+				gasPriceHistory = append(gasPriceHistory, gas)
+			} else {
+				//Remove old element and add the new one
+				gasPriceHistory = removeGasPriceHistoryElement(gasPriceHistory, 0)
+				gasPriceHistory = append(gasPriceHistory, gas)
+			}
+		}
+		gasPriceAvg := big.NewInt(0)
+		totSum := big.NewInt(0)
+		if len(gasPriceHistory) != 0 {
+			// Calculate gasPriceAvg
+			for _,val := range gasPriceHistory {
+				totSum.Add(totSum, val)
+			}
+			gasPriceAvg.Div(totSum, big.NewInt(int64(len(gasPriceHistory))))
+		}
+		gasPriceAvgf := new(big.Float).SetInt(gasPriceAvg)
+		recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD, gasPriceAvgf)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -127,10 +174,14 @@ func (u *Updater) UpdateRecommendedFee() error {
 		u.state.RecommendedFee = *recommendedFee
 		u.rw.Unlock()
 	default:
-		return tracerr.New("Invalid recommende fee policy")
+		return tracerr.New("Invalid recommende fee policy: " + string(u.rfp.PolicyType))
 	}
 
 	return nil
+}
+
+func removeGasPriceHistoryElement(slice []*big.Int, s int) []*big.Int {
+    return append(slice[:s], slice[s+1:]...)
 }
 
 // UpdateMetrics update Status.Metrics information
