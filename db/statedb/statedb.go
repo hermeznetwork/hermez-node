@@ -97,10 +97,6 @@ type Last struct {
 	db db.Storage
 }
 
-func init() {
-	log.Init("debug", []string{"stdout"})
-}
-
 // GetAccount returns the account for the given Idx
 func (s *Last) GetAccount(idx common.Idx) (*common.Account, error) {
 	return GetAccountInTreeDB(s.db, idx)

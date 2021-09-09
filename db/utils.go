@@ -40,7 +40,6 @@ const (
 var migrations *migrate.PackrMigrationSource
 
 func init() {
-	log.Init("debug", []string{"stdout"})
 	migrations = &migrate.PackrMigrationSource{
 		Box: packr.New("hermez-db-migrations", "./migrations"),
 	}
