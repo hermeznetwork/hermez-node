@@ -1241,6 +1241,8 @@ const (
 	// over the average fee for CreateAccountInternal that is applied to
 	// obtain the recommended fee for CreateAccountInternal
 	CreateAccountInternalExtraFeePercentage float64 = 2.0
+	// Threshold used to increase the recommended fee
+	thresholdInWei float64 = 100000000000 // 100 Gwei
 )
 
 // GetRecommendedFee returns the RecommendedFee information
@@ -1284,7 +1286,7 @@ func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64, gasPriceAv
 	var gasP float64 = 1
 	if gasPriceAvg != nil {
 		//Divide the gasPriceAvg by 100 GWei (used as threshold)
-		gasPrice := new(big.Float).Quo(gasPriceAvg, big.NewFloat(100000000000)) //Divide by 100 Gwei
+		gasPrice := new(big.Float).Quo(gasPriceAvg, big.NewFloat(thresholdInWei)) //Divide by 100 Gwei
 		if gasPrice.Cmp(big.NewFloat(1)) == -1 {
 			gasPrice = big.NewFloat(1)
 		}
@@ -1293,10 +1295,10 @@ func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64, gasPriceAv
 	}
 
 	recommendedFee.ExistingAccount = math.Min(maxFeeUSD,
-		math.Max(avgTransactionFee, minFeeUSD) * gasP)
+		math.Max(avgTransactionFee, minFeeUSD)*gasP)
 	recommendedFee.CreatesAccount = math.Min(maxFeeUSD,
-		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD) * gasP)
+		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD)*gasP)
 	recommendedFee.CreatesAccountInternal = math.Min(maxFeeUSD,
-		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD) * gasP)
+		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD)*gasP)
 	return &recommendedFee, nil
 }

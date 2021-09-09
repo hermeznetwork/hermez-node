@@ -50,6 +50,8 @@ const (
 	// RecommendedFeePolicyTypeAvgLastHourResizable set the recommended fee using the average fee of the last hour and
 	// taking in account the avg gas of the last ten ethereum blocks
 	RecommendedFeePolicyTypeAvgLastHourResizable RecommendedFeePolicyType = "AvgLastHourResizable"
+	//Buffer size used to store gas prices when AvgLastHourResizable mode is active
+	bufferSize = 10
 )
 
 var gasPriceHistory []*big.Int
@@ -85,7 +87,7 @@ func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *co
 				ForgeDelay: config.ForgeDelay,
 			},
 		},
-		rfp: rfp,
+		rfp:       rfp,
 		ethClient: ethClient,
 	}
 	u.SetSCVars(vars.AsPtr())
@@ -142,13 +144,13 @@ func (u *Updater) UpdateRecommendedFee() error {
 		//First get the average gas price used from history array
 		//Every time this function is executed, checks the gasPrice and stores it in the gasPriceHistory array. If gasPriceHistory has less than 10 elements include a new one
 		//If gasPriceHistory has more than ten elements, then remove the position 0 without loosing the order and include the current one.
-		ctx := context.Background() 
+		ctx := context.Background()
 		gas, err := u.ethClient.EthSuggestGasPrice(ctx)
 		if err != nil { //If err, gasPriceHistory is not modified to avoid deviations
 			log.Error("error getting gas price for recommended fee: ", err)
 		} else {
 			log.Debug("gas Price History arr: ", gasPriceHistory)
-			if len(gasPriceHistory) < 10 {
+			if len(gasPriceHistory) < bufferSize {
 				gasPriceHistory = append(gasPriceHistory, gas)
 			} else {
 				//Remove old element and add the new one
@@ -160,7 +162,7 @@ func (u *Updater) UpdateRecommendedFee() error {
 		totSum := big.NewInt(0)
 		if len(gasPriceHistory) != 0 {
 			// Calculate gasPriceAvg
-			for _,val := range gasPriceHistory {
+			for _, val := range gasPriceHistory {
 				totSum.Add(totSum, val)
 			}
 			gasPriceAvg.Div(totSum, big.NewInt(int64(len(gasPriceHistory))))
@@ -181,7 +183,7 @@ func (u *Updater) UpdateRecommendedFee() error {
 }
 
 func removeGasPriceHistoryElement(slice []*big.Int, s int) []*big.Int {
-    return append(slice[:s], slice[s+1:]...)
+	return append(slice[:s], slice[s+1:]...)
 }
 
 // UpdateMetrics update Status.Metrics information
