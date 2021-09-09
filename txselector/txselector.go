@@ -251,7 +251,6 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	// - Prepare coordIdxsMap & AccumulatedFees
 	// - Distribute AccumulatedFees to CoordIdxs
 	// - MakeCheckpoint
-	//failedAtomicGroups := []failedAtomicGroup{}
 	failedAtomicGroups := make(map[common.AtomicGroupID]failedAtomicGroup)
 START_SELECTION:
 	txselStateDB := txsel.localAccountsDB.StateDB
@@ -311,8 +310,6 @@ START_SELECTION:
 	//shouldKeepSelectionProcess := true
 
 	txsL1ToBeProcessedChan := make(chan *common.L1Tx)
-	//txsL2ToBeProcessedChan := make(chan common.PoolL2Tx)
-	//txsL2ToBeProcessedAfterL1Chan := make(chan common.PoolL2Tx)
 	nonSelectedL2TxsChan := make(chan common.PoolL2Tx)
 	selectedL2TxsChan := make(chan common.PoolL2Tx)
 	unforjableL2TxsChan := make(chan common.PoolL2Tx)
@@ -320,20 +317,23 @@ START_SELECTION:
 	l1CoordinatorTxsChan := make(chan common.L1Tx)
 	failedAGChan := make(chan failedAtomicGroup)
 	errChan := make(chan error)
-	//done := make(chan int)
 	verificationEnded := make(chan int)
 	// Order L2 txs. This has to be done just once,
 	// as the array will get smaller over iterations, but the order won't be affected
 	selectableTxs = sortL2Txs(selectableTxs, atomicFeeMap)
 	var wg sync.WaitGroup
 
+	// Iterate over l2Txs
+	// - check Nonces
+	// - check enough Balance for the Amount+Fee
+	// - if needed, create new L1CoordinatorTxs for unexisting ToIdx
+	// 	- keep used accAuths
+	// - put the valid txs into selectedTxs array
 	go txsel.verifyTxs(
 		&wg,
 		verificationEnded,
 		txsL1ToBeProcessedChan,
 		selectedL2TxsChan,
-		//txsL2ToBeProcessedChan,
-		//txsL2ToBeProcessedAfterL1Chan,
 		nonSelectedL2TxsChan,
 		unforjableL2TxsChan,
 		accAuthsChan,
@@ -347,53 +347,6 @@ START_SELECTION:
 		selectionConfig,
 		tp)
 
-	//for shouldKeepSelectionProcess {
-	//	// Process txs and get selection
-	//	iteAccAuths, iteL1CoordinatorTxs, iteSelectedTxs,
-	//		nonSelectedTxs, invalidTxs, failedAtomicGroup, err := txsel.processL2Txs(
-	//		tp,
-	//		selectionConfig,
-	//		len(l1UserTxs)+len(l1CoordinatorTxs), // Already added L1 Txs
-	//		len(selectedTxs),                     // Already added L2 Txs
-	//		l1UserFutureTxs,                      // Used to prevent the creation of unnecessary accounts
-	//		selectableTxs,                        // Txs that can be selected
-	//	)
-	//if failedAtomicGroup.id != common.EmptyAtomicGroupID {
-	//	// An atomic group failed to be processed
-	//	// after at least one tx from the group already altered the state.
-	//	// Revert state to current batch and start the selection process again,
-	//	// ignoring the txs from the group that failed
-	//	log.Info(err)
-	//	failedAtomicGroups[failedAtomicGroup.id] = failedAtomicGroup
-	//	if err := txsel.localAccountsDB.Reset(
-	//		txsel.localAccountsDB.CurrentBatch(), false,
-	//	); err != nil {
-	//		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	//	}
-	//	goto START_SELECTION
-	//}
-	//if err != nil {
-	//	return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	//}
-	// Add iteration results to selection arrays
-	//accAuths = append(accAuths, iteAccAuths...)
-	//l1CoordinatorTxs = append(l1CoordinatorTxs, iteL1CoordinatorTxs...)
-	//selectedTxs = append(selectedTxs, iteSelectedTxs...)
-	//discardedTxs = append(discardedTxs, invalidTxs...)
-	// Prepare for next iteration
-	//if len(iteSelectedTxs) == 0 { // Stop iterating
-	//	// If in this iteration no txs got selected, stop selection process
-	//	shouldKeepSelectionProcess = false
-	//	// Add non selected txs to the discarded array as at this point they won't get selected
-	//	for i := 0; i < len(nonSelectedTxs); i++ {
-	//		discardedTxs = append(discardedTxs, nonSelectedTxs[i])
-	//	}
-	//} else { // Keep iterating
-	//	// Try to select nonSelected txs in next iteration
-	//	selectableTxs = nonSelectedTxs
-	//}
-	//}
-
 	var nonSelectedTxs []common.PoolL2Tx
 	var iteSelectedTxs []common.PoolL2Tx
 	var coordIdxs []common.Idx
@@ -402,24 +355,14 @@ START_SELECTION:
 	for {
 		select {
 		case tx := <-txsL1ToBeProcessedChan:
-			fmt.Println("L1 TO BE PROCESSED")
 			_, _, _, _, err = tp.ProcessL1Tx(nil, tx)
-			fmt.Println("wg.Done(1)")
 			wg.Done()
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, err
 			}
-		//case tx := <-txsL2ToBeProcessedChan:
-		//	fmt.Println("TXS L2 TO BE PROCESSED")
-		//	tryToProcessL2Tx(tx, selectedL2TxsChan, nonSelectedL2TxsChan, failedAGChan, errChan, txsel, tp)
-		//case tx := <-txsL2ToBeProcessedAfterL1Chan:
-		//	fmt.Println("TXS L2 TO BE PROCESSED AFTER L1")
-		//	tryToProcessL2Tx(tx, selectedL2TxsChan, nonSelectedL2TxsChan, failedAGChan, errChan, txsel, tp)
 		case tx := <-nonSelectedL2TxsChan:
-			fmt.Println("NOT SELECTED")
 			nonSelectedTxs = append(nonSelectedTxs, tx)
 		case tx := <-selectedL2TxsChan:
-			fmt.Println("SELECTED")
 			iteSelectedTxs = append(iteSelectedTxs, tx)
 			selectedTxs = append(selectedTxs, tx)
 			accSender, err := tp.StateDB().GetAccount(tx.FromIdx)
@@ -444,7 +387,6 @@ START_SELECTION:
 		case accAuth := <-accAuthsChan:
 			accAuths = append(accAuths, accAuth)
 		case failedAG := <-failedAGChan:
-			fmt.Println("FAILED AG")
 			failedAtomicGroups[failedAG.id] = failedAG
 			if err := txsel.localAccountsDB.Reset(txsel.localAccountsDB.CurrentBatch(), false); err != nil {
 				return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
@@ -453,20 +395,15 @@ START_SELECTION:
 		case l1CoordinatorTx := <-l1CoordinatorTxsChan:
 			l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
 		case err := <-errChan:
-			fmt.Println("ERRRR")
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 		case <-verificationEnded:
-			fmt.Println("VERFICI")
 			if len(iteSelectedTxs) == 0 {
 				for i := 0; i < len(nonSelectedTxs); i++ {
 					discardedTxs = append(discardedTxs, nonSelectedTxs[i])
 				}
-				fmt.Println("VERFICI DONE !!!")
-				fmt.Println("DONE")
 				sort.SliceStable(coordIdxs, func(i, j int) bool {
 					return coordIdxs[i] < coordIdxs[j]
 				})
-
 				// distribute the AccumulatedFees from the processed L2Txs into the
 				// Coordinator Idxs
 				for idx, accumulatedFee := range tp.AccumulatedFees {
@@ -499,209 +436,36 @@ START_SELECTION:
 				metric.DiscardedL2Txs.Set(float64(len(discardedTxs)))
 
 				return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, selectedTxs, discardedTxs, nil
-
-				//done <- 1
-			} else {
-				fmt.Println("VERFICI ELSE !!!")
-				iteSelectedTxs = []common.PoolL2Tx{}
-				selectableTxs = nonSelectedTxs
-				nonSelectedTxs = []common.PoolL2Tx{}
-				go txsel.verifyTxs(
-					&wg,
-					verificationEnded,
-					txsL1ToBeProcessedChan,
-					selectedL2TxsChan,
-					//txsL2ToBeProcessedChan,
-					//txsL2ToBeProcessedAfterL1Chan,
-					nonSelectedL2TxsChan,
-					unforjableL2TxsChan,
-					accAuthsChan,
-					l1CoordinatorTxsChan,
-					failedAGChan,
-					errChan,
-					selectableTxs,                        // Txs that can be selected
-					l1UserFutureTxs,                      // Used to prevent the creation of unnecessary accounts
-					len(l1UserTxs)+len(l1CoordinatorTxs), // Already added L1 Txs
-					len(selectedTxs),                     // Already added L2 Txs
-					selectionConfig,
-					tp)
 			}
+			iteSelectedTxs = []common.PoolL2Tx{}
+			selectableTxs = nonSelectedTxs
+			nonSelectedTxs = []common.PoolL2Tx{}
+			go txsel.verifyTxs(
+				&wg,
+				verificationEnded,
+				txsL1ToBeProcessedChan,
+				selectedL2TxsChan,
+				nonSelectedL2TxsChan,
+				unforjableL2TxsChan,
+				accAuthsChan,
+				l1CoordinatorTxsChan,
+				failedAGChan,
+				errChan,
+				selectableTxs,                        // Txs that can be selected
+				l1UserFutureTxs,                      // Used to prevent the creation of unnecessary accounts
+				len(l1UserTxs)+len(l1CoordinatorTxs), // Already added L1 Txs
+				len(selectedTxs),                     // Already added L2 Txs
+				selectionConfig,
+				tp)
 		}
-		//case <- done:
-		//	fmt.Println("DONE")
-		//	sort.SliceStable(coordIdxs, func(i, j int) bool {
-		//		return coordIdxs[i] < coordIdxs[j]
-		//	})
-		//
-		//	// distribute the AccumulatedFees from the processed L2Txs into the
-		//	// Coordinator Idxs
-		//	for idx, accumulatedFee := range tp.AccumulatedFees {
-		//		cmp := accumulatedFee.Cmp(big.NewInt(0))
-		//		if cmp == 1 { // accumulatedFee>0
-		//			// send the fee to the Idx of the Coordinator for the TokenID
-		//			accCoord, err := txsel.localAccountsDB.GetAccount(idx)
-		//			if err != nil {
-		//				log.Errorw("Can not distribute accumulated fees to coordinator "+
-		//					"account: No coord Idx to receive fee", "idx", idx)
-		//				return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-		//			}
-		//			accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
-		//			_, err = txsel.localAccountsDB.UpdateAccount(idx, accCoord)
-		//			if err != nil {
-		//				log.Error(err)
-		//				return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-		//			}
-		//		}
-		//	}
-		//
-		//	err = tp.StateDB().MakeCheckpoint()
-		//	if err != nil {
-		//		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-		//	}
-		//
-		//	metric.SelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
-		//	metric.SelectedL1UserTxs.Set(float64(len(l1UserTxs)))
-		//	metric.SelectedL2Txs.Set(float64(len(selectedTxs)))
-		//	metric.DiscardedL2Txs.Set(float64(len(discardedTxs)))
-		//
-		//	return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, selectedTxs, discardedTxs, nil
-		//}
 	}
-	//for i := 0; i < len(selectedTxs); i++ {
-	//	// get TokenID from tx.Sender
-	//	accSender, err := tp.StateDB().GetAccount(selectedTxs[i].FromIdx)
-	//	if err != nil {
-	//		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	//	}
-	//	tokenID := accSender.TokenID
-	//
-	//	coordIdx, err := txsel.getCoordIdx(tokenID)
-	//	if err != nil {
-	//		// if err is db.ErrNotFound, should not happen, as all
-	//		// the selectedTxs.TokenID should have a CoordinatorIdx
-	//		// created in the DB at this point
-	//		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	//	}
-	//	coordIdxsMap[tokenID] = coordIdx
-	//}
-
-	//for _, idx := range coordIdxsMap {
-	//	coordIdxs = append(coordIdxs, idx)
-	//}
-	// sort CoordIdxs
-	//sort.SliceStable(coordIdxs, func(i, j int) bool {
-	//	return coordIdxs[i] < coordIdxs[j]
-	//})
-	//
-	//// distribute the AccumulatedFees from the processed L2Txs into the
-	//// Coordinator Idxs
-	//for idx, accumulatedFee := range tp.AccumulatedFees {
-	//	cmp := accumulatedFee.Cmp(big.NewInt(0))
-	//	if cmp == 1 { // accumulatedFee>0
-	//		// send the fee to the Idx of the Coordinator for the TokenID
-	//		accCoord, err := txsel.localAccountsDB.GetAccount(idx)
-	//		if err != nil {
-	//			log.Errorw("Can not distribute accumulated fees to coordinator "+
-	//				"account: No coord Idx to receive fee", "idx", idx)
-	//			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	//		}
-	//		accCoord.Balance = new(big.Int).Add(accCoord.Balance, accumulatedFee)
-	//		_, err = txsel.localAccountsDB.UpdateAccount(idx, accCoord)
-	//		if err != nil {
-	//			log.Error(err)
-	//			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	//		}
-	//	}
-	//}
-	//
-	//err = tp.StateDB().MakeCheckpoint()
-	//if err != nil {
-	//	return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-	//}
-	//
-	//metric.SelectedL1CoordinatorTxs.Set(float64(len(l1CoordinatorTxs)))
-	//metric.SelectedL1UserTxs.Set(float64(len(l1UserTxs)))
-	//metric.SelectedL2Txs.Set(float64(len(selectedTxs)))
-	//metric.DiscardedL2Txs.Set(float64(len(discardedTxs)))
-	//
-	//return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, selectedTxs, discardedTxs, nil
 }
-
-//func (txsel *TxSelector) processL2Txs(
-//	tp *txprocessor.TxProcessor,
-//	selectionConfig txprocessor.Config,
-//	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
-//	l1UserFutureTxs []common.L1Tx,
-//	l2Txs []common.PoolL2Tx,
-//) {
-//	// Iterate over l2Txs
-//	// - check Nonces
-//	// - check enough Balance for the Amount+Fee
-//	// - if needed, create new L1CoordinatorTxs for unexisting ToIdx
-//	// 	- keep used accAuths
-//	// - put the valid txs into selectedTxs array
-//	txsL1ToBeProcessedChan := make(chan *common.L1Tx)
-//	selectedL2TxsChan := make(chan common.PoolL2Tx)
-//	//txsL2ToBeProcessedChan := make(chan common.PoolL2Tx)
-//	//txsL2ToBeProcessedAfterL1Chan := make(chan common.PoolL2Tx)
-//	nonSelectedL2TxsChan := make(chan common.PoolL2Tx)
-//	//selectedL2TxsChan := make(chan common.PoolL2Tx)
-//	unforjableL2TxsChan := make(chan common.PoolL2Tx)
-//	accAuthsChan := make(chan []byte)
-//	l1CoordinatorTxsChan := make(chan common.L1Tx)
-//	failedAGChan := make(chan failedAtomicGroup)
-//	errChan := make(chan error)
-//	done := make(chan int)
-//	go txsel.verifyTxs(&wg, done, txsL1ToBeProcessedChan, selectedL2TxsChan,
-//		//txsL2ToBeProcessedChan, txsL2ToBeProcessedAfterL1Chan,
-//		nonSelectedL2TxsChan, unforjableL2TxsChan, accAuthsChan, l1CoordinatorTxsChan, failedAGChan, errChan,
-//		l2Txs, l1UserFutureTxs, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig, tp)
-
-//for {
-//	select {
-//case tx := <-txsL1ToBeProcessedChan:
-//	_, _, _, _, err = tp.ProcessL1Tx(nil, tx)
-//	if err != nil {
-//		return nil, nil, nil, nil, nil, failedAtomicGroup{}, err
-//	}
-//
-//case tx := <-txsL2ToBeProcessedChan:
-//	tryToProcessL2Tx(tx, selectedL2TxsChan, nonSelectedL2TxsChan, failedAGChan, errChan, txsel, tp)
-//case tx := <-txsL2ToBeProcessedAfterL1Chan:
-//	tryToProcessL2Tx(tx, selectedL2TxsChan, nonSelectedL2TxsChan, failedAGChan, errChan, txsel, tp)
-//case tx := <-nonSelectedL2TxsChan:
-//	nonSelectedL2Txs = append(nonSelectedL2Txs, tx)
-//case tx := <-selectedL2TxsChan:
-//	selectedL2Txs = append(selectedL2Txs, tx)
-//case tx := <-unforjableL2TxsChan:
-//	unforjableL2Txs = append(unforjableL2Txs, tx)
-//
-//case accAuth := <-accAuthsChan:
-//	accAuths = append(accAuths, accAuth)
-//
-//case l1CoordinatorTx := <-l1CoordinatorTxsChan:
-//	l1CoordinatorTxs = append(l1CoordinatorTxs, l1CoordinatorTx)
-//
-//case failedAG := <-failedAGChan:
-//	return nil, nil, nil, nil, nil, failedAG, nil
-
-//}
-//case err := <-errChan:
-//	return nil, nil, nil, nil, nil, failedAtomicGroup{}, err
-//
-//case <-done:
-//	return accAuths, l1CoordinatorTxs, selectedL2Txs, nonSelectedL2Txs, unforjableL2Txs, failedAG, nil
-//}
-
-//}
 
 func (txsel *TxSelector) verifyTxs(
 	wg *sync.WaitGroup,
-	done chan int,
+	verificationEnded chan int,
 	txsL1ToBeProcessedChan chan *common.L1Tx,
 	selectedL2TxsChan chan common.PoolL2Tx,
-	//txsL2ToBeProcessedChan chan common.PoolL2Tx,
-	//txsL2ToBeProcessedAfterL1Chan chan common.PoolL2Tx,
 	nonSelectedL2TxsChan chan common.PoolL2Tx,
 	unforjableL2TxsChan chan common.PoolL2Tx,
 	accAuthsChan chan []byte,
@@ -713,19 +477,6 @@ func (txsel *TxSelector) verifyTxs(
 	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
 	selectionConfig txprocessor.Config,
 	tp *txprocessor.TxProcessor) {
-	//defer func() {
-	//	close(txsL1ToBeProcessedChan)
-	//	close(txsL2ToBeProcessedChan)
-	//	close(txsL2ToBeProcessedAfterL1Chan)
-	//	close(nonSelectedL2TxsChan)
-	//	close(unforjableL2TxsChan)
-	//	close(accAuthsChan)
-	//	close(l1CoordinatorTxsChan)
-	//	close(failedAGChan)
-	//	close(errChan)
-	//	close(done)
-	//}()
-
 	positionL1 := nAlreadyProcessedL1Txs
 	nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
 	for i := 0; i < len(l2Txs); i++ {
@@ -795,7 +546,6 @@ func (txsel *TxSelector) verifyTxs(
 
 			// process the L1CoordTx
 			wg.Add(1)
-			fmt.Println("wg.Add(1)")
 			txsL1ToBeProcessedChan <- newL1CoordTx
 			nAlreadyProcessedL1Txs++
 		}
@@ -842,7 +592,6 @@ func (txsel *TxSelector) verifyTxs(
 				// TODO: PROCESS TX
 				// process the L1CoordTx
 				wg.Add(1)
-				fmt.Println("wg.Add(1)")
 				txsL1ToBeProcessedChan <- l1CoordinatorTx
 				nAlreadyProcessedL1Txs++
 			}
@@ -871,15 +620,12 @@ func (txsel *TxSelector) verifyTxs(
 		if newL1CoordTx != nil || l1CoordinatorTx != nil {
 			wg.Wait()
 			tryToProcessL2Tx(l2Txs[i], selectedL2TxsChan, nonSelectedL2TxsChan, failedAGChan, errChan, txsel, tp)
-			//txsL2ToBeProcessedAfterL1Chan <- l2Txs[i]
 		} else {
-			//txsL2ToBeProcessedChan <- l2Txs[i]
 			tryToProcessL2Tx(l2Txs[i], selectedL2TxsChan, nonSelectedL2TxsChan, failedAGChan, errChan, txsel, tp)
 		}
-		// TODO: fix this possible case, when transaction failed, but it's calculated as already processed
 		nAlreadyProcessedL2Txs++
 	} // after this loop, no checks to discard txs should be done
-	done <- 1
+	verificationEnded <- 1
 }
 
 func tryToProcessL2Tx(
@@ -891,7 +637,6 @@ func tryToProcessL2Tx(
 	tokenID := l2tx.TokenID
 	coordIdx, err := txsel.getCoordIdx(tokenID)
 	if err != nil {
-		fmt.Println("could not get CoordIdx")
 		// if err is db.ErrNotFound, should not happen, as all
 		// the selectedTxs.TokenID should have a CoordinatorIdx
 		// created in the DB at this point
@@ -910,7 +655,6 @@ func tryToProcessL2Tx(
 	// TODO: PROCESS TX
 	_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2tx)
 	if err != nil {
-		fmt.Println("could not get ProcessL2Tx")
 		obj := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrTxDiscartedInProcessL2Tx+" due to %s", err.Error()),
 			Code:    ErrTxDiscartedInProcessL2TxCode,
@@ -924,7 +668,6 @@ func tryToProcessL2Tx(
 				failedTxID: l2tx.TxID,
 				reason:     obj,
 			}
-			fmt.Println("could not get ProcessL2Tx FAILED AG")
 			failedAGChan <- failedAG
 			return
 		}
@@ -933,16 +676,11 @@ func tryToProcessL2Tx(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		fmt.Println("could not get ProcessL2Tx nonSelectedL2TxsChan")
 		nonSelectedL2TxsChan <- l2tx
-		fmt.Println("could not get ProcessL2Tx nonSelectedL2TxsChan")
 		errChan <- tracerr.Wrap(err)
 		return
 	}
-	fmt.Println("could ProcessL2Tx selectedL2TxsChan")
 	selectedL2TxsChan <- l2tx
-	fmt.Println("could ProcessL2Tx after selectedL2TxsChan")
-	return
 }
 
 const failedGroupErrMsg = "Failed forging atomic tx from Group %s." +
