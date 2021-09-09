@@ -26,6 +26,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test"
 	"github.com/hermeznetwork/hermez-node/test/til"
@@ -546,7 +547,7 @@ func TestMain(m *testing.M) {
 		WDelayer: wdelayerVars,
 	}, constants, &stateapiupdater.RecommendedFeePolicy{
 		PolicyType: stateapiupdater.RecommendedFeePolicyTypeAvgLastHour,
-	}, &eth.Client{})
+	}, &eth.Client{}, &etherscan.Service{})
 	if err != nil {
 		panic(err)
 	}

@@ -275,7 +275,15 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	if err := historyDB.SetConstants(&hdbConsts); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-
+	var etherScanService *etherscan.Service
+	if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
+		log.Info("EtherScan method detected in cofiguration file")
+		etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
+			cfg.Coordinator.Etherscan.APIKey)
+	} else {
+		log.Info("EtherScan method not configured in config file")
+		etherScanService = nil
+	}
 	stateAPIUpdater, err := stateapiupdater.NewUpdater(
 		historyDB,
 		&hdbNodeCfg,
@@ -283,6 +291,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		&hdbConsts,
 		&cfg.RecommendedFeePolicy,
 		client,
+		etherScanService,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -337,15 +346,6 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			stateDB, 0, uint64(cfg.Coordinator.Circuit.NLevels))
 		if err != nil {
 			return nil, tracerr.Wrap(err)
-		}
-		var etherScanService *etherscan.Service
-		if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
-			log.Info("EtherScan method detected in cofiguration file")
-			etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
-				cfg.Coordinator.Etherscan.APIKey)
-		} else {
-			log.Info("EtherScan method not configured in config file")
-			etherScanService = nil
 		}
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs.URLs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs.URLs {

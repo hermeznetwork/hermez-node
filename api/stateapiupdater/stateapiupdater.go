@@ -14,23 +14,26 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/eth"
+	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
 // Updater is an utility object to facilitate updating the StateAPI
 type Updater struct {
-	hdb       *historydb.HistoryDB
-	state     historydb.StateAPI
-	config    historydb.NodeConfig
-	vars      common.SCVariablesPtr
-	consts    historydb.Constants
-	rw        sync.RWMutex
-	rfp       *RecommendedFeePolicy
-	ethClient eth.ClientInterface
+	hdb              *historydb.HistoryDB
+	state            historydb.StateAPI
+	config           historydb.NodeConfig
+	vars             common.SCVariablesPtr
+	consts           historydb.Constants
+	rw               sync.RWMutex
+	rfp              *RecommendedFeePolicy
+	ethClient        eth.ClientInterface
+	etherScanService *etherscan.Service
 }
 
 // RecommendedFeePolicy describes how the recommended fee is calculated
@@ -74,7 +77,7 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 
 // NewUpdater creates a new Updater
 func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *common.SCVariables,
-	consts *historydb.Constants, rfp *RecommendedFeePolicy, ethClient eth.ClientInterface) (*Updater, error) {
+	consts *historydb.Constants, rfp *RecommendedFeePolicy, ethClient eth.ClientInterface, etherScanService *etherscan.Service) (*Updater, error) {
 	if ok := rfp.valid(); !ok {
 		return nil, tracerr.Wrap(fmt.Errorf("Invalid recommended fee policy: %v", rfp.PolicyType))
 	}
@@ -87,8 +90,9 @@ func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *co
 				ForgeDelay: config.ForgeDelay,
 			},
 		},
-		rfp:       rfp,
-		ethClient: ethClient,
+		rfp:              rfp,
+		ethClient:        ethClient,
+		etherScanService: etherScanService,
 	}
 	u.SetSCVars(vars.AsPtr())
 	return &u, nil
@@ -145,18 +149,36 @@ func (u *Updater) UpdateRecommendedFee() error {
 		//Every time this function is executed, checks the gasPrice and stores it in the gasPriceHistory array. If gasPriceHistory has less than 10 elements include a new one
 		//If gasPriceHistory has more than ten elements, then remove the position 0 without loosing the order and include the current one.
 		ctx := context.Background()
+		eGasPrice := big.NewInt(0)
+		if u.etherScanService != nil {
+			etherscanGasPrice, err := u.etherScanService.GetGasPrice(ctx)
+			if err != nil {
+				log.Warn("[Etherscan gas price service] Error getting the gas price from etherscan. Error: ", err.Error())
+			} else {
+				var ok bool
+				eGasPrice, ok = eGasPrice.SetString(etherscanGasPrice.ProposeGasPrice, 10)
+				if !ok {
+					log.Warn("[Etherscan gas price service] invalid big int: \"%v\"", etherscanGasPrice.ProposeGasPrice, ". Trying another method to get gas price")
+				}
+			}
+		}
+		// Convert the eGasPrice from gwei , such as 20 to wei
+		eGasPrice = eGasPrice.Mul(eGasPrice, big.NewInt(params.GWei))
+
 		gas, err := u.ethClient.EthSuggestGasPrice(ctx)
 		if err != nil { //If err, gasPriceHistory is not modified to avoid deviations
-			log.Error("error getting gas price for recommended fee: ", err)
+			log.Warn("error getting gas price for recommended fee: ", err)
+		}
+		if gas.Cmp(eGasPrice) < 0 {
+			gas = eGasPrice
+		}
+		log.Debug("gas Price History arr: ", gasPriceHistory)
+		if len(gasPriceHistory) < bufferSize {
+			gasPriceHistory = append(gasPriceHistory, gas)
 		} else {
-			log.Debug("gas Price History arr: ", gasPriceHistory)
-			if len(gasPriceHistory) < bufferSize {
-				gasPriceHistory = append(gasPriceHistory, gas)
-			} else {
-				//Remove old element and add the new one
-				gasPriceHistory = removeGasPriceHistoryElement(gasPriceHistory, 0)
-				gasPriceHistory = append(gasPriceHistory, gas)
-			}
+			//Remove old element and add the new one
+			gasPriceHistory = removeGasPriceHistoryElement(gasPriceHistory, 0)
+			gasPriceHistory = append(gasPriceHistory, gas)
 		}
 		gasPriceAvg := big.NewInt(0)
 		totSum := big.NewInt(0)

@@ -12,7 +12,7 @@
 ### Interval between updates of the API metrics
 #UpdateMetricsInterval = "10s"
 ### Interval between updates of the recommended fees
-#UpdateRecommendedFeeInterval = "10s"
+#UpdateRecommendedFeeInterval = "15s"
 ### Maximum concurrent connections allowed between API and SQL
 #MaxSQLConnections = 100
 ### Maximum amount of time that an API request can wait to establish a SQL connection
