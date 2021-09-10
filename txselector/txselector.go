@@ -356,10 +356,10 @@ START_SELECTION:
 		select {
 		case tx := <-txsL1ToBeProcessedChan:
 			_, _, _, _, err = tp.ProcessL1Tx(nil, tx)
-			wg.Done()
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, err
 			}
+			wg.Done()
 		case tx := <-nonSelectedL2TxsChan:
 			nonSelectedTxs = append(nonSelectedTxs, tx)
 		case tx := <-selectedL2TxsChan:
