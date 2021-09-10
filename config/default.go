@@ -2,6 +2,10 @@ package config
 
 // DefaultValues is the default fonfigurations for the hermez node
 const DefaultValues = `
+[Log]
+Level = "info"
+Out = ["stdout"]
+
 [API]
 Address = "0.0.0.0:8086"
 Explorer = true

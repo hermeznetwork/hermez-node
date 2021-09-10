@@ -25,6 +25,7 @@ import (
 )
 
 func init() {
+	log.Init("debug", []string{"stdout"})
 	copystructure.Copiers[reflect.TypeOf(big.Int{})] =
 		func(raw interface{}) (interface{}, error) {
 			in := raw.(big.Int)

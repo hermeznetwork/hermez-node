@@ -8,6 +8,7 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/jmoiron/sqlx"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/stretchr/testify/require"
@@ -21,6 +22,10 @@ import (
 	- It's recommended to use some SQL tool (such as DBeaver) that generates insert queries from existing rows
 	- Any new migration file could be tested using the existing `migrationTester` interface. Check `0002_test.go` for an example
 */
+
+func init() {
+	log.Init("debug", []string{"stdout"})
+}
 
 type migrationTester interface {
 	// InsertData used to insert data in the affected tables of the migration that is being tested

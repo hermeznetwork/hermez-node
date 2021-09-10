@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/russross/meddler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,9 @@ type foo struct {
 	V int
 }
 
+func init() {
+	log.Init("debug", []string{"stdout"})
+}
 func TestSliceToSlicePtrs(t *testing.T) {
 	n := 16
 	a := make([]foo, n)

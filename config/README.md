@@ -3,6 +3,10 @@
 This is an example of the env variable equivalations and the toml file:
 
 ```
+[Log]
+Level = HEZNODE_LOG_LEVEL
+Out = HEZNODE_LOG_OUT
+
 [API]
 Address = HEZNODE_API_ADDRESS
 Explorer = HEZNODE_API_EXPLORER
@@ -132,6 +136,8 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 
 |Section |Parameter Name |Env name  | Required/Optional|Default value |Description |
 --- | --- | --- | --- | --- | --- |
+|Log|Level|HEZNODE_LOG_LEVEL|Optional|"info"|Log level used
+|Log|Out|HEZNODE_LOG_OUT (comma separator ",")|Optional|`["stdout"]`|Place where logs are going to be stored and showed
 |API|Address|HEZNODE_API_ADDRESS|Optional|"0.0.0.0:9086"|Url and port where the API will listen
 |API|Explorer|HEZNODE_API_EXPLORER|Optional|true|Enables the Explorer API endpoints
 |API|UpdateMetricsInterval|HEZNODE_API_UPDATEMETRICSINTERVAL|Optional|"10s"|Interval between updates of the API metrics

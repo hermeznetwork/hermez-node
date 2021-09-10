@@ -17,6 +17,10 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+func init() {
+	log.Init("debug", []string{"stdout"})
+}
+
 func newBatchData(batchNum int) common.BatchData {
 	return common.BatchData{
 		L1CoordinatorTxs: []common.L1Tx{},
