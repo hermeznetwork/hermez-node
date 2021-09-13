@@ -3,14 +3,13 @@ module github.com/hermeznetwork/hermez-node
 go 1.14
 
 require (
-	github.com/BurntSushi/toml v0.3.1
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
-	github.com/caarlos0/env/v6 v6.6.2
 	github.com/dghubble/sling v1.3.0
 	github.com/dimiro1/health v0.0.0-20191019130555-c5cbb4d46ffc
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/getkin/kin-openapi v0.22.0
 	github.com/gin-contrib/cors v1.3.1
+	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.7.2
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/hermeznetwork/go-hermez-config v0.0.0-20210811071123-bf147fbf457c

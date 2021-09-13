@@ -67,6 +67,7 @@ import (
 	"math/big"
 	"sort"
 	"sync"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/api"
@@ -251,6 +252,11 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	// - Prepare coordIdxsMap & AccumulatedFees
 	// - Distribute AccumulatedFees to CoordIdxs
 	// - MakeCheckpoint
+	start := time.Now()
+	defer func(start time.Time) {
+		dur := time.Since(start)
+		log.Infof("transaction selection took %0.0f to execute", dur.Seconds())
+	}(start)
 	failedAtomicGroups := make(map[common.AtomicGroupID]failedAtomicGroup)
 START_SELECTION:
 	txselStateDB := txsel.localAccountsDB.StateDB
