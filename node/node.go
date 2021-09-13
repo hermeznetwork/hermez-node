@@ -662,6 +662,11 @@ func (a *NodeAPI) Run(ctx context.Context) error {
 	}
 	log.Infof("NodeAPI is ready at %v", a.addr)
 	go func() {
+		if err := http.ListenAndServe(":6060", nil); err != nil {
+			log.Error("failed to start debug server: %s\n", err)
+		}
+	}()
+	go func() {
 		if err := server.Serve(listener); err != nil &&
 			tracerr.Unwrap(err) != http.ErrServerClosed {
 			log.Fatalf("Listen: %s\n", err)
