@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"os"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -15,9 +17,14 @@ import (
 )
 
 func (a *API) postPoolTx(c *gin.Context) {
+	// pprof
+	f, err := os.Create("postPoolTx.prof")
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+	
 	// Parse body
 	var receivedTx common.PoolL2Tx
-	if err := c.ShouldBindJSON(&receivedTx); err != nil {
+	if err = c.ShouldBindJSON(&receivedTx); err != nil {
 		retBadReq(&apiError{
 			Err:  err,
 			Code: ErrParamValidationFailedCode,
