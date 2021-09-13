@@ -85,7 +85,7 @@ func setupCoordnetDHT(ctx context.Context, self host.Host, bootstrapPeers []mult
 	}
 
 	if len(bootstrapPeers) == 0 {
-		log.Error("Unable to set any bootstrap peer. Coordinator network will fail to stablish connection," +
+		log.Warn("Unable to set any bootstrap peer. Coordinator network will fail to stablish connection," +
 			"unless someone connects to this coordinator directly (note that at some point there has to be a first peer in the network)")
 	}
 
