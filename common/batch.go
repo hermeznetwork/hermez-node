@@ -26,6 +26,7 @@ type Batch struct {
 	ExitRoot           *big.Int             `meddler:"exit_root,bigint"`
 	GasUsed            uint64               `meddler:"gas_used"`
 	GasPrice           *big.Int             `meddler:"gas_price,bigint"`
+	EtherPriceUSD      float64              `meddler:"ether_price_usd"`
 	// ForgeL1TxsNum is optional, Only when the batch forges L1 txs. Identifier that corresponds
 	// to the group of L1 txs forged in the current batch.
 	ForgeL1TxsNum *int64   `meddler:"forge_l1_txs_num"`

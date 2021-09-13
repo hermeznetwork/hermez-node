@@ -116,4 +116,6 @@ Coordinator = true
 [RecommendedFeePolicy]
 PolicyType = "Static"
 StaticValue = 0.10
+BreakThreshold = 50
+NumLastBatchAvg = 10
 `

@@ -210,3 +210,7 @@ Password = "yourpasswordhere"
 #PolicyType = "Static"
 ### If PolicyType is "static" defines the recommended fee value
 #StaticValue = 0.10
+### If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
+#BreakThreshold = 50
+### If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost
+#NumLastBatchAvg = 10

@@ -130,6 +130,8 @@ APIKey = HEZNODE_ETHERSCAN_APIKEY
 [RecommendedFeePolicy]
 PolicyType = HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE
 StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
+BreakThreshold = HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD
+NumLastBatchAvg = HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG
 ```
 
 ## Table: 
@@ -221,3 +223,5 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|""|This parameter allow access to etherscan services
 |RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static" or "AvgLastHour"
 |RecommendedFeePolicy|StaticValue|HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE|Optional|0.10|If PolicyType is "static" defines the recommended fee value
+|RecommendedFeePolicy|BreakThreshold|HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD|Optional|50|If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
+|RecommendedFeePolicy|NumLastBatchAvg|HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG|Optional|10|If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost

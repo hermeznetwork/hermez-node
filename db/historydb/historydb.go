@@ -165,6 +165,19 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 		total += *tokenPrice.USD * (amount / math.Pow(10, float64(tokenPrice.Decimals))) //nolint decimals have to be ^10
 	}
 	batch.TotalFeesUSD = &total
+	// Check current ether price and insert it into batch table
+	var ether TokenWithUSD
+	err := meddler.QueryRow(
+		hdb.dbRead, &ether,
+		"SELECT * FROM token WHERE symbol = 'ETH';",
+	)
+	if err != nil || ether.USD == nil {
+		log.Warn("error getting ether price from db: ",  err)
+		var emptyFloat64 float64
+		batch.EtherPriceUSD = emptyFloat64
+	} else {
+		batch.EtherPriceUSD = *ether.USD
+	}
 	// Insert to DB
 	return tracerr.Wrap(meddler.Insert(d, "batch", batch))
 }

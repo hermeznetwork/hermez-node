@@ -290,6 +290,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		initSCVars,
 		&hdbConsts,
 		&cfg.RecommendedFeePolicy,
+		cfg.Coordinator.Circuit.MaxTx,
 		client,
 		etherScanService,
 	)
