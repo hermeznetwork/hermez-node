@@ -54,6 +54,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
 	"github.com/russross/meddler"
+	_ "net/http/pprof"
 )
 
 // Mode sets the working mode of the node (synchronizer or coordinator)
