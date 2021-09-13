@@ -37,8 +37,6 @@ import (
 	"github.com/russross/meddler"
 )
 
-// TODO(Edu): Document here how HistoryDB is kept consistent
-
 // HistoryDB persist the historic of the rollup
 type HistoryDB struct {
 	dbRead     *sqlx.DB
@@ -288,7 +286,6 @@ func (hdb *HistoryDB) addBids(d meddler.DB, bids []common.Bid) error {
 	if len(bids) == 0 {
 		return nil
 	}
-	// TODO: check the coordinator info
 	return tracerr.Wrap(db.BulkInsert(
 		d,
 		"INSERT INTO bid (slot_num, bid_value, eth_block_num, bidder_addr) VALUES %s;",
@@ -485,26 +482,6 @@ func (hdb *HistoryDB) UpdateTokenValueByTokenID(tokenID uint, value float64) err
 	_, err := hdb.dbWrite.Exec(
 		"UPDATE token SET usd = $1 WHERE token_id = $2;",
 		value, tokenID,
-	)
-	return tracerr.Wrap(err)
-}
-
-// UpdateFiatPrice updates the USD value per currency
-func (hdb *HistoryDB) UpdateFiatPrice(currency string, baseCurrency string, price float64) error {
-	// last_update field is gonna be updated automatically by the trigger trigger_fiat_price_update
-	_, err := hdb.dbWrite.Exec(
-		"UPDATE fiat SET price = $1 WHERE currency = $2 AND base_currency = $3;",
-		price, currency, baseCurrency,
-	)
-	return tracerr.Wrap(err)
-}
-
-// CreateFiatPrice creates a new entry for a new currency or pair currency/baseCurrency
-func (hdb *HistoryDB) CreateFiatPrice(currency string, baseCurrency string, price float64) error {
-	// last_update field is gonna be filled automatically by the trigger trigger_fiat_price_update
-	_, err := hdb.dbWrite.Exec(
-		"INSERT INTO fiat(currency, base_currency, price) VALUES ($1, $2, $3);",
-		currency, baseCurrency, price,
 	)
 	return tracerr.Wrap(err)
 }
@@ -843,8 +820,6 @@ func (hdb *HistoryDB) GetUnforgedL1UserTxsCount() (int, error) {
 	var count int
 	return count, tracerr.Wrap(row.Scan(&count))
 }
-
-// TODO: Think about chaning all the queries that return a last value, to queries that return the next valid value.
 
 // GetLastTxsPosition for a given to_forge_l1_txs_num
 func (hdb *HistoryDB) GetLastTxsPosition(toForgeL1TxsNum int64) (int, error) {

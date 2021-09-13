@@ -13,7 +13,7 @@ func TestNoRouteVersionNotProvided(t *testing.T) {
 	resp, err := doSimpleReq("GET", endpoint)
 	assert.NoError(t, err)
 	assert.Equal(t,
-		"{\"error\":\"Version not provided, please provide a valid version in the path such as v1\"}\n",
+		"{\"error\":\"Version not provided, please provide a valid version in the path such as v1\"}",
 		resp)
 }
 
@@ -24,6 +24,6 @@ func TestNoRoute(t *testing.T) {
 	resp, err := doSimpleReq("GET", endpoint)
 	assert.NoError(t, err)
 	assert.Equal(t,
-		"{\"error\":\"404 page not found\"}\n",
+		"{\"error\":\"404 page not found\"}",
 		resp)
 }

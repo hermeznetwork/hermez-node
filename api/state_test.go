@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -203,12 +203,10 @@ func TestGetState(t *testing.T) {
 	// Network
 	assert.Equal(t, lastBlock.Num, status.Network.LastEthBlock)
 	assert.Equal(t, lastBlock.Num, status.Network.LastSyncBlock)
-	// TODO: assert all the batch, not just the batch num
 	assert.Equal(t, lastBatchNum, status.Network.LastBatch.BatchNum)
 	assert.Equal(t, currentSlotNum, status.Network.CurrentSlot)
 	assertNextForgers(t, tc.nextForgers, status.Network.NextForgers)
 	// Metrics
-	// TODO: perform real asserts (not just greater than 0)
 	assert.Greater(t, status.Metrics.TransactionsPerBatch, float64(0))
 	assert.Greater(t, status.Metrics.BatchFrequency, float64(0))
 	assert.Greater(t, status.Metrics.TransactionsPerSecond, float64(0))
@@ -216,7 +214,6 @@ func TestGetState(t *testing.T) {
 	assert.Greater(t, status.Metrics.Wallets, int64(0))
 	assert.Greater(t, status.Metrics.AvgTransactionFee, float64(0))
 	// Recommended fee
-	// TODO: perform real asserts (not just greater than 0)
 	assert.Greater(t, status.RecommendedFee.ExistingAccount, float64(0))
 	assert.Equal(t, status.RecommendedFee.CreatesAccount,
 		status.RecommendedFee.ExistingAccount*

@@ -18,6 +18,8 @@ In some cases, some of the structs defined in this file also include custom Mars
 package l2db
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -25,6 +27,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -34,8 +37,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/russross/meddler"
 )
-
-// TODO(Edu): Check DB consistency while there's concurrent use from Coordinator/TxSelector & API
 
 // L2DB stores L2 txs and authorization registers received by the coordinator and keeps them until they are no longer relevant
 // due to them being forged or invalid after a safety period
@@ -194,7 +195,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			rqTokenID     *common.TokenID
 			rqAmount      *string
 			rqFee         *common.FeeSelector
-			rqNonce       *common.Nonce
+			rqNonce       *nonce.Nonce
 			rqOffset      *uint8
 			atomicGroupID *common.AtomicGroupID
 			maxNumBatch   *uint32
@@ -274,13 +275,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			" WHERE (SELECT COUNT (*) FROM tx_pool WHERE state = ? AND NOT external_delete) < ?;" // Check if the pool is full
 		queryVars = append(queryVars, common.PoolL2TxStatePending, l2db.maxTxs)
 	} else {
-		query += " VALUES " + queryVarsPart + " ON CONFLICT ON CONSTRAINT tx_id_unique DO UPDATE SET " +
-			"from_idx = excluded.from_idx, to_idx = excluded.to_idx, to_eth_addr = excluded.to_eth_addr, to_bjj = excluded.to_bjj," +
-			" token_id = excluded.token_id, amount = excluded.amount, fee = excluded.fee, nonce = excluded.nonce, state = excluded.state," +
-			"info = excluded.info, signature = excluded.signature, rq_from_idx = excluded.rq_from_idx, rq_to_idx = excluded.rq_to_idx, " +
-			"rq_to_bjj = excluded.rq_to_bjj, rq_token_id = excluded.rq_token_id, rq_amount = excluded.rq_amount, rq_fee = excluded.rq_fee, rq_nonce = excluded.rq_nonce," +
-			" tx_type = excluded.tx_type, amount_f = excluded.amount_f, client_ip = excluded.client_ip, " +
-			"rq_offset = excluded.rq_offset, max_num_batch = excluded.max_num_batch WHERE tx_pool.atomic_group_id IS NULL;"
+		query += " VALUES " + queryVarsPart + ";"
 	}
 	// Replace "?, ?, ... ?" ==> "$1, $2, ..., $(len(queryVars))"
 	query = l2db.dbRead.Rebind(query)
@@ -294,6 +289,102 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		}
 	}
 	return tracerr.Wrap(err)
+}
+
+// Update PoolL2Tx transaction in the pool
+func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
+	const queryUpdate = `UPDATE tx_pool SET to_idx = ?, to_eth_addr = ?, to_bjj = ?, max_num_batch = ?, 
+	signature = ?, client_ip = ?, tx_type = ? WHERE tx_id = ? AND tx_pool.atomic_group_id IS NULL;`
+
+	if tx.ToIdx == 0 && tx.ToEthAddr == common.EmptyAddr && tx.ToBJJ == common.EmptyBJJComp && tx.MaxNumBatch == 0 {
+		return tracerr.Wrap(errors.New("nothing to update"))
+	}
+
+	queryVars := []interface{}{tx.ToIdx, tx.ToEthAddr, tx.ToBJJ, tx.MaxNumBatch, tx.Signature, tx.ClientIP, tx.Type, tx.TxID}
+
+	query, args, err := sqlx.In(queryUpdate, queryVars...)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	query = l2db.dbWrite.Rebind(query)
+	_, err = l2db.dbWrite.Exec(query, args...)
+	return tracerr.Wrap(err)
+}
+
+func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce nonce.Nonce, tx *common.PoolL2Tx) error {
+	txn, err := l2db.dbWrite.Beginx()
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	defer func() {
+		if err != nil {
+			db.Rollback(txn)
+		}
+	}()
+	var (
+		res          sql.Result
+		queryVars    []interface{}
+		rowsAffected int64
+	)
+
+	const queryDelete = `DELETE FROM tx_pool WHERE from_idx = $1 AND nonce = $2 AND (state = $3 OR state = $4) AND atomic_group_id IS NULL AND NOT external_delete;`
+	if res, err = txn.Exec(queryDelete, idx, nonce, common.PoolL2TxStatePending, common.PoolL2TxStateInvalid); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	if rowsAffected, err = res.RowsAffected(); err != nil || rowsAffected == 0 {
+		return tracerr.Wrap(sql.ErrNoRows)
+	}
+
+	const queryInsertPart = `INSERT INTO tx_pool (
+		tx_id, from_idx, to_idx, to_eth_addr, to_bjj, token_id,
+		amount, fee, nonce, state, info, signature, 
+		tx_type, amount_f, client_ip, max_num_batch
+	)`
+
+	var (
+		toEthAddr   *ethCommon.Address
+		toBJJ       *babyjub.PublicKeyComp
+		info        *string
+		maxNumBatch *uint32
+	)
+
+	// AmountFloat
+	f := new(big.Float).SetInt(tx.Amount)
+	amountF, _ := f.Float64()
+	// ToEthAddr
+	if tx.ToEthAddr != common.EmptyAddr {
+		toEthAddr = &tx.ToEthAddr
+	}
+	// ToBJJ
+	if tx.ToBJJ != common.EmptyBJJComp {
+		toBJJ = &tx.ToBJJ
+	}
+	// MAxNumBatch
+	if tx.MaxNumBatch != 0 {
+		maxNumBatch = &tx.MaxNumBatch
+	}
+
+	queryVarsPart := `(?::BYTEA, ?::BIGINT, ?::BIGINT, ?::BYTEA, ?::BYTEA, ?::INT,
+	?::NUMERIC, ?::SMALLINT, ?::BIGINT, ?::CHAR(4), ?::VARCHAR, ?::BYTEA,
+	?::VARCHAR(40), ?::NUMERIC, ?::VARCHAR, ?::BIGINT)`
+
+	queryVars = append(queryVars,
+		tx.TxID, tx.FromIdx, tx.ToIdx, toEthAddr, toBJJ, tx.TokenID,
+		tx.Amount.String(), tx.Fee, tx.Nonce, tx.State, info, tx.Signature,
+		tx.Type, amountF, tx.ClientIP, maxNumBatch)
+
+	query := queryInsertPart + " VALUES " + queryVarsPart + ";"
+	query = txn.Rebind(query)
+	res, err = txn.Exec(query, queryVars...)
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+	if rowsAffected, err = res.RowsAffected(); err != nil || rowsAffected == 0 {
+		return tracerr.Wrap(sql.ErrNoRows)
+	}
+	return tracerr.Wrap(txn.Commit())
 }
 
 // selectPoolTxCommon select part of queries to get common.PoolL2Tx

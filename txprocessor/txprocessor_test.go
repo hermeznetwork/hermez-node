@@ -9,6 +9,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/test/til"
@@ -469,9 +470,9 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	log.Debug("block:1 batch:1")
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[0].L2Txs)
 	// before processing expect l2Txs[0:2].Nonce==0
-	assert.Equal(t, common.Nonce(0), l2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(0), l2Txs[1].Nonce)
-	assert.Equal(t, common.Nonce(0), l2Txs[2].Nonce)
+	assert.Equal(t, nonce.Nonce(0), l2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(0), l2Txs[1].Nonce)
+	assert.Equal(t, nonce.Nonce(0), l2Txs[2].Nonce)
 
 	// Idx of user 'X'
 	idxX1 := tc.Users["X"].Accounts[common.TokenID(1)].Idx
@@ -493,9 +494,9 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	require.NoError(t, err)
 
 	// after processing expect l2Txs[0:2].Nonce!=0 and has expected value
-	assert.Equal(t, common.Nonce(5), l2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(6), l2Txs[1].Nonce)
-	assert.Equal(t, common.Nonce(7), l2Txs[2].Nonce)
+	assert.Equal(t, nonce.Nonce(5), l2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(6), l2Txs[1].Nonce)
+	assert.Equal(t, nonce.Nonce(7), l2Txs[2].Nonce)
 	// the 'ForceExit(1)' is not computed yet, as the batch is without L1UserTxs
 	assert.Equal(t, 4, len(ptOut.ExitInfos))
 	assert.Equal(t, 1, len(ptOut.CreatedAccounts))

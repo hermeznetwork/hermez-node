@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -256,16 +257,16 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	assert.Equal(t, common.EmptyAddr.Hex(), poolL2Txs[5].ToEthAddr.Hex())
 	assert.Equal(t, common.EmptyBJJComp.String(), poolL2Txs[5].ToBJJ.String())
 
-	assert.Equal(t, common.Nonce(0), poolL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(0), poolL2Txs[1].Nonce)
-	assert.Equal(t, common.Nonce(0), poolL2Txs[2].Nonce)
-	assert.Equal(t, common.Nonce(1), poolL2Txs[3].Nonce)
-	assert.Equal(t, common.Nonce(0), poolL2Txs[4].Nonce)
-	assert.Equal(t, common.Nonce(0), poolL2Txs[5].Nonce)
-	assert.Equal(t, common.Nonce(0), poolL2Txs[6].Nonce)
-	assert.Equal(t, common.Nonce(0), poolL2Txs[7].Nonce)
-	assert.Equal(t, common.Nonce(2), poolL2Txs[8].Nonce)
-	assert.Equal(t, common.Nonce(3), poolL2Txs[9].Nonce)
+	assert.Equal(t, nonce.Nonce(0), poolL2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(0), poolL2Txs[1].Nonce)
+	assert.Equal(t, nonce.Nonce(0), poolL2Txs[2].Nonce)
+	assert.Equal(t, nonce.Nonce(1), poolL2Txs[3].Nonce)
+	assert.Equal(t, nonce.Nonce(0), poolL2Txs[4].Nonce)
+	assert.Equal(t, nonce.Nonce(0), poolL2Txs[5].Nonce)
+	assert.Equal(t, nonce.Nonce(0), poolL2Txs[6].Nonce)
+	assert.Equal(t, nonce.Nonce(0), poolL2Txs[7].Nonce)
+	assert.Equal(t, nonce.Nonce(2), poolL2Txs[8].Nonce)
+	assert.Equal(t, nonce.Nonce(3), poolL2Txs[9].Nonce)
 
 	assert.Equal(t, tc.Users["B"].Addr.Hex(), poolL2Txs[9].ToEthAddr.Hex())
 	assert.Equal(t, common.EmptyBJJComp, poolL2Txs[9].ToBJJ)
@@ -283,9 +284,9 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	`
 	poolL2Txs, err = tc.GeneratePoolL2Txs(set)
 	require.NoError(t, err)
-	assert.Equal(t, common.Nonce(5), poolL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(1), poolL2Txs[1].Nonce)
-	assert.Equal(t, common.Nonce(6), poolL2Txs[2].Nonce)
+	assert.Equal(t, nonce.Nonce(5), poolL2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(1), poolL2Txs[1].Nonce)
+	assert.Equal(t, nonce.Nonce(6), poolL2Txs[2].Nonce)
 
 	// check that a PoolL2Tx can be done to a non existing ToIdx
 	set = `
@@ -466,9 +467,9 @@ func TestGenerateErrors(t *testing.T) {
 	tc = NewContext(0, common.RollupConstMaxL1UserTx)
 	_, err = tc.GenerateBlocks(set)
 	require.NoError(t, err)
-	assert.Equal(t, common.Nonce(3), tc.Users["A"].Accounts[common.TokenID(1)].Nonce)
+	assert.Equal(t, nonce.Nonce(3), tc.Users["A"].Accounts[common.TokenID(1)].Nonce)
 	assert.Equal(t, common.Idx(256), tc.Users["A"].Accounts[common.TokenID(1)].Idx)
-	assert.Equal(t, common.Nonce(1), tc.Users["B"].Accounts[common.TokenID(1)].Nonce)
+	assert.Equal(t, nonce.Nonce(1), tc.Users["B"].Accounts[common.TokenID(1)].Nonce)
 	assert.Equal(t, common.Idx(257), tc.Users["B"].Accounts[common.TokenID(1)].Idx)
 }
 

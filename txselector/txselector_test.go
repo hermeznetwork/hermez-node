@@ -12,6 +12,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -151,7 +152,7 @@ func checkBalanceByIdx(t *testing.T, txsel *TxSelector, idx common.Idx, expected
 // checkSortedByNonce takes as input testAccNonces map, and the array of
 // common.PoolL2Txs, and checks if the nonces correspond to the accumulated
 // values of the map. Also increases the Nonces computed on the map.
-func checkSortedByNonce(t *testing.T, testAccNonces map[common.Idx]common.Nonce,
+func checkSortedByNonce(t *testing.T, testAccNonces map[common.Idx]nonce.Nonce,
 	txs []common.PoolL2Tx) {
 	for _, tx := range txs {
 		assert.True(t, testAccNonces[tx.FromIdx] == tx.Nonce,
@@ -176,7 +177,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
 	tc.RestartNonces()
-	testAccNonces := make(map[common.Idx]common.Nonce)
+	testAccNonces := make(map[common.Idx]nonce.Nonce)
 
 	// add tokens to HistoryDB to avoid breaking FK constrains
 	addTokens(t, tc, txsel.l2db.DB())
@@ -812,9 +813,9 @@ func TestProcessL2Selection(t *testing.T) {
 	// (due the 2nd txs not being accepted)
 	assert.Equal(t, 1, len(oL2Txs))
 	assert.Equal(t, 2, len(discardedL2Txs))
-	assert.Equal(t, common.Nonce(0), oL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(1), discardedL2Txs[0].Nonce)
-	assert.Equal(t, common.Nonce(2), discardedL2Txs[1].Nonce)
+	assert.Equal(t, nonce.Nonce(0), oL2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(1), discardedL2Txs[0].Nonce)
+	assert.Equal(t, nonce.Nonce(2), discardedL2Txs[1].Nonce)
 	assert.Equal(t, "Tx not selected due to not enough Balance at the sender. "+
 		"Current sender account Balance: 7, Amount+Fee: 11", discardedL2Txs[0].Info)
 	assert.Equal(t, 11, discardedL2Txs[0].ErrorCode)
@@ -905,18 +906,6 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 		txsel.localAccountsDB.CurrentBatch())
 	require.NoError(t, err)
 
-	// batch 3. The A-B txs have lower fee, but are the only ones possible
-	// with the current Accounts Balances, as the B-A tx of amount 40 will
-	// not be included as will be processed first when there is not enough
-	// balance at B (processed first as the TxSelector sorts by Fee and then
-	// by Nonce).
-	// TODO: The explanation of the test just above is outdated, as the new itereation of txselector
-	// is capable of detecting more complicated situations. Before merging to develop the explanation
-	// should be updated. Leaving like this to remember that we have altered the original test, since the
-	// code is not stable yet, is good to remember of this test modification. The correctness of the result
-	// has been checked by forging more batches in the original code, and ensuring that the order of the L2Tx
-	// is the same, but contained in less batches. Also the limits in terms of MaxTxs and MaxL1Tx can be checked by
-	// comparing the configuration and the asserts
 	batchPoolL2 := `
 	Type: PoolL2
 	PoolTransfer(0) B-A: 40 (130) // B-A txs are only possible once A-B txs are processed
@@ -1300,7 +1289,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		TokenID:       0,
 		Amount:        big.NewInt(50), // Ok
 		Fee:           0,
-		Nonce:         0,
+		Nonce:         1,
 		RqOffset:      1, // Request tx bellow (position +1)
 		AtomicGroupID: agid,
 		RqFromIdx:     258, // account B
@@ -1333,7 +1322,7 @@ func TestFailingAtomicTx(t *testing.T) {
 		RqTokenID:     0,
 		RqAmount:      big.NewInt(50), // OK
 		RqFee:         0,
-		RqNonce:       0,
+		RqNonce:       1,
 		State:         common.PoolL2TxStatePending,
 	}
 	// Tx2 signature
@@ -1372,6 +1361,17 @@ func TestFailingAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 1, len(oL2Txs))
 	assert.Equal(t, 2, len(discardedL2Txs))
+
+	for _, tx := range discardedL2Txs {
+		if tx1.TxID == tx.TxID {
+			assert.Equal(t, ErrNoCurrentNonceType, tx.ErrorType)
+		} else if tx2.TxID == tx.TxID {
+			assert.Equal(t, ErrInvalidAtomicGroupType, tx.ErrorType)
+		} else {
+			assert.Fail(t, "unexpected transaction")
+		}
+	}
+
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
 	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1010") // 1000 + 10
@@ -1679,6 +1679,15 @@ func TestSortL2Txs(t *testing.T) {
 			assert.Equal(t, expected[i], a.TxID)
 		}
 	}
+
+	//Idxs
+	idx1 := common.Idx(256)
+	idx2 := common.Idx(257)
+	idx3 := common.Idx(258)
+	idx4 := common.Idx(259)
+	idx5 := common.Idx(260)
+	idx6 := common.Idx(261)
+
 	// TxIDs
 	id1 := common.TxID([common.TxIDLen]byte{1})
 	id2 := common.TxID([common.TxIDLen]byte{2})
@@ -1695,18 +1704,21 @@ func TestSortL2Txs(t *testing.T) {
 	txs := []common.PoolL2Tx{
 		{
 			TxID:          id1,
+			FromIdx:       idx1,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   3,
 			Nonce:         2,
 		},
 		{
 			TxID:          id2,
+			FromIdx:       idx1,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   3,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
+			FromIdx:       idx2,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   7,
 			Nonce:         2,
@@ -1714,29 +1726,33 @@ func TestSortL2Txs(t *testing.T) {
 	}
 	fees := calculateAtomicGroupsAverageFee(txs)
 	actual := sortL2Txs(txs, fees)
-	assertResult(t, []common.TxID{id2, id3, id1}, actual)
+	assertResult(t, []common.TxID{id3, id2, id1}, actual)
 	// Case only atomic
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
+			FromIdx:       idx1,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   3,
 			Nonce:         2220,
 		},
 		{
 			TxID:          id2,
+			FromIdx:       idx2,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   3,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
+			FromIdx:       idx3,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   7,
 			Nonce:         300,
 		},
 		{
 			TxID:          id4,
+			FromIdx:       idx2,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   700,
 			Nonce:         2,
@@ -1749,42 +1765,49 @@ func TestSortL2Txs(t *testing.T) {
 	txs = []common.PoolL2Tx{
 		{
 			TxID:          id1,
+			FromIdx:       idx1,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   20,
 			Nonce:         2220,
 		},
 		{
 			TxID:          id2,
+			FromIdx:       idx2,
 			AtomicGroupID: agid2,
 			AbsoluteFee:   20,
 			Nonce:         1,
 		},
 		{
 			TxID:          id3,
+			FromIdx:       idx3,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   30,
 			Nonce:         300,
 		},
 		{
 			TxID:          id4,
+			FromIdx:       idx2,
 			AtomicGroupID: agid1,
 			AbsoluteFee:   30,
 			Nonce:         2,
 		},
 		{
 			TxID:          id5,
+			FromIdx:       idx4,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   25,
 			Nonce:         2,
 		},
 		{
 			TxID:          id6,
+			FromIdx:       idx5,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   10,
 			Nonce:         2,
 		},
 		{
 			TxID:          id7,
+			FromIdx:       idx6,
 			AtomicGroupID: common.EmptyAtomicGroupID,
 			AbsoluteFee:   35,
 			Nonce:         2,

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -23,7 +24,7 @@ var EmptyBJJComp = babyjub.PublicKeyComp([32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 // PoolL2Tx is a struct that represents a L2Tx sent by an account to the
 // coordinator that is waiting to be forged
 type PoolL2Tx struct {
-	// Stored in DB: mandatory fileds
+	// Stored in DB: mandatory fields
 
 	// TxID (12 bytes) for L2Tx is:
 	// bytes:  |  1   |    6    |   5   |
@@ -40,7 +41,7 @@ type PoolL2Tx struct {
 	TokenID     TokenID               `meddler:"token_id"`
 	Amount      *big.Int              `meddler:"amount,bigint"`
 	Fee         FeeSelector           `meddler:"fee"`
-	Nonce       Nonce                 `meddler:"nonce"` // effective 40 bits used
+	Nonce       nonce.Nonce           `meddler:"nonce"` // effective 40 bits used
 	State       PoolL2TxState         `meddler:"state"`
 	MaxNumBatch uint32                `meddler:"max_num_batch,zeroisnull"`
 	// Info contains information about the status & State of the
@@ -52,7 +53,7 @@ type PoolL2Tx struct {
 	ErrorType string                `meddler:"error_type,zeroisnull"`
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
-	// Stored in DB: optional fileds, may be uninitialized
+	// Stored in DB: optional fields, may be uninitialized
 	AtomicGroupID     AtomicGroupID         `meddler:"atomic_group_id,zeroisnull"`
 	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
 	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
@@ -61,7 +62,7 @@ type PoolL2Tx struct {
 	RqTokenID         TokenID               `meddler:"rq_token_id,zeroisnull"`
 	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"`
 	RqFee             FeeSelector           `meddler:"rq_fee,zeroisnull"`
-	RqNonce           Nonce                 `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
+	RqNonce           nonce.Nonce           `meddler:"rq_nonce,zeroisnull"` // effective 48 bits used
 	AbsoluteFee       float64               `meddler:"fee_usd,zeroisnull"`
 	AbsoluteFeeUpdate time.Time             `meddler:"usd_update,utctimez"`
 	Type              TxType                `meddler:"tx_type"`
@@ -463,7 +464,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		ToBJJ       *string               `json:"toBjj"`
 		Amount      string                `json:"amount"`
 		Fee         FeeSelector           `json:"fee"`
-		Nonce       Nonce                 `json:"nonce"`
+		Nonce       nonce.Nonce           `json:"nonce"`
 		MaxNumBatch uint32                `json:"maxNumBatch"`
 		Signature   babyjub.SignatureComp `json:"signature"`
 		RqOffset    *uint8                `json:"requestOffset"`
@@ -500,9 +501,10 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toMarshal)
 }
 
-// UnmarshalJSON unmarshals a PoolL2Tx that has been formated in json as specified in `api/swagger.yml:schemas/PostPoolL2Transaction`.
+// UnmarshalJSON unmarshal a PoolL2Tx that has been formatted in json as specified
+// in `api/swagger.yml:schemas/PostPoolL2Transaction`.
 // Note that ClientIP is not included as part of the json and will be set to "".
-// If State is not setted (State == ""), it will be set to PoolL2TxStatePending.
+// If State is not defined (State == ""), it will be set to PoolL2TxStatePending.
 func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	receivedJSON := struct {
 		TxID        TxID                  `json:"id" binding:"required"`
@@ -514,7 +516,7 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 		ToBJJ       StrHezBJJ             `json:"toBjj"`
 		Amount      *StrBigInt            `json:"amount" binding:"required"`
 		Fee         FeeSelector           `json:"fee"`
-		Nonce       Nonce                 `json:"nonce"`
+		Nonce       nonce.Nonce           `json:"nonce"`
 		MaxNumBatch uint32                `json:"maxNumBatch"`
 		Signature   babyjub.SignatureComp `json:"signature" binding:"required"`
 		State       string                `json:"state"`

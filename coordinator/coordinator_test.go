@@ -115,7 +115,7 @@ func newTestModules(t *testing.T) modules {
 	var bjj babyjub.PublicKeyComp
 	err = bjj.UnmarshalText([]byte("c433f7a696b7aa3a5224efb3993baf0ccd9e92eecee0c29a3f6c8208a9e81d9e"))
 	require.NoError(t, err)
-	coordAccount := txselector.CoordAccount{ // TODO TMP
+	coordAccount := txselector.CoordAccount{
 		Addr:                ethCommon.HexToAddress("0xc58d29fA6e86E4FAe04DDcEd660d45BCf3Cb2370"),
 		BJJ:                 bjj,
 		AccountCreationAuth: nil,
@@ -590,9 +590,3 @@ func TestCoordinatorStress(t *testing.T) {
 
 	closeTestModules(t, modules)
 }
-
-// TODO: Test Reorg
-// TODO: Test TxMonitor
-// TODO: Test forgeBatch
-// TODO: Test waitServerProof
-// TODO: Test handleReorg

@@ -87,6 +87,7 @@ import (
 	"os"
 
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
@@ -668,9 +669,6 @@ func (txProcessor *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx 
 			log.Error(err)
 			return nil, nil, false, nil, tracerr.Wrap(err)
 		}
-		// TODO applyCreateAccount will return the created account,
-		// which in the case type==TypeSynchronizer will be added to an
-		// array of created accounts that will be returned
 	case common.TxTypeDeposit:
 		txProcessor.computeEffectiveAmounts(tx)
 
@@ -1323,7 +1321,7 @@ func (txProcessor *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common
 		// exitAmount (exitAmount=tx.Amount)
 		exitAccount := &common.Account{
 			TokenID: acc.TokenID,
-			Nonce:   common.Nonce(0),
+			Nonce:   nonce.Nonce(0),
 			// as is a common.Tx, the tx.Amount is already an
 			// EffectiveAmount
 			Balance: tx.Amount,

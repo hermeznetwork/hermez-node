@@ -94,11 +94,6 @@ func (s *Stats) Synced() bool {
 	return s.Eth.LastBlock.Num == s.Sync.LastBlock.Num
 }
 
-// TODO(Edu): Consider removing all the mutexes from StatsHolder, make
-// Synchronizer.Stats not thread-safe, don't pass the synchronizer to the
-// debugAPI, and have a copy of the Stats in the DebugAPI that the node passes
-// when the Sync updates.
-
 // StatsHolder stores stats and that allows reading and writing them
 // concurrently
 type StatsHolder struct {
@@ -389,8 +384,6 @@ func (s *Synchronizer) updateCurrentSlot(slot *common.Slot, reset bool, hasBatch
 			return tracerr.Wrap(err)
 		}
 
-		// TODO: Remove this SANITY CHECK once this code is tested enough
-		// BEGIN SANITY CHECK
 		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, blockNum)
 		if err != nil {
 			return tracerr.Wrap(fmt.Errorf("AuctionCanForge: %w", err))
@@ -399,7 +392,6 @@ func (s *Synchronizer) updateCurrentSlot(slot *common.Slot, reset bool, hasBatch
 			return tracerr.Wrap(fmt.Errorf("Synchronized value of forger address for closed slot "+
 				"differs from smart contract: %+v", slot))
 		}
-		// END SANITY CHECK
 	}
 	return nil
 }
@@ -420,8 +412,6 @@ func (s *Synchronizer) updateNextSlot(slot *common.Slot) error {
 			return tracerr.Wrap(err)
 		}
 
-		// TODO: Remove this SANITY CHECK once this code is tested enough
-		// BEGIN SANITY CHECK
 		canForge, err := s.ethClient.AuctionCanForge(slot.Forger, slot.StartBlock)
 		if err != nil {
 			return tracerr.Wrap(fmt.Errorf("AuctionCanForge: %w", err))
@@ -430,7 +420,6 @@ func (s *Synchronizer) updateNextSlot(slot *common.Slot) error {
 			return tracerr.Wrap(fmt.Errorf("Synchronized value of forger address for closed slot "+
 				"differs from smart contract: %+v", slot))
 		}
-		// END SANITY CHECK
 	}
 	return nil
 }
@@ -513,7 +502,6 @@ func (s *Synchronizer) resetIntermediateState() error {
 // If a block is synced, it will be returned and also stored in the DB.  If a
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
-// TODO: Be smart about locking: only lock during the read/write operations
 func (s *Synchronizer) Sync(ctx context.Context,
 	lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
 	if s.resetStateFailed {

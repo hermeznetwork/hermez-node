@@ -10,6 +10,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -178,13 +179,13 @@ func TestAddTxTest(t *testing.T) {
 	tx := &poolL2Txs[1]
 	fetchedTx, err := l2DB.GetTx(tx.TxID)
 	require.NoError(t, err)
-	assert.Equal(t, fetchedTx.TokenID, common.TokenID(2))
-	tx.TokenID = common.TokenID(1)
-	err = l2DBWithACC.AddTxTest(tx)
+	assert.Equal(t, fetchedTx.ToIdx, tx.ToIdx)
+	tx.ToIdx = common.Idx(1)
+	err = l2DBWithACC.UpdateTxAPI(tx)
 	require.NoError(t, err)
 	fetchedTx, err = l2DB.GetTx(tx.TxID)
 	require.NoError(t, err)
-	assert.Equal(t, fetchedTx.TokenID, common.TokenID(1))
+	assert.Equal(t, fetchedTx.ToIdx, common.Idx(1))
 }
 
 func TestAddTxAPI(t *testing.T) {
@@ -482,11 +483,11 @@ func TestInvalidateOldNonces(t *testing.T) {
 	require.NoError(t, err)
 	// Update Accounts currentNonce
 	var updateAccounts []common.IdxNonce
-	var currentNonce = common.Nonce(1)
+	var currentNonce = nonce.Nonce(1)
 	for i := range accs {
 		updateAccounts = append(updateAccounts, common.IdxNonce{
 			Idx:   accs[i].Idx,
-			Nonce: common.Nonce(currentNonce),
+			Nonce: nonce.Nonce(currentNonce),
 		})
 	}
 	// Add txs to DB

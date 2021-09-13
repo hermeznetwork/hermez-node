@@ -213,9 +213,6 @@ folder.
 
     Is so that the API can be accessed by users outside the host.
 
-  - [ ] Add APIKey to `PriceUpdater.Fiat` section.
-      Get a key [here](https://exchangeratesapi.io/)
-
   - [ ] Change PostgreSQL section with the values of user created before.
     - HostWrite:  Use the IP from server instead of localhost
 

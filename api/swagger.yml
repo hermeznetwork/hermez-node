@@ -32,9 +32,10 @@ info:
 
     ### Signatures
 
-    There are two endpoints that require signatures:
+    There are three endpoints that require signatures:
     * POST /account-creation-authorization: signed using an Ethereum key.
     * POST /transactions-pool: signed using BJJ key.
+    * PUT /transactions-pool: signed using BJJ key.
 
     It's recommended to use the official SDKs for [Go](https://github.com/hermeznetwork/hermez-go-sdk), [JS](https://github.com/hermeznetwork/hermezjs) and [Flutter](https://github.com/hermeznetwork/hermez_flutter_sdk).
     If for some reason the previous options doesn't suit your usecase, you can implement the signatures following the spec for [account creation authorizations](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=regular-rollup-account) and [L2 transactions](https://docs.hermez.io/#/developers/protocol/hermez-protocol/protocol?id=l2)
@@ -630,6 +631,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error500'
   '/transactions-pool/{id}':
+    put:
+      tags:
+        - Coordinator
+      summary: Update an L2 transaction in the coordinator's pool. Only regular transactions can be updated. Fields, that can be updated - toAccountIndex, toHezEthereumAddress, toBjj, maxNumBatch, signature, type
+      description: >-
+        Update L2 transaction
+      operationId: putTx
+      parameters:
+        - name: id
+          in: path
+          description: Transaction identifier.
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+      requestBody:
+        description: Signed transaction
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPoolL2Transaction'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionId'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
     get:
       tags:
         - Coordinator
@@ -637,6 +678,7 @@ paths:
       description: >-
         Get transaction from the pool by its ID. This endpoint is specially useful for tracking the status of a transaction that may not be forged yet.
         Only transactions from the pool will be returned.
+        There are other options to filter transactions using query string parameters. Please check for more details below.
         Note that the transaction pool is different for each coordinator and therefore only a coordinator that has received a specific transaction
         will be able to provide information about that transaction.
       operationId: getPoolTx
@@ -666,6 +708,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error404'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error500'
+  '/transactions-pool/accounts/{idx}/nonces/{nonce}':
+    put:
+      tags:
+        - Coordinator
+      summary: Update transaction by from account idx and nonce.
+      description: >-
+        Updates regular transactions by account idx and nonce. This endpoint is useful, when user want to update fee or amount, that was sent in the transaction,
+        but user can't use regular update transaction request, bcs transaction id is also changing. Delete previous transaction and inserts new one
+      operationId: updateTxByIdxAndNonce
+      parameters:
+        - name: idx
+          in: path
+          description: From account idx
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountIndex'
+        - name: nonce
+          in: path
+          description: trasnaction nonce
+          required: true
+          schema:
+            $ref: '#/components/schemas/Nonce'
+      requestBody:
+        description: Signed transaction
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPoolL2Transaction'
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionId'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
         '500':
           description: Internal server error.
           content:
@@ -811,9 +901,10 @@ paths:
     get:
       tags:
         - Explorer
-      summary: Get details and status of a historical transaction.
+      summary: Get details and status of a specific historical transaction.
       description: >-
-        Get transaction by its ID. This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
+        Get transaction by its ID. There are other options to filter transactions using query string parameters. Please check for more details below.
+        This endpoint will return all the different types of transactions except those that are still in the pool of any coordinator.
       operationId: getHistoryTx
       parameters:
         - name: id
@@ -1649,6 +1740,11 @@ components:
           $ref: '#/components/schemas/Nonce'
         state:
           $ref: '#/components/schemas/PoolL2TransactionState'
+        batchNum:
+          type: integer
+          description: Batch num for transaction.
+          example: 0
+          nullable: true
         maxNumBatch:
           type: integer
           description: Batch until the transaction can be forged. If the transaction isn't forged before batch `maxNumBatch`, it will never be forged. 0 means no restriction.

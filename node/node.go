@@ -44,7 +44,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
-	"github.com/hermeznetwork/hermez-node/priceupdater"
 	"github.com/hermeznetwork/hermez-node/prover"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test/debugapi"
@@ -76,7 +75,6 @@ type Node struct {
 	nodeAPI         *NodeAPI
 	stateAPIUpdater *stateapiupdater.Updater
 	debugAPI        *debugapi.DebugAPI
-	priceUpdater    *priceupdater.PriceUpdater
 	// Coordinator
 	coord *coordinator.Coordinator
 
@@ -348,9 +346,9 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			log.Info("EtherScan method not configured in config file")
 			etherScanService = nil
 		}
-		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs))
-		for i, serverProofCfg := range cfg.Coordinator.ServerProofs {
-			serverProofs[i] = prover.NewProofServerClient(serverProofCfg.URL,
+		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs.URLs))
+		for i, serverProofCfg := range cfg.Coordinator.ServerProofs.URLs {
+			serverProofs[i] = prover.NewProofServerClient(serverProofCfg,
 				cfg.Coordinator.ProofServerPollInterval.Duration)
 		}
 
@@ -471,22 +469,11 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	if cfg.Debug.APIAddress != "" {
 		debugAPI = debugapi.NewDebugAPI(cfg.Debug.APIAddress, stateDB, sync)
 	}
-	priceUpdater, err := priceupdater.NewPriceUpdater(
-		cfg.PriceUpdater.Priority,
-		cfg.PriceUpdater.Provider,
-		cfg.PriceUpdater.Statictokens,
-		cfg.PriceUpdater.Fiat,
-		historyDB,
-	)
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{
 		stateAPIUpdater: stateAPIUpdater,
 		nodeAPI:         nodeAPI,
 		debugAPI:        debugAPI,
-		priceUpdater:    priceUpdater,
 		coord:           coord,
 		sync:            sync,
 		cfg:             cfg,
@@ -661,8 +648,7 @@ func NewNodeAPI(
 // with cancellation.
 func (a *NodeAPI) Run(ctx context.Context) error {
 	server := &http.Server{
-		Handler: a.engine,
-		// TODO: Figure out best parameters for production
+		Handler:        a.engine,
 		ReadTimeout:    30 * time.Second, //nolint:gomnd
 		WriteTimeout:   30 * time.Second, //nolint:gomnd
 		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
@@ -737,8 +723,6 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 	return nil
 }
 
-// TODO(Edu): Consider keeping the `lastBlock` inside synchronizer so that we
-// don't have to pass it around.
 func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
 	time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
@@ -811,26 +795,6 @@ func (n *Node) StartSynchronizer() {
 						log.Errorw("Synchronizer.Sync", "err", err)
 					}
 				}
-			}
-		}
-	}()
-
-	n.wg.Add(1)
-	go func() {
-		for {
-			select {
-			case <-n.ctx.Done():
-				log.Info("PriceUpdater done")
-				n.wg.Done()
-				return
-			case <-time.After(n.cfg.PriceUpdater.Interval.Duration):
-				if err := n.priceUpdater.UpdateFiatPrices(n.ctx); err != nil {
-					log.Errorw("PriceUpdater.UpdateFiatPrices()", "err", err)
-				}
-				if err := n.priceUpdater.UpdateTokenList(); err != nil {
-					log.Errorw("PriceUpdater.UpdateTokenList()", "err", err)
-				}
-				n.priceUpdater.UpdatePrices(n.ctx)
 			}
 		}
 	}()

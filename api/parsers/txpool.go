@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/tracerr"
 	"gopkg.in/go-playground/validator.v9"
@@ -26,6 +27,27 @@ func ParsePoolTxFilter(c *gin.Context) (common.TxID, error) {
 		return common.TxID{}, tracerr.Wrap(fmt.Errorf("invalid txID"))
 	}
 	return txID, nil
+}
+
+// PoolTxUpdateByIdxAndNonceFilter struct to get uri param from /transactions-pool/accounts/:accountIndex/nonces/:nonce request
+type PoolTxUpdateByIdxAndNonceFilter struct {
+	AccountIndex string `uri:"accountIndex" binding:"required"`
+	Nonce        *uint  `uri:"nonce" binding:"required"`
+}
+
+// ParsePoolTxUpdateByIdxAndNonceFilter func for parsing pool tx update by idx and nonce filter to the account index and nonce
+func ParsePoolTxUpdateByIdxAndNonceFilter(c *gin.Context) (common.Idx, nonce.Nonce, error) {
+	var poolTxUpdateByIdxAndNonceFilter PoolTxUpdateByIdxAndNonceFilter
+	if err := c.ShouldBindUri(&poolTxUpdateByIdxAndNonceFilter); err != nil {
+		return common.Idx(0), 0, tracerr.Wrap(err)
+	}
+	queryAccount, err := common.StringToIdx(poolTxUpdateByIdxAndNonceFilter.AccountIndex, "accountIndex")
+	if err != nil {
+		return common.Idx(0), 0, tracerr.Wrap(err)
+	}
+
+	queryNonce := nonce.Nonce(*poolTxUpdateByIdxAndNonceFilter.Nonce)
+	return *queryAccount.AccountIndex, queryNonce, nil
 }
 
 // PoolTxsFilters struct for holding query params from /transactions-pool request

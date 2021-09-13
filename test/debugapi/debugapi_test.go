@@ -13,6 +13,7 @@ import (
 	"github.com/dghubble/sling"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func newAccount(t *testing.T, i int) *common.Account {
 	return &common.Account{
 		Idx:     common.Idx(256 + i),
 		TokenID: common.TokenID(i),
-		Nonce:   common.Nonce(i),
+		Nonce:   nonce.Nonce(i),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
 		EthAddr: address,

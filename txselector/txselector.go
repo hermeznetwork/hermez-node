@@ -442,8 +442,6 @@ func (txsel *TxSelector) processL2Txs(
 ) {
 	const failedGroupErrMsg = "Failed forging atomic tx from Group %s." +
 		" Restarting selection process without txs from this group"
-	// TODO: differentiate between nonSelectedL2Txs and unforjableL2Txs
-	// (right now all fall into nonSelectedL2Txs, which is safe but non optimal)
 	positionL1 := nAlreadyProcessedL1Txs
 	nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
 	// Iterate over l2Txs
@@ -730,7 +728,7 @@ func (txsel *TxSelector) processL2Txs(
 				nAlreadyProcessedL1Txs++
 			}
 			if validL2Tx == nil {
-				// TODO: Missing info on why this tx is not selected? Check l2Txs.Info at this point!
+				// Missing info on why this tx is not selected? Check l2Txs.Info at this point!
 				// If tx is atomic, restart process without txs from the atomic group
 				if l2Txs[i].AtomicGroupID != common.EmptyAtomicGroupID {
 					obj := common.TxSelectorError{
@@ -1023,18 +1021,27 @@ func sortL2Txs(
 			atomicGroupsFee[atomicGroups[j][0].AtomicGroupID]
 	})
 
-	// Sort non atomic txs by absolute fee with SliceStable, so that txs with same
-	// AbsoluteFee are not rearranged and nonce order is kept in such case
-	sort.SliceStable(nonAtomicTxs, func(i, j int) bool {
-		return nonAtomicTxs[i].AbsoluteFee > nonAtomicTxs[j].AbsoluteFee
-	})
+	// Sort non atomic txs by AbsoluteFee DESC, then by FromIdx ASC and then
+	// by Nonce ASC.
+	//
+	// This sorting sequence allows us to select firstly the most profitable
+	// txs, even though this can mess with the Nonce sequence, but since the
+	// Nonce sequence is only one of the rules in order to a txs be selected
+	// and we have a txs reprocessing strategy, the tx selector will try to
+	// select the `wrong nonce` txs in the next interation until it identifies
+	// there is no more txs to be selected at this moment, when this situation
+	// happens we can assume the tx selector selected all the most profitable
+	// txs that can be processed at this moment.
 
-	// sort non atomic txs by Nonce. This can be done in many different ways, what
-	// is needed is to output the l2Txs where the Nonce of l2Txs for each
-	// Account is sorted, but the l2Txs can not be grouped by sender Account
-	// neither by Fee. This is because later on the Nonces will need to be
-	// sequential for the zkproof generation.
 	sort.Slice(nonAtomicTxs, func(i, j int) bool {
+		if nonAtomicTxs[i].AbsoluteFee != nonAtomicTxs[j].AbsoluteFee {
+			return nonAtomicTxs[i].AbsoluteFee > nonAtomicTxs[j].AbsoluteFee
+		}
+
+		if nonAtomicTxs[i].FromIdx != nonAtomicTxs[j].FromIdx {
+			return nonAtomicTxs[i].FromIdx < nonAtomicTxs[j].FromIdx
+		}
+
 		return nonAtomicTxs[i].Nonce < nonAtomicTxs[j].Nonce
 	})
 
@@ -1072,6 +1079,7 @@ func sortL2Txs(
 			sortedL2Txs = append(sortedL2Txs, nonAtomicTxs[i])
 		}
 	}
+
 	return sortedL2Txs
 }
 
@@ -1189,7 +1197,6 @@ func isAtomicGroupValid(atomicGroup common.AtomicGroup) bool {
 			atomicGroup.Txs[i].RqTokenID != requestedTx.TokenID ||
 			atomicGroup.Txs[i].RqFee != requestedTx.Fee ||
 			atomicGroup.Txs[i].RqNonce != requestedTx.Nonce {
-			// TODO: err should be compliant with txSelectorError
 			return false
 		}
 		// Check amount
@@ -1243,15 +1250,19 @@ func setInfoForFailedAtomicTx(
 ) common.TxSelectorError {
 	if isOriginOfFailure {
 		obj := common.TxSelectorError{
-			Message: fmt.Sprintf("unselectable atomic group"+" %s, tx %s failed due to: %s",
-				failedAtomicGroupID,
-				failedTxID,
-				failMessage.Message,
-			),
-			Code: failMessage.Code,
-			Type: failMessage.Type,
+			Message: failMessage.Message,
+			Code:    failMessage.Code,
+			Type:    failMessage.Type,
 		}
 		return obj
 	}
-	return common.TxSelectorError{}
+	return common.TxSelectorError{
+		Message: fmt.Sprintf("unselectable atomic group"+" %s, tx %s failed due to: %s",
+			failedAtomicGroupID,
+			failedTxID,
+			failMessage.Message,
+		),
+		Code: ErrInvalidAtomicGroupCode,
+		Type: ErrInvalidAtomicGroupType,
+	}
 }

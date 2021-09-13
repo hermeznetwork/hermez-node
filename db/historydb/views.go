@@ -6,8 +6,9 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/api/apitypes"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/apitypes"
+	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-merkletree"
 )
@@ -47,7 +48,7 @@ type ExitAPIJSON struct {
 type AccountAPIJSON struct {
 	ItemID             uint64              `json:"itemId"`
 	AccountIndex       apitypes.HezIdx     `json:"accountIndex"`
-	Nonce              common.Nonce        `json:"nonce"`
+	Nonce              nonce.Nonce         `json:"nonce"`
 	Balance            *apitypes.BigIntStr `json:"balance"`
 	Bjj                apitypes.HezBJJ     `json:"bjj"`
 	HezEthereumAddress apitypes.HezEthAddr `json:"hezEthereumAddress"`
@@ -94,7 +95,7 @@ type L1infoJSON struct {
 type L2infoJSON struct {
 	Fee            *common.FeeSelector `json:"fee"`
 	HistoricFeeUSD *float64            `json:"historicFeeUSD"`
-	Nonce          *common.Nonce       `json:"nonce"`
+	Nonce          *nonce.Nonce        `json:"nonce"`
 }
 
 // TxAPI is a representation of a generic Tx with additional information
@@ -126,7 +127,7 @@ type TxAPI struct {
 	// L2
 	Fee            *common.FeeSelector `meddler:"fee"`
 	HistoricFeeUSD *float64            `meddler:"fee_usd"`
-	Nonce          *common.Nonce       `meddler:"nonce"`
+	Nonce          *nonce.Nonce        `meddler:"nonce"`
 	// API extras
 	Timestamp        time.Time         `meddler:"timestamp,utctime"`
 	TotalItems       uint64            `meddler:"total_items"`
@@ -230,7 +231,7 @@ type txWrite struct {
 	DepositAmountFloat *float64               `meddler:"deposit_amount_f"`
 	// L2
 	Fee   *common.FeeSelector `meddler:"fee"`
-	Nonce *common.Nonce       `meddler:"nonce"`
+	Nonce *nonce.Nonce        `meddler:"nonce"`
 }
 
 // TokenSymbolAndAddr token representation with only Eth addr and symbol
@@ -342,7 +343,7 @@ type AccountAPI struct {
 	BatchNum         common.BatchNum     `meddler:"batch_num"`
 	PublicKey        apitypes.HezBJJ     `meddler:"bjj"`
 	EthAddr          apitypes.HezEthAddr `meddler:"eth_addr"`
-	Nonce            common.Nonce        `meddler:"nonce"`   // max of 40 bits used
+	Nonce            nonce.Nonce         `meddler:"nonce"`   // max of 40 bits used
 	Balance          *apitypes.BigIntStr `meddler:"balance"` // max of 192 bits used
 	TotalItems       uint64              `meddler:"total_items"`
 	FirstItem        uint64              `meddler:"first_item"`
