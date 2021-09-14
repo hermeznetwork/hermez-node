@@ -12,6 +12,8 @@ MaxSQLConnections = HEZNODE_API_MAXSQLCONNECTIONS
 SQLConnectionTimeout = HEZNODE_API_SQLCONNECTIONTIMEOUT
 ReadTimeout = HEZNODE_API_READTIMEOUT
 WriteTimeout = HEZNODE_API_WRITETIMEOUT
+CoordinatorNetwork = HEZNODE_API_COORDINATORNETWORK
+FindPeersCoordinatorNetworkInterval = HEZNODE_API_COORDINATORNETWORK_FINDPEERSINTERVAL
 
 [Debug]
 APIAddress = HEZNODE_DEBUG_APIADDRESS
@@ -140,6 +142,8 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |API|SQLConnectionTimeout|HEZNODE_API_SQLCONNECTIONTIMEOUT|Optional|"2s"|Maximum amount of time that an API request can wait to establish a SQL connection
 |API|ReadTimeout|HEZNODE_API_READTIMEOUT|Optional|"30s"|ReadTimeout is the maximum duration for reading the entire request, including the body.
 |API|WriteTimeout|HEZNODE_API_WRITETIMEOUT|Optional|"30s"|WriteTimeout is the maximum duration before timing out writes of the response.
+|API|CoordinatorNetwork|HEZNODE_API_COORDINATORNETWORK|Optional|true|Enable the network used to share data (such as txs in the pool) among coordinators.
+|API|FindPeersCoordinatorNetworkInterval|HEZNODE_API_COORDINATORNETWORK_FINDPEERSINTERVAL|Optional|"180s"|Frequency to find more peers for the coordinators network
 |Debug|APIAddress|HEZNODE_DEBUG_APIADDRESS|Optional|"0.0.0.0:12345"|If it is set, the debug api will listen in this address and port
 |Debug|MeddlerLogs|HEZNODE_DEBUG_MEDDLERLOGS|Optional|true|Enables meddler debug mode, where unused columns and struct fields will be logged
 |Debug|GinDebugMode|HEZNODE_DEBUG_GINDEBUGMODE|Optional|false|Sets the web framework Gin-Gonic to run in debug mode
