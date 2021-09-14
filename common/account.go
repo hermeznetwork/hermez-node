@@ -139,12 +139,13 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	if pkSign {
 		b[22] = 1
 	}
+	finiteFieldMod, _ := big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	pkY = pkY.Mod(pkY, finiteFieldMod)
 	balanceBytes := a.Balance.Bytes()
 	copy(b[64-len(balanceBytes):64], balanceBytes)
 	ayBytes := pkY.Bytes()
 	copy(b[96-len(ayBytes):96], ayBytes)
 	copy(b[108:128], a.EthAddr.Bytes())
-
 	return b, nil
 }
 
