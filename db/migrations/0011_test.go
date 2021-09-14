@@ -44,7 +44,7 @@ func (m migrationTest0011) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 	assert.Equal(t, 1, result)
 
 	insert := `INSERT INTO batch
-	(item_id, batch_num, eth_block_num, forger_addr, fees_collected, fee_idxs_coordinator, state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num, total_fees_usd, eth_tx_hash, gas_price, gas_used, ether_price)
+	(item_id, batch_num, eth_block_num, forger_addr, fees_collected, fee_idxs_coordinator, state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num, total_fees_usd, eth_tx_hash, gas_price, gas_used, ether_price_usd)
 	VALUES(1418, 1418, 48278, decode('DCC5DD922FB1D0FD0C450A0636A8CE827521F0ED','hex'), decode('7B7D0A','hex'), decode('5B5D0A','hex'), 0, 0, 255, 0, 1417, 1204, 0, decode('285CE6A154901AF5197382DC8A5CCE02588BDA1B078768C5077B6996FA2EA0A7','hex'), 500000000000, 15000000, 3492.21);
 	`
 	_, err := db.Exec(insert)
@@ -66,9 +66,9 @@ func (m migrationTest0011) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.D
 	const queryCheckGasUsed = `SELECT COUNT(*) FROM batch WHERE gas_used = 0;`
 	row = db.QueryRow(queryCheckGasUsed)
 	assert.Equal(t, `pq: column "gas_used" does not exist`, row.Scan(&result).Error())
-	const queryCheckEtherPrice = `SELECT COUNT(*) FROM batch WHERE ether_price = 0;`
+	const queryCheckEtherPrice = `SELECT COUNT(*) FROM batch WHERE ether_price_usd = 0;`
 	row = db.QueryRow(queryCheckEtherPrice)
-	assert.Equal(t, `pq: column "ether_price" does not exist`, row.Scan(&result).Error())
+	assert.Equal(t, `pq: column "ether_price_usd" does not exist`, row.Scan(&result).Error())
 }
 
 func TestMigration0011(t *testing.T) {
