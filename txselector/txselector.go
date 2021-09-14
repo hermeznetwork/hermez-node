@@ -255,7 +255,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		log.Infof("transaction selection took %0.0f to execute", dur.Seconds())
+		log.Infof("transaction selection took %0.0f to execute", dur.Milliseconds())
 	}(start)
 	failedAtomicGroups := make(map[common.AtomicGroupID]failedAtomicGroup)
 START_SELECTION:
