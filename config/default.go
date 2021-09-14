@@ -11,6 +11,8 @@ MaxSQLConnections = 100
 SQLConnectionTimeout = "2s"
 ReadTimeout = "30s"
 WriteTimeout = "30s"
+CoordinatorNetwork = true
+FindPeersCoordinatorNetworkInterval = "180s"
 
 [StateDB]
 Path = "/var/hermez/statedb"

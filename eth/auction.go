@@ -1039,7 +1039,7 @@ func (c AuctionEthClient) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, e
 		if addr, err := NewCoordinatorLibP2PAddr(url, pubKey); err == nil {
 			libp2pAddrs = append(libp2pAddrs, addr)
 		} else {
-			log.Warn(err)
+			log.Debug(err)
 		}
 	}
 	if len(libp2pAddrs) == 0 {
@@ -1107,6 +1107,8 @@ func NewCoordinatorLibP2PAddr(URL string, pubKey *ecdsa.PublicKey) (multiaddr.Mu
 	} else if err == nil {
 		URL = host
 	}
+	// Get rid of / at the end of the string
+	URL = strings.TrimSuffix(URL, "/")
 	// IP4 case
 	if ok := govalidator.IsIPv4(URL); ok {
 		addr := fmt.Sprintf("/ip4/%s/tcp/%s/p2p/%s", URL, common.CoordinatorsNetworkPort, libp2pID)
@@ -1126,5 +1128,5 @@ func NewCoordinatorLibP2PAddr(URL string, pubKey *ecdsa.PublicKey) (multiaddr.Mu
 		return multiaddr.NewMultiaddr(addr)
 	}
 
-	return nil, tracerr.New("Unexpected url format: " + URL)
+	return nil, tracerr.New("Unexpected url format (won't be able to connect directly to this coordinator): " + URL)
 }
