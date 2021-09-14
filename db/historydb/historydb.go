@@ -24,6 +24,7 @@ package historydb
 import (
 	"math"
 	"math/big"
+	"strconv"
 	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -172,7 +173,7 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 		"SELECT * FROM token WHERE symbol = 'ETH';",
 	)
 	if err != nil || ether.USD == nil {
-		log.Warn("error getting ether price from db: ",  err)
+		log.Warn("error getting ether price from db: ", err)
 		var emptyFloat64 float64
 		batch.EtherPriceUSD = emptyFloat64
 	} else {
@@ -1254,12 +1255,10 @@ const (
 	// over the average fee for CreateAccountInternal that is applied to
 	// obtain the recommended fee for CreateAccountInternal
 	CreateAccountInternalExtraFeePercentage float64 = 2.0
-	// Threshold used to increase the recommended fee
-	thresholdInWei float64 = 100000000000 // 100 Gwei
 )
 
 // GetRecommendedFee returns the RecommendedFee information
-func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64, gasPriceAvg *big.Float) (*common.RecommendedFee, error) {
+func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64) (*common.RecommendedFee, error) {
 	var recommendedFee common.RecommendedFee
 	// Get total txs and the batch of the first selected tx of the last hour
 	type totalTxsSinceBatchNum struct {
@@ -1296,22 +1295,25 @@ func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64, gasPriceAv
 		avgTransactionFee = 0
 	}
 
-	var gasP float64 = 1
-	if gasPriceAvg != nil {
-		//Divide the gasPriceAvg by 100 GWei (used as threshold)
-		gasPrice := new(big.Float).Quo(gasPriceAvg, big.NewFloat(thresholdInWei)) //Divide by 100 Gwei
-		if gasPrice.Cmp(big.NewFloat(1)) == -1 {
-			gasPrice = big.NewFloat(1)
-		}
-		gasP, _ = gasPrice.Float64()
-		log.Debug("factor used for recommended fees: ", gasP)
-	}
-
 	recommendedFee.ExistingAccount = math.Min(maxFeeUSD,
-		math.Max(avgTransactionFee, minFeeUSD)*gasP)
+		math.Max(avgTransactionFee, minFeeUSD))
 	recommendedFee.CreatesAccount = math.Min(maxFeeUSD,
-		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD)*gasP)
+		math.Max(CreateAccountExtraFeePercentage*avgTransactionFee, minFeeUSD))
 	recommendedFee.CreatesAccountInternal = math.Min(maxFeeUSD,
-		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD)*gasP)
+		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD))
 	return &recommendedFee, nil
+}
+
+// GetLatestBatches returns the latest forged batches
+func (hdb *HistoryDB) GetLatestBatches(numElements int) ([]*common.Batch, error) {
+	batchesInfo := []*common.Batch{}
+	if err := meddler.QueryAll(
+		hdb.dbRead, &batchesInfo, `SELECT batch_num, eth_block_num, forger_addr, fees_collected,
+		fee_idxs_coordinator, state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num,
+		total_fees_usd, eth_tx_hash, gas_price, gas_used, ether_price_usd FROM batch
+		ORDER BY batch_num DESC LIMIT `+strconv.Itoa(numElements)+`;`,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return batchesInfo, nil
 }

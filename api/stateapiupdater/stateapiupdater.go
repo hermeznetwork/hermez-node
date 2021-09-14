@@ -8,38 +8,38 @@ of using this package.
 package stateapiupdater
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"math/big"
+	"strconv"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
-	"github.com/hermeznetwork/hermez-node/eth"
-	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
 // Updater is an utility object to facilitate updating the StateAPI
 type Updater struct {
-	hdb              *historydb.HistoryDB
-	state            historydb.StateAPI
-	config           historydb.NodeConfig
-	vars             common.SCVariablesPtr
-	consts           historydb.Constants
-	rw               sync.RWMutex
-	rfp              *RecommendedFeePolicy
-	ethClient        eth.ClientInterface
-	etherScanService *etherscan.Service
+	hdb           *historydb.HistoryDB
+	state         historydb.StateAPI
+	config        historydb.NodeConfig
+	vars          common.SCVariablesPtr
+	consts        historydb.Constants
+	rw            sync.RWMutex
+	rfp           *RecommendedFeePolicy
+	maxTxPerBatch int64
 }
 
 // RecommendedFeePolicy describes how the recommended fee is calculated
 type RecommendedFeePolicy struct {
-	PolicyType  RecommendedFeePolicyType `validate:"required" env:"HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE"`
-	StaticValue float64                  `env:"HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE"`
+	PolicyType      RecommendedFeePolicyType `validate:"required" env:"HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE"`
+	StaticValue     float64                  `env:"HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE"`
+	BreakThreshold  int                      `env:"HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD"`
+	NumLastBatchAvg int                      `env:"HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG"`
 }
 
 // RecommendedFeePolicyType describes the different available recommended fee strategies
@@ -53,11 +53,7 @@ const (
 	// RecommendedFeePolicyTypeAvgLastHourResizable set the recommended fee using the average fee of the last hour and
 	// taking in account the avg gas of the last ten ethereum blocks
 	RecommendedFeePolicyTypeAvgLastHourResizable RecommendedFeePolicyType = "AvgLastHourResizable"
-	//Buffer size used to store gas prices when AvgLastHourResizable mode is active
-	bufferSize = 10
 )
-
-var gasPriceHistory []*big.Int
 
 func (rfp *RecommendedFeePolicy) valid() bool {
 	switch rfp.PolicyType {
@@ -77,7 +73,7 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 
 // NewUpdater creates a new Updater
 func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *common.SCVariables,
-	consts *historydb.Constants, rfp *RecommendedFeePolicy, ethClient eth.ClientInterface, etherScanService *etherscan.Service) (*Updater, error) {
+	consts *historydb.Constants, rfp *RecommendedFeePolicy, maxTxPerBatch int64) (*Updater, error) {
 	if ok := rfp.valid(); !ok {
 		return nil, tracerr.Wrap(fmt.Errorf("Invalid recommended fee policy: %v", rfp.PolicyType))
 	}
@@ -90,9 +86,8 @@ func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *co
 				ForgeDelay: config.ForgeDelay,
 			},
 		},
-		rfp:              rfp,
-		ethClient:        ethClient,
-		etherScanService: etherScanService,
+		rfp:           rfp,
+		maxTxPerBatch: maxTxPerBatch,
 	}
 	u.SetSCVars(vars.AsPtr())
 	return &u, nil
@@ -137,7 +132,7 @@ func (u *Updater) UpdateRecommendedFee() error {
 		}
 		u.rw.Unlock()
 	case RecommendedFeePolicyTypeAvgLastHour:
-		recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD, nil)
+		recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -145,67 +140,57 @@ func (u *Updater) UpdateRecommendedFee() error {
 		u.state.RecommendedFee = *recommendedFee
 		u.rw.Unlock()
 	case RecommendedFeePolicyTypeAvgLastHourResizable:
-		//First get the average gas price used from history array
-		//Every time this function is executed, checks the gasPrice and stores it in the gasPriceHistory array. If gasPriceHistory has less than 10 elements include a new one
-		//If gasPriceHistory has more than ten elements, then remove the position 0 without loosing the order and include the current one.
-		ctx := context.Background()
-		eGasPrice := big.NewInt(0)
-		if u.etherScanService != nil {
-			etherscanGasPrice, err := u.etherScanService.GetGasPrice(ctx)
-			if err != nil {
-				log.Warn("[Etherscan gas price service] Error getting the gas price from etherscan. Error: ", err.Error())
-			} else {
-				var ok bool
-				eGasPrice, ok = eGasPrice.SetString(etherscanGasPrice.ProposeGasPrice, 10)
-				if !ok {
-					log.Warn("[Etherscan gas price service] invalid big int: \"%v\"", etherscanGasPrice.ProposeGasPrice, ". Trying another method to get gas price")
-				}
-			}
-		}
-		// Convert the eGasPrice from gwei , such as 20 to wei
-		eGasPrice = eGasPrice.Mul(eGasPrice, big.NewInt(params.GWei))
-
-		gas, err := u.ethClient.EthSuggestGasPrice(ctx)
-		if err != nil { //If err, gasPriceHistory is not modified to avoid deviations
-			log.Warn("error getting gas price for recommended fee: ", err)
-		}
-		if gas.Cmp(eGasPrice) < 0 {
-			gas = eGasPrice
-		}
-		log.Debug("gas Price History arr: ", gasPriceHistory)
-		if len(gasPriceHistory) < bufferSize {
-			gasPriceHistory = append(gasPriceHistory, gas)
-		} else {
-			//Remove old element and add the new one
-			gasPriceHistory = removeGasPriceHistoryElement(gasPriceHistory, 0)
-			gasPriceHistory = append(gasPriceHistory, gas)
-		}
-		gasPriceAvg := big.NewInt(0)
-		totSum := big.NewInt(0)
-		if len(gasPriceHistory) != 0 {
-			// Calculate gasPriceAvg
-			for _, val := range gasPriceHistory {
-				totSum.Add(totSum, val)
-			}
-			gasPriceAvg.Div(totSum, big.NewInt(int64(len(gasPriceHistory))))
-		}
-		gasPriceAvgf := new(big.Float).SetInt(gasPriceAvg)
-		recommendedFee, err := u.hdb.GetRecommendedFee(u.config.MinFeeUSD, u.config.MaxFeeUSD, gasPriceAvgf)
+		var recommendedFee common.RecommendedFee
+		batchSize := u.maxTxPerBatch
+		latestBatches, err := u.hdb.GetLatestBatches(u.rfp.NumLastBatchAvg)
 		if err != nil {
-			return tracerr.Wrap(err)
+			log.Error("error getting latest "+strconv.Itoa(u.rfp.NumLastBatchAvg)+" batches. Error: ", err)
 		}
+		breakThreshold := u.rfp.BreakThreshold
+
+		//Calculate average batchCostUSD of the last x batches. batchCostUSD=batchGas*GasPrice(inGwei)*EtherPrice/10000000000
+		avgBatchCostUSD := big.NewFloat(0)
+		if len(latestBatches) != 0 {
+			for _, batch := range latestBatches {
+				gasUsedF := new(big.Float).SetUint64(batch.GasUsed)
+				gasPriceF := new(big.Float).Quo(new(big.Float).SetInt(batch.GasPrice), new(big.Float).SetInt64(int64(params.GWei))) //In Gwei
+				etherPriceF := new(big.Float).SetFloat64(batch.EtherPriceUSD)
+
+				batchCostUSD := new(big.Float).Quo(new(big.Float).Mul(gasUsedF, new(big.Float).Mul(gasPriceF, etherPriceF)), new(big.Float).SetInt64(int64(params.GWei)))
+				avgBatchCostUSD.Add(avgBatchCostUSD, batchCostUSD)
+			}
+			avgBatchCostUSD.Quo(avgBatchCostUSD, new(big.Float).SetInt64(int64(len(latestBatches))))
+		}
+
+		//breakEvenTxs=batchSize*breakEvenThreshold
+		batchSizeF := new(big.Float).SetInt64(batchSize)
+		if breakThreshold > 100 || breakThreshold < 0 {
+			log.Error("invalid configuration parameter BreakThreshold. It is a percentage, must be a number between 0 and 100")
+			return tracerr.New("invalid configuration parameter BreakThreshold. It is a percentage, must be a number between 0 and 100")
+		}
+		//nolint
+		breakEvenThresholdF := new(big.Float).Quo(new(big.Float).SetInt64(int64(breakThreshold)), new(big.Float).SetInt64(100)) //Divided by 100 because it is a percentage
+		breakEvenTxs := new(big.Float).Mul(batchSizeF, breakEvenThresholdF)
+
+		//SuggestedPriceUSD=batchCostUSD/breakEvenTxs
+		suggestedPriceUSD, _ := new(big.Float).Quo(avgBatchCostUSD, breakEvenTxs).Float64()
+		log.Debug("suggestedPriceUSD: ", suggestedPriceUSD)
+
+		//RecommendedFee
+		recommendedFee.ExistingAccount = math.Min(u.config.MaxFeeUSD,
+			math.Max(suggestedPriceUSD, u.config.MinFeeUSD))
+		recommendedFee.CreatesAccount = math.Min(u.config.MaxFeeUSD,
+			math.Max(historydb.CreateAccountExtraFeePercentage*suggestedPriceUSD, u.config.MinFeeUSD))
+		recommendedFee.CreatesAccountInternal = math.Min(u.config.MaxFeeUSD,
+			math.Max(historydb.CreateAccountInternalExtraFeePercentage*suggestedPriceUSD, u.config.MinFeeUSD))
+
 		u.rw.Lock()
-		u.state.RecommendedFee = *recommendedFee
+		u.state.RecommendedFee = recommendedFee
 		u.rw.Unlock()
 	default:
 		return tracerr.New("Invalid recommende fee policy: " + string(u.rfp.PolicyType))
 	}
-
 	return nil
-}
-
-func removeGasPriceHistoryElement(slice []*big.Int, s int) []*big.Int {
-	return append(slice[:s], slice[s+1:]...)
 }
 
 // UpdateMetrics update Status.Metrics information

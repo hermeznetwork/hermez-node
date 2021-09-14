@@ -291,8 +291,6 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		&hdbConsts,
 		&cfg.RecommendedFeePolicy,
 		cfg.Coordinator.Circuit.MaxTx,
-		client,
-		etherScanService,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
