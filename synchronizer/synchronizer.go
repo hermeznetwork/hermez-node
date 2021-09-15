@@ -520,6 +520,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	fromBlock := s.startBlockNum
 	// If we have any stored block, we must search the next block after this block
 	if lastSavedBlock != nil {
+		fmt.Println("LAST SAVED BLOCK:", lastSavedBlock.Num)
 		fromBlock = lastSavedBlock.Num + 1
 	}
 
@@ -529,7 +530,8 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		s.consts.Rollup.HermezAuctionContract,
 		s.consts.Rollup.WithdrawDelayerContract,
 	})
-	fmt.Println("NEXT BLOCK NUM:", nextBlockNum)
+	fmt.Println("FROM BLOCK:", fromBlock)
+	fmt.Println("NEXT BLOCK:", nextBlockNum)
 	if err != nil {
 		return nil, nil, err
 	}

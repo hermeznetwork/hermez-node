@@ -369,7 +369,7 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 	distanceFromLastBlock := lastBlock - fromBlock
 	if distanceFromLastBlock <= maxDistanceToSelectBlocksWithEvents {
 		c.events = make(map[int64][]types.Log)
-		return fromBlock + 1, nil
+		return fromBlock, nil
 	}
 
 	from := fromBlock
