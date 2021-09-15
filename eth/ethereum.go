@@ -359,10 +359,17 @@ func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
 // EthNextBlockWithSCEvents returns the next block with events in the provided SC addresses
 func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
 	const blocksPerCycle int64 = 10000
+	const maxDistanceToSelectBlocksWithEvents int64 = 128
 
 	lastBlock, err := c.EthLastBlock()
 	if err != nil {
 		return 0, nil
+	}
+
+	distanceFromLastBlock := lastBlock - fromBlock
+	if distanceFromLastBlock <= maxDistanceToSelectBlocksWithEvents {
+		c.events = make(map[int64][]types.Log)
+		return fromBlock + 1, nil
 	}
 
 	from := fromBlock
@@ -403,16 +410,16 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 
 		// move to the next range until the end of the chain
 		// if "to" is equal lastBlock then stop searching
-		if to == lastBlock {
-			return lastBlock, nil
+		if to == lastBlock-maxDistanceToSelectBlocksWithEvents {
+			return lastBlock - maxDistanceToSelectBlocksWithEvents, nil
 		}
 
 		from = to
 		to += blocksPerCycle
 		// if the "to" is greater than lastBlock, we set "to" as the lastBlock in order
 		// to be execute the last try to find a block with events
-		if to > lastBlock {
-			to = lastBlock
+		if to > lastBlock-maxDistanceToSelectBlocksWithEvents {
+			to = lastBlock - maxDistanceToSelectBlocksWithEvents
 		}
 	}
 }
