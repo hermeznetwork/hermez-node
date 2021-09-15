@@ -691,6 +691,15 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 		})
 	}
 	n.stateAPIUpdater.SetSCVars(vars)
+
+	/*
+		When the state is out of sync, which means, the last block synchronized by the node is
+		different/smaller from the last block provided by the ethereum, the network info in the state
+		will not be updated. So, in order to get some information on the node state, we need
+		to wait until the node finish the synchronization with the ethereum network.
+
+		Side effects are information like lastBatch, nextForgers, metrics with zeros, defaults or null values
+	*/
 	if stats.Synced() {
 		if err := n.stateAPIUpdater.UpdateNetworkInfo(
 			stats.Eth.LastBlock, stats.Sync.LastBlock,

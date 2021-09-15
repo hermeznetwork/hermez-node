@@ -18,6 +18,7 @@ In some cases, some of the structs defined in this file also include custom Mars
 package l2db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -122,37 +123,36 @@ func (l2db *L2DB) UpdateTxsInfo(txs []common.PoolL2Tx, batchNum common.BatchNum)
 	if len(txs) == 0 {
 		return nil
 	}
-	type txUpdate struct {
-		ID        common.TxID `db:"id"`
-		Info      string      `db:"info"`
-		ErrorCode int         `db:"error_code"`
-		ErrorType string      `db:"error_type"`
-	}
-	txUpdates := make([]txUpdate, len(txs))
-	batchN := strconv.FormatInt(int64(batchNum), 10)
-	for i := range txs {
-		txUpdates[i] = txUpdate{
-			ID:        txs[i].TxID,
-			Info:      "BatchNum: " + batchN + ". " + txs[i].Info,
-			ErrorCode: txs[i].ErrorCode,
-			ErrorType: txs[i].ErrorType,
-		}
-	}
+
 	const query string = `
 		UPDATE tx_pool SET
-			info = tx_update.info,
-			error_code = tx_update.error_code,
-			error_type = tx_update.error_type
-		FROM (VALUES
-			(NULL::::BYTEA, NULL::::VARCHAR, NULL::::NUMERIC, NULL::::VARCHAR),
-			(:id, :info, :error_code, :error_type)
-		) as tx_update (id, info, error_code, error_type)
-		WHERE tx_pool.tx_id = tx_update.id;
+			info = $2,
+			error_code = $3,
+			error_type = $4
+		WHERE tx_pool.tx_id = $1;
 	`
-	if len(txUpdates) > 0 {
-		if _, err := sqlx.NamedExec(l2db.dbWrite, query, txUpdates); err != nil {
+
+	batchN := strconv.FormatInt(int64(batchNum), 10)
+
+	tx, err := l2db.dbWrite.BeginTx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	for i := range txs {
+		info := "BatchNum: " + batchN + ". " + txs[i].Info
+
+		if _, err := tx.Exec(query, txs[i].TxID, info, txs[i].ErrorCode, txs[i].ErrorType); err != nil {
+			errRb := tx.Rollback()
+			if errRb != nil {
+				return tracerr.Wrap(fmt.Errorf("failed to rollback tx update: %v. error triggering rollback: %v", err, errRb))
+			}
 			return tracerr.Wrap(err)
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return tracerr.Wrap(err)
 	}
 
 	return nil
