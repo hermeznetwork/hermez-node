@@ -678,8 +678,8 @@ func (c *Client) EthTransactionReceipt(ctx context.Context,
 	return nil, nil
 }
 
-// EthNextBlockWithSCEvents returns the next block with events in the provided SC addresses
-func (c *Client) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
+// EthNextBlockToSync returns the next block with events in the provided SC addresses
+func (c *Client) EthNextBlockToSync(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
 	bb := make([]*Block, 0, len(c.blocks))
 
 	for _, block := range c.blocks {

@@ -44,7 +44,7 @@ type EthereumInterface interface {
 	EthKeyStore() *ethKeystore.KeyStore
 	EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error)
 
-	EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error)
+	EthNextBlockToSync(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error)
 }
 
 var (
@@ -356,8 +356,8 @@ func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
 	return result, tracerr.Wrap(err)
 }
 
-// EthNextBlockWithSCEvents returns the next block with events in the provided SC addresses
-func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
+// EthNextBlockToSync returns the next block with events in the provided SC addresses
+func (c *EthereumClient) EthNextBlockToSync(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
 	const blocksPerCycle int64 = 10000
 	const maxDistanceToSelectBlocksWithEvents int64 = 128
 
@@ -366,6 +366,12 @@ func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock
 		return 0, nil
 	}
 
+	// if fromBlock is greater than the last block, then return the last block
+	if fromBlock >= lastBlock {
+		return lastBlock, nil
+	}
+
+	// if the distance from fromBlock and lastBlock is smaller than the max distance, return the from block
 	distanceFromLastBlock := lastBlock - fromBlock
 	if distanceFromLastBlock <= maxDistanceToSelectBlocksWithEvents {
 		c.events = make(map[int64][]types.Log)

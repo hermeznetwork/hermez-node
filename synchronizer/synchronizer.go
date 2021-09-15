@@ -525,7 +525,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	}
 
 	// next block number to sync
-	nextBlockNum, err := s.ethClient.EthNextBlockWithSCEvents(ctx, fromBlock, []ethCommon.Address{
+	nextBlockNum, err := s.ethClient.EthNextBlockToSync(ctx, fromBlock, []ethCommon.Address{
 		s.consts.Auction.HermezRollup,
 		s.consts.Rollup.HermezAuctionContract,
 		s.consts.Rollup.WithdrawDelayerContract,
