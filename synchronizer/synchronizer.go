@@ -529,6 +529,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 		s.consts.Rollup.HermezAuctionContract,
 		s.consts.Rollup.WithdrawDelayerContract,
 	})
+	fmt.Println("NEXT BLOCK NUM:", nextBlockNum)
 	if err != nil {
 		return nil, nil, err
 	}
