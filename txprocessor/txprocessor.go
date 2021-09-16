@@ -266,6 +266,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	}
 
 	// Process L1UserTxs
+	log.Debugf("[BUG SYNC] ProcessTxs() len(l1usertxs): %v", len(l1usertxs))
 	for i := 0; i < len(l1usertxs); i++ {
 		// assumption: l1usertx are sorted by L1Tx.Position
 		exitIdx, exitAccount, newExit, createdAccount, err := txProcessor.ProcessL1Tx(exitTree,
@@ -316,6 +317,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	}
 
 	// Process L1CoordinatorTxs
+	log.Debugf("[BUG SYNC] ProcessTxs() len(l1coordinatortxs): %v", len(l1coordinatortxs))
 	for i := 0; i < len(l1coordinatortxs); i++ {
 		exitIdx, _, _, createdAccount, err := txProcessor.ProcessL1Tx(exitTree, &l1coordinatortxs[i])
 		if err != nil {
