@@ -404,6 +404,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	}
 
 	// Process L2Txs
+	log.Debugf("[BUG SYNC] ProcessTxs() len(l2txs): %v", len(l2txs))
 	for i := 0; i < len(l2txs); i++ {
 		exitIdx, exitAccount, newExit, err := txProcessor.ProcessL2Tx(coordIdxsMap, collectedFees,
 			exitTree, &l2txs[i])
