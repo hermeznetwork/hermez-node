@@ -198,6 +198,8 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 		}
 	}()
 
+	log.Debugf("[BUG SYNC] ProcessTxs()")
+
 	var exitTree *merkletree.MerkleTree
 	var createdAccounts []common.Account
 
@@ -551,6 +553,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 		}
 		// return exitInfos, createdAccounts and collectedFees, so Synchronizer will
 		// be able to store it into HistoryDB for the concrete BatchNum
+		log.Debugf("[BUG SYNC] ProcessTxs() return 1")
 		return &ProcessTxOutput{
 			ZKInputs:           nil,
 			ExitInfos:          exitInfos,
@@ -567,6 +570,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	txProcessor.zki.Metadata.NewExitRootRaw = exitTree.Root()
 
 	// return ZKInputs as the BatchBuilder will return it to forge the Batch
+	log.Debugf("[BUG SYNC] ProcessTxs() return 2")
 	return &ProcessTxOutput{
 		ZKInputs:           txProcessor.zki,
 		ExitInfos:          nil,
