@@ -951,22 +951,38 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 // Rollup Smart Contract in the given transaction, and the sender address.
 func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 	l1UserTxsLen uint16) (*RollupForgeBatchArgs, *ethCommon.Address, error) {
+
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs()")
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() ethTxHash: %v", ethTxHash)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionByHash()")
 	tx, _, err := c.client.client.TransactionByHash(context.Background(), ethTxHash)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionByHash() tx: %v", tx)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionByHash() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("TransactionByHash: %w", err))
 	}
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionByHash() tx.Data: %v", tx.Data())
 	txData := tx.Data()
 
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.contractAbi.MethodById()")
 	method, err := c.contractAbi.MethodById(txData[:4])
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.contractAbi.MethodById() method: %v", method)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.contractAbi.MethodById() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionReceipt()")
 	receipt, err := c.client.client.TransactionReceipt(context.Background(), ethTxHash)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionReceipt() receipt: %v", receipt)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionReceipt() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionSender()")
 	sender, err := c.client.client.TransactionSender(context.Background(), tx,
 		receipt.Logs[0].BlockHash, receipt.Logs[0].Index)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionSender() sender: %v", sender)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() c.client.client.TransactionSender() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
@@ -1000,6 +1016,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 	if l1UserTxsLen > 0 {
 		l1UserTxsData = aux.L1L2TxsData[:numBytesL1TxUser]
 	}
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() int(l1UserTxsLen): %v", int(l1UserTxsLen))
 	for i := 0; i < int(l1UserTxsLen); i++ {
 		l1Tx, err :=
 			common.L1TxFromDataAvailability(l1UserTxsData[i*lenL1L2TxsBytes:(i+1)*lenL1L2TxsBytes],
@@ -1010,19 +1027,25 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 		rollupForgeBatchArgs.L1UserTxs = append(rollupForgeBatchArgs.L1UserTxs, *l1Tx)
 	}
 	l2TxsData := []byte{}
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() numBeginL2Tx < len(aux.L1L2TxsData): %v", numBeginL2Tx < len(aux.L1L2TxsData))
 	if numBeginL2Tx < len(aux.L1L2TxsData) {
 		l2TxsData = aux.L1L2TxsData[numBeginL2Tx:]
 	}
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() l2TxsData: %v", l2TxsData)
 	numTxsL2 := len(l2TxsData) / lenL1L2TxsBytes
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() numTxsL2: %v", numTxsL2)
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() for i := 0; i < numTxsL2; i++ {}")
 	for i := 0; i < numTxsL2; i++ {
-		l2Tx, err :=
-			common.L2TxFromBytesDataAvailability(l2TxsData[i*lenL1L2TxsBytes:(i+1)*lenL1L2TxsBytes],
-				int(nLevels))
+		l2Tx, err := common.L2TxFromBytesDataAvailability(l2TxsData[i*lenL1L2TxsBytes:(i+1)*lenL1L2TxsBytes], int(nLevels))
+		log.Debugf("[BUG SYNC] RollupForgeBatchArgs() for i := 0; i < numTxsL2; i++ {} i: %v", i)
+		log.Debugf("[BUG SYNC] RollupForgeBatchArgs() for i := 0; i < numTxsL2; i++ {} l2Tx: %v", l2Tx)
+		log.Debugf("[BUG SYNC] RollupForgeBatchArgs() for i := 0; i < numTxsL2; i++ {} err: %v", err)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
 		rollupForgeBatchArgs.L2TxsData = append(rollupForgeBatchArgs.L2TxsData, *l2Tx)
 	}
+	log.Debugf("[BUG SYNC] RollupForgeBatchArgs() rollupForgeBatchArgs.L2TxsData: %v", rollupForgeBatchArgs.L2TxsData)
 	for i := 0; i < numTxsL1Coord; i++ {
 		bytesL1Coordinator :=
 			aux.EncodedL1CoordinatorTx[i*common.RollupConstL1CoordinatorTotalBytes : (i+1)*common.RollupConstL1CoordinatorTotalBytes] //nolint:lll
