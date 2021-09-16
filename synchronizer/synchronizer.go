@@ -1003,6 +1003,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 
 		// Transform L2 txs to PoolL2Txs
 		// NOTE: This is a big ugly, find a better way
+		log.Debugf("[BUG SYNC] rollupSync() len(forgeBatchArgs.L2TxsData): %v", len(forgeBatchArgs.L2TxsData))
 		poolL2Txs := common.L2TxsToPoolL2Txs(forgeBatchArgs.L2TxsData)
 
 		if int(forgeBatchArgs.VerifierIdx) >= len(s.consts.Rollup.Verifiers) {
