@@ -1018,10 +1018,10 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			MaxL1Tx:  common.RollupConstMaxL1Tx,
 		}
 		log.Debugf("[BUG SYNC] rollupSync() s.stateDB.MT.Root().BigInt() 2: %v", s.stateDB.MT.Root().BigInt())
-		log.Debugf("[BUG SYNC] rollupSync() forgeBatchArgs.NewStRoot 2: %v", forgeBatchArgs.NewStRoot)
+		log.Debugf("[BUG SYNC] rollupSync()     forgeBatchArgs.NewStRoot 2: %v", forgeBatchArgs.NewStRoot)
 		tp := txprocessor.NewTxProcessor(s.stateDB, tpc)
 		log.Debugf("[BUG SYNC] rollupSync() s.stateDB.MT.Root().BigInt() 3: %v", s.stateDB.MT.Root().BigInt())
-		log.Debugf("[BUG SYNC] rollupSync() forgeBatchArgs.NewStRoot 3: %v", forgeBatchArgs.NewStRoot)
+		log.Debugf("[BUG SYNC] rollupSync()     forgeBatchArgs.NewStRoot 3: %v", forgeBatchArgs.NewStRoot)
 
 		log.Debugf("[BUG SYNC] rollupSync() tp.ProcessTxs()")
 		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
@@ -1030,7 +1030,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		log.Debugf("[BUG SYNC] rollupSync() tp.ProcessTxs() processTxsOut: %v", processTxsOut)
 		log.Debugf("[BUG SYNC] rollupSync() tp.ProcessTxs() err: %v", err)
 		log.Debugf("[BUG SYNC] rollupSync() s.stateDB.MT.Root().BigInt() 4: %v", s.stateDB.MT.Root().BigInt())
-		log.Debugf("[BUG SYNC] rollupSync() forgeBatchArgs.NewStRoot 4: %v", forgeBatchArgs.NewStRoot)
+		log.Debugf("[BUG SYNC] rollupSync()     forgeBatchArgs.NewStRoot 4: %v", forgeBatchArgs.NewStRoot)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
