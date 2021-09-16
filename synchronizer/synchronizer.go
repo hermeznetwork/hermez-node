@@ -483,17 +483,27 @@ func (s *Synchronizer) init() error {
 }
 
 func (s *Synchronizer) resetIntermediateState() error {
+	log.Debugf("[BUG SYNC] resetIntermediateState start")
 	lastBlock, err := s.historyDB.GetLastBlock()
+	log.Debugf("[BUG SYNC] resetIntermediateState lastBlock: %v", lastBlock)
+	log.Debugf("[BUG SYNC] resetIntermediateState err: %v", err)
+	log.Debugf("[BUG SYNC] resetIntermediateState tracerr.Unwrap(err): %v", tracerr.Unwrap(err))
 	if tracerr.Unwrap(err) == sql.ErrNoRows {
 		lastBlock = &common.Block{}
 	} else if err != nil {
 		return tracerr.Wrap(fmt.Errorf("historyDB.GetLastBlock: %w", err))
 	}
-	if err := s.resetState(lastBlock); err != nil {
+	log.Debugf("[BUG SYNC] resetIntermediateState resetState start")
+	err = s.resetState(lastBlock)
+	log.Debugf("[BUG SYNC] resetIntermediateState resetState err: %v", err)
+	if err != nil {
 		s.resetStateFailed = true
+		log.Debugf("[BUG SYNC] resetIntermediateState s.resetStateFailed: %v", s.resetStateFailed)
 		return tracerr.Wrap(fmt.Errorf("resetState at block %v: %w", lastBlock.Num, err))
 	}
 	s.resetStateFailed = false
+	log.Debugf("[BUG SYNC] resetIntermediateState s.resetStateFailed: %v", s.resetStateFailed)
+	log.Debugf("[BUG SYNC] resetIntermediateState end")
 	return nil
 }
 
@@ -503,15 +513,24 @@ func (s *Synchronizer) resetIntermediateState() error {
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
 func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, discarded *int64, err error) {
+	log.Debugf("[BUG SYNC] Sync start")
+	log.Debugf("[BUG SYNC] Sync s.resetStateFailed: %v", s.resetStateFailed)
 	if s.resetStateFailed {
-		if err := s.resetIntermediateState(); err != nil {
+		log.Debugf("[BUG SYNC] Sync s.resetIntermediateState()")
+		err := s.resetIntermediateState()
+		log.Debugf("[BUG SYNC] Sync s.resetIntermediateState() err: %v", err)
+		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
 	}
 
 	// Get lastSavedBlock from History DB
+	log.Debugf("[BUG SYNC] Sync s.historyDB.GetLastBlock()")
 	lastSavedBlock, err := s.historyDB.GetLastBlock()
+	log.Debugf("[BUG SYNC] Sync s.historyDB.GetLastBlock() lastSavedBlock: %v", lastSavedBlock)
+	log.Debugf("[BUG SYNC] Sync s.historyDB.GetLastBlock() err: %v", err)
 	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+		log.Debugf("[BUG SYNC] Sync s.historyDB.GetLastBlock() tracerr.Wrap(err): %v", tracerr.Wrap(err))
 		return nil, nil, tracerr.Wrap(err)
 	}
 
@@ -520,21 +539,25 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	fromBlock := s.startBlockNum
 	// If we have any stored block, we must search the next block after this block
 	if lastSavedBlock != nil {
-		fmt.Println("LAST SAVED BLOCK:", lastSavedBlock.Num)
 		fromBlock = lastSavedBlock.Num + 1
 	}
 
+	log.Debugf("[BUG SYNC] Sync lastSavedBlock: %v", lastSavedBlock)
+	log.Debugf("[BUG SYNC] Sync fromBlock: %v", fromBlock)
+
 	// next block number to sync
+	log.Debugf("[BUG SYNC] Sync s.ethClient.EthNextBlockToSync()")
 	nextBlockNum, err := s.ethClient.EthNextBlockToSync(ctx, fromBlock, []ethCommon.Address{
 		s.consts.Auction.HermezRollup,
 		s.consts.Rollup.HermezAuctionContract,
 		s.consts.Rollup.WithdrawDelayerContract,
 	})
-	fmt.Println("FROM BLOCK:", fromBlock)
-	fmt.Println("NEXT BLOCK:", nextBlockNum)
+	log.Debugf("[BUG SYNC] Sync s.ethClient.EthNextBlockToSync() nextBlockNum: %v", nextBlockNum)
+	log.Debugf("[BUG SYNC] Sync s.ethClient.EthNextBlockToSync() err: %v", err)
 	if err != nil {
 		return nil, nil, err
 	}
+	log.Debugf("[BUG SYNC] Sync nextBlockNum == lastSavedBlock.Num: %v", nextBlockNum == lastSavedBlock.Num)
 	if nextBlockNum == lastSavedBlock.Num {
 		return nil, nil, nil
 	}
@@ -543,12 +566,16 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	// UpdateFrequencyDivider blocks
 	if nextBlockNum+int64(s.stats.Eth.UpdateBlockNumDiffThreshold) >= s.stats.Eth.LastBlock.Num ||
 		nextBlockNum%int64(s.stats.Eth.UpdateFrequencyDivider) == 0 {
+		log.Debugf("[BUG SYNC] Sync s.stats.UpdateEth()")
 		if err := s.stats.UpdateEth(s.ethClient); err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
 	}
 
+	log.Debugf("[BUG SYNC] Sync s.ethClient.EthBlockByNumber()")
 	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
+	log.Debugf("[BUG SYNC] Sync s.ethClient.EthBlockByNumber() ethBlock: %v", ethBlock)
+	log.Debugf("[BUG SYNC] Sync s.ethClient.EthBlockByNumber() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
 	}
@@ -578,31 +605,48 @@ func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, d
 	defer func() {
 		// If there was an error during sync, reset to the last block
 		// in the historyDB because the historyDB is written last in
-		// the Sync method and is the source of consistency.  This
+		// the Sync method and is the source of consistency. This
 		// allows resetting the stateDB in the case a batch was
 		// processed but the historyDB block was not committed due to an
 		// error.
+
+		// 5497131
+		log.Debugf("[BUG SYNC] defer start")
+		log.Debugf("[BUG SYNC] defer err: %v", err)
 		if err != nil {
-			if err2 := s.resetIntermediateState(); err2 != nil {
+			log.Debugf("[BUG SYNC] defer s.resetIntermediateState()")
+			err2 := s.resetIntermediateState()
+			if err2 != nil {
 				log.Errorw("sync revert", "err", err2)
 			}
+			log.Debugf("[BUG SYNC] defer s.resetIntermediateState() err: %v", err2)
 		}
+		log.Debugf("[BUG SYNC] defer end")
 	}()
 
 	// Get data from the rollup contract
+	log.Debugf("[BUG SYNC] Sync s.rollupSync()")
 	rollupData, err := s.rollupSync(ethBlock)
+	log.Debugf("[BUG SYNC] Sync s.rollupSync() rollupData: %v", rollupData)
+	log.Debugf("[BUG SYNC] Sync s.rollupSync() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
 	// Get data from the auction contract
+	log.Debugf("[BUG SYNC] Sync s.auctionSync()")
 	auctionData, err := s.auctionSync(ethBlock)
+	log.Debugf("[BUG SYNC] Sync s.auctionSync() auctionData: %v", auctionData)
+	log.Debugf("[BUG SYNC] Sync s.auctionSync() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
 
 	// Get data from the WithdrawalDelayer contract
+	log.Debugf("[BUG SYNC] Sync s.wdelayerSync()")
 	wDelayerData, err := s.wdelayerSync(ethBlock)
+	log.Debugf("[BUG SYNC] Sync s.wdelayerSync() wDelayerData: %v", wDelayerData)
+	log.Debugf("[BUG SYNC] Sync s.wdelayerSync() err: %v", err)
 	if err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
@@ -826,6 +870,10 @@ func (s *Synchronizer) resetState(block *common.Block) error {
 // rollupSync retrieves all the Rollup Smart Contract Data that happened at
 // ethBlock.blockNum with ethBlock.Hash.
 func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, error) {
+	log.Debugf("[BUG SYNC] rollupSync() ethBlock: %v", ethBlock)
+
+	log.Debugf("[BUG SYNC] rollupSync() s.stateDB.MT.Root().BigInt(): %v", s.stateDB.MT.Root().BigInt())
+
 	blockNum := ethBlock.Num
 	var rollupData = common.NewRollupData()
 	// var forgeL1TxsNum int64
@@ -971,11 +1019,17 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			MaxFeeTx: common.RollupConstMaxFeeIdxCoordinator,
 			MaxL1Tx:  common.RollupConstMaxL1Tx,
 		}
+		log.Debugf("[BUG SYNC] rollupSync() s.stateDB.MT.Root().BigInt(): %v", s.stateDB.MT.Root().BigInt())
 		tp := txprocessor.NewTxProcessor(s.stateDB, tpc)
+		log.Debugf("[BUG SYNC] rollupSync() s.stateDB.MT.Root().BigInt(): %v", s.stateDB.MT.Root().BigInt())
 
+		log.Debugf("[BUG SYNC] rollupSync() tp.ProcessTxs()")
 		// ProcessTxs updates poolL2Txs adding: Nonce (and also TokenID, but we don't use it).
 		processTxsOut, err := tp.ProcessTxs(forgeBatchArgs.FeeIdxCoordinator,
 			l1UserTxs, batchData.L1CoordinatorTxs, poolL2Txs)
+		log.Debugf("[BUG SYNC] rollupSync() tp.ProcessTxs() processTxsOut: %v", processTxsOut)
+		log.Debugf("[BUG SYNC] rollupSync() tp.ProcessTxs() err: %v", err)
+		log.Debugf("[BUG SYNC] rollupSync() s.stateDB.MT.Root().BigInt(): %v", s.stateDB.MT.Root().BigInt())
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
