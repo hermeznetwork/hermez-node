@@ -10,8 +10,12 @@ package stateapiupdater
 import (
 	"database/sql"
 	"fmt"
+	"math"
+	"math/big"
+	"strconv"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -20,19 +24,22 @@ import (
 
 // Updater is an utility object to facilitate updating the StateAPI
 type Updater struct {
-	hdb    *historydb.HistoryDB
-	state  historydb.StateAPI
-	config historydb.NodeConfig
-	vars   common.SCVariablesPtr
-	consts historydb.Constants
-	rw     sync.RWMutex
-	rfp    *RecommendedFeePolicy
+	hdb           *historydb.HistoryDB
+	state         historydb.StateAPI
+	config        historydb.NodeConfig
+	vars          common.SCVariablesPtr
+	consts        historydb.Constants
+	rw            sync.RWMutex
+	rfp           *RecommendedFeePolicy
+	maxTxPerBatch int64
 }
 
 // RecommendedFeePolicy describes how the recommended fee is calculated
 type RecommendedFeePolicy struct {
-	PolicyType  RecommendedFeePolicyType `validate:"required" env:"HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE"`
-	StaticValue float64                  `env:"HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE"`
+	PolicyType      RecommendedFeePolicyType `validate:"required" env:"HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE"`
+	StaticValue     float64                  `env:"HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE"`
+	BreakThreshold  int                      `env:"HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD"`
+	NumLastBatchAvg int                      `env:"HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG"`
 }
 
 // RecommendedFeePolicyType describes the different available recommended fee strategies
@@ -43,6 +50,9 @@ const (
 	RecommendedFeePolicyTypeStatic RecommendedFeePolicyType = "Static"
 	// RecommendedFeePolicyTypeAvgLastHour set the recommended fee using the average fee of the last hour
 	RecommendedFeePolicyTypeAvgLastHour RecommendedFeePolicyType = "AvgLastHour"
+	// RecommendedFeePolicyTypeAvgLastHourResizable set the recommended fee using the average fee of the last hour and
+	// taking in account the avg gas of the last ten ethereum blocks
+	RecommendedFeePolicyTypeAvgLastHourResizable RecommendedFeePolicyType = "AvgLastHourResizable"
 )
 
 func (rfp *RecommendedFeePolicy) valid() bool {
@@ -54,6 +64,8 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 		return true
 	case RecommendedFeePolicyTypeAvgLastHour:
 		return true
+	case RecommendedFeePolicyTypeAvgLastHourResizable:
+		return true
 	default:
 		return false
 	}
@@ -61,7 +73,7 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 
 // NewUpdater creates a new Updater
 func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *common.SCVariables,
-	consts *historydb.Constants, rfp *RecommendedFeePolicy) (*Updater, error) {
+	consts *historydb.Constants, rfp *RecommendedFeePolicy, maxTxPerBatch int64) (*Updater, error) {
 	if ok := rfp.valid(); !ok {
 		return nil, tracerr.Wrap(fmt.Errorf("Invalid recommended fee policy: %v", rfp.PolicyType))
 	}
@@ -74,7 +86,8 @@ func NewUpdater(hdb *historydb.HistoryDB, config *historydb.NodeConfig, vars *co
 				ForgeDelay: config.ForgeDelay,
 			},
 		},
-		rfp: rfp,
+		rfp:           rfp,
+		maxTxPerBatch: maxTxPerBatch,
 	}
 	u.SetSCVars(vars.AsPtr())
 	return &u, nil
@@ -126,10 +139,57 @@ func (u *Updater) UpdateRecommendedFee() error {
 		u.rw.Lock()
 		u.state.RecommendedFee = *recommendedFee
 		u.rw.Unlock()
-	default:
-		return tracerr.New("Invalid recommende fee policy")
-	}
+	case RecommendedFeePolicyTypeAvgLastHourResizable:
+		var recommendedFee common.RecommendedFee
+		batchSize := u.maxTxPerBatch
+		latestBatches, err := u.hdb.GetLatestBatches(u.rfp.NumLastBatchAvg)
+		if err != nil {
+			log.Error("error getting latest "+strconv.Itoa(u.rfp.NumLastBatchAvg)+" batches. Error: ", err)
+		}
+		breakThreshold := u.rfp.BreakThreshold
 
+		//Calculate average batchCostUSD of the last x batches. batchCostUSD=batchGas*GasPrice(inGwei)*EtherPrice/10000000000
+		avgBatchCostUSD := big.NewFloat(0)
+		if len(latestBatches) != 0 {
+			for _, batch := range latestBatches {
+				gasUsedF := new(big.Float).SetUint64(batch.GasUsed)
+				gasPriceF := new(big.Float).Quo(new(big.Float).SetInt(batch.GasPrice), new(big.Float).SetInt64(int64(params.GWei))) //In Gwei
+				etherPriceF := new(big.Float).SetFloat64(batch.EtherPriceUSD)
+
+				batchCostUSD := new(big.Float).Quo(new(big.Float).Mul(gasUsedF, new(big.Float).Mul(gasPriceF, etherPriceF)), new(big.Float).SetInt64(int64(params.GWei)))
+				avgBatchCostUSD.Add(avgBatchCostUSD, batchCostUSD)
+			}
+			avgBatchCostUSD.Quo(avgBatchCostUSD, new(big.Float).SetInt64(int64(len(latestBatches))))
+		}
+
+		//breakEvenTxs=batchSize*breakEvenThreshold
+		batchSizeF := new(big.Float).SetInt64(batchSize)
+		if breakThreshold > 100 || breakThreshold < 0 {
+			log.Error("invalid configuration parameter BreakThreshold. It is a percentage, must be a number between 0 and 100")
+			return tracerr.New("invalid configuration parameter BreakThreshold. It is a percentage, must be a number between 0 and 100")
+		}
+		//nolint
+		breakEvenThresholdF := new(big.Float).Quo(new(big.Float).SetInt64(int64(breakThreshold)), new(big.Float).SetInt64(100)) //Divided by 100 because it is a percentage
+		breakEvenTxs := new(big.Float).Mul(batchSizeF, breakEvenThresholdF)
+
+		//SuggestedPriceUSD=batchCostUSD/breakEvenTxs
+		suggestedPriceUSD, _ := new(big.Float).Quo(avgBatchCostUSD, breakEvenTxs).Float64()
+		log.Debug("suggestedPriceUSD: ", suggestedPriceUSD)
+
+		//RecommendedFee
+		recommendedFee.ExistingAccount = math.Min(u.config.MaxFeeUSD,
+			math.Max(suggestedPriceUSD, u.config.MinFeeUSD))
+		recommendedFee.CreatesAccount = math.Min(u.config.MaxFeeUSD,
+			math.Max(historydb.CreateAccountExtraFeePercentage*suggestedPriceUSD, u.config.MinFeeUSD))
+		recommendedFee.CreatesAccountInternal = math.Min(u.config.MaxFeeUSD,
+			math.Max(historydb.CreateAccountInternalExtraFeePercentage*suggestedPriceUSD, u.config.MinFeeUSD))
+
+		u.rw.Lock()
+		u.state.RecommendedFee = recommendedFee
+		u.rw.Unlock()
+	default:
+		return tracerr.New("Invalid recommende fee policy: " + string(u.rfp.PolicyType))
+	}
 	return nil
 }
 

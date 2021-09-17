@@ -95,6 +95,8 @@ type RollupEventForgeBatch struct {
 	// Sender    ethCommon.Address
 	EthTxHash    ethCommon.Hash
 	L1UserTxsLen uint16
+	GasUsed      uint64
+	GasPrice     *big.Int
 }
 
 // RollupEventUpdateForgeL1L2BatchTimeout is an event of the Rollup Smart Contract
@@ -840,7 +842,18 @@ func (c *RollupClient) RollupEventsByBlock(blockNum int64,
 			}
 			forgeBatch.BatchNum = new(big.Int).SetBytes(vLog.Topics[1][:]).Int64()
 			forgeBatch.EthTxHash = vLog.TxHash
-			// forgeBatch.Sender = vLog.Address
+			//Check tx info using EthTxHash to get gasprice and gas used
+			tx, _, err := c.client.client.TransactionByHash(context.Background(), vLog.TxHash)
+			if err != nil {
+				return nil, tracerr.Wrap(fmt.Errorf("failed to get TransactionByHash, hash: %s, err: %w", vLog.TxHash.String(), err))
+			}
+			forgeBatch.GasPrice = tx.GasPrice()
+			// Get gas used from TxReceipt
+			txReceipt, err := c.client.client.TransactionReceipt(context.Background(), vLog.TxHash)
+			if err != nil {
+				return nil, tracerr.Wrap(fmt.Errorf("failed to get TransactionByHash, hash: %s, err: %w", vLog.TxHash.String(), err))
+			}
+			forgeBatch.GasUsed = txReceipt.GasUsed
 			rollupEvents.ForgeBatch = append(rollupEvents.ForgeBatch, forgeBatch)
 		case logHermezUpdateForgeL1L2BatchTimeout:
 			var updateForgeL1L2BatchTimeout struct {

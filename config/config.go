@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 	"time"
@@ -10,7 +11,6 @@ import (
 	configLibrary "github.com/hermeznetwork/go-hermez-config"
 	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"gopkg.in/go-playground/validator.v9"
@@ -396,7 +396,7 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 		if strings.Contains(err.Error(), "default") {
 			return nil, err
 		}
-		log.Warn(err.Error())
+		log.Println(err.Error())
 	}
 	validate := validator.New()
 	if err := validate.Struct(cfg); err != nil {
@@ -419,7 +419,7 @@ func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 		if strings.Contains(err.Error(), "default") {
 			return nil, err
 		}
-		log.Warn(err.Error())
+		log.Println(err.Error())
 	}
 	validate := validator.New()
 	if err := validate.Struct(cfg); err != nil {

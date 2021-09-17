@@ -130,6 +130,8 @@ APIKey = HEZNODE_ETHERSCAN_APIKEY
 [RecommendedFeePolicy]
 PolicyType = HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE
 StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
+BreakThreshold = HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD
+NumLastBatchAvg = HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG
 ```
 
 ## Table: 
@@ -141,7 +143,7 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |API|Address|HEZNODE_API_ADDRESS|Optional|"0.0.0.0:9086"|Url and port where the API will listen
 |API|Explorer|HEZNODE_API_EXPLORER|Optional|true|Enables the Explorer API endpoints
 |API|UpdateMetricsInterval|HEZNODE_API_UPDATEMETRICSINTERVAL|Optional|"10s"|Interval between updates of the API metrics
-|API|UpdateRecommendedFeeInterval|HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL|Optional|"10s"|Interval between updates of the recommended fees
+|API|UpdateRecommendedFeeInterval|HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL|Optional|"15s"|Interval between updates of the recommended fees
 |API|MaxSQLConnections|HEZNODE_API_MAXSQLCONNECTIONS|Optional|100|Maximum concurrent connections allowed between API and SQL
 |API|SQLConnectionTimeout|HEZNODE_API_SQLCONNECTIONTIMEOUT|Optional|"2s"|Maximum amount of time that an API request can wait to establish a SQL connection
 |API|ReadTimeout|HEZNODE_API_READTIMEOUT|Optional|"30s"|ReadTimeout is the maximum duration for reading the entire request, including the body.
@@ -221,3 +223,5 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|""|This parameter allow access to etherscan services
 |RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static" or "AvgLastHour"
 |RecommendedFeePolicy|StaticValue|HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE|Optional|0.10|If PolicyType is "static" defines the recommended fee value
+|RecommendedFeePolicy|BreakThreshold|HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD|Optional|50|If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
+|RecommendedFeePolicy|NumLastBatchAvg|HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG|Optional|10|If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost

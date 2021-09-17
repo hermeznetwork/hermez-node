@@ -24,11 +24,13 @@ package historydb
 import (
 	"math"
 	"math/big"
+	"strconv"
 	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/jmoiron/sqlx"
 
@@ -164,6 +166,23 @@ func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
 		total += *tokenPrice.USD * (amount / math.Pow(10, float64(tokenPrice.Decimals))) //nolint decimals have to be ^10
 	}
 	batch.TotalFeesUSD = &total
+	// Check current ether price and insert it into batch table
+	var ether TokenWithUSD
+	err := meddler.QueryRow(
+		hdb.dbRead, &ether,
+		"SELECT * FROM token WHERE symbol = 'ETH';",
+	)
+	if err != nil {
+		log.Warn("error getting ether price from db: ", err)
+		batch.EtherPriceUSD = 0
+	} else if ether.USD == nil {
+		batch.EtherPriceUSD = 0
+	} else {
+		batch.EtherPriceUSD = *ether.USD
+	}
+	if batch.GasPrice == nil {
+		batch.GasPrice = big.NewInt(0)
+	}
 	// Insert to DB
 	return tracerr.Wrap(meddler.Insert(d, "batch", batch))
 }
@@ -188,7 +207,8 @@ func (hdb *HistoryDB) GetBatch(batchNum common.BatchNum) (*common.Batch, error) 
 		hdb.dbRead, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
 		batch.fees_collected, batch.fee_idxs_coordinator, batch.state_root,
 		batch.num_accounts, batch.last_idx, batch.exit_root, batch.forge_l1_txs_num,
-		batch.slot_num, batch.total_fees_usd FROM batch WHERE batch_num = $1;`,
+		batch.slot_num, batch.total_fees_usd, batch.gas_price, batch.gas_used, batch.ether_price_usd
+		FROM batch WHERE batch_num = $1;`,
 		batchNum,
 	)
 	return &batch, tracerr.Wrap(err)
@@ -213,7 +233,7 @@ func (hdb *HistoryDB) GetBatches(from, to common.BatchNum) ([]common.Batch, erro
 	err := meddler.QueryAll(
 		hdb.dbRead, &batches,
 		`SELECT batch_num, eth_block_num, forger_addr, fees_collected, fee_idxs_coordinator, 
-		state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num, total_fees_usd 
+		state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num, total_fees_usd, gas_price, gas_used, ether_price_usd 
 		FROM batch WHERE $1 <= batch_num AND batch_num < $2 ORDER BY batch_num;`,
 		from, to,
 	)
@@ -245,7 +265,8 @@ func (hdb *HistoryDB) GetLastBatch() (*common.Batch, error) {
 		hdb.dbRead, &batch, `SELECT batch.batch_num, batch.eth_block_num, batch.forger_addr,
 		batch.fees_collected, batch.fee_idxs_coordinator, batch.state_root,
 		batch.num_accounts, batch.last_idx, batch.exit_root, batch.forge_l1_txs_num,
-		batch.slot_num, batch.total_fees_usd FROM batch ORDER BY batch_num DESC LIMIT 1;`,
+		batch.slot_num, batch.total_fees_usd, batch.gas_price, batch.gas_used, batch.ether_price_usd
+		FROM batch ORDER BY batch_num DESC LIMIT 1;`,
 	)
 	return &batch, tracerr.Wrap(err)
 }
@@ -1279,6 +1300,7 @@ func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64) (*common.R
 	} else {
 		avgTransactionFee = 0
 	}
+
 	recommendedFee.ExistingAccount = math.Min(maxFeeUSD,
 		math.Max(avgTransactionFee, minFeeUSD))
 	recommendedFee.CreatesAccount = math.Min(maxFeeUSD,
@@ -1286,4 +1308,18 @@ func (hdb *HistoryDB) GetRecommendedFee(minFeeUSD, maxFeeUSD float64) (*common.R
 	recommendedFee.CreatesAccountInternal = math.Min(maxFeeUSD,
 		math.Max(CreateAccountInternalExtraFeePercentage*avgTransactionFee, minFeeUSD))
 	return &recommendedFee, nil
+}
+
+// GetLatestBatches returns the latest forged batches
+func (hdb *HistoryDB) GetLatestBatches(numElements int) ([]*common.Batch, error) {
+	batchesInfo := []*common.Batch{}
+	if err := meddler.QueryAll(
+		hdb.dbRead, &batchesInfo, `SELECT batch_num, eth_block_num, forger_addr, fees_collected,
+		fee_idxs_coordinator, state_root, num_accounts, last_idx, exit_root, forge_l1_txs_num, slot_num,
+		total_fees_usd, eth_tx_hash, gas_price, gas_used, ether_price_usd FROM batch
+		ORDER BY batch_num DESC LIMIT `+strconv.Itoa(numElements)+`;`,
+	); err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	return batchesInfo, nil
 }

@@ -10,7 +10,7 @@ Out = ["stdout"]
 Address = "0.0.0.0:8086"
 Explorer = true
 UpdateMetricsInterval = "10s"
-UpdateRecommendedFeeInterval = "10s"
+UpdateRecommendedFeeInterval = "15s"
 MaxSQLConnections = 100
 SQLConnectionTimeout = "2s"
 ReadTimeout = "30s"
@@ -116,4 +116,6 @@ Coordinator = true
 [RecommendedFeePolicy]
 PolicyType = "Static"
 StaticValue = 0.10
+BreakThreshold = 50
+NumLastBatchAvg = 10
 `
