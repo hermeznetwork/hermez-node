@@ -526,24 +526,24 @@ func (c *Coordinator) handleReorg(ctx context.Context, msg *MsgSyncReorg) error 
 	if c.pipeline != nil {
 		c.pipeline.SetSyncStatsVars(ctx, &msg.Stats, &msg.Vars)
 	}
-	if c.stats.Sync.LastBatch.ForgerAddr != c.cfg.ForgerAddress &&
-		(c.stats.Sync.LastBatch.StateRoot == nil || c.pipelineFromBatch.StateRoot == nil ||
-			c.stats.Sync.LastBatch.StateRoot.Cmp(c.pipelineFromBatch.StateRoot) != 0) {
-		// There's been a reorg and the batch state root from which the
-		// pipeline was started has changed (probably because it was in
-		// a block that was discarded), and it was sent by a different
-		// coordinator than us.  That batch may never be in the main
-		// chain, so we stop the pipeline  (it will be started again
-		// once the node is in sync).
-		log.Infow("Coordinator.handleReorg StopPipeline sync.LastBatch.ForgerAddr != cfg.ForgerAddr "+
-			"& sync.LastBatch.StateRoot != pipelineFromBatch.StateRoot",
-			"sync.LastBatch.StateRoot", c.stats.Sync.LastBatch.StateRoot,
-			"pipelineFromBatch.StateRoot", c.pipelineFromBatch.StateRoot)
-		c.txManager.DiscardPipeline(ctx, c.pipelineNum)
-		if err := c.handleStopPipeline(ctx, "reorg", 0); err != nil {
-			return tracerr.Wrap(err)
-		}
-	}
+	//if c.stats.Sync.LastBatch.ForgerAddr != c.cfg.ForgerAddress &&
+	//	(c.stats.Sync.LastBatch.StateRoot == nil || c.pipelineFromBatch.StateRoot == nil ||
+	//		c.stats.Sync.LastBatch.StateRoot.Cmp(c.pipelineFromBatch.StateRoot) != 0) {
+	//	// There's been a reorg and the batch state root from which the
+	//	// pipeline was started has changed (probably because it was in
+	//	// a block that was discarded), and it was sent by a different
+	//	// coordinator than us.  That batch may never be in the main
+	//	// chain, so we stop the pipeline  (it will be started again
+	//	// once the node is in sync).
+	//	log.Infow("Coordinator.handleReorg StopPipeline sync.LastBatch.ForgerAddr != cfg.ForgerAddr "+
+	//		"& sync.LastBatch.StateRoot != pipelineFromBatch.StateRoot",
+	//		"sync.LastBatch.StateRoot", c.stats.Sync.LastBatch.StateRoot,
+	//		"pipelineFromBatch.StateRoot", c.pipelineFromBatch.StateRoot)
+	//	c.txManager.DiscardPipeline(ctx, c.pipelineNum)
+	//	if err := c.handleStopPipeline(ctx, "reorg", 0); err != nil {
+	//		return tracerr.Wrap(err)
+	//	}
+	//}
 	return nil
 }
 
