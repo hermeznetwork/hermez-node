@@ -61,18 +61,12 @@ type Constants struct {
 	HermezAddress ethCommon.Address
 }
 
-type ProofServer struct {
-	PublicDns  string `json:"publicDns,omitempty"`
-	InstanceId string `json:"instanceId,omitempty"`
-}
-
 // NodeConfig contains the node config exposed in the API
 type NodeConfig struct {
-	MaxPoolTxs   uint32
-	MinFeeUSD    float64
-	MaxFeeUSD    float64
-	ForgeDelay   float64
-	ServerProofs []ProofServer
+	MaxPoolTxs uint32
+	MinFeeUSD  float64
+	MaxFeeUSD  float64
+	ForgeDelay float64
 }
 
 // NodeInfo contains information about he node used when serving the API
