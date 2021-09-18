@@ -254,11 +254,16 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		WDelayer: *sync.WDelayerConstants(),
 	}
 
+	nodeConfig, err := historyDB.GetNodeConfig()
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
 	hdbNodeCfg := historydb.NodeConfig{
-		MaxPoolTxs: cfg.Coordinator.L2DB.MaxTxs,
-		MinFeeUSD:  cfg.Coordinator.L2DB.MinFeeUSD,
-		MaxFeeUSD:  cfg.Coordinator.L2DB.MaxFeeUSD,
-		ForgeDelay: cfg.Coordinator.ForgeDelay.Duration.Seconds(),
+		MaxPoolTxs:   cfg.Coordinator.L2DB.MaxTxs,
+		MinFeeUSD:    cfg.Coordinator.L2DB.MinFeeUSD,
+		MaxFeeUSD:    cfg.Coordinator.L2DB.MaxFeeUSD,
+		ForgeDelay:   cfg.Coordinator.ForgeDelay.Duration.Seconds(),
+		ServerProofs: nodeConfig.ServerProofs,
 	}
 	if err := historyDB.SetNodeConfig(&hdbNodeCfg); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -275,6 +280,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	if err := historyDB.SetConstants(&hdbConsts); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
+
 	var etherScanService *etherscan.Service
 	if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
 		log.Info("EtherScan method detected in cofiguration file")
@@ -346,6 +352,16 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
+		var etherScanService *etherscan.Service
+		if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
+			log.Info("EtherScan method detected in cofiguration file")
+			etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
+				cfg.Coordinator.Etherscan.APIKey)
+		} else {
+			log.Info("EtherScan method not configured in config file")
+			etherScanService = nil
+		}
+
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs.URLs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs.URLs {
 			serverProofs[i] = prover.NewProofServerClient(serverProofCfg,
@@ -419,10 +435,11 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 					PurgeBlockDelay:      cfg.Coordinator.L2DB.PurgeBlockDelay,
 					InvalidateBlockDelay: cfg.Coordinator.L2DB.InvalidateBlockDelay,
 				},
-				ForgeBatchGasCost: cfg.Coordinator.EthClient.ForgeBatchGasCost,
-				VerifierIdx:       uint8(verifierIdx),
-				TxProcessorConfig: txProcessorCfg,
-				ProverReadTimeout: cfg.Coordinator.ProverWaitReadTimeout.Duration,
+				ForgeBatchGasCost:       cfg.Coordinator.EthClient.ForgeBatchGasCost,
+				VerifierIdx:             uint8(verifierIdx),
+				TxProcessorConfig:       txProcessorCfg,
+				ProverReadTimeout:       cfg.Coordinator.ProverWaitReadTimeout.Duration,
+				ProofServerPoolInterval: cfg.Coordinator.ProofServerPollInterval.Duration,
 			},
 			historyDB,
 			l2DB,

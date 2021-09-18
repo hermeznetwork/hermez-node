@@ -79,6 +79,14 @@ func (p *Pipeline) getErrAtBatchNum() common.BatchNum {
 	return p.errAtBatchNum
 }
 
+func createNewProversClients(rawProvers []historydb.ProofServer, poolInterval time.Duration) []prover.Client {
+	var provers []prover.Client
+	for _, proofServer := range rawProvers {
+		provers = append(provers, prover.NewProofServerClient(proofServer.PublicDns, poolInterval))
+	}
+	return provers
+}
+
 // NewPipeline creates a new Pipeline
 func NewPipeline(ctx context.Context,
 	cfg Config,
@@ -94,6 +102,13 @@ func NewPipeline(ctx context.Context,
 	provers []prover.Client,
 	scConsts *common.SCConsts,
 ) (*Pipeline, error) {
+	nodeConfig, err := historyDB.GetNodeConfig()
+	if err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("try get node config: %s", err.Error()))
+	}
+	newProvers := createNewProversClients(nodeConfig.ServerProofs, cfg.ProofServerPoolInterval)
+	provers = append(provers, newProvers...)
+
 	proversPool := NewProversPool(len(provers))
 	proversPoolSize := 0
 	for _, prover := range provers {

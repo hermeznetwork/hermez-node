@@ -175,9 +175,10 @@ type Config struct {
 	VerifierIdx uint8
 	// ForgeBatchGasCost contains the cost of each action in the
 	// ForgeBatch transaction.
-	ForgeBatchGasCost config.ForgeBatchGasCost
-	TxProcessorConfig txprocessor.Config
-	ProverReadTimeout time.Duration
+	ForgeBatchGasCost       config.ForgeBatchGasCost
+	TxProcessorConfig       txprocessor.Config
+	ProverReadTimeout       time.Duration
+	ProofServerPoolInterval time.Duration
 }
 
 func (c *Config) debugBatchStore(batchInfo *BatchInfo) {

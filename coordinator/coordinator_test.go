@@ -173,6 +173,7 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		EthClientAttemptsDelay:  100 * time.Millisecond,
 		TxManagerCheckInterval:  300 * time.Millisecond,
 		ProverReadTimeout:       20 * time.Second,
+		ProofServerPoolInterval: 3 * time.Second,
 		DebugBatchPath:          debugBatchPath,
 		MustForgeAtSlotDeadline: true,
 		Purger: PurgerCfg{
@@ -190,6 +191,15 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		},
 		VerifierIdx: 0,
 	}
+
+	proofServers := make([]historydb.ProofServer, 0)
+	nodeConfig := &historydb.NodeConfig{
+		MaxPoolTxs:   123,
+		MinFeeUSD:    0.5,
+		ServerProofs: proofServers,
+	}
+	err = modules.historyDB.SetNodeConfig(nodeConfig)
+	require.NoError(t, err)
 
 	serverProofs := []prover.Client{
 		&prover.MockClient{Delay: 300 * time.Millisecond},
@@ -434,6 +444,7 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	etherScanService, _ := etherscan.NewEtherscanService("", "")
 	modules := newTestModules(t)
+
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
 	_, err := ethClient.AuctionSetCoordinator(forger, "https://foo.bar")
 	require.NoError(t, err)
