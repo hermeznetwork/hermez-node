@@ -21,8 +21,8 @@ func (m migrationTest0012) InsertData(db *sqlx.DB) error {
 }
 
 func (m migrationTest0012) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB) {
-	const queryGetBatch = `SELECT COUNT(*) FROM provers;`
-	row := db.QueryRow(queryGetBatch)
+	const queryGetProvers = `SELECT COUNT(*) FROM provers;`
+	row := db.QueryRow(queryGetProvers)
 	var result int
 	assert.NoError(t, row.Scan(&result))
 	assert.Equal(t, 1, result)
@@ -36,11 +36,11 @@ func (m migrationTest0012) RunAssertsAfterMigrationUp(t *testing.T, db *sqlx.DB)
 
 func (m migrationTest0012) RunAssertsAfterMigrationDown(t *testing.T, db *sqlx.DB) {
 	// check that the batch inserted in previous step is persisted with same content
-	const queryGetTx = `SELECT COUNT(*) FROM provers;`
-	row := db.QueryRow(queryGetTx)
-	var result int
-	assert.NoError(t, row.Scan(&result))
-	assert.Equal(t, 0, result)
+	const queryGetProvers = `SELECT COUNT(*) FROM provers;`
+	_, err := db.Exec(queryGetProvers)
+	if assert.Error(t, err) {
+		assert.Equal(t, `pq: relation "provers" does not exist`, err.Error())
+	}
 }
 
 func TestMigration0012(t *testing.T) {
