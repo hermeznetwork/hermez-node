@@ -281,15 +281,6 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		return nil, tracerr.Wrap(err)
 	}
 
-	var etherScanService *etherscan.Service
-	if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
-		log.Info("EtherScan method detected in cofiguration file")
-		etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
-			cfg.Coordinator.Etherscan.APIKey)
-	} else {
-		log.Info("EtherScan method not configured in config file")
-		etherScanService = nil
-	}
 	stateAPIUpdater, err := stateapiupdater.NewUpdater(
 		historyDB,
 		&hdbNodeCfg,
