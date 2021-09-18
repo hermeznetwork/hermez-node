@@ -6,17 +6,18 @@ import (
 )
 
 type provers struct {
-	PublicDns string
+	PublicDNS string `meddler:"public_dns"`
 }
 
+// GetProvers get provers addresses saved on databases by hermez-proof-balancer tool
 func (hdb *HistoryDB) GetProvers() ([]string, error) {
 	var provers []*provers
 	err := meddler.QueryAll(
 		hdb.dbRead, &provers, "SELECT public_dns FROM provers",
 	)
-	var publicDns []string
+	var publicDNS []string
 	for _, prover := range provers {
-		publicDns = append(publicDns, prover.PublicDns)
+		publicDNS = append(publicDNS, prover.PublicDNS)
 	}
-	return publicDns, tracerr.Wrap(err)
+	return publicDNS, tracerr.Wrap(err)
 }
