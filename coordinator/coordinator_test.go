@@ -192,15 +192,6 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 		VerifierIdx: 0,
 	}
 
-	proofServers := make([]historydb.ProofServer, 0)
-	nodeConfig := &historydb.NodeConfig{
-		MaxPoolTxs:   123,
-		MinFeeUSD:    0.5,
-		ServerProofs: proofServers,
-	}
-	err = modules.historyDB.SetNodeConfig(nodeConfig)
-	require.NoError(t, err)
-
 	serverProofs := []prover.Client{
 		&prover.MockClient{Delay: 300 * time.Millisecond},
 		&prover.MockClient{Delay: 400 * time.Millisecond},

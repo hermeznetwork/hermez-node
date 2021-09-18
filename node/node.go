@@ -254,16 +254,11 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		WDelayer: *sync.WDelayerConstants(),
 	}
 
-	nodeConfig, err := historyDB.GetNodeConfig()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
-	}
 	hdbNodeCfg := historydb.NodeConfig{
-		MaxPoolTxs:   cfg.Coordinator.L2DB.MaxTxs,
-		MinFeeUSD:    cfg.Coordinator.L2DB.MinFeeUSD,
-		MaxFeeUSD:    cfg.Coordinator.L2DB.MaxFeeUSD,
-		ForgeDelay:   cfg.Coordinator.ForgeDelay.Duration.Seconds(),
-		ServerProofs: nodeConfig.ServerProofs,
+		MaxPoolTxs: cfg.Coordinator.L2DB.MaxTxs,
+		MinFeeUSD:  cfg.Coordinator.L2DB.MinFeeUSD,
+		MaxFeeUSD:  cfg.Coordinator.L2DB.MaxFeeUSD,
+		ForgeDelay: cfg.Coordinator.ForgeDelay.Duration.Seconds(),
 	}
 	if err := historyDB.SetNodeConfig(&hdbNodeCfg); err != nil {
 		return nil, tracerr.Wrap(err)
