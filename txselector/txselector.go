@@ -326,7 +326,6 @@ START_SELECTION:
 	// as the array will get smaller over iterations, but the order won't be affected
 	selectableTxs = sortL2Txs(selectableTxs, atomicFeeMap)
 	var wg sync.WaitGroup
-
 	// Iterate over l2Txs
 	// - check Nonces
 	// - check enough Balance for the Amount+Fee
@@ -473,193 +472,8 @@ func transformTxs(l2txs []common.PoolL2Tx) <-chan common.PoolL2Tx {
 	return out
 }
 
-func checkBatchGreaterThanMaxNumBatch(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
-	unforjableL2TxsChan chan<- common.PoolL2Tx,
-	l2txsChan <-chan common.PoolL2Tx,
-	nextBatchNum uint32, txsWg *sync.WaitGroup) <-chan common.PoolL2Tx {
-	out := make(chan common.PoolL2Tx)
-	go func() {
-		for l2tx := range l2txsChan {
-			if !isBatchGreaterThanMaxNumBatch(failedAGChan, errChan, unforjableL2TxsChan, l2tx, nextBatchNum) {
-				txsWg.Done()
-				continue
-			}
-			out <- l2tx
-		}
-		close(out)
-	}()
-
-	return out
-}
-
-func checkIsExitWithZeroAmount(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
-	unforjableL2TxsChan chan common.PoolL2Tx,
-	l2txsChan <-chan common.PoolL2Tx, txsWg *sync.WaitGroup) <-chan common.PoolL2Tx {
-	out := make(chan common.PoolL2Tx)
-	go func() {
-		for l2tx := range l2txsChan {
-			if !isExitWithZeroAmount(failedAGChan, errChan, unforjableL2TxsChan, l2tx) {
-				txsWg.Done()
-				continue
-			}
-			out <- l2tx
-		}
-		close(out)
-	}()
-	return out
-}
-
-func verifyTxs(failedAGChan chan failedAtomicGroup, errChan chan error, nonSelectedL2TxsChan chan common.PoolL2Tx,
-	l2txsChan <-chan common.PoolL2Tx,
-	txsL1ToBeProcessedChan chan *common.L1Tx, accAuthsChan chan []byte, l1UserFutureTxs []common.L1Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int, selectionConfig txprocessor.Config, tp *txprocessor.TxProcessor, txsel *TxSelector, wg, txsWg *sync.WaitGroup) chan common.PoolL2Tx {
-	out := make(chan common.PoolL2Tx)
-	go func() {
-		for l2tx := range l2txsChan {
-			var isTxCorrect bool
-			isTxCorrect = isEnoughSpace(failedAGChan, errChan, nonSelectedL2TxsChan, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig, l2tx)
-			if !isTxCorrect {
-				txsWg.Done()
-				continue
-			}
-
-			// Check enough Balance on sender
-			isTxCorrect = isEnoughBalanceOnSender(failedAGChan, errChan, nonSelectedL2TxsChan, l2tx, tp)
-			if !isTxCorrect {
-				txsWg.Done()
-				continue
-			}
-
-			// get Nonce & TokenID from the Account by l2Tx.FromIdx
-			accSender, err := tp.StateDB().GetAccount(l2tx.FromIdx)
-			if err != nil {
-				errChan <- tracerr.Wrap(err)
-				return
-			}
-			l2tx.TokenID = accSender.TokenID
-
-			// Check if Nonce is correct
-			isTxCorrect = isNonceCorrect(failedAGChan, errChan, nonSelectedL2TxsChan, l2tx, accSender)
-			if !isTxCorrect {
-				txsWg.Done()
-				continue
-			}
-
-			// if TokenID does not exist yet, create new L1CoordinatorTx to
-			// create the CoordinatorAccount for that TokenID, to receive
-			// the fees. Only in the case that there does not exist yet a
-			// pending L1CoordinatorTx to create the account for the
-			// Coordinator for that TokenID
-			var newL1CoordTx *common.L1Tx
-			newL1CoordTx, positionL1, err = txsel.coordAccountForTokenID(accSender.TokenID, positionL1)
-			if err != nil {
-				errChan <- tracerr.Wrap(err)
-				return
-			}
-			if newL1CoordTx != nil {
-				// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
-				// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
-				isTxCorrect = isEnoughSpaceForL1CoordTx(failedAGChan, errChan, nonSelectedL2TxsChan, l2tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig)
-				if !isTxCorrect {
-					txsWg.Done()
-					continue
-				}
-
-				// increase positionL1
-				positionL1++
-				//l1CoordinatorTxsChan <- *newL1CoordTx
-				accAuthsChan <- txsel.coordAccount.AccountCreationAuth
-
-				// process the L1CoordTx
-				wg.Add(1)
-				txsL1ToBeProcessedChan <- newL1CoordTx
-				nAlreadyProcessedL1Txs++
-			}
-
-			// If tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB,
-			// if so, tx is used.  If tx.ToIdx==0, for an L2Tx will be the
-			// case of TxToEthAddr or TxToBJJ, check if
-			// tx.ToEthAddr/tx.ToBJJ exist in localAccountsDB, if yes tx is
-			// used; if not, check if tx.ToEthAddr is in
-			// AccountCreationAuthDB, if so, tx is used and L1CoordinatorTx
-			// of CreateAccountAndDeposit is created. If tx.ToIdx==1, is a
-			// Exit type and is used.
-			var (
-				validL2Tx       *common.PoolL2Tx
-				l1CoordinatorTx *common.L1Tx
-				accAuth         *common.AccountCreationAuth
-			)
-			if l2tx.ToIdx == 0 { // ToEthAddr/ToBJJ case
-				validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect = verifyAndBuildForTxToEthAddrBJJ(
-					failedAGChan, errChan, nonSelectedL2TxsChan,
-					l2tx, txsel, selectionConfig, l1UserFutureTxs,
-					nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1)
-
-				if !isTxCorrect {
-					txsWg.Done()
-					continue
-				}
-
-				if l1CoordinatorTx != nil && validL2Tx != nil {
-					// If ToEthAddr == 0xff.. this means that we
-					// are handling a TransferToBJJ, which doesn't
-					// require an authorization because it doesn't
-					// contain a valid ethereum address.
-					// Otherwise only create the account if we have
-					// the corresponding authorization
-					if validL2Tx.ToEthAddr == common.FFAddr {
-						accAuthsChan <- common.EmptyEthSignature
-					} else if accAuth != nil {
-						accAuthsChan <- accAuth.Signature
-					}
-					//l1CoordinatorTxsChan <- *l1CoordinatorTx
-					positionL1++
-					// TODO: PROCESS TX
-					// process the L1CoordTx
-					wg.Add(1)
-					txsL1ToBeProcessedChan <- l1CoordinatorTx
-					nAlreadyProcessedL1Txs++
-				}
-				if validL2Tx == nil {
-					// Missing info on why this tx is not selected? Check l2Txs.Info at this point!
-					// If tx is atomic, restart process without txs from the atomic group
-					obj := common.TxSelectorError{
-						Message: l2tx.Info,
-						Code:    l2tx.ErrorCode,
-						Type:    l2tx.ErrorType,
-					}
-
-					if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
-						return
-					}
-					nonSelectedL2TxsChan <- l2tx
-					txsWg.Done()
-					continue
-				}
-			} else if l2tx.ToIdx >= common.IdxUserThreshold {
-				isTxCorrect = isToIdxExists(failedAGChan, errChan, nonSelectedL2TxsChan, l2tx, txsel)
-				if !isTxCorrect {
-					txsWg.Done()
-					continue
-				}
-			}
-
-			if newL1CoordTx != nil || l1CoordinatorTx != nil {
-				wg.Wait()
-			}
-			out <- l2tx
-			nAlreadyProcessedL2Txs++
-		}
-		close(out)
-	}()
-	return out
-}
-
 func (txsel *TxSelector) verifyTxs(
-	wg *sync.WaitGroup,
+	l1TxsWg *sync.WaitGroup,
 	verificationEnded chan int,
 	txsL1ToBeProcessedChan chan *common.L1Tx,
 	selectedL2TxsChan chan common.PoolL2Tx,
@@ -677,12 +491,14 @@ func (txsel *TxSelector) verifyTxs(
 	nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
 	var txsWg sync.WaitGroup
 	txsWg.Add(len(l2Txs))
+	verifier := NewVerifier(failedAGChan, errChan, unforjableL2TxsChan, nonSelectedL2TxsChan, selectedL2TxsChan, txsL1ToBeProcessedChan,
+		accAuthsChan, l2Txs, l1UserFutureTxs, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1, selectionConfig, tp, txsel, l1TxsWg, &txsWg)
+
 	txsChan := transformTxs(l2Txs)
-	txsChan = checkBatchGreaterThanMaxNumBatch(failedAGChan, errChan, unforjableL2TxsChan, txsChan, nextBatchNum, &txsWg)
-	txsChan = checkIsExitWithZeroAmount(failedAGChan, errChan, unforjableL2TxsChan, txsChan, &txsWg)
-	txsChan = verifyTxs(failedAGChan, errChan, nonSelectedL2TxsChan, txsChan, txsL1ToBeProcessedChan, accAuthsChan, l1UserFutureTxs,
-		nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1, selectionConfig, tp, txsel, wg, &txsWg)
-	processL2Txs(&txsWg, failedAGChan, errChan, selectedL2TxsChan, nonSelectedL2TxsChan, txsChan, txsel, tp)
+	txsChan = verifier.checkBatchGreaterThanMaxNumBatch(txsChan, nextBatchNum)
+	txsChan = verifier.checkIsExitWithZeroAmount(txsChan)
+	txsChan = verifier.verifyTxs(txsChan)
+	verifier.processL2Txs(txsChan)
 	go func() {
 		txsWg.Wait()
 		verificationEnded <- 1
