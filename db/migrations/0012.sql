@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS provers (
     instance_id VARCHAR(30) NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT timezone('utc', now()) NOT NULL,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT timezone('utc', now()) NOT NULL,
+    status VARCHAR(15) DEFAULT 'initializing' NOT NULL,
     PRIMARY KEY(instance_id)
 );
 -- +migrate StatementBegin
