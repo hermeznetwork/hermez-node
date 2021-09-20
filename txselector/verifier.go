@@ -485,7 +485,7 @@ func (v *verifier) verifyAndBuildForTxToEthAddrBJJ(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		v.nonSelectedL2TxsChan <- l2tx
+		v.unforjableL2TxsChan <- l2tx
 		return nil, nil, nil, false
 	}
 	return validL2Tx, l1CoordinatorTx, accAuth, true

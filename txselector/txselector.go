@@ -450,12 +450,11 @@ func (txsel *TxSelector) verifyTxs(
 
 	verifier.txsWg = &txsWg
 
-	verifier.
-		processL2Txs(
-			verifier.verifyTxs(
-				verifier.checkIsExitWithZeroAmount(
-					verifier.checkBatchGreaterThanMaxNumBatch(
-						verifier.transformTxs(l2Txs), nextBatchNum)), nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1))
+	verifier.processL2Txs(
+		verifier.verifyTxs(
+			verifier.checkIsExitWithZeroAmount(
+				verifier.checkBatchGreaterThanMaxNumBatch(
+					verifier.transformTxs(l2Txs), nextBatchNum)), nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1))
 	go func() {
 		verifier.txsWg.Wait()
 		verifier.verificationEnded <- 1
