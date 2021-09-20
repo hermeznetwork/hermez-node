@@ -1,6 +1,7 @@
 package statedb
 
 import (
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"testing"
 
@@ -28,9 +29,9 @@ func TestGetIdx(t *testing.T) {
 	pk2 := sk2.Public()
 	addr := ethCommon.HexToAddress("0x74E803744B7EEFc272E852f89a05D41515d431f2")
 	addr2 := ethCommon.HexToAddress("0x54A0706531cEa2ee8F09bAd22f604e377bb56948")
-	idx := common.Idx(1234)
-	idx2 := common.Idx(12345)
-	idx3 := common.Idx(1233)
+	idx := account.Idx(1234)
+	idx2 := account.Idx(12345)
+	idx3 := account.Idx(1233)
 
 	tokenID0 := common.TokenID(0)
 	tokenID1 := common.TokenID(1)
@@ -56,10 +57,10 @@ func TestGetIdx(t *testing.T) {
 	// expect to fail
 	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk.Compress(), tokenID0)
 	assert.NotNil(t, err)
-	assert.Equal(t, common.Idx(0), idxR)
+	assert.Equal(t, account.Idx(0), idxR)
 	idxR, err = sdb.GetIdxByEthAddrBJJ(addr, pk2.Compress(), tokenID0)
 	assert.NotNil(t, err)
-	assert.Equal(t, common.Idx(0), idxR)
+	assert.Equal(t, account.Idx(0), idxR)
 
 	// try to store bigger idx, will not affect as already exist a smaller
 	// Idx for that Addr & BJJ
@@ -82,7 +83,7 @@ func TestGetIdx(t *testing.T) {
 	idxR, err = sdb.GetIdxByEthAddrBJJ(addr2, pk2.Compress(), tokenID0)
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrIdxNotFound, tracerr.Unwrap(err))
-	assert.Equal(t, common.Idx(0), idxR)
+	assert.Equal(t, account.Idx(0), idxR)
 	// expect error when trying to get Idx by addr with not used TokenID
 	_, err = sdb.GetIdxByEthAddr(addr, tokenID1)
 	assert.NotNil(t, err)

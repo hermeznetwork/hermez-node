@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -31,13 +32,13 @@ type L1Tx struct {
 	UserOrigin bool `meddler:"user_origin"`
 	// FromIdx is used by L1Tx/Deposit to indicate the Idx receiver of the L1Tx.DepositAmount
 	// (deposit)
-	FromIdx          Idx                   `meddler:"from_idx,zeroisnull"`
-	EffectiveFromIdx Idx                   `meddler:"effective_from_idx,zeroisnull"`
-	FromEthAddr      ethCommon.Address     `meddler:"from_eth_addr,zeroisnull"`
+	FromIdx          account.Idx       `meddler:"from_idx,zeroisnull"`
+	EffectiveFromIdx account.Idx       `meddler:"effective_from_idx,zeroisnull"`
+	FromEthAddr      ethCommon.Address `meddler:"from_eth_addr,zeroisnull"`
 	FromBJJ          babyjub.PublicKeyComp `meddler:"from_bjj,zeroisnull"`
 	// ToIdx is ignored in L1Tx/Deposit, but used in the L1Tx/DepositAndTransfer
-	ToIdx   Idx      `meddler:"to_idx"`
-	TokenID TokenID  `meddler:"token_id"`
+	ToIdx   account.Idx `meddler:"to_idx"`
+	TokenID TokenID     `meddler:"token_id"`
 	Amount  *big.Int `meddler:"amount,bigint"`
 	// EffectiveAmount only applies to L1UserTx.
 	EffectiveAmount *big.Int `meddler:"effective_amount,bigintnull"`
@@ -81,20 +82,20 @@ func NewL1Tx(tx *L1Tx) (*L1Tx, error) {
 // SetType sets the type of the transaction
 func (tx *L1Tx) SetType() error {
 	if tx.FromIdx == 0 {
-		if tx.ToIdx == Idx(0) {
+		if tx.ToIdx == account.Idx(0) {
 			tx.Type = TxTypeCreateAccountDeposit
-		} else if tx.ToIdx >= IdxUserThreshold {
+		} else if tx.ToIdx >= account.IdxUserThreshold {
 			tx.Type = TxTypeCreateAccountDepositTransfer
 		} else {
 			return tracerr.Wrap(fmt.Errorf(
 				"Can not determine type of L1Tx, invalid ToIdx value: %d", tx.ToIdx))
 		}
-	} else if tx.FromIdx >= IdxUserThreshold {
-		if tx.ToIdx == Idx(0) {
+	} else if tx.FromIdx >= account.IdxUserThreshold {
+		if tx.ToIdx == account.Idx(0) {
 			tx.Type = TxTypeDeposit
-		} else if tx.ToIdx == Idx(1) {
+		} else if tx.ToIdx == account.Idx(1) {
 			tx.Type = TxTypeForceExit
-		} else if tx.ToIdx >= IdxUserThreshold {
+		} else if tx.ToIdx >= account.IdxUserThreshold {
 			if tx.DepositAmount.Int64() == int64(0) {
 				tx.Type = TxTypeForceTransfer
 			} else {
@@ -250,12 +251,12 @@ func L1TxFromDataAvailability(b []byte, nLevels uint32) (*L1Tx, error) {
 	amountBytes := b[idxLen*2 : idxLen*2+Float40BytesLength]
 
 	l1tx := L1Tx{}
-	fromIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(fromIdxBytes, 6))
+	fromIdx, err := account.IdxFromBytes(ethCommon.LeftPadBytes(fromIdxBytes, 6))
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	l1tx.FromIdx = fromIdx
-	toIdx, err := IdxFromBytes(ethCommon.LeftPadBytes(toIdxBytes, 6))
+	toIdx, err := account.IdxFromBytes(ethCommon.LeftPadBytes(toIdxBytes, 6))
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -355,7 +356,7 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 	pkCompB := b[20:52]
 	pkCompL := SwapEndianness(pkCompB)
 	copy(tx.FromBJJ[:], pkCompL)
-	fromIdx, err := IdxFromBytes(b[52:58])
+	fromIdx, err := account.IdxFromBytes(b[52:58])
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -372,7 +373,7 @@ func L1UserTxFromBytes(b []byte) (*L1Tx, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	tx.ToIdx, err = IdxFromBytes(b[72:78])
+	tx.ToIdx, err = account.IdxFromBytes(b[72:78])
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

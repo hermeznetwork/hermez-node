@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"testing"
@@ -62,15 +63,15 @@ func TestZKInputsHashTestVector0(t *testing.T) {
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(257))
+	_, err = sdb.GetAccount(account.Idx(257))
 	require.NotNil(t, err)
-	ptOut.ZKInputs.FeeIdxs[0] = common.Idx(256).BigInt()
+	ptOut.ZKInputs.FeeIdxs[0] = account.Idx(256).BigInt()
 
 	toHash, err := ptOut.ZKInputs.ToHashGlobalData()
 	assert.NoError(t, err)
@@ -117,19 +118,19 @@ func TestZKInputsHashTestVector1(t *testing.T) {
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = sdb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, users[1].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[1].Addr.Hex(), acc.EthAddr.Hex())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(258))
+	_, err = sdb.GetAccount(account.Idx(258))
 	require.NotNil(t, err)
-	ptOut.ZKInputs.FeeIdxs[0] = common.Idx(257).BigInt()
+	ptOut.ZKInputs.FeeIdxs[0] = account.Idx(257).BigInt()
 
 	toHash, err := ptOut.ZKInputs.ToHashGlobalData()
 	assert.NoError(t, err)
@@ -177,7 +178,7 @@ func TestZKInputsEmpty(t *testing.T) {
 
 	// 0. Generate a batch from the empty state with no transactions
 
-	coordIdxs := []common.Idx{}
+	coordIdxs := []account.Idx{}
 	l1UserTxs := []common.L1Tx{}
 	l1CoordTxs := []common.L1Tx{}
 	l2Txs := []common.PoolL2Tx{}
@@ -239,7 +240,7 @@ func TestZKInputsEmpty(t *testing.T) {
 
 	// 2. Generate a batch from a non-empty state with no transactions
 
-	coordIdxs = []common.Idx{}
+	coordIdxs = []account.Idx{}
 	l1UserTxs = []common.L1Tx{}
 	l1CoordTxs = []common.L1Tx{}
 	l2Txs = []common.PoolL2Tx{}
@@ -307,13 +308,13 @@ func TestZKInputs0(t *testing.T) {
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(257))
+	_, err = sdb.GetAccount(account.Idx(257))
 	require.NotNil(t, err)
 
 	// printZKInputs(t, ptOut.ZKInputs)
@@ -368,19 +369,19 @@ func TestZKInputs1(t *testing.T) {
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "15999899", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = sdb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, users[1].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[1].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16000101", acc.Balance.String())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(258))
+	_, err = sdb.GetAccount(account.Idx(258))
 	require.NotNil(t, err)
 
 	// printZKInputs(t, ptOut.ZKInputs)
@@ -436,29 +437,29 @@ func TestZKInputs2(t *testing.T) {
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "15997798", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = sdb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, users[1].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[1].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16000202", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(258))
+	acc, err = sdb.GetAccount(account.Idx(258))
 	require.NoError(t, err)
 	assert.Equal(t, users[2].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[2].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16001000", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(259))
+	acc, err = sdb.GetAccount(account.Idx(259))
 	require.NoError(t, err)
 	assert.Equal(t, users[3].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[3].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16001000", acc.Balance.String())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(260))
+	_, err = sdb.GetAccount(account.Idx(260))
 	require.NotNil(t, err)
 
 	// printZKInputs(t, ptOut.ZKInputs)
@@ -512,29 +513,29 @@ func TestZKInputs3(t *testing.T) {
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "15997798", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = sdb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, users[1].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[1].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16000202", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(258))
+	acc, err = sdb.GetAccount(account.Idx(258))
 	require.NoError(t, err)
 	assert.Equal(t, users[2].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[2].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16002000", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(259))
+	acc, err = sdb.GetAccount(account.Idx(259))
 	require.NoError(t, err)
 	assert.Equal(t, users[3].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[3].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16000000", acc.Balance.String())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(260))
+	_, err = sdb.GetAccount(account.Idx(260))
 	require.NotNil(t, err)
 
 	// printZKInputs(t, ptOut.ZKInputs)
@@ -588,29 +589,29 @@ func TestZKInputs4(t *testing.T) {
 	require.NoError(t, err)
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "15997798", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = sdb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, users[1].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[1].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16000202", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(258))
+	acc, err = sdb.GetAccount(account.Idx(258))
 	require.NoError(t, err)
 	assert.Equal(t, users[2].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[2].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "32001000", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(259))
+	acc, err = sdb.GetAccount(account.Idx(259))
 	require.NoError(t, err)
 	assert.Equal(t, users[3].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[3].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16001000", acc.Balance.String())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(260))
+	_, err = sdb.GetAccount(account.Idx(260))
 	require.NotNil(t, err)
 
 	// printZKInputs(t, ptOut.ZKInputs)
@@ -671,19 +672,19 @@ func TestZKInputs5(t *testing.T) {
 		ptOut.ZKInputs.Metadata.NewExitRootRaw.BigInt().String())
 
 	// check expected account keys values from tx inputs
-	acc, err := sdb.GetAccount(common.Idx(256))
+	acc, err := sdb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, users[0].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[0].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "15997798", acc.Balance.String())
-	acc, err = sdb.GetAccount(common.Idx(257))
+	acc, err = sdb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, users[1].BJJ.Public().Compress().String(), acc.BJJ.String())
 	assert.Equal(t, users[1].Addr.Hex(), acc.EthAddr.Hex())
 	assert.Equal(t, "16000202", acc.Balance.String())
 
 	// check that there no exist more accounts
-	_, err = sdb.GetAccount(common.Idx(258))
+	_, err = sdb.GetAccount(account.Idx(258))
 	require.NotNil(t, err)
 
 	// printZKInputs(t, ptOut.ZKInputs)
@@ -872,7 +873,7 @@ func TestZKInputs6(t *testing.T) {
 	require.NoError(t, err)
 
 	// Coordinator Idx where to send the fees
-	coordIdxs := []common.Idx{261, 263}
+	coordIdxs := []account.Idx{261, 263}
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
 	ptOut, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs,
@@ -937,7 +938,7 @@ func TestZKInputs6(t *testing.T) {
 
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
-	coordIdxs = []common.Idx{263}
+	coordIdxs = []account.Idx{263}
 	ptOut, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs,
 		blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
@@ -960,7 +961,7 @@ func TestZKInputs6(t *testing.T) {
 	log.Debug("(batch10) block:1 batch:2")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = []common.PoolL2Tx{}
-	coordIdxs = []common.Idx{}
+	coordIdxs = []account.Idx{}
 	ptOut, err = txProcessor.ProcessTxs(coordIdxs, l1UserTxs,
 		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)

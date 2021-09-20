@@ -2,13 +2,13 @@ package debugapi
 
 import (
 	"context"
+	account2 "github.com/hermeznetwork/hermez-node/common/account"
 	"net"
 	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
@@ -57,7 +57,7 @@ func (a *DebugAPI) handleAccount(c *gin.Context) {
 		badReq(err, c)
 		return
 	}
-	account, err := a.stateDB.LastGetAccount(common.Idx(uri.Idx))
+	account, err := a.stateDB.LastGetAccount(account2.Idx(uri.Idx))
 	if err != nil {
 		badReq(err, c)
 		return
@@ -66,7 +66,7 @@ func (a *DebugAPI) handleAccount(c *gin.Context) {
 }
 
 func (a *DebugAPI) handleAccounts(c *gin.Context) {
-	var accounts []common.Account
+	var accounts []account2.Account
 	if err := a.stateDB.LastRead(func(sdb *statedb.Last) error {
 		var err error
 		accounts, err = sdb.GetAccounts()

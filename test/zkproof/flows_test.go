@@ -1,6 +1,7 @@
 package zkproof
 
 import (
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"strconv"
@@ -640,7 +641,7 @@ func TestZKInputsAtomicTxs2(t *testing.T) {
 
 	// Batch 4
 	tx4 := common.L1Tx{
-		FromEthAddr:   common.FFAddr,
+		FromEthAddr:   account.FFAddr,
 		FromBJJ:       cWallet.BJJ.Public().Compress(),
 		TokenID:       0,
 		FromIdx:       0,
@@ -651,7 +652,7 @@ func TestZKInputsAtomicTxs2(t *testing.T) {
 		Type:          common.TxTypeCreateAccountDeposit,
 	}
 	tx5 := common.L1Tx{
-		FromEthAddr:   common.FFAddr,
+		FromEthAddr:   account.FFAddr,
 		FromBJJ:       dWallet.BJJ.Public().Compress(),
 		TokenID:       0,
 		FromIdx:       0,
@@ -677,12 +678,12 @@ func TestZKInputsAtomicTxs2(t *testing.T) {
 	// TX 6
 	tx6 := common.PoolL2Tx{
 		FromIdx:       256,
-		ToEthAddr:     common.FFAddr,
+		ToEthAddr:     account.FFAddr,
 		ToBJJ:         cWallet.BJJ.Public().Compress(),
 		Amount:        big.NewInt(100),
 		Nonce:         2,
 		RqFromIdx:     257,
-		RqToEthAddr:   common.FFAddr,
+		RqToEthAddr:   account.FFAddr,
 		RqToBJJ:       dWallet.BJJ.Public().Compress(),
 		RqAmount:      big.NewInt(50),
 		RqNonce:       1,
@@ -697,12 +698,12 @@ func TestZKInputsAtomicTxs2(t *testing.T) {
 	// TX 7
 	tx7 := common.PoolL2Tx{
 		FromIdx:       257,
-		ToEthAddr:     common.FFAddr,
+		ToEthAddr:     account.FFAddr,
 		ToBJJ:         dWallet.BJJ.Public().Compress(),
 		Amount:        big.NewInt(50),
 		Nonce:         1,
 		RqFromIdx:     256,
-		RqToEthAddr:   common.FFAddr,
+		RqToEthAddr:   account.FFAddr,
 		RqToBJJ:       cWallet.BJJ.Public().Compress(),
 		RqAmount:      big.NewInt(100),
 		RqNonce:       2,
@@ -831,7 +832,7 @@ func TestZKInputsAtomicTxsEdge(t *testing.T) {
 	require.NoError(t, err)
 	tx2.Signature = bWallet.BJJ.SignPoseidon(hashTx2).Compress()
 	// BatchBuilder build Batch
-	zki, err := bb.BuildBatch([]common.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx1, tx2})
+	zki, err := bb.BuildBatch([]account.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx1, tx2})
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[3], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
@@ -914,7 +915,7 @@ func TestZKInputsAtomicTxsEdge(t *testing.T) {
 	require.NoError(t, err)
 	tx6.Signature = aWallet.BJJ.SignPoseidon(hashTx6).Compress()
 	// BatchBuilder build Batch
-	zki, err = bb.BuildBatch([]common.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx3, tx4, tx5, tx6})
+	zki, err = bb.BuildBatch([]account.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx3, tx4, tx5, tx6})
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[4], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
@@ -997,7 +998,7 @@ func TestZKInputsAtomicTxsEdge(t *testing.T) {
 	require.NoError(t, err)
 	tx11.Signature = aWallet.BJJ.SignPoseidon(hashTx11).Compress()
 
-	zki, err = bb.BuildBatch([]common.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx7, tx8, tx9, tx10, tx11})
+	zki, err = bb.BuildBatch([]account.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx7, tx8, tx9, tx10, tx11})
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[5], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
@@ -1042,7 +1043,7 @@ func TestZKInputsAtomicTxsEdge(t *testing.T) {
 	require.NoError(t, err)
 	tx13.Signature = bWallet.BJJ.SignPoseidon(hashTx13).Compress()
 	// BatchBuilder build Batch
-	zki, err = bb.BuildBatch([]common.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx12, tx13})
+	zki, err = bb.BuildBatch([]account.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx12, tx13})
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[6], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
@@ -1123,7 +1124,7 @@ func TestZKInputsMaxNumBatch(t *testing.T) {
 	// Manually generate atomic txs
 	// Tx 0
 	tx0 := common.L1Tx{
-		FromEthAddr:   common.FFAddr,
+		FromEthAddr:   account.FFAddr,
 		FromBJJ:       cWallet.BJJ.Public().Compress(),
 		DepositAmount: big.NewInt(0),
 		Amount:        big.NewInt(0),
@@ -1144,7 +1145,7 @@ func TestZKInputsMaxNumBatch(t *testing.T) {
 	require.NoError(t, err)
 	tx1.Signature = aWallet.BJJ.SignPoseidon(hashTx1).Compress()
 	// BatchBuilder build Batch
-	zki, err := bb.BuildBatch([]common.Idx{257}, configBatch, nil, []common.L1Tx{tx0}, []common.PoolL2Tx{tx1})
+	zki, err := bb.BuildBatch([]account.Idx{257}, configBatch, nil, []common.L1Tx{tx0}, []common.PoolL2Tx{tx1})
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[3], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)
@@ -1152,7 +1153,7 @@ func TestZKInputsMaxNumBatch(t *testing.T) {
 	// TX 2
 	tx2 := common.PoolL2Tx{
 		FromIdx:     257,
-		ToEthAddr:   common.FFAddr,
+		ToEthAddr:   account.FFAddr,
 		ToBJJ:       cWallet.BJJ.Public().Compress(),
 		Amount:      big.NewInt(55),
 		Fee:         126,
@@ -1191,7 +1192,7 @@ func TestZKInputsMaxNumBatch(t *testing.T) {
 	require.NoError(t, err)
 	tx4.Signature = aWallet.BJJ.SignPoseidon(hashTx4).Compress()
 	// BatchBuilder build Batch
-	zki, err = bb.BuildBatch([]common.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx2, tx3, tx4})
+	zki, err = bb.BuildBatch([]account.Idx{256}, configBatch, nil, nil, []common.PoolL2Tx{tx2, tx3, tx4})
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoots[4], bb.LocalStateDB().MT.Root().BigInt().String())
 	sendProofAndCheckResp(t, zki)

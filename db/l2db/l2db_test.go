@@ -3,6 +3,7 @@ package l2db
 import (
 	"database/sql"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"os"
 	"testing"
@@ -30,7 +31,7 @@ var historyDB *historydb.HistoryDB
 var tc *til.Context
 var tokens map[common.TokenID]historydb.TokenWithUSD
 
-var accs map[common.Idx]common.Account
+var accs map[account.Idx]account.Account
 
 func TestMain(m *testing.M) {
 	// init DB
@@ -97,7 +98,7 @@ func prepareHistoryDB(historyDB *historydb.HistoryDB) error {
 
 	tokens = make(map[common.TokenID]historydb.TokenWithUSD)
 	// tokensValue = make(map[common.TokenID]float64)
-	accs = make(map[common.Idx]common.Account)
+	accs = make(map[account.Idx]account.Account)
 	now := time.Now().UTC()
 	// Add all blocks except for the last one
 	for i := range blocks[:len(blocks)-1] {
@@ -180,12 +181,12 @@ func TestAddTxTest(t *testing.T) {
 	fetchedTx, err := l2DB.GetTx(tx.TxID)
 	require.NoError(t, err)
 	assert.Equal(t, fetchedTx.ToIdx, tx.ToIdx)
-	tx.ToIdx = common.Idx(1)
+	tx.ToIdx = account.Idx(1)
 	err = l2DBWithACC.UpdateTxAPI(tx)
 	require.NoError(t, err)
 	fetchedTx, err = l2DB.GetTx(tx.TxID)
 	require.NoError(t, err)
-	assert.Equal(t, fetchedTx.ToIdx, common.Idx(1))
+	assert.Equal(t, fetchedTx.ToIdx, account.Idx(1))
 }
 
 func TestAddTxAPI(t *testing.T) {
@@ -341,7 +342,7 @@ func TestL2DB_GetPoolTxs(t *testing.T) {
 	poolL2Txs, err := generatePoolL2Txs()
 	require.NoError(t, err)
 	state := common.PoolL2TxState("pend")
-	idx := common.Idx(256)
+	idx := account.Idx(256)
 	fromItem := uint(0)
 	limit := uint(10)
 	var pendingTxs []*common.PoolL2Tx
@@ -482,10 +483,10 @@ func TestInvalidateOldNonces(t *testing.T) {
 	poolL2Txs, err := generatePoolL2Txs()
 	require.NoError(t, err)
 	// Update Accounts currentNonce
-	var updateAccounts []common.IdxNonce
+	var updateAccounts []account.IdxNonce
 	var currentNonce = nonce.Nonce(1)
 	for i := range accs {
-		updateAccounts = append(updateAccounts, common.IdxNonce{
+		updateAccounts = append(updateAccounts, account.IdxNonce{
 			Idx:   accs[i].Idx,
 			Nonce: nonce.Nonce(currentNonce),
 		})
@@ -834,12 +835,12 @@ func TestAddGet(t *testing.T) {
 	txs[0].ToBJJ = babyjub.PublicKeyComp{}
 	// 1. Has ToIdx >= 256 && ToEthAddr != 0 && ToBJJ != 0
 	require.GreaterOrEqual(t, int(txs[1].ToIdx), 256)
-	txs[1].ToEthAddr = common.FFAddr
+	txs[1].ToEthAddr = account.FFAddr
 	sk := babyjub.NewRandPrivKey()
 	txs[1].ToBJJ = sk.Public().Compress()
 	// 2. Has ToIdx == 0 && ToEthAddr != 0 && ToBJJ != 0
 	txs[2].ToIdx = 0
-	txs[2].ToEthAddr = common.FFAddr
+	txs[2].ToEthAddr = account.FFAddr
 	sk = babyjub.NewRandPrivKey()
 	txs[2].ToBJJ = sk.Public().Compress()
 

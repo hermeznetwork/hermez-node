@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strings"
 
@@ -139,10 +140,10 @@ type Tx struct {
 	IsL1        bool     `meddler:"is_l1"`
 	TxID        TxID     `meddler:"id"`
 	Type        TxType   `meddler:"type"`
-	Position    int      `meddler:"position"`
-	FromIdx     Idx      `meddler:"from_idx"`
-	ToIdx       Idx      `meddler:"to_idx"`
-	Amount      *big.Int `meddler:"amount,bigint"`
+	Position int         `meddler:"position"`
+	FromIdx  account.Idx `meddler:"from_idx"`
+	ToIdx    account.Idx `meddler:"to_idx"`
+	Amount   *big.Int    `meddler:"amount,bigint"`
 	AmountFloat float64  `meddler:"amount_f"`
 	TokenID     TokenID  `meddler:"token_id"`
 	USD         *float64 `meddler:"amount_usd"`

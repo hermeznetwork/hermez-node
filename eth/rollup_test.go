@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"testing"
 
@@ -130,7 +131,7 @@ func TestRollupForgeBatch(t *testing.T) {
 	// Forge Batch 1
 	args := new(RollupForgeBatchArgs)
 	// When encoded, 64 times the 0 idx means that no idx to collect fees is specified.
-	args.FeeIdxCoordinator = []common.Idx{}
+	args.FeeIdxCoordinator = []account.Idx{}
 	l1CoordinatorBytes, err := hex.DecodeString(
 		"1c660323607bb113e586183609964a333d07ebe4bef3be82ec13af453bae9590bd7711cdb6abf" +
 			"42f176eadfbe5506fbef5e092e5543733f91b0061d9a7747fa10694a915a6470fa230" +
@@ -301,8 +302,8 @@ func TestRollupL1UserTxETHCreateAccountDeposit(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
 		FromBJJ:       key.BJJPublicKey.Compress(),
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDUint32),
 		Amount:        big.NewInt(0),
@@ -335,8 +336,8 @@ func TestRollupL1UserTxERC20CreateAccountDeposit(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
 		FromBJJ:       key.BJJPublicKey.Compress(),
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenHEZID),
 		Amount:        big.NewInt(0),
@@ -369,8 +370,8 @@ func TestRollupL1UserTxERC20PermitCreateAccountDeposit(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
 		FromBJJ:       key.BJJPublicKey.Compress(),
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDERC777),
 		Amount:        big.NewInt(0),
@@ -403,8 +404,8 @@ func TestRollupL1UserTxETHDeposit(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
 		FromBJJ:       common.EmptyBJJComp,
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDUint32),
 		Amount:        big.NewInt(0),
@@ -435,8 +436,8 @@ func TestRollupL1UserTxERC20Deposit(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
 		FromBJJ:       common.EmptyBJJComp,
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenHEZID),
 		Amount:        big.NewInt(0),
@@ -466,8 +467,8 @@ func TestRollupL1UserTxERC20PermitDeposit(t *testing.T) {
 	toIdxInt64 := int64(0)
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDERC777),
 		Amount:        big.NewInt(0),
@@ -499,8 +500,8 @@ func TestRollupL1UserTxETHDepositTransfer(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("100000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDUint32),
 		Amount:        amount,
@@ -531,8 +532,8 @@ func TestRollupL1UserTxERC20DepositTransfer(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("100000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenHEZID),
 		Amount:        amount,
@@ -563,8 +564,8 @@ func TestRollupL1UserTxERC20PermitDepositTransfer(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("100000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDERC777),
 		Amount:        amount,
@@ -596,8 +597,8 @@ func TestRollupL1UserTxETHCreateAccountDepositTransfer(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("20000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDUint32),
 		Amount:        amount,
@@ -628,8 +629,8 @@ func TestRollupL1UserTxERC20CreateAccountDepositTransfer(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("30000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenHEZID),
 		Amount:        amount,
@@ -660,8 +661,8 @@ func TestRollupL1UserTxERC20PermitCreateAccountDepositTransfer(t *testing.T) {
 	depositAmount, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	amount, _ := new(big.Int).SetString("40000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: depositAmount,
 		TokenID:       common.TokenID(tokenIDERC777),
 		Amount:        amount,
@@ -692,8 +693,8 @@ func TestRollupL1UserTxETHForceTransfer(t *testing.T) {
 	tokenIDUint32 := uint32(0)
 	amount, _ := new(big.Int).SetString("20000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: big.NewInt(0),
 		TokenID:       common.TokenID(tokenIDUint32),
 		Amount:        amount,
@@ -723,8 +724,8 @@ func TestRollupL1UserTxERC20ForceTransfer(t *testing.T) {
 	toIdxInt64 := int64(258)
 	amount, _ := new(big.Int).SetString("10000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: big.NewInt(0),
 		TokenID:       common.TokenID(tokenHEZID),
 		Amount:        amount,
@@ -754,8 +755,8 @@ func TestRollupL1UserTxERC20PermitForceTransfer(t *testing.T) {
 	toIdxInt64 := int64(260)
 	amount, _ := new(big.Int).SetString("30000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: big.NewInt(0),
 		TokenID:       common.TokenID(tokenIDERC777),
 		Amount:        amount,
@@ -786,8 +787,8 @@ func TestRollupL1UserTxETHForceExit(t *testing.T) {
 	tokenIDUint32 := uint32(0)
 	amount, _ := new(big.Int).SetString("10000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: big.NewInt(0),
 		TokenID:       common.TokenID(tokenIDUint32),
 		Amount:        amount,
@@ -817,8 +818,8 @@ func TestRollupL1UserTxERC20ForceExit(t *testing.T) {
 	toIdxInt64 := int64(1)
 	amount, _ := new(big.Int).SetString("20000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: big.NewInt(0),
 		TokenID:       common.TokenID(tokenHEZID),
 		Amount:        amount,
@@ -846,12 +847,12 @@ func TestRollupL1UserTxERC20PermitForceExit(t *testing.T) {
 	require.NoError(t, err)
 	fromIdxInt64 := int64(258)
 	toIdxInt64 := int64(1)
-	fromIdx := new(common.Idx)
+	fromIdx := new(account.Idx)
 	*fromIdx = 0
 	amount, _ := new(big.Int).SetString("30000000000000000000", 10)
 	l1Tx := common.L1Tx{
-		FromIdx:       common.Idx(fromIdxInt64),
-		ToIdx:         common.Idx(toIdxInt64),
+		FromIdx:       account.Idx(fromIdxInt64),
+		ToIdx:         account.Idx(toIdxInt64),
 		DepositAmount: big.NewInt(0),
 		TokenID:       common.TokenID(tokenIDERC777),
 		Amount:        amount,
@@ -888,7 +889,7 @@ func TestRollupForgeBatch2(t *testing.T) {
 	// Forge Batch 3
 	args := new(RollupForgeBatchArgs)
 	// When encoded, 64 times the 0 idx means that no idx to collect fees is specified.
-	args.FeeIdxCoordinator = []common.Idx{}
+	args.FeeIdxCoordinator = []account.Idx{}
 	args.L1CoordinatorTxs = argsForge.L1CoordinatorTxs
 	args.L1CoordinatorTxsAuths = argsForge.L1CoordinatorTxsAuths
 	for i := 0; i < len(L1UserTxs); i++ {

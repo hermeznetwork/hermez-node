@@ -3,6 +3,7 @@ package statedb
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -38,7 +39,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-func newAccount(t *testing.T, i int) *common.Account {
+func newAccount(t *testing.T, i int) *account.Account {
 	var sk babyjub.PrivateKey
 	_, err := hex.Decode(sk[:],
 		[]byte("0001020304050607080900010203040506070809000102030405060708090001"))
@@ -49,8 +50,8 @@ func newAccount(t *testing.T, i int) *common.Account {
 	require.NoError(t, err)
 	address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
-	return &common.Account{
-		Idx:     common.Idx(256 + i),
+	return &account.Account{
+		Idx:     account.Idx(256 + i),
 		TokenID: common.TokenID(i),
 		Nonce:   nonce.Nonce(i),
 		Balance: big.NewInt(1000),
@@ -207,13 +208,13 @@ func TestStateDBWithoutMT(t *testing.T) {
 	require.NoError(t, err)
 
 	// create test accounts
-	var accounts []*common.Account
+	var accounts []*account.Account
 	for i := 0; i < 4; i++ {
 		accounts = append(accounts, newAccount(t, i))
 	}
 
 	// get non-existing account, expecting an error
-	unexistingAccount := common.Idx(1)
+	unexistingAccount := account.Idx(1)
 	_, err = sdb.GetAccount(unexistingAccount)
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
@@ -232,22 +233,22 @@ func TestStateDBWithoutMT(t *testing.T) {
 	}
 
 	// try already existing idx and get error
-	existingAccount := common.Idx(256)
+	existingAccount := account.Idx(256)
 	_, err = sdb.GetAccount(existingAccount) // check that exist
 	require.NoError(t, err)
-	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
+	_, err = sdb.CreateAccount(account.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrAccountAlreadyExists, tracerr.Unwrap(err))
 
 	// update accounts
 	for i := 0; i < len(accounts); i++ {
 		accounts[i].Nonce = accounts[i].Nonce + 1
-		existingAccount = common.Idx(i)
+		existingAccount = account.Idx(i)
 		_, err = sdb.UpdateAccount(existingAccount, accounts[i])
 		require.NoError(t, err)
 	}
 
-	_, err = sdb.MTGetProof(common.Idx(1))
+	_, err = sdb.MTGetProof(account.Idx(1))
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrStateDBWithoutMT, tracerr.Unwrap(err))
 
@@ -263,13 +264,13 @@ func TestStateDBWithMT(t *testing.T) {
 	require.NoError(t, err)
 
 	// create test accounts
-	var accounts []*common.Account
+	var accounts []*account.Account
 	for i := 0; i < 20; i++ {
 		accounts = append(accounts, newAccount(t, i))
 	}
 
 	// get non-existing account, expecting an error
-	_, err = sdb.GetAccount(common.Idx(1))
+	_, err = sdb.GetAccount(account.Idx(1))
 	assert.NotNil(t, err)
 	assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
 
@@ -286,13 +287,13 @@ func TestStateDBWithMT(t *testing.T) {
 	}
 
 	// try already existing idx and get error
-	_, err = sdb.GetAccount(common.Idx(256)) // check that exist
+	_, err = sdb.GetAccount(account.Idx(256)) // check that exist
 	require.NoError(t, err)
-	_, err = sdb.CreateAccount(common.Idx(256), accounts[1]) // check that can not be created twice
+	_, err = sdb.CreateAccount(account.Idx(256), accounts[1]) // check that can not be created twice
 	assert.NotNil(t, err)
 	assert.Equal(t, ErrAccountAlreadyExists, tracerr.Unwrap(err))
 
-	_, err = sdb.MTGetProof(common.Idx(256))
+	_, err = sdb.MTGetProof(account.Idx(256))
 	require.NoError(t, err)
 
 	// update accounts
@@ -301,7 +302,7 @@ func TestStateDBWithMT(t *testing.T) {
 		_, err = sdb.UpdateAccount(accounts[i].Idx, accounts[i])
 		require.NoError(t, err)
 	}
-	a, err := sdb.GetAccount(common.Idx(256)) // check that account value has been updated
+	a, err := sdb.GetAccount(account.Idx(256)) // check that account value has been updated
 	require.NoError(t, err)
 	assert.Equal(t, accounts[0].Nonce, a.Nonce)
 
@@ -322,7 +323,7 @@ func TestCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	// create test accounts
-	var accounts []*common.Account
+	var accounts []*account.Account
 	for i := 0; i < 10; i++ {
 		accounts = append(accounts, newAccount(t, i))
 	}
@@ -455,7 +456,7 @@ func TestStateDBGetAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// create test accounts
-	var accounts []common.Account
+	var accounts []account.Account
 	for i := 0; i < 16; i++ {
 		account := newAccount(t, i)
 		accounts = append(accounts, *account)
@@ -521,7 +522,7 @@ func TestCheckAccountsTreeTestVectors(t *testing.T) {
 	bjjPoint3Comp := babyjub.PackSignY(false, ay3)
 	require.NoError(t, err)
 	bjj3 := babyjub.PublicKeyComp(bjjPoint3Comp)
-	accounts := []*common.Account{
+	accounts := []*account.Account{
 		{
 			Idx:     1,
 			TokenID: 0xFFFFFFFF,
@@ -685,7 +686,7 @@ func TestCurrentIdx(t *testing.T) {
 	require.NoError(t, err)
 
 	idx := sdb.CurrentIdx()
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	sdb.Close()
 
@@ -693,13 +694,13 @@ func TestCurrentIdx(t *testing.T) {
 	require.NoError(t, err)
 
 	idx = sdb.CurrentIdx()
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	err = sdb.MakeCheckpoint()
 	require.NoError(t, err)
 
 	idx = sdb.CurrentIdx()
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	sdb.Close()
 
@@ -707,7 +708,7 @@ func TestCurrentIdx(t *testing.T) {
 	require.NoError(t, err)
 
 	idx = sdb.CurrentIdx()
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	sdb.Close()
 }

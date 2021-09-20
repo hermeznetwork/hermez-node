@@ -3,6 +3,7 @@ package debugapi
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -26,7 +27,7 @@ func init() {
 	log.Init("debug", []string{"stdout"})
 }
 
-func newAccount(t *testing.T, i int) *common.Account {
+func newAccount(t *testing.T, i int) *account.Account {
 	var sk babyjub.PrivateKey
 	copy(sk[:], []byte(strconv.Itoa(i))) // only for testing
 	pk := sk.Public()
@@ -37,8 +38,8 @@ func newAccount(t *testing.T, i int) *common.Account {
 	key.Curve = ethCrypto.S256()
 	address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
-	return &common.Account{
-		Idx:     common.Idx(256 + i),
+	return &account.Account{
+		Idx:     account.Idx(256 + i),
 		TokenID: common.TokenID(i),
 		Nonce:   nonce.Nonce(i),
 		Balance: big.NewInt(1000),
@@ -67,7 +68,7 @@ func TestDebugAPI(t *testing.T) {
 		require.Nil(t, err)
 	}()
 
-	var accounts []common.Account
+	var accounts []account.Account
 	for i := 0; i < 16; i++ {
 		account := newAccount(t, i)
 		accounts = append(accounts, *account)
@@ -95,7 +96,7 @@ func TestDebugAPI(t *testing.T) {
 	assert.Equal(t, "5705124827515775272209811244650636195377535115082365089650934878384850534213",
 		mtroot.String())
 
-	var accountAPI common.Account
+	var accountAPI account.Account
 	req, err = sling.New().Get(url).
 		Path(fmt.Sprintf("sdb/accounts/%v", accounts[0].Idx)).
 		ReceiveSuccess(&accountAPI)
@@ -103,7 +104,7 @@ func TestDebugAPI(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, accounts[0], accountAPI)
 
-	var accountsAPI []common.Account
+	var accountsAPI []account.Account
 	req, err = sling.New().Get(url).Path("sdb/accounts").ReceiveSuccess(&accountsAPI)
 	require.Equal(t, http.StatusOK, req.StatusCode)
 	require.Nil(t, err)

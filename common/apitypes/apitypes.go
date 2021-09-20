@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strconv"
 	"strings"
@@ -111,7 +112,7 @@ type StrHezEthAddr ethCommon.Address
 // UnmarshalText unmarshals a StrHezEthAddr
 func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
 	if len(text) == 0 {
-		*s = StrHezEthAddr(common.EmptyAddr)
+		*s = StrHezEthAddr(account.EmptyAddr)
 		return nil
 	}
 	withoutHez := strings.TrimPrefix(string(text), "hez:")
@@ -215,7 +216,7 @@ func (s *StrHezBJJ) UnmarshalText(text []byte) error {
 type HezIdx string
 
 // StrHezIdx is used to unmarshal HezIdx directly into an alias of common.Idx
-type StrHezIdx common.Idx
+type StrHezIdx account.Idx
 
 // UnmarshalText unmarshals a StrHezIdx
 func (s *StrHezIdx) UnmarshalText(text []byte) error {
@@ -229,7 +230,7 @@ func (s *StrHezIdx) UnmarshalText(text []byte) error {
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	*s = StrHezIdx(common.Idx(idxInt))
+	*s = StrHezIdx(account.Idx(idxInt))
 	return nil
 }
 

@@ -3,6 +3,7 @@ package common
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -75,6 +76,6 @@ func TestStrHezIdx(t *testing.T) {
 	from := []byte(`{"I":"hez:foo:4"}`)
 	to := &testStrHezIdx{}
 	assert.NoError(t, json.Unmarshal(from, to))
-	assert.Equal(t, Idx(4), Idx(to.I.Idx))
+	assert.Equal(t, account.Idx(4), account.Idx(to.I.Idx))
 	assert.Equal(t, "foo", to.I.TokenSymbol)
 }

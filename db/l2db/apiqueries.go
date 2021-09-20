@@ -2,6 +2,7 @@ package l2db
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -86,7 +87,7 @@ func (l2db *L2DB) checkFeeIsInRange(tx *common.PoolL2Tx) error {
 }
 
 // UpdateTxByIdxAndNonceAPI upadte PoolL2Tx regular transaction in the pool by account idx and nonce
-func (l2db *L2DB) UpdateTxByIdxAndNonceAPI(idx common.Idx, nonce nonce.Nonce, tx *common.PoolL2Tx) error {
+func (l2db *L2DB) UpdateTxByIdxAndNonceAPI(idx account.Idx, nonce nonce.Nonce, tx *common.PoolL2Tx) error {
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -231,9 +232,9 @@ type GetPoolTxsAPIRequest struct {
 	ToBjj       *babyjub.PublicKeyComp
 	TxType      *common.TxType
 	TokenID     *common.TokenID
-	Idx         *common.Idx
-	FromIdx     *common.Idx
-	ToIdx       *common.Idx
+	Idx         *account.Idx
+	FromIdx     *account.Idx
+	ToIdx       *account.Idx
 	State       *common.PoolL2TxState
 
 	FromItem *uint

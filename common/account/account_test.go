@@ -1,8 +1,9 @@
-package common
+package account
 
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common"
 	"math"
 	"math/big"
 	"strings"
@@ -47,7 +48,7 @@ func TestIdxParser(t *testing.T) {
 	i = Idx(281474976710656)
 	iBytes, err = i.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrIdxOverflow, tracerr.Unwrap(err))
+	assert.Equal(t, common.ErrIdxOverflow, tracerr.Unwrap(err))
 }
 
 func TestNonceParser(t *testing.T) {
@@ -83,7 +84,7 @@ func TestAccount(t *testing.T) {
 	pk := sk.Public()
 
 	account := &Account{
-		TokenID: TokenID(1),
+		TokenID: common.TokenID(1),
 		Nonce:   nonce.Nonce(1234),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
@@ -127,7 +128,7 @@ func TestAccountLoop(t *testing.T) {
 		address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
 		account := &Account{
-			TokenID: TokenID(i),
+			TokenID: common.TokenID(i),
 			Nonce:   nonce.Nonce(i),
 			Balance: big.NewInt(1000),
 			BJJ:     pk.Compress(),
@@ -164,7 +165,7 @@ func TestAccountLoopRandom(t *testing.T) {
 		address := ethCrypto.PubkeyToAddress(key.PublicKey)
 
 		account := &Account{
-			TokenID: TokenID(i),
+			TokenID: common.TokenID(i),
 			Nonce:   nonce.Nonce(i),
 			Balance: big.NewInt(1000),
 			BJJ:     pk.Compress(),
@@ -172,7 +173,7 @@ func TestAccountLoopRandom(t *testing.T) {
 		}
 		b, err := account.Bytes()
 		assert.NoError(t, err)
-		a1, err := AccountFromBytes(b)
+		a1, err := account.AccountFromBytes(b)
 		assert.NoError(t, err)
 		assert.Equal(t, account, a1)
 
@@ -183,7 +184,7 @@ func TestAccountLoopRandom(t *testing.T) {
 		assert.True(t, cryptoUtils.CheckBigIntInField(e[2]))
 		assert.True(t, cryptoUtils.CheckBigIntInField(e[3]))
 
-		a2, err := AccountFromBigInts(e)
+		a2, err := account.AccountFromBigInts(e)
 		assert.NoError(t, err)
 		assert.Equal(t, account, a2)
 	}
@@ -208,7 +209,7 @@ func TestAccountHashValue(t *testing.T) {
 	pk := sk.Public()
 
 	account := &Account{
-		TokenID: TokenID(1),
+		TokenID: common.TokenID(1),
 		Nonce:   nonce.Nonce(1234),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
@@ -265,12 +266,12 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	bjjPoint, err = babyjub.PointFromSignAndY(false, ay)
 	require.NoError(t, err)
 	bjj = babyjub.PublicKey(*bjjPoint)
-	account = &Account{
-		TokenID: 0,
-		BJJ:     bjj.Compress(),
-		EthAddr: ethCommon.HexToAddress("0x00"),
-		Nonce:   nonce.Nonce(0),
-		Balance: big.NewInt(0),
+	account = &account.Account{
+		common.TokenID: 0,
+		BJJ:            bjj.Compress(),
+		EthAddr:        ethCommon.HexToAddress("0x00"),
+		Nonce:          nonce.Nonce(0),
+		Balance:        big.NewInt(0),
 	}
 	v, err = account.HashValue()
 	assert.NoError(t, err)
@@ -283,12 +284,12 @@ func TestAccountHashValueTestVectors(t *testing.T) {
 	bjjPoint, err = babyjub.PointFromSignAndY(false, ay)
 	require.NoError(t, err)
 	bjj = babyjub.PublicKey(*bjjPoint)
-	account = &Account{
-		TokenID: 3,
-		BJJ:     bjj.Compress(),
-		EthAddr: ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
-		Nonce:   nonce.Nonce(129),
-		Balance: bigFromStr("42000000000000000000", 10),
+	account = &account.Account{
+		common.TokenID: 3,
+		BJJ:            bjj.Compress(),
+		EthAddr:        ethCommon.HexToAddress("0xA3C88ac39A76789437AED31B9608da72e1bbfBF9"),
+		Nonce:          nonce.Nonce(129),
+		Balance:        bigFromStr("42000000000000000000", 10),
 	}
 	e, err = account.BigInts()
 	assert.NoError(t, err)
@@ -319,14 +320,14 @@ func TestAccountErrNotInFF(t *testing.T) {
 	e = [NLeafElems]*big.Int{z, z, r, r}
 	_, err = AccountFromBigInts(e)
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrNotInFF, tracerr.Unwrap(err))
+	assert.Equal(t, common.ErrNotInFF, tracerr.Unwrap(err))
 
 	// Q+1 should give error
 	r = new(big.Int).Add(cryptoConstants.Q, big.NewInt(1))
 	e = [NLeafElems]*big.Int{z, z, r, r}
 	_, err = AccountFromBigInts(e)
 	assert.NotNil(t, err)
-	assert.Equal(t, ErrNotInFF, tracerr.Unwrap(err))
+	assert.Equal(t, common.ErrNotInFF, tracerr.Unwrap(err))
 }
 
 func TestAccountErrNumOverflowNonce(t *testing.T) {
@@ -338,7 +339,7 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 
 	// check limit
 	account := &Account{
-		TokenID: TokenID(1),
+		TokenID: common.TokenID(1),
 		Nonce:   nonce.Nonce(math.Pow(2, 40) - 1),
 		Balance: big.NewInt(1000),
 		BJJ:     pk.Compress(),
@@ -351,9 +352,9 @@ func TestAccountErrNumOverflowNonce(t *testing.T) {
 	account.Nonce = nonce.Nonce(math.Pow(2, 40))
 	b, err := account.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Errorf("%s Nonce", ErrNumOverflow), tracerr.Unwrap(err))
+	assert.Equal(t, fmt.Errorf("%s Nonce", common.ErrNumOverflow), tracerr.Unwrap(err))
 
-	_, err = AccountFromBytes(b)
+	_, err = account.AccountFromBytes(b)
 	assert.NoError(t, err)
 }
 
@@ -366,7 +367,7 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 
 	// check limit
 	account := &Account{
-		TokenID: TokenID(1),
+		TokenID: common.TokenID(1),
 		Nonce:   nonce.Nonce(math.Pow(2, 40) - 1),
 		Balance: new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(192), nil), big.NewInt(1)),
 		BJJ:     pk.Compress(),
@@ -384,13 +385,13 @@ func TestAccountErrNumOverflowBalance(t *testing.T) {
 		account.Balance.String())
 	b, err := account.Bytes()
 	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Errorf("%s Balance", ErrNumOverflow), tracerr.Unwrap(err))
+	assert.Equal(t, fmt.Errorf("%s Balance", common.ErrNumOverflow), tracerr.Unwrap(err))
 
-	_, err = AccountFromBytes(b)
+	_, err = account.AccountFromBytes(b)
 	assert.NoError(t, err)
 
 	b[39] = 1
-	_, err = AccountFromBytes(b)
+	_, err = account.AccountFromBytes(b)
 	assert.NotNil(t, err)
-	assert.Equal(t, fmt.Errorf("%s Balance", ErrNumOverflow), tracerr.Unwrap(err))
+	assert.Equal(t, fmt.Errorf("%s Balance", common.ErrNumOverflow), tracerr.Unwrap(err))
 }

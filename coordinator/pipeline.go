@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strconv"
 	"sync"
@@ -524,7 +525,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 	var discardedL2Txs []common.PoolL2Tx
 	var l1UserTxs, l1CoordTxs []common.L1Tx
 	var auths [][]byte
-	var coordIdxs []common.Idx
+	var coordIdxs []account.Idx
 
 	if skip, reason := p.forgePolicySkipPreSelection(now); skip {
 		return nil, &reason, nil

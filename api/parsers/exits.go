@@ -3,6 +3,7 @@ package parsers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/tracerr"
 	"gopkg.in/go-playground/validator.v9"
@@ -15,7 +16,7 @@ type ExitFilter struct {
 }
 
 // ParseExitFilter func parsing exit filter from the /exits request to the accountIndex and batchNum
-func ParseExitFilter(c *gin.Context) (*uint, *common.Idx, error) {
+func ParseExitFilter(c *gin.Context) (*uint, *account.Idx, error) {
 	var exitFilter ExitFilter
 	if err := c.ShouldBindUri(&exitFilter); err != nil {
 		return nil, nil, tracerr.Wrap(err)

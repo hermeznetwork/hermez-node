@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -307,7 +308,7 @@ func TestMain(m *testing.M) {
 	// Extract til generated data, and add it to HistoryDB
 	var commonBlocks []common.Block
 	var commonBatches []common.Batch
-	var commonAccounts []common.Account
+	var commonAccounts []account.Account
 	var commonExitTree []common.ExitInfo
 	var commonL1Txs []common.L1Tx
 	var commonL2Txs []common.L2Tx
@@ -325,7 +326,7 @@ func TestMain(m *testing.M) {
 		USD:         &ethUSD,
 		USDUpdate:   &ethNow,
 	})
-	err = api.h.UpdateTokenValue(common.EmptyAddr, ethUSD)
+	err = api.h.UpdateTokenValue(account.EmptyAddr, ethUSD)
 	if err != nil {
 		panic(err)
 	}
@@ -559,7 +560,7 @@ func TestMain(m *testing.M) {
 	poolTxsToSend, poolTxsToReceive := genTestPoolTxs(commonPoolTxs, testTokens, commonAccounts)
 	// Add balance and nonce to historyDB
 	accounts := genTestAccounts(commonAccounts, testTokens)
-	accUpdates := []common.AccountUpdate{}
+	accUpdates := []account.AccountUpdate{}
 	for i := 0; i < len(accounts); i++ {
 		balance := new(big.Int)
 		balance.SetString(string(*accounts[i].Balance), 10)
@@ -567,14 +568,14 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			panic(err)
 		}
-		accUpdates = append(accUpdates, common.AccountUpdate{
+		accUpdates = append(accUpdates, account.AccountUpdate{
 			EthBlockNum: 0,
 			BatchNum:    1,
 			Idx:         *queryAccount.AccountIndex,
 			Nonce:       0,
 			Balance:     balance,
 		})
-		accUpdates = append(accUpdates, common.AccountUpdate{
+		accUpdates = append(accUpdates, account.AccountUpdate{
 			EthBlockNum: 0,
 			BatchNum:    1,
 			Idx:         *queryAccount.AccountIndex,
@@ -906,7 +907,7 @@ func getTokenByID(id common.TokenID, tokens []historydb.TokenWithUSD) historydb.
 	panic("token not found")
 }
 
-func getTokenByIdx(idx common.Idx, tokens []historydb.TokenWithUSD, accs []common.Account) historydb.TokenWithUSD {
+func getTokenByIdx(idx account.Idx, tokens []historydb.TokenWithUSD, accs []account.Account) historydb.TokenWithUSD {
 	for _, acc := range accs {
 		if idx == acc.Idx {
 			return getTokenByID(acc.TokenID, tokens)
@@ -915,7 +916,7 @@ func getTokenByIdx(idx common.Idx, tokens []historydb.TokenWithUSD, accs []commo
 	panic("token not found")
 }
 
-func getAccountByIdx(idx common.Idx, accs []common.Account) *common.Account {
+func getAccountByIdx(idx account.Idx, accs []account.Account) *account.Account {
 	for _, acc := range accs {
 		if acc.Idx == idx {
 			return &acc

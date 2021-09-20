@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"time"
 
@@ -550,9 +551,9 @@ type GetTxsAPIRequest struct {
 	FromBjj           *babyjub.PublicKeyComp
 	ToBjj             *babyjub.PublicKeyComp
 	TokenID           *common.TokenID
-	Idx               *common.Idx
-	FromIdx           *common.Idx
-	ToIdx             *common.Idx
+	Idx               *account.Idx
+	FromIdx           *account.Idx
+	ToIdx             *account.Idx
 	BatchNum          *uint
 	TxType            *common.TxType
 	IncludePendingL1s *bool
@@ -746,7 +747,7 @@ func (hdb *HistoryDB) GetTxsAPI(
 }
 
 // GetExitAPI returns a exit from the DB
-func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *common.Idx) (*ExitAPI, error) {
+func (hdb *HistoryDB) GetExitAPI(batchNum *uint, idx *account.Idx) (*ExitAPI, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -775,7 +776,7 @@ type GetExitsAPIRequest struct {
 	EthAddr              *ethCommon.Address
 	Bjj                  *babyjub.PublicKeyComp
 	TokenID              *common.TokenID
-	Idx                  *common.Idx
+	Idx                  *account.Idx
 	BatchNum             *uint
 	OnlyPendingWithdraws *bool
 
@@ -994,7 +995,7 @@ func (hdb *HistoryDB) GetAuctionVarsAPI() (*common.AuctionVariables, error) {
 }
 
 // GetAccountAPI returns an account by its index
-func (hdb *HistoryDB) GetAccountAPI(idx common.Idx) (*AccountAPI, error) {
+func (hdb *HistoryDB) GetAccountAPI(idx account.Idx) (*AccountAPI, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -1125,7 +1126,7 @@ func (hdb *HistoryDB) GetAccountsAPI(
 }
 
 // GetCommonAccountAPI returns the account associated to an account idx
-func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, error) {
+func (hdb *HistoryDB) GetCommonAccountAPI(idx account.Idx) (*account.Account, error) {
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
@@ -1133,9 +1134,9 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 	}
 	defer hdb.apiConnCon.Release()
 	type fullAccount struct {
-		Idx      common.Idx            `meddler:"idx"`
-		TokenID  common.TokenID        `meddler:"token_id"`
-		BatchNum common.BatchNum       `meddler:"batch_num"`
+		Idx      account.Idx     `meddler:"idx"`
+		TokenID  common.TokenID  `meddler:"token_id"`
+		BatchNum common.BatchNum `meddler:"batch_num"`
 		BJJ      babyjub.PublicKeyComp `meddler:"bjj"`
 		EthAddr  ethCommon.Address     `meddler:"eth_addr"`
 		Nonce    nonce.Nonce           `meddler:"nonce"`
@@ -1155,7 +1156,7 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 	); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	return &common.Account{
+	return &account.Account{
 		Idx:      account.Idx,
 		TokenID:  account.TokenID,
 		BatchNum: account.BatchNum,

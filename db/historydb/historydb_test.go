@@ -3,6 +3,7 @@ package historydb
 import (
 	"database/sql"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math"
 	"math/big"
 	"os"
@@ -372,9 +373,9 @@ func TestAccounts(t *testing.T) {
 		assert.Equal(t, accs[i], acc)
 	}
 	// Test AccountBalances
-	accUpdates := make([]common.AccountUpdate, len(accs))
+	accUpdates := make([]account.AccountUpdate, len(accs))
 	for i, acc := range accs {
-		accUpdates[i] = common.AccountUpdate{
+		accUpdates[i] = account.AccountUpdate{
 			EthBlockNum: batches[acc.BatchNum-1].EthBlockNum,
 			BatchNum:    acc.BatchNum,
 			Idx:         acc.Idx,
@@ -517,17 +518,17 @@ func TestTxs(t *testing.T) {
 	assert.Equal(t, "0x00f5e8ab141ac16d673e654ba7747c2f12e93ea2c50ba6c05563752ca531968c62", dbL1Txs[9].TxID.String())
 
 	// Tx From IDx
-	assert.Equal(t, common.Idx(0), dbL1Txs[0].FromIdx)
-	assert.Equal(t, common.Idx(0), dbL1Txs[1].FromIdx)
-	assert.Equal(t, common.Idx(0), dbL1Txs[2].FromIdx)
-	assert.NotEqual(t, common.Idx(0), dbL1Txs[3].FromIdx)
-	assert.NotEqual(t, common.Idx(0), dbL1Txs[4].FromIdx)
-	assert.NotEqual(t, common.Idx(0), dbL1Txs[5].FromIdx)
-	assert.NotEqual(t, common.Idx(0), dbL1Txs[6].FromIdx)
-	assert.NotEqual(t, common.Idx(0), dbL1Txs[7].FromIdx)
-	assert.Equal(t, common.Idx(0), dbL1Txs[8].FromIdx)
-	assert.Equal(t, common.Idx(0), dbL1Txs[9].FromIdx)
-	assert.Equal(t, common.Idx(0), dbL1Txs[9].FromIdx)
+	assert.Equal(t, account.Idx(0), dbL1Txs[0].FromIdx)
+	assert.Equal(t, account.Idx(0), dbL1Txs[1].FromIdx)
+	assert.Equal(t, account.Idx(0), dbL1Txs[2].FromIdx)
+	assert.NotEqual(t, account.Idx(0), dbL1Txs[3].FromIdx)
+	assert.NotEqual(t, account.Idx(0), dbL1Txs[4].FromIdx)
+	assert.NotEqual(t, account.Idx(0), dbL1Txs[5].FromIdx)
+	assert.NotEqual(t, account.Idx(0), dbL1Txs[6].FromIdx)
+	assert.NotEqual(t, account.Idx(0), dbL1Txs[7].FromIdx)
+	assert.Equal(t, account.Idx(0), dbL1Txs[8].FromIdx)
+	assert.Equal(t, account.Idx(0), dbL1Txs[9].FromIdx)
+	assert.Equal(t, account.Idx(0), dbL1Txs[9].FromIdx)
 	assert.Equal(t, dbL1Txs[5].FromIdx, dbL1Txs[6].FromIdx)
 	assert.Equal(t, dbL1Txs[5].FromIdx, dbL1Txs[7].FromIdx)
 
@@ -945,7 +946,7 @@ func TestUpdateExitTree(t *testing.T) {
 	dbExits, err := historyDB.GetAllExits()
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(dbExits))
-	dbExitsByIdx := make(map[common.Idx]common.ExitInfo)
+	dbExitsByIdx := make(map[account.Idx]common.ExitInfo)
 	for _, dbExit := range dbExits {
 		dbExitsByIdx[dbExit.AccountIdx] = dbExit
 	}

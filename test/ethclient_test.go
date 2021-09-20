@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"testing"
 	"time"
@@ -186,7 +187,7 @@ func TestClientRollup(t *testing.T) {
 		NewExitRoot:       big.NewInt(100),
 		L1CoordinatorTxs:  []common.L1Tx{},
 		L2TxsData:         []common.L2Tx{},
-		FeeIdxCoordinator: []common.Idx{},
+		FeeIdxCoordinator: []account.Idx{},
 		VerifierIdx:       0,
 		L1Batch:           true,
 	})
@@ -223,7 +224,7 @@ func TestClientRollup(t *testing.T) {
 		NewExitRoot:       big.NewInt(100),
 		L1CoordinatorTxs:  []common.L1Tx{},
 		L2TxsData:         []common.L2Tx{},
-		FeeIdxCoordinator: []common.Idx{},
+		FeeIdxCoordinator: []account.Idx{},
 		VerifierIdx:       0,
 		L1Batch:           true,
 	}

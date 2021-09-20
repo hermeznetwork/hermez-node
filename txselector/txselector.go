@@ -64,6 +64,7 @@ package txselector
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"sort"
 
@@ -131,7 +132,7 @@ func (txsel *TxSelector) Reset(batchNum common.BatchNum, fromSynchronizer bool) 
 	return tracerr.Wrap(txsel.localAccountsDB.Reset(batchNum, fromSynchronizer))
 }
 
-func (txsel *TxSelector) getCoordIdx(tokenID common.TokenID) (common.Idx, error) {
+func (txsel *TxSelector) getCoordIdx(tokenID common.TokenID) (account.Idx, error) {
 	return txsel.localAccountsDB.GetIdxByEthAddrBJJ(txsel.coordAccount.Addr,
 		txsel.coordAccount.BJJ, tokenID)
 }
@@ -177,7 +178,7 @@ func (txsel *TxSelector) coordAccountForTokenID(tokenID common.TokenID, position
 // but there is a transactions to them and the authorization of account
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
-func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config, l1UserFutureTxs []common.L1Tx) ([]common.Idx,
+func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config, l1UserFutureTxs []common.L1Tx) ([]account.Idx,
 	[][]byte, []common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	metric.GetL2TxSelection.Inc()
 	coordIdxs, accCreationAuths, _, l1CoordinatorTxs, l2Txs,
@@ -196,7 +197,7 @@ func (txsel *TxSelector) GetL2TxSelection(selectionConfig txprocessor.Config, l1
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
 func (txsel *TxSelector) GetL1L2TxSelection(selectionConfig txprocessor.Config,
-	l1UserTxs, l1UserFutureTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
+	l1UserTxs, l1UserFutureTxs []common.L1Tx) ([]account.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	metric.GetL1L2TxSelection.Inc()
 	coordIdxs, accCreationAuths, l1UserTxs, l1CoordinatorTxs, l2Txs,
@@ -220,7 +221,7 @@ type failedAtomicGroup struct {
 // creation exists. The L1UserTxs, L1CoordinatorTxs, PoolL2Txs that will be
 // included in the next batch.
 func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
-	l1UserTxs, l1UserFutureTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
+	l1UserTxs, l1UserFutureTxs []common.L1Tx) ([]account.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
 	// WIP.0: the TxSelector is not optimized and will need a redesign. The
 	// current version is implemented in order to have a functional
@@ -254,7 +255,7 @@ func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 START_SELECTION:
 	txselStateDB := txsel.localAccountsDB.StateDB
 	tp := txprocessor.NewTxProcessor(txselStateDB, selectionConfig)
-	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
+	tp.AccumulatedFees = make(map[account.Idx]*big.Int)
 
 	// Process L1UserTxs
 	for i := 0; i < len(l1UserTxs); i++ {
@@ -357,7 +358,7 @@ START_SELECTION:
 	}
 
 	// get CoordIdxsMap for the TokenIDs
-	coordIdxsMap := make(map[common.TokenID]common.Idx)
+	coordIdxsMap := make(map[common.TokenID]account.Idx)
 	for i := 0; i < len(selectedTxs); i++ {
 		// get TokenID from tx.Sender
 		accSender, err := tp.StateDB().GetAccount(selectedTxs[i].FromIdx)
@@ -376,7 +377,7 @@ START_SELECTION:
 		coordIdxsMap[tokenID] = coordIdx
 	}
 
-	var coordIdxs []common.Idx
+	var coordIdxs []account.Idx
 	for _, idx := range coordIdxsMap {
 		coordIdxs = append(coordIdxs, idx)
 	}
@@ -710,7 +711,7 @@ func (txsel *TxSelector) processL2Txs(
 				// contain a valid ethereum address.
 				// Otherwise only create the account if we have
 				// the corresponding authorization
-				if validL2Tx.ToEthAddr == common.FFAddr {
+				if validL2Tx.ToEthAddr == account.FFAddr {
 					accAuths = append(accAuths, common.EmptyEthSignature)
 					l1CoordinatorTxs = append(l1CoordinatorTxs, *l1CoordinatorTx)
 					positionL1++
@@ -749,7 +750,7 @@ func (txsel *TxSelector) processL2Txs(
 				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[i])
 				continue
 			}
-		} else if l2Txs[i].ToIdx >= common.IdxUserThreshold {
+		} else if l2Txs[i].ToIdx >= account.IdxUserThreshold {
 			_, err := txsel.localAccountsDB.GetAccount(l2Txs[i].ToIdx)
 			if err != nil {
 				obj := common.TxSelectorError{
@@ -796,7 +797,7 @@ func (txsel *TxSelector) processL2Txs(
 		}
 		// prepare temp coordIdxsMap & AccumulatedFees for the call to
 		// ProcessL2Tx
-		coordIdxsMap := map[common.TokenID]common.Idx{tokenID: coordIdx}
+		coordIdxsMap := map[common.TokenID]account.Idx{tokenID: coordIdx}
 		// tp.AccumulatedFees = make(map[common.Idx]*big.Int)
 		if _, ok := tp.AccumulatedFees[coordIdx]; !ok {
 			tp.AccumulatedFees[coordIdx] = big.NewInt(0)
@@ -865,7 +866,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(
 
 	var l1CoordinatorTx *common.L1Tx
 	var accAuth *common.AccountCreationAuth
-	if l2Tx.ToEthAddr != common.EmptyAddr && l2Tx.ToEthAddr != common.FFAddr {
+	if l2Tx.ToEthAddr != account.EmptyAddr && l2Tx.ToEthAddr != account.FFAddr {
 		// case: ToEthAddr != 0x00 neither 0xff
 		if l2Tx.ToBJJ != common.EmptyBJJComp {
 			// case: ToBJJ!=0:
@@ -929,7 +930,7 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(
 			DepositAmount: big.NewInt(0),
 			Type:          common.TxTypeCreateAccountDeposit,
 		}
-	} else if l2Tx.ToEthAddr == common.FFAddr && l2Tx.ToBJJ != common.EmptyBJJComp {
+	} else if l2Tx.ToEthAddr == account.FFAddr && l2Tx.ToBJJ != common.EmptyBJJComp {
 		// if idx exist for EthAddr&BJJ use it
 		_, err := txsel.localAccountsDB.GetIdxByEthAddrBJJ(l2Tx.ToEthAddr, l2Tx.ToBJJ,
 			l2Tx.TokenID)

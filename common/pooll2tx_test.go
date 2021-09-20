@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/hex"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"testing"
 
@@ -296,52 +297,52 @@ func TestPoolL2Tx_SetType(t *testing.T) {
 	}{
 		{
 			"Send to bjj address",
-			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: account.FFAddr, ToIdx: account.Idx(0)},
 			TxTypeTransferToBJJ,
 			false,
 		}, {
 			"Send to eth address",
-			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: ethAddr, ToIdx: Idx(0)},
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: ethAddr, ToIdx: account.Idx(0)},
 			TxTypeTransferToEthAddr,
 			false,
 		}, {
 			"Send to eth FFAddr address",
-			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: account.FFAddr, ToIdx: account.Idx(0)},
 			TxTypeTransferToEthAddr,
 			true,
 		}, {
 			"Send to idx",
-			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: EmptyAddr, ToIdx: Idx(400)},
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: account.EmptyAddr, ToIdx: account.Idx(400)},
 			TxTypeTransfer,
 			false,
 		}, {
 			"Empty transfer",
-			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: EmptyAddr, ToIdx: Idx(0)},
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: account.EmptyAddr, ToIdx: account.Idx(0)},
 			TxType(""),
 			true,
 		}, {
 			"Empty transfer and FFAddr",
-			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			&PoolL2Tx{ToBJJ: EmptyBJJComp, ToEthAddr: account.FFAddr, ToIdx: account.Idx(0)},
 			TxType(""),
 			true,
 		}, {
 			"Send to eth and bjj addresses and idx",
-			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: Idx(400)},
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: account.Idx(400)},
 			TxTypeTransfer,
 			false,
 		}, {
 			"Send to FFAddr eth and bjj addresses and idx",
-			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(400)},
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: account.FFAddr, ToIdx: account.Idx(400)},
 			TxTypeTransfer,
 			false,
 		}, {
 			"Send to FFAddr eth and bjj addresses",
-			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: FFAddr, ToIdx: Idx(0)},
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: account.FFAddr, ToIdx: account.Idx(0)},
 			TxTypeTransferToBJJ,
 			false,
 		}, {
 			"Send to eth and bjj addresses",
-			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: Idx(0)},
+			&PoolL2Tx{ToBJJ: bjjAddr, ToEthAddr: ethAddr, ToIdx: account.Idx(0)},
 			TxType(""),
 			true,
 		},

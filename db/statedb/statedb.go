@@ -3,6 +3,7 @@ package statedb
 import (
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -98,7 +99,7 @@ type Last struct {
 }
 
 // GetAccount returns the account for the given Idx
-func (s *Last) GetAccount(idx common.Idx) (*common.Account, error) {
+func (s *Last) GetAccount(idx account.Idx) (*account.Account, error) {
 	return GetAccountInTreeDB(s.db, idx)
 }
 
@@ -120,7 +121,7 @@ func (s *Last) DB() db.Storage {
 
 // GetAccounts returns all the accounts in the db.  Use for debugging pruposes
 // only.
-func (s *Last) GetAccounts() ([]common.Account, error) {
+func (s *Last) GetAccounts() ([]account.Account, error) {
 	return getAccounts(s.db)
 }
 
@@ -175,8 +176,8 @@ func (s *StateDB) LastRead(fn func(sdbLast *Last) error) error {
 
 // LastGetAccount is a thread-safe method to query an account in the last
 // checkpoint of the StateDB.
-func (s *StateDB) LastGetAccount(idx common.Idx) (*common.Account, error) {
-	var account *common.Account
+func (s *StateDB) LastGetAccount(idx account.Idx) (*account.Account, error) {
+	var account *account.Account
 	if err := s.LastRead(func(sdb *Last) error {
 		var err error
 		account, err = sdb.GetAccount(idx)
@@ -238,7 +239,7 @@ func (s *StateDB) CurrentBatch() common.BatchNum {
 }
 
 // CurrentIdx returns the current in-memory CurrentIdx of the StateDB.db
-func (s *StateDB) CurrentIdx() common.Idx {
+func (s *StateDB) CurrentIdx() account.Idx {
 	return s.db.CurrentIdx
 }
 
@@ -249,12 +250,12 @@ func (s *StateDB) getCurrentBatch() (common.BatchNum, error) {
 
 // GetCurrentIdx returns the stored Idx from the localStateDB, which is the
 // last Idx used for an Account in the localStateDB.
-func (s *StateDB) GetCurrentIdx() (common.Idx, error) {
+func (s *StateDB) GetCurrentIdx() (account.Idx, error) {
 	return s.db.GetCurrentIdx()
 }
 
 // SetCurrentIdx stores Idx in the StateDB
-func (s *StateDB) SetCurrentIdx(idx common.Idx) error {
+func (s *StateDB) SetCurrentIdx(idx account.Idx) error {
 	return s.db.SetCurrentIdx(idx)
 }
 
@@ -279,14 +280,14 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 }
 
 // GetAccount returns the account for the given Idx
-func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
+func (s *StateDB) GetAccount(idx account.Idx) (*account.Account, error) {
 	return GetAccountInTreeDB(s.db.DB(), idx)
 }
 
-func accountsIter(db db.Storage, fn func(a *common.Account) (bool, error)) error {
+func accountsIter(db db.Storage, fn func(a *account.Account) (bool, error)) error {
 	idxDB := db.WithPrefix(PrefixKeyIdx)
 	if err := idxDB.Iterate(func(k []byte, v []byte) (bool, error) {
-		idx, err := common.IdxFromBytes(k)
+		idx, err := account.IdxFromBytes(k)
 		if err != nil {
 			return false, tracerr.Wrap(err)
 		}
@@ -305,11 +306,11 @@ func accountsIter(db db.Storage, fn func(a *common.Account) (bool, error)) error
 	return nil
 }
 
-func getAccounts(db db.Storage) ([]common.Account, error) {
-	accs := []common.Account{}
+func getAccounts(db db.Storage) ([]account.Account, error) {
+	accs := []account.Account{}
 	if err := accountsIter(
 		db,
-		func(a *common.Account) (bool, error) {
+		func(a *account.Account) (bool, error) {
 			accs = append(accs, *a)
 			return true, nil
 		},
@@ -323,13 +324,13 @@ func getAccounts(db db.Storage) ([]common.Account, error) {
 // Outside tests getting all the accounts is discouraged because it's an
 // expensive operation, but if you must do it, use `LastRead()` method to get a
 // thread-safe and consistent view of the stateDB.
-func (s *StateDB) TestGetAccounts() ([]common.Account, error) {
+func (s *StateDB) TestGetAccounts() ([]account.Account, error) {
 	return getAccounts(s.db.DB())
 }
 
 // GetAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  GetAccount returns the account for the given Idx
-func GetAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
+func GetAccountInTreeDB(sto db.Storage, idx account.Idx) (*account.Account, error) {
 	idxBytes, err := idx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -342,9 +343,9 @@ func GetAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	var b [32 * common.NLeafElems]byte
+	var b [32 * account.NLeafElems]byte
 	copy(b[:], accBytes)
-	account, err := common.AccountFromBytes(b)
+	account, err := account.AccountFromBytes(b)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -355,7 +356,7 @@ func GetAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 // CreateAccount creates a new Account in the StateDB for the given Idx.  If
 // StateDB.MT==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (
+func (s *StateDB) CreateAccount(idx account.Idx, account *account.Account) (
 	*merkletree.CircomProcessorProof, error) {
 	cpp, err := CreateAccountInTreeDB(s.db.DB(), s.MT, idx, account)
 	if err != nil {
@@ -370,8 +371,8 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (
 // from ExitTree.  Creates a new Account in the StateDB for the given Idx.  If
 // StateDB.MT==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
-	account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx account.Idx,
+	account *account.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
@@ -420,7 +421,7 @@ func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 // UpdateAccount updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (
+func (s *StateDB) UpdateAccount(idx account.Idx, account *account.Account) (
 	*merkletree.CircomProcessorProof, error) {
 	return UpdateAccountInTreeDB(s.db.DB(), s.MT, idx, account)
 }
@@ -429,8 +430,8 @@ func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (
 // from ExitTree.  Updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
-	account *common.Account) (*merkletree.CircomProcessorProof, error) {
+func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx account.Idx,
+	account *account.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: account.Bytes()
 	v, err := account.HashValue()
 	if err != nil {
@@ -470,7 +471,7 @@ func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 }
 
 // MTGetProof returns the CircomVerifierProof for a given Idx
-func (s *StateDB) MTGetProof(idx common.Idx) (*merkletree.CircomVerifierProof, error) {
+func (s *StateDB) MTGetProof(idx account.Idx) (*merkletree.CircomVerifierProof, error) {
 	if s.MT == nil {
 		return nil, tracerr.Wrap(ErrStateDBWithoutMT)
 	}

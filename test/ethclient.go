@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"reflect"
 	"sort"
@@ -872,13 +873,13 @@ func (c *Client) RollupL1UserTxERC20ETH(
 	}
 	toForgeL1TxsNum := r.State.LastToForgeL1TxsNum
 	l1Tx, err := common.NewL1Tx(&common.L1Tx{
-		FromIdx:         common.Idx(fromIdx),
+		FromIdx:         account.Idx(fromIdx),
 		FromEthAddr:     *c.addr,
 		FromBJJ:         fromBJJ,
 		Amount:          amount,
 		DepositAmount:   depositAmount,
 		TokenID:         common.TokenID(tokenID),
-		ToIdx:           common.Idx(toIdx),
+		ToIdx:           account.Idx(toIdx),
 		ToForgeL1TxsNum: &toForgeL1TxsNum,
 		Position:        len(queue.L1TxQueue),
 		UserOrigin:      true,

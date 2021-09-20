@@ -3,6 +3,7 @@ package statedb
 import (
 	"bytes"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -33,7 +34,7 @@ func concatEthAddrBJJTokenID(addr ethCommon.Address, pk babyjub.PublicKeyComp,
 // - key: EthAddr & BabyJubJub PublicKey Compressed, value: idx
 // If Idx already exist for the given EthAddr & BJJ, the remaining Idx will be
 // always the smallest one.
-func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address,
+func (s *StateDB) setIdxByEthAddrBJJ(idx account.Idx, addr ethCommon.Address,
 	pk babyjub.PublicKeyComp, tokenID common.TokenID) error {
 	oldIdx, err := s.GetIdxByEthAddrBJJ(addr, pk, tokenID)
 	if err == nil {
@@ -83,17 +84,17 @@ func (s *StateDB) setIdxByEthAddrBJJ(idx common.Idx, addr ethCommon.Address,
 // GetIdxByEthAddr returns the smallest Idx in the StateDB for the given
 // Ethereum Address. Will return common.Idx(0) and error in case that Idx is
 // not found in the StateDB.
-func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID) (common.Idx,
+func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID) (account.Idx,
 	error) {
 	k := concatEthAddrTokenID(addr, tokenID)
 	b, err := s.db.DB().Get(append(PrefixKeyAddr, k...))
 	if err != nil {
-		return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d",
+		return account.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d",
 			ErrIdxNotFound, addr.Hex(), tokenID))
 	}
-	idx, err := common.IdxFromBytes(b)
+	idx, err := account.IdxFromBytes(b)
 	if err != nil {
-		return common.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d",
+		return account.Idx(0), tracerr.Wrap(fmt.Errorf("GetIdxByEthAddr: %s: ToEthAddr: %s, TokenID: %d",
 			err, addr.Hex(), tokenID))
 	}
 	return idx, nil
@@ -105,34 +106,34 @@ func (s *StateDB) GetIdxByEthAddr(addr ethCommon.Address, tokenID common.TokenID
 // query.  Will return common.Idx(0) and error in case that Idx is not found in
 // the StateDB.
 func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk babyjub.PublicKeyComp,
-	tokenID common.TokenID) (common.Idx, error) {
-	if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) && pk == common.EmptyBJJComp {
+	tokenID common.TokenID) (account.Idx, error) {
+	if !bytes.Equal(addr.Bytes(), account.EmptyAddr.Bytes()) && pk == common.EmptyBJJComp {
 		// ToEthAddr
 		// case ToEthAddr!=0 && ToBJJ=0
 		return s.GetIdxByEthAddr(addr, tokenID)
-	} else if !bytes.Equal(addr.Bytes(), common.EmptyAddr.Bytes()) &&
+	} else if !bytes.Equal(addr.Bytes(), account.EmptyAddr.Bytes()) &&
 		pk != common.EmptyBJJComp {
 		// case ToEthAddr!=0 && ToBJJ!=0
 		k := concatEthAddrBJJTokenID(addr, pk, tokenID)
 		b, err := s.db.DB().Get(append(PrefixKeyAddrBJJ, k...))
 		if tracerr.Unwrap(err) == db.ErrNotFound {
 			// return the error (ErrNotFound), so can be traced at upper layers
-			return common.Idx(0), tracerr.Wrap(ErrIdxNotFound)
+			return account.Idx(0), tracerr.Wrap(ErrIdxNotFound)
 		} else if err != nil {
-			return common.Idx(0),
+			return account.Idx(0),
 				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d",
 					ErrIdxNotFound, addr.Hex(), pk, tokenID))
 		}
-		idx, err := common.IdxFromBytes(b)
+		idx, err := account.IdxFromBytes(b)
 		if err != nil {
-			return common.Idx(0),
+			return account.Idx(0),
 				tracerr.Wrap(fmt.Errorf("GetIdxByEthAddrBJJ: %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d",
 					err, addr.Hex(), pk, tokenID))
 		}
 		return idx, nil
 	}
 	// rest of cases (included case ToEthAddr==0) are not possible
-	return common.Idx(0),
+	return account.Idx(0),
 		tracerr.Wrap(
 			fmt.Errorf("GetIdxByEthAddrBJJ: Not found, %s: ToEthAddr: %s, ToBJJ: %s, TokenID: %d",
 				ErrGetIdxNoCase, addr.Hex(), pk, tokenID))
@@ -140,8 +141,8 @@ func (s *StateDB) GetIdxByEthAddrBJJ(addr ethCommon.Address, pk babyjub.PublicKe
 
 // GetTokenIDsFromIdxs returns a map containing the common.TokenID with its
 // respective common.Idx for a given slice of common.Idx
-func (s *StateDB) GetTokenIDsFromIdxs(idxs []common.Idx) (map[common.TokenID]common.Idx, error) {
-	m := make(map[common.TokenID]common.Idx)
+func (s *StateDB) GetTokenIDsFromIdxs(idxs []account.Idx) (map[common.TokenID]account.Idx, error) {
+	m := make(map[common.TokenID]account.Idx)
 	for i := 0; i < len(idxs); i++ {
 		a, err := s.GetAccount(idxs[i])
 		if err != nil {

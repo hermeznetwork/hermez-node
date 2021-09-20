@@ -22,6 +22,7 @@ In some cases, some of the structs defined in this file also include custom Mars
 package historydb
 
 import (
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math"
 	"math/big"
 	"strconv"
@@ -557,10 +558,10 @@ func (hdb *HistoryDB) GetTokenSymbolsAndAddrs() ([]TokenSymbolAndAddr, error) {
 }
 
 // AddAccounts insert accounts into the DB
-func (hdb *HistoryDB) AddAccounts(accounts []common.Account) error {
+func (hdb *HistoryDB) AddAccounts(accounts []account.Account) error {
 	return tracerr.Wrap(hdb.addAccounts(hdb.dbWrite, accounts))
 }
-func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error {
+func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []account.Account) error {
 	if len(accounts) == 0 {
 		return nil
 	}
@@ -578,20 +579,20 @@ func (hdb *HistoryDB) addAccounts(d meddler.DB, accounts []common.Account) error
 }
 
 // GetAllAccounts returns a list of accounts from the DB
-func (hdb *HistoryDB) GetAllAccounts() ([]common.Account, error) {
-	var accs []*common.Account
+func (hdb *HistoryDB) GetAllAccounts() ([]account.Account, error) {
+	var accs []*account.Account
 	err := meddler.QueryAll(
 		hdb.dbRead, &accs,
 		"SELECT idx, token_id, batch_num, bjj, eth_addr FROM account ORDER BY idx;",
 	)
-	return db.SlicePtrsToSlice(accs).([]common.Account), tracerr.Wrap(err)
+	return db.SlicePtrsToSlice(accs).([]account.Account), tracerr.Wrap(err)
 }
 
 // AddAccountUpdates inserts accUpdates into the DB
-func (hdb *HistoryDB) AddAccountUpdates(accUpdates []common.AccountUpdate) error {
+func (hdb *HistoryDB) AddAccountUpdates(accUpdates []account.AccountUpdate) error {
 	return tracerr.Wrap(hdb.addAccountUpdates(hdb.dbWrite, accUpdates))
 }
-func (hdb *HistoryDB) addAccountUpdates(d meddler.DB, accUpdates []common.AccountUpdate) error {
+func (hdb *HistoryDB) addAccountUpdates(d meddler.DB, accUpdates []account.AccountUpdate) error {
 	if len(accUpdates) == 0 {
 		return nil
 	}
@@ -609,13 +610,13 @@ func (hdb *HistoryDB) addAccountUpdates(d meddler.DB, accUpdates []common.Accoun
 }
 
 // GetAllAccountUpdates returns all the AccountUpdate from the DB
-func (hdb *HistoryDB) GetAllAccountUpdates() ([]common.AccountUpdate, error) {
-	var accUpdates []*common.AccountUpdate
+func (hdb *HistoryDB) GetAllAccountUpdates() ([]account.AccountUpdate, error) {
+	var accUpdates []*account.AccountUpdate
 	err := meddler.QueryAll(
 		hdb.dbRead, &accUpdates,
 		"SELECT eth_block_num, batch_num, idx, nonce, balance FROM account_update ORDER BY idx;",
 	)
-	return db.SlicePtrsToSlice(accUpdates).([]common.AccountUpdate), tracerr.Wrap(err)
+	return db.SlicePtrsToSlice(accUpdates).([]account.AccountUpdate), tracerr.Wrap(err)
 }
 
 // AddL1Txs inserts L1 txs to the DB. USD and DepositAmountUSD will be set automatically before storing the tx.
@@ -640,7 +641,7 @@ func (hdb *HistoryDB) addL1Txs(d meddler.DB, l1txs []common.L1Tx) error {
 		amountFloat, _ := af.Float64()
 		laf := new(big.Float).SetInt(l1txs[i].DepositAmount)
 		depositAmountFloat, _ := laf.Float64()
-		var effectiveFromIdx *common.Idx
+		var effectiveFromIdx *account.Idx
 		if l1txs[i].UserOrigin {
 			if l1txs[i].Type != common.TxTypeCreateAccountDeposit &&
 				l1txs[i].Type != common.TxTypeCreateAccountDepositTransfer {
@@ -1036,7 +1037,7 @@ func (hdb *HistoryDB) setExtraInfoForgedL1UserTxs(d sqlx.Ext, txs []common.L1Tx)
 		ID                   common.TxID `db:"id"`
 		AmountSuccess        bool        `db:"amount_success"`
 		DepositAmountSuccess bool        `db:"deposit_amount_success"`
-		EffectiveFromIdx     common.Idx  `db:"effective_from_idx"`
+		EffectiveFromIdx     account.Idx `db:"effective_from_idx"`
 	}
 	txUpdates := []txUpdate{}
 	equal := func(a *big.Int, b *big.Int) bool {

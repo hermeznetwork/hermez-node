@@ -5,6 +5,7 @@ package txsets
 
 import (
 	"encoding/hex"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strconv"
 	"testing"
@@ -69,7 +70,7 @@ func signL2Tx(t *testing.T, chainID uint16, user til.User, l2Tx common.PoolL2Tx)
 
 // GenerateTxsZKInputsHash0 generates the transactions for the TestZKInputsHash0
 func GenerateTxsZKInputsHash0(t *testing.T, chainID uint16) (users []til.User,
-	coordIdxs []common.Idx, l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx,
+	coordIdxs []account.Idx, l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx,
 	l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -101,12 +102,12 @@ func GenerateTxsZKInputsHash0(t *testing.T, chainID uint16) (users []til.User,
 
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 
-	return users, []common.Idx{}, l1UserTxs, []common.L1Tx{}, l2Txs
+	return users, []account.Idx{}, l1UserTxs, []common.L1Tx{}, l2Txs
 }
 
 // GenerateTxsZKInputsHash1 generates the transactions for the TestZKInputsHash1
 func GenerateTxsZKInputsHash1(t *testing.T, chainID uint16) (users []til.User,
-	coordIdxs []common.Idx, l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx,
+	coordIdxs []account.Idx, l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx,
 	l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -148,12 +149,12 @@ func GenerateTxsZKInputsHash1(t *testing.T, chainID uint16) (users []til.User,
 
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 
-	return users, []common.Idx{}, l1UserTxs, []common.L1Tx{}, l2Txs
+	return users, []account.Idx{}, l1UserTxs, []common.L1Tx{}, l2Txs
 }
 
 // GenerateTxsZKInputs0 generates the transactions for the TestZKInputs0
 func GenerateTxsZKInputs0(t *testing.T, chainID uint16) (users []til.User,
-	coordIdxs []common.Idx, l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx,
+	coordIdxs []account.Idx, l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx,
 	l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -187,11 +188,11 @@ func GenerateTxsZKInputs0(t *testing.T, chainID uint16) (users []til.User,
 
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 
-	return users, []common.Idx{}, l1UserTxs, []common.L1Tx{}, l2Txs
+	return users, []account.Idx{}, l1UserTxs, []common.L1Tx{}, l2Txs
 }
 
 // GenerateTxsZKInputs1 generates the transactions for the TestZKInputs1
-func GenerateTxsZKInputs1(t *testing.T, chainID uint16) (users []til.User, coordIdxs []common.Idx,
+func GenerateTxsZKInputs1(t *testing.T, chainID uint16) (users []til.User, coordIdxs []account.Idx,
 	l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx, l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -234,12 +235,12 @@ func GenerateTxsZKInputs1(t *testing.T, chainID uint16) (users []til.User, coord
 
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 
-	coordIdxs = []common.Idx{257}
+	coordIdxs = []account.Idx{257}
 	return users, coordIdxs, l1UserTxs, []common.L1Tx{}, l2Txs
 }
 
 // GenerateTxsZKInputs2 generates the transactions for the TestZKInputs2
-func GenerateTxsZKInputs2(t *testing.T, chainID uint16) (users []til.User, coordIdxs []common.Idx,
+func GenerateTxsZKInputs2(t *testing.T, chainID uint16) (users []til.User, coordIdxs []account.Idx,
 	l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx, l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -314,12 +315,12 @@ func GenerateTxsZKInputs2(t *testing.T, chainID uint16) (users []til.User, coord
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
 
-	coordIdxs = []common.Idx{257}
+	coordIdxs = []account.Idx{257}
 	return users, coordIdxs, l1UserTxs, []common.L1Tx{}, l2Txs
 }
 
 // GenerateTxsZKInputs3 generates the transactions for the TestZKInputs3
-func GenerateTxsZKInputs3(t *testing.T, chainID uint16) (users []til.User, coordIdxs []common.Idx,
+func GenerateTxsZKInputs3(t *testing.T, chainID uint16) (users []til.User, coordIdxs []account.Idx,
 	l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx, l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -394,12 +395,12 @@ func GenerateTxsZKInputs3(t *testing.T, chainID uint16) (users []til.User, coord
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
 
-	coordIdxs = []common.Idx{257}
+	coordIdxs = []account.Idx{257}
 	return users, coordIdxs, l1UserTxs, []common.L1Tx{}, l2Txs
 }
 
 // GenerateTxsZKInputs4 generates the transactions for the TestZKInputs4
-func GenerateTxsZKInputs4(t *testing.T, chainID uint16) (users []til.User, coordIdxs []common.Idx,
+func GenerateTxsZKInputs4(t *testing.T, chainID uint16) (users []til.User, coordIdxs []account.Idx,
 	l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx, l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -484,12 +485,12 @@ func GenerateTxsZKInputs4(t *testing.T, chainID uint16) (users []til.User, coord
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
 
-	coordIdxs = []common.Idx{257}
+	coordIdxs = []account.Idx{257}
 	return users, coordIdxs, l1UserTxs, []common.L1Tx{}, l2Txs
 }
 
 // GenerateTxsZKInputs5 generates the transactions for the TestZKInputs5
-func GenerateTxsZKInputs5(t *testing.T, chainID uint16) (users []til.User, coordIdxs []common.Idx,
+func GenerateTxsZKInputs5(t *testing.T, chainID uint16) (users []til.User, coordIdxs []account.Idx,
 	l1UserTxs []common.L1Tx, l1CoordTxs []common.L1Tx, l2Txs []common.PoolL2Tx) {
 	// same values than in the js test
 	users = GenerateJsUsers(t)
@@ -553,6 +554,6 @@ func GenerateTxsZKInputs5(t *testing.T, chainID uint16) (users []til.User, coord
 	l2Txs[0] = signL2Tx(t, chainID, users[0], l2Txs[0])
 	l2Txs[1] = signL2Tx(t, chainID, users[0], l2Txs[1])
 
-	coordIdxs = []common.Idx{257}
+	coordIdxs = []account.Idx{257}
 	return users, coordIdxs, l1UserTxs, []common.L1Tx{}, l2Txs
 }

@@ -2,6 +2,7 @@ package batchbuilder
 
 import (
 	"github.com/hermeznetwork/hermez-node/common"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"github.com/hermeznetwork/hermez-node/db/kvdb"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/txprocessor"
@@ -59,7 +60,7 @@ func (bb *BatchBuilder) Reset(batchNum common.BatchNum, fromSynchronizer bool) e
 }
 
 // BuildBatch takes the transactions and returns the common.ZKInputs of the next batch
-func (bb *BatchBuilder) BuildBatch(coordIdxs []common.Idx, configBatch *ConfigBatch, l1usertxs,
+func (bb *BatchBuilder) BuildBatch(coordIdxs []account.Idx, configBatch *ConfigBatch, l1usertxs,
 	l1coordinatortxs []common.L1Tx, pooll2txs []common.PoolL2Tx) (*common.ZKInputs, error) {
 	bbStateDB := bb.localStateDB.StateDB
 	tp := txprocessor.NewTxProcessor(bbStateDB, configBatch.TxProcessorConfig)

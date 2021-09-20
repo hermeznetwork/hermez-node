@@ -2,6 +2,7 @@ package historydb
 
 import (
 	"encoding/json"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"time"
 
@@ -219,11 +220,11 @@ type txWrite struct {
 	IsL1             bool             `meddler:"is_l1"`
 	TxID             common.TxID      `meddler:"id"`
 	Type             common.TxType    `meddler:"type"`
-	Position         int              `meddler:"position"`
-	FromIdx          *common.Idx      `meddler:"from_idx"`
-	EffectiveFromIdx *common.Idx      `meddler:"effective_from_idx"`
-	ToIdx            common.Idx       `meddler:"to_idx"`
-	Amount           *big.Int         `meddler:"amount,bigint"`
+	Position         int          `meddler:"position"`
+	FromIdx          *account.Idx `meddler:"from_idx"`
+	EffectiveFromIdx *account.Idx `meddler:"effective_from_idx"`
+	ToIdx            account.Idx  `meddler:"to_idx"`
+	Amount           *big.Int     `meddler:"amount,bigint"`
 	AmountFloat      float64          `meddler:"amount_f"`
 	TokenID          common.TokenID   `meddler:"token_id"`
 	BatchNum         *common.BatchNum `meddler:"batch_num"`     // batchNum in which this tx was forged. If the tx is L2, this must be != 0

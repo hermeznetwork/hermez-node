@@ -22,6 +22,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strconv"
 	"time"
@@ -188,8 +189,8 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 			// Info (always nil)
 			info *string
 			// Rq fields, nil unless tx.RqFromIdx != 0
-			rqFromIdx     *common.Idx
-			rqToIdx       *common.Idx
+			rqFromIdx     *account.Idx
+			rqToIdx       *account.Idx
 			rqToEthAddr   *ethCommon.Address
 			rqToBJJ       *babyjub.PublicKeyComp
 			rqTokenID     *common.TokenID
@@ -204,7 +205,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 		f := new(big.Float).SetInt((*big.Int)(txs[i].Amount))
 		amountF, _ := f.Float64()
 		// ToEthAddr
-		if txs[i].ToEthAddr != common.EmptyAddr {
+		if txs[i].ToEthAddr != account.EmptyAddr {
 			toEthAddr = &txs[i].ToEthAddr
 		}
 		// ToBJJ
@@ -224,7 +225,7 @@ func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
 				rqToIdx = &txs[i].RqToIdx
 			}
 			// RqToEthAddr
-			if txs[i].RqToEthAddr != common.EmptyAddr {
+			if txs[i].RqToEthAddr != account.EmptyAddr {
 				rqToEthAddr = &txs[i].RqToEthAddr
 			}
 			// RqToBJJ
@@ -296,7 +297,7 @@ func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
 	const queryUpdate = `UPDATE tx_pool SET to_idx = ?, to_eth_addr = ?, to_bjj = ?, max_num_batch = ?, 
 	signature = ?, client_ip = ?, tx_type = ? WHERE tx_id = ? AND tx_pool.atomic_group_id IS NULL;`
 
-	if tx.ToIdx == 0 && tx.ToEthAddr == common.EmptyAddr && tx.ToBJJ == common.EmptyBJJComp && tx.MaxNumBatch == 0 {
+	if tx.ToIdx == 0 && tx.ToEthAddr == account.EmptyAddr && tx.ToBJJ == common.EmptyBJJComp && tx.MaxNumBatch == 0 {
 		return tracerr.Wrap(errors.New("nothing to update"))
 	}
 
@@ -312,7 +313,7 @@ func (l2db *L2DB) updateTx(tx common.PoolL2Tx) error {
 	return tracerr.Wrap(err)
 }
 
-func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce nonce.Nonce, tx *common.PoolL2Tx) error {
+func (l2db *L2DB) updateTxByIdxAndNonce(idx account.Idx, nonce nonce.Nonce, tx *common.PoolL2Tx) error {
 	txn, err := l2db.dbWrite.Beginx()
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -354,7 +355,7 @@ func (l2db *L2DB) updateTxByIdxAndNonce(idx common.Idx, nonce nonce.Nonce, tx *c
 	f := new(big.Float).SetInt(tx.Amount)
 	amountF, _ := f.Float64()
 	// ToEthAddr
-	if tx.ToEthAddr != common.EmptyAddr {
+	if tx.ToEthAddr != account.EmptyAddr {
 		toEthAddr = &tx.ToEthAddr
 	}
 	// ToBJJ
@@ -488,15 +489,15 @@ func (l2db *L2DB) InvalidateTxs(txIDs []common.TxID, batchNum common.BatchNum) e
 
 // GetPendingUniqueFromIdxs returns from all the pending transactions, the set
 // of unique FromIdx
-func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]common.Idx, error) {
-	var idxs []common.Idx
+func (l2db *L2DB) GetPendingUniqueFromIdxs() ([]account.Idx, error) {
+	var idxs []account.Idx
 	rows, err := l2db.dbRead.Query(`SELECT DISTINCT from_idx FROM tx_pool
 		WHERE state = $1;`, common.PoolL2TxStatePending)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 	defer db.RowsClose(rows)
-	var idx common.Idx
+	var idx account.Idx
 	for rows.Next() {
 		err = rows.Scan(&idx)
 		if err != nil {
@@ -526,7 +527,7 @@ var invalidateOldNoncesQuery = fmt.Sprintf(`
 // InvalidateOldNonces invalidate txs with nonces that are smaller or equal than their
 // respective accounts nonces.  The state of the affected txs will be changed
 // from Pending to Invalid
-func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []common.IdxNonce, batchNum common.BatchNum) (err error) {
+func (l2db *L2DB) InvalidateOldNonces(updatedAccounts []account.IdxNonce, batchNum common.BatchNum) (err error) {
 	if len(updatedAccounts) == 0 {
 		return nil
 	}

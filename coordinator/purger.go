@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
@@ -93,8 +94,8 @@ func (p *Purger) InvalidateMaybe(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 }
 
 //nolint:unused,deadcode
-func idxsNonceFromL2Txs(txs []common.L2Tx) []common.IdxNonce {
-	idxNonceMap := map[common.Idx]nonce.Nonce{}
+func idxsNonceFromL2Txs(txs []common.L2Tx) []account.IdxNonce {
+	idxNonceMap := map[account.Idx]nonce.Nonce{}
 	for _, tx := range txs {
 		if nonce, ok := idxNonceMap[tx.FromIdx]; !ok {
 			idxNonceMap[tx.FromIdx] = tx.Nonce
@@ -102,15 +103,15 @@ func idxsNonceFromL2Txs(txs []common.L2Tx) []common.IdxNonce {
 			idxNonceMap[tx.FromIdx] = tx.Nonce
 		}
 	}
-	idxsNonce := make([]common.IdxNonce, 0, len(idxNonceMap))
+	idxsNonce := make([]account.IdxNonce, 0, len(idxNonceMap))
 	for idx, nonce := range idxNonceMap {
-		idxsNonce = append(idxsNonce, common.IdxNonce{Idx: idx, Nonce: nonce})
+		idxsNonce = append(idxsNonce, account.IdxNonce{Idx: idx, Nonce: nonce})
 	}
 	return idxsNonce
 }
 
-func idxsNonceFromPoolL2Txs(txs []common.PoolL2Tx) []common.IdxNonce {
-	idxNonceMap := map[common.Idx]nonce.Nonce{}
+func idxsNonceFromPoolL2Txs(txs []common.PoolL2Tx) []account.IdxNonce {
+	idxNonceMap := map[account.Idx]nonce.Nonce{}
 	for _, tx := range txs {
 		if nonce, ok := idxNonceMap[tx.FromIdx]; !ok {
 			idxNonceMap[tx.FromIdx] = tx.Nonce
@@ -118,9 +119,9 @@ func idxsNonceFromPoolL2Txs(txs []common.PoolL2Tx) []common.IdxNonce {
 			idxNonceMap[tx.FromIdx] = tx.Nonce
 		}
 	}
-	idxsNonce := make([]common.IdxNonce, 0, len(idxNonceMap))
+	idxsNonce := make([]account.IdxNonce, 0, len(idxNonceMap))
 	for idx, nonce := range idxNonceMap {
-		idxsNonce = append(idxsNonce, common.IdxNonce{Idx: idx, Nonce: nonce})
+		idxsNonce = append(idxsNonce, account.IdxNonce{Idx: idx, Nonce: nonce})
 	}
 	return idxsNonce
 }
@@ -133,7 +134,7 @@ func poolMarkInvalidOldNonces(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	idxsNonce := make([]common.IdxNonce, len(idxs))
+	idxsNonce := make([]account.IdxNonce, len(idxs))
 	lastIdx, err := stateDB.GetCurrentIdx()
 	if err != nil {
 		return tracerr.Wrap(err)

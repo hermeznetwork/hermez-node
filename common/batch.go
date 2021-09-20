@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -19,7 +20,7 @@ type Batch struct {
 	EthBlockNum        int64                `meddler:"eth_block_num"`
 	ForgerAddr         ethCommon.Address    `meddler:"forger_addr"`
 	CollectedFees      map[TokenID]*big.Int `meddler:"fees_collected,json"`
-	FeeIdxsCoordinator []Idx                `meddler:"fee_idxs_coordinator,json"`
+	FeeIdxsCoordinator []account.Idx        `meddler:"fee_idxs_coordinator,json"`
 	StateRoot          *big.Int             `meddler:"state_root,bigint"`
 	NumAccounts        int                  `meddler:"num_accounts"`
 	LastIdx            int64                `meddler:"last_idx"`
@@ -41,7 +42,7 @@ func NewEmptyBatch() *Batch {
 		EthBlockNum:        0,
 		ForgerAddr:         ethCommon.Address{},
 		CollectedFees:      make(map[TokenID]*big.Int),
-		FeeIdxsCoordinator: make([]Idx, 0),
+		FeeIdxsCoordinator: make([]account.Idx, 0),
 		StateRoot:          big.NewInt(0),
 		NumAccounts:        0,
 		LastIdx:            0,
@@ -85,8 +86,8 @@ type BatchData struct {
 	L1UserTxs        []L1Tx
 	L1CoordinatorTxs []L1Tx
 	L2Txs            []L2Tx
-	CreatedAccounts  []Account
-	UpdatedAccounts  []AccountUpdate
+	CreatedAccounts  []account.Account
+	UpdatedAccounts  []account.AccountUpdate
 	ExitTree         []ExitInfo
 	Batch            Batch
 }
@@ -98,7 +99,7 @@ func NewBatchData() *BatchData {
 		// L1UserTxs:        make([]common.L1Tx, 0),
 		L1CoordinatorTxs: make([]L1Tx, 0),
 		L2Txs:            make([]L2Tx, 0),
-		CreatedAccounts:  make([]Account, 0),
+		CreatedAccounts:  make([]account.Account, 0),
 		ExitTree:         make([]ExitInfo, 0),
 		Batch:            Batch{},
 	}

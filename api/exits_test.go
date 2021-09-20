@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -61,7 +62,7 @@ func (t *testExitsResponse) Len() int {
 func genTestExits(
 	commonExits []common.ExitInfo,
 	tokens []historydb.TokenWithUSD,
-	accs []common.Account,
+	accs []account.Account,
 ) []testExit {
 	allExits := []testExit{}
 	for _, exit := range commonExits {

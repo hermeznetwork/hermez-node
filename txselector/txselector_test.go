@@ -2,6 +2,7 @@ package txselector
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -143,7 +144,7 @@ func checkBalance(t *testing.T, tc *til.Context, txsel *TxSelector, username str
 	checkBalanceByIdx(t, txsel, idx, expected)
 }
 
-func checkBalanceByIdx(t *testing.T, txsel *TxSelector, idx common.Idx, expected string) {
+func checkBalanceByIdx(t *testing.T, txsel *TxSelector, idx account.Idx, expected string) {
 	acc, err := txsel.localAccountsDB.GetAccount(idx)
 	require.NoError(t, err)
 	assert.Equal(t, expected, acc.Balance.String())
@@ -152,7 +153,7 @@ func checkBalanceByIdx(t *testing.T, txsel *TxSelector, idx common.Idx, expected
 // checkSortedByNonce takes as input testAccNonces map, and the array of
 // common.PoolL2Txs, and checks if the nonces correspond to the accumulated
 // values of the map. Also increases the Nonces computed on the map.
-func checkSortedByNonce(t *testing.T, testAccNonces map[common.Idx]nonce.Nonce,
+func checkSortedByNonce(t *testing.T, testAccNonces map[account.Idx]nonce.Nonce,
 	txs []common.PoolL2Tx) {
 	for _, tx := range txs {
 		assert.True(t, testAccNonces[tx.FromIdx] == tx.Nonce,
@@ -177,7 +178,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	// restart nonces of TilContext, as will be set by generating directly
 	// the PoolL2Txs for each specific batch with tc.GeneratePoolL2Txs
 	tc.RestartNonces()
-	testAccNonces := make(map[common.Idx]nonce.Nonce)
+	testAccNonces := make(map[account.Idx]nonce.Nonce)
 
 	// add tokens to HistoryDB to avoid breaking FK constrains
 	addTokens(t, tc, txsel.l2db.DB())
@@ -201,7 +202,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs = []common.L1Tx{}
@@ -212,7 +213,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
@@ -223,7 +224,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(3), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(257), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(257), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "A", 0, "500")
 	checkBalance(t, tc, txsel, "C", 1, "0")
 
@@ -236,7 +237,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(258), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "A", 0, "500")
 	checkBalance(t, tc, txsel, "A", 1, "500")
 	checkBalance(t, tc, txsel, "C", 1, "0")
@@ -250,7 +251,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(5), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(258), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "A", 0, "500")
 	checkBalance(t, tc, txsel, "A", 1, "500")
 	checkBalance(t, tc, txsel, "C", 1, "0")
@@ -264,7 +265,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(6), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(259), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "A", 0, "600")
 	checkBalance(t, tc, txsel, "A", 1, "500")
 	checkBalance(t, tc, txsel, "B", 0, "400")
@@ -294,7 +295,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err :=
 		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []common.Idx{261, 263}, coordIdxs)
+	assert.Equal(t, []account.Idx{261, 263}, coordIdxs)
 	assert.Equal(t, txsel.coordAccount.AccountCreationAuth, accAuths[0])
 	assert.Equal(t, txsel.coordAccount.AccountCreationAuth, accAuths[2])
 	assert.Equal(t, accAuthSig0, accAuths[1])
@@ -305,7 +306,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(discardedL2Txs))
 	assert.Equal(t, len(oL1CoordTxs), len(accAuths))
 	assert.Equal(t, common.BatchNum(7), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(264), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(264), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 1, "20") // CoordIdx for TokenID=1
 	checkBalance(t, tc, txsel, "Coord", 0, "10") // CoordIdx for TokenID=1
 	checkBalance(t, tc, txsel, "A", 0, "600")
@@ -343,7 +344,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, discardedL2Txs, err =
 		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []common.Idx{261, 263}, coordIdxs)
+	assert.Equal(t, []account.Idx{261, 263}, coordIdxs)
 	assert.Equal(t, 0, len(accAuths))
 	assert.Equal(t, 0, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
@@ -351,7 +352,7 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	assert.Equal(t, 0, len(discardedL2Txs))
 	assert.Equal(t, len(oL1CoordTxs), len(accAuths))
 	assert.Equal(t, common.BatchNum(8), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(264), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(264), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 1, "30") // CoordIdx for TokenID=1
 	checkBalance(t, tc, txsel, "Coord", 0, "35") // CoordIdx for TokenID=1
 	checkBalance(t, tc, txsel, "A", 0, "430")
@@ -387,14 +388,14 @@ func TestGetL2TxSelectionMinimumFlow0(t *testing.T) {
 	coordIdxs, accAuths, oL1UserTxs, oL1CoordTxs, oL2Txs, _, err =
 		txsel.GetL1L2TxSelection(tpc, l1UserTxs, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []common.Idx{263}, coordIdxs)
+	assert.Equal(t, []account.Idx{263}, coordIdxs)
 	assert.Equal(t, 0, len(accAuths))
 	assert.Equal(t, 4, len(oL1UserTxs))
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 2, len(oL2Txs))
 	assert.Equal(t, len(oL1CoordTxs), len(accAuths))
 	assert.Equal(t, common.BatchNum(9), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(264), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(264), txsel.localAccountsDB.CurrentIdx())
 	checkBalanceByIdx(t, txsel, 261, "30")
 	checkBalanceByIdx(t, txsel, 263, "75")
 	checkBalance(t, tc, txsel, "A", 0, "730")
@@ -870,7 +871,7 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	err = historyDB.UpdateTokenValue(common.EmptyAddr, 1000)
+	err = historyDB.UpdateTokenValue(account.EmptyAddr, 1000)
 	require.NoError(t, err)
 
 	// restart nonces of TilContext, as will be set by generating directly
@@ -1111,7 +1112,7 @@ func TestSimpleAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs = []common.L1Tx{}
@@ -1122,7 +1123,7 @@ func TestSimpleAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
@@ -1133,7 +1134,7 @@ func TestSimpleAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(3), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(258), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1000")
 	checkBalance(t, tc, txsel, "A", 0, "500")
 	checkBalance(t, tc, txsel, "B", 0, "300")
@@ -1202,7 +1203,7 @@ func TestSimpleAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 2, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(258), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1000")
 	checkBalance(t, tc, txsel, "A", 0, "600") // 500 -100 +200
 	checkBalance(t, tc, txsel, "B", 0, "200") // 300 +100 -200
@@ -1252,7 +1253,7 @@ func TestFailingAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs = []common.L1Tx{}
@@ -1263,7 +1264,7 @@ func TestFailingAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
@@ -1274,7 +1275,7 @@ func TestFailingAtomicTx(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(3), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(259), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1000")
 	checkBalance(t, tc, txsel, "A", 0, "500")
 	checkBalance(t, tc, txsel, "B", 0, "300")
@@ -1373,7 +1374,7 @@ func TestFailingAtomicTx(t *testing.T) {
 	}
 
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(259), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(259), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1010") // 1000 + 10
 	checkBalance(t, tc, txsel, "A", 0, "500")      // Balance not affected due to rejected atomic txs
 	checkBalance(t, tc, txsel, "B", 0, "300")      // Balance not affected due to rejected atomic txs
@@ -1420,7 +1421,7 @@ func TestFilterMaxNumBatch(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(1), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:2")
 	l1UserTxs = []common.L1Tx{}
@@ -1431,7 +1432,7 @@ func TestFilterMaxNumBatch(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(2), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(255), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(255), txsel.localAccountsDB.CurrentIdx())
 
 	log.Debug("block:0 batch:3")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[2].Batch.ForgeL1TxsNum])
@@ -1442,7 +1443,7 @@ func TestFilterMaxNumBatch(t *testing.T) {
 	assert.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 0, len(oL2Txs))
 	assert.Equal(t, common.BatchNum(3), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(258), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1000")
 	checkBalance(t, tc, txsel, "A", 0, "500")
 	checkBalance(t, tc, txsel, "B", 0, "300")
@@ -1499,7 +1500,7 @@ func TestFilterMaxNumBatch(t *testing.T) {
 	assert.Equal(t, 2, discardedL2Txs[0].ErrorCode)
 	assert.Equal(t, "ErrUnsupportedMaxNumBatch", discardedL2Txs[0].ErrorType)
 	assert.Equal(t, common.BatchNum(4), txsel.localAccountsDB.CurrentBatch())
-	assert.Equal(t, common.Idx(258), txsel.localAccountsDB.CurrentIdx())
+	assert.Equal(t, account.Idx(258), txsel.localAccountsDB.CurrentIdx())
 	checkBalance(t, tc, txsel, "Coord", 0, "1000")
 	checkBalance(t, tc, txsel, "A", 0, "700") // 500 +200
 	checkBalance(t, tc, txsel, "B", 0, "100") // 300 -200
@@ -1681,12 +1682,12 @@ func TestSortL2Txs(t *testing.T) {
 	}
 
 	//Idxs
-	idx1 := common.Idx(256)
-	idx2 := common.Idx(257)
-	idx3 := common.Idx(258)
-	idx4 := common.Idx(259)
-	idx5 := common.Idx(260)
-	idx6 := common.Idx(261)
+	idx1 := account.Idx(256)
+	idx2 := account.Idx(257)
+	idx3 := account.Idx(258)
+	idx4 := account.Idx(259)
+	idx5 := account.Idx(260)
+	idx6 := account.Idx(261)
 
 	// TxIDs
 	id1 := common.TxID([common.TxIDLen]byte{1})

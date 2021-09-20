@@ -3,6 +3,7 @@ package coordinator
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"path"
@@ -90,7 +91,7 @@ type BatchInfo struct {
 	L1CoordTxs            []common.L1Tx
 	L1CoordinatorTxsAuths [][]byte
 	L2Txs                 []common.L2Tx
-	CoordIdxs             []common.Idx
+	CoordIdxs             []account.Idx
 	ForgeBatchArgs        *eth.RollupForgeBatchArgs
 	Auth                  *bind.TransactOpts `json:"-"`
 	EthTxs                []*types.Transaction

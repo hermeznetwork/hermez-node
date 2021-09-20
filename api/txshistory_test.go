@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math"
 	"math/big"
 	"sort"
@@ -107,7 +108,7 @@ func (t testTxsResponse) New() Pendinger { return &testTxsResponse{} }
 func genTestTxs(
 	l1s []common.L1Tx,
 	l2s []common.L2Tx,
-	accs []common.Account,
+	accs []account.Account,
 	tokens []historydb.TokenWithUSD,
 	blocks []common.Block,
 ) []testTx {
@@ -160,7 +161,7 @@ func genTestTxs(
 			tx.FromIdx = &idxStrUnforged
 		}
 		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
-		if l1.ToIdx >= common.UserThreshold {
+		if l1.ToIdx >= account.UserThreshold {
 			// find account
 			for _, acc := range accs {
 				if l1.ToIdx == acc.Idx {
@@ -227,7 +228,7 @@ func genTestTxs(
 			}
 		}
 		// If tx has a normal ToIdx (>255), set FromEthAddr and FromBJJ
-		if l2s[i].ToIdx >= common.UserThreshold {
+		if l2s[i].ToIdx >= account.UserThreshold {
 			// find account
 			for _, acc := range accs {
 				if l2s[i].ToIdx == acc.Idx {

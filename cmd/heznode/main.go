@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io"
 	"os"
 	"os/exec"
@@ -832,12 +833,12 @@ func main() {
 	}
 }
 
-func checkAccountParam(c *cli.Context) (*ethCommon.Address, *babyjub.PublicKeyComp, []common.Idx, error) {
+func checkAccountParam(c *cli.Context) (*ethCommon.Address, *babyjub.PublicKeyComp, []account.Idx, error) {
 	accountParam := c.String(flagAccount)
 	const characters = 42
 	var (
 		addr        *ethCommon.Address
-		accountIdxs []common.Idx
+		accountIdxs []account.Idx
 		bjj         *babyjub.PublicKeyComp
 		err         error
 	)
@@ -854,7 +855,7 @@ func checkAccountParam(c *cli.Context) (*ethCommon.Address, *babyjub.PublicKeyCo
 		}
 	} else if matchIdx { //Check tokenID
 		value, _ := strconv.Atoi(accountParam)
-		accountIdxs = append(accountIdxs, (common.Idx)(value))
+		accountIdxs = append(accountIdxs, (account.Idx)(value))
 	} else {
 		return nil, nil, nil, fmt.Errorf("invalid parameter. Only accepted ethereum address, bjj address or account index")
 	}

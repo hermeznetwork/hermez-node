@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	account2 "github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"testing"
 	"time"
@@ -72,7 +73,7 @@ func (t testPoolTxsResponse) New() Pendinger { return &testPoolTxsResponse{} }
 func genTestPoolTxs(
 	poolTxs []common.PoolL2Tx,
 	tokens []historydb.TokenWithUSD,
-	accs []common.Account,
+	accs []account2.Account,
 ) (poolTxsToSend []common.PoolL2Tx, poolTxsToReceive []testPoolTxReceive) {
 	poolTxsToSend = []common.PoolL2Tx{}
 	poolTxsToReceive = []testPoolTxReceive{}
@@ -106,7 +107,7 @@ func genTestPoolTxs(
 		genReceiveTx.FromBJJ = &fromBjj
 		toIdx := common.IdxToHez(poolTxs[i].ToIdx, token.Symbol)
 		genReceiveTx.ToIdx = &toIdx
-		if poolTxs[i].ToEthAddr != common.EmptyAddr {
+		if poolTxs[i].ToEthAddr != account2.EmptyAddr {
 			toEth := common.EthAddrToHez(poolTxs[i].ToEthAddr)
 			genReceiveTx.ToEthAddr = &toEth
 		} else if poolTxs[i].ToIdx > 255 {
@@ -135,7 +136,7 @@ func genTestPoolTxs(
 				rqToIdx := common.IdxToHez(poolTxs[i].RqToIdx, rqToken.Symbol)
 				genReceiveTx.RqToIdx = &rqToIdx
 			}
-			if poolTxs[i].RqToEthAddr != common.EmptyAddr {
+			if poolTxs[i].RqToEthAddr != account2.EmptyAddr {
 				rqToEth := common.EthAddrToHez(poolTxs[i].RqToEthAddr)
 				genReceiveTx.RqToEthAddr = &rqToEth
 			}
@@ -187,7 +188,7 @@ func TestPoolTxs(t *testing.T) {
 	require.NoError(t, err)
 	// Wrong to
 	badTx = tc.poolTxsToSend[0]
-	badTx.ToEthAddr = common.FFAddr
+	badTx.ToEthAddr = account2.FFAddr
 	badTx.ToIdx = 0
 	jsonTxBytes, err = json.Marshal(badTx)
 	require.NoError(t, err)
@@ -424,7 +425,7 @@ func TestPoolTxs(t *testing.T) {
 		nil, &fetchedTx))
 	assertPoolTx(t, txToReceive, fetchedTx)
 
-	tx.ToIdx = common.Idx(0)
+	tx.ToIdx = account2.Idx(0)
 	tx.ToBJJ = common.EmptyBJJComp
 	ethAddrStr := "hez:0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf"
 	ethAddr, err := common.HezStringToEthAddr(ethAddrStr, "ethAddr")
@@ -462,7 +463,7 @@ func TestPoolTxs(t *testing.T) {
 	assertPoolTx(t, txToReceive, fetchedTx)
 
 	tx.Type = common.TxTypeTransferToEthAddr
-	tx.ToIdx = common.Idx(0)
+	tx.ToIdx = account2.Idx(0)
 	ethAddrStr = "hez:0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"
 	ethAddr, err = common.HezStringToEthAddr(ethAddrStr, "ethAddr")
 	require.NoError(t, err)
@@ -497,8 +498,8 @@ func TestPoolTxs(t *testing.T) {
 		nil, &fetchedTx))
 
 	tx.Type = common.TxTypeTransfer
-	tx.ToIdx = common.Idx(262)
-	tx.ToEthAddr = common.EmptyAddr
+	tx.ToIdx = account2.Idx(262)
+	tx.ToEthAddr = account2.EmptyAddr
 	signStr = "9f76205e4c69776f8174db8e0961aa94d37ceb5c1de06a95cca80821ee093d885812c3f7cfad61e00027ee56de0d3f573ff6cc88a13780abd12e5f61a622f103"
 	sign = babyjub.SignatureComp{}
 	err = sign.UnmarshalText([]byte(signStr))
@@ -557,7 +558,7 @@ func TestPoolTxs(t *testing.T) {
 	oldTx := tx
 	oldIdx := idx
 	idx = "hez:ETH:265"
-	tx.FromIdx = common.Idx(265)
+	tx.FromIdx = account2.Idx(265)
 	tx.Nonce = nonce.Nonce(0)
 	tx.TxID, err = common.NewTxIDFromString("0x0293ed7291a26bc0ccd01b696f95c8618690d04d028d2af04087831f874235b217")
 	require.NoError(t, err)
@@ -591,7 +592,7 @@ func TestPoolTxs(t *testing.T) {
 
 	// test wrong account idx
 	oldAccountIdx := tx.FromIdx
-	tx.FromIdx = common.Idx(250)
+	tx.FromIdx = account2.Idx(250)
 	jsonTxBytes, err = json.Marshal(tx)
 	require.NoError(t, err)
 	jsonTxReader = bytes.NewReader(jsonTxBytes)
@@ -634,8 +635,8 @@ func TestAllTosNull(t *testing.T) {
 	// Generate keys
 	addr, sk := generateKeys(4444)
 	// Generate account:
-	var testIdx common.Idx = 333
-	account := common.Account{
+	var testIdx account2.Idx = 333
+	account := account2.Account{
 		Idx:      testIdx,
 		TokenID:  0,
 		BatchNum: 1,
@@ -645,7 +646,7 @@ func TestAllTosNull(t *testing.T) {
 		Balance:  big.NewInt(1000000),
 	}
 	// Add account to history DB (required to verify signature)
-	err := api.h.AddAccounts([]common.Account{account})
+	err := api.h.AddAccounts([]account2.Account{account})
 	assert.NoError(t, err)
 	// Genrate tx with all tos set to nil (to eth, to bjj, to idx)
 	tx := common.PoolL2Tx{

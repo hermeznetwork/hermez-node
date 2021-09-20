@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/common"
@@ -36,14 +37,14 @@ type PoolTxUpdateByIdxAndNonceFilter struct {
 }
 
 // ParsePoolTxUpdateByIdxAndNonceFilter func for parsing pool tx update by idx and nonce filter to the account index and nonce
-func ParsePoolTxUpdateByIdxAndNonceFilter(c *gin.Context) (common.Idx, nonce.Nonce, error) {
+func ParsePoolTxUpdateByIdxAndNonceFilter(c *gin.Context) (account.Idx, nonce.Nonce, error) {
 	var poolTxUpdateByIdxAndNonceFilter PoolTxUpdateByIdxAndNonceFilter
 	if err := c.ShouldBindUri(&poolTxUpdateByIdxAndNonceFilter); err != nil {
-		return common.Idx(0), 0, tracerr.Wrap(err)
+		return account.Idx(0), 0, tracerr.Wrap(err)
 	}
 	queryAccount, err := common.StringToIdx(poolTxUpdateByIdxAndNonceFilter.AccountIndex, "accountIndex")
 	if err != nil {
-		return common.Idx(0), 0, tracerr.Wrap(err)
+		return account.Idx(0), 0, tracerr.Wrap(err)
 	}
 
 	queryNonce := nonce.Nonce(*poolTxUpdateByIdxAndNonceFilter.Nonce)

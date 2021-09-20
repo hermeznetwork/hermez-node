@@ -1,6 +1,7 @@
 package txprocessor
 
 import (
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -39,7 +40,7 @@ func checkBalance(t *testing.T, tc *til.Context, statedb *statedb.StateDB, usern
 	assert.Equal(t, expected, acc.Balance.String())
 }
 
-func checkBalanceByIdx(t *testing.T, statedb *statedb.StateDB, idx common.Idx, expected string) {
+func checkBalanceByIdx(t *testing.T, statedb *statedb.StateDB, idx account.Idx, expected string) {
 	acc, err := statedb.GetAccount(idx)
 	require.NoError(t, err)
 	assert.Equal(t, expected, acc.Balance.String())
@@ -304,7 +305,7 @@ func TestProcessTxsBalances(t *testing.T) {
 		"9061858435528794221929846392270405504056106238451760714188625065949729889651",
 		txProcessor.state.MT.Root().BigInt().String())
 
-	coordIdxs := []common.Idx{261, 263}
+	coordIdxs := []account.Idx{261, 263}
 	log.Debug("block:0 batch:7")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[0].Rollup.Batches[6].L2Txs)
@@ -340,7 +341,7 @@ func TestProcessTxsBalances(t *testing.T) {
 		"8905191229562583213069132470917469035834300549892959854483573322676101624713",
 		txProcessor.state.MT.Root().BigInt().String())
 
-	coordIdxs = []common.Idx{262}
+	coordIdxs = []account.Idx{262}
 	log.Debug("block:1 batch:1")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[0].L2Txs)
@@ -359,7 +360,7 @@ func TestProcessTxsBalances(t *testing.T) {
 		"12063160053709941400160547588624831667157042937323422396363359123696668555050",
 		txProcessor.state.MT.Root().BigInt().String())
 
-	coordIdxs = []common.Idx{}
+	coordIdxs = []account.Idx{}
 	log.Debug("block:1 batch:2")
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = common.L2TxsToPoolL2Txs(blocks[1].Rollup.Batches[1].L2Txs)
@@ -414,7 +415,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, 8, len(blocks[1].Rollup.Batches[1].L2Txs))
 
 	// Coordinator Idx where to send the fees
-	coordIdxs := []common.Idx{256, 257, 258, 259}
+	coordIdxs := []account.Idx{256, 257, 258, 259}
 
 	// Idx of user 'A'
 	idxA1 := tc.Users["A"].Accounts[common.TokenID(1)].Idx
@@ -549,7 +550,7 @@ func TestProcessTxsSynchronizer(t *testing.T) {
 	assert.Equal(t, "51", acc.Balance.String())
 
 	// get balance of Coordinator account for TokenID==0
-	acc, err = statedb.GetAccount(common.Idx(256))
+	acc, err = statedb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, "2", acc.Balance.String())
 
@@ -572,7 +573,7 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	require.NoError(t, err)
 
 	// Coordinator Idx where to send the fees
-	coordIdxs := []common.Idx{256, 257, 258, 259}
+	coordIdxs := []account.Idx{256, 257, 258, 259}
 
 	// Idx of user 'A'
 	idxA1 := tc.Users["A"].Accounts[common.TokenID(1)].Idx
@@ -638,11 +639,11 @@ func TestProcessTxsBatchBuilder(t *testing.T) {
 	assert.Equal(t, "51", acc.Balance.String())
 
 	// get balance of Coordinator account for TokenID==0
-	acc, err = statedb.GetAccount(common.Idx(256))
+	acc, err = statedb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, common.TokenID(0), acc.TokenID)
 	assert.Equal(t, "2", acc.Balance.String())
-	acc, err = statedb.GetAccount(common.Idx(257))
+	acc, err = statedb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, common.TokenID(1), acc.TokenID)
 	assert.Equal(t, "2", acc.Balance.String())
@@ -772,10 +773,10 @@ func TestCreateAccountDepositMaxValue(t *testing.T) {
 	require.NoError(t, err)
 
 	// check balances
-	acc, err := statedb.GetAccount(common.Idx(256))
+	acc, err := statedb.GetAccount(account.Idx(256))
 	require.NoError(t, err)
 	assert.Equal(t, daMaxBI, acc.Balance)
-	acc, err = statedb.GetAccount(common.Idx(257))
+	acc, err = statedb.GetAccount(account.Idx(257))
 	require.NoError(t, err)
 	assert.Equal(t, daMax1BI, acc.Balance)
 
@@ -834,7 +835,7 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	// Check that ProcessTxs always uses the first occurrence of the
 	// CoordIdx for each TokenID
 
-	coordIdxs := []common.Idx{257, 257, 257}
+	coordIdxs := []account.Idx{257, 257, 257}
 	txProcessor, tc, blocks, statedb := initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs := til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l1CoordTxs := blocks[0].Rollup.Batches[1].L1CoordinatorTxs
@@ -849,7 +850,7 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	checkBalanceByIdx(t, txProcessor.state, 259, "0")   // Coord0
 
 	// reset StateDB values
-	coordIdxs = []common.Idx{259, 257}
+	coordIdxs = []account.Idx{259, 257}
 	statedb.Close()
 	txProcessor, tc, blocks, statedb = initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
@@ -865,7 +866,7 @@ func TestMultipleCoordIdxForTokenID(t *testing.T) {
 	checkBalanceByIdx(t, txProcessor.state, 259, "10")  // Coord0
 
 	// reset StateDB values
-	coordIdxs = []common.Idx{257, 259}
+	coordIdxs = []account.Idx{257, 259}
 	statedb.Close()
 	txProcessor, tc, blocks, statedb = initTestMultipleCoordIdxForTokenID(t)
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[1].Batch.ForgeL1TxsNum])
@@ -1220,7 +1221,7 @@ func TestUpdatedAccounts(t *testing.T) {
 	}
 	txProcessor := NewTxProcessor(statedb, config)
 
-	sortedKeys := func(m map[common.Idx]*common.Account) []int {
+	sortedKeys := func(m map[account.Idx]*account.Account) []int {
 		keys := make([]int, 0)
 		for k := range m {
 			keys = append(keys, int(k))

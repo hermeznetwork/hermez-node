@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strconv"
 	"strings"
@@ -50,7 +51,7 @@ func StringToL2TxState(txState string) (*PoolL2TxState, error) {
 
 // QueryAccount is a representation of an account with accountIndex and its token symbol
 type QueryAccount struct {
-	AccountIndex *Idx
+	AccountIndex *account.Idx
 	Symbol       string
 }
 
@@ -66,7 +67,7 @@ func StringToIdx(idxStr, name string) (QueryAccount, error) {
 			"invalid %s, must follow this: hez:<tokenSymbol>:index", name))
 	}
 	idxInt, err := strconv.Atoi(splitted[2])
-	idx := Idx(idxInt)
+	idx := account.Idx(idxInt)
 	return QueryAccount{AccountIndex: &idx, Symbol: splitted[1]}, tracerr.Wrap(err)
 }
 
@@ -149,13 +150,13 @@ func EthAddrToHez(addr ethCommon.Address) string {
 }
 
 // IdxToHez converts account index to hez account index with token symbol
-func IdxToHez(idx Idx, tokenSymbol string) string {
+func IdxToHez(idx account.Idx, tokenSymbol string) string {
 	return "hez:" + tokenSymbol + ":" + strconv.Itoa(int(idx))
 }
 
 // StrHezIdx is used to unmarshal HezIdx directly into an alias of Idx
 type StrHezIdx struct {
-	Idx         Idx
+	Idx         account.Idx
 	TokenSymbol string
 }
 
@@ -172,7 +173,7 @@ func (s *StrHezIdx) UnmarshalText(text []byte) error {
 		return tracerr.Wrap(err)
 	}
 	*s = StrHezIdx{
-		Idx:         Idx(idxInt),
+		Idx:         account.Idx(idxInt),
 		TokenSymbol: splitted[0],
 	}
 	return nil
@@ -184,7 +185,7 @@ type StrHezEthAddr ethCommon.Address
 // UnmarshalText unmarshals a StrHezEthAddr
 func (s *StrHezEthAddr) UnmarshalText(text []byte) error {
 	if len(text) == 0 {
-		*s = StrHezEthAddr(EmptyAddr)
+		*s = StrHezEthAddr(account.EmptyAddr)
 		return nil
 	}
 	withoutHez := strings.TrimPrefix(string(text), "hez:")

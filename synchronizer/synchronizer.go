@@ -36,6 +36,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"sync"
 	"time"
@@ -1024,11 +1025,11 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 		}
 		batchData.CreatedAccounts = processTxsOut.CreatedAccounts
 
-		batchData.UpdatedAccounts = make([]common.AccountUpdate, 0,
+		batchData.UpdatedAccounts = make([]account.AccountUpdate, 0,
 			len(processTxsOut.UpdatedAccounts))
 		for _, acc := range processTxsOut.UpdatedAccounts {
 			batchData.UpdatedAccounts = append(batchData.UpdatedAccounts,
-				common.AccountUpdate{
+				account.AccountUpdate{
 					EthBlockNum: blockNum,
 					BatchNum:    batchNum,
 					Idx:         acc.Idx,
@@ -1105,7 +1106,7 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 	rollupData.Withdrawals = make([]common.WithdrawInfo, 0, len(rollupEvents.Withdraw))
 	for _, evt := range rollupEvents.Withdraw {
 		rollupData.Withdrawals = append(rollupData.Withdrawals, common.WithdrawInfo{
-			Idx:             common.Idx(evt.Idx),
+			Idx:             account.Idx(evt.Idx),
 			NumExitRoot:     common.BatchNum(evt.NumExitRoot),
 			InstantWithdraw: evt.InstantWithdraw,
 			TxHash:          evt.TxHash,

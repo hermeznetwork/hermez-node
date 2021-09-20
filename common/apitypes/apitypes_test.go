@@ -3,13 +3,13 @@ package apitypes
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 
@@ -171,7 +171,7 @@ func TestStrHezIdx(t *testing.T) {
 	from := []byte(`{"I":"hez:foo:4"}`)
 	to := &testStrHezIdx{}
 	assert.NoError(t, json.Unmarshal(from, to))
-	assert.Equal(t, common.Idx(4), common.Idx(to.I))
+	assert.Equal(t, account.Idx(4), account.Idx(to.I))
 }
 
 func TestHezEthAddr(t *testing.T) {

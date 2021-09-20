@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"strconv"
 	"testing"
 
@@ -41,7 +42,7 @@ func (t *testAccountsResponse) Len() int { return len(t.Accounts) }
 
 func (t testAccountsResponse) New() Pendinger { return &testAccountsResponse{} }
 
-func genTestAccounts(accounts []common.Account, tokens []historydb.TokenWithUSD) []testAccount {
+func genTestAccounts(accounts []account.Account, tokens []historydb.TokenWithUSD) []testAccount {
 	tAccounts := []testAccount{}
 	for x, account := range accounts {
 		token := getTokenByID(account.TokenID, tokens)

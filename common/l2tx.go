@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -14,9 +15,9 @@ type L2Tx struct {
 	// Stored in DB: mandatory fields
 	TxID     TxID     `meddler:"id"`
 	BatchNum BatchNum `meddler:"batch_num"` // batchNum in which this tx was forged.
-	Position int      `meddler:"position"`
-	FromIdx  Idx      `meddler:"from_idx"`
-	ToIdx    Idx      `meddler:"to_idx"`
+	Position int         `meddler:"position"`
+	FromIdx  account.Idx `meddler:"from_idx"`
+	ToIdx    account.Idx `meddler:"to_idx"`
 	// TokenID is filled by the TxProcessor
 	TokenID TokenID     `meddler:"token_id"`
 	Amount  *big.Int    `meddler:"amount,bigint"`
@@ -56,9 +57,9 @@ func NewL2Tx(tx *L2Tx) (*L2Tx, error) {
 
 // SetType sets the type of the transaction.  Uses (FromIdx, Nonce).
 func (tx *L2Tx) SetType() error {
-	if tx.ToIdx == Idx(1) {
+	if tx.ToIdx == account.Idx(1) {
 		tx.Type = TxTypeExit
-	} else if tx.ToIdx >= IdxUserThreshold {
+	} else if tx.ToIdx >= account.IdxUserThreshold {
 		tx.Type = TxTypeTransfer
 	} else {
 		return tracerr.Wrap(fmt.Errorf(
@@ -216,14 +217,14 @@ func L2TxFromBytesDataAvailability(b []byte, nLevels int) (*L2Tx, error) {
 
 	var paddedFromIdxBytes [6]byte
 	copy(paddedFromIdxBytes[6-idxLen:], b[0:idxLen])
-	tx.FromIdx, err = IdxFromBytes(paddedFromIdxBytes[:])
+	tx.FromIdx, err = account.IdxFromBytes(paddedFromIdxBytes[:])
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
 
 	var paddedToIdxBytes [6]byte
 	copy(paddedToIdxBytes[6-idxLen:6], b[idxLen:idxLen*2])
-	tx.ToIdx, err = IdxFromBytes(paddedToIdxBytes[:])
+	tx.ToIdx, err = account.IdxFromBytes(paddedToIdxBytes[:])
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}

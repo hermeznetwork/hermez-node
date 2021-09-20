@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strings"
 	"time"
@@ -28,7 +29,7 @@ func newBatchData(batchNum int) common.BatchData {
 		Batch: common.Batch{
 			BatchNum:  common.BatchNum(batchNum),
 			StateRoot: big.NewInt(0), ExitRoot: big.NewInt(0),
-			FeeIdxsCoordinator: make([]common.Idx, 0),
+			FeeIdxsCoordinator: make([]account.Idx, 0),
 			CollectedFees:      make(map[common.TokenID]*big.Int),
 		},
 	}
@@ -48,9 +49,9 @@ func newBlock(blockNum int64) common.BlockData {
 type contextExtra struct {
 	openToForge     int64
 	toForgeL1TxsNum int64
-	nonces          map[common.Idx]nonce.Nonce
+	nonces          map[account.Idx]nonce.Nonce
 	idx             int
-	idxByTxID       map[common.TxID]common.Idx
+	idxByTxID       map[common.TxID]account.Idx
 }
 
 // Context contains the data of the test
@@ -96,7 +97,7 @@ func NewContext(chainID uint16, rollupConstMaxL1UserTx int) *Context {
 
 		rollupConstMaxL1UserTx: rollupConstMaxL1UserTx,
 		chainID:                chainID,
-		idx:                    common.UserThreshold,
+		idx:                    account.UserThreshold,
 		// We use some placeholder values for StateRoot and ExitTree
 		// because these values will never be nil
 		currBlock:    newBlock(2), //nolint:gomnd
@@ -111,17 +112,17 @@ func NewContext(chainID uint16, rollupConstMaxL1UserTx int) *Context {
 		extra: contextExtra{
 			openToForge:     0,
 			toForgeL1TxsNum: 0,
-			nonces:          make(map[common.Idx]nonce.Nonce),
-			idx:             common.UserThreshold,
-			idxByTxID:       make(map[common.TxID]common.Idx),
+			nonces:          make(map[account.Idx]nonce.Nonce),
+			idx:             account.UserThreshold,
+			idxByTxID:       make(map[common.TxID]account.Idx),
 		},
 	}
 }
 
 // Account contains the data related to the account for a specific TokenID of a User
 type Account struct {
-	Idx      common.Idx
-	TokenID  common.TokenID
+	Idx     account.Idx
+	TokenID common.TokenID
 	Nonce    nonce.Nonce
 	BatchNum int
 }
@@ -327,7 +328,7 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
 			tx := common.L2Tx{
-				ToIdx:       common.Idx(1), // as is an Exit
+				ToIdx:       account.Idx(1), // as is an Exit
 				Fee:         common.FeeSelector(inst.Fee),
 				Amount:      inst.Amount,
 				Type:        common.TxTypeExit,
@@ -349,7 +350,7 @@ func (tc *Context) generateBlocks() ([]common.BlockData, error) {
 				return nil, tracerr.Wrap(fmt.Errorf("Line %d: %s", inst.LineNum, err.Error()))
 			}
 			tx := common.L1Tx{
-				ToIdx:         common.Idx(1), // as is an Exit
+				ToIdx:         account.Idx(1), // as is an Exit
 				TokenID:       inst.TokenID,
 				Amount:        inst.Amount,
 				DepositAmount: big.NewInt(0),
@@ -437,7 +438,7 @@ func (tc *Context) calculateIdxForL1Txs(isCoordinatorTxs bool, txs []L1Tx) error
 					tx.fromIdxName, tx.L1Tx.TokenID))
 			}
 			tc.Users[tx.fromIdxName].Accounts[tx.L1Tx.TokenID] = &Account{
-				Idx:      common.Idx(tc.idx),
+				Idx:      account.Idx(tc.idx),
 				TokenID:  tx.L1Tx.TokenID,
 				Nonce:    nonce.Nonce(0),
 				BatchNum: tc.currBatchNum,
@@ -529,7 +530,7 @@ func (tc *Context) addToL1UserQueue(tx L1Tx) error {
 	tx.L1Tx.FromEthAddr = tc.Users[tx.fromIdxName].Addr
 	tx.L1Tx.FromBJJ = tc.Users[tx.fromIdxName].BJJ.Public().Compress()
 	if tx.toIdxName == "" {
-		tx.L1Tx.ToIdx = common.Idx(0)
+		tx.L1Tx.ToIdx = account.Idx(0)
 	} else {
 		account, ok := tc.Users[tx.toIdxName].Accounts[tx.L1Tx.TokenID]
 		if !ok {
@@ -539,7 +540,7 @@ func (tc *Context) addToL1UserQueue(tx L1Tx) error {
 		tx.L1Tx.ToIdx = account.Idx
 	}
 	if tx.L1Tx.Type == common.TxTypeForceExit {
-		tx.L1Tx.ToIdx = common.Idx(1)
+		tx.L1Tx.ToIdx = account.Idx(1)
 	}
 	nTx, err := common.NewL1Tx(&tx.L1Tx)
 	if err != nil {
@@ -639,22 +640,22 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 				Nonce:       tc.Users[inst.From].Accounts[inst.TokenID].Nonce,
 				State:       common.PoolL2TxStatePending,
 				Timestamp:   time.Now(),
-				RqToEthAddr: common.EmptyAddr,
+				RqToEthAddr: account.EmptyAddr,
 				RqToBJJ:     common.EmptyBJJComp,
 				Type:        inst.Typ,
 			}
 			tc.Users[inst.From].Accounts[inst.TokenID].Nonce++
 			if tx.Type == common.TxTypeTransfer {
 				tx.ToIdx = tc.Users[inst.To].Accounts[inst.TokenID].Idx
-				tx.ToEthAddr = common.EmptyAddr
+				tx.ToEthAddr = account.EmptyAddr
 				tx.ToBJJ = common.EmptyBJJComp
 			} else if tx.Type == common.TxTypeTransferToEthAddr {
-				tx.ToIdx = common.Idx(0)
+				tx.ToIdx = account.Idx(0)
 				tx.ToEthAddr = tc.Users[inst.To].Addr
 				tx.ToBJJ = common.EmptyBJJComp
 			} else if tx.Type == common.TxTypeTransferToBJJ {
-				tx.ToIdx = common.Idx(0)
-				tx.ToEthAddr = common.FFAddr
+				tx.ToIdx = account.Idx(0)
+				tx.ToEthAddr = account.FFAddr
 				tx.ToBJJ = tc.Users[inst.To].BJJ.Public().Compress()
 			}
 			nTx, err := common.NewPoolL2Tx(&tx)
@@ -674,11 +675,11 @@ func (tc *Context) generatePoolL2Txs() ([]common.PoolL2Tx, error) {
 		case common.TxTypeExit:
 			tx := common.PoolL2Tx{
 				FromIdx:   tc.Users[inst.From].Accounts[inst.TokenID].Idx,
-				ToIdx:     common.Idx(1), // as is an Exit
+				ToIdx:     account.Idx(1), // as is an Exit
 				Fee:       common.FeeSelector(inst.Fee),
 				TokenID:   inst.TokenID,
 				Amount:    inst.Amount,
-				ToEthAddr: common.EmptyAddr,
+				ToEthAddr: account.EmptyAddr,
 				ToBJJ:     common.EmptyBJJComp,
 				Nonce:     tc.Users[inst.From].Accounts[inst.TokenID].Nonce,
 				State:     common.PoolL2TxStatePending,
@@ -909,8 +910,8 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 						return tracerr.Wrap(fmt.Errorf("Created account with idx: %v not found", tc.extra.idx))
 					}
 					batch.CreatedAccounts = append(batch.CreatedAccounts,
-						common.Account{
-							Idx:      common.Idx(tc.extra.idx),
+						account.Account{
+							Idx:      account.Idx(tc.extra.idx),
 							TokenID:  tx.TokenID,
 							BatchNum: batch.Batch.BatchNum,
 							BJJ:      user.BJJ.Public().Compress(),
@@ -919,9 +920,9 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 							Balance:  big.NewInt(0),
 						})
 					if !tx.UserOrigin {
-						tx.EffectiveFromIdx = common.Idx(tc.extra.idx)
+						tx.EffectiveFromIdx = account.Idx(tc.extra.idx)
 					}
-					tc.extra.idxByTxID[tx.TxID] = common.Idx(tc.extra.idx)
+					tc.extra.idxByTxID[tx.TxID] = account.Idx(tc.extra.idx)
 					tc.extra.idx++
 				}
 			}
@@ -1016,14 +1017,14 @@ func (tc *Context) FillBlocksExtra(blocks []common.BlockData, cfg *ConfigExtra) 
 					common.BatchNum(acc.BatchNum) <= batch.Batch.BatchNum {
 					found := false
 					for _, idx := range batch.Batch.FeeIdxsCoordinator {
-						if idx == common.Idx(acc.Idx) {
+						if idx == account.Idx(acc.Idx) {
 							found = true
 							break
 						}
 					}
 					if !found {
 						batch.Batch.FeeIdxsCoordinator = append(batch.Batch.FeeIdxsCoordinator,
-							common.Idx(acc.Idx))
+							account.Idx(acc.Idx))
 						batch.Batch.CollectedFees[fromAcc.TokenID] = big.NewInt(0)
 					}
 					collected := batch.Batch.CollectedFees[fromAcc.TokenID]

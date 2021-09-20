@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -88,7 +89,7 @@ func TestZKInputsEmpty(t *testing.T) {
 
 	tp := txprocessor.NewTxProcessor(sdb, txprocConfig)
 
-	coordIdxs := []common.Idx{}
+	coordIdxs := []account.Idx{}
 	l1UserTxs := []common.L1Tx{}
 	l1CoordTxs := []common.L1Tx{}
 	l2Txs := []common.PoolL2Tx{}
@@ -102,7 +103,7 @@ func TestZKInputsEmpty(t *testing.T) {
 	_, err = tp.ProcessTxs(coordIdxs, l1UserTxs, l1CoordTxs, l2Txs)
 	require.NoError(t, err)
 
-	coordIdxs = []common.Idx{}
+	coordIdxs = []account.Idx{}
 	l1UserTxs = []common.L1Tx{}
 	l1CoordTxs = []common.L1Tx{}
 	l2Txs = []common.PoolL2Tx{}
@@ -261,7 +262,7 @@ func TestZKInputs6(t *testing.T) {
 	require.NoError(t, err)
 
 	// Coordinator Idx where to send the fees
-	coordIdxs := []common.Idx{261, 262}
+	coordIdxs := []account.Idx{261, 262}
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[0].Rollup.Batches[6].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
@@ -300,7 +301,7 @@ func TestZKInputs6(t *testing.T) {
 
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[0].Batch.ForgeL1TxsNum])
 	l2Txs = poolL2Txs
-	coordIdxs = []common.Idx{262}
+	coordIdxs = []account.Idx{262}
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
 		blocks[1].Rollup.Batches[0].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)
@@ -310,7 +311,7 @@ func TestZKInputs6(t *testing.T) {
 	// batch10
 	l1UserTxs = til.L1TxsToCommonL1Txs(tc.Queues[*blocks[1].Rollup.Batches[1].Batch.ForgeL1TxsNum])
 	l2Txs = []common.PoolL2Tx{}
-	coordIdxs = []common.Idx{}
+	coordIdxs = []account.Idx{}
 	ptOut, err = tp.ProcessTxs(coordIdxs, l1UserTxs,
 		blocks[1].Rollup.Batches[1].L1CoordinatorTxs, l2Txs)
 	require.NoError(t, err)

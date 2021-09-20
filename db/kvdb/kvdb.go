@@ -3,6 +3,7 @@ package kvdb
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"os"
 	"path"
@@ -46,8 +47,8 @@ type KVDB struct {
 	cfg Config
 	db  *pebble.Storage
 	// CurrentIdx holds the current Idx that the BatchBuilder is using
-	CurrentIdx      common.Idx
-	CurrentBatch    common.BatchNum
+	CurrentIdx   account.Idx
+	CurrentBatch common.BatchNum
 	mutexCheckpoint sync.Mutex
 	mutexDelOld     sync.Mutex
 	wg              sync.WaitGroup
@@ -379,7 +380,7 @@ func (k *KVDB) setCurrentBatch() error {
 
 // GetCurrentIdx returns the stored Idx from the KVDB, which is the last Idx
 // used for an Account in the k.
-func (k *KVDB) GetCurrentIdx() (common.Idx, error) {
+func (k *KVDB) GetCurrentIdx() (account.Idx, error) {
 	idxBytes, err := k.db.Get(keyCurrentIdx)
 	if tracerr.Unwrap(err) == db.ErrNotFound {
 		return common.RollupConstReservedIDx, nil // 255, nil
@@ -387,11 +388,11 @@ func (k *KVDB) GetCurrentIdx() (common.Idx, error) {
 	if err != nil {
 		return 0, tracerr.Wrap(err)
 	}
-	return common.IdxFromBytes(idxBytes[:])
+	return account.IdxFromBytes(idxBytes[:])
 }
 
 // SetCurrentIdx stores Idx in the KVDB
-func (k *KVDB) SetCurrentIdx(idx common.Idx) error {
+func (k *KVDB) SetCurrentIdx(idx account.Idx) error {
 	k.CurrentIdx = idx
 
 	tx, err := k.db.NewTx()

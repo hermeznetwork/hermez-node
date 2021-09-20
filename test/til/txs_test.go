@@ -3,6 +3,7 @@ package til
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"testing"
 
@@ -181,12 +182,12 @@ func TestGenerateBlocks(t *testing.T) {
 func (tc *Context) checkL1TxParams(t *testing.T, tx common.L1Tx, typ common.TxType,
 	tokenID common.TokenID, from, to string, depositAmount, amount *big.Int) {
 	assert.Equal(t, typ, tx.Type)
-	if tx.FromIdx != common.Idx(0) {
+	if tx.FromIdx != account.Idx(0) {
 		assert.Equal(t, tc.Users[from].Accounts[tokenID].Idx, tx.FromIdx)
 	}
 	assert.Equal(t, tc.Users[from].Addr.Hex(), tx.FromEthAddr.Hex())
 	assert.Equal(t, tc.Users[from].BJJ.Public().Compress(), tx.FromBJJ)
-	if tx.ToIdx != common.Idx(0) {
+	if tx.ToIdx != account.Idx(0) {
 		assert.Equal(t, tc.Users[to].Accounts[tokenID].Idx, tx.ToIdx)
 	}
 	if depositAmount != nil {
@@ -254,7 +255,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	assert.Equal(t, common.TxTypeExit, poolL2Txs[8].Type)
 	assert.Equal(t, tc.Users["B"].Addr.Hex(), poolL2Txs[9].ToEthAddr.Hex())
 	assert.Equal(t, tc.Users["B"].BJJ.Public().String(), poolL2Txs[10].ToBJJ.String())
-	assert.Equal(t, common.EmptyAddr.Hex(), poolL2Txs[5].ToEthAddr.Hex())
+	assert.Equal(t, account.EmptyAddr.Hex(), poolL2Txs[5].ToEthAddr.Hex())
 	assert.Equal(t, common.EmptyBJJComp.String(), poolL2Txs[5].ToBJJ.String())
 
 	assert.Equal(t, nonce.Nonce(0), poolL2Txs[0].Nonce)
@@ -271,7 +272,7 @@ func TestGeneratePoolL2Txs(t *testing.T) {
 	assert.Equal(t, tc.Users["B"].Addr.Hex(), poolL2Txs[9].ToEthAddr.Hex())
 	assert.Equal(t, common.EmptyBJJComp, poolL2Txs[9].ToBJJ)
 	assert.Equal(t, common.TxTypeTransferToEthAddr, poolL2Txs[9].Type)
-	assert.Equal(t, common.FFAddr, poolL2Txs[10].ToEthAddr)
+	assert.Equal(t, account.FFAddr, poolL2Txs[10].ToEthAddr)
 	assert.Equal(t, tc.Users["B"].BJJ.Public().String(), poolL2Txs[10].ToBJJ.String())
 	assert.Equal(t, common.TxTypeTransferToBJJ, poolL2Txs[10].Type)
 
@@ -468,9 +469,9 @@ func TestGenerateErrors(t *testing.T) {
 	_, err = tc.GenerateBlocks(set)
 	require.NoError(t, err)
 	assert.Equal(t, nonce.Nonce(3), tc.Users["A"].Accounts[common.TokenID(1)].Nonce)
-	assert.Equal(t, common.Idx(256), tc.Users["A"].Accounts[common.TokenID(1)].Idx)
+	assert.Equal(t, account.Idx(256), tc.Users["A"].Accounts[common.TokenID(1)].Idx)
 	assert.Equal(t, nonce.Nonce(1), tc.Users["B"].Accounts[common.TokenID(1)].Nonce)
-	assert.Equal(t, common.Idx(257), tc.Users["B"].Accounts[common.TokenID(1)].Idx)
+	assert.Equal(t, account.Idx(257), tc.Users["B"].Accounts[common.TokenID(1)].Idx)
 }
 
 func TestGenerateFromInstructions(t *testing.T) {

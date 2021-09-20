@@ -1,6 +1,7 @@
 package txprocessor
 
 import (
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/common"
@@ -37,7 +38,7 @@ func BJJCompressedTo256BigInts(pkComp babyjub.PublicKeyComp) [256]*big.Int {
 // the balance of each FeeAccount, taken from the 'collectedFees' map, in the
 // order of the 'orderTokenIDs'
 func formatAccumulatedFees(collectedFees map[common.TokenID]*big.Int, orderTokenIDs []*big.Int,
-	coordIdxs []common.Idx) []*big.Int {
+	coordIdxs []account.Idx) []*big.Int {
 	accFeeOut := make([]*big.Int, len(orderTokenIDs))
 	for i := 0; i < len(accFeeOut); i++ {
 		accFeeOut[i] = big.NewInt(0)

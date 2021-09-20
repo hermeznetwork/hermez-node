@@ -82,6 +82,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -105,10 +106,10 @@ type TxProcessor struct {
 	txIndex int
 	// AccumulatedFees contains the accumulated fees for each token (Coord
 	// Idx) in the processed batch
-	AccumulatedFees map[common.Idx]*big.Int
+	AccumulatedFees map[account.Idx]*big.Int
 	// updatedAccounts stores the last version of the account when it has
 	// been created/updated by any of the processed transactions.
-	updatedAccounts map[common.Idx]*common.Account
+	updatedAccounts map[account.Idx]*account.Account
 	config          Config
 }
 
@@ -126,20 +127,20 @@ type Config struct {
 type processedExit struct {
 	exit    bool
 	newExit bool
-	idx     common.Idx
-	acc     common.Account
+	idx account.Idx
+	acc account.Account
 }
 
 // ProcessTxOutput contains the output of the ProcessTxs method
 type ProcessTxOutput struct {
 	ZKInputs           *common.ZKInputs
 	ExitInfos          []common.ExitInfo
-	CreatedAccounts    []common.Account
-	CoordinatorIdxsMap map[common.TokenID]common.Idx
+	CreatedAccounts    []account.Account
+	CoordinatorIdxsMap map[common.TokenID]account.Idx
 	CollectedFees      map[common.TokenID]*big.Int
 	// UpdatedAccounts returns the current state of each account
 	// created/updated by any of the processed transactions.
-	UpdatedAccounts map[common.Idx]*common.Account
+	UpdatedAccounts map[account.Idx]*account.Account
 }
 
 func newErrorNotEnoughBalance(tx common.Tx) error {
@@ -172,7 +173,7 @@ func (txProcessor *TxProcessor) StateDB() *statedb.StateDB {
 }
 
 // AccumulatedCoordFees returns the accumulated fees for each token (coordinator idx) in the processed batch
-func (txProcessor *TxProcessor) AccumulatedCoordFees() map[common.Idx]*big.Int {
+func (txProcessor *TxProcessor) AccumulatedCoordFees() map[account.Idx]*big.Int {
 	return txProcessor.AccumulatedFees
 }
 
@@ -190,7 +191,7 @@ func (txProcessor *TxProcessor) resetZKInputs() {
 // the HistoryDB, and adds Nonce & TokenID to the L2Txs.
 // And if TypeSynchronizer returns an array of common.Account with all the
 // created accounts.
-func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1coordinatortxs []common.L1Tx,
+func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []account.Idx, l1usertxs, l1coordinatortxs []common.L1Tx,
 	l2txs []common.PoolL2Tx) (ptOut *ProcessTxOutput, err error) {
 	defer func() {
 		if err == nil {
@@ -199,7 +200,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	}()
 
 	var exitTree *merkletree.MerkleTree
-	var createdAccounts []common.Account
+	var createdAccounts []account.Account
 
 	if txProcessor.zki != nil {
 		return nil, tracerr.Wrap(
@@ -227,7 +228,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	}
 
 	if txProcessor.state.Type() == statedb.TypeSynchronizer {
-		txProcessor.updatedAccounts = make(map[common.Idx]*common.Account)
+		txProcessor.updatedAccounts = make(map[account.Idx]*account.Account)
 	}
 
 	exits := make([]processedExit, nTx)
@@ -354,7 +355,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	// remove repeated CoordIdxs that are for the same TokenID (use the
 	// first occurrence)
 	usedCoordTokenIDs := make(map[common.TokenID]bool)
-	var filteredCoordIdxs []common.Idx
+	var filteredCoordIdxs []account.Idx
 	for i := 0; i < len(coordIdxs); i++ {
 		accCoord, err := txProcessor.state.GetAccount(coordIdxs[i])
 		if err != nil {
@@ -367,7 +368,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 	}
 	coordIdxs = filteredCoordIdxs
 
-	txProcessor.AccumulatedFees = make(map[common.Idx]*big.Int)
+	txProcessor.AccumulatedFees = make(map[account.Idx]*big.Int)
 	for _, idx := range coordIdxs {
 		txProcessor.AccumulatedFees[idx] = big.NewInt(0)
 	}
@@ -520,8 +521,8 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 		// once all txs processed (exitTree root frozen), for each Exit,
 		// generate common.ExitInfo data
 		var exitInfos []common.ExitInfo
-		var exitIdxs []common.Idx
-		exitInfosByIdx := make(map[common.Idx]*common.ExitInfo)
+		var exitIdxs []account.Idx
+		exitInfosByIdx := make(map[account.Idx]*common.ExitInfo)
 		for i := 0; i < nTx; i++ {
 			if !exits[i].exit {
 				continue
@@ -578,7 +579,7 @@ func (txProcessor *TxProcessor) ProcessTxs(coordIdxs []common.Idx, l1usertxs, l1
 
 // getFeePlanTokens returns an array of *big.Int containing a list of tokenIDs
 // corresponding to the given CoordIdxs and the processed L2Txs
-func (txProcessor *TxProcessor) getFeePlanTokens(coordIdxs []common.Idx) ([]*big.Int, error) {
+func (txProcessor *TxProcessor) getFeePlanTokens(coordIdxs []account.Idx) ([]*big.Int, error) {
 	var tBI []*big.Int
 	for i := 0; i < len(coordIdxs); i++ {
 		acc, err := txProcessor.state.GetAccount(coordIdxs[i])
@@ -599,8 +600,8 @@ func (txProcessor *TxProcessor) getFeePlanTokens(coordIdxs []common.Idx) ([]*big
 // And another *common.Account parameter which contains the created account in
 // case that has been a new created account and that the StateDB is of type
 // TypeSynchronizer.
-func (txProcessor *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*common.Idx,
-	*common.Account, bool, *common.Account, error) {
+func (txProcessor *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx *common.L1Tx) (*account.Idx,
+	*account.Account, bool, *account.Account, error) {
 	// ZKInputs
 	if txProcessor.zki != nil {
 		// Txs
@@ -712,7 +713,7 @@ func (txProcessor *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx 
 	default:
 	}
 
-	var createdAccount *common.Account
+	var createdAccount *account.Account
 	if txProcessor.state.Type() == statedb.TypeSynchronizer &&
 		(tx.Type == common.TxTypeCreateAccountDeposit ||
 			tx.Type == common.TxTypeCreateAccountDepositTransfer) {
@@ -731,12 +732,12 @@ func (txProcessor *TxProcessor) ProcessL1Tx(exitTree *merkletree.MerkleTree, tx 
 // StateDB depending on the transaction Type. It returns the 3 parameters
 // related to the Exit (in case of): Idx, ExitAccount, boolean determining if
 // the Exit created a new Leaf in the ExitTree.
-func (txProcessor *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]common.Idx,
+func (txProcessor *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]account.Idx,
 	collectedFees map[common.TokenID]*big.Int, exitTree *merkletree.MerkleTree,
-	tx *common.PoolL2Tx) (*common.Idx, *common.Account, bool, error) {
+	tx *common.PoolL2Tx) (*account.Idx, *account.Account, bool, error) {
 	var err error
 	// if tx.ToIdx==0, get toIdx by ToEthAddr or ToBJJ
-	if tx.ToIdx == common.Idx(0) && tx.AuxToIdx == common.Idx(0) {
+	if tx.ToIdx == account.Idx(0) && tx.AuxToIdx == account.Idx(0) {
 		if txProcessor.state.Type() == statedb.TypeSynchronizer {
 			// this in TypeSynchronizer should never be reached
 			log.Error("WARNING: In StateDB with Synchronizer mode L2.ToIdx can't be 0")
@@ -856,7 +857,7 @@ func (txProcessor *TxProcessor) ProcessL2Tx(coordIdxsMap map[common.TokenID]comm
 // applyCreateAccount creates a new account in the account of the depositer, it
 // stores the deposit value
 func (txProcessor *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
-	account := &common.Account{
+	account := &account.Account{
 		TokenID: tx.TokenID,
 		Nonce:   0,
 		Balance: tx.EffectiveDepositAmount,
@@ -864,7 +865,7 @@ func (txProcessor *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 		EthAddr: tx.FromEthAddr,
 	}
 
-	p, err := txProcessor.createAccount(common.Idx(txProcessor.state.CurrentIdx()+1), account)
+	p, err := txProcessor.createAccount(account.Idx(txProcessor.state.CurrentIdx()+1), account)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -887,7 +888,7 @@ func (txProcessor *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 
 		txProcessor.zki.Metadata.NewLastIdxRaw = txProcessor.state.CurrentIdx() + 1
 
-		txProcessor.zki.AuxFromIdx[txProcessor.txIndex] = common.Idx(txProcessor.state.CurrentIdx() + 1).BigInt()
+		txProcessor.zki.AuxFromIdx[txProcessor.txIndex] = account.Idx(txProcessor.state.CurrentIdx() + 1).BigInt()
 		txProcessor.zki.NewAccount[txProcessor.txIndex] = big.NewInt(1)
 
 		if txProcessor.txIndex < len(txProcessor.zki.ISOnChain) { // len(txProcessor.zki.ISOnChain) == nTx
@@ -902,7 +903,7 @@ func (txProcessor *TxProcessor) applyCreateAccount(tx *common.L1Tx) error {
 // createAccount is a wrapper over the StateDB.CreateAccount method that also
 // stores the created account in the updatedAccounts map in case the StateDB is
 // of TypeSynchronizer
-func (txProcessor *TxProcessor) createAccount(idx common.Idx, account *common.Account) (
+func (txProcessor *TxProcessor) createAccount(idx account.Idx, account *account.Account) (
 	*merkletree.CircomProcessorProof, error) {
 	if txProcessor.state.Type() == statedb.TypeSynchronizer {
 		account.Idx = idx
@@ -914,7 +915,7 @@ func (txProcessor *TxProcessor) createAccount(idx common.Idx, account *common.Ac
 // updateAccount is a wrapper over the StateDB.UpdateAccount method that also
 // stores the updated account in the updatedAccounts map in case the StateDB is
 // of TypeSynchronizer
-func (txProcessor *TxProcessor) updateAccount(idx common.Idx, account *common.Account) (
+func (txProcessor *TxProcessor) updateAccount(idx account.Idx, account *account.Account) (
 	*merkletree.CircomProcessorProof, error) {
 	if txProcessor.state.Type() == statedb.TypeSynchronizer {
 		account.Idx = idx
@@ -963,7 +964,7 @@ func (txProcessor *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) err
 	}
 
 	// in case that the tx is a L1Tx>DepositTransfer
-	var accReceiver *common.Account
+	var accReceiver *account.Account
 	if transfer {
 		if tx.ToIdx == tx.FromIdx {
 			accReceiver = accSender
@@ -1009,9 +1010,9 @@ func (txProcessor *TxProcessor) applyDeposit(tx *common.L1Tx, transfer bool) err
 // tx.ToIdx==0, then toIdx!=0, and will be used the toIdx parameter as Idx of
 // the receiver. This parameter is used when the tx.ToIdx is not specified and
 // the real ToIdx is found trhrough the ToEthAddr or ToBJJ.
-func (txProcessor *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]common.Idx,
-	collectedFees map[common.TokenID]*big.Int, tx common.Tx, auxToIdx common.Idx) error {
-	if auxToIdx == common.Idx(0) {
+func (txProcessor *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]account.Idx,
+	collectedFees map[common.TokenID]*big.Int, tx common.Tx, auxToIdx account.Idx) error {
+	if auxToIdx == account.Idx(0) {
 		auxToIdx = tx.ToIdx
 	}
 	// get sender and receiver accounts from localStateDB
@@ -1088,7 +1089,7 @@ func (txProcessor *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]co
 		txProcessor.zki.Siblings1[txProcessor.txIndex] = siblingsToZKInputFormat(pSender.Siblings)
 	}
 
-	var accReceiver *common.Account
+	var accReceiver *account.Account
 	if auxToIdx == tx.FromIdx {
 		// if Sender is the Receiver, reuse 'accSender' pointer,
 		// because in the DB the account for 'auxToIdx' won't be
@@ -1132,8 +1133,8 @@ func (txProcessor *TxProcessor) applyTransfer(coordIdxsMap map[common.TokenID]co
 // applyCreateAccountDepositTransfer, in a single tx, creates a new account,
 // makes a deposit, and performs a transfer to another account
 func (txProcessor *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1Tx) error {
-	auxFromIdx := common.Idx(txProcessor.state.CurrentIdx() + 1)
-	accSender := &common.Account{
+	auxFromIdx := account.Idx(txProcessor.state.CurrentIdx() + 1)
+	accSender := &account.Account{
 		TokenID: tx.TokenID,
 		Nonce:   0,
 		Balance: tx.EffectiveDepositAmount,
@@ -1161,7 +1162,7 @@ func (txProcessor *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1T
 	}
 
 	// create Account of the Sender
-	p, err := txProcessor.createAccount(common.Idx(txProcessor.state.CurrentIdx()+1), accSender)
+	p, err := txProcessor.createAccount(account.Idx(txProcessor.state.CurrentIdx()+1), accSender)
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
@@ -1180,7 +1181,7 @@ func (txProcessor *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1T
 		txProcessor.zki.AuxFromIdx[txProcessor.txIndex] = auxFromIdx.BigInt()
 		txProcessor.zki.NewAccount[txProcessor.txIndex] = big.NewInt(1)
 	}
-	var accReceiver *common.Account
+	var accReceiver *account.Account
 	if tx.ToIdx == auxFromIdx {
 		accReceiver = accSender
 	} else {
@@ -1221,9 +1222,9 @@ func (txProcessor *TxProcessor) applyCreateAccountDepositTransfer(tx *common.L1T
 
 // It returns the ExitAccount and a boolean determining if the Exit created a
 // new Leaf in the ExitTree.
-func (txProcessor *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common.Idx,
+func (txProcessor *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]account.Idx,
 	collectedFees map[common.TokenID]*big.Int, exitTree *merkletree.MerkleTree,
-	tx common.Tx, originalAmount *big.Int) (*common.Account, bool, error) {
+	tx common.Tx, originalAmount *big.Int) (*account.Account, bool, error) {
 	// 0. subtract tx.Amount from current Account in StateMT
 	// add the tx.Amount into the Account (tx.FromIdx) in the ExitMT
 	acc, err := txProcessor.state.GetAccount(tx.FromIdx)
@@ -1319,7 +1320,7 @@ func (txProcessor *TxProcessor) applyExit(coordIdxsMap map[common.TokenID]common
 		// 1a. if idx does not exist in exitTree:
 		// add new leaf 'ExitTreeLeaf', where ExitTreeLeaf.Balance =
 		// exitAmount (exitAmount=tx.Amount)
-		exitAccount := &common.Account{
+		exitAccount := &account.Account{
 			TokenID: acc.TokenID,
 			Nonce:   nonce.Nonce(0),
 			// as is a common.Tx, the tx.Amount is already an
@@ -1419,7 +1420,7 @@ func (txProcessor *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 		return
 	}
 
-	if tx.ToIdx >= common.UserThreshold && tx.FromIdx == common.Idx(0) {
+	if tx.ToIdx >= account.UserThreshold && tx.FromIdx == account.Idx(0) {
 		// CreateAccountDepositTransfer case
 		cmp := tx.DepositAmount.Cmp(tx.Amount)
 		if cmp == -1 { // DepositAmount<Amount
@@ -1485,7 +1486,7 @@ func (txProcessor *TxProcessor) computeEffectiveAmounts(tx *common.L1Tx) {
 		tx.EffectiveAmount = big.NewInt(0)
 	}
 
-	if tx.ToIdx == common.Idx(1) || tx.ToIdx == common.Idx(0) {
+	if tx.ToIdx == account.Idx(1) || tx.ToIdx == account.Idx(0) {
 		// if transfer is Exit type, there are no more checks
 		return
 	}

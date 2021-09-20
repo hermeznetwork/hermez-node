@@ -3,6 +3,7 @@ package test
 import (
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"time"
 
@@ -116,11 +117,11 @@ func GenBatches(nBatches int, blocks []common.Block) []common.Batch {
 // GenAccounts generates accounts. WARNING: This is meant for DB/API testing, and may not be fully
 // consistent with the protocol.
 func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token,
-	userAddr *ethCommon.Address, userBjj *babyjub.PublicKey, batches []common.Batch) []common.Account {
+	userAddr *ethCommon.Address, userBjj *babyjub.PublicKey, batches []common.Batch) []account.Account {
 	if totalAccounts < userAccounts {
 		panic("totalAccounts must be greater than userAccounts")
 	}
-	accs := []common.Account{}
+	accs := []account.Account{}
 	for i := 256; i < 256+totalAccounts; i++ {
 		var addr ethCommon.Address
 		var pubK *babyjub.PublicKey
@@ -132,8 +133,8 @@ func GenAccounts(totalAccounts, userAccounts int, tokens []common.Token,
 			privK := babyjub.NewRandPrivKey()
 			pubK = privK.Public()
 		}
-		accs = append(accs, common.Account{
-			Idx:      common.Idx(i),
+		accs = append(accs, account.Account{
+			Idx:      account.Idx(i),
 			TokenID:  tokens[i%len(tokens)].TokenID,
 			EthAddr:  addr,
 			BatchNum: batches[i%len(batches)].BatchNum,
@@ -150,7 +151,7 @@ func GenL1Txs(
 	fromIdx int,
 	totalTxs, nUserTxs int,
 	userAddr *ethCommon.Address,
-	accounts []common.Account,
+	accounts []account.Account,
 	tokens []common.Token,
 	blocks []common.Block,
 	batches []common.Batch,
@@ -223,12 +224,12 @@ func setFromToAndAppend(
 	tx common.L1Tx,
 	i, nUserTxs int,
 	userAddr *ethCommon.Address,
-	accounts []common.Account,
+	accounts []account.Account,
 	userTxs *[]common.L1Tx,
 	othersTxs *[]common.L1Tx,
 ) {
 	if i < fromIdx+nUserTxs {
-		var from, to *common.Account
+		var from, to *account.Account
 		var err error
 		if i%2 == 0 {
 			from, err = randomAccount(i, true, userAddr, accounts)
@@ -277,7 +278,7 @@ func GenL2Txs(
 	fromIdx int,
 	totalTxs, nUserTxs int,
 	userAddr *ethCommon.Address,
-	accounts []common.Account,
+	accounts []account.Account,
 	tokens []common.Token,
 	blocks []common.Block,
 	batches []common.Batch,
@@ -303,7 +304,7 @@ func GenL2Txs(
 			Type:        randomTxType(i),
 		}
 		if i < nUserTxs {
-			var from, to *common.Account
+			var from, to *account.Account
 			var err error
 			if i%2 == 0 {
 				from, err = randomAccount(i, true, userAddr, accounts)
@@ -386,7 +387,7 @@ func GenBids(nBids int, blocks []common.Block, coords []common.Coordinator) []co
 
 // GenExitTree generates an exitTree (as an array of Exits)
 //nolint:gomnd
-func GenExitTree(n int, batches []common.Batch, accounts []common.Account,
+func GenExitTree(n int, batches []common.Batch, accounts []account.Account,
 	blocks []common.Block) []common.ExitInfo {
 	exitTree := make([]common.ExitInfo, n)
 	for i := 0; i < n; i++ {
@@ -427,7 +428,7 @@ func GenExitTree(n int, batches []common.Batch, accounts []common.Account,
 }
 
 func randomAccount(seed int, userAccount bool, userAddr *ethCommon.Address,
-	accs []common.Account) (*common.Account, error) {
+	accs []account.Account) (*account.Account, error) {
 	i := seed % len(accs)
 	firstI := i
 	for {

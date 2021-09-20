@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"log"
 	"math/big"
 	"testing"
@@ -25,7 +26,7 @@ func TestNewL1UserTx(t *testing.T) {
 		TokenID:         5,
 		Amount:          big.NewInt(1),
 		DepositAmount:   big.NewInt(2),
-		FromIdx:         Idx(300),
+		FromIdx:         account.Idx(300),
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
 	assert.NoError(t, err)
@@ -42,7 +43,7 @@ func TestNewL1CoordinatorTx(t *testing.T) {
 		TokenID:       5,
 		Amount:        big.NewInt(1),
 		DepositAmount: big.NewInt(2),
-		FromIdx:       Idx(300),
+		FromIdx:       account.Idx(300),
 		BatchNum:      &batchNum,
 	}
 	l1Tx, err := NewL1Tx(l1Tx)
@@ -215,7 +216,7 @@ func TestL1TxByteParsersCompatibility(t *testing.T) {
 		TokenID:       2098076,
 		Amount:        big.NewInt(2400000000000000000),
 		DepositAmount: depositAmount,
-		FromIdx:       Idx(29767899),
+		FromIdx:       account.Idx(29767899),
 		FromBJJ:       pkComp,
 		FromEthAddr:   ethCommon.HexToAddress("0x85dab5b9e2e361d0c208d77be90efcc0439b0a53"),
 		UserOrigin:    true,

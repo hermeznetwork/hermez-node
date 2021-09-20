@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"net/http"
 	"strings"
@@ -341,7 +342,7 @@ func isAtomic(tx common.PoolL2Tx) bool {
 	// If a single "Rq" field is different from 0
 	return tx.RqFromIdx != 0 ||
 		tx.RqToIdx != 0 ||
-		tx.RqToEthAddr != common.EmptyAddr ||
+		tx.RqToEthAddr != account.EmptyAddr ||
 		tx.RqToBJJ != common.EmptyBJJComp ||
 		(tx.RqAmount != nil && tx.RqAmount.Cmp(big.NewInt(0)) != 0) ||
 		tx.RqFee != 0 ||

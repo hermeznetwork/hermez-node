@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	account2 "github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"testing"
 
@@ -22,13 +23,13 @@ func TestAtomicPool(t *testing.T) {
 	// Generate N "wallets" (account + private key)
 	const nAccounts = 4 // don't change this value
 	const usedToken = 0 // this test will use only a token
-	accounts := make([]common.Account, nAccounts)
-	accountUpdates := make([]common.AccountUpdate, nAccounts)
-	privateKeys := make(map[common.Idx]*babyjub.PrivateKey, nAccounts)
+	accounts := make([]account2.Account, nAccounts)
+	accountUpdates := make([]account2.AccountUpdate, nAccounts)
+	privateKeys := make(map[account2.Idx]*babyjub.PrivateKey, nAccounts)
 	for i := 0; i < nAccounts; i++ {
 		addr, privKey := generateKeys(i + 1234567)
-		idx := common.Idx(i) + 5000
-		account := common.Account{
+		idx := account2.Idx(i) + 5000
+		account := account2.Account{
 			Idx:      idx,
 			TokenID:  tc.tokens[usedToken].TokenID,
 			BatchNum: 1,
@@ -37,7 +38,7 @@ func TestAtomicPool(t *testing.T) {
 		}
 		balance, ok := big.NewInt(0).SetString("1000000000000000000", 10)
 		require.True(t, ok)
-		accountUpdate := common.AccountUpdate{
+		accountUpdate := account2.AccountUpdate{
 			Idx:      idx,
 			BatchNum: 1,
 			Nonce:    0,

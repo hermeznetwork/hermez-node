@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/log"
@@ -37,7 +38,7 @@ type ZKMetadata struct {
 	L2TxsData             [][]byte
 	ChainID               uint16
 
-	NewLastIdxRaw   Idx
+	NewLastIdxRaw   account.Idx
 	NewStateRootRaw *merkletree.Hash
 	NewExitRootRaw  *merkletree.Hash
 }

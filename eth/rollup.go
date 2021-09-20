@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"strings"
 
@@ -200,7 +201,7 @@ type RollupForgeBatchArgs struct {
 	L1CoordinatorTxs      []common.L1Tx
 	L1CoordinatorTxsAuths [][]byte // Authorization for accountCreations for each L1CoordinatorTx
 	L2TxsData             []common.L2Tx
-	FeeIdxCoordinator     []common.Idx
+	FeeIdxCoordinator     []account.Idx
 	// Circuit selector
 	VerifierIdx uint8
 	L1Batch     bool
@@ -373,7 +374,7 @@ func (c *RollupClient) RollupForgeBatch(args *RollupForgeBatchArgs, auth *bind.T
 			common.RollupConstMaxFeeIdxCoordinator))
 	}
 	for i := 0; i < common.RollupConstMaxFeeIdxCoordinator; i++ {
-		feeIdx := common.Idx(0)
+		feeIdx := account.Idx(0)
 		if i < len(args.FeeIdxCoordinator) {
 			feeIdx = args.FeeIdxCoordinator[i]
 		}
@@ -1001,7 +1002,7 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 		L1CoordinatorTxs:      []common.L1Tx{},
 		L1CoordinatorTxsAuths: [][]byte{},
 		L2TxsData:             []common.L2Tx{},
-		FeeIdxCoordinator:     []common.Idx{},
+		FeeIdxCoordinator:     []account.Idx{},
 	}
 	nLevels := c.consts.Verifiers[rollupForgeBatchArgs.VerifierIdx].NLevels
 	lenL1L2TxsBytes := int((nLevels/8)*2 + common.Float40BytesLength + 1) //nolint:gomnd
@@ -1058,18 +1059,18 @@ func (c *RollupClient) RollupForgeBatchArgs(ethTxHash ethCommon.Hash,
 	numFeeIdxCoordinator := len(aux.FeeIdxCoordinator) / lenFeeIdxCoordinatorBytes
 	for i := 0; i < numFeeIdxCoordinator; i++ {
 		var paddedFeeIdx [6]byte
-		if lenFeeIdxCoordinatorBytes < common.IdxBytesLen {
+		if lenFeeIdxCoordinatorBytes < account.IdxBytesLen {
 			copy(paddedFeeIdx[6-lenFeeIdxCoordinatorBytes:],
 				aux.FeeIdxCoordinator[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
 		} else {
 			copy(paddedFeeIdx[:],
 				aux.FeeIdxCoordinator[i*lenFeeIdxCoordinatorBytes:(i+1)*lenFeeIdxCoordinatorBytes])
 		}
-		feeIdxCoordinator, err := common.IdxFromBytes(paddedFeeIdx[:])
+		feeIdxCoordinator, err := account.IdxFromBytes(paddedFeeIdx[:])
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
-		if feeIdxCoordinator != common.Idx(0) {
+		if feeIdxCoordinator != account.Idx(0) {
 			rollupForgeBatchArgs.FeeIdxCoordinator =
 				append(rollupForgeBatchArgs.FeeIdxCoordinator, feeIdxCoordinator)
 		}

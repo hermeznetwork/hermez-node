@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 	"time"
 
@@ -29,14 +30,14 @@ type PoolL2Tx struct {
 	// TxID (12 bytes) for L2Tx is:
 	// bytes:  |  1   |    6    |   5   |
 	// values: | type | FromIdx | Nonce |
-	TxID    TxID `meddler:"tx_id"`
-	FromIdx Idx  `meddler:"from_idx"`
-	ToIdx   Idx  `meddler:"to_idx,zeroisnull"`
+	TxID    TxID        `meddler:"tx_id"`
+	FromIdx account.Idx `meddler:"from_idx"`
+	ToIdx   account.Idx `meddler:"to_idx,zeroisnull"`
 	// AuxToIdx is only used internally at the StateDB to avoid repeated
 	// computation when processing transactions (from Synchronizer,
 	// TxSelector, BatchBuilder)
-	AuxToIdx    Idx                   `meddler:"-"`
-	ToEthAddr   ethCommon.Address     `meddler:"to_eth_addr,zeroisnull"`
+	AuxToIdx  account.Idx       `meddler:"-"`
+	ToEthAddr ethCommon.Address `meddler:"to_eth_addr,zeroisnull"`
 	ToBJJ       babyjub.PublicKeyComp `meddler:"to_bjj,zeroisnull"`
 	TokenID     TokenID               `meddler:"token_id"`
 	Amount      *big.Int              `meddler:"amount,bigint"`
@@ -54,10 +55,10 @@ type PoolL2Tx struct {
 	Signature babyjub.SignatureComp `meddler:"signature"`         // tx signature
 	Timestamp time.Time             `meddler:"timestamp,utctime"` // time when added to the tx pool
 	// Stored in DB: optional fields, may be uninitialized
-	AtomicGroupID     AtomicGroupID         `meddler:"atomic_group_id,zeroisnull"`
-	RqFromIdx         Idx                   `meddler:"rq_from_idx,zeroisnull"`
-	RqToIdx           Idx                   `meddler:"rq_to_idx,zeroisnull"`
-	RqToEthAddr       ethCommon.Address     `meddler:"rq_to_eth_addr,zeroisnull"`
+	AtomicGroupID AtomicGroupID     `meddler:"atomic_group_id,zeroisnull"`
+	RqFromIdx     account.Idx       `meddler:"rq_from_idx,zeroisnull"`
+	RqToIdx       account.Idx       `meddler:"rq_to_idx,zeroisnull"`
+	RqToEthAddr   ethCommon.Address `meddler:"rq_to_eth_addr,zeroisnull"`
 	RqToBJJ           babyjub.PublicKeyComp `meddler:"rq_to_bjj,zeroisnull"`
 	RqTokenID         TokenID               `meddler:"rq_token_id,zeroisnull"`
 	RqAmount          *big.Int              `meddler:"rq_amount,bigintnull"`
@@ -109,16 +110,16 @@ func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
 
 // SetType sets the type of the transaction
 func (tx *PoolL2Tx) SetType() error {
-	isAddrEmpty := tx.ToBJJ == EmptyBJJComp && tx.ToEthAddr == EmptyAddr
-	if tx.ToIdx >= IdxUserThreshold {
+	isAddrEmpty := tx.ToBJJ == EmptyBJJComp && tx.ToEthAddr == account.EmptyAddr
+	if tx.ToIdx >= account.IdxUserThreshold {
 		tx.Type = TxTypeTransfer
 	} else if isAddrEmpty && tx.ToIdx == 1 {
 		tx.Type = TxTypeExit
 	} else if tx.ToIdx == 0 {
-		if tx.ToBJJ != EmptyBJJComp && tx.ToEthAddr == FFAddr {
+		if tx.ToBJJ != EmptyBJJComp && tx.ToEthAddr == account.FFAddr {
 			tx.Type = TxTypeTransferToBJJ
-		} else if tx.ToEthAddr != FFAddr &&
-			tx.ToEthAddr != EmptyAddr &&
+		} else if tx.ToEthAddr != account.FFAddr &&
+			tx.ToEthAddr != account.EmptyAddr &&
 			tx.ToBJJ == EmptyBJJComp {
 			tx.Type = TxTypeTransferToEthAddr
 		} else {
@@ -372,8 +373,8 @@ func (tx *PoolL2Tx) VerifySignature(chainID uint16, pkComp babyjub.PublicKeyComp
 
 // L2Tx returns a *L2Tx from the PoolL2Tx
 func (tx PoolL2Tx) L2Tx() L2Tx {
-	var toIdx Idx
-	if tx.ToIdx == Idx(0) {
+	var toIdx account.Idx
+	if tx.ToIdx == account.Idx(0) {
 		toIdx = tx.AuxToIdx
 	} else {
 		toIdx = tx.ToIdx
@@ -486,7 +487,7 @@ func (tx PoolL2Tx) MarshalJSON() ([]byte, error) {
 		toIdx := IdxToHez(tx.ToIdx, tx.TokenSymbol)
 		toMarshal.ToIdx = &toIdx
 	}
-	if tx.ToEthAddr != EmptyAddr {
+	if tx.ToEthAddr != account.EmptyAddr {
 		toEth := EthAddrToHez(tx.ToEthAddr)
 		toMarshal.ToEthAddr = &toEth
 	}
@@ -541,8 +542,8 @@ func (tx *PoolL2Tx) UnmarshalJSON(data []byte) error {
 	// Set values to destination struct
 	*tx = PoolL2Tx{
 		TxID:        receivedJSON.TxID,
-		FromIdx:     Idx(receivedJSON.FromIdx.Idx),
-		ToIdx:       Idx(receivedJSON.ToIdx.Idx),
+		FromIdx:     account.Idx(receivedJSON.FromIdx.Idx),
+		ToIdx:       account.Idx(receivedJSON.ToIdx.Idx),
 		ToEthAddr:   ethCommon.Address(receivedJSON.ToEthAddr),
 		ToBJJ:       babyjub.PublicKeyComp(receivedJSON.ToBJJ),
 		TokenID:     receivedJSON.TokenID,

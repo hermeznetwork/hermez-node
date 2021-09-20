@@ -2,6 +2,7 @@ package kvdb
 
 import (
 	"fmt"
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -286,7 +287,7 @@ func TestGetCurrentIdx(t *testing.T) {
 
 	idx, err := db.GetCurrentIdx()
 	require.NoError(t, err)
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	db.Close()
 
@@ -295,14 +296,14 @@ func TestGetCurrentIdx(t *testing.T) {
 
 	idx, err = db.GetCurrentIdx()
 	require.NoError(t, err)
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	err = db.MakeCheckpoint()
 	require.NoError(t, err)
 
 	idx, err = db.GetCurrentIdx()
 	require.NoError(t, err)
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	db.Close()
 
@@ -311,7 +312,7 @@ func TestGetCurrentIdx(t *testing.T) {
 
 	idx, err = db.GetCurrentIdx()
 	require.NoError(t, err)
-	assert.Equal(t, common.Idx(255), idx)
+	assert.Equal(t, account.Idx(255), idx)
 
 	db.Close()
 }

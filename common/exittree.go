@@ -1,6 +1,7 @@
 package common
 
 import (
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"math/big"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -10,7 +11,7 @@ import (
 // ExitInfo represents the ExitTree Leaf data
 type ExitInfo struct {
 	BatchNum    BatchNum                        `meddler:"batch_num"`
-	AccountIdx  Idx                             `meddler:"account_idx"`
+	AccountIdx  account.Idx                     `meddler:"account_idx"`
 	MerkleProof *merkletree.CircomVerifierProof `meddler:"merkle_proof,json"`
 	Balance     *big.Int                        `meddler:"balance,bigint"`
 	// InstantWithdrawn is the ethBlockNum in which the exit is withdrawn
@@ -28,8 +29,8 @@ type ExitInfo struct {
 
 // WithdrawInfo represents a withdraw action to the rollup
 type WithdrawInfo struct {
-	Idx             Idx
-	NumExitRoot     BatchNum
+	Idx         account.Idx
+	NumExitRoot BatchNum
 	InstantWithdraw bool
 	TxHash          ethCommon.Hash // hash of the transaction in which the withdraw happened
 	Owner           ethCommon.Address

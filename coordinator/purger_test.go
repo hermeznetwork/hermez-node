@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"github.com/hermeznetwork/hermez-node/common/account"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -145,17 +146,17 @@ func TestPurgeMaybeInvalidateMaybe(t *testing.T) {
 }
 
 func TestIdxsNonce(t *testing.T) {
-	inputIdxsNonce := []common.IdxNonce{
+	inputIdxsNonce := []account.IdxNonce{
 		{Idx: 256, Nonce: 1},
 		{Idx: 256, Nonce: 2},
 		{Idx: 257, Nonce: 3},
 		{Idx: 258, Nonce: 5},
 		{Idx: 258, Nonce: 2},
 	}
-	expectedIdxsNonce := map[common.Idx]nonce.Nonce{
-		common.Idx(256): nonce.Nonce(2),
-		common.Idx(257): nonce.Nonce(3),
-		common.Idx(258): nonce.Nonce(5),
+	expectedIdxsNonce := map[account.Idx]nonce.Nonce{
+		account.Idx(256): nonce.Nonce(2),
+		account.Idx(257): nonce.Nonce(3),
+		account.Idx(258): nonce.Nonce(5),
 	}
 
 	l2txs := make([]common.L2Tx, len(inputIdxsNonce))
