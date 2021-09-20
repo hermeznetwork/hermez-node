@@ -13,7 +13,7 @@ type provers struct {
 func (hdb *HistoryDB) GetProvers() ([]string, error) {
 	var provers []*provers
 	err := meddler.QueryAll(
-		hdb.dbRead, &provers, "SELECT public_dns FROM provers",
+		hdb.dbRead, &provers, "SELECT public_dns FROM provers WHERE status = 'ready';",
 	)
 	var publicDNS []string
 	for _, prover := range provers {
