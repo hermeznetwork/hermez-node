@@ -69,7 +69,7 @@ func (v *Verifier) checkBatchGreaterThanMaxNumBatch(l2txsChan <-chan common.Pool
 	out := make(chan common.PoolL2Tx)
 	go func() {
 		for l2tx := range l2txsChan {
-			if !isBatchGreaterThanMaxNumBatch(v.failedAGChan, v.errChan, v.unforjableL2TxsChan, l2tx, nextBatchNum) {
+			if !v.isBatchGreaterThanMaxNumBatch(v.unforjableL2TxsChan, l2tx, nextBatchNum) {
 				v.txsWg.Done()
 				continue
 			}
@@ -84,7 +84,7 @@ func (v *Verifier) checkIsExitWithZeroAmount(l2txsChan <-chan common.PoolL2Tx) <
 	out := make(chan common.PoolL2Tx)
 	go func() {
 		for l2tx := range l2txsChan {
-			if !isExitWithZeroAmount(v.failedAGChan, v.errChan, v.unforjableL2TxsChan, l2tx) {
+			if !v.isExitWithZeroAmount(v.unforjableL2TxsChan, l2tx) {
 				v.txsWg.Done()
 				continue
 			}
@@ -100,14 +100,14 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 	go func() {
 		for l2tx := range l2txsChan {
 			var isTxCorrect bool
-			isTxCorrect = isEnoughSpace(v.failedAGChan, v.errChan, v.nonSelectedL2TxsChan, v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.selectionConfig, l2tx)
+			isTxCorrect = v.isEnoughSpace(v.nonSelectedL2TxsChan, v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.selectionConfig, l2tx)
 			if !isTxCorrect {
 				v.txsWg.Done()
 				continue
 			}
 
 			// Check enough Balance on sender
-			isTxCorrect = isEnoughBalanceOnSender(v.failedAGChan, v.errChan, v.nonSelectedL2TxsChan, l2tx, v.tp)
+			isTxCorrect = v.isEnoughBalanceOnSender(v.nonSelectedL2TxsChan, l2tx, v.tp)
 			if !isTxCorrect {
 				v.txsWg.Done()
 				continue
@@ -122,7 +122,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 			l2tx.TokenID = accSender.TokenID
 
 			// Check if Nonce is correct
-			isTxCorrect = isNonceCorrect(v.failedAGChan, v.errChan, v.nonSelectedL2TxsChan, l2tx, accSender)
+			isTxCorrect = v.isNonceCorrect(v.nonSelectedL2TxsChan, l2tx, accSender)
 			if !isTxCorrect {
 				v.txsWg.Done()
 				continue
@@ -142,7 +142,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 			if newL1CoordTx != nil {
 				// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
 				// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
-				isTxCorrect = isEnoughSpaceForL1CoordTx(v.failedAGChan, v.errChan, v.nonSelectedL2TxsChan, l2tx, v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.selectionConfig)
+				isTxCorrect = v.isEnoughSpaceForL1CoordTx(v.nonSelectedL2TxsChan, l2tx, v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.selectionConfig)
 				if !isTxCorrect {
 					v.txsWg.Done()
 					continue
@@ -173,8 +173,8 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 				accAuth         *common.AccountCreationAuth
 			)
 			if l2tx.ToIdx == 0 { // ToEthAddr/ToBJJ case
-				validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect = verifyAndBuildForTxToEthAddrBJJ(
-					v.failedAGChan, v.errChan, v.nonSelectedL2TxsChan,
+				validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect = v.verifyAndBuildForTxToEthAddrBJJ(
+					v.nonSelectedL2TxsChan,
 					l2tx, v.txsel, v.selectionConfig, v.l1UserFutureTxs,
 					v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.positionL1)
 
@@ -211,7 +211,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 						Type:    l2tx.ErrorType,
 					}
 
-					if isTxAtomic(v.failedAGChan, v.errChan, l2tx, obj) {
+					if v.isTxAtomic(l2tx, obj) {
 						return
 					}
 					v.nonSelectedL2TxsChan <- l2tx
@@ -219,7 +219,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 					continue
 				}
 			} else if l2tx.ToIdx >= common.IdxUserThreshold {
-				isTxCorrect = isToIdxExists(v.failedAGChan, v.errChan, v.nonSelectedL2TxsChan, l2tx, v.txsel)
+				isTxCorrect = v.isToIdxExists(v.nonSelectedL2TxsChan, l2tx, v.txsel)
 				if !isTxCorrect {
 					v.txsWg.Done()
 					continue
@@ -240,10 +240,8 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 func (v *Verifier) processL2Txs(l2txsChan <-chan common.PoolL2Tx) {
 	go func() {
 		for l2tx := range l2txsChan {
-			go func(l2tx common.PoolL2Tx) {
-				tryToProcessL2Tx(l2tx, v.selectedL2TxsChan, v.nonSelectedL2TxsChan, v.failedAGChan, v.errChan, v.txsel, v.tp)
-				v.txsWg.Done()
-			}(l2tx)
+			tryToProcessL2Tx(l2tx, v.selectedL2TxsChan, v.nonSelectedL2TxsChan, v.failedAGChan, v.errChan, v.txsel, v.tp)
+			v.txsWg.Done()
 		}
 	}()
 
@@ -304,7 +302,7 @@ func tryToProcessL2Tx(
 	selectedL2TxsChan <- l2tx
 }
 
-func isTxAtomic(failedAGChan chan<- failedAtomicGroup, errChan chan<- error, l2tx common.PoolL2Tx, reason common.TxSelectorError) bool {
+func (v *Verifier) isTxAtomic(l2tx common.PoolL2Tx, reason common.TxSelectorError) bool {
 	if l2tx.AtomicGroupID != common.EmptyAtomicGroupID {
 		failedAG := failedAtomicGroup{
 			id:         l2tx.AtomicGroupID,
@@ -316,17 +314,15 @@ func isTxAtomic(failedAGChan chan<- failedAtomicGroup, errChan chan<- error, l2t
 			l2tx.AtomicGroupID.String(),
 		))
 
-		failedAGChan <- failedAG
-		errChan <- err
+		v.failedAGChan <- failedAG
+		v.errChan <- err
 
 		return true
 	}
 	return false
 }
 
-func isEnoughSpace(
-	failedAGChan chan<- failedAtomicGroup,
-	errChan chan<- error,
+func (v *Verifier) isEnoughSpace(
 	nonSelectedL2TxsChan chan<- common.PoolL2Tx,
 	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
 	selectionConfig txprocessor.Config, l2tx common.PoolL2Tx,
@@ -338,7 +334,7 @@ func isEnoughSpace(
 			Code:    ErrNoAvailableSlotsCode,
 			Type:    ErrNoAvailableSlotsType,
 		}
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return false
 		}
 		// no more available slots for L2Txs, so mark this tx
@@ -352,9 +348,7 @@ func isEnoughSpace(
 	return true
 }
 
-func isBatchGreaterThanMaxNumBatch(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
+func (v *Verifier) isBatchGreaterThanMaxNumBatch(
 	unforjableL2TxsChan chan<- common.PoolL2Tx,
 	l2tx common.PoolL2Tx, nextBatchNum uint32) bool {
 	if l2tx.MaxNumBatch != 0 && nextBatchNum > l2tx.MaxNumBatch {
@@ -364,7 +358,7 @@ func isBatchGreaterThanMaxNumBatch(
 			Type:    ErrUnsupportedMaxNumBatchType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return false
 		}
 		l2tx.Info = obj.Message
@@ -377,9 +371,7 @@ func isBatchGreaterThanMaxNumBatch(
 	return true
 }
 
-func isExitWithZeroAmount(
-	failedAGChan chan<- failedAtomicGroup,
-	errChan chan<- error,
+func (v *Verifier) isExitWithZeroAmount(
 	unforjableL2TxsChan chan<- common.PoolL2Tx,
 	l2tx common.PoolL2Tx) bool {
 	if l2tx.Type == common.TxTypeExit && l2tx.Amount.Cmp(big.NewInt(0)) <= 0 {
@@ -389,7 +381,7 @@ func isExitWithZeroAmount(
 			Code:    ErrExitAmountCode,
 			Type:    ErrExitAmountType,
 		}
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return false
 		}
 		l2tx.Info = obj.Message
@@ -402,9 +394,7 @@ func isExitWithZeroAmount(
 	return true
 }
 
-func isNonceCorrect(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
+func (v *Verifier) isNonceCorrect(
 	nonSelectedL2TxsChan chan common.PoolL2Tx,
 	l2tx common.PoolL2Tx, accSender *common.Account) bool {
 	if l2tx.Nonce != accSender.Nonce {
@@ -414,7 +404,7 @@ func isNonceCorrect(
 			Type:    ErrNoCurrentNonceType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return false
 		}
 		// not valid Nonce at tx. Discard L2Tx, and update Info
@@ -429,9 +419,7 @@ func isNonceCorrect(
 	return true
 }
 
-func isEnoughBalanceOnSender(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
+func (v *Verifier) isEnoughBalanceOnSender(
 	nonSelectedL2TxsChan chan common.PoolL2Tx,
 	l2tx common.PoolL2Tx, tp *txprocessor.TxProcessor) bool {
 	// Check enough Balance on sender
@@ -444,7 +432,7 @@ func isEnoughBalanceOnSender(
 			Type: ErrSenderNotEnoughBalanceType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return false
 		}
 		// not valid Amount with current Balance. Discard L2Tx,
@@ -459,9 +447,7 @@ func isEnoughBalanceOnSender(
 	return true
 }
 
-func isEnoughSpaceForL1CoordTx(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
+func (v *Verifier) isEnoughSpaceForL1CoordTx(
 	nonSelectedL2TxsChan chan common.PoolL2Tx,
 	l2tx common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
 	selectionConfig txprocessor.Config) bool {
@@ -476,7 +462,7 @@ func isEnoughSpaceForL1CoordTx(
 			Type:    ErrNotEnoughSpaceL1CoordinatorType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return false
 		}
 		// discard L2Tx, and update Info parameter of
@@ -490,9 +476,7 @@ func isEnoughSpaceForL1CoordTx(
 	return true
 }
 
-func verifyAndBuildForTxToEthAddrBJJ(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
+func (v *Verifier) verifyAndBuildForTxToEthAddrBJJ(
 	nonSelectedL2TxsChan chan common.PoolL2Tx,
 	l2tx common.PoolL2Tx, txsel *TxSelector,
 	selectionConfig txprocessor.Config, l1UserFutureTxs []common.L1Tx,
@@ -514,7 +498,7 @@ func verifyAndBuildForTxToEthAddrBJJ(
 		}
 		log.Debugw("txsel.processTxToEthAddrBJJ", "err", err)
 		// If tx is atomic, restart process without txs from the atomic group
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return nil, nil, nil, false
 		}
 		// Discard L2Tx, and update Info parameter of
@@ -528,9 +512,7 @@ func verifyAndBuildForTxToEthAddrBJJ(
 	return validL2Tx, l1CoordinatorTx, accAuth, true
 }
 
-func isToIdxExists(
-	failedAGChan chan failedAtomicGroup,
-	errChan chan error,
+func (v *Verifier) isToIdxExists(
 	nonSelectedL2TxsChan chan common.PoolL2Tx,
 	l2tx common.PoolL2Tx, txsel *TxSelector) bool {
 	_, err := txsel.localAccountsDB.GetAccount(l2tx.ToIdx)
@@ -544,7 +526,7 @@ func isToIdxExists(
 		log.Debugw("invalid L2Tx: ToIdx not found in StateDB",
 			"ToIdx", l2tx.ToIdx)
 		// If tx is atomic, restart process without txs from the atomic group
-		if isTxAtomic(failedAGChan, errChan, l2tx, obj) {
+		if v.isTxAtomic(l2tx, obj) {
 			return false
 		}
 		// Discard L2Tx, and update Info parameter of
