@@ -3,6 +3,10 @@
 This is an example of the env variable equivalations and the toml file:
 
 ```
+[Log]
+Level = HEZNODE_LOG_LEVEL
+Out = HEZNODE_LOG_OUT
+
 [API]
 Address = HEZNODE_API_ADDRESS
 Explorer = HEZNODE_API_EXPLORER
@@ -10,6 +14,8 @@ UpdateMetricsInterval = HEZNODE_API_UPDATEMETRICSINTERVAL
 UpdateRecommendedFeeInterval = HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL
 MaxSQLConnections = HEZNODE_API_MAXSQLCONNECTIONS
 SQLConnectionTimeout = HEZNODE_API_SQLCONNECTIONTIMEOUT
+ReadTimeout = HEZNODE_API_READTIMEOUT
+WriteTimeout = HEZNODE_API_WRITETIMEOUT
 
 [Debug]
 APIAddress = HEZNODE_DEBUG_APIADDRESS
@@ -59,6 +65,7 @@ ForgeNoTxsDelay = HEZNODE_COORDINATOR_FORGENOTXSDELAY
 PurgeByExtDelInterval = HEZNODE_COORDINATOR_PURGEBYEXTDELINTERVAL
 MustForgeAtSlotDeadline = HEZNODE_COORDINATOR_MUSTFORGEATSLOTDEADLINE
 IgnoreSlotCommitment = HEZNODE_COORDINATOR_IGNORESLOTCOMMITMENT
+ProverWaitReadTimeout = HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT
 
 [Coordinator.FeeAccount]
 Address = HEZNODE_FEEACCOUNT_ADDRESS
@@ -123,18 +130,24 @@ APIKey = HEZNODE_ETHERSCAN_APIKEY
 [RecommendedFeePolicy]
 PolicyType = HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE
 StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
+BreakThreshold = HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD
+NumLastBatchAvg = HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG
 ```
 
 ## Table: 
 
 |Section |Parameter Name |Env name  | Required/Optional|Default value |Description |
 --- | --- | --- | --- | --- | --- |
+|Log|Level|HEZNODE_LOG_LEVEL|Optional|"info"|Log level used
+|Log|Out|HEZNODE_LOG_OUT (comma separator ",")|Optional|`["stdout"]`|Place where logs are going to be stored and showed
 |API|Address|HEZNODE_API_ADDRESS|Optional|"0.0.0.0:9086"|Url and port where the API will listen
 |API|Explorer|HEZNODE_API_EXPLORER|Optional|true|Enables the Explorer API endpoints
 |API|UpdateMetricsInterval|HEZNODE_API_UPDATEMETRICSINTERVAL|Optional|"10s"|Interval between updates of the API metrics
-|API|UpdateRecommendedFeeInterval|HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL|Optional|"10s"|Interval between updates of the recommended fees
+|API|UpdateRecommendedFeeInterval|HEZNODE_API_UPDATERECOMMENDEDFEEINTERVAL|Optional|"15s"|Interval between updates of the recommended fees
 |API|MaxSQLConnections|HEZNODE_API_MAXSQLCONNECTIONS|Optional|100|Maximum concurrent connections allowed between API and SQL
 |API|SQLConnectionTimeout|HEZNODE_API_SQLCONNECTIONTIMEOUT|Optional|"2s"|Maximum amount of time that an API request can wait to establish a SQL connection
+|API|ReadTimeout|HEZNODE_API_READTIMEOUT|Optional|"30s"|ReadTimeout is the maximum duration for reading the entire request, including the body.
+|API|WriteTimeout|HEZNODE_API_WRITETIMEOUT|Optional|"30s"|WriteTimeout is the maximum duration before timing out writes of the response.
 |Debug|APIAddress|HEZNODE_DEBUG_APIADDRESS|Optional|"0.0.0.0:12345"|If it is set, the debug api will listen in this address and port
 |Debug|MeddlerLogs|HEZNODE_DEBUG_MEDDLERLOGS|Optional|true|Enables meddler debug mode, where unused columns and struct fields will be logged
 |Debug|GinDebugMode|HEZNODE_DEBUG_GINDEBUGMODE|Optional|false|Sets the web framework Gin-Gonic to run in debug mode
@@ -171,6 +184,7 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator|MustForgeAtSlotDeadline|HEZNODE_COORDINATOR_MUSTFORGEATSLOTDEADLINE|Optional|true|Enables the coordinator to forge in slots if the empty slots reach the slot deadline.
 |Coordinator|IgnoreSlotCommitment|HEZNODE_COORDINATOR_IGNORESLOTCOMMITMENT|Optional|true|It will make the coordinator forge at most one batch per slot, only if there are included txs in that batch, or pending l1UserTxs in the smart contract.  Setting this parameter overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline` and `IgnoreSlotCommitment`.
 |Coordinator|ForgeOncePerSlotIfTxs|HEZNODE_COORDINATOR_FORGEONCEPERSLOTIFTXS|Optional|false|This parameter will make the coordinator forge at most one batch per slot, only if there are included txs in that batch, or pending l1UserTxs in the smart contract.  Setting this parameter overrides `ForgeDelay`, `ForgeNoTxsDelay`, `MustForgeAtSlotDeadline` and `IgnoreSlotCommitment`.
+|Coordinator|ProverWaitReadTimeout|HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT|Optional|"20s"|`ProverWaitReadTimeout` just set the timeout to prover waiting.
 |Coordinator.FeeAccount|Address|HEZNODE_FEEACCOUNT_ADDRESS|**Required**|"0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"|Ethereum address of the account that will receive the fees
 |Coordinator.FeeAccount|BJJ|HEZNODE_FEEACCOUNT_BJJ|**Required**|"0x130c5c7f294792559f469220274f3d3b2dca6e89f4c5ec88d3a08bf73262171b"|BJJ is the baby jub jub public key of the account that will receive the fees
 |Coordinator.L2DB|SafetyPeriod|HEZNODE_L2DB_SAFETYPERIOD|Optional|10|Number of batches after which non-pending L2Txs are deleted from the pool
@@ -209,3 +223,5 @@ StaticValue = HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE
 |Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|""|This parameter allow access to etherscan services
 |RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static" or "AvgLastHour"
 |RecommendedFeePolicy|StaticValue|HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE|Optional|0.10|If PolicyType is "static" defines the recommended fee value
+|RecommendedFeePolicy|BreakThreshold|HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD|Optional|50|If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
+|RecommendedFeePolicy|NumLastBatchAvg|HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG|Optional|10|If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost

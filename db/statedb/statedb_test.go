@@ -24,6 +24,9 @@ import (
 
 var deleteme []string
 
+func init() {
+	log.Init("debug", []string{"stdout"})
+}
 func TestMain(m *testing.M) {
 	exitVal := 0
 	exitVal = m.Run()

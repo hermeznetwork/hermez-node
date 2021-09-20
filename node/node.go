@@ -277,13 +277,22 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	if err := historyDB.SetConstants(&hdbConsts); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-
+	var etherScanService *etherscan.Service
+	if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
+		log.Info("EtherScan method detected in cofiguration file")
+		etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
+			cfg.Coordinator.Etherscan.APIKey)
+	} else {
+		log.Info("EtherScan method not configured in config file")
+		etherScanService = nil
+	}
 	stateAPIUpdater, err := stateapiupdater.NewUpdater(
 		historyDB,
 		&hdbNodeCfg,
 		initSCVars,
 		&hdbConsts,
 		&cfg.RecommendedFeePolicy,
+		cfg.Coordinator.Circuit.MaxTx,
 	)
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -338,15 +347,6 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 			stateDB, 0, uint64(cfg.Coordinator.Circuit.NLevels))
 		if err != nil {
 			return nil, tracerr.Wrap(err)
-		}
-		var etherScanService *etherscan.Service
-		if cfg.Coordinator.Etherscan.URL != "" && cfg.Coordinator.Etherscan.APIKey != "" {
-			log.Info("EtherScan method detected in cofiguration file")
-			etherScanService, _ = etherscan.NewEtherscanService(cfg.Coordinator.Etherscan.URL,
-				cfg.Coordinator.Etherscan.APIKey)
-		} else {
-			log.Info("EtherScan method not configured in config file")
-			etherScanService = nil
 		}
 		serverProofs := make([]prover.Client, len(cfg.Coordinator.ServerProofs.URLs))
 		for i, serverProofCfg := range cfg.Coordinator.ServerProofs.URLs {
@@ -424,6 +424,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 				ForgeBatchGasCost: cfg.Coordinator.EthClient.ForgeBatchGasCost,
 				VerifierIdx:       uint8(verifierIdx),
 				TxProcessorConfig: txProcessorCfg,
+				ProverReadTimeout: cfg.Coordinator.ProverWaitReadTimeout.Duration,
 			},
 			historyDB,
 			l2DB,
@@ -454,7 +455,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		var err error
 		nodeAPI, err = NewNodeAPI(
 			version,
-			cfg.API.Address,
+			cfg.API,
 			coord, cfg.API.Explorer,
 			server,
 			historyDB,
@@ -558,7 +559,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 	}
 	nodeAPI, err := NewNodeAPI(
 		version,
-		cfg.API.Address,
+		cfg.API,
 		coord, cfg.API.Explorer,
 		server,
 		historyDB,
@@ -607,15 +608,17 @@ func (s *APIServer) Stop() {
 
 // NodeAPI holds the node http API
 type NodeAPI struct { //nolint:golint
-	api    *api.API
-	engine *gin.Engine
-	addr   string
+	api          *api.API
+	engine       *gin.Engine
+	addr         string
+	readtimeout  time.Duration
+	writetimeout time.Duration
 }
 
 // NewNodeAPI creates a new NodeAPI (which internally calls api.NewAPI)
 func NewNodeAPI(
-	version,
-	addr string,
+	version string,
+	cfgAPI config.APIConfigParameters,
 	coordinatorEndpoints, explorerEndpoints bool,
 	server *gin.Engine,
 	hdb *historydb.HistoryDB,
@@ -641,9 +644,11 @@ func NewNodeAPI(
 		return nil, tracerr.Wrap(err)
 	}
 	return &NodeAPI{
-		addr:   addr,
-		api:    _api,
-		engine: engine,
+		addr:         cfgAPI.Address,
+		api:          _api,
+		engine:       engine,
+		readtimeout:  cfgAPI.Readtimeout.Duration,
+		writetimeout: cfgAPI.Writetimeout.Duration,
 	}, nil
 }
 
@@ -652,9 +657,9 @@ func NewNodeAPI(
 func (a *NodeAPI) Run(ctx context.Context) error {
 	server := &http.Server{
 		Handler:        a.engine,
-		ReadTimeout:    30 * time.Second, //nolint:gomnd
-		WriteTimeout:   30 * time.Second, //nolint:gomnd
-		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
+		ReadTimeout:    a.readtimeout,
+		WriteTimeout:   a.writetimeout,
+		MaxHeaderBytes: 1 << 20, //nolint:gomnd
 	}
 	listener, err := net.Listen("tcp", a.addr)
 	if err != nil {
@@ -694,6 +699,15 @@ func (n *Node) handleNewBlock(ctx context.Context, stats *synchronizer.Stats,
 		})
 	}
 	n.stateAPIUpdater.SetSCVars(vars)
+
+	/*
+		When the state is out of sync, which means, the last block synchronized by the node is
+		different/smaller from the last block provided by the ethereum, the network info in the state
+		will not be updated. So, in order to get some information on the node state, we need
+		to wait until the node finish the synchronization with the ethereum network.
+
+		Side effects are information like lastBatch, nextForgers, metrics with zeros, defaults or null values
+	*/
 	if stats.Synced() {
 		if err := n.stateAPIUpdater.UpdateNetworkInfo(
 			stats.Eth.LastBlock, stats.Sync.LastBlock,
@@ -731,21 +745,20 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 	return nil
 }
 
-func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
-	time.Duration, error) {
-	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
+func (n *Node) syncLoopFn(ctx context.Context) (time.Duration, error) {
+	blockData, discarded, err := n.sync.Sync(ctx)
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
-		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
+		return n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
 	} else if discarded != nil {
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
 		vars := n.sync.SCVars()
 		if err := n.handleReorg(ctx, stats, vars); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
+			return time.Duration(0), tracerr.Wrap(err)
 		}
-		return nil, time.Duration(0), nil
+		return time.Duration(0), nil
 	} else if blockData != nil {
 		// case: new block
 		vars := common.SCVariablesPtr{
@@ -754,12 +767,12 @@ func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common
 			WDelayer: blockData.WDelayer.Vars,
 		}
 		if err := n.handleNewBlock(ctx, stats, &vars, blockData.Rollup.Batches); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
+			return time.Duration(0), tracerr.Wrap(err)
 		}
-		return &blockData.Block, time.Duration(0), nil
+		return time.Duration(0), nil
 	} else {
 		// case: no block
-		return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
+		return n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
 	}
 }
 
@@ -781,7 +794,6 @@ func (n *Node) StartSynchronizer() {
 	n.wg.Add(1)
 	go func() {
 		var err error
-		var lastBlock *common.Block
 		waitDuration := time.Duration(0)
 		for {
 			select {
@@ -790,8 +802,7 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(waitDuration):
-				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx,
-					lastBlock); err != nil {
+				if waitDuration, err = n.syncLoopFn(n.ctx); err != nil {
 					if n.ctx.Err() != nil {
 						continue
 					}

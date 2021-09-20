@@ -5,7 +5,7 @@ import (
 )
 
 func TestLog(t *testing.T) {
-	// Init("error", []string{"stdout", "test.log"})
+	Init("debug", []string{"stdout"}) //[]string{"stdout", "test.log"}
 
 	Info("Test log.Info", " value is ", 10)
 	Infof("Test log.Infof %d", 10)

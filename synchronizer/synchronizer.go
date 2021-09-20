@@ -40,7 +40,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
@@ -502,45 +502,39 @@ func (s *Synchronizer) resetIntermediateState() error {
 // If a block is synced, it will be returned and also stored in the DB.  If a
 // reorg is detected, the number of discarded blocks will be returned and no
 // synchronization will be made.
-func (s *Synchronizer) Sync(ctx context.Context,
-	lastSavedBlock *common.Block) (blockData *common.BlockData, discarded *int64, err error) {
+func (s *Synchronizer) Sync(ctx context.Context) (blockData *common.BlockData, discarded *int64, err error) {
 	if s.resetStateFailed {
 		if err := s.resetIntermediateState(); err != nil {
 			return nil, nil, tracerr.Wrap(err)
 		}
 	}
 
-	var nextBlockNum int64 // next block number to sync
-	if lastSavedBlock == nil {
-		// Get lastSavedBlock from History DB
-		lastSavedBlock, err = s.historyDB.GetLastBlock()
-		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
-			return nil, nil, tracerr.Wrap(err)
-		}
-		// If we don't have any stored block, we must do a full sync
-		// starting from the startBlockNum
-		if tracerr.Unwrap(err) == sql.ErrNoRows || lastSavedBlock.Num == 0 {
-			nextBlockNum = s.startBlockNum
-			lastSavedBlock = nil
-		}
-	}
-	if lastSavedBlock != nil {
-		nextBlockNum = lastSavedBlock.Num + 1
-		if lastSavedBlock.Num < s.startBlockNum {
-			return nil, nil, tracerr.Wrap(
-				fmt.Errorf("lastSavedBlock (%v) < startBlockNum (%v)",
-					lastSavedBlock.Num, s.startBlockNum))
-		}
+	// Get lastSavedBlock from History DB
+	lastSavedBlock, err := s.historyDB.GetLastBlock()
+	if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+		return nil, nil, tracerr.Wrap(err)
 	}
 
-	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
-	if tracerr.Unwrap(err) == ethereum.NotFound {
-		return nil, nil, nil
-	} else if err != nil {
-		return nil, nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
+	// search the next block with events in hermez smart contracts until it reaches the
+	// last eth block, initially we set the from block as the startBlock
+	fromBlock := s.startBlockNum
+	// If we have any stored block, we must search the next block after this block
+	if lastSavedBlock != nil {
+		fromBlock = lastSavedBlock.Num + 1
 	}
-	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v",
-		ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
+
+	// next block number to sync
+	nextBlockNum, err := s.ethClient.EthNextBlockWithSCEvents(ctx, fromBlock, []ethCommon.Address{
+		s.consts.Auction.HermezRollup,
+		s.consts.Rollup.HermezAuctionContract,
+		s.consts.Rollup.WithdrawDelayerContract,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	if nextBlockNum == lastSavedBlock.Num {
+		return nil, nil, nil
+	}
 
 	// While having more blocks to sync than UpdateBlockNumDiffThreshold, UpdateEth will be called once in
 	// UpdateFrequencyDivider blocks
@@ -551,23 +545,28 @@ func (s *Synchronizer) Sync(ctx context.Context,
 		}
 	}
 
-	log.Debugw("Syncing...",
-		"block", nextBlockNum,
-		"ethLastBlock", s.stats.Eth.LastBlock,
-	)
+	ethBlock, err := s.ethClient.EthBlockByNumber(ctx, nextBlockNum)
+	if err != nil {
+		return nil, nil, tracerr.Wrap(fmt.Errorf("EthBlockByNumber: %w", err))
+	}
+	log.Debugf("ethBlock: num: %v, parent: %v, hash: %v", ethBlock.Num, ethBlock.ParentHash.String(), ethBlock.Hash.String())
+	log.Debugw("Syncing...", "block", nextBlockNum, "ethLastBlock", s.stats.Eth.LastBlock)
 
-	// Check that the obtained ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
-	if lastSavedBlock != nil {
-		if lastSavedBlock.Hash != ethBlock.ParentHash {
+	if nextBlockNum > 0 {
+		parentBlockNumber := nextBlockNum - 1
+		parentBlock, err := s.historyDB.GetBlock(parentBlockNumber)
+		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+			return nil, nil, tracerr.Wrap(err)
+		}
+		// Check that the obtained ethBlock.ParentHash == prevEthBlock.Hash; if not, reorg!
+		if tracerr.Unwrap(err) != sql.ErrNoRows && parentBlock != nil && parentBlock.Hash != ethBlock.ParentHash {
 			// Reorg detected
-			log.Debugw("Reorg Detected",
-				"blockNum", ethBlock.Num,
-				"block.parent(got)", ethBlock.ParentHash, "parent.hash(exp)", lastSavedBlock.Hash)
-			lastDBBlockNum, err := s.reorg(lastSavedBlock)
+			log.Debugw("Reorg Detected", "blockNum", ethBlock.Num, "block.parent(got)", ethBlock.ParentHash, "parent.hash(exp)", parentBlock.Hash)
+			lastDBBlockNum, err := s.reorg(parentBlock)
 			if err != nil {
 				return nil, nil, tracerr.Wrap(err)
 			}
-			discarded := lastSavedBlock.Num - lastDBBlockNum
+			discarded := parentBlock.Num - lastDBBlockNum
 			metric.Reorgs.Inc()
 			return nil, &discarded, nil
 		}
@@ -686,24 +685,28 @@ func (s *Synchronizer) Sync(ctx context.Context,
 // corresponding batches in StateBD are discarded.  Returns the last valid
 // blockNum from the HistoryDB.
 func (s *Synchronizer) reorg(uncleBlock *common.Block) (int64, error) {
-	blockNum := uncleBlock.Num
-
+	var err error
 	var block *common.Block
-	for blockNum >= s.startBlockNum {
-		ethBlock, err := s.ethClient.EthBlockByNumber(context.Background(), blockNum)
+
+	for blockNum := uncleBlock.Num; blockNum >= s.startBlockNum; blockNum-- {
+		block, err = s.historyDB.GetBlock(blockNum)
+		if tracerr.Unwrap(err) == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return 0, tracerr.Wrap(fmt.Errorf("historyDB.GetBlock: %w", err))
+		}
+
+		var ethBlock *common.Block
+		ethBlock, err = s.ethClient.EthBlockByNumber(context.Background(), blockNum)
 		if err != nil {
 			return 0, tracerr.Wrap(fmt.Errorf("ethClient.EthBlockByNumber: %w", err))
 		}
 
-		block, err = s.historyDB.GetBlock(blockNum)
-		if err != nil {
-			return 0, tracerr.Wrap(fmt.Errorf("historyDB.GetBlock: %w", err))
-		}
 		if block.Hash == ethBlock.Hash {
 			log.Debugf("Found valid block: %v", blockNum)
 			break
 		}
-		blockNum--
 	}
 	total := uncleBlock.Num - block.Num
 	log.Debugw("Discarding blocks", "total", total, "from", uncleBlock.Num, "to", block.Num+1)
@@ -866,6 +869,8 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			return nil, tracerr.Wrap(fmt.Errorf("RollupForgeBatchArgs: %w", err))
 		}
 		ethTxHash := evtForgeBatch.EthTxHash
+		gasUsed := evtForgeBatch.GasUsed
+		gasPrice := evtForgeBatch.GasPrice
 		batchNum := common.BatchNum(evtForgeBatch.BatchNum)
 		var l1UserTxs []common.L1Tx
 		// Check if this is a L1Batch to get L1 Tx from it
@@ -1051,6 +1056,8 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 			LastIdx:            forgeBatchArgs.NewLastIdx,
 			ExitRoot:           forgeBatchArgs.NewExitRoot,
 			SlotNum:            slotNum,
+			GasUsed:            gasUsed,
+			GasPrice:           gasPrice,
 		}
 		nextForgeL1TxsNumCpy := nextForgeL1TxsNum
 		if forgeBatchArgs.L1Batch {

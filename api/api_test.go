@@ -545,7 +545,7 @@ func TestMain(m *testing.M) {
 		WDelayer: wdelayerVars,
 	}, constants, &stateapiupdater.RecommendedFeePolicy{
 		PolicyType: stateapiupdater.RecommendedFeePolicyTypeAvgLastHour,
-	})
+	}, 400)
 	if err != nil {
 		panic(err)
 	}

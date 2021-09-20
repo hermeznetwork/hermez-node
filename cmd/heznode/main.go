@@ -81,6 +81,7 @@ func cmdImportKey(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("importkey must use mode coordinator"))
 	}
 	cfg := _cfg.node
+	log.Init(cfg.Log.Level, cfg.Log.Out)
 
 	scryptN := ethKeystore.StandardScryptN
 	scryptP := ethKeystore.StandardScryptP
@@ -190,6 +191,7 @@ func cmdWipeDBs(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
 	cfg := _cfg.node
+	log.Init(cfg.Log.Level, cfg.Log.Out)
 	yes := c.Bool(flagYes)
 	if !yes {
 		fmt.Print("*WARNING* Are you sure you want to delete " +
@@ -231,6 +233,7 @@ func cmdSQLMigrationDown(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
 	cfg := _cfg.node
+	log.Init(cfg.Log.Level, cfg.Log.Out)
 	yes := c.Bool(flagYes)
 	migrationsToRun := c.Uint(nMigrations)
 	if !yes {
@@ -295,6 +298,7 @@ func cmdRun(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
+	log.Init(cfg.node.Log.Level, cfg.node.Log.Out)
 	innerNode, err := node.NewNode(cfg.mode, cfg.node, c.App.Version)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting node: %w", err))
@@ -311,6 +315,7 @@ func cmdServeAPI(c *cli.Context) error {
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
+	log.Init(cfg.server.Log.Level, cfg.server.Log.Out)
 	srv, err := node.NewAPIServer(cfg.mode, cfg.server, c.App.Version, nil, nil)
 	if err != nil {
 		return tracerr.Wrap(fmt.Errorf("error starting api server: %w", err))
@@ -333,6 +338,7 @@ func cmdGetAccountDetails(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
 	cfg := _cfg.node
+	log.Init(cfg.Log.Level, cfg.Log.Out)
 
 	historyDB, err := openDBConexion(cfg)
 	if err != nil {
@@ -379,6 +385,7 @@ func cmdDiscard(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
 	cfg := _cfg.node
+	log.Init(cfg.Log.Level, cfg.Log.Out)
 	blockNum := c.Int64(flagBlock)
 	log.Infof("Discarding all blocks up to block %v...", blockNum)
 
@@ -441,7 +448,6 @@ func cmdDiscard(c *cli.Context) error {
 }
 
 func cmdMakeBackup(c *cli.Context) error {
-	log.Info("starting to make a hermez-node backup...")
 	var wg sync.WaitGroup
 	// two goroutines for state db and postgres db
 	goroutinesAmount := 2
@@ -451,6 +457,8 @@ func cmdMakeBackup(c *cli.Context) error {
 		return tracerr.Wrap(fmt.Errorf("error parsing flags and config: %w", err))
 	}
 	cfg := _cfg.node
+	log.Init(cfg.Log.Level, cfg.Log.Out)
+	log.Info("starting to make a hermez-node backup...")
 	zipPath := c.String(flagPath)
 	if _, err = os.Stat(zipPath); os.IsNotExist(err) {
 		log.Infof("creating directory %s for the backup", zipPath)

@@ -1,3 +1,9 @@
+#[Log]
+### Levels: info, debug, warn, error, fatal
+#Level = "info"
+### Out where logs are going to be stored or showed: ["stdout", "filepath.log"]
+#Out = ["stdout"]
+
 #[API]
 ### Url and port where the API will listen
 #Address = "0.0.0.0:8086"
@@ -6,7 +12,7 @@
 ### Interval between updates of the API metrics
 #UpdateMetricsInterval = "10s"
 ### Interval between updates of the recommended fees
-#UpdateRecommendedFeeInterval = "10s"
+#UpdateRecommendedFeeInterval = "15s"
 ### Maximum concurrent connections allowed between API and SQL
 #MaxSQLConnections = 100
 ### Maximum amount of time that an API request can wait to establish a SQL connection
@@ -199,7 +205,12 @@ Password = "yourpasswordhere"
 ### Available options:
 ### - Static: always return the same value (StaticValue) in USD
 ### - AvgLastHour: calculate using the average fee of the forged transactions during the last hour
-### Selects the mode. "Static" or "AvgLastHour"
+### - AvgLastHourResizable: calculate using the average fee of the forged transactions during the last hour and takes in account the gas price o of the last ten ethereum blocks
+### Selects the mode. "Static", "AvgLastHour" or "AvgLastHourResizable"
 #PolicyType = "Static"
 ### If PolicyType is "static" defines the recommended fee value
 #StaticValue = 0.10
+### If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
+#BreakThreshold = 50
+### If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost
+#NumLastBatchAvg = 10

@@ -6,12 +6,16 @@ import (
 	"testing"
 
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var deleteme []string
 
+func init() {
+	log.Init("debug", []string{"stdout"})
+}
 func TestMain(m *testing.M) {
 	exitVal := m.Run()
 	for _, dir := range deleteme {

@@ -15,11 +15,16 @@ import (
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 )
+
+func init() {
+	log.Init("debug", []string{"stdout"})
+}
 
 func newAccount(t *testing.T, i int) *common.Account {
 	var sk babyjub.PrivateKey

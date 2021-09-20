@@ -2,13 +2,19 @@ package config
 
 // DefaultValues is the default fonfigurations for the hermez node
 const DefaultValues = `
+[Log]
+Level = "info"
+Out = ["stdout"]
+
 [API]
 Address = "0.0.0.0:8086"
 Explorer = true
 UpdateMetricsInterval = "10s"
-UpdateRecommendedFeeInterval = "10s"
+UpdateRecommendedFeeInterval = "15s"
 MaxSQLConnections = 100
 SQLConnectionTimeout = "2s"
+ReadTimeout = "30s"
+WriteTimeout = "30s"
 
 [StateDB]
 Path = "/var/hermez/statedb"
@@ -54,6 +60,7 @@ PurgeByExtDelInterval = "1m"
 MustForgeAtSlotDeadline = true
 IgnoreSlotCommitment = true
 ForgeOncePerSlotIfTxs = false
+ProverWaitReadTimeout = "20s"
 
 [Coordinator.FeeAccount]
 Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"
@@ -109,4 +116,6 @@ Coordinator = true
 [RecommendedFeePolicy]
 PolicyType = "Static"
 StaticValue = 0.10
+BreakThreshold = 50
+NumLastBatchAvg = 10
 `
