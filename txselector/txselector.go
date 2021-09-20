@@ -314,7 +314,7 @@ START_SELECTION:
 	var selectedTxs []common.PoolL2Tx
 	// Start selection process
 
-	verifier := NewVerifier(
+	verifier := newVerifier(
 		l1UserFutureTxs,
 		selectionConfig,
 		tp,
@@ -439,7 +439,7 @@ START_SELECTION:
 }
 
 func (txsel *TxSelector) verifyTxs(
-	verifier *Verifier,
+	verifier *verifier,
 	l2Txs []common.PoolL2Tx,
 	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
 ) {

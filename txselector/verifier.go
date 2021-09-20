@@ -16,7 +16,7 @@ import (
 const failedGroupErrMsg = "Failed forging atomic tx from Group %s." +
 	" Restarting selection process without txs from this group"
 
-type Verifier struct {
+type verifier struct {
 	failedAGChan                                                 chan failedAtomicGroup
 	errChan                                                      chan error
 	unforjableL2TxsChan, nonSelectedL2TxsChan, selectedL2TxsChan chan common.PoolL2Tx
@@ -31,12 +31,12 @@ type Verifier struct {
 	txsWg                                                        *sync.WaitGroup
 }
 
-func NewVerifier(
+func newVerifier(
 	l1UserFutureTxs []common.L1Tx,
 	selectionConfig txprocessor.Config,
 	tp *txprocessor.TxProcessor,
-	txsel *TxSelector) *Verifier {
-	return &Verifier{
+	txsel *TxSelector) *verifier {
+	return &verifier{
 		failedAGChan:           make(chan failedAtomicGroup),
 		errChan:                make(chan error),
 		unforjableL2TxsChan:    make(chan common.PoolL2Tx),
@@ -53,7 +53,7 @@ func NewVerifier(
 	}
 }
 
-func (v *Verifier) transformTxs(l2txs []common.PoolL2Tx) <-chan common.PoolL2Tx {
+func (v *verifier) transformTxs(l2txs []common.PoolL2Tx) <-chan common.PoolL2Tx {
 	out := make(chan common.PoolL2Tx)
 	go func() {
 		for _, tx := range l2txs {
@@ -64,11 +64,11 @@ func (v *Verifier) transformTxs(l2txs []common.PoolL2Tx) <-chan common.PoolL2Tx 
 	return out
 }
 
-func (v *Verifier) checkBatchGreaterThanMaxNumBatch(l2txsChan <-chan common.PoolL2Tx, nextBatchNum uint32) <-chan common.PoolL2Tx {
+func (v *verifier) checkBatchGreaterThanMaxNumBatch(l2txsChan <-chan common.PoolL2Tx, nextBatchNum uint32) <-chan common.PoolL2Tx {
 	out := make(chan common.PoolL2Tx)
 	go func() {
 		for l2tx := range l2txsChan {
-			if !v.isBatchGreaterThanMaxNumBatch(v.unforjableL2TxsChan, l2tx, nextBatchNum) {
+			if !v.isBatchGreaterThanMaxNumBatch(l2tx, nextBatchNum) {
 				v.txsWg.Done()
 				continue
 			}
@@ -79,11 +79,11 @@ func (v *Verifier) checkBatchGreaterThanMaxNumBatch(l2txsChan <-chan common.Pool
 	return out
 }
 
-func (v *Verifier) checkIsExitWithZeroAmount(l2txsChan <-chan common.PoolL2Tx) <-chan common.PoolL2Tx {
+func (v *verifier) checkIsExitWithZeroAmount(l2txsChan <-chan common.PoolL2Tx) <-chan common.PoolL2Tx {
 	out := make(chan common.PoolL2Tx)
 	go func() {
 		for l2tx := range l2txsChan {
-			if !v.isExitWithZeroAmount(v.unforjableL2TxsChan, l2tx) {
+			if !v.isExitWithZeroAmount(l2tx) {
 				v.txsWg.Done()
 				continue
 			}
@@ -94,19 +94,19 @@ func (v *Verifier) checkIsExitWithZeroAmount(l2txsChan <-chan common.PoolL2Tx) <
 	return out
 }
 
-func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int) <-chan common.PoolL2Tx {
+func (v *verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int) <-chan common.PoolL2Tx {
 	out := make(chan common.PoolL2Tx)
 	go func() {
 		for l2tx := range l2txsChan {
 			var isTxCorrect bool
-			isTxCorrect = v.isEnoughSpace(v.nonSelectedL2TxsChan, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, v.selectionConfig, l2tx)
+			isTxCorrect = v.isEnoughSpace(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, l2tx)
 			if !isTxCorrect {
 				v.txsWg.Done()
 				continue
 			}
 
 			// Check enough Balance on sender
-			isTxCorrect = v.isEnoughBalanceOnSender(v.nonSelectedL2TxsChan, l2tx, v.tp)
+			isTxCorrect = v.isEnoughBalanceOnSender(l2tx)
 			if !isTxCorrect {
 				v.txsWg.Done()
 				continue
@@ -121,7 +121,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 			l2tx.TokenID = accSender.TokenID
 
 			// Check if Nonce is correct
-			isTxCorrect = v.isNonceCorrect(v.nonSelectedL2TxsChan, l2tx, accSender)
+			isTxCorrect = v.isNonceCorrect(l2tx, accSender)
 			if !isTxCorrect {
 				v.txsWg.Done()
 				continue
@@ -141,7 +141,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 			if newL1CoordTx != nil {
 				// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
 				// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
-				isTxCorrect = v.isEnoughSpaceForL1CoordTx(v.nonSelectedL2TxsChan, l2tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, v.selectionConfig)
+				isTxCorrect = v.isEnoughSpaceForL1CoordTx(l2tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs)
 				if !isTxCorrect {
 					v.txsWg.Done()
 					continue
@@ -173,9 +173,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 			)
 			if l2tx.ToIdx == 0 { // ToEthAddr/ToBJJ case
 				validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect = v.verifyAndBuildForTxToEthAddrBJJ(
-					v.nonSelectedL2TxsChan,
-					l2tx, v.txsel, v.selectionConfig, v.l1UserFutureTxs,
-					nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1)
+					l2tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1)
 
 				if !isTxCorrect {
 					v.txsWg.Done()
@@ -218,7 +216,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 					continue
 				}
 			} else if l2tx.ToIdx >= common.IdxUserThreshold {
-				isTxCorrect = v.isToIdxExists(v.nonSelectedL2TxsChan, l2tx, v.txsel)
+				isTxCorrect = v.isToIdxExists(l2tx)
 				if !isTxCorrect {
 					v.txsWg.Done()
 					continue
@@ -236,28 +234,26 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 	return out
 }
 
-func (v *Verifier) processL2Txs(l2txsChan <-chan common.PoolL2Tx) {
+func (v *verifier) processL2Txs(l2txsChan <-chan common.PoolL2Tx) {
 	go func() {
 		for l2tx := range l2txsChan {
-			tryToProcessL2Tx(l2tx, v.selectedL2TxsChan, v.nonSelectedL2TxsChan, v.failedAGChan, v.errChan, v.txsel, v.tp)
+			v.tryToProcessL2Tx(l2tx)
 			v.txsWg.Done()
 		}
 	}()
 }
 
-func tryToProcessL2Tx(
-	l2tx common.PoolL2Tx, selectedL2TxsChan, nonSelectedL2TxsChan chan common.PoolL2Tx,
-	failedAGChan chan failedAtomicGroup, errChan chan error,
-	txsel *TxSelector, tp *txprocessor.TxProcessor) {
+func (v *verifier) tryToProcessL2Tx(
+	l2tx common.PoolL2Tx) {
 	// get CoordIdxsMap for the TokenID of the current l2Txs[i]
 	// get TokenID from tx.Sender account
 	tokenID := l2tx.TokenID
-	coordIdx, err := txsel.getCoordIdx(tokenID)
+	coordIdx, err := v.txsel.getCoordIdx(tokenID)
 	if err != nil {
 		// if err is db.ErrNotFound, should not happen, as all
 		// the selectedTxs.TokenID should have a CoordinatorIdx
 		// created in the DB at this point
-		errChan <- tracerr.Wrap(fmt.Errorf("could not get CoordIdx for TokenID=%d, "+
+		v.errChan <- tracerr.Wrap(fmt.Errorf("could not get CoordIdx for TokenID=%d, "+
 			"due: %s", tokenID, err))
 		return
 	}
@@ -265,12 +261,12 @@ func tryToProcessL2Tx(
 	// ProcessL2Tx
 	coordIdxsMap := map[common.TokenID]common.Idx{tokenID: coordIdx}
 	// tp.AccumulatedFees = make(map[common.Idx]*big.Int)
-	if _, ok := tp.AccumulatedFees[coordIdx]; !ok {
-		tp.AccumulatedFees[coordIdx] = big.NewInt(0)
+	if _, ok := v.tp.AccumulatedFees[coordIdx]; !ok {
+		v.tp.AccumulatedFees[coordIdx] = big.NewInt(0)
 	}
 
 	// TODO: PROCESS TX
-	_, _, _, err = tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2tx)
+	_, _, _, err = v.tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2tx)
 	if err != nil {
 		obj := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrTxDiscartedInProcessL2Tx+" due to %s", err.Error()),
@@ -285,7 +281,7 @@ func tryToProcessL2Tx(
 				failedTxID: l2tx.TxID,
 				reason:     obj,
 			}
-			failedAGChan <- failedAG
+			v.failedAGChan <- failedAG
 			return
 		}
 		// Discard L2Tx, and update Info parameter of the tx,
@@ -293,14 +289,14 @@ func tryToProcessL2Tx(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		nonSelectedL2TxsChan <- l2tx
-		errChan <- tracerr.Wrap(err)
+		v.nonSelectedL2TxsChan <- l2tx
+		v.errChan <- tracerr.Wrap(err)
 		return
 	}
-	selectedL2TxsChan <- l2tx
+	v.selectedL2TxsChan <- l2tx
 }
 
-func (v *Verifier) isTxAtomic(l2tx common.PoolL2Tx, reason common.TxSelectorError) bool {
+func (v *verifier) isTxAtomic(l2tx common.PoolL2Tx, reason common.TxSelectorError) bool {
 	if l2tx.AtomicGroupID != common.EmptyAtomicGroupID {
 		failedAG := failedAtomicGroup{
 			id:         l2tx.AtomicGroupID,
@@ -320,12 +316,8 @@ func (v *Verifier) isTxAtomic(l2tx common.PoolL2Tx, reason common.TxSelectorErro
 	return false
 }
 
-func (v *Verifier) isEnoughSpace(
-	nonSelectedL2TxsChan chan<- common.PoolL2Tx,
-	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
-	selectionConfig txprocessor.Config, l2tx common.PoolL2Tx,
-) bool {
-	if !canAddL2Tx(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, selectionConfig) {
+func (v *verifier) isEnoughSpace(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int, l2tx common.PoolL2Tx) bool {
+	if !canAddL2Tx(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, v.selectionConfig) {
 		// If tx is atomic, restart process without txs from the atomic group
 		obj := common.TxSelectorError{
 			Message: ErrNoAvailableSlots,
@@ -340,14 +332,13 @@ func (v *Verifier) isEnoughSpace(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		nonSelectedL2TxsChan <- l2tx
+		v.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *Verifier) isBatchGreaterThanMaxNumBatch(
-	unforjableL2TxsChan chan<- common.PoolL2Tx,
+func (v *verifier) isBatchGreaterThanMaxNumBatch(
 	l2tx common.PoolL2Tx, nextBatchNum uint32) bool {
 	if l2tx.MaxNumBatch != 0 && nextBatchNum > l2tx.MaxNumBatch {
 		obj := common.TxSelectorError{
@@ -363,15 +354,13 @@ func (v *Verifier) isBatchGreaterThanMaxNumBatch(
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
 		// Tx won't be forjable since the current batch num won't go backwards
-		unforjableL2TxsChan <- l2tx
+		v.unforjableL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *Verifier) isExitWithZeroAmount(
-	unforjableL2TxsChan chan<- common.PoolL2Tx,
-	l2tx common.PoolL2Tx) bool {
+func (v *verifier) isExitWithZeroAmount(l2tx common.PoolL2Tx) bool {
 	if l2tx.Type == common.TxTypeExit && l2tx.Amount.Cmp(big.NewInt(0)) <= 0 {
 		// If tx is atomic, restart process without txs from the atomic group
 		obj := common.TxSelectorError{
@@ -386,15 +375,13 @@ func (v *Verifier) isExitWithZeroAmount(
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
 		// Although tecnicaly forjable, it won't never get forged with current code
-		unforjableL2TxsChan <- l2tx
+		v.unforjableL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *Verifier) isNonceCorrect(
-	nonSelectedL2TxsChan chan common.PoolL2Tx,
-	l2tx common.PoolL2Tx, accSender *common.Account) bool {
+func (v *verifier) isNonceCorrect(l2tx common.PoolL2Tx, accSender *common.Account) bool {
 	if l2tx.Nonce != accSender.Nonce {
 		obj := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrNoCurrentNonce+"Tx.Nonce: %d, Account.Nonce: %d", l2tx.Nonce, accSender.Nonce),
@@ -411,17 +398,15 @@ func (v *Verifier) isNonceCorrect(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		nonSelectedL2TxsChan <- l2tx
+		v.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *Verifier) isEnoughBalanceOnSender(
-	nonSelectedL2TxsChan chan common.PoolL2Tx,
-	l2tx common.PoolL2Tx, tp *txprocessor.TxProcessor) bool {
+func (v *verifier) isEnoughBalanceOnSender(l2tx common.PoolL2Tx) bool {
 	// Check enough Balance on sender
-	enoughBalance, balance, feeAndAmount := tp.CheckEnoughBalance(l2tx)
+	enoughBalance, balance, feeAndAmount := v.tp.CheckEnoughBalance(l2tx)
 	if !enoughBalance {
 		obj := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrSenderNotEnoughBalance+"Current sender account Balance: %s, Amount+Fee: %s",
@@ -439,20 +424,18 @@ func (v *Verifier) isEnoughBalanceOnSender(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		nonSelectedL2TxsChan <- l2tx
+		v.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *Verifier) isEnoughSpaceForL1CoordTx(
-	nonSelectedL2TxsChan chan common.PoolL2Tx,
-	l2tx common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
-	selectionConfig txprocessor.Config) bool {
+func (v *verifier) isEnoughSpaceForL1CoordTx(
+	l2tx common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int) bool {
 	if !canAddL2TxThatNeedsNewCoordL1Tx(
 		nAlreadyProcessedL1Txs,
 		nAlreadyProcessedL2Txs,
-		selectionConfig,
+		v.selectionConfig,
 	) {
 		obj := common.TxSelectorError{
 			Message: ErrNotEnoughSpaceL1Coordinator,
@@ -468,21 +451,19 @@ func (v *Verifier) isEnoughSpaceForL1CoordTx(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		nonSelectedL2TxsChan <- l2tx
+		v.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *Verifier) verifyAndBuildForTxToEthAddrBJJ(
-	nonSelectedL2TxsChan chan common.PoolL2Tx,
-	l2tx common.PoolL2Tx, txsel *TxSelector,
-	selectionConfig txprocessor.Config, l1UserFutureTxs []common.L1Tx,
+func (v *verifier) verifyAndBuildForTxToEthAddrBJJ(
+	l2tx common.PoolL2Tx,
 	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int,
 ) (*common.PoolL2Tx, *common.L1Tx, *common.AccountCreationAuth, bool) {
-	validL2Tx, l1CoordinatorTx, accAuth, err := txsel.processTxToEthAddrBJJ(
-		selectionConfig,
-		l1UserFutureTxs,
+	validL2Tx, l1CoordinatorTx, accAuth, err := v.txsel.processTxToEthAddrBJJ(
+		v.selectionConfig,
+		v.l1UserFutureTxs,
 		nAlreadyProcessedL1Txs,
 		nAlreadyProcessedL2Txs,
 		positionL1,
@@ -504,16 +485,14 @@ func (v *Verifier) verifyAndBuildForTxToEthAddrBJJ(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		nonSelectedL2TxsChan <- l2tx
+		v.nonSelectedL2TxsChan <- l2tx
 		return nil, nil, nil, false
 	}
 	return validL2Tx, l1CoordinatorTx, accAuth, true
 }
 
-func (v *Verifier) isToIdxExists(
-	nonSelectedL2TxsChan chan common.PoolL2Tx,
-	l2tx common.PoolL2Tx, txsel *TxSelector) bool {
-	_, err := txsel.localAccountsDB.GetAccount(l2tx.ToIdx)
+func (v *verifier) isToIdxExists(l2tx common.PoolL2Tx) bool {
+	_, err := v.txsel.localAccountsDB.GetAccount(l2tx.ToIdx)
 	if err != nil {
 		obj := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrToIdxNotFound+"ToIdx: %d", l2tx.ToIdx),
@@ -532,7 +511,7 @@ func (v *Verifier) isToIdxExists(
 		l2tx.Info = obj.Message
 		l2tx.ErrorCode = obj.Code
 		l2tx.ErrorType = obj.Type
-		nonSelectedL2TxsChan <- l2tx
+		v.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
