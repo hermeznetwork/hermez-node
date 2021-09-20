@@ -24,7 +24,6 @@ type Verifier struct {
 	accAuthsChan                                                 chan []byte
 	verificationEnded                                            chan int
 	l1UserFutureTxs                                              []common.L1Tx
-	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1   int
 	selectionConfig                                              txprocessor.Config
 	tp                                                           *txprocessor.TxProcessor
 	txsel                                                        *TxSelector
@@ -95,12 +94,12 @@ func (v *Verifier) checkIsExitWithZeroAmount(l2txsChan <-chan common.PoolL2Tx) <
 	return out
 }
 
-func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.PoolL2Tx {
+func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int) <-chan common.PoolL2Tx {
 	out := make(chan common.PoolL2Tx)
 	go func() {
 		for l2tx := range l2txsChan {
 			var isTxCorrect bool
-			isTxCorrect = v.isEnoughSpace(v.nonSelectedL2TxsChan, v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.selectionConfig, l2tx)
+			isTxCorrect = v.isEnoughSpace(v.nonSelectedL2TxsChan, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, v.selectionConfig, l2tx)
 			if !isTxCorrect {
 				v.txsWg.Done()
 				continue
@@ -134,7 +133,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 			// pending L1CoordinatorTx to create the account for the
 			// Coordinator for that TokenID
 			var newL1CoordTx *common.L1Tx
-			newL1CoordTx, v.positionL1, err = v.txsel.coordAccountForTokenID(accSender.TokenID, v.positionL1)
+			newL1CoordTx, positionL1, err = v.txsel.coordAccountForTokenID(accSender.TokenID, positionL1)
 			if err != nil {
 				v.errChan <- tracerr.Wrap(err)
 				return
@@ -142,21 +141,21 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 			if newL1CoordTx != nil {
 				// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
 				// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
-				isTxCorrect = v.isEnoughSpaceForL1CoordTx(v.nonSelectedL2TxsChan, l2tx, v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.selectionConfig)
+				isTxCorrect = v.isEnoughSpaceForL1CoordTx(v.nonSelectedL2TxsChan, l2tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, v.selectionConfig)
 				if !isTxCorrect {
 					v.txsWg.Done()
 					continue
 				}
 
 				// increase positionL1
-				v.positionL1++
+				positionL1++
 				//l1CoordinatorTxsChan <- *newL1CoordTx
 				v.accAuthsChan <- v.txsel.coordAccount.AccountCreationAuth
 
 				// process the L1CoordTx
 				v.l1TxsWg.Add(1)
 				v.txsL1ToBeProcessedChan <- newL1CoordTx
-				v.nAlreadyProcessedL1Txs++
+				nAlreadyProcessedL1Txs++
 			}
 
 			// If tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB,
@@ -176,7 +175,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 				validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect = v.verifyAndBuildForTxToEthAddrBJJ(
 					v.nonSelectedL2TxsChan,
 					l2tx, v.txsel, v.selectionConfig, v.l1UserFutureTxs,
-					v.nAlreadyProcessedL1Txs, v.nAlreadyProcessedL2Txs, v.positionL1)
+					nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1)
 
 				if !isTxCorrect {
 					v.txsWg.Done()
@@ -195,12 +194,12 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 					} else if accAuth != nil {
 						v.accAuthsChan <- accAuth.Signature
 					}
-					v.positionL1++
+					positionL1++
 					// TODO: PROCESS TX
 					// process the L1CoordTx
 					v.l1TxsWg.Add(1)
 					v.txsL1ToBeProcessedChan <- l1CoordinatorTx
-					v.nAlreadyProcessedL1Txs++
+					nAlreadyProcessedL1Txs++
 				}
 				if validL2Tx == nil {
 					// Missing info on why this tx is not selected? Check l2Txs.Info at this point!
@@ -230,7 +229,7 @@ func (v *Verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx) <-chan common.Poo
 				v.l1TxsWg.Wait()
 			}
 			out <- l2tx
-			v.nAlreadyProcessedL2Txs++
+			nAlreadyProcessedL2Txs++
 		}
 		close(out)
 	}()
@@ -244,7 +243,6 @@ func (v *Verifier) processL2Txs(l2txsChan <-chan common.PoolL2Tx) {
 			v.txsWg.Done()
 		}
 	}()
-
 }
 
 func tryToProcessL2Tx(
