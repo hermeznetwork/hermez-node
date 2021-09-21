@@ -457,7 +457,7 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 				// to be used as bootstrap nodes for the p2p network
 				bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
 				if err != nil {
-					return nil, tracerr.Wrap(err)
+					log.Warn("error getting registered addresses from the SMC or no addresses registered. error:", err.Error())
 				}
 				// Get Ethereum private key of the coordinator
 				keyJSON, err := keyStore.Export(*account, cfg.Coordinator.EthClient.Keystore.Password, cfg.Coordinator.EthClient.Keystore.Password)
@@ -624,7 +624,7 @@ func NewAPIServer(mode Mode, cfg *config.APIServer, version string, ethClient *e
 			// to be used as bootstrap nodes for the p2p network
 			bootstrapAddrs, err := client.GetCoordinatorsLibP2PAddrs()
 			if err != nil {
-				return nil, tracerr.Wrap(err)
+				log.Warn("error getting registered addresses from the SMC or no addresses registered. error:", err.Error())
 			}
 			// Get Ethereum private key of the coordinator
 			keyJSON, err := keyStore.Export(account, pass, pass)
