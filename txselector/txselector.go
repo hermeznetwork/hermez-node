@@ -1,66 +1,4 @@
-/*
-Package txselector is responsible to choose the transactions from the pool that will be forged in the next batch.
-The main goal is to come with the most profitable selection, always respecting the constrains of the protocol.
-This constrains can be splitted in two categories:
-
-Batch constrains (this information is passed to the txselector as `selectionConfig txprocessor.Config`):
-- NLevels: limit the amount of accounts that can be created by NLevels^2 -1.
-Note that this constraint is not properly checked, if this situation is reached the entire selection will fail
-- MaxFeeTx: maximum amount of different coordinator accounts (idx) that can be used to collect fees.
-Note that this constraint is not checked right now, if this situation is reached the `txprocessor` will fail later on preparing the `zki`
-- MaxTx: maximum amount of transactions that can fit in a batch, in other words: len(l1UserTxs) + len(l1CoordinatorTxs) + len(l2Txs) <= MaxTx
-- MaxL1Tx: maximum amount of L1 transactions that can fit in a batch, in other words: len(l1UserTxs) + len(l1CoordinatorTxs) <= MaxL1Tx
-
-Transaction constrains (this takes into consideration the txs fetched from the pool and the current state stored in StateDB):
-- Sender account exists: `FromIdx` must exist in the `StateDB`, and `tx.TokenID == account.TokenID` has to be respected
-- Sender account has enough balance: tx.Amount + fee <= account.Balance
-- Sender account has correct nonce: `tx.Nonce == account.Nonce`
-- Recipient account exists or can be created:
-	- In case of transfer to Idx: account MUST already exist on StateDB, and match the `tx.TokenID`
-	- In case of transfer to Ethereum address: if the account doesn't exists, it can be created through a `l1CoordinatorTx` IF there is a valid `AccountCreationAuthorization`
-	- In case of transfer to BJJ: if the account doesn't exists, it can be created through a `l1CoordinatorTx` (no need for `AccountCreationAuthorization`)
-- Atomic transactions: requested transaction exist and can be linked,
-according to the `RqOffset` spec: https://docs.hermez.io/#/developers/protocol/hermez-protocol/circuits/circuits?id=rq-tx-verifier
-
-Important considerations:
-- It's assumed that signatures are correct, since they're checked before inserting txs to the pool
-- The state is processed sequentially meaning that each tx that is selected affects the state, in other words:
-the order in which txs are selected can make other txs became valid or invalid.
-This specially relevant for the constrains `Sender account has enough balance` and `Sender account has correct nonce`
-- The creation of accounts using `l1CoordinatorTxs` increments the amount of used L1 transactions.
-This has to be taken into consideration for the constrain `MaxL1Tx`
-
-Current implementation:
-
-The current approach is simple but effective, specially in a scenario of not having a lot of transactions in the pool most of the time:
-0. Process L1UserTxs (this transactions come from the Blockchain and it's mandatory by protocol to forge them)
-1. Get transactions from the pool
-2. Order transactions by (nonce, fee in USD)
-3. Selection loop: iterate over the sorted transactions and split in selected and non selected.
-Repeat this process with the non-selected of each iteration until one iteration doesn't return any selected txs
-Note that this step is the one that ensures that the constrains are respected.
-4. Choose coordinator idxs to collect the fees. Note that `MaxFeeTx` constrain is ignored in this step.
-5. Return the selected L2 txs as well as the necessary `l1CoordinatorTxs` the `l1UserTxs`
-(this is redundant as the return will always be the same as the input) and the coordinator idxs used to collect fees
-
-The previous flow description doesn't take in consideration the constrain `Atomic transactions`.
-This constrain alters the previous step as follow:
-- Atomic transactions are grouped into `AtomicGroups`, and each group has an average fee that is used to sort the transactions together with the non atomic transactions,
-in a way that all the atomic transactions from the same group preserve the relative order as found in the pool.
-This is done in this way because it's assumed that transactions from the same `AtomicGroup`
-have the same `AtomicGroupID`, and are ordered with valid `RqOffset` in the pool.
-- If one atomic transaction fails to be processed in the `Selection loop`,
-the group will be marked as invalid and the entire process will reboot from the beginning with the only difference being that
-txs belonging to failed atomic groups will be discarded before reaching the `Selection loop`.
-This is done this way because the state is altered sequentially, so if a transaction belonging to an atomic group is selected,
-but later on a transaction from the same group can't be selected, the selection will be invalid since there will be a selected tx that depends on a tx that
-doesn't exist in the selection. Right now the mechanism that the StateDB has to revert changes is to go back to a previous checkpoint (checkpoints are created per batch).
-This limitation forces the txselector to restart from the beginning of the batch selection.
-This should be improved once the StateDB has more granular mechanisms to revert the effects of processed txs.
-*/
 package txselector
-
-// current: very simple version of TxSelector
 
 import (
 	"fmt"
@@ -224,10 +162,6 @@ type failedAtomicGroup struct {
 func (txsel *TxSelector) getL1L2TxSelection(selectionConfig txprocessor.Config,
 	l1UserTxs, l1UserFutureTxs []common.L1Tx) ([]common.Idx, [][]byte, []common.L1Tx,
 	[]common.L1Tx, []common.PoolL2Tx, []common.PoolL2Tx, error) {
-	// WIP.0: the TxSelector is not optimized and will need a redesign. The
-	// current version is implemented in order to have a functional
-	// implementation that can be used ASAP.
-
 	// Steps of this method:
 	// - ProcessL1Txs (User txs)
 	// - getPendingTxs (forgable directly with current state & not forgable
@@ -264,7 +198,6 @@ START_SELECTION:
 	tp.AccumulatedFees = make(map[common.Idx]*big.Int)
 
 	// Process L1UserTxs
-	// TODO: make concurrently
 	for i := 0; i < len(l1UserTxs); i++ {
 		// assumption: l1usertx are sorted by L1Tx.Position
 		_, _, _, _, err := tp.ProcessL1Tx(nil, &l1UserTxs[i])
@@ -305,6 +238,8 @@ START_SELECTION:
 
 	// Initialize selection arrays
 
+	// Tracking if any tx was selected in the round of tx verification
+	var isAnyTxWasSelected bool
 	// Used authorizations in the l1CoordinatorTxs
 	var accAuths [][]byte
 	// Processed txs for necessary account creation
@@ -312,9 +247,15 @@ START_SELECTION:
 	var l1CoordinatorTxs []common.L1Tx
 	// Processed txs
 	var selectedTxs []common.PoolL2Tx
+	// txs that are not selected in the round of verification, but can be selected in the next round
+	var nonSelectedTxs []common.PoolL2Tx
+	// coordinator account idx to collect fees
+	var coordIdxs []common.Idx
+
 	// Start selection process
 
-	verifier := newVerifier(
+	// init orchestrator, that will send txs to the following channels
+	txOrchestrator := newTxOrchestrator(
 		l1UserFutureTxs,
 		selectionConfig,
 		tp,
@@ -330,30 +271,27 @@ START_SELECTION:
 	// 	- keep used accAuths
 	// - put the valid txs into selectedTxs array
 	go txsel.verifyTxs(
-		verifier,
+		txOrchestrator,
 		selectableTxs,                        // Txs that can be selected
 		len(l1UserTxs)+len(l1CoordinatorTxs), // Already added L1 Txs
 		len(selectedTxs),                     // Already added L2 Txs
 	)
 
-	var nonSelectedTxs []common.PoolL2Tx
-	var iteSelectedTxs []common.PoolL2Tx
-	var coordIdxs []common.Idx
 	// get CoordIdxsMap for the TokenIDs
 	coordIdxsMap := make(map[common.TokenID]common.Idx)
 	for {
 		select {
-		case tx := <-verifier.txsL1ToBeProcessedChan:
+		case tx := <-txOrchestrator.txsL1ToBeProcessedChan:
 			_, _, _, _, err = tp.ProcessL1Tx(nil, tx)
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, err
 			}
 			l1CoordinatorTxs = append(l1CoordinatorTxs, *tx)
-			verifier.l1TxsWg.Done()
-		case tx := <-verifier.nonSelectedL2TxsChan:
+			txOrchestrator.l1TxsWg.Done()
+		case tx := <-txOrchestrator.nonSelectedL2TxsChan:
 			nonSelectedTxs = append(nonSelectedTxs, tx)
-		case tx := <-verifier.selectedL2TxsChan:
-			iteSelectedTxs = append(iteSelectedTxs, tx)
+		case tx := <-txOrchestrator.selectedL2TxsChan:
+			isAnyTxWasSelected = true
 			selectedTxs = append(selectedTxs, tx)
 			accSender, err := tp.StateDB().GetAccount(tx.FromIdx)
 			if err != nil {
@@ -372,23 +310,22 @@ START_SELECTION:
 				coordIdxsMap[tokenID] = coordIdx
 				coordIdxs = append(coordIdxs, coordIdx)
 			}
-		case tx := <-verifier.unforjableL2TxsChan:
+		case tx := <-txOrchestrator.unforjableL2TxsChan:
 			discardedTxs = append(discardedTxs, tx)
-		case accAuth := <-verifier.accAuthsChan:
+		case accAuth := <-txOrchestrator.accAuthsChan:
 			accAuths = append(accAuths, accAuth)
-		case failedAG := <-verifier.failedAGChan:
+		case failedAG := <-txOrchestrator.failedAGChan:
 			failedAtomicGroups[failedAG.id] = failedAG
 			if err := txsel.localAccountsDB.Reset(txsel.localAccountsDB.CurrentBatch(), false); err != nil {
 				return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 			}
+			// go to the start of the selection process, bcs if one of transaction in atomic group failed, than every other transaction should be rejected
 			goto START_SELECTION
-		case err := <-verifier.errChan:
+		case err := <-txOrchestrator.errChan:
 			return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
-		case <-verifier.verificationEnded:
-			if len(iteSelectedTxs) == 0 {
-				for i := 0; i < len(nonSelectedTxs); i++ {
-					discardedTxs = append(discardedTxs, nonSelectedTxs[i])
-				}
+		case <-txOrchestrator.verificationEnded:
+			if !isAnyTxWasSelected {
+				discardedTxs = append(discardedTxs, nonSelectedTxs...)
 				sort.SliceStable(coordIdxs, func(i, j int) bool {
 					return coordIdxs[i] < coordIdxs[j]
 				})
@@ -425,11 +362,12 @@ START_SELECTION:
 
 				return coordIdxs, accAuths, l1UserTxs, l1CoordinatorTxs, selectedTxs, discardedTxs, nil
 			}
-			iteSelectedTxs = []common.PoolL2Tx{}
+			// some txs was selected, so we can select one more time, bcs conditions, like account balance can be changed after previous round
+			isAnyTxWasSelected = false
 			selectableTxs = nonSelectedTxs
 			nonSelectedTxs = []common.PoolL2Tx{}
 			go txsel.verifyTxs(
-				verifier,
+				txOrchestrator,
 				selectableTxs,                        // Txs that can be selected
 				len(l1UserTxs)+len(l1CoordinatorTxs), // Already added L1 Txs
 				len(selectedTxs),                     // Already added L2 Txs
@@ -438,26 +376,30 @@ START_SELECTION:
 	}
 }
 
+// verifyTxs is verifing txs and sent them to the according channels
 func (txsel *TxSelector) verifyTxs(
-	verifier *verifier,
+	txOrchestrator *txOrchestrator,
 	l2Txs []common.PoolL2Tx,
-	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int,
+	alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount int,
 ) {
-	positionL1 := nAlreadyProcessedL1Txs
+	positionL1 := alreadyProcessedL1TxsAmount
 	nextBatchNum := uint32(txsel.localAccountsDB.CurrentBatch()) + 1
+	// this tx group needed to track that orchestrator processed all the l2txs
 	var txsWg sync.WaitGroup
 	txsWg.Add(len(l2Txs))
 
-	verifier.txsWg = &txsWg
+	txOrchestrator.txsWg = &txsWg
 
-	verifier.processL2Txs(
-		verifier.verifyTxs(
-			verifier.checkIsExitWithZeroAmount(
-				verifier.checkBatchGreaterThanMaxNumBatch(
-					verifier.transformTxs(l2Txs), nextBatchNum)), nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1))
+	l2TxsChan := txOrchestrator.transformTxs(l2Txs)
+	l2TxsChan = txOrchestrator.checkBatchGreaterThanMaxNumBatch(l2TxsChan, nextBatchNum)
+	l2TxsChan = txOrchestrator.checkIsExitWithZeroAmount(l2TxsChan)
+	l2TxsChan = txOrchestrator.verifyTxs(l2TxsChan, alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount, positionL1)
+	txOrchestrator.processL2Txs(l2TxsChan)
+
 	go func() {
-		verifier.txsWg.Wait()
-		verifier.verificationEnded <- 1
+		// wait until all transactions are processed, so verification round can be ended
+		txOrchestrator.txsWg.Wait()
+		txOrchestrator.verificationEnded <- 1
 	}()
 }
 
@@ -560,15 +502,15 @@ func sortL2Txs(
 }
 
 func canAddL2TxThatNeedsNewCoordL1Tx(
-	nAddedL1Txs, nAddedL2txs int,
+	addedL1TxsAmount, addedL2txsAmount int,
 	selectionConfig txprocessor.Config,
 ) bool {
-	return nAddedL1Txs < int(selectionConfig.MaxL1Tx) && // Capacity for L1s already reached
-		nAddedL1Txs+nAddedL2txs+1 < int(selectionConfig.MaxTx)
+	return addedL1TxsAmount < int(selectionConfig.MaxL1Tx) && // Capacity for L1s already reached
+		addedL1TxsAmount+addedL2txsAmount+1 < int(selectionConfig.MaxTx)
 }
 
-func canAddL2Tx(nAddedL1Txs, nAddedL2txs int, selectionConfig txprocessor.Config) bool {
-	return nAddedL1Txs+nAddedL2txs < int(selectionConfig.MaxTx)
+func canAddL2Tx(addedL1TxsAmount, addedL2txsAmount int, selectionConfig txprocessor.Config) bool {
+	return addedL1TxsAmount+addedL2txsAmount < int(selectionConfig.MaxTx)
 }
 
 // filterFailedAtomicGroups split the txs into the ones that can be porcessed

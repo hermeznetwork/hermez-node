@@ -16,27 +16,29 @@ import (
 const failedGroupErrMsg = "Failed forging atomic tx from Group %s." +
 	" Restarting selection process without txs from this group"
 
-type verifier struct {
-	failedAGChan                                                 chan failedAtomicGroup
-	errChan                                                      chan error
-	unforjableL2TxsChan, nonSelectedL2TxsChan, selectedL2TxsChan chan common.PoolL2Tx
-	txsL1ToBeProcessedChan                                       chan *common.L1Tx
-	accAuthsChan                                                 chan []byte
-	verificationEnded                                            chan int
-	l1UserFutureTxs                                              []common.L1Tx
-	selectionConfig                                              txprocessor.Config
-	tp                                                           *txprocessor.TxProcessor
-	txsel                                                        *TxSelector
-	l1TxsWg                                                      *sync.WaitGroup
-	txsWg                                                        *sync.WaitGroup
+// txOrchestrator this struct is for holding channels and propagate txs between channels
+type txOrchestrator struct {
+	failedAGChan                                                 chan failedAtomicGroup   // tracking failed atomic group
+	errChan                                                      chan error               // tracking errors. If error is faced, return from the method
+	unforjableL2TxsChan, nonSelectedL2TxsChan, selectedL2TxsChan chan common.PoolL2Tx     // tracking different types of txs
+	txsL1ToBeProcessedChan                                       chan *common.L1Tx        // tracking l1 txs that have to be processed
+	accAuthsChan                                                 chan []byte              // tracking account auths, that has to be created to process l2
+	verificationEnded                                            chan int                 // tracking verification round ending
+	l1UserFutureTxs                                              []common.L1Tx            // pending l1 tx
+	selectionConfig                                              txprocessor.Config       // config of tx selection
+	tp                                                           *txprocessor.TxProcessor // tx processor
+	txsel                                                        *TxSelector              // tx selector
+	l1TxsWg                                                      *sync.WaitGroup          // wait group to track proceeded l1 tx, so depended l2 tx can be processed
+	txsWg                                                        *sync.WaitGroup          // wait group to track processed l2 tx for verification round ended
 }
 
-func newVerifier(
+// newTxOrchestrator creates new tx orchestrator and init related channels
+func newTxOrchestrator(
 	l1UserFutureTxs []common.L1Tx,
 	selectionConfig txprocessor.Config,
 	tp *txprocessor.TxProcessor,
-	txsel *TxSelector) *verifier {
-	return &verifier{
+	txsel *TxSelector) *txOrchestrator {
+	return &txOrchestrator{
 		failedAGChan:           make(chan failedAtomicGroup),
 		errChan:                make(chan error),
 		unforjableL2TxsChan:    make(chan common.PoolL2Tx),
@@ -53,77 +55,82 @@ func newVerifier(
 	}
 }
 
-func (v *verifier) transformTxs(l2txs []common.PoolL2Tx) <-chan common.PoolL2Tx {
-	out := make(chan common.PoolL2Tx)
+// transformTxs transform txs array to the txs channel
+func (txorches *txOrchestrator) transformTxs(l2txs []common.PoolL2Tx) <-chan common.PoolL2Tx {
+	l2txsChanOut := make(chan common.PoolL2Tx)
 	go func() {
 		for _, tx := range l2txs {
-			out <- tx
+			l2txsChanOut <- tx
 		}
-		close(out)
+		close(l2txsChanOut)
 	}()
-	return out
+	return l2txsChanOut
 }
 
-func (v *verifier) checkBatchGreaterThanMaxNumBatch(l2txsChan <-chan common.PoolL2Tx, nextBatchNum uint32) <-chan common.PoolL2Tx {
-	out := make(chan common.PoolL2Tx)
+// checkBatchGreaterThanMaxNumBatch check if batch in tx is not greater than max num batch specified in config
+// maxBatchNum - batch, until the transaction can be forged
+func (txorches *txOrchestrator) checkBatchGreaterThanMaxNumBatch(l2txsChanInput <-chan common.PoolL2Tx, nextBatchNum uint32) <-chan common.PoolL2Tx {
+	l2txsChanOut := make(chan common.PoolL2Tx)
 	go func() {
-		for l2tx := range l2txsChan {
-			if !v.isBatchGreaterThanMaxNumBatch(l2tx, nextBatchNum) {
-				v.txsWg.Done()
+		for l2tx := range l2txsChanInput {
+			if !txorches.isBatchGreaterThanMaxNumBatch(l2tx, nextBatchNum) {
+				txorches.txsWg.Done()
 				continue
 			}
-			out <- l2tx
+			l2txsChanOut <- l2tx
 		}
-		close(out)
+		close(l2txsChanOut)
 	}()
-	return out
+	return l2txsChanOut
 }
 
-func (v *verifier) checkIsExitWithZeroAmount(l2txsChan <-chan common.PoolL2Tx) <-chan common.PoolL2Tx {
-	out := make(chan common.PoolL2Tx)
+// checkIsExitWithZeroAmount check if exit have zero amount. It's not needed to forge exit with zero amount
+func (txorches *txOrchestrator) checkIsExitWithZeroAmount(l2txsChanInput <-chan common.PoolL2Tx) <-chan common.PoolL2Tx {
+	l2txsChanOut := make(chan common.PoolL2Tx)
 	go func() {
-		for l2tx := range l2txsChan {
-			if !v.isExitWithZeroAmount(l2tx) {
-				v.txsWg.Done()
+		for l2tx := range l2txsChanInput {
+			if !txorches.isExitWithZeroAmount(l2tx) {
+				txorches.txsWg.Done()
 				continue
 			}
-			out <- l2tx
+			l2txsChanOut <- l2tx
 		}
-		close(out)
+		close(l2txsChanOut)
 	}()
-	return out
+	return l2txsChanOut
 }
 
-func (v *verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int) <-chan common.PoolL2Tx {
-	out := make(chan common.PoolL2Tx)
+// verifyTxs func to verify transactions, check for enough space to create l1/l2 tx, correct acc nonce, enough balance on sender
+func (txorches *txOrchestrator) verifyTxs(l2txsChanInput <-chan common.PoolL2Tx, alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount, positionL1 int) <-chan common.PoolL2Tx {
+	l2txsChanOut := make(chan common.PoolL2Tx)
 	go func() {
-		for l2tx := range l2txsChan {
+		for l2tx := range l2txsChanInput {
 			var isTxCorrect bool
-			isTxCorrect = v.isEnoughSpace(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, l2tx)
+			isTxCorrect = txorches.isEnoughSpace(alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount, l2tx)
 			if !isTxCorrect {
-				v.txsWg.Done()
+				txorches.txsWg.Done()
 				continue
 			}
 
 			// Check enough Balance on sender
-			isTxCorrect = v.isEnoughBalanceOnSender(l2tx)
+			isTxCorrect = txorches.isEnoughBalanceOnSender(l2tx)
 			if !isTxCorrect {
-				v.txsWg.Done()
+				txorches.txsWg.Done()
 				continue
 			}
 
 			// get Nonce & TokenID from the Account by l2Tx.FromIdx
-			accSender, err := v.tp.StateDB().GetAccount(l2tx.FromIdx)
+			accSender, err := txorches.tp.StateDB().GetAccount(l2tx.FromIdx)
 			if err != nil {
-				v.errChan <- tracerr.Wrap(err)
+				txorches.errChan <- tracerr.Wrap(err)
 				return
 			}
 			l2tx.TokenID = accSender.TokenID
 
 			// Check if Nonce is correct
-			isTxCorrect = v.isNonceCorrect(l2tx, accSender)
+			isTxCorrect = txorches.isNonceCorrect(l2tx, accSender)
 			if !isTxCorrect {
-				v.txsWg.Done()
+				txorches.txsWg.Done()
 				continue
 			}
 
@@ -133,29 +140,29 @@ func (v *verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 			// pending L1CoordinatorTx to create the account for the
 			// Coordinator for that TokenID
 			var newL1CoordTx *common.L1Tx
-			newL1CoordTx, positionL1, err = v.txsel.coordAccountForTokenID(accSender.TokenID, positionL1)
+			newL1CoordTx, positionL1, err = txorches.txsel.coordAccountForTokenID(accSender.TokenID, positionL1)
 			if err != nil {
-				v.errChan <- tracerr.Wrap(err)
+				txorches.errChan <- tracerr.Wrap(err)
 				return
 			}
 			if newL1CoordTx != nil {
 				// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
 				// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
-				isTxCorrect = v.isEnoughSpaceForL1CoordTx(l2tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs)
+				isTxCorrect = txorches.isEnoughSpaceForL1CoordTx(l2tx, alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount)
 				if !isTxCorrect {
-					v.txsWg.Done()
+					txorches.txsWg.Done()
 					continue
 				}
 
 				// increase positionL1
 				positionL1++
 				//l1CoordinatorTxsChan <- *newL1CoordTx
-				v.accAuthsChan <- v.txsel.coordAccount.AccountCreationAuth
+				txorches.accAuthsChan <- txorches.txsel.coordAccount.AccountCreationAuth
 
 				// process the L1CoordTx
-				v.l1TxsWg.Add(1)
-				v.txsL1ToBeProcessedChan <- newL1CoordTx
-				nAlreadyProcessedL1Txs++
+				txorches.l1TxsWg.Add(1)
+				txorches.txsL1ToBeProcessedChan <- newL1CoordTx
+				alreadyProcessedL1TxsAmount++
 			}
 
 			// If tx.ToIdx>=256, tx.ToIdx should exist to localAccountsDB,
@@ -172,11 +179,11 @@ func (v *verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 				accAuth         *common.AccountCreationAuth
 			)
 			if l2tx.ToIdx == 0 { // ToEthAddr/ToBJJ case
-				validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect = v.verifyAndBuildForTxToEthAddrBJJ(
-					l2tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1)
+				validL2Tx, l1CoordinatorTx, accAuth, isTxCorrect = txorches.verifyAndBuildForTxToEthAddrBJJ(
+					l2tx, alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount, positionL1)
 
 				if !isTxCorrect {
-					v.txsWg.Done()
+					txorches.txsWg.Done()
 					continue
 				}
 
@@ -188,87 +195,87 @@ func (v *verifier) verifyTxs(l2txsChan <-chan common.PoolL2Tx, nAlreadyProcessed
 					// Otherwise only create the account if we have
 					// the corresponding authorization
 					if validL2Tx.ToEthAddr == common.FFAddr {
-						v.accAuthsChan <- common.EmptyEthSignature
+						txorches.accAuthsChan <- common.EmptyEthSignature
 					} else if accAuth != nil {
-						v.accAuthsChan <- accAuth.Signature
+						txorches.accAuthsChan <- accAuth.Signature
 					}
 					positionL1++
-					// TODO: PROCESS TX
 					// process the L1CoordTx
-					v.l1TxsWg.Add(1)
-					v.txsL1ToBeProcessedChan <- l1CoordinatorTx
-					nAlreadyProcessedL1Txs++
+					txorches.l1TxsWg.Add(1)
+					txorches.txsL1ToBeProcessedChan <- l1CoordinatorTx
+					alreadyProcessedL1TxsAmount++
 				}
 				if validL2Tx == nil {
 					// Missing info on why this tx is not selected? Check l2Txs.Info at this point!
 					// If tx is atomic, restart process without txs from the atomic group
-					obj := common.TxSelectorError{
+					txSelErr := common.TxSelectorError{
 						Message: l2tx.Info,
 						Code:    l2tx.ErrorCode,
 						Type:    l2tx.ErrorType,
 					}
 
-					if v.isTxAtomic(l2tx, obj) {
+					if txorches.isTxAtomic(l2tx, txSelErr) {
 						return
 					}
-					v.nonSelectedL2TxsChan <- l2tx
-					v.txsWg.Done()
+					txorches.nonSelectedL2TxsChan <- l2tx
+					txorches.txsWg.Done()
 					continue
 				}
 			} else if l2tx.ToIdx >= common.IdxUserThreshold {
-				isTxCorrect = v.isToIdxExists(l2tx)
+				isTxCorrect = txorches.isToIdxExists(l2tx)
 				if !isTxCorrect {
-					v.txsWg.Done()
+					txorches.txsWg.Done()
 					continue
 				}
 			}
 
+			// if l1tx is present, than we have to wait, until l1tx is processed, so l2tx can be safely processed too
 			if newL1CoordTx != nil || l1CoordinatorTx != nil {
-				v.l1TxsWg.Wait()
+				txorches.l1TxsWg.Wait()
 			}
-			out <- l2tx
-			nAlreadyProcessedL2Txs++
+			l2txsChanOut <- l2tx
+			alreadyProcessedL2TxsAmount++
 		}
-		close(out)
+		close(l2txsChanOut)
 	}()
-	return out
+	return l2txsChanOut
 }
 
-func (v *verifier) processL2Txs(l2txsChan <-chan common.PoolL2Tx) {
+// processL2Txs processing l2tx to see that every transaction is able to be processed
+func (txorches *txOrchestrator) processL2Txs(l2txsChanInput <-chan common.PoolL2Tx) {
 	go func() {
-		for l2tx := range l2txsChan {
-			v.tryToProcessL2Tx(l2tx)
-			v.txsWg.Done()
+		for l2tx := range l2txsChanInput {
+			txorches.tryToProcessL2Tx(l2tx)
+			txorches.txsWg.Done()
 		}
 	}()
 }
 
-func (v *verifier) tryToProcessL2Tx(
+// tryToProcessL2Tx trying to process l2tx
+func (txorches *txOrchestrator) tryToProcessL2Tx(
 	l2tx common.PoolL2Tx) {
 	// get CoordIdxsMap for the TokenID of the current l2Txs[i]
 	// get TokenID from tx.Sender account
 	tokenID := l2tx.TokenID
-	coordIdx, err := v.txsel.getCoordIdx(tokenID)
+	coordIdx, err := txorches.txsel.getCoordIdx(tokenID)
 	if err != nil {
 		// if err is db.ErrNotFound, should not happen, as all
 		// the selectedTxs.TokenID should have a CoordinatorIdx
 		// created in the DB at this point
-		v.errChan <- tracerr.Wrap(fmt.Errorf("could not get CoordIdx for TokenID=%d, "+
+		txorches.errChan <- tracerr.Wrap(fmt.Errorf("could not get CoordIdx for TokenID=%d, "+
 			"due: %s", tokenID, err))
 		return
 	}
 	// prepare temp coordIdxsMap & AccumulatedFees for the call to
 	// ProcessL2Tx
 	coordIdxsMap := map[common.TokenID]common.Idx{tokenID: coordIdx}
-	// tp.AccumulatedFees = make(map[common.Idx]*big.Int)
-	if _, ok := v.tp.AccumulatedFees[coordIdx]; !ok {
-		v.tp.AccumulatedFees[coordIdx] = big.NewInt(0)
+	if _, ok := txorches.tp.AccumulatedFees[coordIdx]; !ok {
+		txorches.tp.AccumulatedFees[coordIdx] = big.NewInt(0)
 	}
 
-	// TODO: PROCESS TX
-	_, _, _, err = v.tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2tx)
+	_, _, _, err = txorches.tp.ProcessL2Tx(coordIdxsMap, nil, nil, &l2tx)
 	if err != nil {
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrTxDiscartedInProcessL2Tx+" due to %s", err.Error()),
 			Code:    ErrTxDiscartedInProcessL2TxCode,
 			Type:    ErrTxDiscartedInProcessL2TxType,
@@ -279,24 +286,24 @@ func (v *verifier) tryToProcessL2Tx(
 			failedAG := failedAtomicGroup{
 				id:         l2tx.AtomicGroupID,
 				failedTxID: l2tx.TxID,
-				reason:     obj,
+				reason:     txSelErr,
 			}
-			v.failedAGChan <- failedAG
+			txorches.failedAGChan <- failedAG
 			return
 		}
 		// Discard L2Tx, and update Info parameter of the tx,
 		// and add it to the discardedTxs array
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
-		v.nonSelectedL2TxsChan <- l2tx
-		v.errChan <- tracerr.Wrap(err)
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
+		txorches.nonSelectedL2TxsChan <- l2tx
 		return
 	}
-	v.selectedL2TxsChan <- l2tx
+	txorches.selectedL2TxsChan <- l2tx
 }
 
-func (v *verifier) isTxAtomic(l2tx common.PoolL2Tx, reason common.TxSelectorError) bool {
+// isTxAtomic check if transaction atomic or not. If tx atomic, then add failedAtomicGroup to the channel and error to the error channel
+func (txorches *txOrchestrator) isTxAtomic(l2tx common.PoolL2Tx, reason common.TxSelectorError) bool {
 	if l2tx.AtomicGroupID != common.EmptyAtomicGroupID {
 		failedAG := failedAtomicGroup{
 			id:         l2tx.AtomicGroupID,
@@ -308,193 +315,201 @@ func (v *verifier) isTxAtomic(l2tx common.PoolL2Tx, reason common.TxSelectorErro
 			l2tx.AtomicGroupID.String(),
 		))
 
-		v.failedAGChan <- failedAG
-		v.errChan <- err
-
+		txorches.failedAGChan <- failedAG
+		txorches.errChan <- err
 		return true
 	}
 	return false
 }
 
-func (v *verifier) isEnoughSpace(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int, l2tx common.PoolL2Tx) bool {
-	if !canAddL2Tx(nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, v.selectionConfig) {
+// isEnoughSpace checks for enough space for l2tx
+// nAddedL1Txs+nAddedL2txs < int(selectionConfig.MaxTx)
+func (txorches *txOrchestrator) isEnoughSpace(alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount int, l2tx common.PoolL2Tx) bool {
+	if !canAddL2Tx(alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount, txorches.selectionConfig) {
 		// If tx is atomic, restart process without txs from the atomic group
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: ErrNoAvailableSlots,
 			Code:    ErrNoAvailableSlotsCode,
 			Type:    ErrNoAvailableSlotsType,
 		}
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return false
 		}
 		// no more available slots for L2Txs, so mark this tx
 		// but also the rest of remaining txs as discarded
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
-		v.nonSelectedL2TxsChan <- l2tx
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
+		txorches.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *verifier) isBatchGreaterThanMaxNumBatch(
+// isBatchGreaterThanMaxNumBatch check if batch in tx is less than max batch num in config
+func (txorches *txOrchestrator) isBatchGreaterThanMaxNumBatch(
 	l2tx common.PoolL2Tx, nextBatchNum uint32) bool {
 	if l2tx.MaxNumBatch != 0 && nextBatchNum > l2tx.MaxNumBatch {
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: ErrUnsupportedMaxNumBatch,
 			Code:    ErrUnsupportedMaxNumBatchCode,
 			Type:    ErrUnsupportedMaxNumBatchType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return false
 		}
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
 		// Tx won't be forjable since the current batch num won't go backwards
-		v.unforjableL2TxsChan <- l2tx
+		txorches.unforjableL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *verifier) isExitWithZeroAmount(l2tx common.PoolL2Tx) bool {
+// isExitWithZeroAmount send to unforjed txs with exit type with zero amount
+func (txorches *txOrchestrator) isExitWithZeroAmount(l2tx common.PoolL2Tx) bool {
 	if l2tx.Type == common.TxTypeExit && l2tx.Amount.Cmp(big.NewInt(0)) <= 0 {
 		// If tx is atomic, restart process without txs from the atomic group
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: ErrExitAmount,
 			Code:    ErrExitAmountCode,
 			Type:    ErrExitAmountType,
 		}
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return false
 		}
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
 		// Although tecnicaly forjable, it won't never get forged with current code
-		v.unforjableL2TxsChan <- l2tx
+		txorches.unforjableL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *verifier) isNonceCorrect(l2tx common.PoolL2Tx, accSender *common.Account) bool {
+// isNonceCorrect check that tx have the same nonce as accSender
+func (txorches *txOrchestrator) isNonceCorrect(l2tx common.PoolL2Tx, accSender *common.Account) bool {
 	if l2tx.Nonce != accSender.Nonce {
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrNoCurrentNonce+"Tx.Nonce: %d, Account.Nonce: %d", l2tx.Nonce, accSender.Nonce),
 			Code:    ErrNoCurrentNonceCode,
 			Type:    ErrNoCurrentNonceType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return false
 		}
 		// not valid Nonce at tx. Discard L2Tx, and update Info
 		// parameter of the tx, and add it to the discardedTxs
 		// array
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
-		v.nonSelectedL2TxsChan <- l2tx
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
+		txorches.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *verifier) isEnoughBalanceOnSender(l2tx common.PoolL2Tx) bool {
+// isEnoughBalanceOnSender checks for enough balance on sender account to process tx
+func (txorches *txOrchestrator) isEnoughBalanceOnSender(l2tx common.PoolL2Tx) bool {
 	// Check enough Balance on sender
-	enoughBalance, balance, feeAndAmount := v.tp.CheckEnoughBalance(l2tx)
+	enoughBalance, balance, feeAndAmount := txorches.tp.CheckEnoughBalance(l2tx)
 	if !enoughBalance {
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrSenderNotEnoughBalance+"Current sender account Balance: %s, Amount+Fee: %s",
 				balance.String(), feeAndAmount.String()),
 			Code: ErrSenderNotEnoughBalanceCode,
 			Type: ErrSenderNotEnoughBalanceType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return false
 		}
 		// not valid Amount with current Balance. Discard L2Tx,
 		// and update Info parameter of the tx, and add it to
 		// the discardedTxs array
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
-		v.nonSelectedL2TxsChan <- l2tx
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
+		txorches.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *verifier) isEnoughSpaceForL1CoordTx(
-	l2tx common.PoolL2Tx, nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs int) bool {
+// isEnoughSpaceForL1CoordTx check is it enough space in tx-pool to process l1 tx
+func (txorches *txOrchestrator) isEnoughSpaceForL1CoordTx(
+	l2tx common.PoolL2Tx, alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount int) bool {
 	if !canAddL2TxThatNeedsNewCoordL1Tx(
-		nAlreadyProcessedL1Txs,
-		nAlreadyProcessedL2Txs,
-		v.selectionConfig,
+		alreadyProcessedL1TxsAmount,
+		alreadyProcessedL2TxsAmount,
+		txorches.selectionConfig,
 	) {
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: ErrNotEnoughSpaceL1Coordinator,
 			Code:    ErrNotEnoughSpaceL1CoordinatorCode,
 			Type:    ErrNotEnoughSpaceL1CoordinatorType,
 		}
 		// If tx is atomic, restart process without txs from the atomic group
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return false
 		}
 		// discard L2Tx, and update Info parameter of
 		// the tx, and add it to the discardedTxs array
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
-		v.nonSelectedL2TxsChan <- l2tx
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
+		txorches.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
 }
 
-func (v *verifier) verifyAndBuildForTxToEthAddrBJJ(
+// verifyAndBuildForTxToEthAddrBJJ verifies and build transaction with specified toEthAddr or toBjj
+func (txorches *txOrchestrator) verifyAndBuildForTxToEthAddrBJJ(
 	l2tx common.PoolL2Tx,
-	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int,
+	alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount, positionL1 int,
 ) (*common.PoolL2Tx, *common.L1Tx, *common.AccountCreationAuth, bool) {
-	validL2Tx, l1CoordinatorTx, accAuth, err := v.txsel.processTxToEthAddrBJJ(
-		v.selectionConfig,
-		v.l1UserFutureTxs,
-		nAlreadyProcessedL1Txs,
-		nAlreadyProcessedL2Txs,
+	validL2Tx, l1CoordinatorTx, accAuth, err := txorches.txsel.processTxToEthAddrBJJ(
+		txorches.selectionConfig,
+		txorches.l1UserFutureTxs,
+		alreadyProcessedL1TxsAmount,
+		alreadyProcessedL2TxsAmount,
 		positionL1,
 		l2tx,
 	)
 	if err != nil {
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrTxDiscartedInProcessTxToEthAddrBJJ+" due to %s", err.Error()),
 			Code:    ErrTxDiscartedInProcessTxToEthAddrBJJCode,
 			Type:    ErrTxDiscartedInProcessTxToEthAddrBJJType,
 		}
 		log.Debugw("txsel.processTxToEthAddrBJJ", "err", err)
 		// If tx is atomic, restart process without txs from the atomic group
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return nil, nil, nil, false
 		}
 		// Discard L2Tx, and update Info parameter of
 		// the tx, and add it to the discardedTxs array
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
-		v.unforjableL2TxsChan <- l2tx
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
+		txorches.unforjableL2TxsChan <- l2tx
 		return nil, nil, nil, false
 	}
 	return validL2Tx, l1CoordinatorTx, accAuth, true
 }
 
-func (v *verifier) isToIdxExists(l2tx common.PoolL2Tx) bool {
-	_, err := v.txsel.localAccountsDB.GetAccount(l2tx.ToIdx)
+// isToIdxExists checks if id of receiver account exists
+func (txorches *txOrchestrator) isToIdxExists(l2tx common.PoolL2Tx) bool {
+	_, err := txorches.txsel.localAccountsDB.GetAccount(l2tx.ToIdx)
 	if err != nil {
-		obj := common.TxSelectorError{
+		txSelErr := common.TxSelectorError{
 			Message: fmt.Sprintf(ErrToIdxNotFound+"ToIdx: %d", l2tx.ToIdx),
 			Code:    ErrToIdxNotFoundCode,
 			Type:    ErrToIdxNotFoundType,
@@ -503,15 +518,15 @@ func (v *verifier) isToIdxExists(l2tx common.PoolL2Tx) bool {
 		log.Debugw("invalid L2Tx: ToIdx not found in StateDB",
 			"ToIdx", l2tx.ToIdx)
 		// If tx is atomic, restart process without txs from the atomic group
-		if v.isTxAtomic(l2tx, obj) {
+		if txorches.isTxAtomic(l2tx, txSelErr) {
 			return false
 		}
 		// Discard L2Tx, and update Info parameter of
 		// the tx, and add it to the discardedTxs array
-		l2tx.Info = obj.Message
-		l2tx.ErrorCode = obj.Code
-		l2tx.ErrorType = obj.Type
-		v.nonSelectedL2TxsChan <- l2tx
+		l2tx.Info = txSelErr.Message
+		l2tx.ErrorCode = txSelErr.Code
+		l2tx.ErrorType = txSelErr.Type
+		txorches.nonSelectedL2TxsChan <- l2tx
 		return false
 	}
 	return true
@@ -523,7 +538,7 @@ func (v *verifier) isToIdxExists(l2tx common.PoolL2Tx) bool {
 // CreateAccountDeposit (with 0 as DepositAmount) is created
 func (txsel *TxSelector) processTxToEthAddrBJJ(
 	selectionConfig txprocessor.Config, l1UserFutureTxs []common.L1Tx,
-	nAlreadyProcessedL1Txs, nAlreadyProcessedL2Txs, positionL1 int, l2Tx common.PoolL2Tx) (
+	alreadyProcessedL1TxsAmount, alreadyProcessedL2TxsAmount, positionL1 int, l2Tx common.PoolL2Tx) (
 	*common.PoolL2Tx, *common.L1Tx, *common.AccountCreationAuth, error) {
 	// check if L2Tx receiver account will be created by a L1UserFutureTxs
 	// (in the next batch, the current frozen queue). In that case, the L2Tx
@@ -635,8 +650,8 @@ func (txsel *TxSelector) processTxToEthAddrBJJ(
 	// if there is no space for the L1CoordinatorTx as MaxL1Tx, or no space
 	// for L1CoordinatorTx + L2Tx as MaxTx, discard the L2Tx
 	if !canAddL2TxThatNeedsNewCoordL1Tx(
-		nAlreadyProcessedL1Txs,
-		nAlreadyProcessedL2Txs,
+		alreadyProcessedL1TxsAmount,
+		alreadyProcessedL2TxsAmount,
 		selectionConfig,
 	) {
 		// L2Tx discarded
