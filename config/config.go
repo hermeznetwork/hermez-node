@@ -319,7 +319,7 @@ type Node struct {
 	} `validate:"required"`
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract
-		Rollup ethCommon.Address `validate:"required"`
+		Rollup ethCommon.Address `validate:"required" env:"HEZNODE_SMARTCONTRACTS_ROLLUP"`
 	} `validate:"required"`
 	API                  APIConfigParameters                  `validate:"required"`
 	RecommendedFeePolicy stateapiupdater.RecommendedFeePolicy `validate:"required"`
@@ -365,7 +365,7 @@ type APIServer struct {
 	PostgreSQL  PostgreSQL          `validate:"required"`
 	Coordinator struct {
 		// ForgerAddress is the address under which this coordinator is forging
-		ForgerAddress ethCommon.Address `validate:"required"`
+		ForgerAddress ethCommon.Address `validate:"required" env:"HEZNODE_COORDINATOR_FORGERADDRESS"`
 		API           struct {
 			// Coordinator enables the coordinator API endpoints
 			Coordinator bool `env:"HEZNODE_COORDINATORAPI_COORDINATOR"`
@@ -389,21 +389,21 @@ type APIServer struct {
 		// Required if API.CoordinatorNetwork == true
 		Keystore struct {
 			// Path to the keystore
-			Path string
+			Path string `env:"HEZNODE_KEYSTORE_PATH"`
 			// Password used to decrypt the keys in the keystore
-			Password string
+			Password string `env:"HEZNODE_KEYSTORE_PASSWORD"`
 			// LightScrypt if set, uses light parameters for the ethereum
 			// keystore encryption algorithm.
-			LightScrypt bool
+			LightScrypt bool `env:"HEZNODE_COORDINATORDEBUG_LIGHTSCRYPT"`
 		}
 		// Rollup is the address of the Hermez.sol smart contract.
 		// Required if API.CoordinatorNetwork == true
-		Rollup ethCommon.Address
+		Rollup ethCommon.Address `env:"HEZNODE_SMARTCONTRACTS_ROLLUP"`
 	}
 	Web3 struct {
 		// URL is the URL of the web3 ethereum-node RPC server.  Only
 		// geth is officially supported.
-		URL string `validate:"required,url"`
+		URL string `validate:"required,url", env:"HEZNODE_WEB3_URL"`
 	}
 	Debug NodeDebug `validate:"required"`
 }
