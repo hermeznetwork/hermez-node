@@ -17,7 +17,7 @@ import (
 )
 
 var rollupClient *RollupClient
-var auctionClient *AuctionClient
+var auctionClient *AuctionEthClient
 
 var ethHashForge ethCommon.Hash
 var argsForge *RollupForgeBatchArgs

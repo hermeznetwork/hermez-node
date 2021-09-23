@@ -1,9 +1,12 @@
 package eth
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/core/types"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +21,7 @@ const minBidStr = "10000000000000000000"
 const URL = "http://localhost:3000"
 
 var allocationRatioConst [3]uint16 = [3]uint16{4000, 4000, 2000}
-var auctionClientTest *AuctionClient
+var auctionClientTest *AuctionEthClient
 
 func TestAuctionGetCurrentSlotNumber(t *testing.T) {
 	currentSlot, err := auctionClientTest.AuctionGetCurrentSlotNumber()
@@ -401,4 +404,31 @@ func TestAuctionForge(t *testing.T) {
 	assert.Equal(t, currentBlockNum, blockNum)
 	_, err = auctionClientTestHermez.AuctionForge(governanceAddressConst)
 	require.Nil(t, err)
+}
+
+func TestGetCoordinatorsLibP2PAddrs(t *testing.T) {
+	auctionClient, err := NewAuctionClient(ethereumClientHermez,
+		auctionTestAddressConst, tokenHEZ)
+	require.NoError(t, err)
+	_, err = auctionClient.GetCoordinatorsLibP2PAddrs()
+	require.NoError(t, err)
+}
+
+func TestPubKeyFromTx(t *testing.T) {
+	auctionClient, err := NewAuctionClient(ethereumClientHermez,
+		auctionTestAddressConst, tokenHEZ)
+	require.NoError(t, err)
+	ctx := context.Background()
+	block, err := auctionClient.client.client.BlockByNumber(ctx, nil)
+	require.NoError(t, err)
+	txs := block.Transactions()
+	for i := 0; i < txs.Len(); i++ {
+		tx, err := auctionClient.client.client.TransactionInBlock(ctx, block.Hash(), uint(i))
+		require.NoError(t, err)
+		pubKey, err := pubKeyFromTx(tx)
+		require.NoError(t, err)
+		from, err := types.Sender(types.NewLondonSigner(tx.ChainId()), tx)
+		require.NoError(t, err)
+		require.Equal(t, from, ethCrypto.PubkeyToAddress(*pubKey))
+	}
 }

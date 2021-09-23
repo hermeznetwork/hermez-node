@@ -60,6 +60,7 @@ func init() {
 	setFeeFactorLsh60(&FeeFactorLsh60)
 }
 
+//nolint:gomnd
 func setFeeFactorLsh60(feeFactorLsh60 *[256]*big.Int) {
 	feeFactorLsh60[0], _ = new(big.Int).SetString("0", 10)
 	feeFactorLsh60[1], _ = new(big.Int).SetString("3", 10)

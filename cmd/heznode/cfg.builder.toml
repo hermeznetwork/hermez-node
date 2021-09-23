@@ -205,12 +205,12 @@ Password = "yourpasswordhere"
 ### Available options:
 ### - Static: always return the same value (StaticValue) in USD
 ### - AvgLastHour: calculate using the average fee of the forged transactions during the last hour
-### - AvgLastHourResizable: calculate using the average fee of the forged transactions during the last hour and takes in account the gas price o of the last ten ethereum blocks
-### Selects the mode. "Static", "AvgLastHour" or "AvgLastHourResizable"
+### - DynamicFee: calculated taking in account the gas used in L1, the gasPrice and the ether price in the last batches.
+### Selects the mode. "Static", "AvgLastHour" or "DynamicFee"
 #PolicyType = "Static"
 ### If PolicyType is "static" defines the recommended fee value
 #StaticValue = 0.10
-### If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
+### If PolicyType is "DynamicFee" defines the break threshold parameter
 #BreakThreshold = 50
-### If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost
+### If PolicyType is "DynamicFee" defines the number of batches to calculate the average cost
 #NumLastBatchAvg = 10

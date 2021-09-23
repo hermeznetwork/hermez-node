@@ -16,12 +16,12 @@ func (a *API) healthRoute(version string, ethClient *ethclient.Client, forgerAdd
 	// the future there will be two separated dbs
 	healthHandler := health.NewHandler()
 
-	if a.l2 != nil {
-		l2DBChecker := checkers.NewCheckerWithDB(a.l2.DB().DB)
+	if a.l2DB != nil {
+		l2DBChecker := checkers.NewCheckerWithDB(a.l2DB.DB().DB)
 		healthHandler.AddChecker("l2DB", l2DBChecker)
 	}
-	if a.h != nil {
-		historyDBChecker := checkers.NewCheckerWithDB(a.h.DB().DB)
+	if a.historyDB != nil {
+		historyDBChecker := checkers.NewCheckerWithDB(a.historyDB.DB().DB)
 		healthHandler.AddChecker("historyDB", historyDBChecker)
 	}
 	if a.stateDB != nil {

@@ -251,17 +251,18 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	api, err = NewAPI(
-		"test",
-		true,
-		true,
-		apiGin,
-		hdb,
-		l2DB,
-		nil,
-		nil,
-		nil,
-	)
+	api, err = NewAPI(Config{
+		Version:                  "test",
+		ExplorerEndpoints:        true,
+		CoordinatorEndpoints:     true,
+		Server:                   apiGin,
+		HistoryDB:                hdb,
+		L2DB:                     l2DB,
+		StateDB:                  nil,
+		EthClient:                nil,
+		ForgerAddress:            nil,
+		CoordinatorNetworkConfig: nil,
+	})
 	if err != nil {
 		log.Error(err)
 		panic(err)
@@ -325,14 +326,14 @@ func TestMain(m *testing.M) {
 		USD:         &ethUSD,
 		USDUpdate:   &ethNow,
 	})
-	err = api.h.UpdateTokenValue(common.EmptyAddr, ethUSD)
+	err = api.historyDB.UpdateTokenValue(common.EmptyAddr, ethUSD)
 	if err != nil {
 		panic(err)
 	}
 	for _, block := range blocksData {
 		// Insert block into HistoryDB
 		// nolint reason: block is used as read only in the function
-		if err := api.h.AddBlockSCData(&block); err != nil { //nolint:gosec
+		if err := api.historyDB.AddBlockSCData(&block); err != nil { //nolint:gosec
 			log.Error(err)
 			panic(err)
 		}
@@ -352,7 +353,7 @@ func TestMain(m *testing.M) {
 			token.USD = &value
 			token.USDUpdate = &now
 			// Set value in DB
-			err = api.h.UpdateTokenValue(token.EthAddr, value)
+			err = api.historyDB.UpdateTokenValue(token.EthAddr, value)
 			if err != nil {
 				panic(err)
 			}
@@ -389,7 +390,7 @@ func TestMain(m *testing.M) {
 		EthBlockNum: updatedCoordBlock,
 		URL:         commonCoords[0].URL + ".new",
 	})
-	if err := api.h.AddCoordinators(commonCoords); err != nil {
+	if err := api.historyDB.AddCoordinators(commonCoords); err != nil {
 		panic(err)
 	}
 
@@ -422,7 +423,7 @@ func TestMain(m *testing.M) {
 		ClosedAuctionSlots:       uint16(10),
 		OpenAuctionSlots:         uint16(20),
 	}
-	if err := api.h.AddAuctionVars(&auctionVars); err != nil {
+	if err := api.historyDB.AddAuctionVars(&auctionVars); err != nil {
 		panic(err)
 	}
 	// Last update in auction vars will indicate how things will behave from slot 5
@@ -446,7 +447,7 @@ func TestMain(m *testing.M) {
 		ClosedAuctionSlots:       uint16(10),
 		OpenAuctionSlots:         uint16(20),
 	}
-	if err := api.h.AddAuctionVars(&auctionVars); err != nil {
+	if err := api.historyDB.AddAuctionVars(&auctionVars); err != nil {
 		panic(err)
 	}
 
@@ -482,7 +483,7 @@ func TestMain(m *testing.M) {
 		EthBlockNum: commonBlocks[0].Num,
 		Bidder:      commonCoords[0].Bidder,
 	})
-	if err = api.h.AddBids(bids); err != nil {
+	if err = api.historyDB.AddBids(bids); err != nil {
 		panic(err)
 	}
 	bootForger := historydb.NextForgerAPI{
@@ -582,7 +583,7 @@ func TestMain(m *testing.M) {
 			Balance:     balance,
 		})
 	}
-	if err := api.h.AddAccountUpdates(accUpdates); err != nil {
+	if err := api.historyDB.AddAccountUpdates(accUpdates); err != nil {
 		panic(err)
 	}
 	tc = testCommon{
@@ -661,17 +662,18 @@ func TestTimeout(t *testing.T) {
 			require.NoError(t, err)
 		}
 	}()
-	_, err = NewAPI(
-		"test",
-		true,
-		true,
-		apiGinTO,
-		hdbTO,
-		l2DBTO,
-		nil,
-		nil,
-		nil,
-	)
+	_, err = NewAPI(Config{
+		Version:                  "test",
+		ExplorerEndpoints:        true,
+		CoordinatorEndpoints:     true,
+		Server:                   apiGinTO,
+		HistoryDB:                hdbTO,
+		L2DB:                     l2DBTO,
+		StateDB:                  nil,
+		EthClient:                nil,
+		ForgerAddress:            nil,
+		CoordinatorNetworkConfig: nil,
+	})
 	require.NoError(t, err)
 
 	client := &http.Client{}

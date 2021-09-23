@@ -17,3 +17,6 @@ type Coordinator struct {
 	// URL of the coordinators API
 	URL string `meddler:"url"`
 }
+
+// CoordinatorsNetworkPort is the port used by coordinators for libp2p
+const CoordinatorsNetworkPort = "3598"

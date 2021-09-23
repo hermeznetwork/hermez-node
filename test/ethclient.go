@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -22,6 +23,7 @@ import (
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/mitchellh/copystructure"
+	"github.com/multiformats/go-multiaddr"
 )
 
 func init() {
@@ -1662,6 +1664,11 @@ func (c *Client) AuctionEventInit(genesisBlockNum int64) (*eth.AuctionEventIniti
 		OpenAuctionSlots:       vars.OpenAuctionSlots,
 		AllocationRatio:        vars.AllocationRatio,
 	}, 1, nil
+}
+
+// GetCoordinatorsLibP2PAddrs required for the interface
+func (c *Client) GetCoordinatorsLibP2PAddrs() ([]multiaddr.Multiaddr, error) {
+	return nil, errors.New("TODO")
 }
 
 //

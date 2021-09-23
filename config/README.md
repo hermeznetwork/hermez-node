@@ -16,6 +16,8 @@ MaxSQLConnections = HEZNODE_API_MAXSQLCONNECTIONS
 SQLConnectionTimeout = HEZNODE_API_SQLCONNECTIONTIMEOUT
 ReadTimeout = HEZNODE_API_READTIMEOUT
 WriteTimeout = HEZNODE_API_WRITETIMEOUT
+CoordinatorNetwork = HEZNODE_API_COORDINATORNETWORK
+FindPeersCoordinatorNetworkInterval = HEZNODE_API_COORDINATORNETWORK_FINDPEERSINTERVAL
 
 [Debug]
 APIAddress = HEZNODE_DEBUG_APIADDRESS
@@ -148,6 +150,8 @@ NumLastBatchAvg = HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG
 |API|SQLConnectionTimeout|HEZNODE_API_SQLCONNECTIONTIMEOUT|Optional|"2s"|Maximum amount of time that an API request can wait to establish a SQL connection
 |API|ReadTimeout|HEZNODE_API_READTIMEOUT|Optional|"30s"|ReadTimeout is the maximum duration for reading the entire request, including the body.
 |API|WriteTimeout|HEZNODE_API_WRITETIMEOUT|Optional|"30s"|WriteTimeout is the maximum duration before timing out writes of the response.
+|API|CoordinatorNetwork|HEZNODE_API_COORDINATORNETWORK|Optional|true|Enable the network used to share data (such as txs in the pool) among coordinators.
+|API|FindPeersCoordinatorNetworkInterval|HEZNODE_API_COORDINATORNETWORK_FINDPEERSINTERVAL|Optional|"180s"|Frequency to find more peers for the coordinators network
 |Debug|APIAddress|HEZNODE_DEBUG_APIADDRESS|Optional|"0.0.0.0:12345"|If it is set, the debug api will listen in this address and port
 |Debug|MeddlerLogs|HEZNODE_DEBUG_MEDDLERLOGS|Optional|true|Enables meddler debug mode, where unused columns and struct fields will be logged
 |Debug|GinDebugMode|HEZNODE_DEBUG_GINDEBUGMODE|Optional|false|Sets the web framework Gin-Gonic to run in debug mode
@@ -221,7 +225,7 @@ NumLastBatchAvg = HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG
 |Coordinator.Debug|RollupVerifierIndex||Optional|nil|RollupVerifierIndex is the index of the verifier to use in the Rollup smart contract. The verifier chosen by index must match with the Circuit parameters. Only for debug purposes. It can't be used as env variable
 |Coordinator.Etherscan|URL|HEZNODE_ETHERSCAN_URL|Optional|""|If this parameter is set, specifies the etherscan endpoint to get the gas estimations for that momment
 |Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|""|This parameter allow access to etherscan services
-|RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static" or "AvgLastHour"
+|RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static", "AvgLastHour" and "DynamicFee"
 |RecommendedFeePolicy|StaticValue|HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE|Optional|0.10|If PolicyType is "static" defines the recommended fee value
-|RecommendedFeePolicy|BreakThreshold|HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD|Optional|50|If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
-|RecommendedFeePolicy|NumLastBatchAvg|HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG|Optional|10|If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost
+|RecommendedFeePolicy|BreakThreshold|HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD|Optional|50|If PolicyType is "DynamicFee" defines the break threshold parameter
+|RecommendedFeePolicy|NumLastBatchAvg|HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG|Optional|10|If PolicyType is "DynamicFee" defines the number of batches to calculate the average cost
