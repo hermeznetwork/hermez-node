@@ -403,7 +403,7 @@ type APIServer struct {
 	Web3 struct {
 		// URL is the URL of the web3 ethereum-node RPC server.  Only
 		// geth is officially supported.
-		URL string `validate:"required,url", env:"HEZNODE_WEB3_URL"`
+		URL string `validate:"required,url" env:"HEZNODE_WEB3_URL"`
 	}
 	Debug NodeDebug `validate:"required"`
 }
