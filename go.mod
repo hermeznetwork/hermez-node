@@ -3,7 +3,6 @@ module github.com/hermeznetwork/hermez-node
 go 1.14
 
 require (
-	github.com/BurntSushi/toml v0.3.1
 	github.com/arnaubennassar/eth2libp2p v0.0.0-20210729150027-477efe523548
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
@@ -20,7 +19,6 @@ require (
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20210308142348-8f85683b2cef
 	github.com/iden3/go-merkletree v0.0.0-20210308143313-8b63ca866189
 	github.com/ipfs/go-cid v0.0.7
-	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.8.0
