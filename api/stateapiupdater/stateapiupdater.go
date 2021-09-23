@@ -50,9 +50,9 @@ const (
 	RecommendedFeePolicyTypeStatic RecommendedFeePolicyType = "Static"
 	// RecommendedFeePolicyTypeAvgLastHour set the recommended fee using the average fee of the last hour
 	RecommendedFeePolicyTypeAvgLastHour RecommendedFeePolicyType = "AvgLastHour"
-	// RecommendedFeePolicyTypeAvgLastHourResizable set the recommended fee using the average fee of the last hour and
-	// taking in account the avg gas of the last ten ethereum blocks
-	RecommendedFeePolicyTypeAvgLastHourResizable RecommendedFeePolicyType = "AvgLastHourResizable"
+	// RecommendedFeePolicyTypeDynamicFee set the recommended fee taking in account the gas used in L1,
+	// the gasPrice and the ether price in the last batches
+	RecommendedFeePolicyTypeDynamicFee RecommendedFeePolicyType = "DynamicFee"
 )
 
 func (rfp *RecommendedFeePolicy) valid() bool {
@@ -64,7 +64,7 @@ func (rfp *RecommendedFeePolicy) valid() bool {
 		return true
 	case RecommendedFeePolicyTypeAvgLastHour:
 		return true
-	case RecommendedFeePolicyTypeAvgLastHourResizable:
+	case RecommendedFeePolicyTypeDynamicFee:
 		return true
 	default:
 		return false
@@ -139,7 +139,7 @@ func (u *Updater) UpdateRecommendedFee() error {
 		u.rw.Lock()
 		u.state.RecommendedFee = *recommendedFee
 		u.rw.Unlock()
-	case RecommendedFeePolicyTypeAvgLastHourResizable:
+	case RecommendedFeePolicyTypeDynamicFee:
 		var recommendedFee common.RecommendedFee
 		batchSize := u.maxTxPerBatch
 		latestBatches, err := u.hdb.GetLatestBatches(u.rfp.NumLastBatchAvg)

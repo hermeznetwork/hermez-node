@@ -225,7 +225,7 @@ NumLastBatchAvg = HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG
 |Coordinator.Debug|RollupVerifierIndex||Optional|nil|RollupVerifierIndex is the index of the verifier to use in the Rollup smart contract. The verifier chosen by index must match with the Circuit parameters. Only for debug purposes. It can't be used as env variable
 |Coordinator.Etherscan|URL|HEZNODE_ETHERSCAN_URL|Optional|""|If this parameter is set, specifies the etherscan endpoint to get the gas estimations for that momment
 |Coordinator.Etherscan|APIKey|HEZNODE_ETHERSCAN_APIKEY|Optional|""|This parameter allow access to etherscan services
-|RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static" or "AvgLastHour"
+|RecommendedFeePolicy|PolicyType|HEZNODE_RECOMMENDEDFEEPOLICY_POLICYTYPE|Optional|"Static"|Selects the mode. "Static", "AvgLastHour" and "DynamicFee"
 |RecommendedFeePolicy|StaticValue|HEZNODE_RECOMMENDEDFEEPOLICY_STATICVALUE|Optional|0.10|If PolicyType is "static" defines the recommended fee value
-|RecommendedFeePolicy|BreakThreshold|HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD|Optional|50|If PolicyType is "AvgLastHourResizable" defines the break threshold parameter
-|RecommendedFeePolicy|NumLastBatchAvg|HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG|Optional|10|If PolicyType is "AvgLastHourResizable" defines the number of batches to calculate the average cost
+|RecommendedFeePolicy|BreakThreshold|HEZNODE_RECOMMENDEDFEEPOLICY_BREAKTHRESHOLD|Optional|50|If PolicyType is "DynamicFee" defines the break threshold parameter
+|RecommendedFeePolicy|NumLastBatchAvg|HEZNODE_RECOMMENDEDFEEPOLICY_NUMLASTBATCHAVG|Optional|10|If PolicyType is "DynamicFee" defines the number of batches to calculate the average cost
