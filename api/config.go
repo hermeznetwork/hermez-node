@@ -46,8 +46,8 @@ func newRollupConstants(publicConstants common.RollupConstants) *rollupConstants
 	}
 }
 
-// Config of the API
-type Config struct {
+// NetworkConfig of the API
+type NetworkConfig struct {
 	RollupConstants   common.RollupConstants
 	AuctionConstants  common.AuctionConstants
 	WDelayerConstants common.WDelayerConstants
@@ -63,5 +63,5 @@ type configAPI struct {
 }
 
 func (a *API) getConfig(c *gin.Context) {
-	c.JSON(http.StatusOK, a.cg)
+	c.JSON(http.StatusOK, a.config)
 }

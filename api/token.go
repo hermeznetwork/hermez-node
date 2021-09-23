@@ -22,7 +22,7 @@ func (a *API) getToken(c *gin.Context) {
 	}
 	tokenID := common.TokenID(*tokenIDUint)
 	// Fetch token from historyDB
-	token, err := a.h.GetTokenAPI(tokenID)
+	token, err := a.historyDB.GetTokenAPI(tokenID)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -42,7 +42,7 @@ func (a *API) getTokens(c *gin.Context) {
 		return
 	}
 	// Fetch exits from historyDB
-	tokens, pendingItems, err := a.h.GetTokensAPI(filters)
+	tokens, pendingItems, err := a.historyDB.GetTokensAPI(filters)
 	if err != nil {
 		retSQLErr(err, c)
 		return

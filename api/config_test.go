@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getConfigTest(chainID uint16) Config {
-	var config Config
+func getConfigTest(chainID uint16) NetworkConfig {
+	var config NetworkConfig
 
 	var rollupPublicConstants common.RollupConstants
 	rollupPublicConstants.AbsoluteMaxL1L2BatchTimeout = 240
@@ -51,5 +51,5 @@ func TestGetConfig(t *testing.T) {
 	var configTest configAPI
 	assert.NoError(t, doGoodReq("GET", endpoint, nil, &configTest))
 	assert.Equal(t, config, configTest)
-	assert.Equal(t, api.cg, &configTest)
+	assert.Equal(t, api.config, &configTest)
 }

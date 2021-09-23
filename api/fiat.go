@@ -20,7 +20,7 @@ func (a *API) getFiatCurrency(c *gin.Context) {
 		return
 	}
 	// Fetch currency from historyDB
-	currency, err := a.h.GetCurrencyAPI(symbol)
+	currency, err := a.historyDB.GetCurrencyAPI(symbol)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -46,7 +46,7 @@ func (a *API) getFiatCurrencies(c *gin.Context) {
 	}
 
 	// Fetch exits from historyDB
-	currencies, err := a.h.GetCurrenciesAPI(symbols)
+	currencies, err := a.historyDB.GetCurrenciesAPI(symbols)
 	if err != nil {
 		retSQLErr(err, c)
 		return

@@ -39,7 +39,7 @@ type ClientInterface interface {
 // Client is used to interact with Ethereum and the Hermez smart contracts.
 type Client struct {
 	EthereumClient
-	AuctionClient
+	AuctionEthClient
 	RollupClient
 	WDelayerClient
 }
@@ -78,9 +78,9 @@ func NewClient(client *ethclient.Client, account *accounts.Account, ks *ethKeyst
 		return nil, tracerr.Wrap(err)
 	}
 	return &Client{
-		EthereumClient: *ethereumClient,
-		AuctionClient:  *auctionClient,
-		RollupClient:   *rollupClient,
-		WDelayerClient: *wDelayerClient,
+		EthereumClient:   *ethereumClient,
+		AuctionEthClient: *auctionClient,
+		RollupClient:     *rollupClient,
+		WDelayerClient:   *wDelayerClient,
 	}, nil
 }

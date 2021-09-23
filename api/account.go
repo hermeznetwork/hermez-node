@@ -20,7 +20,7 @@ func (a *API) getAccount(c *gin.Context) {
 		}, c)
 		return
 	}
-	apiAccount, err := a.h.GetAccountAPI(*account.AccountIndex)
+	apiAccount, err := a.historyDB.GetAccountAPI(*account.AccountIndex)
 	if err != nil {
 		retSQLErr(err, c)
 		return
@@ -61,7 +61,7 @@ func (a *API) getAccounts(c *gin.Context) {
 	}
 
 	// Fetch Accounts from historyDB
-	apiAccounts, pendingItems, err := a.h.GetAccountsAPI(accountsFilter)
+	apiAccounts, pendingItems, err := a.historyDB.GetAccountsAPI(accountsFilter)
 	if err != nil {
 		retSQLErr(err, c)
 		return

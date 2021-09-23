@@ -25,6 +25,7 @@ the /config endpoint, which returns a static object generated at construction ti
 package api
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"reflect"
 	"strings"
@@ -32,75 +33,107 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
+	"github.com/hermeznetwork/hermez-node/api/coordinatornetwork"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/metric"
 	"github.com/hermeznetwork/tracerr"
+	"github.com/multiformats/go-multiaddr"
 	"gopkg.in/go-playground/validator.v9"
 )
 
 // API serves HTTP requests to allow external interaction with the Hermez node
 type API struct {
-	h             *historydb.HistoryDB
-	cg            *configAPI
-	l2            *l2db.L2DB
+	historyDB     *historydb.HistoryDB
+	config        *configAPI
+	l2DB          *l2db.L2DB
 	stateDB       *statedb.StateDB
 	hermezAddress ethCommon.Address
 	validate      *validator.Validate
+	coordnet      *coordinatornetwork.CoordinatorNetwork
+}
+
+// CoordinatorNetworkConfig wraps the parameters needed to start the coordinator network
+type CoordinatorNetworkConfig struct {
+	BootstrapPeers []multiaddr.Multiaddr
+	EthPrivKey     *ecdsa.PrivateKey
+}
+
+// Config wraps the parameters needed to start the API
+type Config struct {
+	Version                  string
+	CoordinatorEndpoints     bool
+	ExplorerEndpoints        bool
+	Server                   *gin.Engine
+	HistoryDB                *historydb.HistoryDB
+	L2DB                     *l2db.L2DB
+	StateDB                  *statedb.StateDB
+	EthClient                *ethclient.Client
+	ForgerAddress            *ethCommon.Address
+	CoordinatorNetworkConfig *CoordinatorNetworkConfig
 }
 
 // NewAPI sets the endpoints and the appropriate handlers, but doesn't start the server
-func NewAPI(
-	version string,
-	coordinatorEndpoints, explorerEndpoints bool,
-	server *gin.Engine,
-	hdb *historydb.HistoryDB,
-	l2db *l2db.L2DB,
-	stateDB *statedb.StateDB,
-	ethClient *ethclient.Client,
-	forgerAddress *ethCommon.Address,
-) (*API, error) {
+func NewAPI(setup Config) (*API, error) {
 	// Check input
-	if coordinatorEndpoints && l2db == nil {
+	if setup.CoordinatorEndpoints && setup.L2DB == nil {
 		return nil, tracerr.Wrap(errors.New("cannot serve Coordinator endpoints without L2DB"))
 	}
-	if explorerEndpoints && hdb == nil {
+	if setup.ExplorerEndpoints && setup.HistoryDB == nil {
 		return nil, tracerr.Wrap(errors.New("cannot serve Explorer endpoints without HistoryDB"))
 	}
-	consts, err := hdb.GetConstants()
+	consts, err := setup.HistoryDB.GetConstants()
 	if err != nil {
 		return nil, err
 	}
 
 	a := &API{
-		h: hdb,
-		cg: &configAPI{
+		historyDB: setup.HistoryDB,
+		config: &configAPI{
 			RollupConstants:   *newRollupConstants(consts.Rollup),
 			AuctionConstants:  consts.Auction,
 			WDelayerConstants: consts.WDelayer,
 			ChainID:           consts.ChainID,
 		},
-		l2:            l2db,
-		stateDB:       stateDB,
+		l2DB:          setup.L2DB,
+		stateDB:       setup.StateDB,
 		hermezAddress: consts.HermezAddress,
 		validate:      newValidate(),
 	}
 
+	// Setup coordinator network (libp2p interface)
+	if setup.CoordinatorNetworkConfig != nil {
+		if setup.CoordinatorNetworkConfig.EthPrivKey == nil {
+			return nil, tracerr.New("EthPrivateKey is required to setup the coordinators network")
+		}
+		coordnet, err := coordinatornetwork.NewCoordinatorNetwork(
+			setup.CoordinatorNetworkConfig.EthPrivKey,
+			setup.CoordinatorNetworkConfig.BootstrapPeers,
+			consts.ChainID,
+			a.coordnetPoolTxHandler,
+		)
+		if err != nil {
+			return nil, err
+		}
+		a.coordnet = &coordnet
+	}
+
+	// Setup http interface
 	middleware, err := metric.PrometheusMiddleware()
 	if err != nil {
 		return nil, err
 	}
-	server.Use(middleware)
+	setup.Server.Use(middleware)
 
-	server.NoRoute(a.noRoute)
+	setup.Server.NoRoute(a.noRoute)
 
-	v1 := server.Group("/v1")
+	v1 := setup.Server.Group("/v1")
 
-	v1.GET("/health", gin.WrapH(a.healthRoute(version, ethClient, forgerAddress)))
+	v1.GET("/health", gin.WrapH(a.healthRoute(setup.Version, setup.EthClient, setup.ForgerAddress)))
 	// Add coordinator endpoints
-	if coordinatorEndpoints {
+	if setup.CoordinatorEndpoints {
 		// Account creation authorization
 		v1.POST("/account-creation-authorization", a.postAccountCreationAuth)
 		v1.GET("/account-creation-authorization/:hezEthereumAddress", a.getAccountCreationAuth)
@@ -115,7 +148,7 @@ func NewAPI(
 	}
 
 	// Add explorer endpoints
-	if explorerEndpoints {
+	if setup.ExplorerEndpoints {
 		// Account
 		v1.GET("/accounts", a.getAccounts)
 		v1.GET("/accounts/:accountIndex", a.getAccount)
@@ -168,4 +201,12 @@ func newValidate() *validator.Validate {
 	validate.RegisterStructValidation(parsers.SlotsFiltersStructValidation, parsers.SlotsFilters{})
 
 	return validate
+}
+
+// FindMorePeersForCoordinatorsNetwork will advertise the node and look for other peers in the network
+func (a API) FindMorePeersForCoordinatorsNetwork() error {
+	if a.coordnet == nil {
+		return errors.New("Coordinator network must be initialized in order to find more peers")
+	}
+	return a.coordnet.FindMorePeers()
 }
