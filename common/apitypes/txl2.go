@@ -186,7 +186,7 @@ func (tx *TxL2) UnmarshalJSON(data []byte) error {
 		RqNonce              *nonce.Nonce          `json:"requestNonce"`
 		Token                jsonToken             `json:"token"`
 	}
-	var auxTx = jsonFormat{}
+	auxTx := jsonFormat{}
 	err := json.Unmarshal(data, &auxTx)
 	if err != nil {
 		return err
