@@ -8,7 +8,7 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 // SwapEndianness swaps the order of the bytes in the slice.

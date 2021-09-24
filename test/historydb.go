@@ -11,7 +11,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 // Block0 represents Ethereum's genesis block,

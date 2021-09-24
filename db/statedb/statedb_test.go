@@ -87,7 +87,7 @@ func TestNewStateDBIntermediateState(t *testing.T) {
 	// k0 not yet in last
 	err = sdb.LastRead(func(sdb *Last) error {
 		_, err := sdb.DB().Get(k0)
-		assert.Equal(t, db.ErrNotFound, tracerr.Unwrap(err))
+		assert.Equal(t, merkletree.ErrNotFound, tracerr.Unwrap(err))
 		return nil
 	})
 	require.NoError(t, err)

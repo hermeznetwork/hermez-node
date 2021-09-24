@@ -216,8 +216,11 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 	chainIDU16 := uint16(chainIDU64)
 
 	stateDB, err := statedb.NewStateDB(statedb.Config{
-		Path:    cfg.StateDB.Path,
-		Keep:    cfg.StateDB.Keep,
+		 Host:cfg.PostgreSQL.HostWrite,
+		 Port:cfg.PostgreSQL.PortWrite,
+		User:cfg.PostgreSQL.UserWrite,
+		Password: cfg.PostgreSQL.PasswordWrite,
+		Database: cfg.PostgreSQL.NameWrite,
 		Type:    statedb.TypeSynchronizer,
 		NLevels: statedb.MaxNLevels,
 	})

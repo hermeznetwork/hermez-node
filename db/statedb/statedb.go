@@ -6,19 +6,20 @@ import (
 	"math/big"
 
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db/kvdb"
+	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
-	"github.com/iden3/go-merkletree"
+	merkletree "github.com/iden3/go-merkletree-sql"
+	"github.com/iden3/go-merkletree-sql/db/sql"
 	"github.com/iden3/go-merkletree/db"
 	"github.com/iden3/go-merkletree/db/pebble"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
 	// ErrStateDBWithoutMT is used when a method that requires a MerkleTree
 	// is called in a StateDB that does not have a MerkleTree defined
-	ErrStateDBWithoutMT = errors.New(
-		"Can not call method to use MerkleTree in a StateDB without MerkleTree")
+	ErrStateDBWithoutMT = errors.New("Can not call method to use MerkleTree in a StateDB without MerkleTree")
 
 	// ErrAccountAlreadyExists is used when CreateAccount is called and the
 	// Account already exists
@@ -27,24 +28,14 @@ var (
 	// ErrIdxNotFound is used when trying to get the Idx from EthAddr or
 	// EthAddr&ToBJJ
 	ErrIdxNotFound = errors.New("Idx can not be found")
+
 	// ErrGetIdxNoCase is used when trying to get the Idx from EthAddr &
 	// BJJ with not compatible combination
-	ErrGetIdxNoCase = errors.New(
-		"Can not get Idx due unexpected combination of ethereum Address & BabyJubJub PublicKey")
-
-	// PrefixKeyIdx is the key prefix for idx in the db
-	PrefixKeyIdx = []byte("i:")
-	// PrefixKeyAccHash is the key prefix for account hash in the db
-	PrefixKeyAccHash = []byte("h:")
-	// PrefixKeyMT is the key prefix for merkle tree in the db
-	PrefixKeyMT = []byte("m:")
-	// PrefixKeyAddr is the key prefix for address in the db
-	PrefixKeyAddr = []byte("a:")
-	// PrefixKeyAddrBJJ is the key prefix for address-babyjubjub in the db
-	PrefixKeyAddrBJJ = []byte("ab:")
+	ErrGetIdxNoCase = errors.New("Can not get Idx due unexpected combination of ethereum Address & BabyJubJub PublicKey")
 )
 
 const (
+	merkleTreeId = 1
 	// TypeSynchronizer defines a StateDB used by the Synchronizer, that
 	// generates the ExitTree when processing the txs
 	TypeSynchronizer = "synchronizer"
@@ -64,37 +55,33 @@ type TypeStateDB string
 
 // Config of the StateDB
 type Config struct {
-	// Path where the checkpoints will be stored
-	Path string
-	// Keep is the number of old checkpoints to keep.  If 0, all
-	// checkpoints are kept.
-	Keep int
-	// NoLast skips having an opened DB with a checkpoint to the last
-	// batchNum for thread-safe reads.
-	NoLast bool
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Database string
+
 	// Type of StateDB (
 	Type TypeStateDB
 	// NLevels is the number of merkle tree levels in case the Type uses a
 	// merkle tree.  If the Type doesn't use a merkle tree, NLevels should
 	// be 0.
 	NLevels int
-	// At every checkpoint, check that there are no gaps between the
-	// checkpoints
-	noGapsCheck bool
 }
 
 // StateDB represents the StateDB object
 type StateDB struct {
 	cfg Config
-	db  *kvdb.KVDB
-	MT  *merkletree.MerkleTree
+	db  *sqlx.DB
+	sto merkletree.Storage
+	mt  *merkletree.MerkleTree
 }
 
 // Last offers a subset of view methods of the StateDB that can be
 // called via the LastRead method of StateDB in a thread-safe manner to obtain
 // a consistent view to the last batch of the StateDB.
 type Last struct {
-	db db.Storage
+	db merkletree.Storage
 }
 
 // GetAccount returns the account for the given Idx
@@ -104,8 +91,8 @@ func (s *Last) GetAccount(idx common.Idx) (*common.Account, error) {
 
 // GetCurrentBatch returns the current BatchNum stored in Last.db
 func (s *Last) GetCurrentBatch() (common.BatchNum, error) {
-	cbBytes, err := s.db.Get(kvdb.KeyCurrentBatch)
-	if tracerr.Unwrap(err) == db.ErrNotFound {
+	cbBytes, err := s.dba.Get(kvdba.KeyCurrentBatch)
+	if tracerr.Unwrap(err) == dba.ErrNotFound {
 		return 0, nil
 	} else if err != nil {
 		return 0, tracerr.Wrap(err)
@@ -114,7 +101,7 @@ func (s *Last) GetCurrentBatch() (common.BatchNum, error) {
 }
 
 // DB returns the underlying storage of Last
-func (s *Last) DB() db.Storage {
+func (s *Last) DB() merkletree.Storage {
 	return s.db
 }
 
@@ -129,18 +116,26 @@ func (s *Last) GetAccounts() ([]common.Account, error) {
 // deleted.
 // func NewStateDB(pathDB string, keep int, typ TypeStateDB, nLevels int) (*StateDB, error) {
 func NewStateDB(cfg Config) (*StateDB, error) {
-	var kv *kvdb.KVDB
 	var err error
-
-	kv, err = kvdb.NewKVDB(kvdb.Config{Path: cfg.Path, Keep: cfg.Keep,
-		NoGapsCheck: cfg.noGapsCheck, NoLast: cfg.NoLast})
+	db, err := dbUtils.InitSQLDB(
+		cfg.Port,
+		cfg.Host,
+		cfg.User,
+		cfg.Password,
+		cfg.Database,
+	)
 	if err != nil {
-		return nil, tracerr.Wrap(err)
+		return nil, tracerr.Wrap(fmt.Errorf("dbUtils.InitSQLDB: %w", err))
+	}
+
+	sqlStorage, err := sql.NewSqlStorage(db, merkleTreeId)
+	if err != nil {
+		return nil, err
 	}
 
 	var mt *merkletree.MerkleTree = nil
 	if cfg.Type == TypeSynchronizer || cfg.Type == TypeBatchBuilder {
-		mt, err = merkletree.NewMerkleTree(kv.StorageWithPrefix(PrefixKeyMT), cfg.NLevels)
+		mt, err = merkletree.NewMerkleTree(sqlStorage, cfg.NLevels)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
@@ -151,8 +146,9 @@ func NewStateDB(cfg Config) (*StateDB, error) {
 	}
 	return &StateDB{
 		cfg: cfg,
-		db:  kv,
-		MT:  mt,
+		db:  db,
+		sto: sqlStorage,
+		mt:  mt,
 	}, nil
 }
 
@@ -206,7 +202,7 @@ func (s *StateDB) LastGetCurrentBatch() (common.BatchNum, error) {
 func (s *StateDB) LastMTGetRoot() (*big.Int, error) {
 	var root *big.Int
 	if err := s.LastRead(func(sdb *Last) error {
-		mt, err := merkletree.NewMerkleTree(sdb.DB().WithPrefix(PrefixKeyMT), s.cfg.NLevels)
+		mt, err := merkletree.NewMerkleTree(s.sto, s.cfg.NLevels)
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
@@ -267,13 +263,13 @@ func (s *StateDB) Reset(batchNum common.BatchNum) error {
 	if err := s.db.Reset(batchNum); err != nil {
 		return tracerr.Wrap(err)
 	}
-	if s.MT != nil {
+	if s.mt != nil {
 		// open the MT for the current s.db
-		mt, err := merkletree.NewMerkleTree(s.db.StorageWithPrefix(PrefixKeyMT), s.MT.MaxLevels())
+		mt, err := merkletree.NewMerkleTree(s.db.StorageWithPrefix(PrefixKeyMT), s.mt.MaxLevels())
 		if err != nil {
 			return tracerr.Wrap(err)
 		}
-		s.MT = mt
+		s.mt = mt
 	}
 	return nil
 }
@@ -283,8 +279,8 @@ func (s *StateDB) GetAccount(idx common.Idx) (*common.Account, error) {
 	return GetAccountInTreeDB(s.db.DB(), idx)
 }
 
-func accountsIter(db db.Storage, fn func(a *common.Account) (bool, error)) error {
-	idxDB := db.WithPrefix(PrefixKeyIdx)
+func (s *StateDB) accountsIter(db merkletree.Storage, fn func(a *common.Account) (bool, error)) error {
+	idxDB := s.db
 	if err := idxDB.Iterate(func(k []byte, v []byte) (bool, error) {
 		idx, err := common.IdxFromBytes(k)
 		if err != nil {
@@ -305,7 +301,7 @@ func accountsIter(db db.Storage, fn func(a *common.Account) (bool, error)) error
 	return nil
 }
 
-func getAccounts(db db.Storage) ([]common.Account, error) {
+func getAccounts(db merkletree.Storage) ([]common.Account, error) {
 	accs := []common.Account{}
 	if err := accountsIter(
 		db,
@@ -329,7 +325,8 @@ func (s *StateDB) TestGetAccounts() ([]common.Account, error) {
 
 // GetAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  GetAccount returns the account for the given Idx
-func GetAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error) {
+func GetAccountInTreeDB(sto merkletree.Storage, idx common.Idx) (*common.Account, error) {
+
 	idxBytes, err := idx.Bytes()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -357,7 +354,7 @@ func GetAccountInTreeDB(sto db.Storage, idx common.Idx) (*common.Account, error)
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (
 	*merkletree.CircomProcessorProof, error) {
-	cpp, err := CreateAccountInTreeDB(s.db.DB(), s.MT, idx, account)
+	cpp, err := CreateAccountInTreeDB(s.sto, s.mt, idx, account)
 	if err != nil {
 		return cpp, tracerr.Wrap(err)
 	}
@@ -370,7 +367,7 @@ func (s *StateDB) CreateAccount(idx common.Idx, account *common.Account) (
 // from ExitTree.  Creates a new Account in the StateDB for the given Idx.  If
 // StateDB.MT==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
+func CreateAccountInTreeDB(sto merkletree.Storage, mt *merkletree.MerkleTree, idx common.Idx,
 	account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: leaf.Bytes()
 	v, err := account.HashValue()
@@ -422,14 +419,14 @@ func CreateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 // MerkleTree, returning a CircomProcessorProof.
 func (s *StateDB) UpdateAccount(idx common.Idx, account *common.Account) (
 	*merkletree.CircomProcessorProof, error) {
-	return UpdateAccountInTreeDB(s.db.DB(), s.MT, idx, account)
+	return UpdateAccountInTreeDB(s.db.DB(), s.mt, idx, account)
 }
 
 // UpdateAccountInTreeDB is abstracted from StateDB to be used from StateDB and
 // from ExitTree.  Updates the Account in the StateDB for the given Idx.  If
 // StateDB.mt==nil, MerkleTree is not affected, otherwise updates the
 // MerkleTree, returning a CircomProcessorProof.
-func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common.Idx,
+func UpdateAccountInTreeDB(sto merkletree.Storage, mt *merkletree.MerkleTree, idx common.Idx,
 	account *common.Account) (*merkletree.CircomProcessorProof, error) {
 	// store at the DB the key: v, and value: account.Bytes()
 	v, err := account.HashValue()
@@ -471,10 +468,10 @@ func UpdateAccountInTreeDB(sto db.Storage, mt *merkletree.MerkleTree, idx common
 
 // MTGetProof returns the CircomVerifierProof for a given Idx
 func (s *StateDB) MTGetProof(idx common.Idx) (*merkletree.CircomVerifierProof, error) {
-	if s.MT == nil {
+	if s.mt == nil {
 		return nil, tracerr.Wrap(ErrStateDBWithoutMT)
 	}
-	p, err := s.MT.GenerateSCVerifierProof(idx.BigInt(), s.MT.Root())
+	p, err := s.mt.GenerateSCVerifierProof(idx.BigInt(), s.mt.Root())
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
@@ -526,8 +523,7 @@ func (l *LocalStateDB) Reset(batchNum common.BatchNum, fromSynchronizer bool) er
 		}
 		// open the MT for the current s.db
 		if l.MT != nil {
-			mt, err := merkletree.NewMerkleTree(l.db.StorageWithPrefix(PrefixKeyMT),
-				l.MT.MaxLevels())
+			mt, err := merkletree.NewMerkleTree(l.sto, l.mt.MaxLevels())
 			if err != nil {
 				return tracerr.Wrap(err)
 			}

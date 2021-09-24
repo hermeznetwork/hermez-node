@@ -70,7 +70,6 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/api"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/hermeznetwork/hermez-node/db/kvdb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -104,7 +103,7 @@ func NewTxSelector(coordAccount *CoordAccount, dbpath string,
 	localAccountsDB, err := statedb.NewLocalStateDB(
 		statedb.Config{
 			Path:    dbpath,
-			Keep:    kvdb.DefaultKeep,
+			Keep:    kvd.DefaultKeep,
 			Type:    statedb.TypeTxSelector,
 			NLevels: 0,
 		},

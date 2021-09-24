@@ -10,7 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 // TokenJSON is a representation of the JSON structure returned

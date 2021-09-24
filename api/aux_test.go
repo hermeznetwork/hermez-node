@@ -7,7 +7,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 func AddAdditionalInformation(blocks []common.BlockData) {

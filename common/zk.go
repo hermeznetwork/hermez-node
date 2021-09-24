@@ -12,7 +12,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 	"github.com/mitchellh/mapstructure"
 )
 

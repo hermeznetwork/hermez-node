@@ -92,9 +92,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree"
-	"github.com/iden3/go-merkletree/db"
-	"github.com/iden3/go-merkletree/db/pebble"
+	merkletree "github.com/iden3/go-merkletree-sql"
 )
 
 // TxProcessor represents the TxProcessor object

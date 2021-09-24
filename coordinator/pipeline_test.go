@@ -17,7 +17,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
 	"github.com/hermeznetwork/hermez-node/test"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -9,7 +9,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/statedb"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
-	"github.com/iden3/go-merkletree/db"
+	merkletree "github.com/iden3/go-merkletree-sql"
 )
 
 // PurgerCfg is the purger configuration
@@ -141,7 +141,7 @@ func poolMarkInvalidOldNonces(l2DB *l2db.L2DB, stateDB *statedb.LocalStateDB,
 	for i, idx := range idxs {
 		acc, err := stateDB.GetAccount(idx)
 		if err != nil {
-			if tracerr.Unwrap(err) != db.ErrNotFound {
+			if tracerr.Unwrap(err) != merkletree.ErrNotFound {
 				return tracerr.Wrap(err)
 			} else if idx <= lastIdx {
 				return tracerr.Wrap(fmt.Errorf("account with idx %v (lastIdx: %v) "+

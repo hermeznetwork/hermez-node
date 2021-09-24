@@ -5,7 +5,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 func siblingsToZKInputFormat(s []*merkletree.Hash) []*big.Int {

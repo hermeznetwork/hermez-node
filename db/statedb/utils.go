@@ -9,7 +9,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree/db"
+	merkletree "github.com/iden3/go-merkletree-sql"
 )
 
 func concatEthAddrTokenID(addr ethCommon.Address, tokenID common.TokenID) []byte {
