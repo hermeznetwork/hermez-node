@@ -232,21 +232,21 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 	p.mutexL2DBUpdateDelete.Lock()
 	batchInfo, skipReason, err = p.forgeBatch(batchNum)
 	p.mutexL2DBUpdateDelete.Unlock()
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	} else if err != nil {
-		if tracerr.Unwrap(err) == errLastL1BatchNotSynced {
-			log.Warnw("forgeBatch: scheduled L1Batch too early", "err", err,
-				"lastForgeL1TxsNum", p.state.lastForgeL1TxsNum,
-				"syncLastForgeL1TxsNum", p.stats.Sync.LastForgeL1TxsNum)
-		} else {
-			log.Errorw("forgeBatch", "err", err)
-		}
-		return nil, tracerr.Wrap(err)
-	} else if skipReason != nil {
-		log.Debugw("skipping batch", "batch", batchNum, "reason", *skipReason)
-		return nil, tracerr.Wrap(errSkipBatchByPolicy)
-	}
+	//if ctx.Err() != nil {
+	//	return nil, ctx.Err()
+	//} else if err != nil {
+	//	if tracerr.Unwrap(err) == errLastL1BatchNotSynced {
+	//		log.Warnw("forgeBatch: scheduled L1Batch too early", "err", err,
+	//			"lastForgeL1TxsNum", p.state.lastForgeL1TxsNum,
+	//			"syncLastForgeL1TxsNum", p.stats.Sync.LastForgeL1TxsNum)
+	//	} else {
+	//		log.Errorw("forgeBatch", "err", err)
+	//	}
+	//	return nil, tracerr.Wrap(err)
+	//} else if skipReason != nil {
+	//	log.Debugw("skipping batch", "batch", batchNum, "reason", *skipReason)
+	//	return nil, tracerr.Wrap(errSkipBatchByPolicy)
+	//}
 
 	// 3. Send the ZKInputs to the proof server
 	batchInfo.ServerProof = serverProof
