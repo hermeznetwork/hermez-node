@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"sort"
 	"sync"
 	"time"
 
@@ -678,61 +677,6 @@ func (c *Client) EthTransactionReceipt(ctx context.Context,
 	}
 
 	return nil, nil
-}
-
-// EthNextBlockWithSCEvents returns the next block with events in the provided SC addresses
-func (c *Client) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
-	bb := make([]*Block, 0, len(c.blocks))
-
-	for _, block := range c.blocks {
-		if block.Eth.BlockNum >= fromBlock {
-			bb = append(bb, block)
-		}
-	}
-
-	sort.Slice(bb, func(i, j int) bool {
-		return bb[i].Eth.BlockNum < bb[j].Eth.BlockNum
-	})
-
-	for _, block := range bb {
-		if len(block.Rollup.Events.L1UserTx) > 0 ||
-			len(block.Rollup.Events.AddToken) > 0 ||
-			len(block.Rollup.Events.ForgeBatch) > 0 ||
-			len(block.Rollup.Events.UpdateForgeL1L2BatchTimeout) > 0 ||
-			len(block.Rollup.Events.UpdateFeeAddToken) > 0 ||
-			len(block.Rollup.Events.Withdraw) > 0 ||
-			len(block.Rollup.Events.UpdateWithdrawalDelay) > 0 ||
-			len(block.Rollup.Events.UpdateBucketWithdraw) > 0 ||
-			len(block.Rollup.Events.UpdateBucketsParameters) > 0 ||
-			len(block.Rollup.Events.UpdateTokenExchange) > 0 ||
-			len(block.Rollup.Events.SafeMode) > 0 ||
-
-			len(block.Auction.Events.NewBid) > 0 ||
-			len(block.Auction.Events.NewSlotDeadline) > 0 ||
-			len(block.Auction.Events.NewClosedAuctionSlots) > 0 ||
-			len(block.Auction.Events.NewOutbidding) > 0 ||
-			len(block.Auction.Events.NewDonationAddress) > 0 ||
-			len(block.Auction.Events.NewBootCoordinator) > 0 ||
-			len(block.Auction.Events.NewOpenAuctionSlots) > 0 ||
-			len(block.Auction.Events.NewAllocationRatio) > 0 ||
-			len(block.Auction.Events.SetCoordinator) > 0 ||
-			len(block.Auction.Events.NewForgeAllocated) > 0 ||
-			len(block.Auction.Events.NewDefaultSlotSetBid) > 0 ||
-			len(block.Auction.Events.NewForge) > 0 ||
-			len(block.Auction.Events.HEZClaimed) > 0 ||
-
-			len(block.WDelayer.Events.Deposit) > 0 ||
-			len(block.WDelayer.Events.Withdraw) > 0 ||
-			len(block.WDelayer.Events.EmergencyModeEnabled) > 0 ||
-			len(block.WDelayer.Events.NewWithdrawalDelay) > 0 ||
-			len(block.WDelayer.Events.EscapeHatchWithdrawal) > 0 ||
-			len(block.WDelayer.Events.NewEmergencyCouncil) > 0 ||
-			len(block.WDelayer.Events.NewHermezGovernanceAddress) > 0 {
-			return block.Eth.BlockNum, nil
-		}
-	}
-
-	return 0, nil
 }
 
 // CtlAddERC20 adds an ERC20 token to the blockchain.
