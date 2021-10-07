@@ -18,6 +18,7 @@ import (
 	"github.com/hermeznetwork/hermez-node/db/historydb"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/db/statedb"
+	"github.com/hermeznetwork/hermez-node/eth"
 	"github.com/hermeznetwork/hermez-node/etherscan"
 	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/hermez-node/synchronizer"
@@ -508,6 +509,21 @@ func TestCoordHandleMsgSyncBlock(t *testing.T) {
 	closeTestModules(t, modules)
 }
 
+// ethAddTokens adds the tokens from the blocks to the blockchain
+func ethAddTokens(blocks []common.BlockData, client *test.Client) {
+	for _, block := range blocks {
+		for _, token := range block.Rollup.AddedTokens {
+			consts := eth.ERC20Consts{
+				Name:     fmt.Sprintf("Token %d", token.TokenID),
+				Symbol:   fmt.Sprintf("TK%d", token.TokenID),
+				Decimals: 18,
+			}
+			// tokenConsts[token.TokenID] = consts
+			client.CtlAddERC20(token.EthAddr, consts)
+		}
+	}
+}
+
 func TestCoordinatorStress(t *testing.T) {
 	if os.Getenv("TEST_COORD_STRESS") == "" {
 		return
@@ -530,7 +546,7 @@ func TestCoordinatorStress(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for {
-			blockData, _, err := syn.Sync(ctx)
+			blockData, _, err := syn.Sync(ctx, nil)
 			if ctx.Err() != nil {
 				wg.Done()
 				return
