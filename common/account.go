@@ -3,6 +3,7 @@ package common
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -147,7 +148,10 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 		ayBytes[0] = ayBytes[0] & 0x3f
 		pkY = big.NewInt(0).SetBytes(ayBytes)
 	}
-	finiteFieldMod, _ := big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	finiteFieldMod, ok := big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10) //nolint:gomnd
+	if !ok {
+		return b, errors.New("error setting bjj finite field")
+	}
 	pkY = pkY.Mod(pkY, finiteFieldMod)
 	ayBytes = pkY.Bytes()
 	copy(b[96-len(ayBytes):96], ayBytes)
