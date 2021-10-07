@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -42,6 +43,8 @@ type EthereumInterface interface {
 	EthSuggestGasPrice(ctx context.Context) (*big.Int, error)
 	EthKeyStore() *ethKeystore.KeyStore
 	EthCall(ctx context.Context, tx *types.Transaction, blockNum *big.Int) ([]byte, error)
+
+	EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error)
 }
 
 var (
@@ -73,6 +76,8 @@ type EthereumClient struct {
 	ks      *ethKeystore.KeyStore
 	config  *EthereumConfig
 	opts    *bind.CallOpts
+
+	events map[int64][]types.Log
 }
 
 // NewEthereumClient creates a EthereumClient instance.  The account is not mandatory (it can
@@ -97,6 +102,7 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account,
 		return nil, tracerr.Wrap(err)
 	}
 	c.chainID = chainID
+	c.events = make(map[int64][]types.Log)
 	return c, nil
 }
 
@@ -348,4 +354,65 @@ func (c *EthereumClient) EthCall(ctx context.Context, tx *types.Transaction,
 	}
 	result, err := c.client.CallContract(ctx, msg, blockNum)
 	return result, tracerr.Wrap(err)
+}
+
+// EthNextBlockWithSCEvents returns the next block with events in the provided SC addresses
+func (c *EthereumClient) EthNextBlockWithSCEvents(ctx context.Context, fromBlock int64, addresses []ethCommon.Address) (int64, error) {
+	const blocksPerCycle int64 = 10000
+
+	lastBlock, err := c.EthLastBlock()
+	if err != nil {
+		return 0, nil
+	}
+
+	from := fromBlock
+	to := from + blocksPerCycle
+
+	for bn := from; bn <= to; bn++ {
+		if _, ok := c.events[bn]; ok {
+			delete(c.events, bn)
+			return bn, nil
+		}
+	}
+
+	for {
+		q := ethereum.FilterQuery{
+			FromBlock: big.NewInt(from),
+			ToBlock:   big.NewInt(to),
+			Addresses: addresses,
+		}
+
+		// query logs with filter
+		logs, err := c.client.FilterLogs(ctx, q)
+		if err != nil {
+			return 0, err
+		}
+
+		if len(logs) > 0 {
+			for _, log := range logs {
+				c.events[int64(log.BlockNumber)] = append(c.events[int64(log.BlockNumber)], log)
+			}
+
+			// when we have logs, we sort the logs by block ascending and get the first one
+			sort.Slice(logs, func(i, j int) bool {
+				return logs[i].BlockNumber < logs[j].BlockNumber
+			})
+
+			return int64(logs[0].BlockNumber), nil
+		}
+
+		// move to the next range until the end of the chain
+		// if "to" is equal lastBlock then stop searching
+		if to == lastBlock {
+			return lastBlock, nil
+		}
+
+		from = to
+		to += blocksPerCycle
+		// if the "to" is greater than lastBlock, we set "to" as the lastBlock in order
+		// to be execute the last try to find a block with events
+		if to > lastBlock {
+			to = lastBlock
+		}
+	}
 }
