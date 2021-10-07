@@ -141,10 +141,17 @@ func (a *Account) Bytes() ([32 * NLeafElems]byte, error) {
 	}
 	balanceBytes := a.Balance.Bytes()
 	copy(b[64-len(balanceBytes):64], balanceBytes)
+	// Check if there is possibility of finite field overflow
 	ayBytes := pkY.Bytes()
+	if len(ayBytes) == 32 {
+		ayBytes[0] = ayBytes[0] & 0x3f
+		pkY = big.NewInt(0).SetBytes(ayBytes)
+	}
+	finiteFieldMod, _ := big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	pkY = pkY.Mod(pkY, finiteFieldMod)
+	ayBytes = pkY.Bytes()
 	copy(b[96-len(ayBytes):96], ayBytes)
 	copy(b[108:128], a.EthAddr.Bytes())
-
 	return b, nil
 }
 
