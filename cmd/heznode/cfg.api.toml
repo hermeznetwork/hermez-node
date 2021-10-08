@@ -3,6 +3,8 @@ Address = "localhost:8386"
 Explorer = true
 MaxSQLConnections = 10
 SQLConnectionTimeout = "2s"
+CoordinatorNetwork = true
+FindPeersCoordinatorNetworkInterval = "300s"
 
 [PostgreSQL]
 PortWrite     = 5432
