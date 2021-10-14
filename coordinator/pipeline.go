@@ -597,9 +597,9 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 		batchInfo.BatchNum); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
-	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs, batchInfo.BatchNum); err != nil {
-		return nil, nil, tracerr.Wrap(err)
-	}
+	// if err := p.l2DB.UpdateTxsInfo(discardedL2Txs, batchInfo.BatchNum); err != nil {
+	// 	return nil, nil, tracerr.Wrap(err)
+	// }
 
 	// Invalidate transactions that become invalid because of
 	// the poolL2Txs selected.  Will mark as invalid the txs that have a
