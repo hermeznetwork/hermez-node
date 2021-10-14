@@ -479,6 +479,8 @@ github.com/hermeznetwork/go-hermez-config v0.0.0-20210811071123-bf147fbf457c h1:
 github.com/hermeznetwork/go-hermez-config v0.0.0-20210811071123-bf147fbf457c/go.mod h1:oP5l93YlYArOFlp9t65C8+zDijAyDAurMY4gkkjFkwY=
 github.com/hermeznetwork/go-hermez-config v0.0.0-20210811083017-293d54cc5c47 h1:Y9/fFEZZ1yuZKfBnT4zNkmx7vBKpnNhQy6NuKw4K6MI=
 github.com/hermeznetwork/go-hermez-config v0.0.0-20210811083017-293d54cc5c47/go.mod h1:oP5l93YlYArOFlp9t65C8+zDijAyDAurMY4gkkjFkwY=
+github.com/hermeznetwork/go-hermez-config v0.0.0-20211014101826-b847060661cc h1:8Sptuojy79wDa8htKlNGqyXD/KSharDS4gJjqXwNUgk=
+github.com/hermeznetwork/go-hermez-config v0.0.0-20211014101826-b847060661cc/go.mod h1:oP5l93YlYArOFlp9t65C8+zDijAyDAurMY4gkkjFkwY=
 github.com/hermeznetwork/tracerr v0.3.1-0.20210120162744-5da60b576169 h1:I7zgVVlOgf+26yrrKKY9UT+9f73qqlNBGX6C9MPXnk4=
 github.com/hermeznetwork/tracerr v0.3.1-0.20210120162744-5da60b576169/go.mod h1:nsWC1+tc4qUEbUGRv4DcPJJTjLsedlPajlFmpJoohK4=
 github.com/holiman/bloomfilter/v2 v2.0.3 h1:73e0e/V0tCydx14a0SCYS/EWCxgwLZ18CZcZKVu0fao=
@@ -902,7 +904,6 @@ github.com/markbates/oncer v1.0.0 h1:E83IaVAHygyndzPimgUYJjbshhDTALZyXxvk9FOlQRY
 github.com/markbates/oncer v1.0.0/go.mod h1:Z59JA581E9GP6w96jai+TGqafHPW+cPfRxz2aSZ0mcI=
 github.com/markbates/safe v1.0.1 h1:yjZkbvRM6IzKj9tlu/zMJLS0n/V351OZWRnF3QfaUxI=
 github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kNSCBdG0=
-github.com/matryer/is v1.4.0/go.mod h1:8I/i5uYgLzgsgEloJE1U6xx5HkBQpAZvepWuujKwMRU=
 github.com/marten-seemann/qpack v0.2.1/go.mod h1:F7Gl5L1jIgN1D11ucXefiuJS9UMVP2opoCp2jDKb7wc=
 github.com/marten-seemann/qtls v0.10.0 h1:ECsuYUKalRL240rRD4Ri33ISb7kAQ3qGDlrrl55b2pc=
 github.com/marten-seemann/qtls v0.10.0/go.mod h1:UvMd1oaYDACI99/oZUYLzMCkBXQVT0aGm99sJhbT8hs=
@@ -910,6 +911,7 @@ github.com/marten-seemann/qtls-go1-15 v0.1.1 h1:LIH6K34bPVttyXnUWixk0bzH6/N07Vxb
 github.com/marten-seemann/qtls-go1-15 v0.1.1/go.mod h1:GyFwywLKkRt+6mfU99csTEY1joMZz5vmB1WNZH3P81I=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd h1:br0buuQ854V8u83wA0rVZ8ttrq5CpaPZdvrK0LP2lOk=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd/go.mod h1:QuCEs1Nt24+FYQEqAAncTDPJIuGs+LxK1MCiFL25pMU=
+github.com/matryer/is v1.4.0/go.mod h1:8I/i5uYgLzgsgEloJE1U6xx5HkBQpAZvepWuujKwMRU=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.0/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.1/go.mod h1:FuOcm+DKB9mbwrcAfNl7/TZVBZ6rcnceauSikq3lYCQ=
