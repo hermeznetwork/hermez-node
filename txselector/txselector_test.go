@@ -620,7 +620,7 @@ func TestTransferManyFromSameAccount(t *testing.T) {
 	assert.Equal(t, 3, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 7, len(oL2Txs))
-	assert.Equal(t, 4, len(discardedL2Txs))
+	assert.Equal(t, 0, len(discardedL2Txs))
 
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.localAccountsDB.CurrentBatch())
