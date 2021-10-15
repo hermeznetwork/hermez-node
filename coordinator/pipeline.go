@@ -521,7 +521,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 	batchInfo.Debug.StartBlockNum = p.stats.Eth.LastBlock.Num + 1
 
 	var poolL2Txs []common.PoolL2Tx
-	// var discardedL2Txs []common.PoolL2Tx
+	var discardedL2Txs []common.PoolL2Tx
 	var l1UserTxs, l1CoordTxs []common.L1Tx
 	var auths [][]byte
 	var coordIdxs []common.Idx
@@ -549,7 +549,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 			return nil, nil, tracerr.Wrap(err)
 		}
 
-		coordIdxs, auths, l1UserTxs, l1CoordTxs, poolL2Txs, _, err =
+		coordIdxs, auths, l1UserTxs, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
 			p.txSelector.GetL1L2TxSelection(p.cfg.TxProcessorConfig, _l1UserTxs, l1UserFutureTxs)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
@@ -563,7 +563,7 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 		}
 
 		// 2b: only L2 txs
-		coordIdxs, auths, l1CoordTxs, poolL2Txs, _, err =
+		coordIdxs, auths, l1CoordTxs, poolL2Txs, discardedL2Txs, err =
 			p.txSelector.GetL2TxSelection(p.cfg.TxProcessorConfig, l1UserFutureTxs)
 		if err != nil {
 			return nil, nil, tracerr.Wrap(err)
@@ -597,9 +597,9 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 		batchInfo.BatchNum); err != nil {
 		return nil, nil, tracerr.Wrap(err)
 	}
-	// if err := p.l2DB.UpdateTxsInfo(discardedL2Txs, batchInfo.BatchNum); err != nil {
-	// 	return nil, nil, tracerr.Wrap(err)
-	// }
+	if err := p.l2DB.UpdateTxsInfo(discardedL2Txs, batchInfo.BatchNum); err != nil {
+		return nil, nil, tracerr.Wrap(err)
+	}
 
 	// Invalidate transactions that become invalid because of
 	// the poolL2Txs selected.  Will mark as invalid the txs that have a
