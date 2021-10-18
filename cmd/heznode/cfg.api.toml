@@ -3,7 +3,7 @@ Address = "localhost:8386"
 Explorer = true
 MaxSQLConnections = 10
 SQLConnectionTimeout = "2s"
-CoordinatorNetwork = true
+CoordinatorNetwork = false
 FindPeersCoordinatorNetworkInterval = "300s"
 
 [PostgreSQL]
