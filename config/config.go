@@ -416,8 +416,12 @@ type LogConf struct {
 
 // LoadNode loads the Node configuration from path.
 func LoadNode(path string, coordinator bool) (*Node, error) {
-	var cfg Node
-	err := configLibrary.LoadConfig(path, DefaultValues, &cfg)
+	var cfg, aux Node
+	err := configLibrary.SourceParamsHezNode(path, &cfg, &aux)
+	if err != nil {
+		log.Println("Error SourceParamsHezNode: ", err.Error())
+	}
+	err = configLibrary.LoadConfig(path, DefaultValues, &cfg)
 	if err != nil {
 		//Split errors depending on if there is a file error, a env error or a default error
 		if strings.Contains(err.Error(), "default") {
@@ -434,13 +438,18 @@ func LoadNode(path string, coordinator bool) (*Node, error) {
 			return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 		}
 	}
+	log.Printf("Loaded Configuration: %+v", cfg)
 	return &cfg, nil
 }
 
 // LoadAPIServer loads the APIServer configuration from path.
 func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
-	var cfg APIServer
-	err := configLibrary.LoadConfig(path, DefaultValues, &cfg)
+	var cfg, aux APIServer
+	err := configLibrary.SourceParamsHezNode(path, &cfg, &aux)
+	if err != nil {
+		log.Println("Error SourceParamsHezNode: ", err.Error())
+	}
+	err = configLibrary.LoadConfig(path, DefaultValues, &cfg)
 	if err != nil {
 		//Split errors depending on if there is a file error, a env error or a default error
 		if strings.Contains(err.Error(), "default") {
@@ -457,5 +466,6 @@ func LoadAPIServer(path string, coordinator bool) (*APIServer, error) {
 			return nil, tracerr.Wrap(fmt.Errorf("error validating configuration file: %w", err))
 		}
 	}
+	log.Printf("Loaded Configuration: %+v", cfg)
 	return &cfg, nil
 }
