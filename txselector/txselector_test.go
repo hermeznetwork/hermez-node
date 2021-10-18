@@ -620,7 +620,7 @@ func TestTransferManyFromSameAccount(t *testing.T) {
 	assert.Equal(t, 3, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
 	assert.Equal(t, 7, len(oL2Txs))
-	assert.Equal(t, 4, len(discardedL2Txs))
+	assert.Equal(t, 0, len(discardedL2Txs))
 
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
 		txsel.localAccountsDB.CurrentBatch())
@@ -933,7 +933,7 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 	require.Equal(t, 0, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
 	require.Equal(t, 5, len(oL2Txs))         // the 3 txs A-B
-	require.Equal(t, 6, len(discardedL2Txs)) // the 8 txs B-A
+	require.Equal(t, 0, len(discardedL2Txs)) // the 8 txs B-A
 	require.Equal(t, 0, len(accAuths))
 
 	err = txsel.l2db.StartForging(common.TxIDsFromPoolL2Txs(oL2Txs),
@@ -948,7 +948,7 @@ func TestValidTxsWithLowFeeAndInvalidTxsWithHighFee(t *testing.T) {
 	require.Equal(t, 0, len(oL1UserTxs))
 	require.Equal(t, 0, len(oL1CoordTxs))
 	require.Equal(t, 5, len(oL2Txs))
-	require.Equal(t, 1, len(discardedL2Txs))
+	require.Equal(t, 0, len(discardedL2Txs))
 	require.Equal(t, 0, len(accAuths))
 
 	stateDB.Close()

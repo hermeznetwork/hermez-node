@@ -470,15 +470,7 @@ func (txsel *TxSelector) processL2Txs(
 					l2Txs[i].AtomicGroupID.String(),
 				))
 			}
-			// no more available slots for L2Txs, so mark this tx
-			// but also the rest of remaining txs as discarded
-			for j := i; j < len(l2Txs); j++ {
-				l2Txs[i].Info = obj.Message
-				l2Txs[i].ErrorCode = obj.Code
-				l2Txs[i].ErrorType = obj.Type
-				nonSelectedL2Txs = append(nonSelectedL2Txs, l2Txs[j])
-			}
-			break
+			continue
 		}
 
 		// Reject tx if the batch that is being selected is greater than MaxNumBatch
