@@ -339,31 +339,34 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				p.wg.Done()
 				return
 			case batchInfo := <-batchChSentServerProof:
-				// Once errAtBatchNum != 0, we stop forging
-				// batches because there's been an error and we
-				// wait for the pipeline to be stopped.
-				if p.getErrAtBatchNum() != 0 {
-					p.revertPoolChanges(batchNum)
-					continue
-				}
-				err := p.waitServerProof(p.ctx, batchInfo)
-				if p.ctx.Err() != nil {
-					p.revertPoolChanges(batchNum)
-					continue
-				} else if err != nil {
-					log.Errorw("waitServerProof", "err", err)
-					p.setErrAtBatchNum(batchInfo.BatchNum)
-					p.coord.SendMsg(p.ctx, MsgStopPipeline{
-						Reason: fmt.Sprintf(
-							"Pipeline.waitServerProof: %v", err),
-						FailedBatchNum: batchInfo.BatchNum,
-					})
-					p.revertPoolChanges(batchNum)
-					continue
-				}
-				// We are done with this serverProof, add it back to the pool
-				p.proversPool.Add(p.ctx, batchInfo.ServerProof)
-				p.txManager.AddBatch(p.ctx, batchInfo)
+
+				go func() {
+					// Once errAtBatchNum != 0, we stop forging
+					// batches because there's been an error and we
+					// wait for the pipeline to be stopped.
+					if p.getErrAtBatchNum() != 0 {
+						p.revertPoolChanges(batchNum)
+						return
+					}
+					err := p.waitServerProof(p.ctx, batchInfo)
+					if p.ctx.Err() != nil {
+						p.revertPoolChanges(batchNum)
+						return
+					} else if err != nil {
+						log.Errorw("waitServerProof", "err", err)
+						p.setErrAtBatchNum(batchInfo.BatchNum)
+						p.coord.SendMsg(p.ctx, MsgStopPipeline{
+							Reason: fmt.Sprintf(
+								"Pipeline.waitServerProof: %v", err),
+							FailedBatchNum: batchInfo.BatchNum,
+						})
+						p.revertPoolChanges(batchNum)
+						return
+					}
+					// We are done with this serverProof, add it back to the pool
+					p.proversPool.Add(p.ctx, batchInfo.ServerProof)
+					p.txManager.AddBatch(p.ctx, batchInfo)
+				}()
 			}
 		}
 	}()

@@ -515,6 +515,20 @@ func (t *TxManager) Run(ctx context.Context) {
 				continue
 			}
 		case batchInfo := <-t.batchCh:
+			// when using multiple provers, a prover forging a future batch can
+			// finish computing the proof before other prover computing the proof
+			// for the next batch, we need to make sure the batch being forged is
+			// the next in the sequence, if it is not, we wait a bit and add it
+			// again to the channel, allowing it to be processed in the future
+			if batchInfo.BatchNum > t.lastSuccessBatch+1 {
+				go func() {
+					const secondsBeforeReadingBatchToChannel = 10
+					time.Sleep(secondsBeforeReadingBatchToChannel * time.Second)
+					t.batchCh <- batchInfo
+				}()
+				continue
+			}
+
 			if batchInfo.PipelineNum < t.minPipelineNum {
 				log.Warnw("TxManager: batchInfo received pipelineNum < minPipelineNum",
 					"num", batchInfo.PipelineNum, "minNum", t.minPipelineNum)
