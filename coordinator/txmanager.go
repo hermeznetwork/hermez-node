@@ -520,7 +520,7 @@ func (t *TxManager) Run(ctx context.Context) {
 			// for the next batch, we need to make sure the batch being forged is
 			// the next in the sequence, if it is not, we wait a bit and add it
 			// again to the channel, allowing it to be processed in the future
-			if batchInfo.BatchNum > t.lastSuccessBatch+1 {
+			if batchInfo.BatchNum > t.lastSuccessBatch+1 && t.lastSuccessBatch != 0 {
 				go func(t *TxManager, batchInfo *BatchInfo) {
 					const secondsBeforeReadingBatchToChannel = 10
 					time.Sleep(secondsBeforeReadingBatchToChannel * time.Second)
