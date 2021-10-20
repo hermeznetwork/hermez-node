@@ -339,8 +339,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				p.wg.Done()
 				return
 			case batchInfo := <-batchChSentServerProof:
-
-				go func() {
+				go func(p *Pipeline, batchInfo *BatchInfo, batchNum common.BatchNum) {
 					// Once errAtBatchNum != 0, we stop forging
 					// batches because there's been an error and we
 					// wait for the pipeline to be stopped.
@@ -366,7 +365,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 					// We are done with this serverProof, add it back to the pool
 					p.proversPool.Add(p.ctx, batchInfo.ServerProof)
 					p.txManager.AddBatch(p.ctx, batchInfo)
-				}()
+				}(p, batchInfo, batchNum)
 			}
 		}
 	}()
