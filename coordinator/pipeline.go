@@ -235,13 +235,7 @@ func (p *Pipeline) handleForgeBatch(ctx context.Context,
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	} else if err != nil {
-		if tracerr.Unwrap(err) == errLastL1BatchNotSynced {
-			log.Warnw("forgeBatch: scheduled L1Batch too early", "err", err,
-				"lastForgeL1TxsNum", p.state.lastForgeL1TxsNum,
-				"syncLastForgeL1TxsNum", p.stats.Sync.LastForgeL1TxsNum)
-		} else {
-			log.Errorw("forgeBatch", "err", err)
-		}
+		log.Errorw("forgeBatch", "err", err)
 		return nil, tracerr.Wrap(err)
 	} else if skipReason != nil {
 		log.Debugw("skipping batch", "batch", batchNum, "reason", *skipReason)
@@ -301,8 +295,7 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				if p.ctx.Err() != nil {
 					p.revertPoolChanges(batchNum)
 					continue
-				} else if tracerr.Unwrap(err) == errLastL1BatchNotSynced ||
-					tracerr.Unwrap(err) == errSkipBatchByPolicy {
+				} else if tracerr.Unwrap(err) == errSkipBatchByPolicy {
 					p.revertPoolChanges(batchNum)
 					continue
 				} else if err != nil {
@@ -535,9 +528,6 @@ func (p *Pipeline) forgeBatch(batchNum common.BatchNum) (batchInfo *BatchInfo,
 	// 1. Decide if we forge L2Tx or L1+L2Tx
 	if p.shouldL1L2Batch(batchInfo) {
 		batchInfo.L1Batch = true
-		if p.state.lastForgeL1TxsNum != p.stats.Sync.LastForgeL1TxsNum {
-			return nil, nil, tracerr.Wrap(errLastL1BatchNotSynced)
-		}
 		// 2a: L1+L2 txs
 		_l1UserTxs, err := p.historyDB.GetUnforgedL1UserTxs(p.state.lastForgeL1TxsNum + 1)
 		if err != nil {
