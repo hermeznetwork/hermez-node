@@ -522,8 +522,8 @@ func (t *TxManager) Run(ctx context.Context) {
 			// again to the channel, allowing it to be processed in the future
 			if batchInfo.BatchNum > t.lastSuccessBatch+1 && t.lastSuccessBatch != 0 {
 				go func(t *TxManager, batchInfo *BatchInfo) {
-					const secondsBeforeReadingBatchToChannel = 10
-					time.Sleep(secondsBeforeReadingBatchToChannel * time.Second)
+					const secondsBeforeReadingBatchToChannel = 500
+					time.Sleep(secondsBeforeReadingBatchToChannel * time.Millisecond)
 					t.batchCh <- batchInfo
 				}(t, batchInfo)
 				continue
