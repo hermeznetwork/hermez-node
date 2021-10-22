@@ -311,6 +311,8 @@ func (p *Pipeline) Start(batchNum common.BatchNum,
 				p.lastForgeTime = time.Now()
 
 				p.state.batchNum = batchNum
+				fmt.Println("######### Generating new zkInputs. Batch: ", batchInfo.BatchNum, time.Now())
+				fmt.Println("############## channel: ", len(batchChSentServerProof))
 				select {
 				case batchChSentServerProof <- batchInfo:
 				case <-p.ctx.Done():

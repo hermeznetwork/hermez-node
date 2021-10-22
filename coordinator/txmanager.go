@@ -265,6 +265,7 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 		}
 		// RollupForgeBatch() calls ethclient.SendTransaction()
 		ethTx, err = t.ethClient.RollupForgeBatch(batchInfo.ForgeBatchArgs, auth)
+		log.Warn("ETH TX HASH: ", ethTx, batchInfo.BatchNum, time.Now())
 		// We check the errors via strings because we match the
 		// definition of the error from geth, with the string returned
 		// via RPC obtained by the client.
@@ -521,6 +522,7 @@ func (t *TxManager) Run(ctx context.Context) {
 			// the next in the sequence, if it is not, we wait a bit and add it
 			// again to the channel, allowing it to be processed in the future
 			if batchInfo.BatchNum > t.lastSuccessBatch+1 && t.lastSuccessBatch != 0 {
+				fmt.Println("NOOOOOOOOOOOOOO, ha entrado", batchInfo.BatchNum, t.lastSuccessBatch+1, len(t.batchCh), cap(t.batchCh))
 				go func(t *TxManager, batchInfo *BatchInfo) {
 					const waitIntervalBeforeWritingBatchToChannel = 500
 					time.Sleep(waitIntervalBeforeWritingBatchToChannel * time.Millisecond)
