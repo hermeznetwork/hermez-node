@@ -201,9 +201,6 @@ func (s *Mock) runProver(ctx context.Context) {
 
 // Run the mock server.  Use ctx to stop it via cancel
 func (s *Mock) Run(ctx context.Context) error {
-
-	log.Init("debug", []string{"stdout"})
-
 	api := gin.Default()
 	api.Use(cors.Default())
 
@@ -219,7 +216,6 @@ func (s *Mock) Run(ctx context.Context) error {
 		WriteTimeout:   30 * time.Second, //nolint:gomnd
 		MaxHeaderBytes: 1 << 20,          //nolint:gomnd
 	}
-
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		return tracerr.Wrap(err)

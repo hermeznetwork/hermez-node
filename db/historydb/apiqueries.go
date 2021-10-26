@@ -12,7 +12,6 @@ import (
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
-	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
@@ -1127,12 +1126,6 @@ func (hdb *HistoryDB) GetAccountsAPI(
 
 // GetCommonAccountAPI returns the account associated to an account idx
 func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, error) {
-
-	start := time.Now()
-	defer func(s time.Time) {
-		log.Debugf("PERFORMANCE BENCHMARK[GetCommonAccountAPI]: %dms", time.Since(s).Milliseconds())
-	}(start)
-
 	cancel, err := hdb.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
