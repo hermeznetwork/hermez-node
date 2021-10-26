@@ -165,6 +165,12 @@ func (acc *APIConnectionController) Acquire() (context.CancelFunc, error) {
 
 // Release frees a SQL connection
 func (acc *APIConnectionController) Release() {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[Release]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	acc.smphr.Release(1)
 }
 
