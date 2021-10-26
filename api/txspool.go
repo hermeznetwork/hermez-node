@@ -19,6 +19,12 @@ import (
 const sqlError = "500 - sql error"
 
 func (a *API) postPoolTx(c *gin.Context) {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[postPoolTx]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	// Parse body
 	var receivedTx common.PoolL2Tx
 	if err := c.ShouldBindJSON(&receivedTx); err != nil {
