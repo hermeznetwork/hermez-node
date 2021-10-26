@@ -154,11 +154,6 @@ func NewAPIConnectionController(maxConnections int, timeout time.Duration) *APIC
 // Acquire reserves a SQL connection. If the connection is not acquired
 // within the timeout, the function will return an error
 func (acc *APIConnectionController) Acquire() (context.CancelFunc, error) {
-	start := time.Now()
-	defer func(s time.Time) {
-		log.Debugf("PERFORMANCE BENCHMARK[Acquire]: %dms", time.Since(s).Milliseconds())
-	}(start)
-
 	ctx, cancel := context.WithTimeout(context.Background(), acc.timeout) //nolint:govet
 	return cancel, acc.smphr.Acquire(ctx, 1)
 }
