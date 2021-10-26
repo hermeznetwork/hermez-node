@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api/parsers"
@@ -56,6 +57,12 @@ func (a *API) coordnetPoolTxHandler(tx common.PoolL2Tx) error {
 }
 
 func (a *API) validateAndStorePoolTx(tx common.PoolL2Tx) *apiError {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[validateAndStorePoolTx]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	// Check if tx is atomic (has any non 0ed Rq* field)
 	if isAtomic(tx) {
 		return &apiError{
@@ -277,6 +284,12 @@ func (a *API) getPoolTxs(c *gin.Context) {
 }
 
 func (a *API) verifyPoolL2Tx(tx common.PoolL2Tx) *apiError {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[verifyPoolL2Tx]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	// Check type and id
 	_, err := common.NewPoolL2Tx(&tx)
 	if err != nil {

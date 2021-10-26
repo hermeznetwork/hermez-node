@@ -3,12 +3,14 @@ package l2db
 import (
 	"fmt"
 	"math/big"
+	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/common/apitypes"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
 	"github.com/hermeznetwork/hermez-node/db"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
@@ -48,6 +50,12 @@ func (l2db *L2DB) GetAccountCreationAuthAPI(addr ethCommon.Address) (*AccountCre
 
 // AddTxAPI inserts a tx to the pool
 func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[VerifySignature]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"time"
 
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 )
 
@@ -46,6 +48,12 @@ func (f FeeSelector) Percentage() float64 {
 // CalcFeeAmount calculates the fee amount in tokens from an amount and
 // feeSelector (fee index).
 func CalcFeeAmount(amount *big.Int, feeSel FeeSelector) (*big.Int, error) {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[CalcFeeAmount]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	feeAmount := new(big.Int).Mul(amount, FeeFactorLsh60[int(feeSel)])
 	if feeSel < 192 { //nolint:gomnd
 		feeAmount.Rsh(feeAmount, 60)

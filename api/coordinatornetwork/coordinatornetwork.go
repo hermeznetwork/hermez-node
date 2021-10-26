@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"strconv"
+	"time"
 
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/log"
@@ -80,6 +81,12 @@ func NewCoordinatorNetwork(
 
 // PublishTx send a L2 transaction to the coordinators network
 func (coordnet CoordinatorNetwork) PublishTx(tx common.PoolL2Tx) error {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[PublishTx]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	return coordnet.txsPool.publish(tx)
 }
 

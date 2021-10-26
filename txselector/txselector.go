@@ -265,11 +265,27 @@ START_SELECTION:
 		}
 	}
 
+	///////////////////
+
+	// is the number of transactions enough to start forging a new batch?
+	//
+	// if yes
+	//   start to select the transactions from the pending ones to forge the new batch
+	//
+	// if no
+	//	 wait X time and check again
+	//   if it still not enough, but the size of the pool is the same, forge the batch with the found ones
+	//	 if it is still not enough, but the size of the pool has changed, start counting a limit of cycles, wait X time and check again
+	//	 if the limit of cycles is reached, forge the batch with the ones which were found.
+
+	////////////////////
+
 	// Get pending txs from the pool
 	l2TxsFromDB, err := txsel.l2db.GetPendingTxs()
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, tracerr.Wrap(err)
 	}
+
 	// Filter transactions belonging to failed atomic groups
 	selectableTxsTmp, discardedTxs := filterFailedAtomicGroups(l2TxsFromDB, failedAtomicGroups)
 	// Filter invalid atomic groups

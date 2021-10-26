@@ -10,6 +10,7 @@ import (
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-node/common/nonce"
+	"github.com/hermeznetwork/hermez-node/log"
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -84,6 +85,12 @@ type TxSelectorError struct {
 // NewPoolL2Tx returns the given L2Tx with the TxId & Type parameters calculated
 // from the L2Tx values
 func NewPoolL2Tx(tx *PoolL2Tx) (*PoolL2Tx, error) {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[NewPoolL2Tx]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	txTypeOld := tx.Type
 	if err := tx.SetType(); err != nil {
 		return nil, tracerr.Wrap(err)
@@ -355,6 +362,12 @@ func (tx *PoolL2Tx) HashToSign(chainID uint16) (*big.Int, error) {
 
 // VerifySignature returns true if the signature verification is correct for the given PublicKeyComp
 func (tx *PoolL2Tx) VerifySignature(chainID uint16, pkComp babyjub.PublicKeyComp) bool {
+
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[VerifySignature]: %dms", time.Since(s).Milliseconds())
+	}(start)
+
 	h, err := tx.HashToSign(chainID)
 	if err != nil {
 		return false
