@@ -33,6 +33,7 @@ import (
 	"github.com/hermeznetwork/tracerr"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/jmoiron/sqlx"
+	"github.com/hermeznetwork/hermez-node/log"
 
 	//nolint:errcheck // driver for postgres DB
 	_ "github.com/lib/pq"
@@ -169,6 +170,10 @@ func (l2db *L2DB) AddTxTest(tx *common.PoolL2Tx) error {
 // Insert PoolL2Tx transactions into the pool. If checkPoolIsFull is set to true the insert will
 // fail if the pool is fool and errPoolFull will be returned
 func (l2db *L2DB) addTxs(txs []common.PoolL2Tx, checkPoolIsFull bool) error {
+	start := time.Now()
+	defer func(s time.Time) {
+		log.Debugf("PERFORMANCE BENCHMARK[AddTxAPI]: %dms", time.Since(s).Milliseconds())
+	}(start)
 	// Set the columns that will be affected by the insert on the table
 	const queryInsertPart = `INSERT INTO tx_pool (
 		tx_id, from_idx, to_idx, to_eth_addr, to_bjj, token_id,

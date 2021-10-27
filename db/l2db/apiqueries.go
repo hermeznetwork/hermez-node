@@ -53,19 +53,25 @@ func (l2db *L2DB) AddTxAPI(tx *common.PoolL2Tx) error {
 
 	start := time.Now()
 	defer func(s time.Time) {
-		log.Debugf("PERFORMANCE BENCHMARK[VerifySignature]: %dms", time.Since(s).Milliseconds())
+		log.Debugf("PERFORMANCE BENCHMARK[AddTxAPI]: %dms", time.Since(s).Milliseconds())
 	}(start)
 
+	start = time.Now()
 	cancel, err := l2db.apiConnCon.Acquire()
 	defer cancel()
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
+	log.Debugf("PERFORMANCE BENCHMARK[AddTxAPI] Acquire: %dms", time.Since(start).Milliseconds())
+
 	defer l2db.apiConnCon.Release()
+	start = time.Now()
 	// Check fee is in range
 	if err = l2db.checkFeeIsInRange(tx); err != nil {
 		return tracerr.Wrap(err)
 	}
+	log.Debugf("PERFORMANCE BENCHMARK[AddTxAPI] checkFeeIsInRange: %dms", time.Since(start).Milliseconds())
+
 	// Add tx if pool is not full
 	return tracerr.Wrap(
 		l2db.addTxs([]common.PoolL2Tx{*tx}, true),
