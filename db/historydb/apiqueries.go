@@ -1150,15 +1150,13 @@ func (hdb *HistoryDB) GetCommonAccountAPI(idx common.Idx) (*common.Account, erro
 	}
 	account := &fullAccount{}
 	if err := meddler.QueryRow(
-		hdb.dbRead, account, `SELECT account.idx, token_id, batch_num, bjj, eth_addr, au.nonce, au.balance
-		FROM account INNER JOIN (
-			SELECT DISTINCT idx,
-			first_value(nonce) OVER w AS nonce,
-			first_value(balance) OVER w AS balance
-			FROM account_update
-			WINDOW w as (PARTITION BY idx ORDER BY item_id DESC)
-		) AS au ON au.idx = account.idx
-		WHERE account.idx = $1;`, idx,
+		hdb.dbRead, account, `SELECT distinct on (a.idx) a.idx, a.token_id, a.batch_num, a.bjj, 
+			a.eth_addr, coalesce(au.nonce, 0) as nonce, coalesce(au.balance, 0) as balance
+		FROM account a
+	    LEFT JOIN account_update au
+			ON a.idx = au.idx
+	   	WHERE a.idx = $1
+	   	ORDER BY a.idx, au.eth_block_num desc;`, idx,
 	); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
