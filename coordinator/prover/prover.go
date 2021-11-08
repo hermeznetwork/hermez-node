@@ -235,7 +235,9 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	if err != nil {
 		return tracerr.Wrap(err)
 	}
-	log.Debug("ZK-INPUT: sending request to proof server")
+	if path == "input" {
+		log.Debug("ZK-INPUT: sending request to proof server")
+	}
 	res, err := p.client.Do(req.WithContext(ctx), ret, &errSrv)
 	if err != nil {
 		return tracerr.Wrap(err)
@@ -244,7 +246,9 @@ func (p *ProofServerClient) apiRequest(ctx context.Context, method apiMethod, pa
 	if !(200 <= res.StatusCode && res.StatusCode < 300) {
 		return tracerr.Wrap(errSrv)
 	}
-	log.Debug("ZK-INPUT: request sent successfully")
+	if path == "input" {
+		log.Debug("ZK-INPUT: request sent successfully")
+	}
 	return nil
 }
 

@@ -64,10 +64,7 @@ import (
 	"github.com/hermeznetwork/tracerr"
 )
 
-var (
-	errLastL1BatchNotSynced = fmt.Errorf("last L1Batch not synced yet")
-	errSkipBatchByPolicy    = fmt.Errorf("skip batch by policy")
-)
+var errSkipBatchByPolicy = fmt.Errorf("skip batch by policy")
 
 const (
 	queueLen         = 16

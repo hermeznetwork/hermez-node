@@ -201,6 +201,7 @@ func (s *Mock) runProver(ctx context.Context) {
 
 // Run the mock server.  Use ctx to stop it via cancel
 func (s *Mock) Run(ctx context.Context) error {
+	log.Init("debug", []string{"stdout"})
 	api := gin.Default()
 	api.Use(cors.Default())
 
