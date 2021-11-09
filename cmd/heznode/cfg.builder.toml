@@ -17,6 +17,9 @@
 #MaxSQLConnections = 100
 ### Maximum amount of time that an API request can wait to establish a SQL connection
 #SQLConnectionTimeout = "2s"
+#CoordinatorNetwork = true
+#FindPeersCoordinatorNetworkInterval = "300s"
+
 
 #[Debug]
 ### If it is set, the debug api will listen in this address and port
