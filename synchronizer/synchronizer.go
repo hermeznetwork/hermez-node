@@ -40,6 +40,7 @@ import (
 	"sync"
 	"time"
 
+	rpc "github.com/centrifuge/go-substrate-rpc-client/v4/gethrpc"
 	"github.com/ethereum/go-ethereum"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -74,6 +75,13 @@ type Stats struct {
 		LastBlock                   common.Block
 		LastBatchNum                int64
 	}
+	Avail struct {
+		UpdateBlockNumDiffThreshold uint16
+		UpdateFrequencyDivider      uint16
+		FirstBlockNum               uint32
+		LastBlock                   common.BlockAvail
+		LastBatchNum                int64
+	}
 	Sync struct {
 		Updated   time.Time
 		LastBlock common.Block
@@ -102,11 +110,16 @@ type StatsHolder struct {
 }
 
 // NewStatsHolder creates a new StatsHolder
-func NewStatsHolder(firstBlockNum int64, updateBlockNumDiffThreshold uint16, updateFrequencyDivider uint16) *StatsHolder {
+func NewStatsHolder(firstBlockNum int64, firstAvailBlockNum uint32, updateBlockNumDiffThreshold uint16, updateFrequencyDivider uint16) *StatsHolder {
 	stats := Stats{}
 	stats.Eth.UpdateBlockNumDiffThreshold = updateBlockNumDiffThreshold
 	stats.Eth.UpdateFrequencyDivider = updateFrequencyDivider
 	stats.Eth.FirstBlockNum = firstBlockNum
+
+	stats.Avail.FirstBlockNum = firstAvailBlockNum
+	stats.Avail.UpdateBlockNumDiffThreshold = updateBlockNumDiffThreshold
+	stats.Avail.UpdateFrequencyDivider = updateFrequencyDivider
+
 	stats.Sync.LastForgeL1TxsNum = -1
 	return &StatsHolder{Stats: stats}
 }
@@ -149,6 +162,17 @@ func (s *StatsHolder) UpdateEth(ethClient eth.ClientInterface) error {
 	s.rw.Lock()
 	s.Eth.LastBlock = *lastBlock
 	s.Eth.LastBatchNum = lastBatchNum
+	s.rw.Unlock()
+	return nil
+}
+
+func (s *StatsHolder) UpdateAvail(cl availClient) error {
+	lastBlock, err := cl.GetLastBlock()
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("GetBlockByNumber: %w", err))
+	}
+	s.rw.Lock()
+	s.Avail.LastBlock = *lastBlock
 	s.rw.Unlock()
 	return nil
 }
@@ -207,26 +231,30 @@ type StartBlockNums struct {
 type Config struct {
 	StatsUpdateBlockNumDiffThreshold uint16
 	StatsUpdateFrequencyDivider      uint16
-	ChainID                          uint16
+	StatsStartAvailBlock             uint32
+	Stats
+	ChainID uint16
 }
 
 // Synchronizer implements the Synchronizer type
 type Synchronizer struct {
-	EthClient        eth.ClientInterface
-	consts           common.SCConsts
-	historyDB        *historydb.HistoryDB
-	l2DB             *l2db.L2DB
-	stateDB          *statedb.StateDB
-	cfg              Config
-	initVars         common.SCVariables
-	startBlockNum    int64
-	vars             common.SCVariables
-	stats            *StatsHolder
-	resetStateFailed bool
+	EthClient          eth.ClientInterface
+	AvailClient        availClient
+	consts             common.SCConsts
+	historyDB          *historydb.HistoryDB
+	l2DB               *l2db.L2DB
+	stateDB            *statedb.StateDB
+	cfg                Config
+	initVars           common.SCVariables
+	startBlockNum      int64
+	startBlockNumAvail uint32
+	vars               common.SCVariables
+	stats              *StatsHolder
+	resetStateFailed   bool
 }
 
 // NewSynchronizer creates a new Synchronizer
-func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.HistoryDB,
+func NewSynchronizer(ethClient eth.ClientInterface, availClient availClient, historyDB *historydb.HistoryDB,
 	l2DB *l2db.L2DB, stateDB *statedb.StateDB, cfg Config) (*Synchronizer, error) {
 	auctionConstants, err := ethClient.AuctionConstants()
 	if err != nil {
@@ -267,17 +295,22 @@ func NewSynchronizer(ethClient eth.ClientInterface, historyDB *historydb.History
 	if startBlockNums.WDelayer < startBlockNum {
 		startBlockNum = startBlockNums.WDelayer
 	}
-	stats := NewStatsHolder(startBlockNum, cfg.StatsUpdateBlockNumDiffThreshold, cfg.StatsUpdateFrequencyDivider)
+
+	startBlockNumAvail := uint32(1)
+
+	stats := NewStatsHolder(startBlockNum, cfg.StatsStartAvailBlock, cfg.StatsUpdateBlockNumDiffThreshold, cfg.StatsUpdateFrequencyDivider)
 	s := &Synchronizer{
-		EthClient:     ethClient,
-		consts:        consts,
-		historyDB:     historyDB,
-		l2DB:          l2DB,
-		stateDB:       stateDB,
-		cfg:           cfg,
-		initVars:      *initVars,
-		startBlockNum: startBlockNum,
-		stats:         stats,
+		EthClient:          ethClient,
+		AvailClient:        availClient,
+		consts:             consts,
+		historyDB:          historyDB,
+		l2DB:               l2DB,
+		stateDB:            stateDB,
+		cfg:                cfg,
+		initVars:           *initVars,
+		startBlockNum:      startBlockNum,
+		startBlockNumAvail: startBlockNumAvail,
+		stats:              stats,
 	}
 	return s, s.init()
 }
@@ -680,6 +713,115 @@ func (s *Synchronizer) Sync(ctx context.Context,
 	return blockData, nil, nil
 }
 
+func (s *Synchronizer) SyncAvail(ctx context.Context, lastSavedBlock *common.BlockAvail) (blockData *common.BlockAvail, err error) {
+	var nextBlockNum uint32
+	if lastSavedBlock == nil {
+		lastSavedBlock, err = s.historyDB.GetLastAvailBlock()
+		if err != nil && tracerr.Unwrap(err) != sql.ErrNoRows {
+			return nil, tracerr.Wrap(err)
+		}
+		if tracerr.Unwrap(err) == sql.ErrNoRows || lastSavedBlock.Num == 0 {
+			nextBlockNum = s.startBlockNumAvail
+			lastSavedBlock = nil
+		}
+	}
+
+	if lastSavedBlock != nil {
+		nextBlockNum = lastSavedBlock.Num + 1
+		if lastSavedBlock.Num < s.startBlockNumAvail {
+			return nil, tracerr.Wrap(
+				fmt.Errorf("lastSavedBlock (%v) < startBlockNum (%v)",
+					lastSavedBlock.Num, s.startBlockNum))
+		}
+	}
+	if lastSavedBlock != nil {
+		fmt.Println(nextBlockNum)
+	}
+	availBlock, err := s.AvailClient.GetBlockByNumber(uint64(nextBlockNum))
+
+	if tracerr.Unwrap(err) == rpc.ErrNoResult {
+		return nil, nil
+	} else if err != nil {
+		return nil, tracerr.Wrap(fmt.Errorf("GetBlockByNumber: %w", err))
+	}
+	log.Debugw("availBlock: num: %v, parent: %v, hash: %v", availBlock.Num, availBlock.ParentHash, availBlock.Hash)
+
+	if nextBlockNum+uint32(s.stats.Avail.UpdateBlockNumDiffThreshold) >= s.stats.Avail.LastBlock.Num ||
+		nextBlockNum%uint32(s.stats.Avail.UpdateFrequencyDivider) == 0 {
+		if err := s.stats.UpdateAvail(s.AvailClient); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	}
+
+	log.Debugw("Syncing...", "block", nextBlockNum, "availLastBlock", s.stats.Avail.LastBlock)
+
+	if lastSavedBlock != nil {
+		if lastSavedBlock.Hash != availBlock.ParentHash {
+			log.Debugw("Reorg Detected",
+				"blockNum", availBlock.Num,
+				"block.parent(got)", availBlock.ParentHash, "parent.hash(exp)", lastSavedBlock.Hash)
+			// TODO do reorg
+			return nil, nil
+		}
+	}
+
+	defer func() {
+		// If there was an error during sync, reset to the last block
+		// in the historyDB because the historyDB is written last in
+		// the Sync method and is the source of consistency.  This
+		// allows resetting the stateDB in the case a batch was
+		// processed but the historyDB block was not committed due to an
+		// error.
+		// TODO adopt to avail
+		if err != nil {
+			if err2 := s.resetIntermediateState(); err2 != nil {
+				log.Errorw("sync revert", "err", err2)
+			}
+		}
+	}()
+
+	err = s.historyDB.AddAvailBlock(availBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range availBlock.L2Txs {
+		if err := availBlock.L2Txs[i].SetType(); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+	}
+
+	poolL2Txs := common.L2TxsToPoolL2Txs(availBlock.L2Txs)
+
+	tpc := txprocessor.Config{
+		NLevels:  32,
+		MaxTx:    256,
+		ChainID:  s.cfg.ChainID,
+		MaxFeeTx: common.RollupConstMaxFeeIdxCoordinator,
+		MaxL1Tx:  common.RollupConstMaxL1Tx,
+	}
+
+	tp := txprocessor.NewTxProcessor(s.stateDB, tpc)
+	// processTxsOut
+	_, err = tp.ProcessTxs(nil, nil, nil, poolL2Txs)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+
+	l2Txs := make([]common.L2Tx, len(poolL2Txs))
+	for i, tx := range poolL2Txs {
+		l2Txs[i] = tx.L2Tx()
+		if err := l2Txs[i].SetID(); err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		l2Txs[i].AvailBlockNum = blockData.Num
+		// TODO set batch num
+		l2Txs[i].Position = 0
+	}
+
+	return blockData, nil
+}
+
 // reorg manages a reorg, updating History and State DB as needed.  Keeps
 // checking previous blocks from the HistoryDB against the blockchain until a
 // block hash match is found.  All future blocks in the HistoryDB and
@@ -853,7 +995,6 @@ func (s *Synchronizer) rollupSync(ethBlock *common.Block) (*common.RollupData, e
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-
 	// Get ForgeBatch events to get the L1CoordinatorTxs
 	for _, evtForgeBatch := range rollupEvents.ForgeBatch {
 		batchData := common.NewBatchData()

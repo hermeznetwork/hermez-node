@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/hermeznetwork/hermez-node/avail"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/db/l2db"
 	"github.com/hermeznetwork/hermez-node/eth"
@@ -29,12 +30,14 @@ type TxManager struct {
 	cfg              Config
 	ethClient        eth.ClientInterface
 	etherscanService *etherscan.Service
-	l2DB             *l2db.L2DB   // Used only to mark forged txs as forged in the L2DB
-	coord            *Coordinator // Used only to send messages to stop the pipeline
-	batchCh          chan *BatchInfo
-	chainID          *big.Int
-	account          accounts.Account
-	consts           common.SCConsts
+	avail            *avail.Client
+
+	l2DB    *l2db.L2DB   // Used only to mark forged txs as forged in the L2DB
+	coord   *Coordinator // Used only to send messages to stop the pipeline
+	batchCh chan *BatchInfo
+	chainID *big.Int
+	account accounts.Account
+	consts  common.SCConsts
 
 	stats       synchronizer.Stats
 	vars        common.SCVariables
@@ -57,7 +60,7 @@ type TxManager struct {
 }
 
 // NewTxManager creates a new TxManager
-func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterface, l2DB *l2db.L2DB,
+func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterface, availClient *avail.Client, l2DB *l2db.L2DB,
 	coord *Coordinator, scConsts *common.SCConsts, initSCVars *common.SCVariables, etherscanService *etherscan.Service) (
 	*TxManager, error) {
 	chainID, err := ethClient.EthChainID()
@@ -76,6 +79,7 @@ func NewTxManager(ctx context.Context, cfg *Config, ethClient eth.ClientInterfac
 	return &TxManager{
 		cfg:               *cfg,
 		ethClient:         ethClient,
+		avail:             availClient,
 		etherscanService:  etherscanService,
 		l2DB:              l2DB,
 		coord:             coord,
@@ -306,6 +310,11 @@ func (t *TxManager) sendRollupForgeBatch(ctx context.Context, batchInfo *BatchIn
 	}
 	if !resend {
 		t.accNextNonce = auth.Nonce.Uint64() + 1
+	}
+	args := batchInfo.ForgeBatchArgs
+	err = t.avail.SendTxs(args.NewStRoot, args.L1UserTxs, args.L1CoordinatorTxs, args.L2TxsData)
+	if err != nil {
+		return tracerr.Wrap(fmt.Errorf("failed to send l2txs to the avail, err: %v", err))
 	}
 	batchInfo.EthTxs = append(batchInfo.EthTxs, ethTx)
 	log.Infow("TxManager ethClient.RollupForgeBatch", "batch", batchInfo.BatchNum, "tx", ethTx.Hash())

@@ -213,9 +213,9 @@ func newTestCoordinator(t *testing.T, forgerAddr ethCommon.Address, ethClient *t
 	return coord
 }
 
-func newTestSynchronizer(t *testing.T, ethClient *test.Client, ethClientSetup *test.ClientSetup,
+func newTestSynchronizer(t *testing.T, ethClient *test.Client, ethClientSetup *test.ClientSetup, availClient *test.AvailClient,
 	modules modules) *synchronizer.Synchronizer {
-	sync, err := synchronizer.NewSynchronizer(ethClient, modules.historyDB, modules.l2DB, modules.stateDB,
+	sync, err := synchronizer.NewSynchronizer(ethClient, availClient, modules.historyDB, modules.l2DB, modules.stateDB,
 		synchronizer.Config{
 			StatsUpdateBlockNumDiffThreshold: 100,
 			StatsUpdateFrequencyDivider:      100,
@@ -534,9 +534,10 @@ func TestCoordinatorStress(t *testing.T) {
 	var timer timer
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	etherScanService, _ := etherscan.NewEtherscanService("", "")
+	availClient := test.NewAvailClient()
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
-	syn := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
+	syn := newTestSynchronizer(t, ethClient, ethClientSetup, availClient, modules)
 
 	coord.Start()
 	ctx, cancel := context.WithCancel(context.Background())

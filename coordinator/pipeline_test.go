@@ -184,9 +184,10 @@ func TestPipelineForgeBatchWithTxs(t *testing.T) {
 	ctx := context.Background()
 	ethClient := test.NewClient(true, &timer, &bidder, ethClientSetup)
 	etherScanService, _ := etherscan.NewEtherscanService("", "")
+	availClient := test.NewAvailClient()
 	modules := newTestModules(t)
 	coord := newTestCoordinator(t, forger, ethClient, ethClientSetup, modules, etherScanService)
-	sync := newTestSynchronizer(t, ethClient, ethClientSetup, modules)
+	sync := newTestSynchronizer(t, ethClient, ethClientSetup, availClient, modules)
 
 	// preload the synchronier (via the test ethClient) some tokens and
 	// users with positive balances

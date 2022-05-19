@@ -12,6 +12,7 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/avail"
 	"github.com/hermeznetwork/hermez-node/common"
 	dbUtils "github.com/hermeznetwork/hermez-node/db"
 	"github.com/hermeznetwork/hermez-node/db/historydb"
@@ -358,9 +359,10 @@ func TestSyncGeneral(t *testing.T) {
 	clientSetup.ChainID = big.NewInt(int64(chainID))
 	bootCoordAddr := clientSetup.AuctionVariables.BootCoordinator
 	client := test.NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
-
+	availClient, err := avail.NewClient("", "")
+	assert.NoError(t, err)
 	// Create Synchronizer
-	s, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
+	s, err := NewSynchronizer(client, availClient, historyDB, l2DB, stateDB, Config{
 		StatsUpdateBlockNumDiffThreshold: 100,
 		StatsUpdateFrequencyDivider:      100,
 	})
@@ -764,9 +766,9 @@ func TestSyncForgerCommitment(t *testing.T) {
 	clientSetup.AuctionVariables.SlotDeadline = 2
 	bootCoordAddr := clientSetup.AuctionVariables.BootCoordinator
 	client := test.NewClient(true, &timer, &ethCommon.Address{}, clientSetup)
-
+	availClient := test.NewAvailClient()
 	// Create Synchronizer
-	s, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
+	s, err := NewSynchronizer(client, availClient, historyDB, l2DB, stateDB, Config{
 		StatsUpdateBlockNumDiffThreshold: 100,
 		StatsUpdateFrequencyDivider:      100,
 	})
@@ -867,7 +869,7 @@ func TestSyncForgerCommitment(t *testing.T) {
 		require.True(t, stats.Synced())
 		syncCommitment[syncBlock.Block.Num] = stats.Sync.Auction.CurrentSlot.ForgerCommitment
 
-		s2, err := NewSynchronizer(client, historyDB, l2DB, stateDB, Config{
+		s2, err := NewSynchronizer(client, availClient, historyDB, l2DB, stateDB, Config{
 			StatsUpdateBlockNumDiffThreshold: 100,
 			StatsUpdateFrequencyDivider:      100,
 		})

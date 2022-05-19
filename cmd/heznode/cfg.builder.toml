@@ -68,11 +68,13 @@ URL = "http://localhost:8545"
 
 [SmartContracts]
 ## Smart contract address of the rollup Hermez.sol
-Rollup   = "0xA68D85dF56E733A06443306A095646317B5Fa633"
+Rollup   = "0x10465b16615ae36F350268eb951d7B0187141D3B"
 
 [Coordinator]
 ## Ethereum address that the coordinator is using to forge batches
-ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD"
+ForgerAddress = "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7"
+AvailURL = "wss://devnet-avail.polygon.technology/ws"
+AvailSeedPhrase = "style fix blame erase grape hole weather firm shock civil chest payment"
 ### Minimum balance the forger address needs to start the coordinator in wei. If It is set to 0, the coordinator will not check the balance
 #MinimumForgeAddressBalance = "0"
 ### Number of confirmation blocks to be sure that the tx has been mined correctly
@@ -106,7 +108,7 @@ ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD"
 
 [Coordinator.FeeAccount]
 ## Ethereum address of the account that will receive the fees
-Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"
+Address = "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7"
 ## BJJ is the baby jub jub public key of the account that will receive the fees
 BJJ = "0x130c5c7f294792559f469220274f3d3b2dca6e89f4c5ec88d3a08bf73262171b"
 

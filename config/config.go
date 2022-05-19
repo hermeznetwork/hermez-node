@@ -127,6 +127,12 @@ type Coordinator struct {
 	PurgeByExtDelInterval Duration `validate:"required" env:"HEZNODE_COORDINATOR_PURGEBYEXTDELINTERVAL"`
 	// ProverWaitReadTimeout
 	ProverWaitReadTimeout Duration `env:"HEZNODE_COORDINATOR_PROVERWAITREADTIMEOUT"`
+
+	// AvailURL url for the polygon avail
+	AvailURL string `env:"HEZNODE_COORDINATOR_AVAIL_URL"`
+	// Avail seed phrase
+	AvailSeedPhrase string `env:"HEZNODE_COORDINATOR_AVAIL_SEED_PHRASE"`
+
 	// L2DB is the DB that holds the pool of L2Txs
 	L2DB struct {
 		// SafetyPeriod is the number of batches after which
@@ -316,6 +322,9 @@ type Node struct {
 		// defined number of blocks. This value only affects the reported % of
 		// synchronization of blocks and batches, nothing else.
 		StatsUpdateFrequencyDivider uint16 `validate:"required,gt=1" env:"HEZNODE_SYNCHRONIZER_STATSUPDATEFREQUENCYDIVIDER"`
+
+		// StartAvailBlock last avail block from which synchronizer should sync
+		StartAvailBlock uint32 `env:"HEZNODE_SYNCHRONIZER_LASTAVAILBLOCK"`
 	} `validate:"required"`
 	SmartContracts struct {
 		// Rollup is the address of the Hermez.sol smart contract

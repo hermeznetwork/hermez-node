@@ -15,6 +15,15 @@ type Block struct {
 	ParentHash ethCommon.Hash `meddler:"-" json:"-"`
 }
 
+// BlockAvail represents of an Avail block
+type BlockAvail struct {
+	Num        uint32 `meddler:"avail_block_num"`
+	Hash       string `meddler:"hash"`
+	StateRoot  string `meddler:"root"`
+	ParentHash string `meddler:"-" json:"-"`
+	L2Txs      []L2Tx `meddler:"-" json:"-"`
+}
+
 // RollupData contains information returned by the Rollup smart contract
 type RollupData struct {
 	// L1UserTxs that were submitted in the block

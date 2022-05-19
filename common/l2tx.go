@@ -26,6 +26,8 @@ type L2Tx struct {
 	Type  TxType      `meddler:"type"`
 	// EthBlockNum in which this L2Tx was added to the queue
 	EthBlockNum int64 `meddler:"eth_block_num"`
+	// AvailBlockNum in which this L2tx was added to the queue
+	AvailBlockNum uint32 `meddler:"avail_block_num"`
 }
 
 // NewL2Tx returns the given L2Tx with the TxId & Type parameters calculated

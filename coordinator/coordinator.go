@@ -49,6 +49,7 @@ import (
 	"time"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-node/avail"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
@@ -170,6 +171,10 @@ type Config struct {
 	// VerifierIdx is the index of the verifier contract registered in the
 	// smart contract
 	VerifierIdx uint8
+	// AvailURL url for the polygon avail
+	AvailURL string
+	// Avail seed phrase
+	AvailSeedPhrase string
 	// ForgeBatchGasCost contains the cost of each action in the
 	// ForgeBatch transaction.
 	ForgeBatchGasCost config.ForgeBatchGasCost
@@ -285,7 +290,11 @@ func NewCoordinator(cfg Config,
 	}
 	ctxTimeout, ctxTimeoutCancel := context.WithTimeout(ctx, 1*time.Second)
 	defer ctxTimeoutCancel()
-	txManager, err := NewTxManager(ctxTimeout, &cfg, ethClient, l2DB, &c,
+	availClient, err := avail.NewClient(cfg.AvailURL, cfg.AvailSeedPhrase)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	txManager, err := NewTxManager(ctxTimeout, &cfg, ethClient, availClient, l2DB, &c,
 		scConsts, initSCVars, etherscanService)
 	if err != nil {
 		return nil, tracerr.Wrap(err)

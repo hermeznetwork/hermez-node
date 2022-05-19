@@ -27,12 +27,13 @@ type NextForgerAPI struct {
 
 // NetworkAPI is the network state exposed via the API
 type NetworkAPI struct {
-	LastEthBlock  int64           `json:"lastEthereumBlock"`
-	LastSyncBlock int64           `json:"lastSynchedBlock"`
-	LastBatch     *BatchAPI       `json:"lastBatch"`
-	CurrentSlot   int64           `json:"currentSlot"`
-	NextForgers   []NextForgerAPI `json:"nextForgers"`
-	PendingL1Txs  int             `json:"pendingL1Transactions"`
+	LastEthBlock   int64           `json:"lastEthereumBlock"`
+	LastSyncBlock  int64           `json:"lastSynchedBlock"`
+	LastBatch      *BatchAPI       `json:"lastBatch"`
+	LastAvailBlock int64           `json:"lastAvailBlock"`
+	CurrentSlot    int64           `json:"currentSlot"`
+	NextForgers    []NextForgerAPI `json:"nextForgers"`
+	PendingL1Txs   int             `json:"pendingL1Transactions"`
 }
 
 // NodePublicInfo is the configuration and metrics of the node that is exposed via API

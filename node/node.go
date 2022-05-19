@@ -33,6 +33,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hermeznetwork/hermez-node/api"
 	"github.com/hermeznetwork/hermez-node/api/stateapiupdater"
+	"github.com/hermeznetwork/hermez-node/avail"
 	"github.com/hermeznetwork/hermez-node/batchbuilder"
 	"github.com/hermeznetwork/hermez-node/common"
 	"github.com/hermeznetwork/hermez-node/config"
@@ -238,7 +239,13 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 		)
 	}
 
-	sync, err := synchronizer.NewSynchronizer(client, historyDB, l2DB, stateDB, synchronizer.Config{
+	availClient, err := avail.NewClient(cfg.Coordinator.AvailURL, cfg.Coordinator.AvailSeedPhrase)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+
+	sync, err := synchronizer.NewSynchronizer(client, availClient, historyDB, l2DB, stateDB, synchronizer.Config{
+		StatsStartAvailBlock:             cfg.Synchronizer.StartAvailBlock,
 		StatsUpdateBlockNumDiffThreshold: cfg.Synchronizer.StatsUpdateBlockNumDiffThreshold,
 		StatsUpdateFrequencyDivider:      cfg.Synchronizer.StatsUpdateFrequencyDivider,
 		ChainID:                          chainIDU16,
@@ -423,6 +430,8 @@ func NewNode(mode Mode, cfg *config.Node, version string) (*Node, error) {
 				VerifierIdx:       uint8(verifierIdx),
 				TxProcessorConfig: txProcessorCfg,
 				ProverReadTimeout: cfg.Coordinator.ProverWaitReadTimeout.Duration,
+				AvailURL:          cfg.Coordinator.AvailURL,
+				AvailSeedPhrase:   cfg.Coordinator.AvailSeedPhrase,
 			},
 			historyDB,
 			l2DB,
@@ -834,21 +843,27 @@ func (n *Node) handleReorg(ctx context.Context, stats *synchronizer.Stats,
 	return nil
 }
 
-func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common.Block,
-	time.Duration, error) {
+func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block, lastAvailBlock *common.BlockAvail) (
+	*common.Block, *common.BlockAvail, time.Duration, error) {
 	blockData, discarded, err := n.sync.Sync(ctx, lastBlock)
+	var (
+		block              *common.Block
+		blockAvail         *common.BlockAvail
+		isReturnBlock      bool
+		isReturnAvailBlock bool
+	)
 	stats := n.sync.Stats()
 	if err != nil {
 		// case: error
-		return nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
+		return nil, nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
 	} else if discarded != nil {
 		// case: reorg
 		log.Infow("Synchronizer.Sync reorg", "discarded", *discarded)
 		vars := n.sync.SCVars()
 		if err := n.handleReorg(ctx, stats, vars); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
+			return nil, nil, time.Duration(0), tracerr.Wrap(err)
 		}
-		return nil, time.Duration(0), nil
+		return nil, nil, time.Duration(0), nil
 	} else if blockData != nil {
 		// case: new block
 		vars := common.SCVariablesPtr{
@@ -857,13 +872,34 @@ func (n *Node) syncLoopFn(ctx context.Context, lastBlock *common.Block) (*common
 			WDelayer: blockData.WDelayer.Vars,
 		}
 		if err := n.handleNewBlock(ctx, stats, &vars, blockData.Rollup.Batches); err != nil {
-			return nil, time.Duration(0), tracerr.Wrap(err)
+			return nil, nil, time.Duration(0), tracerr.Wrap(err)
 		}
-		return &blockData.Block, time.Duration(0), nil
-	} else {
-		// case: no block
-		return lastBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
+		block = &blockData.Block
+		isReturnBlock = true
 	}
+	//} else {
+	//	// case: no block
+	//	return lastBlock, lastAvailBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
+	//}
+	blockDataAvail, err := n.sync.SyncAvail(ctx, lastAvailBlock)
+
+	if err != nil {
+		// case: error
+		return nil, nil, n.cfg.Synchronizer.SyncLoopInterval.Duration, tracerr.Wrap(err)
+	} else if blockDataAvail != nil {
+		blockAvail = blockDataAvail
+		isReturnAvailBlock = true
+	}
+	if isReturnBlock && isReturnAvailBlock {
+		return block, blockAvail, time.Duration(0), nil
+	} else if isReturnAvailBlock {
+		return lastBlock, blockAvail, time.Duration(0), tracerr.Wrap(err)
+	} else if isReturnBlock {
+		return block, lastAvailBlock, time.Duration(0), nil
+	} else {
+		return lastBlock, lastAvailBlock, n.cfg.Synchronizer.SyncLoopInterval.Duration, nil
+	}
+
 }
 
 // StartSynchronizer starts the synchronizer
@@ -885,6 +921,7 @@ func (n *Node) StartSynchronizer() {
 	go func() {
 		var err error
 		var lastBlock *common.Block
+		var lastAvailBlock *common.BlockAvail
 		waitDuration := time.Duration(0)
 		for {
 			select {
@@ -893,8 +930,7 @@ func (n *Node) StartSynchronizer() {
 				n.wg.Done()
 				return
 			case <-time.After(waitDuration):
-				if lastBlock, waitDuration, err = n.syncLoopFn(n.ctx,
-					lastBlock); err != nil {
+				if lastBlock, lastAvailBlock, waitDuration, err = n.syncLoopFn(n.ctx, lastBlock, lastAvailBlock); err != nil {
 					if n.ctx.Err() != nil {
 						continue
 					}

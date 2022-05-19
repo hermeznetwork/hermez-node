@@ -43,10 +43,10 @@ StatsUpdateBlockNumDiffThreshold = 100
 StatsUpdateFrequencyDivider = 100
 
 [SmartContracts]
-Rollup   = "0xA68D85dF56E733A06443306A095646317B5Fa633"
+Rollup   = "0x10465b16615ae36F350268eb951d7B0187141D3B"
 
 [Coordinator]
-ForgerAddress = "0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD" # Non-Boot Coordinator
+ForgerAddress = "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7" # Non-Boot Coordinator
 MinimumForgeAddressBalance = "0"
 ConfirmBlocks = 5
 L1BatchTimeoutPerc = 0.00001
@@ -63,9 +63,11 @@ MustForgeAtSlotDeadline = true
 IgnoreSlotCommitment = true
 ForgeOncePerSlotIfTxs = false
 ProverWaitReadTimeout = "20s"
+AvailURL = "wss://devnet-avail.polygon.technology/ws"
+AvailSeedPhrase = "style fix blame erase grape hole weather firm shock civil chest payment"
 
 [Coordinator.FeeAccount]
-Address = "0x56232B1c5B10038125Bc7345664B4AFD745bcF8E"
+Address = "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7"
 BJJ = "0x130c5c7f294792559f469220274f3d3b2dca6e89f4c5ec88d3a08bf73262171b"
 
 [Coordinator.L2DB]

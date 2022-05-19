@@ -124,6 +124,14 @@ func (hdb *HistoryDB) GetLastBlock() (*common.Block, error) {
 	return block, tracerr.Wrap(err)
 }
 
+// GetLastAvailBlock get last avail block
+func (hdb *HistoryDB) GetLastAvailBlock() (*common.BlockAvail, error) {
+	block := &common.BlockAvail{}
+	err := meddler.QueryRow(
+		hdb.dbRead, block, "SELECT * FROM block_avail ORDER BY avail_block_num DESC LIMIT 1;")
+	return block, tracerr.Wrap(err)
+}
+
 // AddBatch insert a Batch into the DB
 func (hdb *HistoryDB) AddBatch(batch *common.Batch) error { return hdb.addBatch(hdb.dbWrite, batch) }
 func (hdb *HistoryDB) addBatch(d meddler.DB, batch *common.Batch) error {
@@ -1230,6 +1238,32 @@ func (hdb *HistoryDB) AddBlockSCData(blockData *common.BlockData) (err error) {
 	}
 
 	return tracerr.Wrap(txn.Commit())
+}
+
+func (hdb *HistoryDB) AddAvailBlock(block *common.BlockAvail) (err error) {
+	txn, err := hdb.dbWrite.Beginx()
+	if err != nil {
+		tracerr.Wrap(err)
+	}
+	defer func() {
+		if err != nil {
+			db.Rollback(txn)
+		}
+	}()
+
+	if err := hdb.addAvailBlock(txn, block); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	if err := hdb.addL2Txs(txn, block.L2Txs); err != nil {
+		return tracerr.Wrap(err)
+	}
+
+	return tracerr.Wrap(txn.Commit())
+}
+
+func (hdb *HistoryDB) addAvailBlock(d meddler.DB, block *common.BlockAvail) (err error) {
+	return tracerr.Wrap(meddler.Insert(d, "block_avail", block))
 }
 
 // AddAuctionVars insert auction vars into the DB
