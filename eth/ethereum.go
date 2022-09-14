@@ -92,7 +92,7 @@ func NewEthereumClient(client *ethclient.Client, account *accounts.Account,
 		config:  config,
 		opts:    newCallOpts(),
 	}
-	chainID, err := c.EthChainID(1)
+	chainID, err := c.EthChainID()
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
