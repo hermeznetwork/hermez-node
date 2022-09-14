@@ -1,9 +1,9 @@
 #!/bin/sh -e
 
 USAGE="Available options:
-    doc     Start documentation UI at http://localhost:8001 and the mock up server at http://localhost:4010
-    mock    Start the mock up server at http://localhost:4010
-    editor  Start the documentation editor at  http://localhost:8002
+    doc     Start documentation UI at http://localhost:8545 and the mock up server at http://localhost:4010
+    mock    Start the mock up server at http://localhost:30303
+    editor  Start the documentation editor at  http://localhost:8545
     stop    Stop all runing services started using this script
     help    display this message"
 
