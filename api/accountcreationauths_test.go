@@ -14,7 +14,7 @@ import (
 )
 
 type testAuth struct {
-	EthAddr   string    `json:"hezEthereumAddress" binding:"required"`
+	EthAddr   string    `json:"hez:0xef2d4ea4f3c485bb47059b01b894a6d433504d9f" binding:"required"`
 	BJJ       string    `json:"bjj" binding:"required"`
 	Signature string    `json:"signature" binding:"required"`
 	Timestamp time.Time `json:"timestamp"`
@@ -24,7 +24,7 @@ func genTestAuths(auths []*common.AccountCreationAuth) []testAuth {
 	testAuths := []testAuth{}
 	for _, auth := range auths {
 		testAuths = append(testAuths, testAuth{
-			EthAddr:   common.EthAddrToHez(auth.EthAddr),
+			EthAddr:   common.EthAddrToHez(auth.0xef2d4ea4f3c485bb47059b01b894a6d433504d9f),
 			BJJ:       common.BjjToString(auth.BJJ),
 			Signature: "0x" + hex.EncodeToString(auth.Signature),
 			Timestamp: auth.Timestamp,

@@ -70,7 +70,7 @@ func (a *API) getAccountCreationAuth(c *gin.Context) {
 }
 
 type receivedAuth struct {
-	EthAddr   apitypes.StrHezEthAddr `json:"hezEthereumAddress" binding:"required"`
+	EthAddr   apitypes.StrHezEthAddr `json:"hez:0xef2d4ea4f3c485bb47059b01b894a6d433504d9f" binding:"required"`
 	BJJ       apitypes.StrHezBJJ     `json:"bjj" binding:"required"`
 	Signature apitypes.EthSignature  `json:"signature" binding:"required"`
 	Timestamp time.Time              `json:"timestamp"`

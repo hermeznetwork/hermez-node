@@ -99,7 +99,7 @@ func NewAPI(setup Config) (*API, error) {
 		},
 		l2DB:          setup.L2DB,
 		stateDB:       setup.StateDB,
-		hermezAddress: consts.HermezAddress,
+		hermezAddress: consts.hez:0xef2d4ea4f3c485bb47059b01b894a6d433504d9f,
 		validate:      newValidate(),
 	}
 

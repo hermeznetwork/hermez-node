@@ -9,7 +9,7 @@ import (
 
 // GetAccountCreationAuthFilter struct for parsing hezEthereumAddress from /account-creation-authorization/:hezEthereumAddress request
 type GetAccountCreationAuthFilter struct {
-	Addr string `uri:"hezEthereumAddress" binding:"required"`
+	Addr string `uri:"hez:0xef2d4ea4f3c485bb47059b01b894a6d433504d9f" binding:"required"`
 }
 
 // ParseGetAccountCreationAuthFilter parsing uri request to the eth address
@@ -18,5 +18,5 @@ func ParseGetAccountCreationAuthFilter(c *gin.Context) (*ethCommon.Address, erro
 	if err := c.ShouldBindUri(&getAccountCreationAuthFilter); err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	return common.HezStringToEthAddr(getAccountCreationAuthFilter.Addr, "hezEthereumAddress")
+	return common.HezStringToEthAddr(getAccountCreationAuthFilter.Addr, "hez:0xef2d4ea4f3c485bb47059b01b894a6d433504d9f")
 }

@@ -39,7 +39,7 @@ func (a *API) getAccount(c *gin.Context) {
 
 func (a *API) getAccounts(c *gin.Context) {
 	for id := range c.Request.URL.Query() {
-		if id != "tokenIds" && id != "hezEthereumAddress" && id != "BJJ" &&
+		if id != "tokenIds" && id != "hez:0xef2d4ea4f3c485bb47059b01b894a6d433504d9f" && id != "BJJ" &&
 			id != "fromItem" && id != "order" && id != "limit" {
 			retBadReq(&apiError{
 				Err:  fmt.Errorf("invalid Param: %s", id),

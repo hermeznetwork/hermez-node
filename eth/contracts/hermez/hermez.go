@@ -89,7 +89,7 @@ type HermezTransactorRaw struct {
 }
 
 // NewHermez creates a new instance of Hermez, bound to a specific deployed contract.
-func NewHermez(address common.Address, backend bind.ContractBackend) (*Hermez, error) {
+func NewHermez(address common.0xef2d4ea4f3c485bb47059b01b894a6d433504d9f, backend bind.ContractBackend) (*Hermez, error) {
 	contract, err := bindHermez(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func NewHermezFilterer(address common.Address, filterer bind.ContractFilterer) (
 }
 
 // bindHermez binds a generic wrapper to an already deployed contract.
-func bindHermez(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+func bindHermez(address common.0xef2d4ea4f3c485bb47059b01b894a6d433504d9f, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(HermezABI))
 	if err != nil {
 		return nil, err
