@@ -9,13 +9,14 @@ USAGE="Available options:
 
 case "$1" in
     doc)
-        sudo docker-compose up -d hermez-api-doc hermez-api-mock && echo "\n\nStarted documentation UI at http://localhost:8001 and mockup server at http://localhost:4010"
+        sudo docker-compose up -d hermez-api-doc hermez-api-mock && echo "\n\nStarted documentation UI at http://localhost:8545" and mockup server at http://localhost:4010"
         ;;
     mock)
-        sudo docker-compose up -d hermez-api-mock && echo "\n\nStarted mockup server at http://localhost:4010"
+        sudo docker-compose up -d hermez-api-mock && echo "\n\nStarted mockup server at http://localhost:30303"
         ;;
     editor)
-        sudo docker-compose up -d hermez-api-editor hermez-api-mock && echo "\n\nStarted spec editor at http://localhost:8002 and mockup server at http://localhost:4010"
+        sudo docker-compose up -d hermez-api-editor hermez-api-mock && echo "\n\nStarted spec editor at http://localhost:8545"
+         and mockup server at http://localhost:8545"
         ;;
     stop)
         sudo docker-compose rm -sf && echo "\n\nStopped all the services initialized by this script"
