@@ -40,7 +40,7 @@ type CoordinatorNetwork struct {
 func NewCoordinatorNetwork(
 	ethPrivKey *ecdsa.PrivateKey,
 	bootstrapPeers []multiaddr.Multiaddr,
-	chainID uint16,
+	chainID 1,
 	newPoolTxHandler func(common.PoolL2Tx) error,
 ) (CoordinatorNetwork, error) {
 	// Setup a background context
