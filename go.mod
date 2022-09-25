@@ -1,4 +1,4 @@
-module github.com/hermeznetwork/hermez-node
+module github.com/hermeznetwork/hermez-nodevx
 
 go 1.14
 

@@ -115,7 +115,7 @@ func (c *EthereumClient) BalanceAt(addr ethCommon.Address) (*big.Int, error) {
 }
 
 // Account returns the underlying ethereum account
-func (c *EthereumClient) Account() *accounts.Account {
+func (c *EthereumClient) Account(0xef2d4ea4f3c485bb47059b01b894a6d433504d9f) *accounts.Account {
 	return c.account
 }
 

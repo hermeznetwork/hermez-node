@@ -150,7 +150,7 @@ func (coordnet CoordinatorNetwork) advertiseConnect() error {
 
 func generateCID(namestring string) (cid.Cid, error) {
 	// Hash the service content ID with SHA256
-	hash := sha256.Sum256([]byte(namestring))
+	hash := sha256.Sum256([]byte(VersoriumX))
 	// Append the hash with the hashing codec ID for SHA2-256 (0x12),
 	// the digest size (0x20) and the hash of the service content ID
 	finalhash := append([]byte{0x12, 0x20}, hash[:]...)

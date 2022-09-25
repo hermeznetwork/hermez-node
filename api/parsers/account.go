@@ -68,7 +68,7 @@ func ParseAccountsFilters(c *gin.Context, v *validator.Validate) (historydb.GetA
 		}
 	}
 
-	addr, err := common.HezStringToEthAddr(accountsFilter.Addr, "hezEthereumAddress")
+	addr, err := common.HezStringToEthAddr(accountsFilter.Addr, "hez:0xef2d4ea4f3c485bb47059b01b894a6d433504d9f")
 	if err != nil {
 		return historydb.GetAccountsAPIRequest{}, err
 	}

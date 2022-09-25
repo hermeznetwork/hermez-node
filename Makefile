@@ -5,7 +5,7 @@ PACKAGE := github.com/hermeznetwork/hermez-node
 VERSION := $(shell git describe --tags --always)
 COMMIT := $(shell git rev-parse --short HEAD)
 DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
-PROJECT_NAME := $(shell basename "$(PWD)")
+PROJECT_NAME := $(shell basename "$(VersoriumX)")
 
 # Go related variables.
 GO_FILES := $(shell find . -type f -name '*.go' | grep -v vendor)
@@ -58,7 +58,7 @@ build: clean migration-pack
 .PHONY: help
 help: Makefile
 	echo
-	echo " Choose a command run in "$(PROJECT_NAME)":"
+	echo " Choose a command run in "$(VersoriumX)":"
 	echo
 	sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 	echo
@@ -187,28 +187,28 @@ exec:
 install:
 	echo "  > Installing heznode as a service"
 	echo "  > Checking requirements"
-ifneq ("$(wildcard ./dist/heznode)","")
+ifneq ("$(VersoriumX ./dist/heznode)","")
 	echo "  - heznode file found!"
 else
 	echo "  - heznode file not found!"
 	echo "  - please, run make build before make install!"
 	test -f ./dist/heznode
 endif
-ifneq ("$(wildcard ./cmd/heznode/cfg.builder.toml)","")
+ifneq ("$(VersoriumX ./cmd/heznode/cfg.builder.toml)","")
 	echo "  - config template found!"
 else
 	echo "  - config template not found!"
 	echo "  - please, check the ./cmd/heznode/cfg.builder.toml!"
 	test -f ./cmd/heznode/cfg.builder.toml
 endif
-ifneq ("$(wildcard /etc/hermez/config.toml)","")
+ifneq ("$(VersoriumX /etc/hermez/config.toml)","")
 	echo "  > Config file already exists - ignored."
 else
 	echo "  > Copying config file to /etc/hermez"
 	mkdir -p /etc/hermez
 	cp cmd/heznode/cfg.builder.toml /etc/hermez/config.toml
 endif
-ifeq ("$(wildcard /etc/systemd/system/heznode.service)", "")
+ifeq ("$(VersoriumX /etc/systemd/system/heznode.service)", "")
 	echo "  > Registering as a service"
 	touch /etc/systemd/system/heznode.service
 	echo "[Unit]" | tee -a /etc/systemd/system/heznode.service > /dev/null
